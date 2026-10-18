@@ -410,7 +410,8 @@ fun HomeScreen(
                     ) {
                         CountryPillRow(
                             selected = selectedCountry,
-                            onSelect = { selectedCountry = it }
+                            onSelect = { selectedCountry = it },
+                            languageCode = languageCode
                         )
                     }
                 }
@@ -466,7 +467,8 @@ fun HomeScreen(
                 ) {
                     CountryPillRow(
                         selected = selectedCountry,
-                        onSelect = { selectedCountry = it }
+                        onSelect = { selectedCountry = it },
+                        languageCode = languageCode
                     )
                 }
             }
@@ -492,7 +494,8 @@ fun HomeScreen(
 @Composable
 private fun CountryPillRow(
     selected: String,
-    onSelect: (String) -> Unit
+    onSelect: (String) -> Unit,
+    languageCode: String
 ) {
     LazyRow(
         modifier = Modifier
