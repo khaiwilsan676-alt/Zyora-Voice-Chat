@@ -409,7 +409,7 @@ interface GlobalRoom {
 // ============ CONSTANTS ============
 const BANNERS = [
   { image: '/IMG-20260830-WA0081.jpg' },
-  { image: '/IMG-20260818-WA0000.jpg' },
+  { image: '/file_0000000033348246b73ea85588488c24.png' },
   { image: '/IMG-20260818-WA0001.jpg' }
 ]
 
@@ -2598,6 +2598,7 @@ export default function HomePage({ onLogout }: HomePageProps) {
       style={{
         minHeight: viewportHeight ? `calc(var(--vh, 1vh) * 100)` : '100vh',
         paddingBottom: '0px',
+        WebkitTapHighlightColor: 'transparent',
         touchAction: 'manipulation',
         WebkitUserSelect: 'none',
         userSelect: 'none',
