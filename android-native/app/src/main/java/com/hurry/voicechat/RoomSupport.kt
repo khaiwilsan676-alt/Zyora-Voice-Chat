@@ -46,10 +46,12 @@ import java.util.TimeZone
 
 // GitHub Raw URLs for your images
 private const val ROOM_SUPPORT_HEADER = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261018_165235.png"
-private const val RANK_IMG_1 = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261018_164620.png"
-private const val RANK_IMG_2 = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261018_164609.png"
-private const val RANK_IMG_3 = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261018_164558.png"
 private const val BOTTOM_FIXED_IMG = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_000000009adc8211ab89731594a82623.png"
+
+// Top 3 Medals Images
+private const val MEDAL_1 = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261018_212036.png"
+private const val MEDAL_2 = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261018_212013.png"
+private const val MEDAL_3 = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261018_212057.png"
 
 @Composable
 fun RoomSupport(onBack: () -> Unit) {
@@ -161,7 +163,7 @@ fun RoomSupportContent(bgColor: Color) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .offset(y = (-25).dp) // <-- Yahan -25.dp kar diya thoda sa aur upar karne ke liye
+                .offset(y = (-30).dp) // <-- Yahan -30.dp kar diya bhai
                 .padding(horizontal = 10.dp)
         ) {
             RoomStatsTable()
@@ -227,7 +229,7 @@ fun RankingContent(bgColor: Color) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 4.dp, bottom = 12.dp)
+                    .padding(top = 4.dp, bottom = 4.dp) // <-- Gap decrease kar diya yahan
             ) {
                 val tabs = listOf("Daily", "Weekly", "Monthly")
                 tabs.forEachIndexed { index, title ->
@@ -259,59 +261,66 @@ fun RankingContent(bgColor: Color) {
                     .weight(1f) 
                     .verticalScroll(scrollState) 
             ) {
-                // 3. Top 3 Images (Rank 1, 2, 3) 
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 10.dp)
-                    // Yahan se verticalArrangement hata diya gaya hai taaki 4 to 50 wala exact gap match ho sake
-                ) {
-                    AsyncImage(
-                        model = RANK_IMG_1, 
-                        contentDescription = "Rank 1", 
-                        // Yahan wahi 4.dp ka gap daala jo cards me hai taaki same dikhe
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), 
-                        contentScale = ContentScale.FillWidth 
-                    )
-                    AsyncImage(
-                        model = RANK_IMG_2, 
-                        contentDescription = "Rank 2", 
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), 
-                        contentScale = ContentScale.FillWidth
-                    )
-                    AsyncImage(
-                        model = RANK_IMG_3, 
-                        contentDescription = "Rank 3", 
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), 
-                        contentScale = ContentScale.FillWidth
-                    )
-                }
                 
-                // 4. List 4 to 50 Cards
+                // 4. List 1 to 50 Cards
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 10.dp) 
                 ) {
-                    for (i in 4..50) {
+                    for (i in 1..50) { // <-- Ab list seedha 1 se 50 chal rahi hai
+                        
+                        // Top 3 ke liye colors
+                        val cardBgColor = when (i) {
+                            1 -> Color(0xFFD4AF37) // Golden
+                            2 -> Color(0xFFC0C0C0) // Silver
+                            3 -> Color(0xFF8B4513) // Brown
+                            else -> tableColor
+                        }
+
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 4.dp) // Exactly same gap here
-                                .background(tableColor, RoundedCornerShape(6.dp)) 
-                                .padding(horizontal = 16.dp, vertical = 22.dp),
+                                .padding(vertical = 4.dp) 
+                                .background(cardBgColor, RoundedCornerShape(6.dp)) 
+                                .padding(horizontal = 16.dp, vertical = 24.dp), // <-- Height ekdam thodi si increase ki (22dp se 24dp)
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(
-                                text = i.toString(),
-                                color = Color.White,
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.width(30.dp)
-                            )
+                            // Left side Rank / Image
+                            Box(
+                                modifier = Modifier.width(30.dp),
+                                contentAlignment = Alignment.CenterStart
+                            ) {
+                                when (i) {
+                                    1 -> AsyncImage(
+                                            model = MEDAL_1,
+                                            contentDescription = "Rank 1",
+                                            modifier = Modifier.size(24.dp)
+                                         )
+                                    2 -> AsyncImage(
+                                            model = MEDAL_2,
+                                            contentDescription = "Rank 2",
+                                            modifier = Modifier.size(24.dp)
+                                         )
+                                    3 -> AsyncImage(
+                                            model = MEDAL_3,
+                                            contentDescription = "Rank 3",
+                                            modifier = Modifier.size(24.dp)
+                                         )
+                                    else -> Text(
+                                        text = i.toString(),
+                                        color = Color.White,
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                            
+                            Spacer(modifier = Modifier.width(8.dp))
+                            
                             Text(
                                 text = "User / Room Name",
-                                color = Color.LightGray,
+                                color = if (i <= 3) Color.White else Color.LightGray, // Top 3 me thoda clear dikhe isliye white rakha
                                 fontSize = 14.sp
                             )
                         }
