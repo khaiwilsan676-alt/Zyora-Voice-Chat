@@ -54,6 +54,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.basicMarquee 
 import coil3.compose.AsyncImage
 
+// Optimized Shader-like CPU logic to prevent room hanging (Replaced old Canva logic)
 @Composable
 fun TransparentGreenImage(url: String, modifier: Modifier = Modifier) {
     var bitmap by remember(url) { mutableStateOf<android.graphics.Bitmap?>(null) }
@@ -63,17 +64,28 @@ fun TransparentGreenImage(url: String, modifier: Modifier = Modifier) {
             runCatching {
                 val source = java.net.URL(url).openStream().use { android.graphics.BitmapFactory.decodeStream(it) } ?: return@runCatching null
                 val result = source.copy(android.graphics.Bitmap.Config.ARGB_8888, true)
-                val hsv = FloatArray(3)
                 
-                for (y in 0 until result.height) {
-                    for (x in 0 until result.width) {
-                        val pixel = result.getPixel(x, y)
-                        android.graphics.Color.colorToHSV(pixel, hsv)
-                        if (hsv[0] in 60f..165f && hsv[1] > 0.2f && hsv[2] > 0.2f) {
-                            result.setPixel(x, y, android.graphics.Color.TRANSPARENT)
-                        }
+                val width = result.width
+                val height = result.height
+                val pixels = IntArray(width * height)
+                
+                // Get all pixels at once (100x faster than looping getPixel)
+                result.getPixels(pixels, 0, width, 0, 0, width, height)
+                
+                for (i in pixels.indices) {
+                    val color = pixels[i]
+                    val r = (color shr 16) and 0xFF
+                    val g = (color shr 8) and 0xFF
+                    val b = color and 0xFF
+                    
+                    // Simple Green Screen Shader Logic: Check if green is dominant
+                    if (g > 90 && g > r * 1.1 && g > b * 1.1) {
+                        pixels[i] = android.graphics.Color.TRANSPARENT
                     }
                 }
+                
+                // Set all pixels back at once
+                result.setPixels(pixels, 0, width, 0, 0, width, height)
                 result
             }.getOrNull()
         }
@@ -172,6 +184,13 @@ fun RoomPage(
     
     var showOfficialAnnouncement by remember { mutableStateOf(true) }
     var clearedBy by remember { mutableStateOf("") }
+    
+    // Screen width calculation for extreme right animation
+    val configuration = LocalConfiguration.current
+    val density = LocalDensity.current
+    val screenWidthPx = remember(configuration, density) {
+        with(density) { configuration.screenWidthDp.dp.roundToPx() }
+    }
     
     LaunchedEffect(showChat, imeVisible) {
         if (!showChat) {
@@ -392,15 +411,17 @@ fun RoomPage(
                     )
                     Column(Modifier.padding(start = 8.dp), verticalArrangement = Arrangement.Center) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            val displayRoomName = roomName
                             
+                            // Modifier fixed for Auto-scroll (Marquee): width constraints must come before marquee
                             Text(
-                                text = displayRoomName,
+                                text = roomName,
                                 color = Color.White,
                                 fontSize = 13.sp,
                                 fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
                                 maxLines = 1,
-                                modifier = Modifier.basicMarquee(iterations = Int.MAX_VALUE).widthIn(max = 100.dp),
+                                modifier = Modifier
+                                    .widthIn(max = 85.dp) // Important limit for scroll trigger
+                                    .basicMarquee(iterations = Int.MAX_VALUE),
                                 overflow = TextOverflow.Clip
                             )
                             
@@ -581,7 +602,6 @@ fun RoomPage(
                     }
                     
                     Box(Modifier.size(62.dp),contentAlignment=Alignment.Center){
-                        // Yahan size 125.dp kar diya gaya hai aur original Box size wapas kar diya hai
                         AsyncImage(model="https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/file_0000000019c4821180028eebae10dbfc.png",contentDescription="Gift",modifier=Modifier.size(125.dp).clickable{showGift=true},contentScale=ContentScale.Fit)
                     }
                     
@@ -669,8 +689,9 @@ fun RoomPage(
                     
                     AnimatedVisibility(
                         visibleState = visibleState,
+                        // Blue banner perfectly extreme right edge se aayega
                         enter=slideInHorizontally(
-                            initialOffsetX={ 2500 }, // Ye 2500 set hone se right side of screen se slide karke left me aayega
+                            initialOffsetX={ screenWidthPx }, 
                             animationSpec = tween(durationMillis = 800, easing = LinearOutSlowInEasing)
                         ) + fadeIn(animationSpec = tween(800))
                     ) {
@@ -977,7 +998,6 @@ fun RoomPage(
     val raw="https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/"
     Box(Modifier.fillMaxSize().background(Color.Transparent).clickable{onDismiss()},contentAlignment=Alignment.TopCenter){
         
-        // Ye rahi teri Black sheet. Maine iski height 32% se badhakar 48% kar di hai.
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -986,7 +1006,6 @@ fun RoomPage(
                 .clickable(enabled=false){}
         )
         
-        // Ye tere icons wala hissa hai. Ise wahi 32% par hi center rakha hai, taaki icons ek inch bhi upar-niche na khiskein.
         Column(
             modifier = Modifier
                 .fillMaxWidth()
