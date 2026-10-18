@@ -2064,7 +2064,7 @@ const MemoSeatItem = memo(SeatItemBase, (prev, next) => {
 });
 
 const RoomSideBanner = memo(function RoomSideBanner() {
-  const bannerImages = ['/1788339540059~2.jpg', '/1788339681679~2.jpg'];
+  const bannerImages = ['/IMG_20261018_165235.png', '/1788339681679~2.jpg'];
   const [currentIndex, setCurrentIndex] = useState(0);
   useEffect(() => {
     const timer = setInterval(() => setCurrentIndex((prev) => (prev + 1) % bannerImages.length), 3000);
