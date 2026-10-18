@@ -4,6 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -24,6 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -86,7 +88,10 @@ fun RoomSupport(onBack: () -> Unit) {
                 tint = Color.White,
                 modifier = Modifier
                     .align(Alignment.CenterStart)
-                    .clickable { onBack() }
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null // Grey effect hta diya
+                    ) { onBack() }
             )
             
             Row(
@@ -99,7 +104,10 @@ fun RoomSupport(onBack: () -> Unit) {
                     fontSize = 18.sp,
                     fontWeight = if (pagerState.currentPage == 0) FontWeight.Bold else FontWeight.Normal,
                     modifier = Modifier
-                        .clickable { coroutineScope.launch { pagerState.animateScrollToPage(0) } }
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null // Grey effect hta diya
+                        ) { coroutineScope.launch { pagerState.animateScrollToPage(0) } }
                         .padding(horizontal = 12.dp)
                 )
                 Text(
@@ -108,7 +116,10 @@ fun RoomSupport(onBack: () -> Unit) {
                     fontSize = 18.sp,
                     fontWeight = if (pagerState.currentPage == 1) FontWeight.Bold else FontWeight.Normal,
                     modifier = Modifier
-                        .clickable { coroutineScope.launch { pagerState.animateScrollToPage(1) } }
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null // Grey effect hta diya
+                        ) { coroutineScope.launch { pagerState.animateScrollToPage(1) } }
                         .padding(horizontal = 12.dp)
                 )
             }
@@ -150,7 +161,7 @@ fun RoomSupportContent(bgColor: Color) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .offset(y = (-2).dp) 
+                .offset(y = (-20).dp) // <-- Yahan -20.dp kar diya bhai jaisa tune bola
                 .padding(horizontal = 10.dp)
         ) {
             RoomStatsTable()
@@ -179,42 +190,40 @@ fun RankingContent(bgColor: Color) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(bgColor) // Make sure background color matches completely
+            .background(bgColor) 
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(scrollState)
+            modifier = Modifier.fillMaxSize() 
         ) {
             Spacer(modifier = Modifier.statusBarsPadding().height(60.dp))
 
-            // 1. Top Patla Full Round Card with Speaker (Ekdam patli patti aur single row)
+            // 1. Top Patla Full Round Card with Speaker (FIXED)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 4.dp)
                     .background(tableColor, CircleShape)
-                    .padding(horizontal = 12.dp, vertical = 6.dp), // Height reduced
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
                     imageVector = Icons.Default.VolumeUp,
                     contentDescription = "Speaker",
                     tint = Color(0xFF388FC2),
-                    modifier = Modifier.size(18.dp) // Thoda icon chota kiya row maintain karne ke liye
+                    modifier = Modifier.size(18.dp) 
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
                     text = "Rooms points = Room Coins + Room visitors*1000",
                     color = Color(0xFFFFD700),
-                    fontSize = 11.sp, // Font size chota kiya taaki ek line me aaye
+                    fontSize = 11.sp, 
                     fontWeight = FontWeight.Medium,
-                    maxLines = 1, // Ek hi row me set
+                    maxLines = 1, 
                     overflow = TextOverflow.Ellipsis
                 )
             }
 
-            // 2. Daily, Weekly, Monthly Tabs 
+            // 2. Daily, Weekly, Monthly Tabs (FIXED)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -225,7 +234,10 @@ fun RankingContent(bgColor: Color) {
                     Box(
                         modifier = Modifier
                             .weight(1f)
-                            .clickable { selectedTimeTab = index }
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null // GREY EFFECT HATA DIYA
+                            ) { selectedTimeTab = index }
                             .padding(vertical = 12.dp),
                         contentAlignment = Alignment.Center
                     ) {
@@ -238,54 +250,78 @@ fun RankingContent(bgColor: Color) {
                     }
                 }
             }
-
-            // 3. Top 3 Images (Rank 1, 2, 3) properly horizontally list-wise set
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 10.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp), 
-                verticalAlignment = Alignment.Bottom
-            ) {
-                AsyncImage(model = RANK_IMG_2, contentDescription = "Rank 2", modifier = Modifier.weight(1f).aspectRatio(0.85f), contentScale = ContentScale.Fit)
-                AsyncImage(model = RANK_IMG_1, contentDescription = "Rank 1", modifier = Modifier.weight(1.2f).aspectRatio(0.75f), contentScale = ContentScale.Fit)
-                AsyncImage(model = RANK_IMG_3, contentDescription = "Rank 3", modifier = Modifier.weight(1f).aspectRatio(0.85f), contentScale = ContentScale.Fit)
-            }
             
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // 4. List 4 to 50 Cards
+            // --- YAHAN SE SCROLLABLE AREA START (1 TO 50) ---
+            
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 10.dp)
+                    .weight(1f) 
+                    .verticalScroll(scrollState) 
             ) {
-                for (i in 4..50) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp)
-                            .background(tableColor, RoundedCornerShape(12.dp))
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = i.toString(),
-                            color = Color.White,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.width(30.dp)
-                        )
-                        Text(
-                            text = "User / Room Name",
-                            color = Color.LightGray,
-                            fontSize = 14.sp
-                        )
+                // 3. Top 3 Images (Rank 1, 2, 3) Ek ke neeche ek
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 10.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    AsyncImage(
+                        model = RANK_IMG_1, 
+                        contentDescription = "Rank 1", 
+                        modifier = Modifier.fillMaxWidth().height(100.dp), 
+                        contentScale = ContentScale.Fit
+                    )
+                    AsyncImage(
+                        model = RANK_IMG_2, 
+                        contentDescription = "Rank 2", 
+                        modifier = Modifier.fillMaxWidth().height(100.dp), 
+                        contentScale = ContentScale.Fit
+                    )
+                    AsyncImage(
+                        model = RANK_IMG_3, 
+                        contentDescription = "Rank 3", 
+                        modifier = Modifier.fillMaxWidth().height(100.dp), 
+                        contentScale = ContentScale.Fit
+                    )
+                }
+                
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // 4. List 4 to 50 Cards
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 10.dp)
+                ) {
+                    for (i in 4..50) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp)
+                                .background(tableColor, RoundedCornerShape(6.dp)) 
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = i.toString(),
+                                color = Color.White,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.width(30.dp)
+                            )
+                            Text(
+                                text = "User / Room Name",
+                                color = Color.LightGray,
+                                fontSize = 14.sp
+                            )
+                        }
                     }
                 }
+                
+                Spacer(modifier = Modifier.height(130.dp)) 
             }
-            
-            Spacer(modifier = Modifier.height(110.dp)) 
         }
 
         // 5. Bottom Fixed Image 
@@ -296,13 +332,14 @@ fun RankingContent(bgColor: Color) {
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .offset(y = 15.dp) 
+                .scale(1.1f) 
+                .offset(y = 35.dp) 
         )
     }
 }
 
 // ==========================================
-// Puraane Components (Cream Patti height kam ki hai)
+// Puraane Components (Untouched)
 // ==========================================
 
 @Composable
@@ -325,7 +362,7 @@ fun RoomStatsTable() {
             modifier = Modifier
                 .fillMaxWidth()
                 .background(headerBg)
-                .padding(vertical = 6.dp), // Height reduced
+                .padding(vertical = 6.dp), 
             contentAlignment = Alignment.Center
         ) {
             Text(
@@ -415,7 +452,7 @@ fun RewardCountdownCard() {
             modifier = Modifier
                 .fillMaxWidth()
                 .background(headerGradient)
-                .padding(horizontal = 12.dp, vertical = 6.dp), // Height reduced
+                .padding(horizontal = 12.dp, vertical = 6.dp), 
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
         ) {
@@ -423,7 +460,7 @@ fun RewardCountdownCard() {
                 imageVector = Icons.Default.CardGiftcard,
                 contentDescription = "Gift",
                 tint = headingColor,
-                modifier = Modifier.size(20.dp) // Icon slightly smaller to fit reduced padding
+                modifier = Modifier.size(20.dp) 
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
@@ -482,7 +519,7 @@ fun TargetRewardTable() {
             modifier = Modifier
                 .fillMaxWidth()
                 .background(headerBg)
-                .padding(vertical = 4.dp), // Height reduced
+                .padding(vertical = 4.dp), 
             contentAlignment = Alignment.Center
         ) {
             Text(
@@ -578,7 +615,7 @@ fun ThisWeekCountdownCard() {
             modifier = Modifier
                 .fillMaxWidth()
                 .background(headerGradient)
-                .padding(horizontal = 12.dp, vertical = 6.dp), // Height reduced
+                .padding(horizontal = 12.dp, vertical = 6.dp), 
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
