@@ -10,8 +10,6 @@ import android.view.View
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.ui.AspectRatioFrameLayout
-import androidx.media3.ui.PlayerView
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -79,7 +77,13 @@ private val medalGold = Color(0xFFFACC15)
 private val medalBg = Color(0xFF02050E)
 
 @Composable
-private fun MedalVideo(video: String, modifier: Modifier = Modifier, animated: Boolean = true, variant: String = "black") {
+private fun MedalVideo(
+    video: String, 
+    modifier: Modifier = Modifier, 
+    animated: Boolean = true, 
+    variant: String = "black",
+    isColorless: Boolean = false // Detail page pe false rahega, baaki list me true
+) {
     val context = LocalContext.current
     val player = remember(video) {
         ExoPlayer.Builder(context).build().apply {
@@ -93,43 +97,50 @@ private fun MedalVideo(video: String, modifier: Modifier = Modifier, animated: B
     DisposableEffect(player) {
         onDispose { player.release() }
     }
+    
+    // TextureView use kiya hai yaha jisse transparency mast chalti hai bina UI ko tode!
     AndroidView(
-        modifier = modifier.aspectRatio(1f),
+        modifier = modifier.aspectRatio(1f), // EKDAM SQUARE
         factory = { ctx ->
-            PlayerView(ctx).apply {
-                useController = false
-                resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM
-                setShutterBackgroundColor(AndroidColor.TRANSPARENT)
-                setBackgroundColor(AndroidColor.TRANSPARENT)
-                // Match the real Medal.tsx SVG chroma filters: remove black or green
-                // pixels from the medal video while preserving the square crop.
-                val matrix = if (variant == "green") {
-                    ColorMatrix(floatArrayOf(
+            android.view.TextureView(ctx).apply {
+                isOpaque = false // TRANSPARENT FIX: Black box nahi banega ExoPlayer ka
+                
+                // Tera exact TSX wala matrix Black/Green hatane ke liye
+                val baseValues = if (variant == "green") {
+                    floatArrayOf(
                         1f, 0f, 0f, 0f, 0f,
                         0f, 1f, 0f, 0f, 0f,
                         0f, 0f, 1f, 0f, 0f,
                         1.5f, -2.5f, 1.5f, 1f, 0f
-                    ))
+                    )
                 } else {
-                    ColorMatrix(floatArrayOf(
+                    floatArrayOf(
                         1f, 0f, 0f, 0f, 0f,
                         0f, 1f, 0f, 0f, 0f,
                         0f, 0f, 1f, 0f, 0f,
                         4f, 4f, 4f, 0f, -204f
-                    ))
+                    )
                 }
-                val colorFilter = ColorMatrixColorFilter(matrix)
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    setRenderEffect(android.graphics.RenderEffect.createColorFilterEffect(colorFilter))
+
+                val chromaMatrix = android.graphics.ColorMatrix(baseValues)
+                val finalColorFilter = if (isColorless) {
+                    val grayMatrix = android.graphics.ColorMatrix()
+                    grayMatrix.setSaturation(0f)
+                    grayMatrix.setConcat(grayMatrix, chromaMatrix)
+                    ColorMatrixColorFilter(grayMatrix)
                 } else {
-                    setLayerType(View.LAYER_TYPE_HARDWARE, Paint().apply { this.colorFilter = colorFilter })
+                    ColorMatrixColorFilter(chromaMatrix)
                 }
-                keepScreenOn = false
-                this.player = player
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    setRenderEffect(android.graphics.RenderEffect.createColorFilterEffect(finalColorFilter))
+                } else {
+                    setLayerType(View.LAYER_TYPE_HARDWARE, Paint().apply { this.colorFilter = finalColorFilter })
+                }
             }
         },
         update = { view ->
-            view.player = player
+            player.setVideoTextureView(view)
             player.playWhenReady = animated
             if (animated && player.playbackState == Player.STATE_IDLE) player.prepare()
             if (!animated && player.playbackState == Player.STATE_READY) player.pause()
@@ -167,7 +178,7 @@ fun Medal(onBack: () -> Unit = {}, medals: List<HurryMedal> = emptyList()) {
                 )
         )
         Column(Modifier.fillMaxSize()) {
-            Column(Modifier.fillMaxWidth().padding(top = 22.dp, start = 12.dp, end = 12.dp)) {
+            Column(Modifier.fillMaxWidth().statusBarsPadding().padding(top = 19.dp, start = 12.dp, end = 12.dp)) {
                 Box(Modifier.fillMaxWidth().height(42.dp), contentAlignment = Alignment.Center) {
                     IconButton(onClick = onBack, modifier = Modifier.align(Alignment.CenterStart)) {
                         Icon(Icons.Default.ArrowBack, "Back", tint = Color.White)
@@ -228,7 +239,13 @@ fun Medal(onBack: () -> Unit = {}, medals: List<HurryMedal> = emptyList()) {
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
-                            MedalVideo(medal.video, Modifier.size((medal.size.coerceAtMost(250) / 2).dp).aspectRatio(1f), animated = false, variant = medal.variant)
+                            MedalVideo(
+                                video = medal.video, 
+                                modifier = Modifier.size((medal.size.coerceAtMost(250) / 2).dp).aspectRatio(1f), 
+                                animated = false, 
+                                variant = medal.variant,
+                                isColorless = true // List item me grayscale rahega
+                            )
                         }
                         Text(medal.name, color = Color(0xFFE4DFED), fontSize = 13.sp, maxLines = 1, textAlign = TextAlign.Center)
                     }
@@ -236,17 +253,26 @@ fun Medal(onBack: () -> Unit = {}, medals: List<HurryMedal> = emptyList()) {
             }
         }
 
+        // NEW PAGE (Detail Page on click)
         if (selected != null && display != null) {
             Column(Modifier.fillMaxSize().background(Color.Black).verticalScroll(rememberScrollState())) {
-                Box(Modifier.fillMaxWidth().height(220.dp)) {
-                    AsyncImage(model = medalAsset("IMG_20260924_132006.png"), contentDescription = null, modifier = Modifier.fillMaxSize())
-                    IconButton(onClick = { selected = null; activeTier = 0 }, modifier = Modifier.align(Alignment.TopStart).padding(top = 22.dp)) {
+                Box(Modifier.fillMaxWidth().height(260.dp)) { // Height set jisse square kata na lagay
+                    AsyncImage(model = medalAsset("IMG_20260924_132006.png"), contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                    IconButton(onClick = { selected = null; activeTier = 0 }, modifier = Modifier.statusBarsPadding().align(Alignment.TopStart).padding(top = 22.dp)) {
                         Icon(Icons.Default.ArrowBack, "Back", tint = Color.White)
                     }
-                    IconButton(onClick = { overlay = "Rules" }, modifier = Modifier.align(Alignment.TopEnd).padding(top = 22.dp)) {
+                    IconButton(onClick = { overlay = "Rules" }, modifier = Modifier.statusBarsPadding().align(Alignment.TopEnd).padding(top = 22.dp)) {
                         Icon(Icons.Default.HelpOutline, "Rules", tint = Color.White)
                     }
-                    MedalVideo(display.video, Modifier.align(Alignment.Center).size(280.dp).aspectRatio(1f), animated = true, variant = display.variant)
+                    
+                    // Naye Page Ka Video (Square + Black/Green Chroma Removed + NO Grayscale)
+                    MedalVideo(
+                        video = display.video, 
+                        modifier = Modifier.align(Alignment.BottomCenter).size(280.dp).aspectRatio(1f), 
+                        animated = true, 
+                        variant = display.variant,
+                        isColorless = false // False set hai taki sirf black/green hate, color original rahe!
+                    )
                 }
                 Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     AsyncImage(model = medalAsset("IMG_20260924_132112.png"), contentDescription = "Medal frame", modifier = Modifier.size(288.dp))
