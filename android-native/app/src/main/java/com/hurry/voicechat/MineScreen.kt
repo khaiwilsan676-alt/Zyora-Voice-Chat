@@ -18,7 +18,7 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 
 @Composable
-fun MineNativePage(onBack: () -> Unit, createdRoom: HurryRoom? = null, onCreateRoom: () -> Unit = {}, onSearch: () -> Unit = {}) {
+fun MineNativePage(onBack: () -> Unit, createdRoom: HurryRoom? = null, onCreateRoom: () -> Unit = {}, onSearch: () -> Unit = {}, languageCode: String = "en") {
     var recent by remember { mutableStateOf(false) }
     val card = Modifier.fillMaxWidth().height(112.dp)
     
@@ -55,7 +55,7 @@ fun MineNativePage(onBack: () -> Unit, createdRoom: HurryRoom? = null, onCreateR
                                 .padding(horizontal = 4.dp, vertical = 3.dp)
                         ) {
                             Text(
-                                "Popular",
+                                nativeText(languageCode, "popular"),
                                 fontSize = 21.sp,
                                 fontWeight = FontWeight.Normal,
                                 color = HurryMuted
@@ -68,7 +68,7 @@ fun MineNativePage(onBack: () -> Unit, createdRoom: HurryRoom? = null, onCreateR
                                 .padding(horizontal = 4.dp, vertical = 3.dp)
                         ) {
                             Text(
-                                "Mine",
+                                nativeText(languageCode, "mine"),
                                 fontSize = 21.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = HurryText
@@ -115,8 +115,8 @@ fun MineNativePage(onBack: () -> Unit, createdRoom: HurryRoom? = null, onCreateR
                     }
                     Spacer(Modifier.width(16.dp))
                     Column {
-                        Text(createdRoom?.name ?: "Embark Your Zyora Journey!", color=Color.White, fontSize=16.sp, maxLines=1, softWrap=false)
-                        Text(if (createdRoom == null) "Tap to create your room" else "Tap to enter your room", color=Color.White.copy(alpha=.8f), fontSize=14.sp)
+                        Text(createdRoom?.name ?: nativeText(languageCode, "create_room"), color=Color.White, fontSize=16.sp, maxLines=1, softWrap=false)
+                        Text(nativeText(languageCode, if (createdRoom == null) "tap_create" else "tap_enter"), color=Color.White.copy(alpha=.8f), fontSize=14.sp)
                     }
                 }
             }
@@ -134,7 +134,7 @@ fun MineNativePage(onBack: () -> Unit, createdRoom: HurryRoom? = null, onCreateR
         item {
             Column(Modifier.fillMaxWidth().padding(top=24.dp), horizontalAlignment=Alignment.CenterHorizontally) {
                 AsyncImage("https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/file_0000000047308211a02722299d1fda2e.png", null, Modifier.size(50.dp))
-                Text("No data", color=Color(0xFF9CA3AF), fontSize=14.sp)
+                Text(nativeText(languageCode, "no_data"), color=Color(0xFF9CA3AF), fontSize=14.sp)
             }
         }
     }
