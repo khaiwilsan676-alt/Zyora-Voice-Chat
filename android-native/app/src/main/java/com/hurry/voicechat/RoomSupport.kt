@@ -43,7 +43,8 @@ private const val ROOM_SUPPORT_HEADER =
 fun RoomSupport(onBack: () -> Unit) {
     BackHandler(onBack = onBack)
     
-    val bgColor = Color(0xFF2563EB)
+    // Slightly darker overall background
+    val bgColor = Color(0xFF1D47A3)
     val scrollState = rememberScrollState()
 
     Box(
@@ -56,17 +57,17 @@ fun RoomSupport(onBack: () -> Unit) {
                 .fillMaxSize()
                 .verticalScroll(scrollState)
         ) {
-            // 1. Image with Bottom Fading Effect
+            // 1. Image with Bottom Fading Effect (Mixing only at the very bottom)
             AsyncImage(
                 model = ROOM_SUPPORT_HEADER,
                 contentDescription = null,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(280.dp)
+                    .height(300.dp) // Increased height to show properly
                     .drawWithCache {
                         val gradient = Brush.verticalGradient(
                             colors = listOf(Color.Transparent, bgColor),
-                            startY = size.height * 0.4f,
+                            startY = size.height * 0.8f, // Fades only at the bottom 20%
                             endY = size.height
                         )
                         onDrawWithContent {
@@ -77,12 +78,12 @@ fun RoomSupport(onBack: () -> Unit) {
                 contentScale = ContentScale.Crop
             )
 
-            // 2. Content Column Overlapping the faded section
+            // 2. Content Column Overlapping slightly
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .offset(y = (-60).dp)
-                    .padding(horizontal = 8.dp)
+                    .offset(y = (-16).dp) // Moved down so the image is fully visible
+                    .padding(horizontal = 10.dp)
             ) {
                 RoomStatsTable()
                 
@@ -128,16 +129,18 @@ fun RoomSupport(onBack: () -> Unit) {
 fun RoomStatsTable() {
     val borderColor = Color(0xFF388FC2)
     val headerBg = Brush.verticalGradient(listOf(Color(0xFFFFF0C5), Color(0xFFFFE0A0)))
-    val tableBg = Brush.verticalGradient(listOf(Color(0xFF17649B), Color(0xFF104B7A)))
+    // Solid uniform color for the whole table body
+    val tableBgSolid = Color(0xFF104B7A)
     val textColorLight = Color(0xFFE2EAF0)
     val titleColor = Color(0xFF155B91)
+    val mdCorner = RoundedCornerShape(12.dp)
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .border(2.dp, borderColor, RoundedCornerShape(16.dp))
-            .clip(RoundedCornerShape(16.dp))
-            .background(tableBg)
+            .border(2.dp, borderColor, mdCorner)
+            .clip(mdCorner)
+            .background(tableBgSolid)
     ) {
         Box(
             modifier = Modifier
@@ -219,13 +222,15 @@ fun RewardCountdownCard() {
 
     val borderGradient = Brush.linearGradient(listOf(Color(0xFF75D8FF), Color(0xFF268ED6)))
     val headerGradient = Brush.verticalGradient(listOf(Color(0xFFFFF0C9), Color(0xFFFFE2A3)))
-    val bodyGradient = Brush.verticalGradient(listOf(Color(0xFF1268B5), Color(0xFF064A91)))
+    // Solid uniform darker blue for the bottom text area
+    val bodyBgSolid = Color(0xFF0D4880)
+    val mdCorner = RoundedCornerShape(12.dp)
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .border(2.dp, borderGradient, RoundedCornerShape(16.dp))
-            .clip(RoundedCornerShape(16.dp))
+            .border(2.dp, borderGradient, mdCorner)
+            .clip(mdCorner)
     ) {
         Row(
             modifier = Modifier
@@ -260,7 +265,7 @@ fun RewardCountdownCard() {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(bodyGradient)
+                .background(bodyBgSolid)
                 .padding(16.dp)
         ) {
             Text(
@@ -280,9 +285,10 @@ fun RewardCountdownCard() {
 fun TargetRewardTable() {
     val borderColor = Color(0xFF388FC2)
     val headerBg = Brush.verticalGradient(listOf(Color(0xFFFFF0C5), Color(0xFFFFE0A0)))
-    val tableBg = Brush.verticalGradient(listOf(Color(0xFF17649B), Color(0xFF104B7A)))
+    val tableBgSolid = Color(0xFF104B7A)
     val textColorLight = Color(0xFFE2EAF0)
     val titleColor = Color(0xFF155B91)
+    val mdCorner = RoundedCornerShape(12.dp)
 
     val headerSize = 9.sp 
     val dataSize = 10.sp
@@ -290,9 +296,9 @@ fun TargetRewardTable() {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .border(2.dp, borderColor, RoundedCornerShape(16.dp))
-            .clip(RoundedCornerShape(16.dp))
-            .background(tableBg)
+            .border(2.dp, borderColor, mdCorner)
+            .clip(mdCorner)
+            .background(tableBgSolid)
     ) {
         Box(
             modifier = Modifier
@@ -381,13 +387,14 @@ fun ThisWeekCountdownCard() {
 
     val borderColor = Color(0xFF438CC1)
     val headerGradient = Brush.verticalGradient(listOf(Color(0xFFFFF0C9), Color(0xFFFFE2A0)))
-    val bodyGradient = Brush.verticalGradient(listOf(Color(0xFF1769AA), Color(0xFF0D5790)))
+    val bodyBgSolid = Color(0xFF0D4880) // Uniform darker background
+    val mdCorner = RoundedCornerShape(12.dp)
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .border(2.dp, borderColor, RoundedCornerShape(16.dp))
-            .clip(RoundedCornerShape(16.dp))
+            .border(2.dp, borderColor, mdCorner)
+            .clip(mdCorner)
     ) {
         Row(
             modifier = Modifier
@@ -424,7 +431,7 @@ fun ThisWeekCountdownCard() {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(bodyGradient)
+                .background(bodyBgSolid)
                 .padding(16.dp)
         ) {
             Text(
@@ -439,7 +446,7 @@ fun ThisWeekCountdownCard() {
     }
 }
 
-// --- Component 5: Rules Section ---
+// --- Component 5: Rules Section (No background card, just text) ---
 @Composable
 fun RulesSection() {
     val textColor = Color(0xFFEAF5FF)
@@ -448,13 +455,12 @@ fun RulesSection() {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color(0xFF0A2E1F), RoundedCornerShape(16.dp)) // Dark green background to match the original image styling
-            .padding(20.dp)
+            .padding(horizontal = 8.dp) // Removed background entirely as requested
     ) {
         Text(
             text = "Rules",
             color = highlightColor,
-            fontSize = 24.sp,
+            fontSize = 26.sp,
             fontWeight = FontWeight.Medium,
             modifier = Modifier.align(Alignment.CenterHorizontally),
             textAlign = TextAlign.Center
@@ -547,8 +553,6 @@ fun RulesSection() {
             fontSize = 14.sp,
             lineHeight = 20.sp
         )
-
-        // Point 7 explicitly omitted as requested.
         
         Spacer(modifier = Modifier.height(24.dp))
 
