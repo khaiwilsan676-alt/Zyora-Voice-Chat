@@ -498,7 +498,7 @@ fun HomeScreen(
                 contentDescription = "Right Corner Decoration",
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(end = 0.dp, bottom = 45.dp) // <- End 0 kiya (right edge) aur bottom ko thora adjust kiya niche 
+                    .padding(end = 12.dp, bottom = 38.dp) // <- End 0 kiya (right edge) aur bottom ko thora adjust kiya niche 
                     .size(70.dp)
                     .clickable { },
                 contentScale = ContentScale.Fit
