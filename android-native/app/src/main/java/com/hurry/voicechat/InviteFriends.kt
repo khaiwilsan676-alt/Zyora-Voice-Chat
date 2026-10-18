@@ -309,7 +309,7 @@ fun InviteFriends(onBack: (() -> Unit)? = null, onClose: (() -> Unit)? = null) {
 
         // 1. Top Icons (Back & Help) - Top safe area thoda decrease kiya (vertical = 16.dp ki jagah top = 8.dp)
         Row(
-            Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 8.dp, top = 8.dp).align(Alignment.TopCenter),
+            Modifier.fillMaxWidth().statusBarsPadding().padding(start = 8.dp, end = 8.dp, top = 8.dp).align(Alignment.TopCenter),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             IconButton(onClick = { onBack?.invoke() ?: onClose?.invoke() }) {
