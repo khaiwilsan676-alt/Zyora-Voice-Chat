@@ -75,14 +75,7 @@ fun RoomSupport(onBack: () -> Unit) {
                     ) { onBack() }
             )
             
-            // Ab tab nahi hai, sirf title hai
-            Text(
-                text = "Room Support",
-                color = Color.White,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.align(Alignment.Center)
-            )
+            // "Room Support" heading yahan se hata di hai bss
         }
     }
 }
