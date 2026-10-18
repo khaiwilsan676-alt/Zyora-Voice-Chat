@@ -80,7 +80,7 @@ fun LanguagePage(
                 }
             }
             Text(
-                nativeText(initial, "language"),
+                nativeText(pendingCode, "language"),
                 modifier = Modifier.weight(1f),
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
@@ -98,7 +98,7 @@ fun LanguagePage(
                     .padding(horizontal = 8.dp, vertical = 8.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Text(nativeText(initial, "save"), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF2563EB))
+                Text(nativeText(pendingCode, "save"), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF2563EB))
             }
         }
 
