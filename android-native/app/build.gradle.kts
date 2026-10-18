@@ -24,8 +24,16 @@ android {
         .get()
         .replace("\\", "\\\\")
         .replace("\"", "\\\"")
+    val firebaseApiKey = providers.gradleProperty("FIREBASE_API_KEY")
+        .orElse(providers.environmentVariable("FIREBASE_API_KEY"))
+        .orElse(providers.environmentVariable("NEXT_PUBLIC_FIREBASE_API_KEY"))
+        .orElse("")
+        .get()
+        .replace("\\", "\\\\")
+        .replace("\"", "\\\"")
     defaultConfig {
         buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")
+        buildConfigField("String", "FIREBASE_API_KEY", "\"$firebaseApiKey\"")
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
