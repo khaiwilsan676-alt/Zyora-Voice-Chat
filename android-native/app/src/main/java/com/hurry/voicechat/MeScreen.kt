@@ -27,7 +27,7 @@ private const val RAW_ME = "https://raw.githubusercontent.com/khaiwilsan676-alt/
 private data class MeMenu(val label: String, val asset: String)
 
 @Composable
-fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -> Unit = {}) {
+fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -> Unit = {}, languageCode: String = "en") {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("hurry_user", Context.MODE_PRIVATE) }
     val uid = prefs.getString("uid", "") ?: ""
@@ -81,13 +81,13 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
 
                 Spacer(Modifier.height(18.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                    Stat("0", "Friends")
+                    Stat("0", nativeText(languageCode, "friends"))
                     DividerV()
-                    Stat("1", "Followers")
+                    Stat("1", nativeText(languageCode, "followers"))
                     DividerV()
-                    Stat("0", "Following")
+                    Stat("0", nativeText(languageCode, "following"))
                     DividerV()
-                    Stat("1", "Visitors")
+                    Stat("1", nativeText(languageCode, "visitors"))
                 }
             }
         }
@@ -132,7 +132,7 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
                             }
                         )
                         Spacer(Modifier.width(4.dp))
-                        Text(label, Modifier.weight(1f), fontSize = 15.sp, fontWeight = FontWeight.Normal, color = Color(0xFF171717))
+                        Text(nativeText(languageCode, when (label) { "Invite Friends" -> "invite"; "Family" -> "family"; "Level" -> "level"; "Medal" -> "medal"; "Store" -> "store"; "Bag" -> "bag"; "Seller Center" -> "seller"; "Language Setting" -> "language"; "Settings" -> "settings"; "Customer Service" -> "support"; "Help & Feedback" -> "help"; else -> label }), Modifier.weight(1f), fontSize = 15.sp, fontWeight = FontWeight.Normal, color = Color(0xFF171717))
                         Text("›", fontSize = 25.sp, color = Color(0xFFAAAAAA))
                     }
                 }
