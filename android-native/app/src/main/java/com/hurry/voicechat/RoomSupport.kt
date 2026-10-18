@@ -3,13 +3,19 @@ package com.hurry.voicechat
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessTime
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CardGiftcard
+import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -31,83 +37,271 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.util.Calendar
 import java.util.TimeZone
 
-private const val ROOM_SUPPORT_HEADER =
-    "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261018_123751-remove-back-icon-room-support-ranking-text-bss-cre.jpg"
+// GitHub Raw URLs for your images
+private const val ROOM_SUPPORT_HEADER = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261018_165235.png"
+private const val RANK_IMG_1 = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261018_164620.png"
+private const val RANK_IMG_2 = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261018_164609.png"
+private const val RANK_IMG_3 = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261018_164558.png"
+private const val BOTTOM_FIXED_IMG = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_000000009adc8211ab89731594a82623.png"
 
 @Composable
 fun RoomSupport(onBack: () -> Unit) {
     BackHandler(onBack = onBack)
     
-    // Overall background made significantly darker
-    val bgColor = Color(0xFF0C2459)
-    val scrollState = rememberScrollState()
+    val bgColor = Color(0xFF04102A) 
+    val pagerState = rememberPagerState(pageCount = { 2 })
+    val coroutineScope = rememberCoroutineScope()
 
-    Box(
+    Column(
         modifier = Modifier
             .fillMaxSize()
             .background(bgColor)
     ) {
+        // --- Top Bar ---
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp)
+        ) {
+            // Left Arrow Back Icon
+            Icon(
+                imageVector = Icons.Default.ArrowBack,
+                contentDescription = "Back",
+                tint = Color.White,
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .clickable { onBack() }
+            )
+            
+            // Middle Tabs (Room Support & Ranking)
+            Row(
+                modifier = Modifier.align(Alignment.Center),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Room Support",
+                    color = if (pagerState.currentPage == 0) Color.White else Color.Gray,
+                    fontSize = 18.sp,
+                    fontWeight = if (pagerState.currentPage == 0) FontWeight.Bold else FontWeight.Normal,
+                    modifier = Modifier
+                        .clickable { coroutineScope.launch { pagerState.animateScrollToPage(0) } }
+                        .padding(horizontal = 12.dp)
+                )
+                Text(
+                    text = "Ranking",
+                    color = if (pagerState.currentPage == 1) Color.White else Color.Gray,
+                    fontSize = 18.sp,
+                    fontWeight = if (pagerState.currentPage == 1) FontWeight.Bold else FontWeight.Normal,
+                    modifier = Modifier
+                        .clickable { coroutineScope.launch { pagerState.animateScrollToPage(1) } }
+                        .padding(horizontal = 12.dp)
+                )
+            }
+        }
+
+        // --- Pager for Sliding ---
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.fillMaxSize()
+        ) { page ->
+            if (page == 0) {
+                RoomSupportContent(bgColor)
+            } else {
+                RankingContent(bgColor)
+            }
+        }
+    }
+}
+
+// ==========================================
+// 1. ROOM SUPPORT PAGE (Purana UI as it is)
+// ==========================================
+@Composable
+fun RoomSupportContent(bgColor: Color) {
+    val scrollState = rememberScrollState()
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(scrollState)
+    ) {
+        // Top Image with Bottom Fading Effect
+        AsyncImage(
+            model = ROOM_SUPPORT_HEADER,
+            contentDescription = null,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(250.dp) // Adjusted height slightly so top bar fits well
+                .drawWithCache {
+                    val gradient = Brush.verticalGradient(
+                        colors = listOf(Color.Transparent, bgColor),
+                        startY = size.height * 0.98f, 
+                        endY = size.height
+                    )
+                    onDrawWithContent {
+                        drawContent()
+                        drawRect(gradient, blendMode = BlendMode.SrcOver)
+                    }
+                },
+            contentScale = ContentScale.Crop
+        )
+
+        // Content Column
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .offset(y = (-2).dp) 
+                .padding(horizontal = 10.dp)
+        ) {
+            RoomStatsTable()
+            Spacer(modifier = Modifier.height(16.dp))
+            RewardCountdownCard()
+            Spacer(modifier = Modifier.height(16.dp))
+            TargetRewardTable()
+            Spacer(modifier = Modifier.height(16.dp))
+            ThisWeekCountdownCard()
+            Spacer(modifier = Modifier.height(24.dp))
+            RulesSection()
+        }
+        Spacer(modifier = Modifier.height(32.dp))
+    }
+}
+
+// ==========================================
+// 2. RANKING PAGE (Naya Page)
+// ==========================================
+@Composable
+fun RankingContent(bgColor: Color) {
+    val scrollState = rememberScrollState()
+    val tableColor = Color(0xFF104B7A)
+    var selectedTimeTab by remember { mutableIntStateOf(0) } // 0=Daily, 1=Weekly, 2=Monthly
+
+    Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(scrollState)
         ) {
-            // 1. Image with Bottom Fading Effect
-            AsyncImage(
-                model = ROOM_SUPPORT_HEADER,
-                contentDescription = null,
+            // 1. Top Patla Full Round Card with Speaker
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(300.dp)
-                    .drawWithCache {
-                        val gradient = Brush.verticalGradient(
-                            colors = listOf(Color.Transparent, bgColor),
-                            startY = size.height * 0.8f,
-                            endY = size.height
-                        )
-                        onDrawWithContent {
-                            drawContent()
-                            drawRect(gradient, blendMode = BlendMode.SrcOver)
-                        }
-                    },
-                contentScale = ContentScale.Crop
-            )
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .background(tableColor, CircleShape)
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.VolumeUp,
+                    contentDescription = "Speaker",
+                    tint = Color(0xFF388FC2) // Blue color
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Rooms points = Room Coins + Room visitors*1000",
+                    color = Color(0xFFFFD700), // Yellow color
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
 
-            // 2. Content Column - Adjusted offset for just a slight push down instead of dropping completely
+            // 2. Daily, Weekly, Monthly Tabs (No faltu gap)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp, bottom = 16.dp)
+            ) {
+                val tabs = listOf("Daily", "Weekly", "Monthly")
+                tabs.forEachIndexed { index, title ->
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable { selectedTimeTab = index }
+                            .padding(vertical = 12.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = title,
+                            color = if (selectedTimeTab == index) Color.White else Color.Gray,
+                            fontSize = 16.sp,
+                            fontWeight = if (selectedTimeTab == index) FontWeight.Bold else FontWeight.Normal
+                        )
+                    }
+                }
+            }
+
+            // 3. Top 3 Images (Rank 1, 2, 3)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 10.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.Bottom
+            ) {
+                AsyncImage(model = RANK_IMG_2, contentDescription = "Rank 2", modifier = Modifier.weight(1f).height(120.dp), contentScale = ContentScale.Fit)
+                AsyncImage(model = RANK_IMG_1, contentDescription = "Rank 1", modifier = Modifier.weight(1f).height(140.dp), contentScale = ContentScale.Fit)
+                AsyncImage(model = RANK_IMG_3, contentDescription = "Rank 3", modifier = Modifier.weight(1f).height(120.dp), contentScale = ContentScale.Fit)
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // 4. List 4 to 50 Cards
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .offset(y = (-10).dp) // Halka sa niche kiya hai (-16.dp se badha kar -10.dp)
                     .padding(horizontal = 10.dp)
             ) {
-                RoomStatsTable()
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                RewardCountdownCard()
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                TargetRewardTable()
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                ThisWeekCountdownCard()
-                
-                Spacer(modifier = Modifier.height(24.dp))
-                
-                RulesSection()
+                for (i in 4..50) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp)
+                            .background(tableColor, RoundedCornerShape(12.dp))
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = i.toString(),
+                            color = Color.White,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.width(30.dp)
+                        )
+                        // Baki area user info ke liye space chora hai
+                        Text(
+                            text = "User / Room Name",
+                            color = Color.LightGray,
+                            fontSize = 14.sp
+                        )
+                    }
+                }
             }
             
-            Spacer(modifier = Modifier.height(32.dp))
+            // Bottom space for fixed image
+            Spacer(modifier = Modifier.height(100.dp)) 
         }
+
+        // 5. Bottom Fixed Image (Ekdam screen se chipka hua)
+        AsyncImage(
+            model = BOTTOM_FIXED_IMG,
+            contentDescription = "Bottom Art",
+            contentScale = ContentScale.FillWidth,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+        )
     }
 }
 
-// --- Component 1: Room Stats Table ---
+
+// ==========================================
+// Puraane Components (Untouched)
+// ==========================================
+
 @Composable
 fun RoomStatsTable() {
     val borderColor = Color(0xFF388FC2)
@@ -128,7 +322,7 @@ fun RoomStatsTable() {
             modifier = Modifier
                 .fillMaxWidth()
                 .background(headerBg)
-                .padding(vertical = 16.dp),
+                .padding(vertical = 10.dp), 
             contentAlignment = Alignment.Center
         ) {
             Text(
@@ -183,7 +377,6 @@ fun RoomStatsTable() {
     }
 }
 
-// --- Component 2: Reward Countdown Card ---
 @Composable
 fun RewardCountdownCard() {
     var timeLeftInSeconds by remember { mutableLongStateOf(calculateSecondsUntilNextWednesday()) }
@@ -202,7 +395,7 @@ fun RewardCountdownCard() {
 
     val timeString = "${days}Day ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}"
 
-    val borderGradient = Brush.linearGradient(listOf(Color(0xFF75D8FF), Color(0xFF268ED6)))
+    val borderColor = Color(0xFF388FC2) 
     val headerGradient = Brush.verticalGradient(listOf(Color(0xFFFFF0C9), Color(0xFFFFE2A3)))
     val bodyBgSolid = Color(0xFF0D4880)
     val mdCorner = RoundedCornerShape(12.dp)
@@ -212,14 +405,14 @@ fun RewardCountdownCard() {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .border(2.dp, borderGradient, mdCorner)
+            .border(2.dp, borderColor, mdCorner) 
             .clip(mdCorner)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(headerGradient)
-                .padding(horizontal = 12.dp, vertical = 16.dp),
+                .padding(horizontal = 12.dp, vertical = 10.dp), 
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
         ) {
@@ -263,7 +456,6 @@ fun RewardCountdownCard() {
     }
 }
 
-// --- Component 3: Target & Reward 18-Level Table ---
 @Composable
 fun TargetRewardTable() {
     val borderColor = Color(0xFF388FC2)
@@ -287,7 +479,7 @@ fun TargetRewardTable() {
             modifier = Modifier
                 .fillMaxWidth()
                 .background(headerBg)
-                .padding(vertical = 12.dp),
+                .padding(vertical = 8.dp), 
             contentAlignment = Alignment.Center
         ) {
             Text(
@@ -336,7 +528,7 @@ fun TargetRewardTable() {
                 ValueCell(data.visitors, Modifier.weight(1f), textColorLight, dataSize)
                 VerticalDivider(borderColor)
                 ValueCell(data.roomCoins, Modifier.weight(1f), textColorLight, dataSize)
-                VerticalDivider(borderColor) // Line restored here
+                VerticalDivider(borderColor) 
                 ValueCell(data.totalCoins, Modifier.weight(1f), textColorLight, dataSize, FontWeight.Bold)
                 VerticalDivider(borderColor)
                 ValueCell(data.ownerCoins, Modifier.weight(1f), textColorLight, dataSize)
@@ -350,7 +542,6 @@ fun TargetRewardTable() {
     }
 }
 
-// --- Component 4: This Week Countdown Card ---
 @Composable
 fun ThisWeekCountdownCard() {
     var timeLeftInSeconds by remember { mutableLongStateOf(7 * 24 * 60 * 60L) }
@@ -384,7 +575,7 @@ fun ThisWeekCountdownCard() {
             modifier = Modifier
                 .fillMaxWidth()
                 .background(headerGradient)
-                .padding(horizontal = 12.dp, vertical = 16.dp),
+                .padding(horizontal = 12.dp, vertical = 10.dp), 
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
@@ -430,7 +621,6 @@ fun ThisWeekCountdownCard() {
     }
 }
 
-// --- Component 5: Rules Section ---
 @Composable
 fun RulesSection() {
     val textColor = Color(0xFFEAF5FF)
@@ -444,107 +634,81 @@ fun RulesSection() {
         Text(
             text = "Rules",
             color = highlightColor,
-            fontSize = 26.sp,
+            fontSize = 20.sp, 
             fontWeight = FontWeight.Medium,
             modifier = Modifier.align(Alignment.CenterHorizontally),
             textAlign = TextAlign.Center
         )
         
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         Text(
             text = buildAnnotatedString {
                 append("1. Weekly Room Visitors and Weekly Room Coins are counted from ")
-                withStyle(SpanStyle(color = highlightColor)) {
-                    append("Monday 00:00 to Sunday 23:59 (UTC +5:30)")
-                }
+                withStyle(SpanStyle(color = highlightColor)) { append("Monday 00:00 to Sunday 23:59 (UTC +5:30)") }
                 append(".")
             },
-            color = textColor,
-            fontSize = 14.sp,
-            lineHeight = 20.sp
+            color = textColor, fontSize = 12.sp, lineHeight = 16.sp
         )
         
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         Text(
             text = buildAnnotatedString {
                 append("2. ")
-                withStyle(SpanStyle(color = highlightColor)) {
-                    append("Reaching the Room Level requires meeting both the Room Visitors and Room Coins targets simultaneously.")
-                }
+                withStyle(SpanStyle(color = highlightColor)) { append("Reaching the Room Level requires meeting both the Room Visitors and Room Coins targets simultaneously.") }
             },
-            color = textColor,
-            fontSize = 14.sp,
-            lineHeight = 20.sp
+            color = textColor, fontSize = 12.sp, lineHeight = 16.sp
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         Text(
             text = buildAnnotatedString {
                 append("3. Room Owners must fill in Room Partner information ")
-                withStyle(SpanStyle(color = highlightColor)) {
-                    append("from Monday 00:00 to Tuesday 24:00 (UTC +5:30)")
-                }
+                withStyle(SpanStyle(color = highlightColor)) { append("from Monday 00:00 to Tuesday 24:00 (UTC +5:30)") }
                 append("; Otherwise, the reward will be expired.")
             },
-            color = textColor,
-            fontSize = 14.sp,
-            lineHeight = 20.sp
+            color = textColor, fontSize = 12.sp, lineHeight = 16.sp
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         Text(
             text = buildAnnotatedString {
                 append("4. ")
-                withStyle(SpanStyle(color = highlightColor)) {
-                    append("Rewards will be sent every Wednesday.")
-                }
+                withStyle(SpanStyle(color = highlightColor)) { append("Rewards will be sent every Wednesday.") }
             },
-            color = textColor,
-            fontSize = 14.sp,
-            lineHeight = 20.sp
+            color = textColor, fontSize = 12.sp, lineHeight = 16.sp
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         Text(
             text = buildAnnotatedString {
                 append("5. ")
-                withStyle(SpanStyle(color = highlightColor)) {
-                    append("Each user can only receive 1 reward per week. ")
-                }
+                withStyle(SpanStyle(color = highlightColor)) { append("Each user can only receive 1 reward per week. ") }
                 append("The reward will be sent based on the highest target reached by the user, whether it is as an Owner or a Partner. For example, if the user is both the Owner of their room and a Partner in other rooms, or a Partner in multiple rooms simultaneously, the reward with the most coins will be sent.")
             },
-            color = textColor,
-            fontSize = 14.sp,
-            lineHeight = 20.sp
+            color = textColor, fontSize = 12.sp, lineHeight = 16.sp
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         Text(
             text = "6. Cheating and violations are prohibited. Once discovered, all rewards will be cancelled.",
-            color = textColor,
-            fontSize = 14.sp,
-            lineHeight = 20.sp
+            color = textColor, fontSize = 12.sp, lineHeight = 16.sp
         )
         
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         Text(
             text = "Regard, Zyora Team",
-            color = textColor,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.fillMaxWidth(),
-            textAlign = TextAlign.End
+            color = textColor, fontSize = 12.sp, fontWeight = FontWeight.Bold,
+            modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.End
         )
     }
 }
-
 
 // --- Helper Functions and Data Classes ---
 
@@ -562,14 +726,7 @@ private fun HeaderCell(
             .padding(vertical = 8.dp, horizontal = 1.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = text, 
-            color = color, 
-            fontSize = fontSize, 
-            textAlign = TextAlign.Center, 
-            lineHeight = (fontSize.value + 2).sp,
-            fontWeight = fontWeight
-        )
+        Text(text = text, color = color, fontSize = fontSize, textAlign = TextAlign.Center, lineHeight = (fontSize.value + 2).sp, fontWeight = fontWeight)
     }
 }
 
@@ -587,13 +744,7 @@ private fun ValueCell(
             .padding(vertical = 10.dp, horizontal = 1.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = text, 
-            color = color, 
-            fontSize = fontSize, 
-            textAlign = TextAlign.Center,
-            fontWeight = fontWeight
-        )
+        Text(text = text, color = color, fontSize = fontSize, textAlign = TextAlign.Center, fontWeight = fontWeight)
     }
 }
 
@@ -652,3 +803,4 @@ fun getTargetRewardData() = listOf(
     TargetRewardRow("17", "≥3,000", "≥7.65B", "738.14M", "402.2M", "30.54M", "11"),
     TargetRewardRow("18", "≥3,500", "≥10.35B", "983.14M", "521.14M", "38.5M", "12")
 )
+
