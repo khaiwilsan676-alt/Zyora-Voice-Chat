@@ -6,17 +6,13 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CardGiftcard
-import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -25,7 +21,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -34,24 +29,16 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import java.util.Calendar
 import java.util.TimeZone
 
 // GitHub Raw URLs for your images
 private const val ROOM_SUPPORT_HEADER = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261018_165235.png"
-private const val BOTTOM_FIXED_IMG = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_000000009adc8211ab89731594a82623.png"
-
-// Top 3 Medals Images
-private const val MEDAL_1 = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261018_212036.png"
-private const val MEDAL_2 = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261018_212013.png"
-private const val MEDAL_3 = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261018_212057.png"
 
 @Composable
 fun RoomSupport(onBack: () -> Unit) {
@@ -59,25 +46,17 @@ fun RoomSupport(onBack: () -> Unit) {
     
     // Light blue color
     val bgColor = Color(0xFF0F265C) 
-    val pagerState = rememberPagerState(pageCount = { 2 })
-    val coroutineScope = rememberCoroutineScope()
 
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(bgColor)
     ) {
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier.fillMaxSize()
-        ) { page ->
-            if (page == 0) {
-                RoomSupportContent(bgColor)
-            } else {
-                RankingContent(bgColor)
-            }
-        }
+        
+        // Sirf Room Support ka content call kiya hai ab
+        RoomSupportContent(bgColor)
 
+        // Top Bar
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -96,35 +75,14 @@ fun RoomSupport(onBack: () -> Unit) {
                     ) { onBack() }
             )
             
-            Row(
-                modifier = Modifier.align(Alignment.Center),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Room Support",
-                    color = if (pagerState.currentPage == 0) Color.White else Color.Gray,
-                    fontSize = 18.sp,
-                    fontWeight = if (pagerState.currentPage == 0) FontWeight.Bold else FontWeight.Normal,
-                    modifier = Modifier
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null // Grey effect hta diya
-                        ) { coroutineScope.launch { pagerState.animateScrollToPage(0) } }
-                        .padding(horizontal = 12.dp)
-                )
-                Text(
-                    text = "Ranking",
-                    color = if (pagerState.currentPage == 1) Color.White else Color.Gray,
-                    fontSize = 18.sp,
-                    fontWeight = if (pagerState.currentPage == 1) FontWeight.Bold else FontWeight.Normal,
-                    modifier = Modifier
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null // Grey effect hta diya
-                        ) { coroutineScope.launch { pagerState.animateScrollToPage(1) } }
-                        .padding(horizontal = 12.dp)
-                )
-            }
+            // Ab tab nahi hai, sirf title hai
+            Text(
+                text = "Room Support",
+                color = Color.White,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.align(Alignment.Center)
+            )
         }
     }
 }
@@ -163,7 +121,7 @@ fun RoomSupportContent(bgColor: Color) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .offset(y = (-30).dp) // <-- Yahan -30.dp kar diya bhai
+                .offset(y = (-30).dp) 
                 .padding(horizontal = 10.dp)
         ) {
             RoomStatsTable()
@@ -181,172 +139,7 @@ fun RoomSupportContent(bgColor: Color) {
 }
 
 // ==========================================
-// 2. RANKING PAGE
-// ==========================================
-@Composable
-fun RankingContent(bgColor: Color) {
-    val scrollState = rememberScrollState()
-    val tableColor = Color(0xFF104B7A)
-    var selectedTimeTab by remember { mutableIntStateOf(0) }
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(bgColor) 
-    ) {
-        Column(
-            modifier = Modifier.fillMaxSize() 
-        ) {
-            Spacer(modifier = Modifier.statusBarsPadding().height(60.dp))
-
-            // 1. Top Patla Full Round Card with Speaker (FIXED)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp)
-                    .background(tableColor, CircleShape)
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = Icons.Default.VolumeUp,
-                    contentDescription = "Speaker",
-                    tint = Color(0xFF388FC2),
-                    modifier = Modifier.size(18.dp) 
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = "Rooms points = Room Coins + Room visitors*1000",
-                    color = Color(0xFFFFD700),
-                    fontSize = 11.sp, 
-                    fontWeight = FontWeight.Medium,
-                    maxLines = 1, 
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-
-            // 2. Daily, Weekly, Monthly Tabs (FIXED)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 4.dp, bottom = 4.dp) // <-- Gap decrease kar diya yahan
-            ) {
-                val tabs = listOf("Daily", "Weekly", "Monthly")
-                tabs.forEachIndexed { index, title ->
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null // GREY EFFECT HATA DIYA
-                            ) { selectedTimeTab = index }
-                            .padding(vertical = 12.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = title,
-                            color = if (selectedTimeTab == index) Color.White else Color.Gray,
-                            fontSize = 16.sp,
-                            fontWeight = if (selectedTimeTab == index) FontWeight.Bold else FontWeight.Normal
-                        )
-                    }
-                }
-            }
-            
-            // --- YAHAN SE SCROLLABLE AREA START (1 TO 50) ---
-            
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f) 
-                    .verticalScroll(scrollState) 
-            ) {
-                
-                // 4. List 1 to 50 Cards
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 10.dp) 
-                ) {
-                    for (i in 1..50) { // <-- Ab list seedha 1 se 50 chal rahi hai
-                        
-                        // Top 3 ke liye colors
-                        val cardBgColor = when (i) {
-                            1 -> Color(0xFFD4AF37) // Golden
-                            2 -> Color(0xFFC0C0C0) // Silver
-                            3 -> Color(0xFF8B4513) // Brown
-                            else -> tableColor
-                        }
-
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 4.dp) 
-                                .background(cardBgColor, RoundedCornerShape(6.dp)) 
-                                .padding(horizontal = 16.dp, vertical = 24.dp), // <-- Height ekdam thodi si increase ki (22dp se 24dp)
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            // Left side Rank / Image
-                            Box(
-                                modifier = Modifier.width(30.dp),
-                                contentAlignment = Alignment.CenterStart
-                            ) {
-                                when (i) {
-                                    1 -> AsyncImage(
-                                            model = MEDAL_1,
-                                            contentDescription = "Rank 1",
-                                            modifier = Modifier.size(24.dp)
-                                         )
-                                    2 -> AsyncImage(
-                                            model = MEDAL_2,
-                                            contentDescription = "Rank 2",
-                                            modifier = Modifier.size(24.dp)
-                                         )
-                                    3 -> AsyncImage(
-                                            model = MEDAL_3,
-                                            contentDescription = "Rank 3",
-                                            modifier = Modifier.size(24.dp)
-                                         )
-                                    else -> Text(
-                                        text = i.toString(),
-                                        color = Color.White,
-                                        fontSize = 16.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                            }
-                            
-                            Spacer(modifier = Modifier.width(8.dp))
-                            
-                            Text(
-                                text = "User / Room Name",
-                                color = if (i <= 3) Color.White else Color.LightGray, // Top 3 me thoda clear dikhe isliye white rakha
-                                fontSize = 14.sp
-                            )
-                        }
-                    }
-                }
-                
-                Spacer(modifier = Modifier.height(130.dp)) 
-            }
-        }
-
-        // 5. Bottom Fixed Image 
-        AsyncImage(
-            model = BOTTOM_FIXED_IMG,
-            contentDescription = "Bottom Art",
-            contentScale = ContentScale.FillWidth,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .scale(1.1f) 
-                .offset(y = 35.dp) 
-        )
-    }
-}
-
-// ==========================================
-// Puraane Components (Untouched)
+// Components (Untouched)
 // ==========================================
 
 @Composable
