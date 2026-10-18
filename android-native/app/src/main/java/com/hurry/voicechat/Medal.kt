@@ -82,7 +82,7 @@ private fun MedalVideo(
     modifier: Modifier = Modifier, 
     animated: Boolean = true, 
     variant: String = "black",
-    isColorless: Boolean = false // Detail page pe false rahega, baaki list me true
+    isColorless: Boolean = false
 ) {
     val context = LocalContext.current
     val player = remember(video) {
@@ -98,14 +98,12 @@ private fun MedalVideo(
         onDispose { player.release() }
     }
     
-    // TextureView use kiya hai yaha jisse transparency mast chalti hai bina UI ko tode!
     AndroidView(
-        modifier = modifier.aspectRatio(1f), // EKDAM SQUARE
+        modifier = modifier.aspectRatio(1f),
         factory = { ctx ->
             android.view.TextureView(ctx).apply {
-                isOpaque = false // TRANSPARENT FIX: Black box nahi banega ExoPlayer ka
+                isOpaque = false
                 
-                // Tera exact TSX wala matrix Black/Green hatane ke liye
                 val baseValues = if (variant == "green") {
                     floatArrayOf(
                         1f, 0f, 0f, 0f, 0f,
@@ -244,7 +242,7 @@ fun Medal(onBack: () -> Unit = {}, medals: List<HurryMedal> = emptyList()) {
                                 modifier = Modifier.size((medal.size.coerceAtMost(250) / 2).dp).aspectRatio(1f), 
                                 animated = false, 
                                 variant = medal.variant,
-                                isColorless = true // List item me grayscale rahega
+                                isColorless = true
                             )
                         }
                         Text(medal.name, color = Color(0xFFE4DFED), fontSize = 13.sp, maxLines = 1, textAlign = TextAlign.Center)
@@ -253,10 +251,9 @@ fun Medal(onBack: () -> Unit = {}, medals: List<HurryMedal> = emptyList()) {
             }
         }
 
-        // NEW PAGE (Detail Page on click)
         if (selected != null && display != null) {
             Column(Modifier.fillMaxSize().background(Color.Black).verticalScroll(rememberScrollState())) {
-                Box(Modifier.fillMaxWidth().height(260.dp)) { // Height set jisse square kata na lagay
+                Box(Modifier.fillMaxWidth().height(260.dp)) {
                     AsyncImage(model = medalAsset("IMG_20260924_132006.png"), contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                     IconButton(onClick = { selected = null; activeTier = 0 }, modifier = Modifier.statusBarsPadding().align(Alignment.TopStart).padding(top = 22.dp)) {
                         Icon(Icons.Default.ArrowBack, "Back", tint = Color.White)
@@ -265,13 +262,12 @@ fun Medal(onBack: () -> Unit = {}, medals: List<HurryMedal> = emptyList()) {
                         Icon(Icons.Default.HelpOutline, "Rules", tint = Color.White)
                     }
                     
-                    // Naye Page Ka Video (Square + Black/Green Chroma Removed + NO Grayscale)
                     MedalVideo(
                         video = display.video, 
                         modifier = Modifier.align(Alignment.BottomCenter).size(280.dp).aspectRatio(1f), 
                         animated = true, 
                         variant = display.variant,
-                        isColorless = false // False set hai taki sirf black/green hate, color original rahe!
+                        isColorless = false
                     )
                 }
                 Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -307,15 +303,27 @@ fun Medal(onBack: () -> Unit = {}, medals: List<HurryMedal> = emptyList()) {
                 containerColor = medalPurple,
                 contentColor = Color.White,
                 scrimColor = Color.Black.copy(alpha=.6f),
+                shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp), // Curve kam kar diya
+                dragHandle = null, // Top line hata di
                 sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
             ) {
-                Column(Modifier.fillMaxWidth().fillMaxHeight(if (isRules) .92f else .72f).padding(horizontal = 16.dp)) {
+                // Height ko exactly 60% (60vh) par set kar diya
+                Column(Modifier.fillMaxWidth().fillMaxHeight(if (isRules) .6f else .6f).padding(horizontal = 16.dp)) {
                     Text(title, modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp), textAlign = TextAlign.Center, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Medium)
                     if (isRules) {
                         Column(Modifier.verticalScroll(rememberScrollState()).padding(bottom = 32.dp)) {
                             Text(
-                                "*Rules*\n\n*1. Important Information:*\n(a) Before participating, carefully review event rules, including task completion, rewards, and prohibited activities.\n(b) Participation confirms that you have read and agreed to the rules.\n\n*2. What are Medals?*\n(a) Medals are rewards for users who meet criteria by completing platform tasks or events.\n(b) Medals are divided into achievement and activity types, with three levels each.\n\n*3. How to earn medals?*\nEach medal has unique earning criteria detailed on its page. Medals are awarded after completing required objectives.\n\n*4. Medal Role:*\nMedals showcase achievements and can be displayed next to your avatar. Some provide benefits as you level up.\n\n*5. Medal Benefits Expiration:*\n(a) Medals generally do not expire; improperly obtained medals are invalid.\n(b) Some medals are time-limited.\n(c) A maximum of 10 medals can be displayed.\n(d) They appear in your info card and room chat.\n(e) Visit Me > Medals to check status.\n\n*6. Improving Medal Levels*\nMedal levels depend on task and activity status. Complete tasks and activities to upgrade.\n\n*7. Additional Notes:*\nCheating and abuse are prohibited. Medal descriptions may be updated. Medal rewards cannot be exchanged for cash or goods; unauthorized transactions are prohibited.",
+                                "Rules\n\n1. Important Information:\n(a) Before participating, carefully review event rules, including task completion, rewards, and prohibited activities.\n(b) Participation confirms that you have read and agreed to the rules.\n\n2. What are Medals?\n(a) Medals are rewards for users who meet criteria by completing platform tasks or events.\n(b) Medals are divided into achievement and activity types, with three levels each.\n\n3. How to earn medals?\nEach medal has unique earning criteria detailed on its page. Medals are awarded after completing required objectives.\n\n4. Medal Role:\nMedals showcase achievements and can be displayed next to your avatar. Some provide benefits as you level up.\n\n5. Medal Benefits Expiration:\n(a) Medals generally do not expire; improperly obtained medals are invalid.\n(b) Some medals are time-limited.\n(c) A maximum of 10 medals can be displayed.\n(d) They appear in your info card and room chat.\n(e) Visit Me > Medals to check status.\n\n6. Improving Medal Levels\nMedal levels depend on task and activity status. Complete tasks and activities to upgrade.\n\n7. Additional Notes:\nCheating and abuse are prohibited. Medal descriptions may be updated. Medal rewards cannot be exchanged for cash or goods; unauthorized transactions are prohibited.",
                                 color = Color.White, fontSize = 13.sp, lineHeight = 19.sp
+                            )
+                            // Right side me Zyora Team text add kar diya hai
+                            Text(
+                                "Regard, Zyora Team",
+                                color = Color.White,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+                                textAlign = TextAlign.End
                             )
                         }
                     } else {
