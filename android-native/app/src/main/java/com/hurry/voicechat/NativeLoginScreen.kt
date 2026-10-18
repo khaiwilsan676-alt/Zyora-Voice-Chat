@@ -49,7 +49,7 @@ import java.net.URL
 
 private const val HURRY_FIREBASE_API_KEY = "AIzaSyBNTxdeuqc3F7R4eyjmwdQqQ2YWv9-9yv4"
 private const val HURRY_API_BASE = "https://hurry-voice-chat-lz75.onrender.com"
-private const val HURRY_VIDEO = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/VID_20261017_130447.mp4"
+private const val HURRY_VIDEO = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/gemini_generated_video_99a3cc1a~3.mp4"
 private const val HURRY_LOGO = "file:///android_asset/logo.png"
 
 @OptIn(ExperimentalMaterial3Api::class)
