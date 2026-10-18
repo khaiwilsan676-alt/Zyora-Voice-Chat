@@ -1,21 +1,31 @@
 package com.hurry.voicechat
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessTime
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CardGiftcard
 import androidx.compose.material3.Divider
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -29,6 +39,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -47,6 +58,17 @@ fun RoomSupport(onBack: () -> Unit) {
     // Light blue color
     val bgColor = Color(0xFF0F265C) 
 
+    // Popup State
+    var popupMessage by remember { mutableStateOf<String?>(null) }
+
+    // Auto-hide popup timer
+    LaunchedEffect(popupMessage) {
+        if (popupMessage != null) {
+            delay(2000L) // Popup 2 second tak show hoga
+            popupMessage = null
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -54,7 +76,10 @@ fun RoomSupport(onBack: () -> Unit) {
     ) {
         
         // Sirf Room Support ka content call kiya hai ab
-        RoomSupportContent(bgColor)
+        RoomSupportContent(
+            bgColor = bgColor,
+            onShowPopup = { msg -> popupMessage = msg }
+        )
 
         // Top Bar
         Box(
@@ -77,6 +102,27 @@ fun RoomSupport(onBack: () -> Unit) {
             
             // "Room Support" heading yahan se hata di hai bss
         }
+
+        // Custom Pill Popup (Black/40%)
+        AnimatedVisibility(
+            visible = popupMessage != null,
+            modifier = Modifier.align(Alignment.Center),
+            enter = fadeIn(),
+            exit = fadeOut()
+        ) {
+            Box(
+                modifier = Modifier
+                    .background(Color.Black.copy(alpha = 0.4f), RoundedCornerShape(50)) // Pill shape
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                Text(
+                    text = popupMessage ?: "",
+                    color = Color.White,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        }
     }
 }
 
@@ -84,7 +130,7 @@ fun RoomSupport(onBack: () -> Unit) {
 // 1. ROOM SUPPORT PAGE 
 // ==========================================
 @Composable
-fun RoomSupportContent(bgColor: Color) {
+fun RoomSupportContent(bgColor: Color, onShowPopup: (String) -> Unit) {
     val scrollState = rememberScrollState()
 
     Column(
@@ -119,11 +165,11 @@ fun RoomSupportContent(bgColor: Color) {
         ) {
             RoomStatsTable()
             Spacer(modifier = Modifier.height(16.dp))
-            RewardCountdownCard()
+            ThisWeekCountdownCard(onShowPopup = onShowPopup)
             Spacer(modifier = Modifier.height(16.dp))
             TargetRewardTable()
             Spacer(modifier = Modifier.height(16.dp))
-            ThisWeekCountdownCard()
+            RewardCountdownCard()
             Spacer(modifier = Modifier.height(24.dp))
             RulesSection()
         }
@@ -132,7 +178,7 @@ fun RoomSupportContent(bgColor: Color) {
 }
 
 // ==========================================
-// Components (Untouched)
+// Components (Baki All Logics Untouched)
 // ==========================================
 
 @Composable
@@ -375,8 +421,12 @@ fun TargetRewardTable() {
     }
 }
 
+// User Data Class For Partner State
+data class PartnerData(val id: String, val name: String, val avatarUrl: String)
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ThisWeekCountdownCard() {
+fun ThisWeekCountdownCard(onShowPopup: (String) -> Unit) {
     var timeLeftInSeconds by remember { mutableLongStateOf(7 * 24 * 60 * 60L) }
 
     LaunchedEffect(Unit) {
@@ -397,6 +447,16 @@ fun ThisWeekCountdownCard() {
     val headerGradient = Brush.verticalGradient(listOf(Color(0xFFFFF0C9), Color(0xFFFFE2A0)))
     val bodyBgSolid = Color(0xFF0D4880)
     val mdCorner = RoundedCornerShape(12.dp)
+
+    // Check karega agar aaj Monday ya Tuesday hai
+    val canAddPartner = remember { isMondayOrTuesday() }
+
+    // Bottom Sheet aur Partners ka State Management
+    val partnersList = remember { mutableStateListOf<PartnerData?>(null, null, null) }
+    var showBottomSheet by remember { mutableStateOf(false) }
+    var currentSlotIndex by remember { mutableStateOf(-1) }
+    var searchQuery by remember { mutableStateOf("") }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     Column(
         modifier = Modifier
@@ -436,7 +496,7 @@ fun ThisWeekCountdownCard() {
             )
         }
 
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(bodyBgSolid)
@@ -450,6 +510,188 @@ fun ThisWeekCountdownCard() {
                 lineHeight = 18.sp,
                 modifier = Modifier.fillMaxWidth()
             )
+            
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // 3 Cards / Partners Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                partnersList.forEachIndexed { index, partner ->
+                    if (partner == null) {
+                        // Empty State (Plus icon dikhayega)
+                        Box(
+                            modifier = Modifier
+                                .size(60.dp)
+                                .clip(mdCorner)
+                                .background(borderColor)
+                                .clickable {
+                                    if (canAddPartner) {
+                                        currentSlotIndex = index
+                                        searchQuery = "" // Input clear kar diya pichla
+                                        showBottomSheet = true
+                                    } else {
+                                        onShowPopup("Fill-in Time not Yet")
+                                    }
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(26.dp)
+                                    .border(1.5.dp, Color.White, CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Add,
+                                    contentDescription = "Add Partner",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    } else {
+                        // Jab Partner Add ho jaye: Avatar or Niche uska naam
+                        Column(
+                            modifier = Modifier.width(60.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            AsyncImage(
+                                model = partner.avatarUrl,
+                                contentDescription = "Partner Avatar",
+                                modifier = Modifier
+                                    .size(45.dp)
+                                    .clip(CircleShape)
+                                    .border(1.5.dp, borderColor, CircleShape),
+                                contentScale = ContentScale.Crop
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = partner.name,
+                                color = Color.White,
+                                fontSize = 10.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Black Bottom Sheet Logic (40vh, slight curves)
+    if (showBottomSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showBottomSheet = false },
+            sheetState = sheetState,
+            containerColor = Color.Black,
+            dragHandle = null, 
+            shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp) // Thoda sa curve
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight(0.4f) // 40vh Height
+                    .padding(vertical = 16.dp)
+            ) {
+                // Top Header (Back icon + Title)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ArrowBack,
+                        contentDescription = "Back",
+                        tint = Color.White,
+                        modifier = Modifier.clickable { showBottomSheet = false }
+                    )
+                    Text(
+                        text = "Partners",
+                        color = Color.White,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Spacer(modifier = Modifier.width(24.dp)) // To keep title properly centered
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                // Input Bar for ID Search
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder = { Text("Search by ID...", color = Color.Gray) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        focusedBorderColor = Color.White,
+                        unfocusedBorderColor = Color.DarkGray,
+                        cursorColor = Color.White
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Search Result View (Niche left avtar, center naam, right blue Add)
+                if (searchQuery.isNotBlank()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Left Avatar (Mocked for now with an API)
+                        AsyncImage(
+                            model = "https://ui-avatars.com/api/?name=${searchQuery}&background=random",
+                            contentDescription = "Search Avatar",
+                            modifier = Modifier
+                                .size(42.dp)
+                                .clip(CircleShape)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        
+                        // Center Name
+                        Text(
+                            text = "User $searchQuery",
+                            color = Color.White,
+                            fontSize = 15.sp,
+                            modifier = Modifier.weight(1f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        
+                        // Right Side Blue Add Button
+                        Text(
+                            text = "Add",
+                            color = Color(0xFF388FC2), // Blue color 
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier
+                                .clickable {
+                                    // Add logic triggers ho gaya!
+                                    partnersList[currentSlotIndex] = PartnerData(
+                                        id = searchQuery,
+                                        name = "User $searchQuery",
+                                        avatarUrl = "https://ui-avatars.com/api/?name=${searchQuery}&background=random"
+                                    )
+                                    showBottomSheet = false // Sheet close kardo
+                                }
+                                .padding(8.dp) // Clicking area badhane k liye
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -609,6 +851,14 @@ fun calculateSecondsUntilNextWednesday(): Long {
     
     val diffMillis = nextWed.timeInMillis - now.timeInMillis
     return if (diffMillis > 0) diffMillis / 1000L else 7 * 24 * 3600L
+}
+
+// Function checking if today is Monday or Tuesday
+fun isMondayOrTuesday(): Boolean {
+    val timeZone = TimeZone.getTimeZone("Asia/Kolkata")
+    val now = Calendar.getInstance(timeZone)
+    val dayOfWeek = now.get(Calendar.DAY_OF_WEEK)
+    return dayOfWeek == Calendar.MONDAY || dayOfWeek == Calendar.TUESDAY
 }
 
 data class TargetRewardRow(
