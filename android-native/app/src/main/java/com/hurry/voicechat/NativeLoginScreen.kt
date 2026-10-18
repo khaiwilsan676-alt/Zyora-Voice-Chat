@@ -523,7 +523,10 @@ private fun syncHurryUser(user: JSONObject, context: android.content.Context) {
         save.outputStream.use { it.write(profile.toString().toByteArray(Charsets.UTF_8)) }
         saveCode = save.responseCode
         val saveStream = if (saveCode in 200..299) save.inputStream else save.errorStream
-        saveResponse = runCatching { saveStream?.bufferedReader()?.use { it.readText() }.orEmpty() }.getOrDefault("")
+        saveResponse = runCatching { saveStream?.bufferedReader()?.use { it.readText().orEmpty() }.orEmpty() }.getOrDefault("")
+    } catch (networkError: Throwable) {
+        saveCode = -1
+        saveResponse = networkError.message ?: "Network unavailable"
     } finally {
         save.disconnect()
     }
