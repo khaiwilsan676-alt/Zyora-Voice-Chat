@@ -159,7 +159,8 @@ fun HomeScreen(
     onSearch: () -> Unit = {},
     onCreateMineRoom: () -> Unit = {},
     mineCreatedRoom: HurryRoom? = null,
-    mineSelected: Boolean = false
+    mineSelected: Boolean = false,
+    languageCode: String = "en"
 ) {
     val mine = mineSelected
     val context = LocalContext.current
@@ -293,7 +294,7 @@ fun HomeScreen(
                             .padding(horizontal = 4.dp, vertical = 3.dp)
                     ) {
                         Text(
-                            "Popular",
+                            nativeText(languageCode, "popular"),
                             fontSize = 21.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFF1E1E1E)
@@ -306,7 +307,7 @@ fun HomeScreen(
                             .padding(horizontal = 4.dp, vertical = 3.dp)
                     ) {
                         Text(
-                            "Mine",
+                            nativeText(languageCode, "mine"),
                             fontSize = 21.sp,
                             fontWeight = FontWeight.Normal,
                             color = Color(0xFF6B7280)
