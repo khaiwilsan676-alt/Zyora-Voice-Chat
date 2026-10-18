@@ -29,12 +29,19 @@ private data class MeMenu(val label: String, val asset: String)
 @Composable
 fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -> Unit = {}, languageCode: String = "en") {
     val context = LocalContext.current
-    val prefs = remember { context.getSharedPreferences("hurry_user", Context.MODE_PRIVATE) }
+    // Native login stores the authenticated Firebase profile in hurry_auth.
+    // Read the same preferences so the signed-in account ID appears on the Me page.
+    val prefs = remember { context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE) }
     val uid = prefs.getString("uid", "") ?: ""
+    val email = prefs.getString("email", "") ?: ""
     val name = prefs.getString("name", "")?.takeIf { it.isNotBlank() && it.lowercase() !in listOf("guest","user","null","undefined") }
-        ?: "Hurry User"
-    val photo = prefs.getString("photo", "") ?: ""
-    val account = prefs.getString("accountNumber", "") ?: ""
+        ?: email.substringBefore("@").takeIf { it.isNotBlank() }
+        ?: "Zyora User"
+    val photo = prefs.getString("photo", null)?.takeIf { it.isNotBlank() }
+        ?: prefs.getString("image", "") ?: ""
+    val savedAccount = prefs.getString("accountNumber", null)?.takeIf { it.isNotBlank() }
+        ?: prefs.getString("accountId", "") ?: ""
+    val account = savedAccount.ifBlank { nativeMeAccountNumber(uid) }
     val phone = prefs.getString("phone", "") ?: ""
 
     val topItems = listOf(
@@ -72,7 +79,7 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
                         Spacer(Modifier.width(16.dp))
                         Column {
                             Text(name, fontSize = 24.sp, fontWeight = FontWeight.Normal, color = Color(0xFF111827))
-                            if (account.isNotBlank()) Text("ID: $account", fontSize = 12.sp, fontWeight = FontWeight.Normal, color = Color(0xFF374151))
+                            Text("ID: $account", fontSize = 12.sp, fontWeight = FontWeight.Normal, color = Color(0xFF374151))
                             if (phone.isNotBlank()) Text(phone, fontSize = 12.sp, fontWeight = FontWeight.Normal, color = Color(0xFF4B5563))
                         }
                     }
@@ -139,6 +146,21 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
             }
         }
     }
+}
+
+
+private fun nativeMeAccountNumber(uid: String): String {
+    if (uid.isBlank()) return ""
+    val special = when (uid) {
+        "HUSxSvQnabgU029dWYt1TUV04hd2" -> "100002"
+        "ADqW31RGBMaosOzy0HiqexKSD7h1" -> "100003"
+        "100002" -> "100002"
+        "100003" -> "100003"
+        else -> null
+    }
+    if (special != null) return special
+    if (uid in setOf("500001", "500002", "500003", "500004", "500005", "700001", "700002", "700003")) return uid
+    return (10000000L + kotlin.math.abs(uid.hashCode().toLong()) % 90000000L).toString()
 }
 
 @Composable private fun Stat(value: String, label: String) {
