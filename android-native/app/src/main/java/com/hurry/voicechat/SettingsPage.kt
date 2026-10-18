@@ -1,5 +1,7 @@
 package com.hurry.voicechat
 
+import android.content.Context
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -17,6 +19,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
 
 private val SettingsInk = Color(0xFF0F172A)
 private val SettingsBody = Color(0xFF1E293B)
@@ -28,7 +31,9 @@ fun SettingsPage(
     onBack: () -> Unit = {},
     onLogout: () -> Unit = {}
 ) {
-    var notificationsEnabled by remember { mutableStateOf(true) }
+    val settingsContext = LocalContext.current
+    val settingsPrefs = remember { settingsContext.getSharedPreferences("zyora_settings", Context.MODE_PRIVATE) }
+    var notificationsEnabled by remember { mutableStateOf(settingsPrefs.getBoolean("appNotifications", true)) }
     var showBlocklist by remember { mutableStateOf(false) }
     var showAbout by remember { mutableStateOf(false) }
 
@@ -128,14 +133,16 @@ fun SettingsPage(
         }
 
         Spacer(Modifier.height(16.dp))
-        Column(Modifier.fillMaxWidth().border(width = 0.5.dp, color = Color(0xFFE2E8F0))) {
+        Column(Modifier.fillMaxWidth().background(Color.White)) {
             Row(
-                Modifier.fillMaxWidth().clickable { notificationsEnabled = !notificationsEnabled }
-                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text("Message Notifications", Modifier.weight(1f), fontSize = 16.sp, color = SettingsBody)
-                SettingsToggle(checked = notificationsEnabled) { notificationsEnabled = it }
+                SettingsToggle(checked = notificationsEnabled) {
+                    notificationsEnabled = it
+                    settingsPrefs.edit().putBoolean("appNotifications", it).apply()
+                }
             }
             SettingsDividerLine()
             SettingsNavigationRow("Blocklist") { showBlocklist = true }
@@ -196,7 +203,7 @@ private fun SettingsNavigationRow(title: String, onClick: () -> Unit) {
 
 @Composable
 private fun SettingsDividerLine() {
-    Box(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp).height(1.dp).background(SettingsDivider))
+    Box(Modifier.fillMaxWidth().height(1.dp).background(SettingsDivider))
 }
 
 @Composable
