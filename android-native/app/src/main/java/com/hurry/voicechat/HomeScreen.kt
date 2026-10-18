@@ -243,7 +243,7 @@ fun HomeScreen(
     }
 
     if (mine) {
-        MineNativePage(onBack = onPopular, createdRoom = mineCreatedRoom, onCreateRoom = onCreateMineRoom, onSearch = onSearch)
+        MineNativePage(onBack = onPopular, createdRoom = mineCreatedRoom, onCreateRoom = onCreateMineRoom, onSearch = onSearch, languageCode = languageCode)
         return
     }
 
@@ -550,7 +550,7 @@ private fun CountryPillRow(
                 }
 
                 Text(
-                    text = pill.label,
+                    text = if (pill.value == "all") nativeText(languageCode, "all") else pill.label,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = if (active) Color.White else Color(0xFF374151),
