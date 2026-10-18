@@ -168,6 +168,8 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
     val context = LocalContext.current
     val roomCreateScope = rememberCoroutineScope()
     val authPrefs = remember { context.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE) }
+    val languagePrefs = remember { context.getSharedPreferences("zyora_settings", android.content.Context.MODE_PRIVATE) }
+    var languageCode by remember { mutableStateOf(languagePrefs.getString("appLanguage", "en") ?: "en") }
     val userId = remember { authPrefs.getString("uid", "").orEmpty() }
     var mineCreatedRoom by remember {
         mutableStateOf(
@@ -231,6 +233,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                     Box(Modifier.weight(1f)) {
                         when (tab) {
                             HurryTab.HOME -> HomeScreen(
+                                languageCode = languageCode,
                                 onRoom = { openedRoom = it },
                                 onMine = { homeMine = true },
                                 onPopular = { homeMine = false },
@@ -295,7 +298,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                                 openedChat = Triple(uid, name, image)
                             })
                             HurryTab.ME -> when (openedMePage) {
-                                null -> MeScreen(onOpen = { openedMePage = it }, onPublicProfile = { openedPublicProfile = it })
+                                null -> MeScreen(languageCode = languageCode,onOpen = { openedMePage = it }, onPublicProfile = { openedPublicProfile = it })
                                 "Coins" -> CoinsNativePage(onBack = { openedMePage = null })
                                 "Diamonds" -> DiamondsNativePage(onBack = { openedMePage = null })
                                 "Invite Friends" -> InviteFriends(onBack = { openedMePage = null })
@@ -306,8 +309,8 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                                 "Bag" -> StorePage(onBack = { openedMePage = null }, initialView = "bag")
                                 "Seller Center" -> SellerCenter(onBack = { openedMePage = null })
                                 "SVIP" -> Svip(onBack = { openedMePage = null })
-                                "Language Setting" -> LanguagePage(onBack = { openedMePage = null })
-                                "Settings" -> SettingsPage(onBack = { openedMePage = null }, onLogout = {
+                                "Language Setting" -> LanguagePage(selectedLanguage = languageCode, onLanguageSelected = { code -> languageCode = code; languagePrefs.edit().putString("appLanguage", code).apply() }, onBack = { openedMePage = null })
+                                "Settings" -> SettingsPage(languageCode = languageCode, onBack = { openedMePage = null }, onLogout = {
                                     authPrefs.edit()
                                         .remove("uid")
                                         .remove("name")
@@ -325,7 +328,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                         }
                     }
                     if (openedMePage == null) {
-                        HurryBottomNav(tab, onTab = { tab = it })
+                        HurryBottomNav(tab, languageCode = languageCode, onTab = { tab = it })
                     }
                 }
             }
