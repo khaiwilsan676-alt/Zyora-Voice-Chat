@@ -157,6 +157,7 @@ fun HomeScreen(
     onLeaderboard: (String) -> Unit = {},
     onInviteFriends: () -> Unit = {},
     onSearch: () -> Unit = {},
+    onRoomSupport: () -> Unit = {},
     onCreateMineRoom: () -> Unit = {},
     mineCreatedRoom: HurryRoom? = null,
     mineSelected: Boolean = false,
@@ -249,7 +250,7 @@ fun HomeScreen(
 
     val banners = listOf(
         RAW + "IMG-20260830-WA0081.jpg",
-        RAW + "IMG-20260818-WA0000.jpg",
+        "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/banner_blue_light_final_668x220.png",
         RAW + "IMG-20260818-WA0001.jpg"
     )
     val pager = rememberPagerState(pageCount = { banners.size })
@@ -361,7 +362,7 @@ fun HomeScreen(
                                 AsyncImage(
                                     model = banners[page],
                                     contentDescription = null,
-                                    modifier = Modifier.fillMaxSize().clickable { onInviteFriends() },
+                                    modifier = Modifier.fillMaxSize().clickable { if (page == 1) onRoomSupport() else onInviteFriends() },
                                     contentScale = ContentScale.Crop
                                 )
                             }
