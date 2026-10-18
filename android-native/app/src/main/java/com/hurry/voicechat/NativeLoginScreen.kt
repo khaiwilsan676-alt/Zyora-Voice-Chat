@@ -28,6 +28,12 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.platform.LocalContext
+import androidx.credentials.CredentialManager
+import androidx.credentials.CustomCredential
+import androidx.credentials.GetCredentialRequest
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -63,7 +69,6 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
     var showPassword by remember { mutableStateOf(false) }
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf("") }
-    var showGoogleSetupMessage by remember { mutableStateOf(false) }
     var showPrivacyPolicy by remember { mutableStateOf(false) }
 
     Box(Modifier.fillMaxSize().background(Color(0xFF111827))) {
@@ -154,7 +159,26 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
                 }
                 Spacer(Modifier.weight(1.4f))
                 Button(
-                    onClick = { error = ""; showGoogleSetupMessage = true },
+                    onClick = {
+                        error = ""
+                        scope.launch {
+                            loading = true
+                            try {
+                                val user = withContext(Dispatchers.IO) { googleFirebaseSignIn(context) }
+                                withContext(Dispatchers.IO) { syncHurryUser(user, context) }
+                                context.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE).edit()
+                                    .putString("uid", user.optString("localId"))
+                                    .putString("email", user.optString("email"))
+                                    .putString("idToken", user.optString("idToken"))
+                                    .apply()
+                                onLoginSuccess()
+                            } catch (t: Throwable) {
+                                error = authErrorText(t.message ?: "Google sign-in failed. Please try again.")
+                            } finally {
+                                loading = false
+                            }
+                        }
+                    },
                     enabled = !loading,
                     modifier = Modifier.fillMaxWidth().height(54.dp),
                     shape = RoundedCornerShape(50),
@@ -166,7 +190,7 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
                 }
                 Spacer(Modifier.height(14.dp))
                 Button(
-                    onClick = { page = "login"; error = ""; showGoogleSetupMessage = false },
+                    onClick = { page = "login"; error = "" },
                     modifier = Modifier.fillMaxWidth().height(54.dp),
                     shape = RoundedCornerShape(50),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB), contentColor = Color.White)
@@ -174,6 +198,11 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
                     AccountLoginIcon(Modifier.size(24.dp))
                     Spacer(Modifier.width(10.dp))
                     Text("Account", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                }
+                if (error.isNotBlank()) {
+                    Spacer(Modifier.height(10.dp))
+                    Text(error, color = Color.White, fontSize = 12.sp, textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(Color(0x66EF4444)).padding(10.dp))
                 }
                 Spacer(Modifier.height(24.dp))
                 
@@ -282,34 +311,6 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
                 Spacer(Modifier.height(28.dp))
             }
         }
-        if (showGoogleSetupMessage) {
-            ModalBottomSheet(
-                onDismissRequest = { showGoogleSetupMessage = false },
-                containerColor = Color.White,
-                contentColor = Color(0xFF111827),
-                dragHandle = { BottomSheetDefaults.DragHandle(color = Color(0xFFD1D5DB)) }
-            ) {
-                Column(
-                    Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 24.dp).padding(bottom = 28.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    GoogleLoginIcon(Modifier.size(38.dp))
-                    Spacer(Modifier.height(12.dp))
-                    Text("Google", fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF111827))
-                    Spacer(Modifier.height(10.dp))
-                    Text(
-                        "Google sign-in is not configured for this Android app yet.",
-                        fontSize = 14.sp,
-                        color = Color(0xFF6B7280),
-                        textAlign = TextAlign.Center
-                    )
-                    Spacer(Modifier.height(20.dp))
-                    TextButton(onClick = { showGoogleSetupMessage = false }) {
-                        Text("Close", color = Color(0xFF2563EB), fontSize = 15.sp)
-                    }
-                }
-            }
-        }
     }
 }
 
@@ -346,6 +347,57 @@ private fun AuthField(
             }
         }
     }
+}
+
+private suspend fun googleFirebaseSignIn(context: android.content.Context): JSONObject {
+    val webClientId = BuildConfig.GOOGLE_WEB_CLIENT_ID.trim()
+    require(webClientId.isNotBlank()) {
+        "Google Sign-In setup is incomplete: configure the GOOGLE_WEB_CLIENT_ID repository secret with Zyora's OAuth Web client ID."
+    }
+    val credentialManager = CredentialManager.create(context)
+    val googleOption = GetGoogleIdOption.Builder()
+        .setServerClientId(webClientId)
+        .setFilterByAuthorizedAccounts(false)
+        .setAutoSelectEnabled(false)
+        .build()
+    val request = GetCredentialRequest.Builder().addCredentialOption(googleOption).build()
+    val result = credentialManager.getCredential(context, request)
+    val credential = result.credential
+    if (credential !is CustomCredential || credential.type != GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
+        throw IllegalStateException("Google did not return a valid sign-in credential.")
+    }
+    val googleCredential = try {
+        GoogleIdTokenCredential.createFrom(credential.data)
+    } catch (_: GoogleIdTokenParsingException) {
+        throw IllegalStateException("Could not read the Google sign-in response. Please try again.")
+    }
+    val postBody = "id_token=" + java.net.URLEncoder.encode(googleCredential.idToken, "UTF-8") + "&providerId=google.com"
+    val connection = (URL("https://identitytoolkit.googleapis.com/v1/accounts:signInWithIdp?key=$HURRY_FIREBASE_API_KEY").openConnection() as HttpURLConnection).apply {
+        requestMethod = "POST"
+        connectTimeout = 15000
+        readTimeout = 20000
+        doOutput = true
+        setRequestProperty("Content-Type", "application/json")
+    }
+    val body = JSONObject().put("requestUri", "http://localhost").put("postBody", postBody)
+        .put("returnSecureToken", true).put("returnIdpCredential", true)
+    connection.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
+    val code = connection.responseCode
+    val stream = if (code in 200..299) connection.inputStream else connection.errorStream
+    val response = stream.bufferedReader().use { it.readText() }
+    connection.disconnect()
+    val json = JSONObject(response)
+    if (code !in 200..299) {
+        val detail = json.optJSONObject("error")?.optString("message").orEmpty()
+        throw IllegalStateException(when {
+            detail.contains("INVALID_IDP_RESPONSE") || detail.contains("INVALID_ID_TOKEN") ->
+                "Google sign-in was rejected. Check Zyora's OAuth client and Firebase Google provider configuration."
+            detail.contains("OPERATION_NOT_ALLOWED") ->
+                "Google sign-in is not enabled for Zyora's Firebase project."
+            else -> detail.ifBlank { "Google sign-in failed. Please try again." }
+        })
+    }
+    return json
 }
 
 private fun firebaseEmailAuth(email: String, password: String, create: Boolean): JSONObject {
