@@ -172,6 +172,7 @@ fun HomeScreen(
 
     var rooms by remember { mutableStateOf(NativeRoomMemoryCache.rooms) }
     var selectedCountry by remember { mutableStateOf("all") }
+    var showDailyCheckIn by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         if (NativeRoomMemoryCache.rooms == null) {
@@ -502,8 +503,16 @@ fun HomeScreen(
                     .clickable(
                         indication = null,
                         interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-                    ) { },
+                    ) { showDailyCheckIn = true },
                 contentScale = ContentScale.Fit
+            )
+
+            DailyCheckInModal(
+                isOpen = showDailyCheckIn,
+                onClose = { showDailyCheckIn = false },
+                currentDay = 1,
+                onSignIn = { },
+                claimedToday = false
             )
         }
     }
