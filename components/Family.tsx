@@ -499,8 +499,8 @@ export default function Family({ onBack }: FamilyProps) {
               />
             </div>
             <div className="flex justify-center gap-8 w-full px-2">
-              {/* ⭐ Top 1 Frames — reduced size */}
-              <GreenVideoRewardItem title="Frames *7 days" videoSrc="/gemini_generated_video_0d259062.mp4" onClick={() => setActiveVideoModal({src: '/gemini_generated_video_0d259062.mp4', type: 'green', label: 'TOP1 Family', videoSize: 'w-[64vw] max-w-[280px] aspect-square'})} />
+              {/* ⭐ Top 1 Frames */}
+              <GreenVideoRewardItem title="Frames *7 days" videoSrc="/gemini_generated_video_0d259062.mp4" onClick={() => setActiveVideoModal({src: '/gemini_generated_video_0d259062.mp4', type: 'green', label: 'TOP1 Family'})} />
               <RewardItem title="Family Frame *7 d" />
             </div>
             <div className="flex justify-center w-full px-2">
@@ -526,8 +526,8 @@ export default function Family({ onBack }: FamilyProps) {
               />
             </div>
             <div className="flex justify-center gap-8 w-full px-2">
-              {/* ⭐ Top 2 Frames — reduced size */}
-              <GreenVideoRewardItem title="Frames *7 days" videoSrc="/gemini_generated_video_0d259062.mp4" onClick={() => setActiveVideoModal({src: '/gemini_generated_video_0d259062.mp4', type: 'green', label: 'TOP2 Family', videoSize: 'w-[64vw] max-w-[280px] aspect-square'})} />
+              {/* ⭐ Top 2 Frames */}
+              <GreenVideoRewardItem title="Frames *7 days" videoSrc="/gemini_generated_video_0d259062.mp4" onClick={() => setActiveVideoModal({src: '/gemini_generated_video_0d259062.mp4', type: 'green', label: 'TOP2 Family'})} />
               <RewardItem title="Family Frame *7 d" />
             </div>
             <div className="flex justify-center w-full px-2">
@@ -553,8 +553,8 @@ export default function Family({ onBack }: FamilyProps) {
               />
             </div>
             <div className="flex justify-center gap-8 w-full px-2">
-              {/* ⭐ Top 3 Frames — reduced size */}
-              <VideoRewardItem title="Frames *7 days" videoSrc="/gemini_generated_video_123c050b~2.mp4" scaleClass="scale-100" blendScreen={false} onClick={() => setActiveVideoModal({src: '/gemini_generated_video_123c050b~2.mp4', type: 'black-noblend', label: 'TOP3 Family', videoSize: 'w-[64vw] max-w-[280px] aspect-square'})} />
+              {/* ⭐ Top 3 Frames */}
+              <VideoRewardItem title="Frames *7 days" videoSrc="/gemini_generated_video_123c050b~2.mp4" scaleClass="scale-100" blendScreen={false} onClick={() => setActiveVideoModal({src: '/gemini_generated_video_123c050b~2.mp4', type: 'black-noblend', label: 'TOP3 Family'})} />
               <RewardItem title="Family Frame *7 d" />
             </div>
             <div className="flex justify-center w-full px-2">
@@ -572,8 +572,8 @@ export default function Family({ onBack }: FamilyProps) {
           <div className="w-full bg-[#3B0C06] border-2 border-[#FFD700] rounded-xl pt-12 pb-8 flex flex-col shadow-[0_0_20px_rgba(255,215,0,0.15)] relative z-10">
             <div className="flex justify-evenly w-full px-2">
               <RewardItem title="Medal *3 days" />
-              {/* ⭐ Top 4-10 Frames — reduced size */}
-              <GreenVideoRewardItem title="Frames *3 days" videoSrc="/gemini_generated_video_0d259062.mp4" onClick={() => setActiveVideoModal({src: '/gemini_generated_video_0d259062.mp4', type: 'green', label: 'TOP4-10 Family', videoSize: 'w-[64vw] max-w-[280px] aspect-square'})} />
+              {/* ⭐ Top 4-10 Frames */}
+              <GreenVideoRewardItem title="Frames *3 days" videoSrc="/gemini_generated_video_0d259062.mp4" onClick={() => setActiveVideoModal({src: '/gemini_generated_video_0d259062.mp4', type: 'green', label: 'TOP4-10 Family'})} />
               <MixedImageRewardItem 
                 title="Vehicle *3 days" 
                 imageSrc="/IMG_20260919_222041.jpg" 
