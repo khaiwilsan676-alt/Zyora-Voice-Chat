@@ -29,7 +29,8 @@ private val SettingsDivider = Color(0xFFF1F5F9)
 @Composable
 fun SettingsPage(
     onBack: () -> Unit = {},
-    onLogout: () -> Unit = {}
+    onLogout: () -> Unit = {},
+    languageCode: String = "en"
 ) {
     val settingsContext = LocalContext.current
     val settingsPrefs = remember { settingsContext.getSharedPreferences("zyora_settings", Context.MODE_PRIVATE) }
@@ -39,7 +40,7 @@ fun SettingsPage(
 
     if (showBlocklist) {
         Column(Modifier.fillMaxSize().background(Color.White)) {
-            SettingsSubHeader("Blocklist") { showBlocklist = false }
+            SettingsSubHeader(nativeText(languageCode, "blocklist")) { showBlocklist = false }
             Box(
                 Modifier.fillMaxWidth().weight(1f).padding(horizontal = 24.dp),
                 contentAlignment = Alignment.Center
@@ -52,7 +53,7 @@ fun SettingsPage(
 
     if (showAbout) {
         Column(Modifier.fillMaxSize().background(Color.White)) {
-            SettingsSubHeader("About Us") { showAbout = false }
+            SettingsSubHeader(nativeText(languageCode, "about")) { showAbout = false }
             Column(
                 Modifier.fillMaxSize().verticalScroll(rememberScrollState())
                     .padding(horizontal = 24.dp, vertical = 32.dp)
@@ -104,7 +105,7 @@ fun SettingsPage(
                 }
             }
             Text(
-                "Settings",
+                nativeText(languageCode, "settings"),
                 modifier = Modifier.weight(1f),
                 fontSize = 18.sp,
                 fontWeight = FontWeight.SemiBold,
@@ -120,16 +121,16 @@ fun SettingsPage(
                 Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Message Notifications", Modifier.weight(1f), fontSize = 16.sp, color = SettingsBody)
+                Text(nativeText(languageCode, "notifications"), Modifier.weight(1f), fontSize = 16.sp, color = SettingsBody)
                 SettingsToggle(checked = notificationsEnabled) {
                     notificationsEnabled = it
                     settingsPrefs.edit().putBoolean("appNotifications", it).apply()
                 }
             }
             SettingsDividerLine()
-            SettingsNavigationRow("Blocklist") { showBlocklist = true }
+            SettingsNavigationRow(nativeText(languageCode, "blocklist")) { showBlocklist = true }
             SettingsDividerLine()
-            SettingsNavigationRow("About Us") { showAbout = true }
+            SettingsNavigationRow(nativeText(languageCode, "about")) { showAbout = true }
         }
 
         Spacer(Modifier.height(40.dp))
@@ -140,7 +141,7 @@ fun SettingsPage(
                 .clickable { onLogout() },
             contentAlignment = Alignment.Center
         ) {
-            Text("Log out", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = Color(0xFF334155))
+            Text(nativeText(languageCode, "logout"), fontSize = 16.sp, fontWeight = FontWeight.Medium, color = Color(0xFF334155))
         }
     }
 }
