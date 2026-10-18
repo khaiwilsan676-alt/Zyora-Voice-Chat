@@ -409,8 +409,56 @@ private fun syncHurryUser(user: JSONObject, context: android.content.Context) {
     val uid = user.optString("localId")
     val email = user.optString("email")
     if (uid.isBlank()) throw IllegalStateException("Firebase did not return a user ID.")
-    val name = email.substringBefore("@").ifBlank { "User" }
-    val accountId = (10000000 + (kotlin.math.abs(uid.hashCode()) % 90000000)).toString()
+
+    // Match the real app: each Firebase UID gets one persistent public account ID.
+    val specialAccounts = mapOf(
+        "HUSxSvQnabgU029dWYt1TUV04hd2" to "100002",
+        "ADqW31RGBMaosOzy0HiqexKSD7h1" to "100003",
+        "100002" to "100002",
+        "100003" to "100003"
+    )
+    val officialIds = setOf("500001", "500002", "500003", "500004", "500005")
+    val adminIds = setOf("700001", "700002", "700003")
+    val accountHash = kotlin.math.abs(uid.hashCode().toLong())
+    val generatedAccountId = when {
+        officialIds.contains(uid) || adminIds.contains(uid) -> uid
+        specialAccounts.containsKey(uid) -> specialAccounts.getValue(uid)
+        else -> (10000000L + accountHash % 90000000L).toString()
+    }
+
+    // Read the existing profile first so a returning user keeps their ID, name, avatar and country.
+    val existingProfile = runCatching {
+        val get = (URL("$HURRY_API_BASE/api/users?uid=${java.net.URLEncoder.encode(uid, "UTF-8")}").openConnection() as HttpURLConnection).apply {
+            requestMethod = "GET"; connectTimeout = 10000; readTimeout = 10000
+            setRequestProperty("Accept", "application/json")
+        }
+        val code = get.responseCode
+        val stream = if (code in 200..299) get.inputStream else get.errorStream
+        val response = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+        get.disconnect()
+        if (code !in 200..299 || response.isBlank()) JSONObject()
+        else {
+            val root = JSONObject(response)
+            root.optJSONObject("user") ?: root.optJSONObject("data") ?: root
+        }
+    }.getOrDefault(JSONObject())
+
+    val existingAccount = existingProfile.optString("accountId").ifBlank {
+        existingProfile.optString("accountNumber").ifBlank { existingProfile.optString("Account Number") }
+    }
+    val accountId = existingAccount.ifBlank { generatedAccountId }
+    val emailName = email.substringBefore("@").ifBlank { "User" }
+    val name = existingProfile.optString("name").ifBlank {
+        existingProfile.optString("Name").ifBlank { emailName }
+    }
+    val image = existingProfile.optString("image").ifBlank {
+        existingProfile.optString("avatar").ifBlank {
+            existingProfile.optString("photo").ifBlank { "/default-avatar.png" }
+        }
+    }
+    val country = existingProfile.optString("country").ifBlank {
+        existingProfile.optString("Country").ifBlank { "🇮🇳" }
+    }
     val deviceId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID).orEmpty()
 
     val banConnection = (URL("$HURRY_API_BASE/api/check-ban").openConnection() as HttpURLConnection).apply {
@@ -426,10 +474,17 @@ private fun syncHurryUser(user: JSONObject, context: android.content.Context) {
 
     val profile = JSONObject()
         .put("id", uid).put("uid", uid).put("appLongId", uid)
-        .put("name", name).put("email", email).put("gmail", email)
-        .put("image", "/default-avatar.png").put("avatar", "/default-avatar.png")
+        .put("name", name).put("email", email.ifBlank { existingProfile.optString("email") })
+        .put("gmail", email.ifBlank { existingProfile.optString("gmail") })
+        .put("image", image).put("avatar", image)
         .put("accountId", accountId).put("accountNumber", accountId)
-        .put("country", "🇮🇳").put("deviceId", deviceId)
+        .put("country", country).put("deviceId", deviceId)
+    // Keep existing profile fields (gender, bio, setup state, etc.) when updating the account.
+    val keys = existingProfile.keys()
+    while (keys.hasNext()) {
+        val key = keys.next()
+        if (!profile.has(key)) profile.put(key, existingProfile.opt(key))
+    }
     val save = (URL("$HURRY_API_BASE/api/users").openConnection() as HttpURLConnection).apply {
         requestMethod = "PUT"; connectTimeout = 12000; readTimeout = 12000; doOutput = true
         setRequestProperty("Content-Type", "application/json")
@@ -437,11 +492,21 @@ private fun syncHurryUser(user: JSONObject, context: android.content.Context) {
     save.outputStream.use { it.write(profile.toString().toByteArray(Charsets.UTF_8)) }
     val saveCode = save.responseCode
     val saveStream = if (saveCode in 200..299) save.inputStream else save.errorStream
-    val saveText = runCatching { saveStream.bufferedReader().use { it.readText() } }.getOrDefault("")
+    runCatching { saveStream?.bufferedReader()?.use { it.readText() } }
     save.disconnect()
     if (saveCode !in 200..299) throw IllegalStateException("Signed in, but profile sync failed. Please try again.")
+
     context.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE).edit()
-        .putString("name", name).putString("accountId", accountId).putString("deviceId", deviceId).apply()
+        .putString("uid", uid)
+        .putString("email", email)
+        .putString("name", name)
+        .putString("accountId", accountId)
+        .putString("accountNumber", accountId)
+        .putString("photo", image)
+        .putString("image", image)
+        .putString("country", country)
+        .putString("deviceId", deviceId)
+        .apply()
 }
 
 private fun authErrorText(raw: String): String = when {
