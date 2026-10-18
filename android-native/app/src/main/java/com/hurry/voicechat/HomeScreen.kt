@@ -168,7 +168,7 @@ fun HomeScreen(
     val dao = remember {
         runCatching { HurryDatabase.get(context).roomDao() }.getOrNull()
     }
-    val roomSyncPrefs = remember { context.getSharedPreferences("native_room_sync", Context.MODE_PRIVATE) }
+    val roomSyncPrefs = remember { context.getSharedPreferences("native_room_sync", Context.MODEPRIVATE) }
 
     var rooms by remember { mutableStateOf(NativeRoomMemoryCache.rooms) }
     var selectedCountry by remember { mutableStateOf("all") }
@@ -250,7 +250,7 @@ fun HomeScreen(
 
     val banners = listOf(
         RAW + "IMG-20260830-WA0081.jpg",
-        RAW + "file_0000000033348246b73ea85588488c24.png", // <- 2nd banner updated here
+        RAW + "file_0000000033348246b73ea85588488c24.png", 
         RAW + "IMG-20260818-WA0001.jpg"
     )
     val pager = rememberPagerState(pageCount = { banners.size })
@@ -270,6 +270,19 @@ fun HomeScreen(
         val list = rooms ?: emptyList()
         if (selectedCountry == "all") list
         else list.filter { countryMatches(it.country, selectedCountry) }
+    }
+
+    // 🔴 TERA 2..2..1..1 LOAD WALA LOGIC (Fast and staggered load, bina kch tode)
+    var displayedRooms by remember { mutableStateOf(emptyList<HurryRoom>()) }
+    LaunchedEffect(filteredRooms) {
+        displayedRooms = emptyList()
+        if (filteredRooms.isNotEmpty()) {
+            val chunks = filteredRooms.chunked(2) // 2-2 ke chunks banaye
+            for (chunk in chunks) {
+                displayedRooms = displayedRooms + chunk // Pehle 2 load hoga, phir agla 2...
+                kotlinx.coroutines.delay(40) // Halki si speed delay jisse fast load effect aaye aur CPU hang na ho
+            }
+        }
     }
 
     Column(
@@ -362,7 +375,6 @@ fun HomeScreen(
                                 AsyncImage(
                                     model = banners[page],
                                     contentDescription = null,
-                                    // <- Grey ripple effect removed here using indication = null
                                     modifier = Modifier.fillMaxSize().clickable(
                                         indication = null, 
                                         interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
@@ -444,7 +456,8 @@ fun HomeScreen(
                         }
                     }
                 } else {
-                    val roomRows = filteredRooms.chunked(2)
+                    // Ab filteredRooms ki jagah displayedRooms use hoga
+                    val roomRows = displayedRooms.chunked(2) 
                     items(
                         items = roomRows,
                         key = { row -> row.first().id }
@@ -452,8 +465,8 @@ fun HomeScreen(
                         Row(
                             Modifier
                                 .fillMaxWidth()
-                                .padding(start = 12.dp, end = 12.dp, bottom = 8.dp), // Thoda sa vertical gap add kiya
-                            horizontalArrangement = Arrangement.spacedBy(10.dp) // <- 1st aur 2nd room card ke beech ka gap badha diya
+                                .padding(start = 12.dp, end = 12.dp, bottom = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             row.forEach { room ->
                                 RoomListCard(room, onRoom, Modifier.weight(1f))
@@ -478,13 +491,14 @@ fun HomeScreen(
                 }
             }
 
-            // BOTTOM RIGHT DECORATION IMAGE
+            // 🔴 TERA RIGHT SIDE IMAGE WALA FIX 
+            // Faltu right gap hata ke 0 kiya aur image or niche kar diya
             AsyncImage(
                 model = RAW + "IMG_20260916_002115.png",
                 contentDescription = "Right Corner Decoration",
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(end = 16.dp, bottom = 75.dp) 
+                    .padding(end = 0.dp, bottom = 45.dp) // <- End 0 kiya (right edge) aur bottom ko thora adjust kiya niche 
                     .size(70.dp)
                     .clickable { },
                 contentScale = ContentScale.Fit
@@ -601,7 +615,6 @@ private fun RoomListCard(
                 contentScale = ContentScale.Crop
             )
             
-            // <- Live track aur equalizer logic (bars ki height state me store ki hai)
             var liveCount by remember(room.id) { mutableIntStateOf((1000..4999).random()) }
             var bar1 by remember(room.id) { mutableStateOf(4.dp) }
             var bar2 by remember(room.id) { mutableStateOf(9.dp) }
@@ -611,16 +624,16 @@ private fun RoomListCard(
                 while (true) {
                     kotlinx.coroutines.delay((500L..1200L).random())
                     liveCount = (liveCount + (-3..5).random()).coerceAtLeast(1000)
-                    // Equalizer effect ke liye random heights
                     bar1 = (3..10).random().dp
                     bar2 = (4..12).random().dp
                     bar3 = (3..10).random().dp
                 }
             }
             
+            // 🔴 TERA TRACK (Equalizer) WALA FIX
+            // `bottom = 6.dp` tha, ab thora aur niche kar diya `bottom = 2.dp`
             Row(
-                modifier = Modifier.align(Alignment.BottomEnd).padding(end = 7.dp, bottom = 6.dp)
-                    // <- Background color aur clip yahan se hata diya gaya hai (bina kisi card ke floats properly)
+                modifier = Modifier.align(Alignment.BottomEnd).padding(end = 7.dp, bottom = 2.dp) 
                     .padding(horizontal = 5.dp, vertical = 3.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -638,7 +651,6 @@ private fun RoomListCard(
                     verticalAlignment = Alignment.Bottom
                 ) {
                     listOf(bar1, bar2, bar3).forEach { barHeight ->
-                        // <- Equalizer bars upar neeche naturally animate honge
                         val animatedHeight by androidx.compose.animation.core.animateDpAsState(
                             targetValue = barHeight,
                             label = "equalizer_animation"
@@ -722,10 +734,9 @@ private fun HurryCategoryCard(
                 .fillMaxWidth()
                 .padding(start = 3.dp, end = 3.dp, bottom = 2.dp)
         ) {
-            // 1. Logos Ab Pehle aayenge (Taaki Ye Niche Rahein)
             Row(
                 Modifier
-                    .matchParentSize() // Frame ke exactly andar fit hone ke liye
+                    .matchParentSize() 
                     .offset(y = (-1).dp),
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
@@ -752,7 +763,6 @@ private fun HurryCategoryCard(
                 )
             }
 
-            // 2. Frame Ab Baad me Aayega (Taaki Ye Logos ke Upar overlap ho)
             AsyncImage(
                 model = CARD_FRAME,
                 contentDescription = null,
