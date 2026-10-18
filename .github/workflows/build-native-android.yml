@@ -47,6 +47,7 @@ jobs:
         working-directory: android-native
         env:
           HURRY_VERSION_NAME: "1.0.${{ github.run_number }}"
+          GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
         run: gradle assembleDebug --no-daemon --stacktrace
 
       - name: Publish versioned Native APK
