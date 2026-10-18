@@ -32,6 +32,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -52,22 +53,33 @@ private const val BOTTOM_FIXED_IMG = "https://raw.githubusercontent.com/khaiwils
 fun RoomSupport(onBack: () -> Unit) {
     BackHandler(onBack = onBack)
     
-    val bgColor = Color(0xFF04102A) 
+    // Light blue color
+    val bgColor = Color(0xFF0F265C) 
     val pagerState = rememberPagerState(pageCount = { 2 })
     val coroutineScope = rememberCoroutineScope()
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .background(bgColor)
     ) {
-        // --- Top Bar ---
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.fillMaxSize()
+        ) { page ->
+            if (page == 0) {
+                RoomSupportContent(bgColor)
+            } else {
+                RankingContent(bgColor)
+            }
+        }
+
         Box(
             modifier = Modifier
                 .fillMaxWidth()
+                .statusBarsPadding()
                 .padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
-            // Left Arrow Back Icon
             Icon(
                 imageVector = Icons.Default.ArrowBack,
                 contentDescription = "Back",
@@ -77,7 +89,6 @@ fun RoomSupport(onBack: () -> Unit) {
                     .clickable { onBack() }
             )
             
-            // Middle Tabs (Room Support & Ranking)
             Row(
                 modifier = Modifier.align(Alignment.Center),
                 verticalAlignment = Alignment.CenterVertically
@@ -102,23 +113,11 @@ fun RoomSupport(onBack: () -> Unit) {
                 )
             }
         }
-
-        // --- Pager for Sliding ---
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier.fillMaxSize()
-        ) { page ->
-            if (page == 0) {
-                RoomSupportContent(bgColor)
-            } else {
-                RankingContent(bgColor)
-            }
-        }
     }
 }
 
 // ==========================================
-// 1. ROOM SUPPORT PAGE (Purana UI as it is)
+// 1. ROOM SUPPORT PAGE 
 // ==========================================
 @Composable
 fun RoomSupportContent(bgColor: Color) {
@@ -129,17 +128,15 @@ fun RoomSupportContent(bgColor: Color) {
             .fillMaxSize()
             .verticalScroll(scrollState)
     ) {
-        // Top Image with Bottom Fading Effect
         AsyncImage(
             model = ROOM_SUPPORT_HEADER,
             contentDescription = null,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(250.dp) // Adjusted height slightly so top bar fits well
                 .drawWithCache {
                     val gradient = Brush.verticalGradient(
                         colors = listOf(Color.Transparent, bgColor),
-                        startY = size.height * 0.98f, 
+                        startY = size.height * 0.90f, 
                         endY = size.height
                     )
                     onDrawWithContent {
@@ -147,10 +144,9 @@ fun RoomSupportContent(bgColor: Color) {
                         drawRect(gradient, blendMode = BlendMode.SrcOver)
                     }
                 },
-            contentScale = ContentScale.Crop
+            contentScale = ContentScale.FillWidth 
         )
 
-        // Content Column
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -172,48 +168,57 @@ fun RoomSupportContent(bgColor: Color) {
 }
 
 // ==========================================
-// 2. RANKING PAGE (Naya Page)
+// 2. RANKING PAGE
 // ==========================================
 @Composable
 fun RankingContent(bgColor: Color) {
     val scrollState = rememberScrollState()
     val tableColor = Color(0xFF104B7A)
-    var selectedTimeTab by remember { mutableIntStateOf(0) } // 0=Daily, 1=Weekly, 2=Monthly
+    var selectedTimeTab by remember { mutableIntStateOf(0) }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(bgColor) // Make sure background color matches completely
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(scrollState)
         ) {
-            // 1. Top Patla Full Round Card with Speaker
+            Spacer(modifier = Modifier.statusBarsPadding().height(60.dp))
+
+            // 1. Top Patla Full Round Card with Speaker (Ekdam patli patti aur single row)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .padding(horizontal = 16.dp, vertical = 4.dp)
                     .background(tableColor, CircleShape)
-                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                    .padding(horizontal = 12.dp, vertical = 6.dp), // Height reduced
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
                     imageVector = Icons.Default.VolumeUp,
                     contentDescription = "Speaker",
-                    tint = Color(0xFF388FC2) // Blue color
+                    tint = Color(0xFF388FC2),
+                    modifier = Modifier.size(18.dp) // Thoda icon chota kiya row maintain karne ke liye
                 )
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(6.dp))
                 Text(
                     text = "Rooms points = Room Coins + Room visitors*1000",
-                    color = Color(0xFFFFD700), // Yellow color
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium
+                    color = Color(0xFFFFD700),
+                    fontSize = 11.sp, // Font size chota kiya taaki ek line me aaye
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1, // Ek hi row me set
+                    overflow = TextOverflow.Ellipsis
                 )
             }
 
-            // 2. Daily, Weekly, Monthly Tabs (No faltu gap)
+            // 2. Daily, Weekly, Monthly Tabs 
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 8.dp, bottom = 16.dp)
+                    .padding(top = 4.dp, bottom = 12.dp)
             ) {
                 val tabs = listOf("Daily", "Weekly", "Monthly")
                 tabs.forEachIndexed { index, title ->
@@ -234,17 +239,17 @@ fun RankingContent(bgColor: Color) {
                 }
             }
 
-            // 3. Top 3 Images (Rank 1, 2, 3)
+            // 3. Top 3 Images (Rank 1, 2, 3) properly horizontally list-wise set
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 10.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly,
+                horizontalArrangement = Arrangement.spacedBy(4.dp), 
                 verticalAlignment = Alignment.Bottom
             ) {
-                AsyncImage(model = RANK_IMG_2, contentDescription = "Rank 2", modifier = Modifier.weight(1f).height(120.dp), contentScale = ContentScale.Fit)
-                AsyncImage(model = RANK_IMG_1, contentDescription = "Rank 1", modifier = Modifier.weight(1f).height(140.dp), contentScale = ContentScale.Fit)
-                AsyncImage(model = RANK_IMG_3, contentDescription = "Rank 3", modifier = Modifier.weight(1f).height(120.dp), contentScale = ContentScale.Fit)
+                AsyncImage(model = RANK_IMG_2, contentDescription = "Rank 2", modifier = Modifier.weight(1f).aspectRatio(0.85f), contentScale = ContentScale.Fit)
+                AsyncImage(model = RANK_IMG_1, contentDescription = "Rank 1", modifier = Modifier.weight(1.2f).aspectRatio(0.75f), contentScale = ContentScale.Fit)
+                AsyncImage(model = RANK_IMG_3, contentDescription = "Rank 3", modifier = Modifier.weight(1f).aspectRatio(0.85f), contentScale = ContentScale.Fit)
             }
             
             Spacer(modifier = Modifier.height(16.dp))
@@ -271,7 +276,6 @@ fun RankingContent(bgColor: Color) {
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.width(30.dp)
                         )
-                        // Baki area user info ke liye space chora hai
                         Text(
                             text = "User / Room Name",
                             color = Color.LightGray,
@@ -281,11 +285,10 @@ fun RankingContent(bgColor: Color) {
                 }
             }
             
-            // Bottom space for fixed image
-            Spacer(modifier = Modifier.height(100.dp)) 
+            Spacer(modifier = Modifier.height(110.dp)) 
         }
 
-        // 5. Bottom Fixed Image (Ekdam screen se chipka hua)
+        // 5. Bottom Fixed Image 
         AsyncImage(
             model = BOTTOM_FIXED_IMG,
             contentDescription = "Bottom Art",
@@ -293,13 +296,13 @@ fun RankingContent(bgColor: Color) {
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
+                .offset(y = 15.dp) 
         )
     }
 }
 
-
 // ==========================================
-// Puraane Components (Untouched)
+// Puraane Components (Cream Patti height kam ki hai)
 // ==========================================
 
 @Composable
@@ -322,13 +325,13 @@ fun RoomStatsTable() {
             modifier = Modifier
                 .fillMaxWidth()
                 .background(headerBg)
-                .padding(vertical = 10.dp), 
+                .padding(vertical = 6.dp), // Height reduced
             contentAlignment = Alignment.Center
         ) {
             Text(
                 text = "My Room",
                 color = titleColor,
-                fontSize = 22.sp,
+                fontSize = 20.sp,
                 fontWeight = FontWeight.Bold
             )
         }
@@ -412,7 +415,7 @@ fun RewardCountdownCard() {
             modifier = Modifier
                 .fillMaxWidth()
                 .background(headerGradient)
-                .padding(horizontal = 12.dp, vertical = 10.dp), 
+                .padding(horizontal = 12.dp, vertical = 6.dp), // Height reduced
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
         ) {
@@ -420,7 +423,7 @@ fun RewardCountdownCard() {
                 imageVector = Icons.Default.CardGiftcard,
                 contentDescription = "Gift",
                 tint = headingColor,
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier.size(20.dp) // Icon slightly smaller to fit reduced padding
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
@@ -479,13 +482,13 @@ fun TargetRewardTable() {
             modifier = Modifier
                 .fillMaxWidth()
                 .background(headerBg)
-                .padding(vertical = 8.dp), 
+                .padding(vertical = 4.dp), // Height reduced
             contentAlignment = Alignment.Center
         ) {
             Text(
                 text = "Target & Reward",
                 color = titleColor,
-                fontSize = 18.sp,
+                fontSize = 16.sp,
                 fontWeight = FontWeight.Bold
             )
         }
@@ -575,7 +578,7 @@ fun ThisWeekCountdownCard() {
             modifier = Modifier
                 .fillMaxWidth()
                 .background(headerGradient)
-                .padding(horizontal = 12.dp, vertical = 10.dp), 
+                .padding(horizontal = 12.dp, vertical = 6.dp), // Height reduced
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
@@ -584,7 +587,7 @@ fun ThisWeekCountdownCard() {
                     imageVector = Icons.Default.AccessTime,
                     contentDescription = "Clock",
                     tint = Color(0xFF155B91), 
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(20.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
@@ -803,4 +806,3 @@ fun getTargetRewardData() = listOf(
     TargetRewardRow("17", "≥3,000", "≥7.65B", "738.14M", "402.2M", "30.54M", "11"),
     TargetRewardRow("18", "≥3,500", "≥10.35B", "983.14M", "521.14M", "38.5M", "12")
 )
-
