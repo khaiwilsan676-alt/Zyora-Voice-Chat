@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.platform.LocalContext
 
 private data class LanguageOption(val code: String, val label: String, val native: String)
 
@@ -54,7 +55,9 @@ fun LanguagePage(
             it.label.equals(selectedLanguage, ignoreCase = true) ||
             it.native == selectedLanguage
     }?.code ?: "en"
-    var pendingCode by remember { mutableStateOf(initial) }
+    val context = LocalContext.current
+    val languagePrefs = remember { context.getSharedPreferences("zyora_settings", android.content.Context.MODE_PRIVATE) }
+    var pendingCode by remember { mutableStateOf(languagePrefs.getString("appLanguage", initial) ?: initial) }
 
     Column(Modifier.fillMaxSize().background(Color.White)) {
         Row(
@@ -88,8 +91,8 @@ fun LanguagePage(
                 Modifier.defaultMinSize(minWidth = 56.dp, minHeight = 36.dp)
                     .background(Color.Transparent, RoundedCornerShape(8.dp))
                     .clickable {
-                        val language = languageOptions.firstOrNull { it.code == pendingCode }
-                        if (language != null) onLanguageSelected(language.label)
+                        languagePrefs.edit().putString("appLanguage", pendingCode).apply()
+                        onLanguageSelected(pendingCode)
                         onBack()
                     }
                     .padding(horizontal = 8.dp, vertical = 8.dp),
