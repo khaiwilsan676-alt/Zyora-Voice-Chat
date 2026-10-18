@@ -634,7 +634,7 @@ export default function Family({ onBack }: FamilyProps) {
               <div className="absolute inset-0 w-full h-full flex flex-col items-center justify-center bg-transparent pointer-events-none overflow-hidden">
                 {/* ⭐ TOP X FAMILY text — frame ke BAHAR upar se perfectly chipka hua */}
                 {activeVideoModal.label && (
-                  <div className="flex items-center justify-center gap-2 mb-[-35px] relative z-20">
+                  <div className="flex items-center justify-center gap-2 mb-[-24px] relative z-20">
                     <div className="flex flex-col gap-[3px] items-end mr-1">
                       <div className="w-8 h-[2px] bg-[#FFD700] drop-shadow-[0_1px_1px_rgba(0,0,0,0.9)]"></div>
                       <div className="w-5 h-[2px] bg-[#FFD700] drop-shadow-[0_1px_1px_rgba(0,0,0,0.9)]"></div>
@@ -649,7 +649,7 @@ export default function Family({ onBack }: FamilyProps) {
                   </div>
                 )}
                 
-                {/* ⭐ ALL VIDEOS (Frames/Medals) — Sabhi frames ko bahut bada kar diya hai */}
+                {/* ⭐ ALL VIDEOS (Frames/Medals) — Perfect Size */}
                 <video 
                   src={activeVideoModal.src} 
                   autoPlay 
@@ -658,7 +658,7 @@ export default function Family({ onBack }: FamilyProps) {
                   muted
                   disablePictureInPicture
                   disableRemotePlayback
-                  className="object-contain drop-shadow-2xl z-10 w-[120vw] max-w-[600px] scale-125"
+                  className="object-contain drop-shadow-2xl z-10 w-[90vw] max-w-[420px] aspect-square"
                   style={activeVideoModal.type === 'black' ? { 
                     mixBlendMode: 'screen', 
                     backgroundColor: 'transparent',
@@ -675,7 +675,7 @@ export default function Family({ onBack }: FamilyProps) {
 
                 {/* ⭐ 5 stars — frame ke BAHAR niche se perfectly chipka hua */}
                 {activeVideoModal.label && (
-                  <div className="flex gap-1.5 mt-[-35px] relative z-20 leading-none">
+                  <div className="flex gap-1.5 mt-[-24px] relative z-20 leading-none">
                     {[...Array(5)].map((_, i) => (
                       <svg key={i} className="w-8 h-8 text-[#FFD700] fill-current drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]" viewBox="0 0 20 20">
                         <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
