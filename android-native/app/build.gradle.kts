@@ -2,13 +2,14 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
-    id("com.google.devtools.ksp")   // ← ADDED
+    id("com.google.devtools.ksp")
+    id("com.google.gms.google-services")
 }
 android {
     namespace = "com.hurry.voicechat"
     compileSdk = 36
     defaultConfig {
-        applicationId = "com.hurry.voicechat"
+        applicationId = "com.hawa.app"
         minSdk = 26
         targetSdk = 36
         versionCode = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1
