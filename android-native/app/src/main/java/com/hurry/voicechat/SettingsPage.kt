@@ -67,38 +67,20 @@ fun SettingsPage(
                     letterSpacing = (-0.4).sp
                 )
                 Text(
-                    "Welcome to Zyora",
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF2563EB),
-                    textAlign = TextAlign.Center
-                )
-                Text(
-                    "Zyora is a social voice-chat application made to bring people together. Join live voice rooms, meet new people, make friends, and enjoy conversations with a community that shares your interests.",
+                    "Zyora is a real-time group voice chat application for people from different places to connect. You can find new friends who share the same interests, chat with them, and enjoy the fun of the party!",
                     fontSize = 15.sp, lineHeight = 25.sp, color = Color(0xFF333333), letterSpacing = 0.2.sp
                 )
                 Spacer(Modifier.height(24.dp))
-                Text("What you can do on Zyora", fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF111827))
-                Spacer(Modifier.height(14.dp))
-                Text("• Live Voice Rooms", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF333333))
-                Text("Join rooms and talk with other people in real time.", fontSize = 15.sp, lineHeight = 25.sp, color = Color(0xFF333333))
+                Text("We have the following functions:", fontSize = 15.sp, lineHeight = 25.sp, color = Color(0xFF333333))
+                Spacer(Modifier.height(12.dp))
+                Text("• Free", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF333333))
+                Text("You can have free, high-quality and stable voice chat through the Internet.", fontSize = 15.sp, lineHeight = 25.sp, color = Color(0xFF333333))
                 Spacer(Modifier.height(16.dp))
-                Text("• Meet New Friends", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF333333))
-                Text("Discover people, connect through conversations, and build new friendships.", fontSize = 15.sp, lineHeight = 25.sp, color = Color(0xFF333333))
+                Text("• Online party", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF333333))
+                Text("Join different online parties and topic rooms, including birthday parties, wedding parties, games, and more.", fontSize = 15.sp, lineHeight = 25.sp, color = Color(0xFF333333))
                 Spacer(Modifier.height(16.dp))
-                Text("• Social Features", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF333333))
-                Text("Personalize your profile, interact with others, and enjoy the features available in the app.", fontSize = 15.sp, lineHeight = 25.sp, color = Color(0xFF333333))
-                Spacer(Modifier.height(24.dp))
-                Text("Our Goal", fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF111827))
-                Spacer(Modifier.height(8.dp))
-                Text("We want Zyora to be a fun, welcoming, and respectful place for people to connect. Please respect other users and help keep every room friendly and safe.", fontSize = 15.sp, lineHeight = 25.sp, color = Color(0xFF333333))
-                Spacer(Modifier.height(24.dp))
-                Text("Your Privacy", fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF111827))
-                Spacer(Modifier.height(8.dp))
-                Text("You can clear Zyora's locally stored app data at any time from Android Settings. Clearing app storage may sign you out and remove information saved on your phone.", fontSize = 15.sp, lineHeight = 25.sp, color = Color(0xFF333333))
-                Spacer(Modifier.height(24.dp))
-                Text("Thank you for being part of Zyora!", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF2563EB))
+                Text("• Gorgeous gifts", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF333333))
+                Text("While enjoying chats with friends, you can send them gifts with special effects and have more fun together.", fontSize = 15.sp, lineHeight = 25.sp, color = Color(0xFF333333))
             }
         }
         return
@@ -115,10 +97,10 @@ fun SettingsPage(
                 contentAlignment = Alignment.Center
             ) {
                 androidx.compose.foundation.Canvas(Modifier.size(24.dp)) {
-                    val stroke = 2.2.dp.toPx()
-                    drawLine(SettingsInk, androidx.compose.ui.geometry.Offset(size.width * 0.88f, size.height / 2), androidx.compose.ui.geometry.Offset(size.width * 0.15f, size.height / 2), strokeWidth = stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round)
-                    drawLine(SettingsInk, androidx.compose.ui.geometry.Offset(size.width * 0.15f, size.height / 2), androidx.compose.ui.geometry.Offset(size.width * 0.48f, size.height * 0.18f), strokeWidth = stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round)
-                    drawLine(SettingsInk, androidx.compose.ui.geometry.Offset(size.width * 0.15f, size.height / 2), androidx.compose.ui.geometry.Offset(size.width * 0.48f, size.height * 0.82f), strokeWidth = stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+                    val stroke = 2.4.dp.toPx()
+                    drawLine(SettingsInk, androidx.compose.ui.geometry.Offset(size.width * 0.86f, size.height / 2), androidx.compose.ui.geometry.Offset(size.width * 0.16f, size.height / 2), strokeWidth = stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+                    drawLine(SettingsInk, androidx.compose.ui.geometry.Offset(size.width * 0.16f, size.height / 2), androidx.compose.ui.geometry.Offset(size.width * 0.45f, size.height * 0.20f), strokeWidth = stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+                    drawLine(SettingsInk, androidx.compose.ui.geometry.Offset(size.width * 0.16f, size.height / 2), androidx.compose.ui.geometry.Offset(size.width * 0.45f, size.height * 0.80f), strokeWidth = stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round)
                 }
             }
             Text(
@@ -172,10 +154,10 @@ private fun SettingsSubHeader(title: String, onBack: () -> Unit) {
     ) {
         Box(Modifier.size(32.dp).clickable { onBack() }, contentAlignment = Alignment.Center) {
             androidx.compose.foundation.Canvas(Modifier.size(24.dp)) {
-                val stroke = 2.2.dp.toPx()
-                drawLine(SettingsInk, androidx.compose.ui.geometry.Offset(size.width * 0.88f, size.height / 2), androidx.compose.ui.geometry.Offset(size.width * 0.15f, size.height / 2), strokeWidth = stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round)
-                drawLine(SettingsInk, androidx.compose.ui.geometry.Offset(size.width * 0.15f, size.height / 2), androidx.compose.ui.geometry.Offset(size.width * 0.48f, size.height * 0.18f), strokeWidth = stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round)
-                drawLine(SettingsInk, androidx.compose.ui.geometry.Offset(size.width * 0.15f, size.height / 2), androidx.compose.ui.geometry.Offset(size.width * 0.48f, size.height * 0.82f), strokeWidth = stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+                val stroke = 2.4.dp.toPx()
+                drawLine(SettingsInk, androidx.compose.ui.geometry.Offset(size.width * 0.86f, size.height / 2), androidx.compose.ui.geometry.Offset(size.width * 0.16f, size.height / 2), strokeWidth = stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+                drawLine(SettingsInk, androidx.compose.ui.geometry.Offset(size.width * 0.16f, size.height / 2), androidx.compose.ui.geometry.Offset(size.width * 0.45f, size.height * 0.20f), strokeWidth = stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+                drawLine(SettingsInk, androidx.compose.ui.geometry.Offset(size.width * 0.16f, size.height / 2), androidx.compose.ui.geometry.Offset(size.width * 0.45f, size.height * 0.80f), strokeWidth = stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round)
             }
         }
         Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
