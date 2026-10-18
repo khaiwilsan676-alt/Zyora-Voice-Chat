@@ -596,6 +596,43 @@ private fun RoomListCard(
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
             )
+            // Same live-track/equalizer indicator shown on the real app's room cards.
+            var liveCount by remember(room.id) { mutableIntStateOf((1000..4999).random()) }
+            LaunchedEffect(room.id) {
+                while (true) {
+                    kotlinx.coroutines.delay((1000L..3000L).random())
+                    liveCount = (liveCount + (-3..3).random()).coerceAtLeast(1000)
+                }
+            }
+            Row(
+                modifier = Modifier.align(Alignment.BottomEnd).padding(end = 7.dp, bottom = 6.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(Color(0x55000000))
+                    .padding(horizontal = 5.dp, vertical = 3.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    liveCount.toString(),
+                    color = Color.White,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    maxLines = 1
+                )
+                Row(
+                    modifier = Modifier.height(10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+                    verticalAlignment = Alignment.Bottom
+                ) {
+                    listOf(4.dp, 9.dp, 6.dp).forEachIndexed { index, barHeight ->
+                        Box(
+                            Modifier.width(2.dp).height(barHeight)
+                                .clip(RoundedCornerShape(2.dp))
+                                .background(Color.White)
+                        )
+                    }
+                }
+            }
         }
         Row(
             Modifier
