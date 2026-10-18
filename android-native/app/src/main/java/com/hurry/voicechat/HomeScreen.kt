@@ -248,7 +248,9 @@ fun HomeScreen(
         return
     }
 
+    // 🔴 1st BANNER KI JAGHA WAHI IMAGE HAI JO TUNE DI THI
     val banners = listOf(
+        RAW + "file_00000000efe88211874bfd6b0392fd41.png", 
         RAW + "IMG-20260830-WA0081.jpg",
         RAW + "file_0000000033348246b73ea85588488c24.png", 
         RAW + "IMG-20260818-WA0001.jpg"
@@ -272,15 +274,14 @@ fun HomeScreen(
         else list.filter { countryMatches(it.country, selectedCountry) }
     }
 
-    // 🔴 TERA 2..2..1..1 LOAD WALA LOGIC (Fast and staggered load, bina kch tode)
     var displayedRooms by remember { mutableStateOf(emptyList<HurryRoom>()) }
     LaunchedEffect(filteredRooms) {
         displayedRooms = emptyList()
         if (filteredRooms.isNotEmpty()) {
-            val chunks = filteredRooms.chunked(2) // 2-2 ke chunks banaye
+            val chunks = filteredRooms.chunked(2) 
             for (chunk in chunks) {
-                displayedRooms = displayedRooms + chunk // Pehle 2 load hoga, phir agla 2...
-                kotlinx.coroutines.delay(40) // Halki si speed delay jisse fast load effect aaye aur CPU hang na ho
+                displayedRooms = displayedRooms + chunk 
+                kotlinx.coroutines.delay(40) 
             }
         }
     }
@@ -330,9 +331,10 @@ fun HomeScreen(
                 }
                 Spacer(Modifier.weight(1f))
                 
+                // 🔴 SEARCH OR HOUSE ICON KE BEECH KA GAP EXACT 3.DP KAR DIYA HAI
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    horizontalArrangement = Arrangement.spacedBy(3.dp) 
                 ) {
                     Box(Modifier.clickable(indication = null, interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }) { onSearch() }) { 
                         HurrySearchIcon() 
@@ -350,7 +352,7 @@ fun HomeScreen(
         Box(Modifier.fillMaxSize()) {
             LazyColumn(
                 state = listState,
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.fillMaxSize().offset(y = (-8).dp),
                 contentPadding = PaddingValues(bottom = 80.dp)
             ) {
                 item {
@@ -456,7 +458,6 @@ fun HomeScreen(
                         }
                     }
                 } else {
-                    // Ab filteredRooms ki jagah displayedRooms use hoga
                     val roomRows = displayedRooms.chunked(2) 
                     items(
                         items = roomRows,
@@ -466,7 +467,7 @@ fun HomeScreen(
                             Modifier
                                 .fillMaxWidth()
                                 .padding(start = 12.dp, end = 12.dp, bottom = 8.dp),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             row.forEach { room ->
                                 RoomListCard(room, onRoom, Modifier.weight(1f))
@@ -491,16 +492,17 @@ fun HomeScreen(
                 }
             }
 
-            // 🔴 TERA RIGHT SIDE IMAGE WALA FIX 
-            // Faltu right gap hata ke 0 kiya aur image or niche kar diya
             AsyncImage(
                 model = RAW + "IMG_20260916_002115.png",
                 contentDescription = "Right Corner Decoration",
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(end = 12.dp, bottom = 38.dp) // <- End 0 kiya (right edge) aur bottom ko thora adjust kiya niche 
+                    .padding(end = 12.dp, bottom = 38.dp) 
                     .size(70.dp)
-                    .clickable { },
+                    .clickable(
+                        indication = null,
+                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+                    ) { },
                 contentScale = ContentScale.Fit
             )
         }
@@ -630,8 +632,6 @@ private fun RoomListCard(
                 }
             }
             
-            // 🔴 TERA TRACK (Equalizer) WALA FIX
-            // `bottom = 6.dp` tha, ab thora aur niche kar diya `bottom = 2.dp`
             Row(
                 modifier = Modifier.align(Alignment.BottomEnd).padding(end = 7.dp, bottom = 2.dp) 
                     .padding(horizontal = 5.dp, vertical = 3.dp),
