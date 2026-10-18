@@ -19,7 +19,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.interaction.MutableInteractionSource
 
 @Composable
-fun HurryBottomNav(tab: HurryTab, onTab: (HurryTab) -> Unit) {
+fun HurryBottomNav(tab: HurryTab, languageCode: String = "en", onTab: (HurryTab) -> Unit) {
     Row(
         Modifier
             .fillMaxWidth()
@@ -29,9 +29,9 @@ fun HurryBottomNav(tab: HurryTab, onTab: (HurryTab) -> Unit) {
         horizontalArrangement = Arrangement.SpaceAround,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        NavItem(HurryTab.HOME, tab, onTab, "Home")
-        NavItem(HurryTab.MESSAGE, tab, onTab, "Message")
-        NavItem(HurryTab.ME, tab, onTab, "Me")
+        NavItem(HurryTab.HOME, tab, onTab, nativeText(languageCode, "home"))
+        NavItem(HurryTab.MESSAGE, tab, onTab, nativeText(languageCode, "message"))
+        NavItem(HurryTab.ME, tab, onTab, nativeText(languageCode, "me"))
     }
 }
 
