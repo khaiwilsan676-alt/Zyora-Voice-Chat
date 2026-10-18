@@ -190,11 +190,13 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
     var openedLeaderboard by remember { mutableStateOf<String?>(null) }
     var openedInvite by remember { mutableStateOf(false) }
     var openedSearch by remember { mutableStateOf(false) }
+    var openedRoomSupport by remember { mutableStateOf(false) }
     var openedPublicProfile by remember { mutableStateOf<RoomProfileUser?>(null) }
 
-    BackHandler(enabled = openedRoom != null || openedChat != null || openedMePage != null || openedSearch || openedPublicProfile != null) {
+    BackHandler(enabled = openedRoom != null || openedChat != null || openedMePage != null || openedSearch || openedRoomSupport || openedPublicProfile != null) {
         when {
             openedPublicProfile != null -> openedPublicProfile = null
+            openedRoomSupport -> openedRoomSupport = false
             openedSearch -> openedSearch = false
             openedChat != null -> openedChat = null
             openedRoom != null -> openedRoom = null
@@ -206,6 +208,8 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
         Box(Modifier.fillMaxSize()) {
             if (openedPublicProfile != null) {
                 PublicProfile(user=openedPublicProfile!!,onBack={openedPublicProfile=null})
+            } else if (openedRoomSupport) {
+                RoomSupport(onBack = { openedRoomSupport = false })
             } else if (openedSearch) {
                 SearchPage(onBack={openedSearch=false},onOpenProfile={openedPublicProfile=it;openedSearch=false})
             } else if (openedRoom != null) {
@@ -240,6 +244,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                                 onLeaderboard = { openedLeaderboard = it },
                                 onInviteFriends = { openedInvite = true },
                                 onSearch = { openedSearch = true },
+                                onRoomSupport = { openedRoomSupport = true },
                                 onCreateMineRoom = {
                                     // A room is keyed to the user's stable account ID, not to each tap.
                                     // Once saved locally, every tap only reopens this same room.
