@@ -161,7 +161,7 @@ fun RoomSupportContent(bgColor: Color) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .offset(y = (-20).dp) // <-- Yahan -20.dp kar diya bhai jaisa tune bola
+                .offset(y = (-25).dp) // <-- Yahan -25.dp kar diya thoda sa aur upar karne ke liye
                 .padding(horizontal = 10.dp)
         ) {
             RoomStatsTable()
@@ -259,49 +259,47 @@ fun RankingContent(bgColor: Color) {
                     .weight(1f) 
                     .verticalScroll(scrollState) 
             ) {
-                // 3. Top 3 Images (Rank 1, 2, 3) Ek ke neeche ek
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 10.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    AsyncImage(
-                        model = RANK_IMG_1, 
-                        contentDescription = "Rank 1", 
-                        modifier = Modifier.fillMaxWidth().height(100.dp), 
-                        contentScale = ContentScale.Fit
-                    )
-                    AsyncImage(
-                        model = RANK_IMG_2, 
-                        contentDescription = "Rank 2", 
-                        modifier = Modifier.fillMaxWidth().height(100.dp), 
-                        contentScale = ContentScale.Fit
-                    )
-                    AsyncImage(
-                        model = RANK_IMG_3, 
-                        contentDescription = "Rank 3", 
-                        modifier = Modifier.fillMaxWidth().height(100.dp), 
-                        contentScale = ContentScale.Fit
-                    )
-                }
-                
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // 4. List 4 to 50 Cards
+                // 3. Top 3 Images (Rank 1, 2, 3) 
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 10.dp)
+                    // Yahan se verticalArrangement hata diya gaya hai taaki 4 to 50 wala exact gap match ho sake
+                ) {
+                    AsyncImage(
+                        model = RANK_IMG_1, 
+                        contentDescription = "Rank 1", 
+                        // Yahan wahi 4.dp ka gap daala jo cards me hai taaki same dikhe
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), 
+                        contentScale = ContentScale.FillWidth 
+                    )
+                    AsyncImage(
+                        model = RANK_IMG_2, 
+                        contentDescription = "Rank 2", 
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), 
+                        contentScale = ContentScale.FillWidth
+                    )
+                    AsyncImage(
+                        model = RANK_IMG_3, 
+                        contentDescription = "Rank 3", 
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), 
+                        contentScale = ContentScale.FillWidth
+                    )
+                }
+                
+                // 4. List 4 to 50 Cards
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 10.dp) 
                 ) {
                     for (i in 4..50) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 4.dp)
+                                .padding(vertical = 4.dp) // Exactly same gap here
                                 .background(tableColor, RoundedCornerShape(6.dp)) 
-                                .padding(16.dp),
+                                .padding(horizontal = 16.dp, vertical = 22.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
