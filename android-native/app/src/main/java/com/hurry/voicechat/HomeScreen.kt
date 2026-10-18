@@ -250,7 +250,7 @@ fun HomeScreen(
 
     val banners = listOf(
         RAW + "IMG-20260830-WA0081.jpg",
-        "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/banner_blue_light_final_668x220.png",
+        RAW + "file_0000000033348246b73ea85588488c24.png", // <- 2nd banner updated here
         RAW + "IMG-20260818-WA0001.jpg"
     )
     val pager = rememberPagerState(pageCount = { banners.size })
@@ -319,7 +319,7 @@ fun HomeScreen(
                 
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp) // Yahan fix kar diya, ekdum Popular/Mine jaisa same gap (4.dp)
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Box(Modifier.clickable(indication = null, interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }) { onSearch() }) { 
                         HurrySearchIcon() 
@@ -362,7 +362,11 @@ fun HomeScreen(
                                 AsyncImage(
                                     model = banners[page],
                                     contentDescription = null,
-                                    modifier = Modifier.fillMaxSize().clickable { if (page == 1) onRoomSupport() else onInviteFriends() },
+                                    // <- Grey ripple effect removed here using indication = null
+                                    modifier = Modifier.fillMaxSize().clickable(
+                                        indication = null, 
+                                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+                                    ) { if (page == 1) onRoomSupport() else onInviteFriends() },
                                     contentScale = ContentScale.Crop
                                 )
                             }
@@ -448,8 +452,8 @@ fun HomeScreen(
                         Row(
                             Modifier
                                 .fillMaxWidth()
-                                .padding(start = 12.dp, end = 12.dp, bottom = 6.dp),
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                .padding(start = 12.dp, end = 12.dp, bottom = 8.dp), // Thoda sa vertical gap add kiya
+                            horizontalArrangement = Arrangement.spacedBy(10.dp) // <- 1st aur 2nd room card ke beech ka gap badha diya
                         ) {
                             row.forEach { room ->
                                 RoomListCard(room, onRoom, Modifier.weight(1f))
@@ -596,18 +600,27 @@ private fun RoomListCard(
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
             )
-            // Same live-track/equalizer indicator shown on the real app's room cards.
+            
+            // <- Live track aur equalizer logic (bars ki height state me store ki hai)
             var liveCount by remember(room.id) { mutableIntStateOf((1000..4999).random()) }
+            var bar1 by remember(room.id) { mutableStateOf(4.dp) }
+            var bar2 by remember(room.id) { mutableStateOf(9.dp) }
+            var bar3 by remember(room.id) { mutableStateOf(6.dp) }
+            
             LaunchedEffect(room.id) {
                 while (true) {
-                    kotlinx.coroutines.delay((1000L..3000L).random())
-                    liveCount = (liveCount + (-3..3).random()).coerceAtLeast(1000)
+                    kotlinx.coroutines.delay((500L..1200L).random())
+                    liveCount = (liveCount + (-3..5).random()).coerceAtLeast(1000)
+                    // Equalizer effect ke liye random heights
+                    bar1 = (3..10).random().dp
+                    bar2 = (4..12).random().dp
+                    bar3 = (3..10).random().dp
                 }
             }
+            
             Row(
                 modifier = Modifier.align(Alignment.BottomEnd).padding(end = 7.dp, bottom = 6.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(Color(0x55000000))
+                    // <- Background color aur clip yahan se hata diya gaya hai (bina kisi card ke floats properly)
                     .padding(horizontal = 5.dp, vertical = 3.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -620,13 +633,18 @@ private fun RoomListCard(
                     maxLines = 1
                 )
                 Row(
-                    modifier = Modifier.height(10.dp),
+                    modifier = Modifier.height(12.dp),
                     horizontalArrangement = Arrangement.spacedBy(2.dp),
                     verticalAlignment = Alignment.Bottom
                 ) {
-                    listOf(4.dp, 9.dp, 6.dp).forEachIndexed { index, barHeight ->
+                    listOf(bar1, bar2, bar3).forEach { barHeight ->
+                        // <- Equalizer bars upar neeche naturally animate honge
+                        val animatedHeight by androidx.compose.animation.core.animateDpAsState(
+                            targetValue = barHeight,
+                            label = "equalizer_animation"
+                        )
                         Box(
-                            Modifier.width(2.dp).height(barHeight)
+                            Modifier.width(2.dp).height(animatedHeight)
                                 .clip(RoundedCornerShape(2.dp))
                                 .background(Color.White)
                         )
