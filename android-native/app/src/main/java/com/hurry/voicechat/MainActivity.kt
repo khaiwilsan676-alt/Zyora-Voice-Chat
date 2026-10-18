@@ -70,7 +70,7 @@ class MainActivity : ComponentActivity() {
             } else if (!authenticated) {
                 NativeLoginScreen(onLoginSuccess = { authenticated = true })
             } else {
-                HurryNativeRoot()
+                HurryNativeRoot(onLogout = { authenticated = false })
             }
         }
     }
@@ -164,7 +164,7 @@ private fun HurryLaunchScreen() {
     }
 }
 @Composable
-private fun HurryNativeRoot() {
+private fun HurryNativeRoot(onLogout: () -> Unit) {
     val context = LocalContext.current
     val roomCreateScope = rememberCoroutineScope()
     val authPrefs = remember { context.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE) }
@@ -307,7 +307,17 @@ private fun HurryNativeRoot() {
                                 "Seller Center" -> SellerCenter(onBack = { openedMePage = null })
                                 "SVIP" -> Svip(onBack = { openedMePage = null })
                                 "Language Setting" -> LanguagePage(onBack = { openedMePage = null })
-                                "Settings" -> MeNativeSubPage("Settings", onBack = { openedMePage = null })
+                                "Settings" -> SettingsPage(onBack = { openedMePage = null }, onLogout = {
+                                    authPrefs.edit()
+                                        .remove("uid")
+                                        .remove("name")
+                                        .remove("phone")
+                                        .remove("image")
+                                        .remove("accountId")
+                                        .apply()
+                                    openedMePage = null
+                                    onLogout()
+                                })
                                 "Customer Service" -> HurrySupport(onBack = { openedMePage = null })
                                 "Help & Feedback" -> HelpFeedbackPage(onBack = { openedMePage = null })
                                 else -> MeNativeSubPage(openedMePage!!, onBack = { openedMePage = null })
