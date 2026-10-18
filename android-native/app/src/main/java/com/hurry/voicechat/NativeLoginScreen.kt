@@ -500,14 +500,10 @@ private fun syncHurryUser(user: JSONObject, context: android.content.Context) {
         requestMethod = "PUT"; connectTimeout = 12000; readTimeout = 12000; doOutput = true
         setRequestProperty("Content-Type", "application/json")
     }
-    save.outputStream.use { it.write(profile.toString().toByteArray(Charsets.UTF_8)) }
-    val saveCode = save.responseCode
-    val saveStream = if (saveCode in 200..299) save.inputStream else save.errorStream
-    runCatching { saveStream?.bufferedReader()?.use { it.readText() } }
-    save.disconnect()
-    if (saveCode !in 200..299) throw IllegalStateException("Signed in, but profile sync failed. Please try again.")
-
-    context.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE).edit()
+    // Save the signed-in identity locally before network profile sync. A temporary
+    // Render/MongoDB outage must not turn a valid Firebase login into a failed login.
+    val authPrefs = context.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE)
+    authPrefs.edit()
         .putString("uid", uid)
         .putString("email", email)
         .putString("name", name)
@@ -517,7 +513,31 @@ private fun syncHurryUser(user: JSONObject, context: android.content.Context) {
         .putString("image", image)
         .putString("country", country)
         .putString("deviceId", deviceId)
+        .putString("pendingProfileJson", profile.toString())
+        .putBoolean("profileSyncPending", true)
         .apply()
+
+    var saveCode = -1
+    var saveResponse = ""
+    try {
+        save.outputStream.use { it.write(profile.toString().toByteArray(Charsets.UTF_8)) }
+        saveCode = save.responseCode
+        val saveStream = if (saveCode in 200..299) save.inputStream else save.errorStream
+        saveResponse = runCatching { saveStream?.bufferedReader()?.use { it.readText() }.orEmpty() }.getOrDefault("")
+    } finally {
+        save.disconnect()
+    }
+
+    if (saveCode in 200..299) {
+        authPrefs.edit()
+            .remove("pendingProfileJson")
+            .putBoolean("profileSyncPending", false)
+            .apply()
+    } else {
+        // Keep the profile queued locally for a retry on the next login. Do not
+        // discard a successful Firebase session because the profile API is offline.
+        android.util.Log.w("ZyoraAuth", "Profile sync queued; HTTP $saveCode: $saveResponse")
+    }
 }
 
 private fun authErrorText(raw: String): String = when {
