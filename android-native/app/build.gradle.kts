@@ -19,21 +19,14 @@ android {
         compose = true
         buildConfig = true
     }
-    val googleWebClientId = providers.gradleProperty("GOOGLE_WEB_CLIENT_ID")
-        .orElse(providers.environmentVariable("GOOGLE_WEB_CLIENT_ID"))
-        .orElse("")
-        .get()
-        .replace("\\", "\\\\")
-        .replace("\"", "\\\"")
     val firebaseApiKey = providers.gradleProperty("FIREBASE_API_KEY")
         .orElse(providers.environmentVariable("FIREBASE_API_KEY"))
         .orElse(providers.environmentVariable("NEXT_PUBLIC_FIREBASE_API_KEY"))
-        .orElse("")
+        .orElse("AIzaSyBNTxdeuqc3F7R4eyjmwdQqQ2YWv9-9yv4")
         .get()
         .replace("\\", "\\\\")
         .replace("\"", "\\\"")
     defaultConfig {
-        buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")
         buildConfigField("String", "FIREBASE_API_KEY", "\"$firebaseApiKey\"")
     }
     compileOptions {
@@ -50,6 +43,8 @@ dependencies {
     implementation("androidx.credentials:credentials:1.5.0")
     implementation("androidx.credentials:credentials-play-services-auth:1.5.0")
     implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
+    implementation("com.google.firebase:firebase-auth:23.2.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.10.2")
     implementation("androidx.core:core-splashscreen:1.0.1")
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
