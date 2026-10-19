@@ -12,7 +12,6 @@ import androidx.compose.runtime.*
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.BackHandler
 import androidx.activity.result.contract.ActivityResultContracts
-import android.media.MediaPlayer
 import android.net.Uri
 import android.provider.OpenableColumns
 import androidx.compose.material.icons.Icons
@@ -52,7 +51,6 @@ fun Fourgride(
     var musicTracks by remember { mutableStateOf(emptyList<NativeMusicTrack>()) }
     var playingUri by remember { mutableStateOf<String?>(null) }
     var isPlaying by remember { mutableStateOf(false) }
-    var mediaPlayer by remember { mutableStateOf<MediaPlayer?>(null) }
     LaunchedEffect(Unit) {
         musicTracks = musicPrefs.getStringSet("uris", emptySet()).orEmpty().mapNotNull { raw ->
             runCatching {
@@ -187,17 +185,16 @@ fun Fourgride(
                                 Text(track.name, Modifier.weight(1f), color = Color.White, fontSize = 14.sp, maxLines = 1)
                                 IconButton(onClick = {
                                     if (playingUri == track.url && isPlaying) {
-                                        mediaPlayer?.pause()
+                                        context.startService(Intent(context, RoomMusicService::class.java).setAction(RoomMusicService.ACTION_PAUSE))
                                         isPlaying = false
                                     } else {
-                                        runCatching { mediaPlayer?.release() }
-                                        mediaPlayer = MediaPlayer().apply {
-                                            setDataSource(context, Uri.parse(track.url))
-                                            setOnPreparedListener { player -> player.start(); isPlaying = true; playingUri = track.url }
-                                            setOnCompletionListener { isPlaying = false; playingUri = null }
-                                            prepareAsync()
-                                        }
+                                        val playIntent = Intent(context, RoomMusicService::class.java)
+                                            .setAction(RoomMusicService.ACTION_PLAY)
+                                            .putExtra(RoomMusicService.EXTRA_URI, track.url)
+                                            .putExtra(RoomMusicService.EXTRA_TITLE, track.name)
+                                        androidx.core.content.ContextCompat.startForegroundService(context, playIntent)
                                         playingUri = track.url
+                                        isPlaying = true
                                         onMusicPlay?.invoke(track)
                                     }
                                 }) {
@@ -205,8 +202,7 @@ fun Fourgride(
                                 }
                                 IconButton(onClick = {
                                     if (playingUri == track.url) {
-                                        runCatching { mediaPlayer?.release() }
-                                        mediaPlayer = null
+                                        context.startService(Intent(context, RoomMusicService::class.java).setAction(RoomMusicService.ACTION_STOP))
                                         playingUri = null
                                         isPlaying = false
                                     }
