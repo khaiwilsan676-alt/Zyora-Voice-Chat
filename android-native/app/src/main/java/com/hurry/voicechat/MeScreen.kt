@@ -9,8 +9,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -19,8 +17,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -33,7 +29,6 @@ private data class MeMenu(val label: String, val asset: String)
 @Composable
 fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -> Unit = {}, languageCode: String = "en") {
     val context = LocalContext.current
-    val clipboard = LocalClipboardManager.current
     // Native login stores the authenticated Firebase profile in hurry_auth.
     // Read the same preferences so the signed-in account ID appears on the Me page.
     val prefs = remember { context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE) }
@@ -60,7 +55,7 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
     )
 
     LazyColumn(
-        modifier = Modifier.fillMaxSize().background(Color(0xFFF1F1F1)).statusBarsPadding(),
+        modifier = Modifier.fillMaxSize().background(Color(0xFFF1F1F1)),
         contentPadding = PaddingValues(bottom = 24.dp)
     ) {
         item {
@@ -84,20 +79,7 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
                         Spacer(Modifier.width(16.dp))
                         Column {
                             Text(name, fontSize = 24.sp, fontWeight = FontWeight.Normal, color = Color(0xFF111827))
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("ID: $account", fontSize = 12.sp, fontWeight = FontWeight.Normal, color = Color(0xFF374151))
-                                IconButton(
-                                    onClick = { clipboard.setText(AnnotatedString(account)) },
-                                    modifier = Modifier.size(24.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Filled.ContentCopy,
-                                        contentDescription = "Copy ID",
-                                        tint = Color(0xFF374151),
-                                        modifier = Modifier.size(14.dp)
-                                    )
-                                }
-                            }
+                            Text("ID: $account", fontSize = 12.sp, fontWeight = FontWeight.Normal, color = Color(0xFF374151))
                             if (phone.isNotBlank()) Text(phone, fontSize = 12.sp, fontWeight = FontWeight.Normal, color = Color(0xFF4B5563))
                         }
                     }
