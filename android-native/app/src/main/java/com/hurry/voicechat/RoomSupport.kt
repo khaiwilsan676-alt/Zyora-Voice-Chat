@@ -19,13 +19,10 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CardGiftcard
 import androidx.compose.material3.Divider
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,6 +40,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.delay
 import java.util.Calendar
@@ -75,33 +73,12 @@ fun RoomSupport(onBack: () -> Unit) {
             .background(bgColor)
     ) {
         
-        // Sirf Room Support ka content call kiya hai ab
+        // Pura Content aur top bar scrollable banaya gaya hai
         RoomSupportContent(
             bgColor = bgColor,
-            onShowPopup = { msg -> popupMessage = msg }
+            onShowPopup = { msg -> popupMessage = msg },
+            onBack = onBack
         )
-
-        // Top Bar
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .statusBarsPadding()
-                .padding(horizontal = 16.dp, vertical = 12.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.ArrowBack,
-                contentDescription = "Back",
-                tint = Color.White,
-                modifier = Modifier
-                    .align(Alignment.CenterStart)
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null // Grey effect hta diya
-                    ) { onBack() }
-            )
-            
-            // "Room Support" heading yahan se hata di hai bss
-        }
 
         // Custom Pill Popup (Black/40%)
         AnimatedVisibility(
@@ -130,7 +107,7 @@ fun RoomSupport(onBack: () -> Unit) {
 // 1. ROOM SUPPORT PAGE 
 // ==========================================
 @Composable
-fun RoomSupportContent(bgColor: Color, onShowPopup: (String) -> Unit) {
+fun RoomSupportContent(bgColor: Color, onShowPopup: (String) -> Unit, onBack: () -> Unit) {
     val scrollState = rememberScrollState()
 
     Column(
@@ -138,24 +115,41 @@ fun RoomSupportContent(bgColor: Color, onShowPopup: (String) -> Unit) {
             .fillMaxSize()
             .verticalScroll(scrollState)
     ) {
-        AsyncImage(
-            model = ROOM_SUPPORT_HEADER,
-            contentDescription = null,
-            modifier = Modifier
-                .fillMaxWidth()
-                .drawWithCache {
-                    val gradient = Brush.verticalGradient(
-                        colors = listOf(Color.Transparent, bgColor),
-                        startY = size.height * 0.90f, 
-                        endY = size.height
-                    )
-                    onDrawWithContent {
-                        drawContent()
-                        drawRect(gradient, blendMode = BlendMode.SrcOver)
-                    }
-                },
-            contentScale = ContentScale.FillWidth 
-        )
+        // Box banaya taaki Back icon image ke upar rahe aur dono sath mein scroll ho
+        Box(modifier = Modifier.fillMaxWidth()) {
+            AsyncImage(
+                model = ROOM_SUPPORT_HEADER,
+                contentDescription = null,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .drawWithCache {
+                        val gradient = Brush.verticalGradient(
+                            colors = listOf(Color.Transparent, bgColor),
+                            startY = size.height * 0.90f, 
+                            endY = size.height
+                        )
+                        onDrawWithContent {
+                            drawContent()
+                            drawRect(gradient, blendMode = BlendMode.SrcOver)
+                        }
+                    },
+                contentScale = ContentScale.FillWidth 
+            )
+
+            // Back Icon ab float nahi hoga, page scroll ke sath upar jayega
+            Icon(
+                imageVector = Icons.Default.ArrowBack,
+                contentDescription = "Back",
+                tint = Color.White,
+                modifier = Modifier
+                    .statusBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null // Grey effect hta diya
+                    ) { onBack() }
+            )
+        }
 
         Column(
             modifier = Modifier
@@ -424,7 +418,6 @@ fun TargetRewardTable() {
 // User Data Class For Partner State
 data class PartnerData(val id: String, val name: String, val avatarUrl: String)
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ThisWeekCountdownCard(onShowPopup: (String) -> Unit) {
     var timeLeftInSeconds by remember { mutableLongStateOf(7 * 24 * 60 * 60L) }
@@ -447,16 +440,18 @@ fun ThisWeekCountdownCard(onShowPopup: (String) -> Unit) {
     val headerGradient = Brush.verticalGradient(listOf(Color(0xFFFFF0C9), Color(0xFFFFE2A0)))
     val bodyBgSolid = Color(0xFF0D4880)
     val mdCorner = RoundedCornerShape(12.dp)
+    val smallCurve = RoundedCornerShape(6.dp) // + wale card ka curve kam kiya
 
     // Check karega agar aaj Monday ya Tuesday hai
     val canAddPartner = remember { isMondayOrTuesday() }
 
-    // Bottom Sheet aur Partners ka State Management
+    // Dialog aur Partners ka State Management
     val partnersList = remember { mutableStateListOf<PartnerData?>(null, null, null) }
-    var showBottomSheet by remember { mutableStateOf(false) }
+    var showSearchDialog by remember { mutableStateOf(false) }
+    var showConfirmDialog by remember { mutableStateOf(false) }
     var currentSlotIndex by remember { mutableStateOf(-1) }
     var searchQuery by remember { mutableStateOf("") }
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    var pendingPartner by remember { mutableStateOf<PartnerData?>(null) } // Temp hold karne k liye
 
     Column(
         modifier = Modifier
@@ -520,17 +515,17 @@ fun ThisWeekCountdownCard(onShowPopup: (String) -> Unit) {
             ) {
                 partnersList.forEachIndexed { index, partner ->
                     if (partner == null) {
-                        // Empty State (Plus icon dikhayega)
+                        // Empty State (Curve kam kiya yahan smallCurve use karke)
                         Box(
                             modifier = Modifier
                                 .size(60.dp)
-                                .clip(mdCorner)
+                                .clip(smallCurve) 
                                 .background(borderColor)
                                 .clickable {
                                     if (canAddPartner) {
                                         currentSlotIndex = index
                                         searchQuery = "" // Input clear kar diya pichla
-                                        showBottomSheet = true
+                                        showSearchDialog = true
                                     } else {
                                         onShowPopup("Fill-in Time not Yet")
                                     }
@@ -581,113 +576,150 @@ fun ThisWeekCountdownCard(onShowPopup: (String) -> Unit) {
         }
     }
 
-    // Black Bottom Sheet Logic (40vh, slight curves)
-    if (showBottomSheet) {
-        ModalBottomSheet(
-            onDismissRequest = { showBottomSheet = false },
-            sheetState = sheetState,
-            containerColor = Color.Black,
-            dragHandle = null, 
-            shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp) // Thoda sa curve
-        ) {
-            Column(
+    // 1. Center Search Dialog (Top heading "Partner")
+    if (showSearchDialog) {
+        Dialog(onDismissRequest = { showSearchDialog = false }) {
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .fillMaxHeight(0.4f) // 40vh Height
-                    .padding(vertical = 16.dp)
+                    .clip(mdCorner)
+                    .background(bodyBgSolid) // Same Table ka color
+                    .border(2.dp, borderColor, mdCorner)
+                    .padding(16.dp)
             ) {
-                // Top Header (Back icon + Title)
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.ArrowBack,
-                        contentDescription = "Back",
-                        tint = Color.White,
-                        modifier = Modifier.clickable { showBottomSheet = false }
-                    )
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = "Partners",
+                        text = "Partner",
                         color = Color.White,
                         fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.weight(1f)
+                        fontWeight = FontWeight.Bold
                     )
-                    Spacer(modifier = Modifier.width(24.dp)) // To keep title properly centered
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        placeholder = { Text("Search by ID...", color = Color.Gray) },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            focusedBorderColor = borderColor, // Border same ussi color ka
+                            unfocusedBorderColor = borderColor,
+                            cursorColor = Color.White
+                        )
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    if (searchQuery.isNotBlank()) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            AsyncImage(
+                                model = "https://ui-avatars.com/api/?name=${searchQuery}&background=random",
+                                contentDescription = "Search Avatar",
+                                modifier = Modifier
+                                    .size(42.dp)
+                                    .clip(CircleShape)
+                                    .border(1.dp, borderColor, CircleShape)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            
+                            Text(
+                                text = "User $searchQuery",
+                                color = Color.White,
+                                fontSize = 15.sp,
+                                modifier = Modifier.weight(1f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            
+                            // Right Side Blue Add Button
+                            Text(
+                                text = "Add",
+                                color = borderColor, 
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier
+                                    .clickable {
+                                        // Directly add nai karna, Confirm dialog show karna hai
+                                        pendingPartner = PartnerData(
+                                            id = searchQuery,
+                                            name = "User $searchQuery",
+                                            avatarUrl = "https://ui-avatars.com/api/?name=${searchQuery}&background=random"
+                                        )
+                                        showSearchDialog = false
+                                        showConfirmDialog = true
+                                    }
+                                    .padding(8.dp) 
+                            )
+                        }
+                    }
                 }
+            }
+        }
+    }
 
-                Spacer(modifier = Modifier.height(20.dp))
-
-                // Input Bar for ID Search
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    placeholder = { Text("Search by ID...", color = Color.Gray) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    singleLine = true,
-                    shape = RoundedCornerShape(12.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
-                        focusedBorderColor = Color.White,
-                        unfocusedBorderColor = Color.DarkGray,
-                        cursorColor = Color.White
+    // 2. Center Confirmation Dialog (Top heading "Tips")
+    if (showConfirmDialog) {
+        Dialog(onDismissRequest = { showConfirmDialog = false }) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(mdCorner)
+                    .background(bodyBgSolid)
+                    .border(2.dp, borderColor, mdCorner)
+                    .padding(20.dp)
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "Tips",
+                        color = Color.White,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold
                     )
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Search Result View (Niche left avtar, center naam, right blue Add)
-                if (searchQuery.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
+                    Text(
+                        text = "If you add partner, then you can't remove",
+                        color = Color.White,
+                        fontSize = 14.sp,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(24.dp))
+                    
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
-                        // Left Avatar (Mocked for now with an API)
-                        AsyncImage(
-                            model = "https://ui-avatars.com/api/?name=${searchQuery}&background=random",
-                            contentDescription = "Search Avatar",
-                            modifier = Modifier
-                                .size(42.dp)
-                                .clip(CircleShape)
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        
-                        // Center Name
                         Text(
-                            text = "User $searchQuery",
-                            color = Color.White,
-                            fontSize = 15.sp,
-                            modifier = Modifier.weight(1f),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        
-                        // Right Side Blue Add Button
-                        Text(
-                            text = "Add",
-                            color = Color(0xFF388FC2), // Blue color 
+                            text = "Cancel",
+                            color = Color.Gray,
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
-                            modifier = Modifier
-                                .clickable {
-                                    // Add logic triggers ho gaya!
-                                    partnersList[currentSlotIndex] = PartnerData(
-                                        id = searchQuery,
-                                        name = "User $searchQuery",
-                                        avatarUrl = "https://ui-avatars.com/api/?name=${searchQuery}&background=random"
-                                    )
-                                    showBottomSheet = false // Sheet close kardo
+                            modifier = Modifier.clickable { 
+                                showConfirmDialog = false
+                                pendingPartner = null 
+                            }.padding(8.dp)
+                        )
+                        
+                        Text(
+                            text = "Confirm",
+                            color = borderColor,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.clickable { 
+                                // Yahan aake actual mein add hoga
+                                pendingPartner?.let {
+                                    partnersList[currentSlotIndex] = it
                                 }
-                                .padding(8.dp) // Clicking area badhane k liye
+                                showConfirmDialog = false
+                                pendingPartner = null
+                            }.padding(8.dp)
                         )
                     }
                 }
