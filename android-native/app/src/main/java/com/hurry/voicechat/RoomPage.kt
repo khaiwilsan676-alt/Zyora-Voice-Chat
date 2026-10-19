@@ -176,6 +176,7 @@ fun RoomPage(
     var showWildParty by remember{mutableStateOf(false)}
     var showFruitParty by remember{mutableStateOf(false)}
     var miniMusicTrack by remember { mutableStateOf<NativeMusicTrack?>(null) }
+    var musicControllerMinimized by remember { mutableStateOf(false) }
     var input by remember{mutableStateOf("")}
     val chatFocusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -388,6 +389,39 @@ fun RoomPage(
             Spacer(Modifier.width(6.dp))
             Text("0",color=Color(0xFFEEF3A3),fontSize=12.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Bold, letterSpacing=0.1.sp)
             Icon(Icons.Default.ChevronRight,null,tint=Color(0xFFEEF3A3),modifier=Modifier.padding(start=4.dp).size(10.dp))
+        }
+
+        if (musicControllerMinimized && miniMusicTrack != null) {
+            Row(
+                modifier = Modifier.align(Alignment.TopStart)
+                    .padding(top = 86.dp, start = 78.dp)
+                    .widthIn(max = 110.dp)
+                    .clip(CircleShape)
+                    .background(Color.Black.copy(alpha = 0.3f))
+                    .clickable {
+                        musicControllerMinimized = false
+                        showMenu = true
+                    }
+                    .padding(start = 2.dp, end = 8.dp, top = 2.dp, bottom = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                AsyncImage(
+                    model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/file_00000000ee70820b9fd0dfe71739874e.png",
+                    contentDescription = "Music",
+                    modifier = Modifier.size(24.dp),
+                    contentScale = ContentScale.Fit
+                )
+                Text(
+                    miniMusicTrack?.name.orEmpty(),
+                    modifier = Modifier.widthIn(max = 68.dp).basicMarquee(),
+                    color = Color.White,
+                    fontSize = 11.sp,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                    maxLines = 1,
+                    softWrap = false
+                )
+            }
         }
 
         Column(Modifier.fillMaxSize().imePadding()){
@@ -730,8 +764,8 @@ fun RoomPage(
             onTogglePublicMsg={publicMsgOff=!publicMsgOff},
             speaker=speaker,
             onToggleSpeaker={speaker=!speaker},
-            onMusicPlay={ track -> miniMusicTrack = track },
-            onMusicMinimize={ track -> if (track != null) miniMusicTrack = track; showMenu = false },
+            onMusicPlay={ track -> miniMusicTrack = track; musicControllerMinimized = false },
+            onMusicMinimize={ track -> if (track != null) { miniMusicTrack = track; musicControllerMinimized = true }; showMenu = false },
             onOpenStore=null
         )
         
@@ -843,31 +877,6 @@ fun RoomPage(
             MemberSheet(seats.first{it.number==selectedSeat}){selectedSeat=0}
         }
         
-        if (miniMusicTrack != null && !showMenu) {
-            Surface(
-                modifier = Modifier.align(Alignment.BottomStart).padding(start = 12.dp, bottom = 82.dp)
-                    .clickable { showMenu = true },
-                color = Color(0xE8202733),
-                shape = RoundedCornerShape(14.dp),
-                shadowElevation = 8.dp
-            ) {
-                Row(
-                    Modifier.padding(start = 10.dp, end = 4.dp, top = 7.dp, bottom = 7.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Icon(Icons.Default.MusicNote, contentDescription = "Music", tint = Color(0xFF72B7FF), modifier = Modifier.size(22.dp))
-                    Column(Modifier.widthIn(max = 150.dp)) {
-                        Text("Music", color = Color.White.copy(alpha = .7f), fontSize = 10.sp)
-                        Text(miniMusicTrack?.name.orEmpty(), color = Color.White, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
-                    IconButton(onClick = { miniMusicTrack = null }, modifier = Modifier.size(28.dp)) {
-                        Icon(Icons.Default.Close, contentDescription = "Close mini music", tint = Color.White.copy(alpha = .8f), modifier = Modifier.size(16.dp))
-                    }
-                }
-            }
-        }
-
         if(showMessageSheet) {
             val screenHeight = LocalConfiguration.current.screenHeightDp
             Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=.30f)).clickable{showMessageSheet=false},contentAlignment=Alignment.BottomCenter) {
