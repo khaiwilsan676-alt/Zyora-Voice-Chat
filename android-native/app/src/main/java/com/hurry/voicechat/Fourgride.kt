@@ -233,12 +233,7 @@ fun Fourgride(
         }
     }
     if (showLuckyBag) {
-        AlertDialog(
-            onDismissRequest = { showLuckyBag = false },
-            title = { Text("Lucky bag") },
-            text = { Text("Lucky bag") },
-            confirmButton = { TextButton(onClick = { showLuckyBag = false }) { Text("Close") } }
-        )
+        LuckyBag(onClose = { showLuckyBag = false })
     }
 }
 
