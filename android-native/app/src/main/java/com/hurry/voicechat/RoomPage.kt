@@ -170,6 +170,7 @@ fun RoomPage(
     var showStore by remember { mutableStateOf(false) }
     var storeInitialView by remember { mutableStateOf("store") }
     var showExitMenu by remember{mutableStateOf(false)}
+    var keepingRoomForMini by remember { mutableStateOf(false) }
     var showInfo by remember{mutableStateOf(false)}
     var showActiveUsers by remember{mutableStateOf(false)}
     var showSettings by remember{mutableStateOf(false)}
@@ -383,7 +384,7 @@ fun RoomPage(
         roomSocket.connect()
         
         onDispose {
-            roomSocket.emit("room_leave",JSONObject().put("roomId",roomId).put("userId",accountId).put("accountId",accountId))
+            if (!keepingRoomForMini) roomSocket.emit("room_leave",JSONObject().put("roomId",roomId).put("userId",accountId).put("accountId",accountId))
             roomSocket.off("room_presence",presenceListener)
             roomSocket.off("room_message",messageListener)
             roomSocket.off("room_chat_cleared",clearedListener)
@@ -806,7 +807,7 @@ fun RoomPage(
         }
         
         if(showExitMenu) RoomExitMenu(
-            onKeep={showExitMenu=false;onKeepRoom(roomName,roomImage,roomId)},
+            onKeep={keepingRoomForMini=true;showExitMenu=false;onKeepRoom(roomName,roomImage,roomId)},
             onExit={showExitMenu=false;onClose()},
             onDismiss={showExitMenu=false}
         )
