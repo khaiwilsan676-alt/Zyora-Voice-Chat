@@ -1,6 +1,8 @@
 package com.hurry.voicechat
 
 import android.Manifest
+import android.content.Context
+import android.media.AudioManager
 import android.content.pm.PackageManager
 import android.webkit.PermissionRequest
 import android.webkit.WebChromeClient
@@ -30,6 +32,23 @@ import org.json.JSONObject
 @Composable
 fun JitsiRoomAudio(roomId: String, userName: String, canSpeak: Boolean, onSpeakingChanged: (Boolean) -> Unit = {}) {
     val context = LocalContext.current
+
+    // Keep the room's WebRTC audio on Android's communication route while
+    // this room is open, then restore the user's previous audio routing.
+    DisposableEffect(context, roomId) {
+        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        val previousMode = audioManager.mode
+        @Suppress("DEPRECATION")
+        val previousSpeakerphone = audioManager.isSpeakerphoneOn
+        audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
+        @Suppress("DEPRECATION")
+        run { audioManager.isSpeakerphoneOn = true }
+        onDispose {
+            @Suppress("DEPRECATION")
+            run { audioManager.isSpeakerphoneOn = previousSpeakerphone }
+            audioManager.mode = previousMode
+        }
+    }
     var hasMicPermission by remember {
         mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED)
     }
