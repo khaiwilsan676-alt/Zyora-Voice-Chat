@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import com.hurry.voicechat.*
 
 private enum class NativeRoute { HOME, MESSAGE, ME, SEARCH, WALLET, SETTING, LANGUAGE, LEADERBOARD, LEVEL, STORE, SVIP, ROOM }
@@ -15,7 +16,7 @@ class NativeMainActivity : ComponentActivity() {
         requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
         setContent {
             MaterialTheme {
-                var route by remember { mutableStateOf(NativeRoute.HOME) }
+                var route by rememberSaveable { mutableStateOf(NativeRoute.HOME) }
                 val back: () -> Unit = {
                     route = when (route) {
                         NativeRoute.HOME -> NativeRoute.HOME
