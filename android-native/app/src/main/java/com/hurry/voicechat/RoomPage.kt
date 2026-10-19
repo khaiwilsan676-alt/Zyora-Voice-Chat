@@ -162,6 +162,7 @@ fun RoomPage(
     var roomImage by remember{mutableStateOf(roomOwner.image)}
     var followed by remember{mutableStateOf(false)}
     var speaker by remember{mutableStateOf(true)}
+    var localVoiceSpeaking by remember { mutableStateOf(false) }
     var publicMsgOff by remember{mutableStateOf(false)}
     var locked by remember{mutableStateOf(false)}
     var showChat by remember{mutableStateOf(false)}
@@ -401,7 +402,8 @@ fun RoomPage(
         JitsiRoomAudio(
             roomId = roomId,
             userName = currentUser.name,
-            canSpeak = seats.any { it.occupied && it.accountId == accountId && !it.muted }
+            canSpeak = seats.any { it.occupied && it.accountId == accountId && !it.muted },
+            onSpeakingChanged = { localVoiceSpeaking = it }
         )
         AsyncImage(model="https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/1784875884052~2.jpg",contentDescription="Room theme background",modifier=Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
         
@@ -580,7 +582,7 @@ fun RoomPage(
                 seats.chunked(5).forEach { rowSeats ->
                     Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.SpaceBetween) {
                         rowSeats.forEach { seat ->
-                            NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}) {
+                            NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, isSpeaking = seat.speaking || (seat.accountId == accountId && localVoiceSpeaking)) {
                                 selectedSeat = seat.number
                                 showSeatSheet = true
                             }
@@ -996,7 +998,9 @@ fun RoomPage(
     }
 }
 
-@Composable private fun NativeSeat(seat:NativeRoomSeat,ownerId:String,onClick:()->Unit){
+@Composable private fun NativeSeat(seat:NativeRoomSeat,ownerId:String,isSpeaking:Boolean=seat.speaking,onClick:()->Unit){
+    val voicePulse = rememberInfiniteTransition(label = "voice-wave")
+    val waveProgress by voicePulse.animateFloat(initialValue = 0.15f, targetValue = 1f, animationSpec = infiniteRepeatable(animation = tween(850, easing = LinearEasing), repeatMode = RepeatMode.Restart), label = "voice-wave-progress")
     val raw="https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/"
     Column(
         horizontalAlignment=Alignment.CenterHorizontally,
@@ -1024,6 +1028,11 @@ fun RoomPage(
                     center=center,
                     style=Stroke(width=size.minDimension*15f/512f)
                 )
+                if (isSpeaking) {
+                    val pulseRadius = size.minDimension * (0.45f + waveProgress * 0.42f)
+                    drawCircle(color = Color(0xFF168CFF).copy(alpha = 0.65f * (1f - waveProgress)), radius = pulseRadius, center = center, style = Stroke(width = size.minDimension * 0.055f))
+                    drawCircle(color = Color(0xFF45B7FF).copy(alpha = 0.42f * (1f - waveProgress)), radius = pulseRadius * 0.78f, center = center, style = Stroke(width = size.minDimension * 0.035f))
+                }
                 drawCircle(brush=ringBrush,radius=radius,center=center,style=Stroke(width=size.minDimension*10f/512f))
                 val shine = Brush.horizontalGradient(
                     colors=listOf(Color.White.copy(alpha=0f),Color.White.copy(alpha=.75f),Color.White.copy(alpha=.95f),Color.White.copy(alpha=0f)),
