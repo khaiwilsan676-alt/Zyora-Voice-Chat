@@ -43,6 +43,12 @@ import coil3.compose.AsyncImage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+// ✅ GLOBAL STATE — sheet close hone ke baad bhi survive karta hai
+object MusicPlaybackState {
+    var currentPlayingUri: String? = null
+    var isPlaying: Boolean = false
+}
+
 data class NativeMusicTrack(val id: String, val name: String, val url: String, val duration: Long = 0L)
 data class DeviceMusicItem(val id: String, val name: String, val uri: String, val duration: Long)
 
@@ -105,8 +111,10 @@ fun Fourgride(
     val prefs = remember { context.getSharedPreferences("hurry_room_tools", android.content.Context.MODE_PRIVATE) }
     val musicPrefs = remember { context.getSharedPreferences("zyora_phone_music", android.content.Context.MODE_PRIVATE) }
     var musicTracks by remember { mutableStateOf(emptyList<NativeMusicTrack>()) }
-    var playingUri by remember { mutableStateOf<String?>(null) }
-    var isPlaying by remember { mutableStateOf(false) }
+
+    // ✅ INIT from global state (survives sheet close)
+    var playingUri by remember { mutableStateOf(MusicPlaybackState.currentPlayingUri) }
+    var isPlaying by remember { mutableStateOf(MusicPlaybackState.isPlaying) }
 
     LaunchedEffect(Unit) {
         musicTracks = musicPrefs.getStringSet("uris", emptySet()).orEmpty().mapNotNull { raw ->
@@ -159,7 +167,6 @@ fun Fourgride(
         }
     }
 
-    // Load durations for existing tracks (music page open hone pe)
     LaunchedEffect(showMusic, musicTracks.size) {
         if (showMusic && musicTracks.isNotEmpty()) {
             val durations = withContext(Dispatchers.IO) {
@@ -181,7 +188,6 @@ fun Fourgride(
         }
     }
 
-    // Load device music when device sheet opens
     LaunchedEffect(showDeviceMusic) {
         if (showDeviceMusic) {
             deviceMusicLoading = true
@@ -263,7 +269,6 @@ fun Fourgride(
         }
     }
 
-    // ---------- MUSIC PAGE ----------
     if (showMusic) {
         BackHandler(enabled = true) {
             val currentTrack = musicTracks.firstOrNull { it.url == playingUri }
@@ -307,6 +312,8 @@ fun Fourgride(
                                     if (playingUri == track.url && isPlaying) {
                                         context.startService(Intent(context, RoomMusicService::class.java).setAction(RoomMusicService.ACTION_PAUSE))
                                         isPlaying = false
+                                        MusicPlaybackState.isPlaying = false
+                                        MusicPlaybackState.currentPlayingUri = playingUri
                                     } else {
                                         val playIntent = Intent(context, RoomMusicService::class.java)
                                             .setAction(RoomMusicService.ACTION_PLAY)
@@ -315,6 +322,8 @@ fun Fourgride(
                                         ContextCompat.startForegroundService(context, playIntent)
                                         playingUri = track.url
                                         isPlaying = true
+                                        MusicPlaybackState.currentPlayingUri = track.url
+                                        MusicPlaybackState.isPlaying = true
                                         onMusicPlay?.invoke(track)
                                     }
                                 }) {
@@ -325,6 +334,8 @@ fun Fourgride(
                                         context.startService(Intent(context, RoomMusicService::class.java).setAction(RoomMusicService.ACTION_STOP))
                                         playingUri = null
                                         isPlaying = false
+                                        MusicPlaybackState.currentPlayingUri = null
+                                        MusicPlaybackState.isPlaying = false
                                     }
                                     musicTracks = musicTracks.filterNot { it.id == track.id }
                                     musicPrefs.edit().putStringSet("uris", musicTracks.map { it.id }.toSet()).apply()
@@ -355,7 +366,6 @@ fun Fourgride(
         }
     }
 
-    // ---------- DEVICE MUSIC BLACK SHEET ----------
     if (showDeviceMusic) {
         BackHandler(enabled = true) { showDeviceMusic = false }
         Box(Modifier.fillMaxSize().background(Color.Black)) {
