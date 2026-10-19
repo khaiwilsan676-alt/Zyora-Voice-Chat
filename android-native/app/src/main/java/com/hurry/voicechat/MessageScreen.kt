@@ -95,7 +95,7 @@ fun MessageScreen(onChat: (String, String, String) -> Unit, embeddedSheet: Boole
         )
     }
 
-    Column(Modifier.fillMaxSize().background(Color(0xFFF0F2F5))) {
+    Column(Modifier.fillMaxSize().background(Color.White)) {
         if (embeddedSheet) {
             Box(Modifier.fillMaxWidth().height(54.dp).background(Color.White)) {
                 IconButton(onClick = onBack, modifier = Modifier.align(Alignment.CenterStart).size(48.dp)) {
@@ -109,8 +109,8 @@ fun MessageScreen(onChat: (String, String, String) -> Unit, embeddedSheet: Boole
                     Brush.verticalGradient(
                         0.0f to Color(0xFF3B82F6),
                         0.3f to Color(0xFF3B82F6), // Blue color thora aur increase kiya yahan
-                        0.75f to Color(0xFFE5E7EB),
-                        1.0f to Color(0xFFF0F2F5)
+                        0.75f to Color.White,
+                        1.0f to Color.White
                     )
                 ).statusBarsPadding().padding(top = 12.dp, bottom = 12.dp)
             ) {
@@ -134,7 +134,7 @@ fun MessageScreen(onChat: (String, String, String) -> Unit, embeddedSheet: Boole
             }
         }
 
-        LazyColumn(Modifier.fillMaxSize().background(Color(0xFFF0F2F5)).padding(bottom = 8.dp)) {
+        LazyColumn(Modifier.fillMaxSize().background(Color.White).padding(bottom = 8.dp)) {
             items(chats) { chat ->
                 MessageRow(chat) { onChat(chat.uid, chat.name, chat.image) }
             }
