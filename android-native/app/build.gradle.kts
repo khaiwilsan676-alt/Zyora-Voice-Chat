@@ -10,8 +10,9 @@ android {
     compileSdk = 36
     defaultConfig {
         applicationId = "com.hawa.app"
-        minSdk = 26
-        targetSdk = 36
+        // Support Android 6.0 (Marshmallow) and newer devices.
+        minSdk = 23
+        targetSdk = 35
         versionCode = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1
         versionName = System.getenv("HURRY_VERSION_NAME") ?: "1.0"
     }
@@ -59,8 +60,6 @@ dependencies {
     implementation("io.coil-kt.coil3:coil-compose:3.3.0")
     implementation("io.coil-kt.coil3:coil-network-okhttp:3.3.0")
     implementation("io.socket:socket.io-client:2.1.1")
-
-    // ─── Room DB (IndexedDB ka native equivalent) ───  ← ADDED
     implementation("androidx.room:room-runtime:2.8.4")
     implementation("androidx.room:room-ktx:2.8.4")
     ksp("androidx.room:room-compiler:2.8.4")
