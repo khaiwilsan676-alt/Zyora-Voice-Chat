@@ -17,6 +17,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.geometry.Offset
+import kotlin.math.roundToInt
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -184,6 +189,22 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
     }
     var tab by remember { mutableStateOf(HurryTab.HOME) }
     var homeMine by remember { mutableStateOf(false) }
+    var keptRoom by remember {
+        mutableStateOf(
+            runCatching {
+                authPrefs.getString("kept_room_data", null)?.let { raw ->
+                    val saved = JSONObject(raw)
+                    HurryRoom(
+                        id = saved.optString("id"),
+                        name = saved.optString("name", "Room"),
+                        image = saved.optString("image"),
+                        country = saved.optString("country", "🇮🇳"),
+                        accountId = saved.optString("accountId", saved.optString("id"))
+                    )
+                }
+            }.getOrNull()
+        )
+    }
     var openedRoom by remember { mutableStateOf<HurryRoom?>(null) }
     var openedChat by remember { mutableStateOf<Triple<String, String, String>?>(null) }
     var openedMePage by remember { mutableStateOf<String?>(null) }
@@ -229,7 +250,35 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                     ),
                     currentUser = RoomPageCurrentUser(id = userId, uid = userId, accountId = authPrefs.getString("accountId", userId).orEmpty(), name = authPrefs.getString("name", "User").orEmpty(), image = authPrefs.getString("image", "").orEmpty()),
                     onBack = { openedRoom = null },
-                    onClose = { openedRoom = null }
+                    onClose = {
+                        if (keptRoom?.id == openedRoom?.id) {
+                            keptRoom = null
+                            authPrefs.edit().remove("kept_room_data").apply()
+                        }
+                        openedRoom = null
+                    },
+                    onKeepRoom = { roomName, roomImage, roomId ->
+                        val active = openedRoom
+                        val miniRoom = HurryRoom(
+                            id = roomId.ifBlank { active?.id.orEmpty() },
+                            name = roomName.ifBlank { active?.name ?: "Room" },
+                            image = roomImage.ifBlank { active?.image.orEmpty() },
+                            country = active?.country ?: "🇮🇳",
+                            accountId = active?.accountId?.ifBlank { active.id } ?: roomId
+                        )
+                        keptRoom = miniRoom
+                        authPrefs.edit().putString(
+                            "kept_room_data",
+                            JSONObject()
+                                .put("id", miniRoom.id)
+                                .put("name", miniRoom.name)
+                                .put("image", miniRoom.image)
+                                .put("country", miniRoom.country)
+                                .put("accountId", miniRoom.accountId)
+                                .toString()
+                        ).apply()
+                        openedRoom = null
+                    }
                 )
             } else if (openedLeaderboard != null) {
                 Leaderboard(onBack = { openedLeaderboard = null }, initialTab = openedLeaderboard!!)
@@ -343,9 +392,66 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                     }
                 }
             }
+            if (openedRoom == null && tab == HurryTab.HOME && keptRoom != null) {
+                KeptRoomBubble(
+                    room = keptRoom!!,
+                    onOpen = { openedRoom = keptRoom },
+                    onExit = {
+                        keptRoom = null
+                        authPrefs.edit().remove("kept_room_data").apply()
+                    }
+                )
+            }
         }
     }
 }
+
+@Composable
+private fun KeptRoomBubble(room: HurryRoom, onOpen: () -> Unit, onExit: () -> Unit) {
+    var drag by remember(room.id) { mutableStateOf(Offset.Zero) }
+    var dragging by remember { mutableStateOf(false) }
+    Box(Modifier.fillMaxSize()) {
+        if (dragging) {
+            Box(
+                Modifier.align(Alignment.BottomEnd).padding(end = 18.dp, bottom = 18.dp)
+                    .size(58.dp).clip(RoundedCornerShape(50))
+                    .background(Color(0xFFE53935)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("×", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+        AsyncImage(
+            model = if (room.image.isBlank()) "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/default-avatar.png" else room.image,
+            contentDescription = "Kept room. Tap to reopen or drag to exit",
+            modifier = Modifier.align(Alignment.BottomEnd)
+                .padding(end = 18.dp, bottom = 88.dp)
+                .offset { IntOffset(drag.x.roundToInt(), drag.y.roundToInt()) }
+                .size(56.dp).clip(RoundedCornerShape(50))
+                .background(Color.White)
+                .clickable(enabled = !dragging) { onOpen() }
+                .pointerInput(room.id) {
+                    detectDragGestures(
+                        onDragStart = { dragging = true },
+                        onDragEnd = {
+                            val shouldExit = drag.y > 24.dpToPxSafe()
+                            dragging = false
+                            if (shouldExit) onExit()
+                            drag = Offset.Zero
+                        },
+                        onDragCancel = { dragging = false; drag = Offset.Zero },
+                        onDrag = { change, amount ->
+                            change.consume()
+                            drag += amount
+                        }
+                    )
+                },
+            contentScale = ContentScale.Crop
+        )
+    }
+}
+
+private fun Float.dpToPxSafe(): Float = this * 3f
 
 @Composable
 private fun MeNativeSubPage(title: String, onBack: () -> Unit) {
