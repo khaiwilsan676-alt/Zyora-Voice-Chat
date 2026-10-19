@@ -181,6 +181,7 @@ fun RoomPage(
     var showRoomTask by remember{mutableStateOf(false)}
     var showWildParty by remember{mutableStateOf(false)}
     var showFruitParty by remember{mutableStateOf(false)}
+    var showSeatSheet by remember{mutableStateOf(false)}
     var miniMusicTrack by remember { mutableStateOf<NativeMusicTrack?>(null) }
     var musicControllerMinimized by remember { mutableStateOf(false) }
     var input by remember{mutableStateOf("")}
@@ -242,7 +243,7 @@ fun RoomPage(
     
     var announcement by remember{mutableStateOf("")}
     var selectedSeat by remember{mutableIntStateOf(0)}
-    var showSeatSheet by remember{mutableStateOf(false)}
+
     val messages=remember{mutableStateListOf<NativeRoomMessage>()}
     val entryToasts=remember{mutableStateListOf<NativeEntryToast>()}
     val roomSocketRef=remember{mutableStateOf<io.socket.client.Socket?>(null)}
