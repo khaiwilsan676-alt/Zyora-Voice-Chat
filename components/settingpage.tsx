@@ -31,6 +31,12 @@ export default function SettingPage({
   // ✅ State to toggle Blocklist page view
   const [showBlocklistView, setShowBlocklistView] = useState(false)
 
+  // ✅ State to toggle Privacy Policy page view
+  const [showPrivacyView, setShowPrivacyView] = useState(false)
+
+  // ✅ State to toggle Account Deletion page view
+  const [showAccountDeleteView, setShowAccountDeleteView] = useState(false)
+
   useEffect(() => {
     const savedNotifications = localStorage.getItem('appNotifications');
     if (savedNotifications !== null) {
@@ -113,7 +119,6 @@ export default function SettingPage({
   if (showBlocklistView) {
     return (
       <div className="w-full min-h-screen bg-white">
-        {/* Top Header with Safe Area for Android/iOS */}
         <div
           className="flex items-center px-4 py-3 bg-white relative"
           style={{
@@ -131,7 +136,6 @@ export default function SettingPage({
           </h1>
         </div>
 
-        {/* Blocklist Content (No Data) */}
         <div className="flex flex-col items-center justify-center px-6" style={{ minHeight: '60vh' }}>
           <p className="text-[#9CA3AF] text-[17px] font-medium tracking-wide">No data</p>
         </div>
@@ -143,7 +147,6 @@ export default function SettingPage({
   if (showAboutView) {
     return (
       <div className="w-full min-h-screen bg-white">
-        {/* Top Header with Safe Area for Android/iOS */}
         <div
           className="flex items-center px-4 py-3 bg-white relative"
           style={{
@@ -161,7 +164,6 @@ export default function SettingPage({
           </h1>
         </div>
 
-        {/* About Us Content */}
         <div className="px-6 py-8 pb-20">
           <h2 className="text-3xl font-semibold text-center text-black mb-8 tracking-tight">About Us</h2>
 
@@ -187,6 +189,75 @@ export default function SettingPage({
               <p>While enjoying chatting with your friends, you can send them gifts. Gorgeous effects are coming with gift sent. You can have so much fun~</p>
             </div>
           </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ✅ PRIVACY POLICY PAGE RENDER
+  if (showPrivacyView) {
+    return (
+      <div className="w-full min-h-screen bg-white">
+        <div
+          className="flex items-center px-4 py-3 bg-white relative"
+          style={{
+            paddingTop: 'calc(env(safe-area-inset-top, 0px) + 16px)'
+          }}
+        >
+          <button 
+            onClick={() => setShowPrivacyView(false)} 
+            className="p-1 hover:bg-slate-100 rounded-full transition-colors z-10"
+          >
+            <ArrowLeft size={24} className="text-slate-900" />
+          </button>
+          <h1 className="text-lg font-semibold text-slate-900 absolute left-0 right-0 text-center pointer-events-none">
+            Privacy Policy
+          </h1>
+        </div>
+
+        <div className="px-6 py-8">
+          <p className="text-slate-600 text-[15px] leading-relaxed">
+            Your privacy policy content goes here...
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  // ✅ ACCOUNT DELETION PAGE RENDER
+  if (showAccountDeleteView) {
+    return (
+      <div className="w-full min-h-screen bg-[#F8F9FA]">
+        <div
+          className="flex items-center px-4 py-3 bg-[#F8F9FA] relative"
+          style={{
+            paddingTop: 'calc(env(safe-area-inset-top, 0px) + 16px)'
+          }}
+        >
+          <button 
+            onClick={() => setShowAccountDeleteView(false)} 
+            className="p-1 hover:bg-slate-200 rounded-full transition-colors z-10"
+          >
+            <ArrowLeft size={24} className="text-slate-900" />
+          </button>
+          <h1 className="text-lg font-semibold text-slate-900 absolute left-0 right-0 text-center pointer-events-none">
+            Account Deletion
+          </h1>
+        </div>
+
+        {/* Apply for Account Deletion Button (Exact Match to Screenshot) */}
+        <div className="px-6 mt-10">
+          <button
+            onClick={() => {
+              // Add your account deletion logic here
+              console.log("Apply for account deletion clicked");
+            }}
+            className="w-full border-2 border-[#F45C84] rounded-full py-4 text-center bg-transparent hover:bg-[#F45C84]/5 transition-colors"
+          >
+            <span className="text-[20px] font-medium text-[#F45C84] tracking-wide">
+              Apply for Account Deletion
+            </span>
+          </button>
         </div>
       </div>
     )
@@ -226,11 +297,11 @@ export default function SettingPage({
           </button>
         </div>
 
-        {/* ✅ Blocklist Button - Ab yeh view open karega */}
+        {/* ✅ Blocklist Button */}
         <div
           onClick={() => {
             if (onBlocklistPress) onBlocklistPress()
-            setShowBlocklistView(true) // 👈 Yeh line view open karegi
+            setShowBlocklistView(true)
           }}
           className="flex items-center justify-between px-5 py-4 border-b border-slate-100 cursor-pointer hover:bg-slate-50 transition-colors"
         >
@@ -238,14 +309,33 @@ export default function SettingPage({
           <ChevronRight size={20} className="text-slate-400" />
         </div>
 
+        {/* ✅ About Us Button */}
         <div
           onClick={() => {
             if (onAboutPress) onAboutPress()
             setShowAboutView(true)
           }}
-          className="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-slate-50 transition-colors"
+          className="flex items-center justify-between px-5 py-4 border-b border-slate-100 cursor-pointer hover:bg-slate-50 transition-colors"
         >
           <span className="text-base text-slate-800">{t.about}</span>
+          <ChevronRight size={20} className="text-slate-400" />
+        </div>
+
+        {/* ✅ Privacy Policy Button (Added just below About) */}
+        <div
+          onClick={() => setShowPrivacyView(true)}
+          className="flex items-center justify-between px-5 py-4 border-b border-slate-100 cursor-pointer hover:bg-slate-50 transition-colors"
+        >
+          <span className="text-base text-slate-800">{t.privacyPolicy || "Privacy Policy"}</span>
+          <ChevronRight size={20} className="text-slate-400" />
+        </div>
+
+        {/* ✅ Account Deletion Button (Added just below Privacy Policy) */}
+        <div
+          onClick={() => setShowAccountDeleteView(true)}
+          className="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-slate-50 transition-colors"
+        >
+          <span className="text-base text-slate-800">{t.accountDeletion || "Account Deletion"}</span>
           <ChevronRight size={20} className="text-slate-400" />
         </div>
       </div>
