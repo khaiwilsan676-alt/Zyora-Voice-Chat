@@ -889,12 +889,13 @@ fun RoomPage(
             val screenHeight = LocalConfiguration.current.screenHeightDp
             Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=.30f)).clickable{showMessageSheet=false},contentAlignment=Alignment.BottomCenter) {
                 Surface(
-                    modifier=Modifier.fillMaxWidth().height((screenHeight * .60f).dp).clickable(enabled=false) {},
-                    color=Color.White, 
+                    modifier=Modifier.fillMaxWidth().height((screenHeight * .60f).dp).background(Color.White).clickable(enabled=false) {},
+                    color=Color.White,
+                    contentColor=Color.Black,
                     shape=RoundedCornerShape(topStart=15.dp,topEnd=15.dp),
                     shadowElevation=16.dp
                 ) {
-                    Box(Modifier.fillMaxSize().background(Color.White)) { 
+                    Column(Modifier.fillMaxSize().background(Color.White)) {
                         MessageScreen(onChat={ _, _, _ -> showMessageSheet=false }, embeddedSheet=true, onBack={ showMessageSheet=false })
                     }
                 }
