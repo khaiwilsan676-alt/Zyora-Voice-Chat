@@ -1,5 +1,6 @@
 package com.hurry.voicechat
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
@@ -189,7 +190,6 @@ fun RoomPage(
     BackHandler(enabled = true) {
         when {
             showExitMenu -> showExitMenu = false
-            showRulesSheet -> showRulesSheet = false
             showChat -> { showChat = false; keyboardController?.hide() }
             showMessageSheet -> showMessageSheet = false
             showMenu -> showMenu = false
