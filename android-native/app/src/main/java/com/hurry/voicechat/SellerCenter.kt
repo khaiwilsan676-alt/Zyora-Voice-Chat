@@ -3,6 +3,7 @@ package com.hurry.voicechat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -127,7 +128,7 @@ fun SellerCenter(onBack: () -> Unit = {}) {
                         Spacer(Modifier.width(24.dp))
                         listOf("User", "Seller").forEach { option ->
                             Row(
-                                Modifier.clickable { salesMethod = option }.padding(end = 18.dp),
+                                Modifier.clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { salesMethod = option }.padding(end = 18.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Box(
@@ -232,7 +233,18 @@ private fun SellerDetailsView() {
                     Text(record.second, fontSize = 12.sp, color = SellerMuted)
                 }
                 Spacer(Modifier.width(6.dp))
-                Text("◉ " + record.third, modifier = Modifier.padding(top = 62.dp), fontSize = 13.sp, fontWeight = FontWeight.Bold, color = SellerText)
+                Row(
+                    modifier = Modifier.padding(top = 62.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    AsyncImage(
+                        model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_00000000e56882119c217d508b6733dc.png",
+                        contentDescription = "Coins",
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(record.third, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = SellerText)
+                }
             }
             Box(Modifier.fillMaxWidth().height(1.dp).background(SellerLine))
         }
