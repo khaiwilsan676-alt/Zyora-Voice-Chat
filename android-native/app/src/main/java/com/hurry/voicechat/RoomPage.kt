@@ -34,6 +34,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -53,7 +54,7 @@ import org.json.JSONObject
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.basicMarquee 
+import androidx.compose.foundation.basicMarquee
 import coil3.compose.AsyncImage
 
 // Optimized Shader-like CPU logic to prevent room hanging (Replaced old Canva logic)
@@ -71,7 +72,6 @@ fun TransparentGreenImage(url: String, modifier: Modifier = Modifier) {
                 val height = result.height
                 val pixels = IntArray(width * height)
                 
-                // Get all pixels at once (100x faster than looping getPixel)
                 result.getPixels(pixels, 0, width, 0, 0, width, height)
                 
                 for (i in pixels.indices) {
@@ -80,13 +80,11 @@ fun TransparentGreenImage(url: String, modifier: Modifier = Modifier) {
                     val g = (color shr 8) and 0xFF
                     val b = color and 0xFF
                     
-                    // Simple Green Screen Shader Logic: Check if green is dominant
                     if (g > 90 && g > r * 1.1 && g > b * 1.1) {
                         pixels[i] = android.graphics.Color.TRANSPARENT
                     }
                 }
                 
-                // Set all pixels back at once
                 result.setPixels(pixels, 0, width, 0, 0, width, height)
                 result
             }.getOrNull()
@@ -182,13 +180,38 @@ fun RoomPage(
     var showWildParty by remember{mutableStateOf(false)}
     var showFruitParty by remember{mutableStateOf(false)}
     var showSeatSheet by remember{mutableStateOf(false)}
+
+    // MUSIC STATE
     var miniMusicTrack by remember { mutableStateOf<NativeMusicTrack?>(null) }
     var musicControllerMinimized by remember { mutableStateOf(false) }
+    var isMusicPlaying by remember { mutableStateOf(false) }
+    var musicVolume by remember { mutableFloatStateOf(1f) }
+    var musicPlaylist by remember { mutableStateOf<List<NativeMusicTrack>>(emptyList()) }
+    var currentTrackIndex by remember { mutableIntStateOf(0) }
+    var musicCurrentTime by remember { mutableFloatStateOf(0f) }
+    var musicDuration by remember { mutableFloatStateOf(0f) }
+
     var input by remember{mutableStateOf("")}
     val chatFocusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
     val imeVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
     var keyboardShownForChat by remember { mutableStateOf(false) }
+
+    // Fake playback ticker to keep UI alive
+    LaunchedEffect(isMusicPlaying, miniMusicTrack) {
+        while (isMusicPlaying && miniMusicTrack != null) {
+            kotlinx.coroutines.delay(1000)
+            if (musicDuration > 0f) {
+                if (musicCurrentTime < musicDuration) {
+                    musicCurrentTime = (musicCurrentTime + 1f).coerceAtMost(musicDuration)
+                } else if (musicPlaylist.isNotEmpty()) {
+                    currentTrackIndex = (currentTrackIndex + 1) % musicPlaylist.size
+                    miniMusicTrack = musicPlaylist[currentTrackIndex]
+                    musicCurrentTime = 0f
+                }
+            }
+        }
+    }
 
     BackHandler(enabled = true) {
         when {
@@ -214,7 +237,6 @@ fun RoomPage(
     var showOfficialAnnouncement by remember { mutableStateOf(true) }
     var clearedBy by remember { mutableStateOf("") }
     
-    // Screen width calculation for extreme right animation
     val configuration = LocalConfiguration.current
     val density = LocalDensity.current
     val screenWidthPx = remember(configuration, density) {
@@ -407,89 +429,209 @@ fun RoomPage(
             onSpeakingChanged = { localVoiceSpeaking = it }
         )
         AsyncImage(model="https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/1784875884052~2.jpg",contentDescription="Room theme background",modifier=Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
-        
-        Row(
-            modifier=Modifier.align(Alignment.TopStart).padding(top=84.dp,start=4.dp) 
-                .height(22.dp)
-                .background(Brush.horizontalGradient(listOf(Color(0xE6242B35),Color(0x99242B35),Color.Transparent)))
-                .clickable{showInfo=true}
-                .padding(start=12.dp,end=12.dp),
-            verticalAlignment=Alignment.CenterVertically
-        ){
-            TransparentGreenImage(
-                url="https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/1788258883971~2.jpg",
-                modifier=Modifier.size(16.dp)
-            )
-            Spacer(Modifier.width(6.dp))
-            Text("0",color=Color(0xFFEEF3A3),fontSize=12.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Bold, letterSpacing=0.1.sp)
-            Icon(Icons.Default.ChevronRight,null,tint=Color(0xFFEEF3A3),modifier=Modifier.padding(start=4.dp).size(10.dp))
-        }
 
-        if (miniMusicTrack != null && !musicControllerMinimized) {
+        // TOP ROW: Trophy (SAME position) + Music Pill beside it (when minimized)
+        Row(
+            modifier = Modifier.align(Alignment.TopStart).padding(top = 84.dp, start = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            // Trophy — SAME as original
             Row(
-                modifier = Modifier.align(Alignment.BottomCenter)
-                    .padding(horizontal = 16.dp)
-                    .padding(bottom = (configuration.screenHeightDp * 0.08f).dp)
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(18.dp))
-                    .background(Color(0xE6222732))
-                    .border(1.dp, Color.White.copy(alpha = 0.18f), RoundedCornerShape(18.dp))
-                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                modifier = Modifier
+                    .height(22.dp)
+                    .background(Brush.horizontalGradient(listOf(Color(0xE6242B35), Color(0x99242B35), Color.Transparent)))
+                    .clickable { showInfo = true }
+                    .padding(start = 12.dp, end = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                AsyncImage(
-                    model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20260815_133309.png",
-                    contentDescription = "Music",
-                    modifier = Modifier.size(38.dp),
-                    contentScale = ContentScale.Fit
+                TransparentGreenImage(
+                    url = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/1788258883971~2.jpg",
+                    modifier = Modifier.size(16.dp)
                 )
-                Spacer(Modifier.width(10.dp))
-                Text(
-                    text = miniMusicTrack?.name.orEmpty(),
-                    color = Color.White,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
-                    fontSize = 14.sp
-                )
-                IconButton(onClick = { musicControllerMinimized = true }) {
-                    Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Minimize music", tint = Color.White)
-                }
-                IconButton(onClick = { miniMusicTrack = null; musicControllerMinimized = false }) {
-                    Icon(Icons.Default.Close, contentDescription = "Close music", tint = Color.White)
+                Spacer(Modifier.width(6.dp))
+                Text("0", color = Color(0xFFEEF3A3), fontSize = 12.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, letterSpacing = 0.1.sp)
+                Icon(Icons.Default.ChevronRight, null, tint = Color(0xFFEEF3A3), modifier = Modifier.padding(start = 4.dp).size(10.dp))
+            }
+
+            // Music Pill — only when minimized
+            if (musicControllerMinimized && miniMusicTrack != null) {
+                val pillRotation = rememberInfiniteTransition(label = "musicPillRotation")
+                    .animateFloat(
+                        initialValue = 0f,
+                        targetValue = 360f,
+                        animationSpec = infiniteRepeatable(tween(4000, easing = LinearEasing), RepeatMode.Restart),
+                        label = "musicPillAngle"
+                    )
+                Row(
+                    modifier = Modifier
+                        .height(26.dp)
+                        .clip(RoundedCornerShape(50))
+                        .background(Color.Black.copy(alpha = 0.30f))
+                        .clickable { musicControllerMinimized = false }
+                        .padding(start = 2.dp, end = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    AsyncImage(
+                        model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20260815_133309.png",
+                        contentDescription = "Music",
+                        modifier = Modifier.size(22.dp).graphicsLayer { rotationZ = if (isMusicPlaying) pillRotation.value else 0f },
+                        contentScale = ContentScale.Fit
+                    )
+                    Text(
+                        text = miniMusicTrack?.name.orEmpty(),
+                        color = Color.White,
+                        fontSize = 11.sp,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Clip,
+                        modifier = Modifier.widthIn(max = 68.dp).basicMarquee(iterations = Int.MAX_VALUE)
+                    )
                 }
             }
         }
 
-        if (musicControllerMinimized && miniMusicTrack != null) {
-            val musicIconRotation = rememberInfiniteTransition(label = "miniMusicRotation")
-                .animateFloat(
-                    initialValue = 0f,
-                    targetValue = 360f,
-                    animationSpec = infiniteRepeatable(
-                        animation = tween(durationMillis = 4000, easing = LinearEasing),
-                        repeatMode = RepeatMode.Restart
-                    ),
-                    label = "miniMusicRotationAngle"
-                )
+        // FULL MUSIC CONTROLLER CARD
+        if (miniMusicTrack != null && !musicControllerMinimized) {
+            val track = miniMusicTrack!!
             Box(
-                modifier = Modifier.align(Alignment.BottomEnd)
-                    .padding(end = 12.dp, bottom = (configuration.screenHeightDp * 0.08f).dp)
-                    .size(56.dp)
-                    .clip(CircleShape)
-                    .border(3.dp, Color.Black, CircleShape)
-                    .background(Color.Black)
-                    .clickable {
-                        musicControllerMinimized = false
-                    },
-                contentAlignment = Alignment.Center
+                modifier = Modifier.align(Alignment.BottomCenter)
+                    .padding(horizontal = 16.dp)
+                    .padding(bottom = (configuration.screenHeightDp * 0.08f).dp)
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color(0xE6000000))
+                    .border(1.dp, Color.White.copy(alpha = 0.10f), RoundedCornerShape(12.dp))
+                    .padding(12.dp)
             ) {
-                AsyncImage(
-                    model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20260815_133309.png",
-                    contentDescription = "Music",
-                    modifier = Modifier.size(56.dp).graphicsLayer { rotationZ = musicIconRotation.value },
-                    contentScale = ContentScale.Fit
-                )
+                Column(Modifier.fillMaxWidth()) {
+                    Box(Modifier.fillMaxWidth()) {
+                        Box(
+                            Modifier.align(Alignment.TopStart)
+                                .size(24.dp).clip(CircleShape)
+                                .background(Color.White.copy(alpha = 0.10f))
+                                .clickable {
+                                    miniMusicTrack = null
+                                    isMusicPlaying = false
+                                    musicPlaylist = emptyList()
+                                    musicCurrentTime = 0f
+                                    musicDuration = 0f
+                                },
+                            contentAlignment = Alignment.Center
+                        ) { Icon(Icons.Default.Close, "Close", tint = Color.White, modifier = Modifier.size(14.dp)) }
+
+                        Text(
+                            text = track.name,
+                            color = Color.White,
+                            fontSize = 13.sp,
+                            fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.align(Alignment.Center).fillMaxWidth().padding(horizontal = 32.dp)
+                        )
+
+                        Box(
+                            Modifier.align(Alignment.TopEnd)
+                                .size(24.dp).clip(CircleShape)
+                                .background(Color.White.copy(alpha = 0.10f))
+                                .clickable { musicControllerMinimized = true },
+                            contentAlignment = Alignment.Center
+                        ) { Icon(Icons.Default.KeyboardArrowDown, "Minimize", tint = Color.White, modifier = Modifier.size(16.dp)) }
+                    }
+
+                    Spacer(Modifier.height(8.dp))
+
+                    Slider(
+                        value = musicCurrentTime,
+                        onValueChange = { musicCurrentTime = it },
+                        valueRange = 0f..(if (musicDuration > 0f) musicDuration else 1f),
+                        colors = SliderDefaults.colors(
+                            thumbColor = Color(0xFF3B82F6),
+                            activeTrackColor = Color(0xFF3B82F6),
+                            inactiveTrackColor = Color.White.copy(alpha = 0.3f)
+                        ),
+                        modifier = Modifier.fillMaxWidth().height(20.dp)
+                    )
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text(formatMusicTime(musicCurrentTime), color = Color.White.copy(alpha = 0.6f), fontSize = 9.sp)
+                        Text(formatMusicTime(musicDuration), color = Color.White.copy(alpha = 0.6f), fontSize = 9.sp)
+                    }
+
+                    Spacer(Modifier.height(4.dp))
+
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(
+                            onClick = {
+                                if (musicPlaylist.isNotEmpty()) {
+                                    currentTrackIndex = (currentTrackIndex - 1 + musicPlaylist.size) % musicPlaylist.size
+                                    miniMusicTrack = musicPlaylist[currentTrackIndex]
+                                    musicCurrentTime = 0f
+                                    isMusicPlaying = true
+                                }
+                            },
+                            modifier = Modifier.size(36.dp)
+                        ) { Icon(Icons.Default.SkipPrevious, "Prev", tint = Color.White, modifier = Modifier.size(22.dp)) }
+
+                        Spacer(Modifier.width(16.dp))
+
+                        Box(
+                            Modifier.size(44.dp).clip(CircleShape)
+                                .background(Color.White.copy(alpha = 0.10f))
+                                .clickable { isMusicPlaying = !isMusicPlaying },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = if (isMusicPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                contentDescription = if (isMusicPlaying) "Pause" else "Play",
+                                tint = Color.White,
+                                modifier = Modifier.size(26.dp)
+                            )
+                        }
+
+                        Spacer(Modifier.width(16.dp))
+
+                        IconButton(
+                            onClick = {
+                                if (musicPlaylist.isNotEmpty()) {
+                                    currentTrackIndex = (currentTrackIndex + 1) % musicPlaylist.size
+                                    miniMusicTrack = musicPlaylist[currentTrackIndex]
+                                    musicCurrentTime = 0f
+                                    isMusicPlaying = true
+                                }
+                            },
+                            modifier = Modifier.size(36.dp)
+                        ) { Icon(Icons.Default.SkipNext, "Next", tint = Color.White, modifier = Modifier.size(22.dp)) }
+                    }
+
+                    Spacer(Modifier.height(4.dp))
+
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.VolumeUp, "Volume", tint = Color.White, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Slider(
+                            value = musicVolume,
+                            onValueChange = { musicVolume = it },
+                            valueRange = 0f..1f,
+                            colors = SliderDefaults.colors(
+                                thumbColor = Color(0xFF3B82F6),
+                                activeTrackColor = Color(0xFF3B82F6),
+                                inactiveTrackColor = Color.White.copy(alpha = 0.3f)
+                            ),
+                            modifier = Modifier.weight(1f).height(20.dp)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            "${(musicVolume * 100).toInt()}%",
+                            color = Color.White,
+                            fontSize = 10.sp,
+                            fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                            textAlign = TextAlign.End,
+                            modifier = Modifier.width(30.dp)
+                        )
+                    }
+                }
             }
         }
 
@@ -514,8 +656,6 @@ fun RoomPage(
                     )
                     Column(Modifier.padding(start = 8.dp), verticalArrangement = Arrangement.Center) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            
-                            // Modifier fixed for Auto-scroll (Marquee): width constraints must come before marquee
                             Text(
                                 text = roomName,
                                 color = Color.White,
@@ -523,13 +663,11 @@ fun RoomPage(
                                 fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
                                 maxLines = 1,
                                 modifier = Modifier
-                                    .widthIn(max = 85.dp) // Important limit for scroll trigger
+                                    .widthIn(max = 85.dp)
                                     .basicMarquee(iterations = Int.MAX_VALUE),
                                 overflow = TextOverflow.Clip
                             )
-                            
                             Text(roomCountryFlag(roomOwner.country), color = Color.White, fontSize = 13.sp)
-                            
                             if (accountId != roomOwner.accountId.ifBlank { roomOwner.id }) {
                                 Box(
                                     Modifier
@@ -792,7 +930,6 @@ fun RoomPage(
                     
                     AnimatedVisibility(
                         visibleState = visibleState,
-                        // Blue banner perfectly extreme right edge se aayega
                         enter=slideInHorizontally(
                             initialOffsetX={ fullWidth -> screenWidthPx + fullWidth }, 
                             animationSpec = tween(durationMillis = 800, easing = LinearOutSlowInEasing)
@@ -833,8 +970,19 @@ fun RoomPage(
             onTogglePublicMsg={publicMsgOff=!publicMsgOff},
             speaker=speaker,
             onToggleSpeaker={speaker=!speaker},
-            onMusicPlay={ track -> miniMusicTrack = track; musicControllerMinimized = false },
-            onMusicMinimize={ track -> if (track != null) { miniMusicTrack = track; musicControllerMinimized = true }; showMenu = false },
+            onMusicPlay={ track ->
+                miniMusicTrack = track
+                musicPlaylist = listOf(track)
+                currentTrackIndex = 0
+                musicCurrentTime = 0f
+                musicDuration = 180f
+                isMusicPlaying = true
+                musicControllerMinimized = false
+            },
+            onMusicMinimize={ track ->
+                if (track != null) { miniMusicTrack = track; musicControllerMinimized = true }
+                showMenu = false
+            },
             onOpenStore={ view ->
                 storeInitialView = if (view.equals("bag", true)) "bag" else "store"
                 showStore = true
@@ -968,6 +1116,12 @@ fun RoomPage(
             }
         }
     }
+}
+
+private fun formatMusicTime(seconds: Float): String {
+    if (seconds.isNaN() || seconds < 0f) return "0:00"
+    val t = seconds.toInt()
+    return "${t / 60}:${(t % 60).toString().padStart(2, '0')}"
 }
 
 @Composable private fun SeatActionSheet(
