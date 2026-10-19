@@ -175,7 +175,6 @@ fun RoomPage(
     var showRoomTask by remember{mutableStateOf(false)}
     var showWildParty by remember{mutableStateOf(false)}
     var showFruitParty by remember{mutableStateOf(false)}
-    var showMusic by remember{mutableStateOf(false)}
     var input by remember{mutableStateOf("")}
     val chatFocusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -796,7 +795,6 @@ fun RoomPage(
         if(showRoomTask) Roomtask(onBack={showRoomTask=false})
         if(showWildParty) Wildparty(onClose={showWildParty=false},onMinimize={showWildParty=false})
         if(showFruitParty) Fruitparty(onClose={showFruitParty=false},onMinimize={showFruitParty=false})
-        if(showMusic) MusicSheet{showMusic=false}
         if(showEmoji) EmojiPicker(
             onClose={showEmoji=false},
             onSelectEmoji={ sticker ->
