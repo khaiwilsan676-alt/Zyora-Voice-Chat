@@ -55,7 +55,7 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
     )
 
     LazyColumn(
-        modifier = Modifier.fillMaxSize().background(Color(0xFFF1F1F1)),
+        modifier = Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF2563EB), Color(0xFFEFF6FF), Color(0xFFF1F1F1))),),
         contentPadding = PaddingValues(bottom = 24.dp)
     ) {
         item {
