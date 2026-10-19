@@ -392,34 +392,34 @@ fun RoomPage(
         }
 
         if (musicControllerMinimized && miniMusicTrack != null) {
-            Row(
-                modifier = Modifier.align(Alignment.TopStart)
-                    .padding(top = 86.dp, start = 78.dp)
-                    .widthIn(max = 110.dp)
+            val musicIconRotation = rememberInfiniteTransition(label = "miniMusicRotation")
+                .animateFloat(
+                    initialValue = 0f,
+                    targetValue = 360f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(durationMillis = 4000, easing = LinearEasing),
+                        repeatMode = RepeatMode.Restart
+                    ),
+                    label = "miniMusicRotationAngle"
+                )
+            Box(
+                modifier = Modifier.align(Alignment.BottomEnd)
+                    .padding(end = 12.dp, bottom = (configuration.screenHeightDp * 0.08f).dp)
+                    .size(56.dp)
                     .clip(CircleShape)
-                    .background(Color.Black.copy(alpha = 0.3f))
+                    .border(3.dp, Color.Black, CircleShape)
+                    .background(Color.Black)
                     .clickable {
                         musicControllerMinimized = false
                         showMenu = true
-                    }
-                    .padding(start = 2.dp, end = 8.dp, top = 2.dp, bottom = 2.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    },
+                contentAlignment = Alignment.Center
             ) {
                 AsyncImage(
-                    model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/file_00000000ee70820b9fd0dfe71739874e.png",
+                    model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20260815_133309.png",
                     contentDescription = "Music",
-                    modifier = Modifier.size(24.dp),
+                    modifier = Modifier.size(56.dp).graphicsLayer { rotationZ = musicIconRotation.value },
                     contentScale = ContentScale.Fit
-                )
-                Text(
-                    miniMusicTrack?.name.orEmpty(),
-                    modifier = Modifier.widthIn(max = 68.dp).basicMarquee(),
-                    color = Color.White,
-                    fontSize = 11.sp,
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
-                    maxLines = 1,
-                    softWrap = false
                 )
             }
         }
