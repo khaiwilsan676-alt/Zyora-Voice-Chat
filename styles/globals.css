@@ -1,0 +1,9 @@
+/* Global styles (created by Copilot)
+   Hide bottom/tab bars while a chat detail is open
+   Add this class to your bottom navigation element if it uses a different selector */
+
+body.hide-bottom-bars .bottom-bars,
+body.hide-bottom-bars #bottom-nav,
+body.hide-bottom-bars .mobile-tab {
+  display: none !important;
+}

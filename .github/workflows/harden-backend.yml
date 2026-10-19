@@ -1,0 +1,112 @@
+name: Harden Hurry backend
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  harden:
+    runs-on: ubuntu-latest
+    if: github.actor != 'github-actions[bot]'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Harden backend without UI changes
+        shell: python
+        run: |
+          from pathlib import Path
+          import json
+
+          p = Path('backend/server.js')
+          s = p.read_text()
+
+          s = s.replace(
+              'const server = http.createServer(app);\n\napp.use(cors({ origin: "*" }));\napp.use(express.json({ limit: "50mb" }));',
+              '''const server = http.createServer(app);\n\napp.disable("x-powered-by");\napp.set("trust proxy", 1);\n\nconst allowedOrigins = String(process.env.HURRY_ALLOWED_ORIGINS || "*")\n  .split(",")\n  .map((v) => v.trim())\n  .filter(Boolean);\n\napp.use(cors({\n  origin: (origin, callback) => {\n    if (!origin || allowedOrigins.includes("*") || allowedOrigins.includes(origin)) {\n      return callback(null, true);\n    }\n    return callback(new Error("CORS origin denied"));\n  },\n  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],\n  credentials: true,\n}));\n\napp.use((req, res, next) => {\n  res.setHeader("X-Content-Type-Options", "nosniff");\n  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");\n  res.setHeader("X-Frame-Options", "SAMEORIGIN");\n  next();\n});\n\napp.use(express.json({ limit: "2mb" }));\napp.use(express.urlencoded({ extended: false, limit: "2mb" }));\n\nconst requestRate = new Map();\napp.use((req, res, next) => {\n  const now = Date.now();\n  const ip = String(req.ip || req.socket.remoteAddress || "unknown");\n  const current = requestRate.get(ip);\n  if (!current || now - current.started >= 60000) {\n    requestRate.set(ip, { started: now, count: 1 });\n    return next();\n  }\n  current.count += 1;\n  if (current.count > 240) {\n    return res.status(429).json({ error: "Too many requests" });\n  }\n  next();\n});'''
+          )
+
+          s = s.replace(
+              'maxHttpBufferSize: 50 * 1024 * 1024,',
+              'maxHttpBufferSize: 1024 * 1024,'
+          )
+
+          marker = 'function markUserOnline(userId, socket, accountId = null) {'
+          helper = '''function socketOwnsIdentity(socket, id) {\n  const value = String(id || "");\n  return Boolean(\n    value &&\n    (String(socket.userId || "") === value ||\n     String(socket.accountId || "") === value ||\n     String(socket.roomUserId || "") === value ||\n     String(socket.roomAccountId || "") === value)\n  );\n}\n\nfunction socketIsInRoom(socket, roomId) {\n  const room = String(roomId || "");\n  return Boolean(\n    room &&\n    String(socket.roomId || "") === room &&\n    socket.rooms.has(`room:${room}`)\n  );\n}\n\n'''
+          if helper not in s and marker in s:
+              s = s.replace(marker, helper + marker, 1)
+
+          s = s.replace(
+              '''  socket.on("room_settings_update", (data = {}) => {\n    if (!data || !data.roomId) return;\n    const roomId = String(data.roomId);\n    io.to(`room:${roomId}`).emit("room_settings_updated", data);\n  });''',
+              '''  socket.on("room_settings_update", (data = {}) => {\n    if (!data || !data.roomId) return;\n    const roomId = String(data.roomId);\n    if (!socketIsInRoom(socket, roomId)) return;\n    if (data.userId && !socketOwnsIdentity(socket, data.userId)) return;\n    io.to(`room:${roomId}`).emit("room_settings_updated", data);\n  });'''
+          )
+
+          s = s.replace(
+              '''  socket.on("room_message", (message) => {\n    if (\n      !message?.roomId ||\n      !message?.senderId\n    ) {\n      return;\n    }\n\n    io.to(`room:${message.roomId}`).emit(\n      "room_message",\n      message\n    );\n  });''',
+              '''  socket.on("room_message", (message) => {\n    if (!message?.roomId || !message?.senderId) return;\n    const roomId = String(message.roomId);\n    if (!socketIsInRoom(socket, roomId)) return;\n    if (!socketOwnsIdentity(socket, message.senderId)) return;\n    io.to(`room:${roomId}`).emit("room_message", message);\n  });'''
+          )
+
+          s = s.replace(
+              '''  socket.on("room_clear_chat", (data = {}) => {\n    const roomId = data?.roomId ? String(data.roomId) : "";\n    if (!roomId) return;\n\n    io.to(`room:${roomId}`).emit("room_chat_cleared", {\n      roomId,\n      timestamp: Date.now(),\n    });\n  });''',
+              '''  socket.on("room_clear_chat", (data = {}) => {\n    const roomId = data?.roomId ? String(data.roomId) : "";\n    if (!roomId || !socketIsInRoom(socket, roomId)) return;\n    if (data.userId && !socketOwnsIdentity(socket, data.userId)) return;\n    io.to(`room:${roomId}`).emit("room_chat_cleared", {\n      roomId,\n      timestamp: Date.now(),\n    });\n  });'''
+          )
+
+          s = s.replace(
+              '''    if (\n      !message?.senderId ||\n      !message?.receiverId\n    ) {\n      return;\n    }\n\n\n    const receiverId = String(message.receiverId);''',
+              '''    if (!message?.senderId || !message?.receiverId) return;\n    if (!socketOwnsIdentity(socket, message.senderId)) return;\n\n    const receiverId = String(message.receiverId);'''
+          )
+
+          s = s.replace(
+              '''    if (!userId || !otherUserId) {\n      socket.emit("private_message_history", {''',
+              '''    if (!userId || !otherUserId || !socketOwnsIdentity(socket, userId)) {\n      socket.emit("private_message_history", {''',
+              1
+          )
+
+          s = s.replace(
+              '''    if (!userId || !otherUserId || !db) return;\n\n    try {\n      await db.collection("privateMessages").deleteMany({''',
+              '''    if (!userId || !otherUserId || !db) return;\n    if (!socketOwnsIdentity(socket, userId)) return;\n\n    try {\n      await db.collection("privateMessages").deleteMany({''',
+              1
+          )
+
+          s = s.replace(
+              '''    if (!userId || !otherUserId || !messageId || !db) return;\n\n    try {\n      await db.collection("privateMessages").deleteOne({''',
+              '''    if (!userId || !otherUserId || !messageId || !db) return;\n    if (!socketOwnsIdentity(socket, userId)) return;\n\n    try {\n      await db.collection("privateMessages").deleteOne({''',
+              1
+          )
+
+          s = s.replace(
+              '''    if (!userId || !otherUserId || !messageIds.length || !db) return;\n\n    try {\n      await db.collection("privateMessages").deleteMany({''',
+              '''    if (!userId || !otherUserId || !messageIds.length || !db) return;\n    if (!socketOwnsIdentity(socket, userId)) return;\n\n    try {\n      await db.collection("privateMessages").deleteMany({''',
+              1
+          )
+
+          old = '''    const isRoomUser =\n      String(socket.roomAccountId || "") === userId ||\n      String(socket.accountId || "") === userId ||\n      String(socket.roomUserId || "") === userId ||\n      String(socket.userId || "") === userId ||\n      Boolean(socket.roomId && String(socket.roomId) === roomId);'''
+          new = '''    const isRoomUser =\n      String(socket.roomAccountId || "") === userId ||\n      String(socket.accountId || "") === userId ||\n      String(socket.roomUserId || "") === userId ||\n      String(socket.userId || "") === userId;'''
+          s = s.replace(old, new)
+
+          p.write_text(s)
+
+          # Keep dependency metadata consistent without changing frontend packages.
+          bp = Path('backend/package.json')
+          if bp.exists():
+              data = json.loads(bp.read_text())
+              data.setdefault('dependencies', {})
+              # No new runtime dependency is required for the hardening above.
+              bp.write_text(json.dumps(data, indent=2) + '\n')
+
+      - name: Validate syntax
+        run: node --check backend/server.js
+
+      - name: Commit hardened backend
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add backend/server.js backend/package.json
+          if git diff --cached --quiet; then
+            echo "No backend changes required"
+            exit 0
+          fi
+          git commit -m "Harden backend security and performance"
+          git push
