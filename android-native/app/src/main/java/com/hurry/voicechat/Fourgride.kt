@@ -3,9 +3,7 @@ package com.hurry.voicechat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.items
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -75,8 +73,9 @@ fun Fourgride(
                     NativeMusicTrack(uri.toString(), name, uri.toString())
                 }.getOrNull()
             }
-            musicTracks = (musicTracks + added).distinctBy { it.id }
-            musicPrefs.edit().putStringSet("uris", musicTracks.map { it.id }.toSet()).apply()
+            val updatedTracks = (musicTracks + added).distinctBy { it.id }
+            musicTracks = updatedTracks
+            musicPrefs.edit().putStringSet("uris", updatedTracks.map { it.id }.toSet()).apply()
         }
     }
     var entryEffect by remember { mutableStateOf(prefs.getBoolean("entry_effect", false)) }
