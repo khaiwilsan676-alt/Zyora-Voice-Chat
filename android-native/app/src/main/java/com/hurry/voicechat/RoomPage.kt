@@ -185,6 +185,28 @@ fun RoomPage(
     val keyboardController = LocalSoftwareKeyboardController.current
     val imeVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
     var keyboardShownForChat by remember { mutableStateOf(false) }
+
+    BackHandler(enabled = true) {
+        when {
+            showExitMenu -> showExitMenu = false
+            showRulesSheet -> showRulesSheet = false
+            showChat -> { showChat = false; keyboardController?.hide() }
+            showMessageSheet -> showMessageSheet = false
+            showMenu -> showMenu = false
+            showStore -> showStore = false
+            showInfo -> showInfo = false
+            showActiveUsers -> showActiveUsers = false
+            showSettings -> showSettings = false
+            showGift -> showGift = false
+            showEmoji -> showEmoji = false
+            showGames -> showGames = false
+            showRoomTask -> showRoomTask = false
+            showWildParty -> showWildParty = false
+            showFruitParty -> showFruitParty = false
+            showSeatSheet -> showSeatSheet = false
+            else -> showExitMenu = true
+        }
+    }
     
     var showOfficialAnnouncement by remember { mutableStateOf(true) }
     var clearedBy by remember { mutableStateOf("") }
