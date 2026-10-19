@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -23,6 +25,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.geometry.Offset
 import kotlin.math.roundToInt
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalConfiguration
@@ -434,7 +437,7 @@ private fun KeptRoomBubble(room: HurryRoom, onOpen: () -> Unit, onExit: () -> Un
                     detectDragGestures(
                         onDragStart = { dragging = true },
                         onDragEnd = {
-                            val shouldExit = drag.y > 24.dpToPxSafe()
+                            val shouldExit = drag.y > 24f.dpToPxSafe()
                             dragging = false
                             if (shouldExit) onExit()
                             drag = Offset.Zero

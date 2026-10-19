@@ -181,6 +181,7 @@ fun RoomPage(
     var showRoomTask by remember{mutableStateOf(false)}
     var showWildParty by remember{mutableStateOf(false)}
     var showFruitParty by remember{mutableStateOf(false)}
+    var showSeatSheet by remember { mutableStateOf(false) }
     var miniMusicTrack by remember { mutableStateOf<NativeMusicTrack?>(null) }
     var musicControllerMinimized by remember { mutableStateOf(false) }
     var input by remember{mutableStateOf("")}
