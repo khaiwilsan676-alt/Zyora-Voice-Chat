@@ -394,6 +394,42 @@ fun RoomPage(
             Icon(Icons.Default.ChevronRight,null,tint=Color(0xFFEEF3A3),modifier=Modifier.padding(start=4.dp).size(10.dp))
         }
 
+        if (miniMusicTrack != null && !musicControllerMinimized) {
+            Row(
+                modifier = Modifier.align(Alignment.BottomCenter)
+                    .padding(horizontal = 16.dp)
+                    .padding(bottom = (configuration.screenHeightDp * 0.08f).dp)
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(Color(0xE6222732))
+                    .border(1.dp, Color.White.copy(alpha = 0.18f), RoundedCornerShape(18.dp))
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                AsyncImage(
+                    model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20260815_133309.png",
+                    contentDescription = "Music",
+                    modifier = Modifier.size(38.dp),
+                    contentScale = ContentScale.Fit
+                )
+                Spacer(Modifier.width(10.dp))
+                Text(
+                    text = miniMusicTrack?.name.orEmpty(),
+                    color = Color.White,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                    fontSize = 14.sp
+                )
+                IconButton(onClick = { musicControllerMinimized = true }) {
+                    Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Minimize music", tint = Color.White)
+                }
+                IconButton(onClick = { miniMusicTrack = null; musicControllerMinimized = false }) {
+                    Icon(Icons.Default.Close, contentDescription = "Close music", tint = Color.White)
+                }
+            }
+        }
+
         if (musicControllerMinimized && miniMusicTrack != null) {
             val musicIconRotation = rememberInfiniteTransition(label = "miniMusicRotation")
                 .animateFloat(
@@ -414,7 +450,6 @@ fun RoomPage(
                     .background(Color.Black)
                     .clickable {
                         musicControllerMinimized = false
-                        showMenu = true
                     },
                 contentAlignment = Alignment.Center
             ) {
