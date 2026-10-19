@@ -398,6 +398,11 @@ fun RoomPage(
     }
 
     Box(Modifier.fillMaxSize().background(Color.Black)){
+        JitsiRoomAudio(
+            roomId = roomId,
+            userName = currentUser.name,
+            canSpeak = seats.any { it.occupied && it.accountId == accountId && !it.muted }
+        )
         AsyncImage(model="https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/1784875884052~2.jpg",contentDescription="Room theme background",modifier=Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
         
         Row(
