@@ -44,8 +44,7 @@ fun LuckyBag(onClose: () -> Unit = {}) {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
         Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.40f)).clickable { onClose() })
         Box(
-            Modifier.fillMaxWidth().widthIn(max = 440.dp).heightIn(min = 400.dp)
-                .fillMaxHeight(0.72f)
+            Modifier.fillMaxWidth().widthIn(max = 440.dp).heightIn(min = 400.dp, max = 520.dp)
         ) {
             AsyncImage(
                 model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_000000008aec8230a4f2d1854cb19882.png",
@@ -55,9 +54,9 @@ fun LuckyBag(onClose: () -> Unit = {}) {
             )
             IconButton(
                 onClick = { showClaim = true },
-                modifier = Modifier.align(Alignment.TopStart).padding(start = 10.dp, top = 26.dp).size(36.dp)
+                modifier = Modifier.align(Alignment.TopStart).padding(start = 16.dp, top = 32.dp).size(28.dp)
             ) {
-                Icon(Icons.Default.Description, contentDescription = "Claim details", tint = Color.White, modifier = Modifier.fillMaxSize())
+                Icon(Icons.Default.Description, contentDescription = "Claim details", tint = Color.White, modifier = Modifier.fillMaxSize(0.9f))
             }
             IconButton(
                 onClick = { showRules = true },
