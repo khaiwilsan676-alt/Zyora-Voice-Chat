@@ -1,6 +1,8 @@
 package com.hurry.voicechat
 
 import android.content.Context
+import android.content.ContextWrapper
+import android.app.Activity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -29,6 +31,16 @@ private data class MeMenu(val label: String, val asset: String)
 @Composable
 fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -> Unit = {}, languageCode: String = "en") {
     val context = LocalContext.current
+    SideEffect {
+        var currentContext: Context = context
+        while (currentContext !is Activity && currentContext is ContextWrapper) {
+            currentContext = currentContext.baseContext
+        }
+        if (currentContext is Activity) {
+            currentContext.window.statusBarColor = android.graphics.Color.TRANSPARENT
+            currentContext.window.isStatusBarContrastEnforced = false
+        }
+    }
     // Native login stores the authenticated Firebase profile in hurry_auth.
     // Read the same preferences so the signed-in account ID appears on the Me page.
     val prefs = remember { context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE) }
@@ -55,7 +67,7 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
     )
 
     LazyColumn(
-        modifier = Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF2563EB), Color(0xFFEFF6FF), Color(0xFFF1F1F1))),),
+        modifier = Modifier.fillMaxSize().background(Color(0xFFF1F1F1)),
         contentPadding = PaddingValues(bottom = 24.dp)
     ) {
         item {
