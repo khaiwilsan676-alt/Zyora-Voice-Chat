@@ -11,6 +11,19 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.compose.BackHandler
+import androidx.activity.result.contract.ActivityResultContracts
+import android.media.MediaPlayer
+import android.net.Uri
+import android.provider.OpenableColumns
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -33,12 +46,50 @@ fun Fourgride(
     onMusicPlay: ((NativeMusicTrack) -> Unit)? = null,
     onOpenStore: ((String) -> Unit)? = null
 ) {
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("hurry_room_tools", android.content.Context.MODE_PRIVATE) }
+    val musicPrefs = remember { context.getSharedPreferences("zyora_phone_music", android.content.Context.MODE_PRIVATE) }
+    var musicTracks by remember { mutableStateOf(emptyList<NativeMusicTrack>()) }
+    var playingUri by remember { mutableStateOf<String?>(null) }
+    var isPlaying by remember { mutableStateOf(false) }
+    var mediaPlayer by remember { mutableStateOf<MediaPlayer?>(null) }
+    LaunchedEffect(Unit) {
+        musicTracks = musicPrefs.getStringSet("uris", emptySet()).orEmpty().mapNotNull { raw ->
+            runCatching {
+                val uri = Uri.parse(raw)
+                val name = context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+                    if (cursor.moveToFirst()) cursor.getString(0) else null
+                } ?: uri.lastPathSegment ?: "Music"
+                NativeMusicTrack(raw, name, raw)
+            }.getOrNull()
+        }
+    }
+    val musicPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
+        if (uris.isNotEmpty()) {
+            val added = uris.mapNotNull { uri ->
+                runCatching {
+                    context.contentResolver.takePersistableUriPermission(uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    val name = context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+                        if (cursor.moveToFirst()) cursor.getString(0) else null
+                    } ?: uri.lastPathSegment ?: "Music"
+                    NativeMusicTrack(uri.toString(), name, uri.toString())
+                }.getOrNull()
+            }
+            musicTracks = (musicTracks + added).distinctBy { it.id }
+            musicPrefs.edit().putStringSet("uris", musicTracks.map { it.id }.toSet()).apply()
+        }
+    }
     var entryEffect by remember { mutableStateOf(prefs.getBoolean("entry_effect", false)) }
     var giftEffect by remember { mutableStateOf(prefs.getBoolean("gift_effect", false)) }
     var showMusic by remember { mutableStateOf(false) }
     var showLuckyBag by remember { mutableStateOf(false) }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            runCatching { mediaPlayer?.release() }
+            mediaPlayer = null
+        }
+    }
 
     val base = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/"
     val tools = listOf(
@@ -112,12 +163,70 @@ fun Fourgride(
     }
 
     if (showMusic) {
-        AlertDialog(
-            onDismissRequest = { showMusic = false },
-            title = { Text("Music") },
-            text = { Text("No music added yet. Add music from your phone in the Music panel.") },
-            confirmButton = { TextButton(onClick = { showMusic = false; onClose() }) { Text("Back") } }
-        )
+        BackHandler(enabled = true) { showMusic = false }
+        Box(Modifier.fillMaxSize().background(Color.Black)) {
+            Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
+                Box(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp), contentAlignment = Alignment.Center) {
+                    IconButton(onClick = { showMusic = false }, modifier = Modifier.align(Alignment.CenterStart)) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+                    }
+                    Text("Music", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                }
+                if (musicTracks.isEmpty()) {
+                    Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        Text("No music added yet. Tap below to add music from your phone.", color = Color.White.copy(alpha = .45f), fontSize = 13.sp)
+                    }
+                } else {
+                    androidx.compose.foundation.lazy.LazyColumn(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 16.dp)) {
+                        items(musicTracks, key = { it.id }) { track ->
+                            Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Text(track.name, Modifier.weight(1f), color = Color.White, fontSize = 14.sp, maxLines = 1)
+                                IconButton(onClick = {
+                                    if (playingUri == track.url && isPlaying) {
+                                        mediaPlayer?.pause()
+                                        isPlaying = false
+                                    } else {
+                                        runCatching { mediaPlayer?.release() }
+                                        mediaPlayer = MediaPlayer().apply {
+                                            setDataSource(context, Uri.parse(track.url))
+                                            setOnPreparedListener { player -> player.start(); isPlaying = true; playingUri = track.url }
+                                            setOnCompletionListener { isPlaying = false; playingUri = null }
+                                            prepareAsync()
+                                        }
+                                        playingUri = track.url
+                                        onMusicPlay?.invoke(track)
+                                    }
+                                }) {
+                                    Icon(if (playingUri == track.url && isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, contentDescription = "Play music", tint = Color.White)
+                                }
+                                IconButton(onClick = {
+                                    if (playingUri == track.url) {
+                                        runCatching { mediaPlayer?.release() }
+                                        mediaPlayer = null
+                                        playingUri = null
+                                        isPlaying = false
+                                    }
+                                    musicTracks = musicTracks.filterNot { it.id == track.id }
+                                    musicPrefs.edit().putStringSet("uris", musicTracks.map { it.id }.toSet()).apply()
+                                }) {
+                                    Icon(Icons.Default.Close, contentDescription = "Remove music", tint = Color.White.copy(alpha = .8f))
+                                }
+                            }
+                        }
+                    }
+                }
+                Button(
+                    onClick = { musicPicker.launch(arrayOf("audio/*")) },
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp).height(48.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B82F6))
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = null, tint = Color.White)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Add Music From Phone", color = Color.White, fontWeight = FontWeight.SemiBold)
+                }
+            }
+        }
     }
     if (showLuckyBag) {
         AlertDialog(
