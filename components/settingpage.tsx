@@ -174,7 +174,7 @@ export default function SettingPage({
     )
   }
 
-  // ✅ ABOUT US PAGE RENDER (Updated with Dynamic Version)
+  // ✅ ABOUT US PAGE RENDER
   if (showAboutView) {
     return (
       <div className="w-full min-h-screen bg-white">
@@ -240,7 +240,7 @@ export default function SettingPage({
     )
   }
 
-  // ✅ PRIVACY POLICY PAGE RENDER
+  // ✅ PRIVACY POLICY PAGE RENDER (Removed Center Heading)
   if (showPrivacyView) {
     return (
       <div className="w-full min-h-screen bg-white">
@@ -262,7 +262,7 @@ export default function SettingPage({
         </div>
 
         <div className="px-6 py-6 pb-20">
-          <h2 className="text-2xl font-bold text-slate-900 mb-1">Privacy Policy</h2>
+          {/* Removed the center heading as requested, starting directly with Last Updated */}
           <p className="text-slate-500 text-[14px] mb-6">Last updated: October 14, 2026</p>
 
           <div className="text-slate-700 text-[15px] leading-relaxed space-y-5">
@@ -482,11 +482,12 @@ export default function SettingPage({
       </div>
 
       <div className="px-6 mt-10">
+        {/* ✅ Updated Outer Logout Button to Blue Color */}
         <button
           onClick={() => setShowLogoutDialog(true)}
-          className="w-full border border-slate-300 rounded-full py-3.5 text-center bg-white hover:bg-slate-50 transition-colors shadow-sm"
+          className="w-full rounded-full py-3.5 text-center bg-blue-500 hover:bg-blue-600 transition-colors shadow-sm"
         >
-          <span className="text-base font-medium text-slate-700">{t.logout}</span>
+          <span className="text-base font-medium text-white">{t.logout}</span>
         </button>
       </div>
 
