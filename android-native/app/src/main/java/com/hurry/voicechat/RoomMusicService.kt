@@ -114,6 +114,15 @@ class RoomMusicService : Service() {
         currentUri = null
     }
 
+    // Swiping Zyora away from Recents means the user explicitly closed the app.
+    // Stop room music then; ordinary Home/app switching does not call this.
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        releasePlayer()
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf()
+        super.onTaskRemoved(rootIntent)
+    }
+
     override fun onDestroy() {
         releasePlayer()
         super.onDestroy()
