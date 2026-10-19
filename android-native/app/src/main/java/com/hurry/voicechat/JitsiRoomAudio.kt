@@ -7,6 +7,7 @@ import android.webkit.WebChromeClient
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.webkit.JavascriptInterface
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.size
@@ -27,7 +28,7 @@ import org.json.JSONObject
 
 /** Hidden audio-only Jitsi conference; existing Compose room UI stays unchanged. */
 @Composable
-fun JitsiRoomAudio(roomId: String, userName: String, canSpeak: Boolean) {
+fun JitsiRoomAudio(roomId: String, userName: String, canSpeak: Boolean, onSpeakingChanged: (Boolean) -> Unit = {}) {
     val context = LocalContext.current
     var hasMicPermission by remember {
         mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED)
@@ -57,6 +58,11 @@ fun JitsiRoomAudio(roomId: String, userName: String, canSpeak: Boolean) {
                 settings.mediaPlaybackRequiresUserGesture = false
                 settings.javaScriptCanOpenWindowsAutomatically = true
                 settings.cacheMode = WebSettings.LOAD_DEFAULT
+                addJavascriptInterface(object {
+                    @JavascriptInterface fun onVoiceActivity(active: Boolean) {
+                        android.os.Handler(android.os.Looper.getMainLooper()).post { onSpeakingChanged(active) }
+                    }
+                }, "ZyoraVoiceBridge")
                 webChromeClient = object : WebChromeClient() {
                     override fun onPermissionRequest(request: PermissionRequest) {
                         post {
@@ -98,7 +104,19 @@ fun JitsiRoomAudio(roomId: String, userName: String, canSpeak: Boolean) {
                           interfaceConfigOverwrite: { TOOLBAR_BUTTONS: [] },
                           userInfo: { displayName: ${displayName} }
                         });
-                        api.addEventListener('videoConferenceJoined', function() { window.setZyoraMuted(desiredMuted); });
+                        let localParticipantId = null;
+                      api.addEventListener('videoConferenceJoined', function(event) {
+                        localParticipantId = event && event.id ? event.id : null;
+                        window.setZyoraMuted(desiredMuted);
+                      });
+                      api.addEventListener('audioLevelChanged', function(event) {
+                        if (localParticipantId && event && event.participantId === localParticipantId) {
+                          try { ZyoraVoiceBridge.onVoiceActivity(!desiredMuted && event.audioLevel > 0.08); } catch (e) {}
+                        }
+                      });
+                      api.addEventListener('audioMuteStatusChanged', function(event) {
+                        if (event && event.muted) { try { ZyoraVoiceBridge.onVoiceActivity(false); } catch (e) {} }
+                      });
                       }
                       startConference();
                     </script>
