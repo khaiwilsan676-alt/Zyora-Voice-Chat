@@ -49,6 +49,7 @@ fun JitsiRoomAudio(roomId: String, userName: String, canSpeak: Boolean) {
         factory = { viewContext ->
             val roomName = JSONObject.quote("HurryVoice-$roomId")
             val displayName = JSONObject.quote(userName.ifBlank { "User" })
+            val initialMuted = !(canSpeak && hasMicPermission)
             WebView(viewContext).apply {
                 webViewState.value = this
                 settings.javaScriptEnabled = true
@@ -74,7 +75,7 @@ fun JitsiRoomAudio(roomId: String, userName: String, canSpeak: Boolean) {
                     <div id="meet" style="width:1px;height:1px;overflow:hidden"></div>
                     <script src="https://meet.jit.si/external_api.js"></script>
                     <script>
-                      let desiredMuted = true;
+                      let desiredMuted = ${initialMuted};
                       let api = null;
                       window.setZyoraMuted = function(muted) {
                         desiredMuted = !!muted;
