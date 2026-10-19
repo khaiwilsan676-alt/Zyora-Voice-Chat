@@ -188,12 +188,12 @@ fun DailyCheckInModal(
                     // Sign In Button
                     Button(
                         onClick = onSignIn,
-                        enabled = !claimed && currentDay <= 7,
+                        enabled = !claimedToday && currentDay <= 7,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(52.dp)
                             .shadow(
-                                elevation = if (!claimed && currentDay <= 7) 8.dp else 0.dp,
+                                elevation = if (!claimedToday && currentDay <= 7) 8.dp else 0.dp,
                                 shape = RoundedCornerShape(12.dp),
                                 spotColor = Color(0xFF3B82F6)
                             ),
