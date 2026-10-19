@@ -175,6 +175,7 @@ fun RoomPage(
     var showRoomTask by remember{mutableStateOf(false)}
     var showWildParty by remember{mutableStateOf(false)}
     var showFruitParty by remember{mutableStateOf(false)}
+    var miniMusicTrack by remember { mutableStateOf<NativeMusicTrack?>(null) }
     var input by remember{mutableStateOf("")}
     val chatFocusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -729,7 +730,8 @@ fun RoomPage(
             onTogglePublicMsg={publicMsgOff=!publicMsgOff},
             speaker=speaker,
             onToggleSpeaker={speaker=!speaker},
-            onMusicPlay=null,
+            onMusicPlay={ track -> miniMusicTrack = track },
+            onMusicMinimize={ track -> if (track != null) miniMusicTrack = track; showMenu = false },
             onOpenStore=null
         )
         
@@ -841,6 +843,31 @@ fun RoomPage(
             MemberSheet(seats.first{it.number==selectedSeat}){selectedSeat=0}
         }
         
+        if (miniMusicTrack != null && !showMenu) {
+            Surface(
+                modifier = Modifier.align(Alignment.BottomStart).padding(start = 12.dp, bottom = 82.dp)
+                    .clickable { showMenu = true },
+                color = Color(0xE8202733),
+                shape = RoundedCornerShape(14.dp),
+                shadowElevation = 8.dp
+            ) {
+                Row(
+                    Modifier.padding(start = 10.dp, end = 4.dp, top = 7.dp, bottom = 7.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(Icons.Default.MusicNote, contentDescription = "Music", tint = Color(0xFF72B7FF), modifier = Modifier.size(22.dp))
+                    Column(Modifier.widthIn(max = 150.dp)) {
+                        Text("Music", color = Color.White.copy(alpha = .7f), fontSize = 10.sp)
+                        Text(miniMusicTrack?.name.orEmpty(), color = Color.White, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                    IconButton(onClick = { miniMusicTrack = null }, modifier = Modifier.size(28.dp)) {
+                        Icon(Icons.Default.Close, contentDescription = "Close mini music", tint = Color.White.copy(alpha = .8f), modifier = Modifier.size(16.dp))
+                    }
+                }
+            }
+        }
+
         if(showMessageSheet) {
             val screenHeight = LocalConfiguration.current.screenHeightDp
             Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=.30f)).clickable{showMessageSheet=false},contentAlignment=Alignment.BottomCenter) {
