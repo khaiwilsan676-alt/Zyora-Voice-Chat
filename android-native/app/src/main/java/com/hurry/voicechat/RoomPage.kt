@@ -166,6 +166,8 @@ fun RoomPage(
     var showChat by remember{mutableStateOf(false)}
     var showMessageSheet by remember{mutableStateOf(false)}
     var showMenu by remember{mutableStateOf(false)}
+    var showStore by remember { mutableStateOf(false) }
+    var storeInitialView by remember { mutableStateOf("store") }
     var showExitMenu by remember{mutableStateOf(false)}
     var showInfo by remember{mutableStateOf(false)}
     var showActiveUsers by remember{mutableStateOf(false)}
@@ -767,13 +769,18 @@ fun RoomPage(
             onToggleSpeaker={speaker=!speaker},
             onMusicPlay={ track -> miniMusicTrack = track; musicControllerMinimized = false },
             onMusicMinimize={ track -> if (track != null) { miniMusicTrack = track; musicControllerMinimized = true }; showMenu = false },
-            onOpenStore=null
+            onOpenStore={ view ->
+                storeInitialView = if (view.equals("bag", true)) "bag" else "store"
+                showStore = true
+                showMenu = false
+            }
         )
         
         val activeRoomUsers = backendRoomUsers.toList()
         val roomFollowers = seats.filter { it.occupied && it.accountId.isNotBlank() && it.accountId != roomOwner.accountId && it.accountId != roomOwner.id }
             .map { RoomInfoFollower(it.accountId,it.userName,it.userImage) }
             
+        if(showStore) StorePage(onBack={showStore=false}, initialView=storeInitialView)
         if(showInfo) RoomInfo(
             isOpen=true,
             onClose={showInfo=false},
