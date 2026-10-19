@@ -691,7 +691,7 @@ fun RoomPage(
                         visibleState = visibleState,
                         // Blue banner perfectly extreme right edge se aayega
                         enter=slideInHorizontally(
-                            initialOffsetX={ screenWidthPx }, 
+                            initialOffsetX={ fullWidth -> screenWidthPx + fullWidth }, 
                             animationSpec = tween(durationMillis = 800, easing = LinearOutSlowInEasing)
                         ) + fadeIn(animationSpec = tween(800))
                     ) {
