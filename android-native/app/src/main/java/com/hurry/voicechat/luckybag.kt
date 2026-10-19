@@ -50,7 +50,7 @@ fun LuckyBag(onClose: () -> Unit = {}) {
                 model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_000000008aec8230a4f2d1854cb19882.png",
                 contentDescription = null,
                 modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.FillBounds
+                contentScale = ContentScale.Fit
             )
             IconButton(
                 onClick = { showClaim = true },
