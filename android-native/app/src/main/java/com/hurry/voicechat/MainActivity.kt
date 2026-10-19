@@ -193,14 +193,20 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
     var openedRoomSupport by remember { mutableStateOf(false) }
     var openedPublicProfile by remember { mutableStateOf<RoomProfileUser?>(null) }
 
-    BackHandler(enabled = openedRoom != null || openedChat != null || openedMePage != null || openedSearch || openedRoomSupport || openedPublicProfile != null) {
+    BackHandler(enabled = true) {
         when {
             openedPublicProfile != null -> openedPublicProfile = null
             openedRoomSupport -> openedRoomSupport = false
             openedSearch -> openedSearch = false
-            openedChat != null -> openedChat = null
             openedRoom != null -> openedRoom = null
+            openedLeaderboard != null -> openedLeaderboard = null
+            openedInvite -> openedInvite = false
+            openedChat != null -> openedChat = null
             openedMePage != null -> openedMePage = null
+            tab != HurryTab.HOME -> tab = HurryTab.HOME
+            homeMine -> homeMine = false
+            // Stay on the current root screen rather than closing the app.
+            else -> Unit
         }
     }
 
