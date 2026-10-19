@@ -42,6 +42,7 @@ fun Fourgride(
     speaker: Boolean,
     onToggleSpeaker: () -> Unit,
     onMusicPlay: ((NativeMusicTrack) -> Unit)? = null,
+    onMusicMinimize: ((NativeMusicTrack?) -> Unit)? = null,
     onOpenStore: ((String) -> Unit)? = null
 ) {
     val context = LocalContext.current
@@ -82,13 +83,6 @@ fun Fourgride(
     var giftEffect by remember { mutableStateOf(prefs.getBoolean("gift_effect", false)) }
     var showMusic by remember { mutableStateOf(false) }
     var showLuckyBag by remember { mutableStateOf(false) }
-
-    DisposableEffect(Unit) {
-        onDispose {
-            runCatching { mediaPlayer?.release() }
-            mediaPlayer = null
-        }
-    }
 
     val base = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/"
     val tools = listOf(
@@ -170,6 +164,16 @@ fun Fourgride(
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
                     }
                     Text("Music", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    IconButton(
+                        onClick = {
+                            onMusicMinimize?.invoke(musicTracks.firstOrNull { it.url == playingUri })
+                            showMusic = false
+                            onClose()
+                        },
+                        modifier = Modifier.align(Alignment.CenterEnd)
+                    ) {
+                        Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Minimize music", tint = Color.White)
+                    }
                 }
                 if (musicTracks.isEmpty()) {
                     Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
