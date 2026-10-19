@@ -187,6 +187,23 @@ fun InviteFriends(onBack: (() -> Unit)? = null, onClose: (() -> Unit)? = null) {
                         )
                     )
                 )
+
+                // Top Icons ab yaha hain (Scroll ke saath move honge)
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .statusBarsPadding()
+                        .padding(start = 8.dp, end = 8.dp, top = 8.dp)
+                        .align(Alignment.TopCenter),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    IconButton(onClick = { onBack?.invoke() ?: onClose?.invoke() }) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White, modifier = Modifier.size(28.dp))
+                    }
+                    IconButton(onClick = { helpRules = true }) {
+                        Icon(Icons.Default.HelpOutline, contentDescription = "Help", tint = Color.White, modifier = Modifier.size(28.dp))
+                    }
+                }
             }
 
             Column(
@@ -244,7 +261,8 @@ fun InviteFriends(onBack: (() -> Unit)? = null, onClose: (() -> Unit)? = null) {
                 Box(Modifier.fillMaxWidth().wrapContentHeight(), contentAlignment = Alignment.TopCenter) {
                     InviteArt("1788102034828~2.jpg", Modifier.fillMaxWidth().wrapContentHeight(), key = InviteKey.GREEN)
                     
-                    Column(Modifier.fillMaxWidth().padding(top = 80.dp)) { 
+                    // Top padding ko 80 se 110 kar diya taaki numbers niche aayen
+                    Column(Modifier.fillMaxWidth().padding(top = 110.dp)) { 
                         Row(
                             Modifier.fillMaxWidth().padding(horizontal = 70.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -261,7 +279,8 @@ fun InviteFriends(onBack: (() -> Unit)? = null, onClose: (() -> Unit)? = null) {
                             }
                         }
 
-                        Spacer(Modifier.height(45.dp))
+                        // Gap ko 45.dp se 10.dp kar diya taaki claim button thora upar ho jaye
+                        Spacer(Modifier.height(10.dp))
 
                         Column(
                             Modifier.fillMaxWidth(),
@@ -281,51 +300,18 @@ fun InviteFriends(onBack: (() -> Unit)? = null, onClose: (() -> Unit)? = null) {
                     }
                 }
                 
-                Column(
-                    Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 32.dp)
-                ) {
-                    Text("Rules", color = inviteYellow, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
-                    Spacer(Modifier.height(16.dp))
-                    Text(
-                        text = "1. Invite a friend to register and receive instant coins. You will get 100,000 coins when they log in. If your friend logs into the Zyora app the next day or within 3 days, they will receive an additional 150,000 coins.\n\n2. If your invited friend recharges 500,000 coins within 90 days, you will receive 6% of the coins from each recharge. Additionally, if your friend sends gift coins, you will receive 6% of the coins from the gifts they send.\n\n3. The Zyora app must not already be downloaded or registered on your friend's phone, and they must not be part of another account's network. The invitation will be considered successful—and rewards granted—only when all these conditions are met.\n\n4. Invite your friends; you will earn free coins when they recharge or send gifts.",
-                        color = Color.White,
-                        fontSize = 12.sp,
-                        lineHeight = 18.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                    Spacer(Modifier.height(24.dp))
-                    Text(
-                        "Best regards,\nThe Zyora Team",
-                        color = Color.White,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.End,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(Modifier.height(140.dp)) 
-                }
+                // Bottom rules hata diye gaye hain
+                // Bas thora sa blank space chhora hai taaki floating button page ke end ko cover na kare
+                Spacer(Modifier.height(100.dp))
             }
         }
 
-        // 1. Top Icons (Back & Help) - Top safe area thoda decrease kiya (vertical = 16.dp ki jagah top = 8.dp)
-        Row(
-            Modifier.fillMaxWidth().statusBarsPadding().padding(start = 8.dp, end = 8.dp, top = 8.dp).align(Alignment.TopCenter),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            IconButton(onClick = { onBack?.invoke() ?: onClose?.invoke() }) {
-                Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White, modifier = Modifier.size(28.dp))
-            }
-            IconButton(onClick = { helpRules = true }) {
-                Icon(Icons.Default.HelpOutline, contentDescription = "Help", tint = Color.White, modifier = Modifier.size(28.dp))
-            }
-        }
-
-        // 2. Floating Invite Button
+        // Floating Invite Button - Bottom padding 40.dp se ghata kar 16.dp kardi taaki thora niche ho jaye
         InviteArt(
             "1788074191602~2.jpg",
             Modifier
                 .align(Alignment.BottomEnd)
-                .padding(end = 8.dp, bottom = 40.dp) 
+                .padding(end = 8.dp, bottom = 20.dp) 
                 .widthIn(max = 360.dp)
                 .fillMaxWidth(.88f)
                 .wrapContentHeight()
@@ -333,7 +319,7 @@ fun InviteFriends(onBack: (() -> Unit)? = null, onClose: (() -> Unit)? = null) {
             key = InviteKey.GREEN
         )
 
-        // 3. Bottom Share Sheet
+        // Bottom Share Sheet
         if (isSheetOpen) {
             Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f)).clickable { isSheetOpen = false }) {
                 Column(
