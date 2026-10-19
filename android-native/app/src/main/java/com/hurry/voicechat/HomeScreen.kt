@@ -39,7 +39,6 @@ import androidx.room.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-
 // ═══════════════════════════════════════════════════════
 // CONSTANTS
 // ═══════════════════════════════════════════════════════
@@ -249,10 +248,9 @@ fun HomeScreen(
         return
     }
 
-    // 🔴 1st BANNER KI JAGHA WAHI IMAGE HAI JO TUNE DI THI
+    // 🔴 2ND BANNER REMOVED, AB SIRF 3 HAIN
     val banners = listOf(
         RAW + "file_00000000efe88211874bfd6b0392fd41.png", 
-        RAW + "IMG-20260830-WA0081.jpg",
         RAW + "file_0000000033348246b73ea85588488c24.png", 
         RAW + "IMG-20260818-WA0001.jpg"
     )
@@ -332,7 +330,7 @@ fun HomeScreen(
                 }
                 Spacer(Modifier.weight(1f))
                 
-                // 🔴 SEARCH OR HOUSE ICON KE BEECH KA GAP EXACT 3.DP KAR DIYA HAI
+                // 🔴 SEARCH OR HOUSE ICON KE BEECH KA GAP EXACT 3.DP HAI
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(3.dp) 
@@ -378,10 +376,15 @@ fun HomeScreen(
                                 AsyncImage(
                                     model = banners[page],
                                     contentDescription = null,
+                                    // 🔴 1ST BANNER = INVITE FRIENDS, 2ND = ROOM SUPPORT
                                     modifier = Modifier.fillMaxSize().clickable(
                                         indication = null, 
                                         interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-                                    ) { if (page == 1) onRoomSupport() else onInviteFriends() },
+                                    ) { 
+                                        if (page == 0) onInviteFriends() 
+                                        else if (page == 1) onRoomSupport() 
+                                        else onInviteFriends()
+                                    },
                                     contentScale = ContentScale.Crop
                                 )
                             }
@@ -478,10 +481,13 @@ fun HomeScreen(
                     }
                 }
             }
+            
+            // 🔴 STICKY HEADER TRANSPARENT GAP FIX (Added offset -8.dp to match LazyColumn)
             if (countrySticky) {
                 Box(
                     Modifier
                         .align(Alignment.TopCenter)
+                        .offset(y = (-8).dp) 
                         .fillMaxWidth()
                         .background(Color(0xFFF5F5F5))
                 ) {
@@ -707,7 +713,7 @@ fun HurryHouseIcon(selected: Boolean = false) {
 }
 
 // ═══════════════════════════════════════════════════════
-// CATEGORY CARD (UPDATED TO OVERLAP FRAME ON TOP OF LOGOS)
+// CATEGORY CARD
 // ═══════════════════════════════════════════════════════
 @Composable
 private fun HurryCategoryCard(
