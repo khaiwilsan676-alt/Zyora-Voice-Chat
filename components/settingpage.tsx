@@ -43,6 +43,9 @@ export default function SettingPage({
   // ✅ State to handle Confirmation Dialog for Logout
   const [showLogoutDialog, setShowLogoutDialog] = useState(false)
 
+  // ✅ State for dynamic App Version
+  const [appVersion, setAppVersion] = useState('1.0.0 (763)')
+
   useEffect(() => {
     const savedNotifications = localStorage.getItem('appNotifications');
     if (savedNotifications !== null) {
@@ -61,6 +64,28 @@ export default function SettingPage({
 
     window.addEventListener('languageChange', handleLangChange as EventListener)
     return () => window.removeEventListener('languageChange', handleLangChange as EventListener)
+  }, [])
+
+  // ✅ Logic to fetch actual App Version dynamically
+  useEffect(() => {
+    // 1. Check if Next.js Environment Variable is set
+    if (process.env.NEXT_PUBLIC_APP_VERSION) {
+      setAppVersion(process.env.NEXT_PUBLIC_APP_VERSION);
+    } 
+    // 2. Check if Capacitor/Cordova is used (for Mobile Apps)
+    else if (typeof window !== 'undefined' && (window as any).Capacitor?.Plugins?.App) {
+      (window as any).Capacitor.Plugins.App.getInfo()
+        .then((info: any) => {
+          if (info && info.version) {
+            setAppVersion(`${info.version} (${info.build || '1'})`);
+          }
+        })
+        .catch((err: any) => console.log("Error fetching app version:", err));
+    }
+    // 3. Fallback to package.json version if available via window object (custom logic)
+    else {
+      // You can add custom logic here if you are loading version from an API
+    }
   }, [])
 
   const t = getTranslation(appLang)
@@ -149,7 +174,7 @@ export default function SettingPage({
     )
   }
 
-  // ✅ ABOUT US PAGE RENDER
+  // ✅ ABOUT US PAGE RENDER (Updated with Dynamic Version)
   if (showAboutView) {
     return (
       <div className="w-full min-h-screen bg-white">
@@ -171,9 +196,24 @@ export default function SettingPage({
         </div>
 
         <div className="px-6 py-8 pb-20">
-          <h2 className="text-3xl font-semibold text-center text-black mb-8 tracking-tight">About Us</h2>
+          {/* ✅ Top Icon and Version Info */}
+          <div className="flex flex-col items-center justify-center mb-10">
+            {/* Make sure to place your image in public folder as 'zyora-icon.png' or update the src below */}
+            <img 
+              src="/zyora-icon.png" 
+              alt="Zyora App Icon" 
+              className="w-32 h-32 rounded-[2.5rem] shadow-sm object-cover mb-5"
+            />
+            <h2 className="text-[42px] font-bold text-[#333333] tracking-tight leading-none mb-3">
+              Zyora
+            </h2>
+            <p className="text-[17px] font-medium text-[#7A7A7A] tracking-wide">
+              Current version V {appVersion}
+            </p>
+          </div>
 
-          <div className="text-[#333333] text-[15px] leading-relaxed space-y-6 tracking-wide">
+          {/* Existing About Us Text */}
+          <div className="text-[#333333] text-[15px] leading-relaxed space-y-6 tracking-wide mt-8">
             <p>
               Hurry is a real-time group voice chat application for multiple players. There are South Asian users from all over the world. You can find new friends who share the same interests with you, chat with them and enjoy the fun of the party!
             </p>
