@@ -104,6 +104,8 @@ private fun MedalVideo(
             android.view.TextureView(ctx).apply {
                 isOpaque = false
                 
+                player.setVideoTextureView(this)
+
                 val baseValues = if (variant == "green") {
                     floatArrayOf(
                         1f, 0f, 0f, 0f, 0f,
@@ -135,10 +137,42 @@ private fun MedalVideo(
                 } else {
                     setLayerType(View.LAYER_TYPE_HARDWARE, Paint().apply { this.colorFilter = finalColorFilter })
                 }
+
+                val adjustAspectRatio = { tv: android.view.TextureView, p: Player ->
+                    val videoSize = p.videoSize
+                    if (videoSize.width > 0 && videoSize.height > 0 && tv.width > 0 && tv.height > 0) {
+                        val viewWidth = tv.width.toFloat()
+                        val viewHeight = tv.height.toFloat()
+                        val videoRatio = videoSize.width.toFloat() / videoSize.height.toFloat()
+                        val viewRatio = viewWidth / viewHeight
+
+                        val matrix = android.graphics.Matrix()
+                        val scaleX = if (videoRatio > viewRatio) videoRatio / viewRatio else 1f
+                        val scaleY = if (videoRatio > viewRatio) 1f else viewRatio / videoRatio
+                        
+                        matrix.setScale(scaleX, scaleY, viewWidth / 2f, viewHeight / 2f)
+                        tv.setTransform(matrix)
+                    }
+                }
+
+                val videoSizeListener = object : Player.Listener {
+                    override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
+                        adjustAspectRatio(this@apply, player)
+                    }
+                }
+                player.addListener(videoSizeListener)
+                setTag(android.R.id.content, videoSizeListener)
+
+                val layoutListener = View.OnLayoutChangeListener { v, _, _, _, _, _, _, _, _ ->
+                    adjustAspectRatio(v as android.view.TextureView, player)
+                }
+                addOnLayoutChangeListener(layoutListener)
+                setTag(android.R.id.custom, layoutListener)
+
+                adjustAspectRatio(this, player)
             }
         },
         update = { view ->
-            player.setVideoTextureView(view)
             player.playWhenReady = animated
             if (animated && player.playbackState == Player.STATE_IDLE) player.prepare()
             if (!animated && player.playbackState == Player.STATE_READY) player.pause()
@@ -176,7 +210,8 @@ fun Medal(onBack: () -> Unit = {}, medals: List<HurryMedal> = emptyList()) {
                 )
         )
         Column(Modifier.fillMaxSize()) {
-            Column(Modifier.fillMaxWidth().statusBarsPadding().padding(top = 19.dp, start = 12.dp, end = 12.dp)) {
+            // MAIN PAGE: Top safe area 7.dp kar diya
+            Column(Modifier.fillMaxWidth().statusBarsPadding().padding(top = 7.dp, start = 12.dp, end = 12.dp)) {
                 Box(Modifier.fillMaxWidth().height(42.dp), contentAlignment = Alignment.Center) {
                     IconButton(onClick = onBack, modifier = Modifier.align(Alignment.CenterStart)) {
                         Icon(Icons.Default.ArrowBack, "Back", tint = Color.White)
@@ -255,10 +290,12 @@ fun Medal(onBack: () -> Unit = {}, medals: List<HurryMedal> = emptyList()) {
             Column(Modifier.fillMaxSize().background(Color.Black).verticalScroll(rememberScrollState())) {
                 Box(Modifier.fillMaxWidth().height(260.dp)) {
                     AsyncImage(model = medalAsset("IMG_20260924_132006.png"), contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-                    IconButton(onClick = { selected = null; activeTier = 0 }, modifier = Modifier.statusBarsPadding().align(Alignment.TopStart).padding(top = 22.dp)) {
+                    
+                    // PREVIEW PAGE: Top Safe area 7.dp kar diya
+                    IconButton(onClick = { selected = null; activeTier = 0 }, modifier = Modifier.statusBarsPadding().align(Alignment.TopStart).padding(top = 7.dp)) {
                         Icon(Icons.Default.ArrowBack, "Back", tint = Color.White)
                     }
-                    IconButton(onClick = { overlay = "Rules" }, modifier = Modifier.statusBarsPadding().align(Alignment.TopEnd).padding(top = 22.dp)) {
+                    IconButton(onClick = { overlay = "Rules" }, modifier = Modifier.statusBarsPadding().align(Alignment.TopEnd).padding(top = 7.dp)) {
                         Icon(Icons.Default.HelpOutline, "Rules", tint = Color.White)
                     }
                     
@@ -303,11 +340,10 @@ fun Medal(onBack: () -> Unit = {}, medals: List<HurryMedal> = emptyList()) {
                 containerColor = medalPurple,
                 contentColor = Color.White,
                 scrimColor = Color.Black.copy(alpha=.6f),
-                shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp), // Curve kam kar diya
-                dragHandle = null, // Top line hata di
+                shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
+                dragHandle = null,
                 sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
             ) {
-                // Height ko exactly 60% (60vh) par set kar diya
                 Column(Modifier.fillMaxWidth().fillMaxHeight(if (isRules) .6f else .6f).padding(horizontal = 16.dp)) {
                     Text(title, modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp), textAlign = TextAlign.Center, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Medium)
                     if (isRules) {
@@ -316,7 +352,6 @@ fun Medal(onBack: () -> Unit = {}, medals: List<HurryMedal> = emptyList()) {
                                 "Rules\n\n1. Important Information:\n(a) Before participating, carefully review event rules, including task completion, rewards, and prohibited activities.\n(b) Participation confirms that you have read and agreed to the rules.\n\n2. What are Medals?\n(a) Medals are rewards for users who meet criteria by completing platform tasks or events.\n(b) Medals are divided into achievement and activity types, with three levels each.\n\n3. How to earn medals?\nEach medal has unique earning criteria detailed on its page. Medals are awarded after completing required objectives.\n\n4. Medal Role:\nMedals showcase achievements and can be displayed next to your avatar. Some provide benefits as you level up.\n\n5. Medal Benefits Expiration:\n(a) Medals generally do not expire; improperly obtained medals are invalid.\n(b) Some medals are time-limited.\n(c) A maximum of 10 medals can be displayed.\n(d) They appear in your info card and room chat.\n(e) Visit Me > Medals to check status.\n\n6. Improving Medal Levels\nMedal levels depend on task and activity status. Complete tasks and activities to upgrade.\n\n7. Additional Notes:\nCheating and abuse are prohibited. Medal descriptions may be updated. Medal rewards cannot be exchanged for cash or goods; unauthorized transactions are prohibited.",
                                 color = Color.White, fontSize = 13.sp, lineHeight = 19.sp
                             )
-                            // Right side me Zyora Team text add kar diya hai
                             Text(
                                 "Regard, Zyora Team",
                                 color = Color.White,
