@@ -250,6 +250,7 @@ fun RoomPage(
             if (isMusicPlaying) {
                 appContext.startService(Intent(appContext, RoomMusicService::class.java).setAction(RoomMusicService.ACTION_PAUSE))
                 isMusicPlaying = false
+                MusicPlaybackState.isPlaying = false
             } else {
                 val intent = Intent(appContext, RoomMusicService::class.java)
                     .setAction(RoomMusicService.ACTION_PLAY)
@@ -257,6 +258,9 @@ fun RoomPage(
                     .putExtra(RoomMusicService.EXTRA_TITLE, track.name)
                 ContextCompat.startForegroundService(appContext, intent)
                 isMusicPlaying = true
+                MusicPlaybackState.currentPlayingUri = track.url
+                MusicPlaybackState.currentTrack = track
+                MusicPlaybackState.isPlaying = true
             }
         }
     }
@@ -299,6 +303,9 @@ fun RoomPage(
         }
         miniMusicTrack = null
         isMusicPlaying = false
+        MusicPlaybackState.currentPlayingUri = null
+        MusicPlaybackState.currentTrack = null
+        MusicPlaybackState.isPlaying = false
         musicPlaylist = emptyList()
         musicCurrentTime = 0f
         musicDuration = 0f
@@ -788,10 +795,26 @@ fun RoomPage(
                 musicCurrentTime = 0f
                 musicDuration = if (track.duration > 0) track.duration / 1000f else 180f
                 isMusicPlaying = true
+                MusicPlaybackState.currentPlayingUri = track.url
+                MusicPlaybackState.currentTrack = track
+                MusicPlaybackState.isPlaying = true
                 musicControllerMinimized = false
             },
+            onMusicPlaybackChanged={ track, playing ->
+                miniMusicTrack = track
+                isMusicPlaying = playing
+                MusicPlaybackState.currentPlayingUri = track.url
+                MusicPlaybackState.currentTrack = track
+                MusicPlaybackState.isPlaying = playing
+            },
             onMusicMinimize={ track ->
-                if (track != null) { miniMusicTrack = track; musicControllerMinimized = true }
+                if (track != null) {
+                    miniMusicTrack = track
+                    musicControllerMinimized = false
+                } else {
+                    miniMusicTrack = null
+                    musicControllerMinimized = false
+                }
                 showMenu = false
             },
             onOpenStore={ view ->
