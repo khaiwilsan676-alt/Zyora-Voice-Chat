@@ -1791,6 +1791,9 @@ io.on("connection", (socket) => {
       "private_message",
       normalizedMessage
     );
+    // Separate monitor event updates the existing Owner private-message console live.
+    // The Owner console already reads the same collection through /api/privateMessages.
+    io.emit("private_message_monitor", normalizedMessage);
 
     if (receiverAccountId && receiverAccountId !== receiverId) {
       io.to(`user:${receiverAccountId}`).emit(
