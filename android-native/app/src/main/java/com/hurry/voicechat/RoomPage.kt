@@ -933,8 +933,43 @@ fun RoomPage(
             }
         })
         if(showSeatSheet && selectedSeat>0) {
-            val seat=seats.firstOrNull{it.number==selectedSeat}
-            if(seat!=null) SeatActionSheet(seat=seat,isOwner=accountId==roomOwner.accountId.ifBlank{roomOwner.id},isMySeat=seat.occupied && seat.accountId==accountId,onDismiss={showSeatSheet=false;selectedSeat=0},onTake={ if(!seat.occupied && !seat.locked){ roomSocketRef.value?.emit("room_seat_action", JSONObject().put("roomId",roomId).put("userId",accountId).put("action","take").put("seatNumber",seat.number).put("user",JSONObject().put("name",currentUser.name.ifBlank{"User"}).put("image",currentUser.image.ifBlank{"https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/default-avatar.png"}).put("accountId",accountId))); showSeatSheet=false;selectedSeat=0} },onLeave={ roomSocketRef.value?.emit("room_seat_action",JSONObject().put("roomId",roomId).put("userId",accountId).put("action","leave").put("seatNumber",seat.number)); showSeatSheet=false;selectedSeat=0},onMute={ val nextMuted=!seat.muted; roomSocketRef.value?.emit("room_seat_action",JSONObject().put("roomId",roomId).put("userId",accountId).put("action","mute").put("seatNumber",seat.number).put("isMuted",nextMuted)); showSeatSheet=false;selectedSeat=0},onLock={ val nextLocked=!seat.locked; roomSocketRef.value?.emit("room_seat_action",JSONObject().put("roomId",roomId).put("userId",accountId).put("action","lock").put("seatNumber",seat.number).put("isLocked",nextLocked)); showSeatSheet=false;selectedSeat=0},onInvite={clipboard.setText(AnnotatedString("Join room $roomName — seat $selectedSeat (ID: $roomId)"));showSeatSheet=false;selectedSeat=0})
+            val seatIndex = seats.indexOfFirst { it.number == selectedSeat }
+            val seat = seats.getOrNull(seatIndex)
+            val isRoomOwner = accountId == roomOwner.accountId || accountId == roomOwner.id || accountId == roomId
+            if(seat!=null) SeatActionSheet(
+                seat=seat,
+                isOwner=isRoomOwner,
+                isMySeat=seat.occupied && seat.accountId==accountId,
+                onDismiss={showSeatSheet=false;selectedSeat=0},
+                onTake={
+                    if(!seat.occupied && !seat.locked) {
+                        val user = JSONObject().put("name",currentUser.name.ifBlank{"User"}).put("image",currentUser.image.ifBlank{"https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/default-avatar.png"}).put("accountId",accountId)
+                        if(seatIndex>=0) seats[seatIndex]=seat.copy(occupied=true,userName=currentUser.name.ifBlank{"User"},userImage=currentUser.image,accountId=accountId,muted=false,locked=false)
+                        roomSocketRef.value?.emit("room_seat_action",JSONObject().put("roomId",roomId).put("userId",accountId).put("action","take").put("seatNumber",seat.number).put("user",user))
+                        showSeatSheet=false;selectedSeat=0
+                    }
+                },
+                onLeave={
+                    if(seatIndex>=0) seats[seatIndex]=NativeRoomSeat(number=seat.number)
+                    roomSocketRef.value?.emit("room_seat_action",JSONObject().put("roomId",roomId).put("userId",accountId).put("action","leave").put("seatNumber",seat.number))
+                    showSeatSheet=false;selectedSeat=0
+                },
+                onMute={
+                    val nextMuted=!seat.muted
+                    if(seatIndex>=0) seats[seatIndex]=seat.copy(muted=nextMuted)
+                    roomSocketRef.value?.emit("room_seat_action",JSONObject().put("roomId",roomId).put("userId",accountId).put("action","mute").put("seatNumber",seat.number).put("isMuted",nextMuted))
+                    showSeatSheet=false;selectedSeat=0
+                },
+                onLock={
+                    if(isRoomOwner) {
+                        val nextLocked=!seat.locked
+                        if(seatIndex>=0) seats[seatIndex]=seat.copy(locked=nextLocked)
+                        roomSocketRef.value?.emit("room_seat_action",JSONObject().put("roomId",roomId).put("userId",accountId).put("action","lock").put("seatNumber",seat.number).put("isLocked",nextLocked))
+                        showSeatSheet=false;selectedSeat=0
+                    }
+                },
+                onInvite={clipboard.setText(AnnotatedString("Join room $roomName — seat $selectedSeat (ID: $roomId)"));showSeatSheet=false;selectedSeat=0}
+            )
         }
         if(selectedSeat>0 && seats.firstOrNull{it.number==selectedSeat}?.occupied==true && !showSeatSheet) MemberSheet(seats.first{it.number==selectedSeat}){selectedSeat=0}
         if(showMessageSheet) {
