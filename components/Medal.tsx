@@ -357,6 +357,8 @@ const UnequippedMedalsScreen = ({ onClose }: { onClose: () => void }) => {
 }
 
 // --- RULES SCREEN (HALF SCREEN BOTTOM SHEET) ---
+// NOTE: Isme koi X (close) icon NAHI hai.
+// Sheet band karne ke liye sirf bahar (overlay) pe touch/click karo.
 const RulesScreen = ({ onClose }: { onClose: () => void }) => {
   return (
     <div className="fixed inset-0 z-[100] flex flex-col justify-end">
@@ -919,48 +921,8 @@ export default function Medal({ onBack }: MedalProps) {
       </div>
 
       {selectedMedal && displayMedal && (
-        <div
-          className="fixed inset-0 z-50 overflow-y-auto overflow-x-hidden animate-fade-in"
-          style={{
-            background:
-              'radial-gradient(130% 90% at 50% -10%, #2a1663 0%, #150a3a 32%, #07031a 62%, #02010a 100%)',
-          }}
-        >
-          {/* ====== AMBIENT GLOW / SHINE LAYERS ====== */}
-          <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
-            {/* top big purple halo */}
-            <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[560px] h-[560px] rounded-full bg-[#4c1d95]/45 blur-[130px]" />
-            {/* gold aura behind medal area */}
-            <div className="absolute top-[12%] left-1/2 -translate-x-1/2 w-[340px] h-[340px] rounded-full bg-[#facc15]/15 blur-[90px] animate-glow-pulse" />
-            {/* bottom left blue */}
-            <div className="absolute -bottom-24 -left-16 w-[320px] h-[320px] rounded-full bg-[#1d4ed8]/30 blur-[110px]" />
-            {/* bottom right violet */}
-            <div className="absolute -bottom-24 -right-16 w-[320px] h-[320px] rounded-full bg-[#7c3aed]/30 blur-[110px]" />
-            {/* center soft white light */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[420px] h-[420px] rounded-full bg-white/[0.04] blur-[80px]" />
-
-            {/* star field */}
-            <div
-              className="absolute inset-0 opacity-50 animate-twinkle"
-              style={{
-                backgroundImage:
-                  'radial-gradient(1px 1px at 20% 22%, #ffffff 50%, transparent 51%),' +
-                  'radial-gradient(1px 1px at 72% 18%, #ffffff 50%, transparent 51%),' +
-                  'radial-gradient(1.5px 1.5px at 40% 68%, #ffffff 50%, transparent 51%),' +
-                  'radial-gradient(1px 1px at 85% 58%, #ffe9a8 50%, transparent 51%),' +
-                  'radial-gradient(1px 1px at 12% 84%, #ffffff 50%, transparent 51%),' +
-                  'radial-gradient(1.5px 1.5px at 56% 40%, #ffe9a8 50%, transparent 51%),' +
-                  'radial-gradient(1px 1px at 30% 46%, #ffffff 50%, transparent 51%),' +
-                  'radial-gradient(1px 1px at 90% 32%, #ffffff 50%, transparent 51%)',
-                backgroundRepeat: 'no-repeat',
-              }}
-            />
-
-            {/* diagonal light sweep */}
-            <div className="absolute inset-0 bg-[linear-gradient(115deg,transparent_35%,rgba(255,255,255,0.06)_50%,transparent_65%)] animate-sheen" />
-          </div>
-
-          <div className="relative z-10 w-full h-[30vh]">
+        <div className="fixed inset-0 z-50 bg-black overflow-y-auto overflow-x-hidden animate-fade-in">
+          <div className="relative w-full h-[30vh]">
             <img
               src="/IMG_20260924_132006.png"
               alt=""
@@ -984,9 +946,6 @@ export default function Medal({ onBack }: MedalProps) {
             >
               <HelpCircle size={22} className="opacity-80" />
             </button>
-
-            {/* Glow behind the medal video */}
-            <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] rounded-full bg-[#facc15]/10 blur-[70px]" />
 
             <div
               className="absolute left-1/2 -translate-x-1/2 z-30 pointer-events-none overflow-hidden"
@@ -1042,7 +1001,7 @@ export default function Medal({ onBack }: MedalProps) {
                   />
                 ))}
               </div>
-              <h3 className="text-[22px] font-bold text-white tracking-wide drop-shadow-[0_0_12px_rgba(250,204,21,0.35)]">
+              <h3 className="text-[22px] font-bold text-white tracking-wide drop-shadow-md">
                 {displayMedal.name}
               </h3>
             </div>
@@ -1052,7 +1011,7 @@ export default function Medal({ onBack }: MedalProps) {
             </p>
 
             {showTabs && (
-              <div className="flex flex-col items-center mt-4 relative z-10">
+              <div className="flex flex-col items-center mt-4 relative z-10 w-full">
                 <div className="flex items-center justify-center gap-2">
                   {tierMedals.map((_, i) => (
                     <React.Fragment key={i}>
@@ -1073,12 +1032,10 @@ export default function Medal({ onBack }: MedalProps) {
                     </React.Fragment>
                   ))}
                 </div>
-
-                {/* ====== SHINY "NOT OBTAINED" PILL (Obtained button style) ====== */}
-                <span className="relative mt-2 inline-flex items-center justify-center overflow-hidden rounded-full px-4 py-[3px] text-[10px] font-bold tracking-wider text-[#3b2500] bg-gradient-to-b from-[#fff3b0] via-[#facc15] to-[#b8860b] border border-[#fff6c9]/80 shadow-[0_0_12px_rgba(250,204,21,0.65),0_0_28px_rgba(250,204,21,0.3),inset_0_1px_0_rgba(255,255,255,0.9),inset_0_-1px_0_rgba(0,0,0,0.18)]">
-                  <span className="pointer-events-none absolute top-0 left-0 h-full w-1/3 animate-shine bg-gradient-to-r from-transparent via-white/80 to-transparent" />
-                  <span className="relative z-10">Not Obtained</span>
-                </span>
+                {/* MODIFIED BUTTON HERE */}
+                <div className="mt-5 w-[85%] max-w-[320px] py-3 rounded-full bg-gradient-to-b from-[#FDE08B] to-[#E2B344] text-[#4A2B0C] font-semibold text-[16px] text-center shadow-[0_4px_10px_rgba(0,0,0,0.3)] tracking-wide">
+                  Not Obtained
+                </div>
               </div>
             )}
           </div>
@@ -1090,39 +1047,6 @@ export default function Medal({ onBack }: MedalProps) {
             }
             .animate-fade-in {
               animation: fadeIn 0.3s ease-out forwards;
-            }
-
-            @keyframes glowPulse {
-              0%, 100% { opacity: 0.6; transform: translateX(-50%) scale(1); }
-              50% { opacity: 1; transform: translateX(-50%) scale(1.12); }
-            }
-            .animate-glow-pulse {
-              animation: glowPulse 4.5s ease-in-out infinite;
-            }
-
-            @keyframes twinkle {
-              0%, 100% { opacity: 0.35; }
-              50% { opacity: 0.8; }
-            }
-            .animate-twinkle {
-              animation: twinkle 5s ease-in-out infinite;
-            }
-
-            @keyframes sheen {
-              0% { transform: translateX(-120%); }
-              100% { transform: translateX(120%); }
-            }
-            .animate-sheen {
-              animation: sheen 7s ease-in-out infinite;
-            }
-
-            @keyframes shine {
-              0% { transform: translateX(-200%) skewX(-20deg); }
-              60% { transform: translateX(400%) skewX(-20deg); }
-              100% { transform: translateX(400%) skewX(-20deg); }
-            }
-            .animate-shine {
-              animation: shine 2.4s ease-in-out infinite;
             }
           `}</style>
         </div>
