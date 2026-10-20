@@ -289,6 +289,7 @@ fun Medal(onBack: () -> Unit = {}, medals: List<HurryMedal> = emptyList()) {
                             )
                         }
                         Text(medal.name, color = Color(0xFFE4DFED), fontSize = 13.sp, maxLines = 1, textAlign = TextAlign.Center)
+                        Text("Preview", color = Color(0xFFFACC15), fontSize = 11.sp, modifier = Modifier.padding(top = 3.dp).clickable { selected = medal; activeTier = (nativeMedals.filter { it.tier == medal.tier }.indexOf(medal)).coerceAtLeast(0) })
                     }
                 }
             }
