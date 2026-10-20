@@ -43,58 +43,71 @@ fun LuckyBag(onClose: () -> Unit = {}) {
 
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
         Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.40f)).clickable { onClose() })
+        
         Box(
-            Modifier.fillMaxWidth().widthIn(max = 440.dp).heightIn(min = 400.dp, max = 520.dp)
+            Modifier.fillMaxWidth().widthIn(max = 440.dp).heightIn(min = 400.dp, max = 520.dp),
+            contentAlignment = Alignment.BottomCenter // Isse pura content bottom mein chipak jayega
         ) {
-            AsyncImage(
-                model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_000000008aec8230a4f2d1854cb19882.png",
-                contentDescription = null,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Fit
-            )
-            IconButton(
-                onClick = { showClaim = true },
-                modifier = Modifier.align(Alignment.TopStart).padding(start = 16.dp, top = 32.dp).size(28.dp)
-            ) {
-                Icon(Icons.Default.Description, contentDescription = "Claim details", tint = Color.White, modifier = Modifier.fillMaxSize(0.9f))
-            }
-            IconButton(
-                onClick = { showRules = true },
-                modifier = Modifier.align(Alignment.TopEnd).padding(end = 16.dp, top = 26.dp).size(30.dp)
-            ) {
-                Icon(Icons.Default.HelpOutline, contentDescription = "Rules", tint = Color.White, modifier = Modifier.fillMaxSize())
-            }
-            Column(
-                Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 18.dp)
-            ) {
-                Text("Gold Quantity", color = LuckyGold, fontSize = 16.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 4.dp, bottom = 8.dp))
-                val coinOptions = listOf(10000, 100000, 200000, 500000, 1000000, 1500000, 2000000)
-                coinOptions.chunked(4).forEach { row ->
-                    Row(Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                        row.forEach { amount ->
-                            LuckyOption(
-                                label = amount.toString(),
-                                selected = selectedCoins == amount,
-                                modifier = Modifier.weight(1f),
-                                onClick = { selectedCoins = amount }
-                            )
-                        }
-                        repeat(4 - row.size) { Spacer(Modifier.weight(1f)) }
-                    }
-                }
-                Text("Number of people", color = LuckyGold, fontSize = 16.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 4.dp, top = 4.dp, bottom = 8.dp))
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf(5, 10, 30, 50).forEach { count ->
-                        LuckyOption(count.toString(), recipients == count, Modifier.weight(1f)) { recipients = count }
-                    }
-                }
-                Button(
+            // Ek inner wrapper box jisme Image base rahegi aur icons/content uske upar overlap karenge
+            Box(Modifier.fillMaxWidth()) {
+                
+                // Background Image - Bottom aligned by default inside this wrapping box
+                AsyncImage(
+                    model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_000000008aec8230a4f2d1854cb19882.png",
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxWidth(),
+                    contentScale = ContentScale.FillWidth 
+                )
+                
+                // Doc icon overlapping on Top Start of the image
+                IconButton(
                     onClick = { showClaim = true },
-                    modifier = Modifier.fillMaxWidth(0.90f).align(Alignment.CenterHorizontally).padding(top = 18.dp).height(48.dp),
-                    shape = RoundedCornerShape(50),
-                    colors = ButtonDefaults.buttonColors(containerColor = LuckyPink)
+                    modifier = Modifier.align(Alignment.TopStart).padding(start = 16.dp, top = 32.dp).size(28.dp)
                 ) {
-                    Text("Send", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                    Icon(Icons.Default.Description, contentDescription = "Claim details", tint = Color.White, modifier = Modifier.fillMaxSize(0.9f))
+                }
+                
+                // ? Help icon overlapping on Top End of the image
+                IconButton(
+                    onClick = { showRules = true },
+                    modifier = Modifier.align(Alignment.TopEnd).padding(end = 16.dp, top = 26.dp).size(30.dp)
+                ) {
+                    Icon(Icons.Default.HelpOutline, contentDescription = "Rules", tint = Color.White, modifier = Modifier.fillMaxSize())
+                }
+                
+                // Bottom content (Gold Quantity, Users, Send Button) overlapping on Bottom Center of the image
+                Column(
+                    Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 18.dp)
+                ) {
+                    Text("Gold Quantity", color = LuckyGold, fontSize = 16.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 4.dp, bottom = 8.dp))
+                    val coinOptions = listOf(10000, 100000, 200000, 500000, 1000000, 1500000, 2000000)
+                    coinOptions.chunked(4).forEach { row ->
+                        Row(Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                            row.forEach { amount ->
+                                LuckyOption(
+                                    label = amount.toString(),
+                                    selected = selectedCoins == amount,
+                                    modifier = Modifier.weight(1f),
+                                    onClick = { selectedCoins = amount }
+                                )
+                            }
+                            repeat(4 - row.size) { Spacer(Modifier.weight(1f)) }
+                        }
+                    }
+                    Text("Number of people", color = LuckyGold, fontSize = 16.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 4.dp, top = 4.dp, bottom = 8.dp))
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf(5, 10, 30, 50).forEach { count ->
+                            LuckyOption(count.toString(), recipients == count, Modifier.weight(1f)) { recipients = count }
+                        }
+                    }
+                    Button(
+                        onClick = { showClaim = true },
+                        modifier = Modifier.fillMaxWidth(0.90f).align(Alignment.CenterHorizontally).padding(top = 18.dp).height(48.dp),
+                        shape = RoundedCornerShape(50),
+                        colors = ButtonDefaults.buttonColors(containerColor = LuckyPink)
+                    ) {
+                        Text("Send", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                    }
                 }
             }
         }
@@ -153,3 +166,4 @@ private fun LuckyOption(label: String, selected: Boolean, modifier: Modifier = M
         Text(label, color = if (selected) Color.White else LuckyGold, fontSize = 12.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, maxLines = 1)
     }
 }
+
