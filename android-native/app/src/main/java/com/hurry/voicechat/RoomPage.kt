@@ -721,7 +721,7 @@ fun RoomPage(
         }
 
         // ==================== MUSIC CONTROLLER CARD ====================
-        if (miniMusicTrack != null && !musicControllerMinimized) {
+        if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.isMusicPageOpen) {
             val track = miniMusicTrack!!
             Box(
                 modifier = Modifier.align(Alignment.BottomCenter)
