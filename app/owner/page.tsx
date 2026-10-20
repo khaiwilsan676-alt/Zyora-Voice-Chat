@@ -673,6 +673,24 @@ export default function StaffPanel() {
     };
   }, []);
 
+  // Keep the Owner panel's private-chat monitor live as messages arrive over Socket.IO.
+  useEffect(() => {
+    const handleLivePrivateMessage = (message: any) => {
+      if (!message?.id || !message?.senderId || !message?.receiverId) return;
+      setPrivateMessages(prev => {
+        const index = prev.findIndex(item => item.id === message.id);
+        if (index >= 0) {
+          const next = [...prev];
+          next[index] = { ...next[index], ...message };
+          return next;
+        }
+        return [message, ...prev].slice(0, 1000);
+      });
+    };
+    socket.on("private_message", handleLivePrivateMessage);
+    return () => { socket.off("private_message", handleLivePrivateMessage); };
+  }, []);
+
   useEffect(() => {
     if (!privateMessageSearchQuery.trim()) {
       setFilteredPrivateMessages(privateMessages);
