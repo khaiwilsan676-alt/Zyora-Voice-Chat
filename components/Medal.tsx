@@ -921,8 +921,9 @@ export default function Medal({ onBack }: MedalProps) {
       </div>
 
       {selectedMedal && displayMedal && (
-        <div className="fixed inset-0 z-50 bg-black overflow-y-auto overflow-x-hidden animate-fade-in">
-          <div className="relative w-full h-[30vh]">
+        // YAHAN SCROLL BAND KAR DIYA HAI (overflow-hidden)
+        <div className="fixed inset-0 z-50 bg-black overflow-hidden animate-fade-in flex flex-col">
+          <div className="relative w-full h-[30vh] flex-shrink-0">
             <img
               src="/IMG_20260924_132006.png"
               alt=""
@@ -984,14 +985,14 @@ export default function Medal({ onBack }: MedalProps) {
             </div>
           </div>
 
-          <div className="relative z-20 flex flex-col items-center w-full max-w-md mx-auto px-6 pb-16">
+          <div className="relative z-20 flex flex-col items-center w-full max-w-md mx-auto px-6 flex-1 justify-center pb-8">
             <img
               src="/IMG_20260924_132112.png"
               alt="frame"
-              className="w-72 h-72 object-contain pointer-events-none mt-14"
+              className="w-64 h-64 object-contain pointer-events-none -mt-10"
             />
 
-            <div className="relative -mt-15 z-10">
+            <div className="relative mt-2 z-10">
               <div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 flex items-center gap-[2px] whitespace-nowrap z-20 pointer-events-none">
                 {Array.from({ length: displayMedal.stars }).map((_, i) => (
                   <Star
