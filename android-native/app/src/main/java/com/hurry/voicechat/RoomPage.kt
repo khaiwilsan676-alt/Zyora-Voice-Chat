@@ -183,6 +183,7 @@ fun RoomPage(
     var copiedId by remember { mutableStateOf("") }
     var roomName by remember{mutableStateOf(roomOwner.name.ifBlank{"Room"})}
     var roomImage by remember{mutableStateOf(roomOwner.image)}
+    var announcement by remember{mutableStateOf("")}
     LaunchedEffect(roomId) {
         withContext(Dispatchers.IO) {
             runCatching {
@@ -389,7 +390,6 @@ fun RoomPage(
         } else keyboardController?.hide()
     }
     
-    var announcement by remember{mutableStateOf("")}
     var selectedSeat by remember{mutableIntStateOf(0)}
 
     val messages=remember{mutableStateListOf<NativeRoomMessage>()}
