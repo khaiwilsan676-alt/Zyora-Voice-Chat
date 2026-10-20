@@ -357,27 +357,21 @@ const UnequippedMedalsScreen = ({ onClose }: { onClose: () => void }) => {
 }
 
 // --- RULES SCREEN (HALF SCREEN BOTTOM SHEET) ---
-// NOTE: Isme koi X (close) icon NAHI hai.
-// Sheet band karne ke liye sirf bahar (overlay) pe touch/click karo.
 const RulesScreen = ({ onClose }: { onClose: () => void }) => {
   return (
     <div className="fixed inset-0 z-[100] flex flex-col justify-end">
-      {/* Dark Overlay - ispe click karne se sheet band ho jayegi */}
       <div
         className="absolute inset-0 bg-black/60 transition-opacity"
         onClick={onClose}
       />
 
-      {/* Bottom Sheet - Medal background ke match karta hua color */}
       <div className="relative w-full h-[75vh] bg-[#2a1b5e] rounded-t-3xl flex flex-col font-sans overflow-hidden animate-slide-up shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
-        {/* Header - NO X icon, only title */}
         <div className="relative flex items-center justify-center pt-6 pb-4 flex-shrink-0 border-b border-white/10">
           <h1 className="text-xl font-medium text-white tracking-wide">
             Rules
           </h1>
         </div>
 
-        {/* Content - Scrollable */}
         <div className="flex-1 overflow-y-auto px-5 pb-10 pt-4 text-white text-[13px] leading-relaxed">
           <h2 className="text-[16px] font-bold mb-3 text-[#facc15]">
             *Rules*
@@ -921,24 +915,24 @@ export default function Medal({ onBack }: MedalProps) {
       </div>
 
       {selectedMedal && displayMedal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto overflow-x-hidden animate-fade-in bg-[#030610]">
+        <div className="fixed inset-0 z-50 overflow-hidden animate-fade-in bg-[#081228] flex flex-col h-[100dvh]">
           
-          {/* NEW STARRY BACKGROUND LAYER (Matches First SS) */}
+          {/* NEW STARRY BACKGROUND LAYER (No black behind light) */}
           <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
-            {/* Deep space base glow */}
-            <div className="absolute -top-1/4 left-1/2 -translate-x-1/2 w-[150vw] h-[100vh] bg-[radial-gradient(ellipse_at_top,_rgba(40,80,200,0.3)_0%,_transparent_70%)] blur-3xl"></div>
+            {/* Base glow (Rich Blue instead of black) */}
+            <div className="absolute -top-1/4 left-1/2 -translate-x-1/2 w-[150vw] h-[100vh] bg-[radial-gradient(ellipse_at_top,_rgba(40,90,255,0.4)_0%,_rgba(8,18,40,0)_60%)] blur-3xl"></div>
             {/* Light rays */}
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[120vw] h-[80vh] bg-[conic-gradient(from_180deg_at_50%_0%,_transparent_0deg,_rgba(60,120,255,0.15)_40deg,_rgba(60,120,255,0.25)_50deg,_rgba(60,120,255,0.15)_60deg,_transparent_100deg)] blur-2xl opacity-80"></div>
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[120vw] h-[80vh] bg-[conic-gradient(from_180deg_at_50%_0%,_transparent_0deg,_rgba(80,140,255,0.2)_40deg,_rgba(80,140,255,0.35)_50deg,_rgba(80,140,255,0.2)_60deg,_transparent_100deg)] blur-2xl opacity-90"></div>
             {/* Stars layer 1 */}
-            <div className="absolute inset-0 opacity-30 bg-[radial-gradient(circle_at_center,_white_1px,_transparent_1.5px)] bg-[size:40px_40px]"></div>
+            <div className="absolute inset-0 opacity-40 bg-[radial-gradient(circle_at_center,_white_1px,_transparent_1.5px)] bg-[size:40px_40px]"></div>
             {/* Stars layer 2 */}
-            <div className="absolute inset-0 opacity-15 bg-[radial-gradient(circle_at_center,_white_1px,_transparent_1.5px)] bg-[size:60px_60px] bg-[position:20px_20px]"></div>
+            <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_center,_white_1px,_transparent_1.5px)] bg-[size:60px_60px] bg-[position:20px_20px]"></div>
             {/* Bottom fade */}
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#030610]/80 to-[#030610]"></div>
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#081228]/80 to-[#081228]"></div>
           </div>
-          {/* END NEW BACKGROUND */}
+          {/* END BACKGROUND */}
 
-          <div className="relative w-full h-[30vh] z-10">
+          <div className="relative w-full h-[30vh] z-10 flex-shrink-0">
             <img
               src="/IMG_20260924_132006.png"
               alt=""
@@ -1000,14 +994,14 @@ export default function Medal({ onBack }: MedalProps) {
             </div>
           </div>
 
-          <div className="relative z-20 flex flex-col items-center w-full max-w-md mx-auto px-6 pb-16">
+          <div className="relative z-20 flex flex-col items-center w-full max-w-md mx-auto px-6 pb-6 flex-1 justify-end">
             <img
               src="/IMG_20260924_132112.png"
               alt="frame"
-              className="w-72 h-72 object-contain pointer-events-none mt-14"
+              className="w-64 h-64 object-contain pointer-events-none mt-2"
             />
 
-            <div className="relative -mt-15 z-10">
+            <div className="relative -mt-12 z-10">
               <div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 flex items-center gap-[2px] whitespace-nowrap z-20 pointer-events-none">
                 {Array.from({ length: displayMedal.stars }).map((_, i) => (
                   <Star
@@ -1027,8 +1021,8 @@ export default function Medal({ onBack }: MedalProps) {
             </p>
 
             {showTabs && (
-              <div className="flex flex-col items-center mt-6 relative z-10 w-full px-4">
-                <div className="flex items-center justify-center gap-2 mb-6">
+              <div className="flex flex-col items-center mt-4 relative z-10 w-full px-4">
+                <div className="flex items-center justify-center gap-2 mb-4">
                   {tierMedals.map((_, i) => (
                     <React.Fragment key={i}>
                       {i > 0 && (
@@ -1039,7 +1033,7 @@ export default function Medal({ onBack }: MedalProps) {
                         alt={`${i + 1}`}
                         onClick={() => setActiveTier(i)}
                         draggable={false}
-                        className={`w-12 h-12 object-contain cursor-pointer transition-all duration-200 ${
+                        className={`w-10 h-10 object-contain cursor-pointer transition-all duration-200 ${
                           activeTier === i
                             ? 'rounded-md border-2 border-[#facc15] shadow-[0_0_8px_rgba(250,204,21,0.35)]'
                             : 'opacity-70'
@@ -1049,9 +1043,9 @@ export default function Medal({ onBack }: MedalProps) {
                   ))}
                 </div>
                 
-                {/* UPDATED BUTTON: Golden pill shape like "obtained" button from 2nd SS */}
+                {/* Golden pill shape button */}
                 <div className="w-full max-w-[320px]">
-                  <div className="w-full py-[14px] rounded-full bg-gradient-to-b from-[#FCEAB4] via-[#E6BA75] to-[#C78A3D] text-[#4A2E0B] font-bold text-[17px] text-center tracking-wide shadow-[0_4px_15px_rgba(230,186,117,0.4)] border border-[#FCEAB4]/60 cursor-pointer active:scale-95 transition-transform">
+                  <div className="w-full py-[12px] rounded-full bg-gradient-to-b from-[#FCEAB4] via-[#E6BA75] to-[#C78A3D] text-[#4A2E0B] font-bold text-[16px] text-center tracking-wide shadow-[0_4px_15px_rgba(230,186,117,0.4)] border border-[#FCEAB4]/60 cursor-pointer active:scale-95 transition-transform">
                     Not Obtained
                   </div>
                 </div>
