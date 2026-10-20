@@ -106,6 +106,7 @@ fun Fourgride(
     speaker: Boolean,
     onToggleSpeaker: () -> Unit,
     onMusicPlay: ((NativeMusicTrack) -> Unit)? = null,
+    onMusicPlaybackChanged: ((NativeMusicTrack, Boolean) -> Unit)? = null,
     onMusicMinimize: ((NativeMusicTrack?) -> Unit)? = null,
     onOpenStore: ((String) -> Unit)? = null
 ) {
@@ -275,12 +276,13 @@ fun Fourgride(
     if (showMusic) {
         BackHandler(enabled = true) {
             val currentTrack = musicTracks.firstOrNull { it.url == MusicPlaybackState.currentPlayingUri } ?: MusicPlaybackState.currentTrack
-            if (MusicPlaybackState.isPlaying && currentTrack != null) {
+            if (MusicPlaybackState.currentPlayingUri != null && currentTrack != null) {
                 onMusicMinimize?.invoke(currentTrack) 
             } else {
                 onMusicMinimize?.invoke(null) 
             }
             showMusic = false
+            MusicPlaybackState.isMusicPageOpen = false
             onClose()
         }
         Box(Modifier.fillMaxSize().background(Color.Black)) {
@@ -289,7 +291,7 @@ fun Fourgride(
                     IconButton(
                         onClick = {
                             val currentTrack = musicTracks.firstOrNull { it.url == MusicPlaybackState.currentPlayingUri } ?: MusicPlaybackState.currentTrack
-                            if (MusicPlaybackState.isPlaying && currentTrack != null) {
+                            if (MusicPlaybackState.currentPlayingUri != null && currentTrack != null) {
                                 onMusicMinimize?.invoke(currentTrack)
                             } else {
                                 onMusicMinimize?.invoke(null)
@@ -323,6 +325,8 @@ fun Fourgride(
                                     if (MusicPlaybackState.currentPlayingUri == track.url && MusicPlaybackState.isPlaying) {
                                         context.startService(Intent(context, RoomMusicService::class.java).setAction(RoomMusicService.ACTION_PAUSE))
                                         MusicPlaybackState.isPlaying = false
+                                        MusicPlaybackState.currentTrack = track
+                                        onMusicPlaybackChanged?.invoke(track, false)
                                     } else {
                                         val playIntent = Intent(context, RoomMusicService::class.java)
                                             .setAction(RoomMusicService.ACTION_PLAY)
@@ -333,6 +337,7 @@ fun Fourgride(
                                         MusicPlaybackState.isPlaying = true
                                         MusicPlaybackState.currentTrack = track
                                         onMusicPlay?.invoke(track)
+                                        onMusicPlaybackChanged?.invoke(track, true)
                                     }
                                 }) {
                                     Icon(if (MusicPlaybackState.currentPlayingUri == track.url && MusicPlaybackState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, contentDescription = "Play music", tint = Color.White)
