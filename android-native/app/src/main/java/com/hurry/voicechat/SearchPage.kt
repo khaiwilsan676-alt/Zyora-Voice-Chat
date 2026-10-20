@@ -105,18 +105,40 @@ fun SearchPage(onBack:()->Unit={},onOpenProfile:(RoomProfileUser)->Unit={}) {
     val conn=URL("https://hurry-voice-chat-lz75.onrender.com/api/users?search=$encoded&accountId=$encoded&q=$encoded").openConnection() as HttpURLConnection
     conn.connectTimeout=9000; conn.readTimeout=9000
     try {
-     val body=conn.inputStream.bufferedReader().use{it.readText()}
-     val arr=if(body.trim().startsWith("[")) JSONArray(body) else {
-      val o=JSONObject(body)
-      o.optJSONArray("users") ?: JSONArray().apply { o.optJSONObject("user")?.let{put(it)} }
+     val status=conn.responseCode
+     if (status == HttpURLConnection.HTTP_NOT_FOUND) return@runCatching emptyList<SearchUserNative>()
+     val stream=if(status in 200..299) conn.inputStream else conn.errorStream
+     val body=stream?.bufferedReader()?.use{it.readText()}.orEmpty()
+     if(status !in 200..299) throw java.io.IOException("User search failed: HTTP $status")
+     val root=body.trim()
+     val arr=if(root.startsWith("[")) JSONArray(root) else {
+      val o=JSONObject(root)
+      val data=o.optJSONObject("data")
+      o.optJSONArray("users")
+       ?: o.optJSONArray("results")
+       ?: data?.optJSONArray("users")
+       ?: JSONArray().apply {
+        (o.optJSONObject("user") ?: data?.optJSONObject("user"))?.let{put(it)}
+       }
      }
      val list= mutableListOf<SearchUserNative>(); val seen=mutableSetOf<String>()
      for(i in 0 until arr.length()) {
       val u=arr.optJSONObject(i) ?: continue
-      val id=u.optString("id",u.optString("uid",u.optString("appLongId","")))
-      val acc=u.optString("accountId",u.optString("accountNumber",u.optString("displayUserNumber",u.optString("Account Number",id))))
+      val id=u.optString("id").takeUnless{it=="null"}.orEmpty()
+       .ifBlank{u.optString("uid").takeUnless{it=="null"}.orEmpty()}
+       .ifBlank{u.optString("appLongId").takeUnless{it=="null"}.orEmpty()}
+       .ifBlank{u.optString("_id").takeUnless{it=="null"}.orEmpty()}
+      val acc=u.optString("accountId").takeUnless{it=="null"}.orEmpty()
+       .ifBlank{u.optString("accountNumber").takeUnless{it=="null"}.orEmpty()}
+       .ifBlank{u.optString("displayUserNumber").takeUnless{it=="null"}.orEmpty()}
+       .ifBlank{u.optString("Account Number").takeUnless{it=="null"}.orEmpty()}
+       .ifBlank{id}
       if(acc.isBlank() || !seen.add(acc)) continue
-      list.add(SearchUserNative(id.ifBlank{acc},acc,u.optString("name",u.optString("displayName",u.optString("userName","User"))),u.optString("country","🇮🇳"),u.optString("image",u.optString("photo",u.optString("photoURL",u.optString("avatar","")))),u.optString("bio","")))
+      list.add(SearchUserNative(id.ifBlank{acc},acc,
+       u.optString("name").takeUnless{it=="null"}.orEmpty().ifBlank{u.optString("displayName").ifBlank{u.optString("userName","User")}},
+       u.optString("country","🇮🇳"),
+       u.optString("image").takeUnless{it=="null"}.orEmpty().ifBlank{u.optString("photo").ifBlank{u.optString("photoURL").ifBlank{u.optString("avatar","")}}},
+       u.optString("bio","")))
      }
      list
     } finally { conn.disconnect() }
