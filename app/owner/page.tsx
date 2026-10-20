@@ -687,8 +687,8 @@ export default function StaffPanel() {
         return [message, ...prev].slice(0, 1000);
       });
     };
-    socket.on("private_message", handleLivePrivateMessage);
-    return () => { socket.off("private_message", handleLivePrivateMessage); };
+    socket.on("private_message_monitor", handleLivePrivateMessage);
+    return () => { socket.off("private_message_monitor", handleLivePrivateMessage); };
   }, []);
 
   useEffect(() => {
