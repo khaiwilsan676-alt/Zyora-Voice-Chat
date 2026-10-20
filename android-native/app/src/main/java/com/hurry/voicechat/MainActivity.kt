@@ -357,7 +357,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                 InviteFriends(onBack = { openedInvite = false })
             } else if (openedChat != null) {
                 val chat = openedChat!!
-                NativeChatScreen(chat.second, chat.third, onBack = { openedChat = null })
+                NativeChatScreen(name = chat.second, image = chat.third, receiverId = chat.first, currentUserId = userId, onBack = { openedChat = null })
             } else {
                 Column(Modifier.fillMaxSize()) {
                     Box(Modifier.weight(1f)) {
