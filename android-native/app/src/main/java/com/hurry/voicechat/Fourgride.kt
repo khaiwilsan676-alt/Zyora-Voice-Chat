@@ -272,7 +272,12 @@ fun Fourgride(
     if (showMusic) {
         BackHandler(enabled = true) {
             val currentTrack = musicTracks.firstOrNull { it.url == playingUri }
-            if (currentTrack != null) onMusicPlay?.invoke(currentTrack)
+            // Yahan logic add kiya gaya hai
+            if (isPlaying && currentTrack != null) {
+                onMusicMinimize?.invoke(currentTrack) // Sirf tabhi controller show hoga agar play ho raha hai
+            } else {
+                onMusicMinimize?.invoke(null) // Warna koi controller nahi dikhega
+            }
             showMusic = false
             onClose()
         }
@@ -282,7 +287,12 @@ fun Fourgride(
                     IconButton(
                         onClick = {
                             val currentTrack = musicTracks.firstOrNull { it.url == playingUri }
-                            if (currentTrack != null) onMusicPlay?.invoke(currentTrack)
+                            // Yahan bhi same logic button click ke liye add kiya hai
+                            if (isPlaying && currentTrack != null) {
+                                onMusicMinimize?.invoke(currentTrack)
+                            } else {
+                                onMusicMinimize?.invoke(null)
+                            }
                             showMusic = false
                             onClose()
                         },
