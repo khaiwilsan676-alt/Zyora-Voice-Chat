@@ -305,7 +305,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
     HurryTheme {
         Box(Modifier.fillMaxSize()) {
             if (openedPublicProfile != null) {
-                PublicProfile(user=openedPublicProfile!!,onBack={openedPublicProfile=null})
+                PublicProfile(user=openedPublicProfile!!,onBack={openedPublicProfile=null},currentUserId=userId)
             } else if (openedRoomSupport) {
                 RoomSupport(onBack = { openedRoomSupport = false })
             } else if (openedSearch) {
