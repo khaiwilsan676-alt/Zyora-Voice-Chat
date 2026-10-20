@@ -609,7 +609,7 @@ fun RoomPage(
                     item {
                         Column(Modifier.fillMaxWidth().padding(start=4.dp, top=8.dp, end=82.dp, bottom=2.dp)) {
                             Column(Modifier.fillMaxWidth(.92f).clip(RoundedCornerShape(8.dp)).background(Color.Black.copy(alpha=.30f)).padding(horizontal=14.dp,vertical=12.dp)) {
-                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) { SystemBellIcon(modifier = Modifier.size(24.dp)); Text("System", color = Color.Gray, fontSize = 12.sp) }
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) { SystemBellIcon(modifier = Modifier.size(44.dp)); Text("System", color = Color.Gray, fontSize = 12.sp) }
                                 Spacer(Modifier.height(4.dp))
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(clearedBy, color = Color(0xFFE2C67D), fontSize = 13.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
@@ -710,7 +710,7 @@ fun RoomPage(
                         visibleState = visibleState, 
                         enter=slideInHorizontally(initialOffsetX={ _ -> screenWidthPx }, animationSpec = tween(durationMillis = 800, easing = LinearOutSlowInEasing)) + fadeIn(animationSpec = tween(800))
                     ) {
-                        Row(Modifier.fillMaxWidth(0.75f).clip(RoundedCornerShape(topStart=0.dp,bottomStart=0.dp,topEnd=50.dp,bottomEnd=50.dp)).background(Brush.horizontalGradient(listOf(Color(0xF52563EB),Color(0x002563EB)))).padding(start=10.dp,end=10.dp,top=2.dp,bottom=2.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+                        Row(Modifier.fillMaxWidth(0.75f).clip(RoundedCornerShape(topStart=50.dp,bottomStart=50.dp,topEnd=0.dp,bottomEnd=0.dp)).background(Brush.horizontalGradient(listOf(Color(0xF52563EB),Color(0x002563EB)))).padding(start=10.dp,end=10.dp,top=2.dp,bottom=2.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(6.dp)) {
                             AsyncImage(model=toast.image.ifBlank{"https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/default-avatar.png"},contentDescription=toast.name,modifier=Modifier.size(24.dp).clip(CircleShape),contentScale=ContentScale.Crop)
                             Text(toast.name,color=Color.White,fontSize=13.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold,maxLines=1,modifier=Modifier.widthIn(max=95.dp))
                             Text("Enter the Room",color=Color.White,fontSize=12.sp,maxLines=1)
