@@ -183,6 +183,20 @@ fun RoomPage(
     var roomName by remember{mutableStateOf(roomOwner.name.ifBlank{"Room"})}
     var roomImage by remember{mutableStateOf(roomOwner.image)}
     var followed by remember{mutableStateOf(false)}
+    LaunchedEffect(roomId, accountId) {
+        if (accountId.isBlank() || accountId == "guest") return@LaunchedEffect
+        followed = withContext(Dispatchers.IO) {
+            runCatching {
+                val url = java.net.URL("https://hurry-voice-chat-lz75.onrender.com/api/room-follows?userId=" + java.net.URLEncoder.encode(accountId, "UTF-8"))
+                val conn = (url.openConnection() as java.net.HttpURLConnection).apply { connectTimeout = 8000; readTimeout = 8000 }
+                try {
+                    val body = conn.inputStream.bufferedReader().use { it.readText() }
+                    val follows = JSONObject(body).optJSONArray("follows") ?: JSONArray()
+                    (0 until follows.length()).any { follows.optJSONObject(it)?.optString("roomId") == roomId }
+                } finally { conn.disconnect() }
+            }.getOrDefault(false)
+        }
+    }
     var speaker by remember{mutableStateOf(true)}
     var localVoiceSpeaking by remember { mutableStateOf(false) }
     var publicMsgOff by remember{mutableStateOf(false)}
@@ -493,8 +507,41 @@ fun RoomPage(
                             Text(text = roomName,color = Color.White,fontSize = 13.sp,fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,maxLines = 1,modifier = Modifier.widthIn(max = 85.dp).basicMarquee(iterations = Int.MAX_VALUE),overflow = TextOverflow.Clip)
                             Text(roomCountryFlag(roomOwner.country), color = Color.White, fontSize = 13.sp)
                             if (accountId != roomOwner.accountId.ifBlank { roomOwner.id }) {
-                                Box(Modifier.size(20.dp).clip(CircleShape).background(Color(0xFF3B82F6)).clickable { followed = !followed; onFollowToggle(roomId, followed) }, contentAlignment = Alignment.Center) {
-                                    Icon(imageVector = if(followed) Icons.Default.Check else Icons.Default.Add,contentDescription = "Follow",tint = Color.White,modifier = Modifier.size(14.dp))
+                                Box(Modifier.size(20.dp).clip(CircleShape).background(if (followed) Color(0xFF9CA3AF) else Color(0xFF3B82F6)).clickable {
+                                    val next = !followed
+                                    followed = next
+                                    onFollowToggle(roomId, next)
+                                    kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                                        runCatching {
+                                            val encodedUser = java.net.URLEncoder.encode(accountId, "UTF-8")
+                                            val encodedRoom = java.net.URLEncoder.encode(roomId, "UTF-8")
+                                            val url = if (next) java.net.URL("https://hurry-voice-chat-lz75.onrender.com/api/room-follows") else java.net.URL("https://hurry-voice-chat-lz75.onrender.com/api/room-follows?userId=$encodedUser&roomId=$encodedRoom")
+                                            val conn = (url.openConnection() as java.net.HttpURLConnection).apply {
+                                                requestMethod = if (next) "POST" else "DELETE"
+                                                connectTimeout = 8000
+                                                readTimeout = 8000
+                                                if (next) {
+                                                    doOutput = true
+                                                    setRequestProperty("Content-Type", "application/json")
+                                                }
+                                            }
+                                            if (next) {
+                                                val payload = JSONObject()
+                                                    .put("userId", accountId)
+                                                    .put("roomId", roomId)
+                                                    .put("roomName", roomName)
+                                                    .put("roomImage", roomImage)
+                                                    .put("roomCountry", roomOwner.country)
+                                                    .put("followerName", currentUser.name)
+                                                    .put("followerImage", currentUser.image)
+                                                conn.outputStream.use { it.write(payload.toString().toByteArray(Charsets.UTF_8)) }
+                                            }
+                                            conn.responseCode
+                                            conn.disconnect()
+                                        }
+                                    }
+                                }, contentAlignment = Alignment.Center) {
+                                    Icon(imageVector = if(followed) Icons.Default.Check else Icons.Default.Add,contentDescription = if(followed) "Following" else "Follow",tint = Color.White,modifier = Modifier.size(14.dp))
                                 }
                             }
                         }
