@@ -122,6 +122,7 @@ fun InviteFriends(onBack: (() -> Unit)? = null, onClose: (() -> Unit)? = null) {
     val context = LocalContext.current
     val configuration = LocalConfiguration.current
     val screenHeight = configuration.screenHeightDp.dp
+    val vh = screenHeight / 100f
     val userPrefs = remember { context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE) }
     val code = userPrefs.getString("uid", null)?.takeIf { it.isNotBlank() } ?: "WELCOME123"
     val inviteLink = "https://yourapp.com/invite/$code"
@@ -188,7 +189,6 @@ fun InviteFriends(onBack: (() -> Unit)? = null, onClose: (() -> Unit)? = null) {
                     )
                 )
 
-                // Top Icons ab yaha hain (Scroll ke saath move honge)
                 Row(
                     Modifier
                         .fillMaxWidth()
@@ -258,55 +258,50 @@ fun InviteFriends(onBack: (() -> Unit)? = null, onClose: (() -> Unit)? = null) {
                     }
                 }
 
-                Box(Modifier.fillMaxWidth().wrapContentHeight(), contentAlignment = Alignment.TopCenter) {
+                Box(Modifier.fillMaxWidth().wrapContentHeight()) {
                     InviteArt("1788102034828~2.jpg", Modifier.fillMaxWidth().wrapContentHeight(), key = InviteKey.GREEN)
-                    
-                    // Top padding ko 80 se 110 kar diya taaki numbers niche aayen
-                    Column(Modifier.fillMaxWidth().padding(top = 110.dp)) { 
-                        Row(
-                            Modifier.fillMaxWidth().padding(horizontal = 70.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.Bottom
-                        ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text("0", color = inviteYellow, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                                Text("Number\nInvitation", color = inviteYellow, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, lineHeight = 12.sp, textAlign = TextAlign.Center)
-                            }
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                InviteArt("file_00000000e56882119c217d508b6733dc.png", Modifier.size(40.dp), key = InviteKey.WHITE)
-                                Text("0", color = inviteYellow, fontSize = 24.sp, fontWeight = FontWeight.Bold, lineHeight = 25.sp)
-                                Text("Total Coins\nRewards", color = inviteYellow, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, lineHeight = 12.sp, textAlign = TextAlign.Center)
-                            }
-                        }
 
-                        // Gap ko 45.dp se 10.dp kar diya taaki claim button thora upar ho jaye
-                        Spacer(Modifier.height(10.dp))
+                    // Number of Invitation — bottom: 14vh (left: 85px)
+                    Column(
+                        Modifier.align(Alignment.BottomStart).padding(start = 85.dp, bottom = vh * 14f),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text("0", color = inviteYellow, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                        Text("Number\nInvitation", color = inviteYellow, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, lineHeight = 12.sp, textAlign = TextAlign.Center)
+                    }
 
-                        Column(
-                            Modifier.fillMaxWidth(),
-                            horizontalAlignment = Alignment.CenterHorizontally
+                    // Total Coins Rewards — bottom: 15vh (right: 80px)
+                    Column(
+                        Modifier.align(Alignment.BottomEnd).padding(end = 80.dp, bottom = vh * 15f),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        InviteArt("file_00000000e56882119c217d508b6733dc.png", Modifier.size(40.dp), key = InviteKey.WHITE)
+                        Text("0", color = inviteYellow, fontSize = 24.sp, fontWeight = FontWeight.Bold, lineHeight = 25.sp)
+                        Text("Total Coins\nRewards", color = inviteYellow, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, lineHeight = 12.sp, textAlign = TextAlign.Center)
+                    }
+
+                    // Claim block — bottom: 35vh (center)
+                    Column(
+                        Modifier.align(Alignment.BottomCenter).padding(bottom = vh * 35f),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        InviteArt("file_00000000e56882119c217d508b6733dc.png", Modifier.size(50.dp), key = InviteKey.WHITE)
+                        Text("0", color = inviteYellow, fontSize = 30.sp, fontWeight = FontWeight.Bold, lineHeight = 32.sp)
+                        Box(
+                            Modifier.padding(top = 12.dp).clip(CircleShape)
+                                .background(Brush.verticalGradient(listOf(Color(0xFFE62E2E), Color(0xFFB80D0D), Color(0xFF7A0000))))
+                                .border(1.5.dp, inviteYellow, CircleShape)
+                                .padding(horizontal = 40.dp, vertical = 6.dp)
                         ) {
-                            InviteArt("file_00000000e56882119c217d508b6733dc.png", Modifier.size(50.dp), key = InviteKey.WHITE)
-                            Text("0", color = inviteYellow, fontSize = 30.sp, fontWeight = FontWeight.Bold, lineHeight = 32.sp)
-                            Box(
-                                Modifier.padding(top = 12.dp).clip(CircleShape)
-                                    .background(Brush.verticalGradient(listOf(Color(0xFFE62E2E), Color(0xFFB80D0D), Color(0xFF7A0000))))
-                                    .border(1.5.dp, inviteYellow, CircleShape)
-                                    .padding(horizontal = 40.dp, vertical = 6.dp)
-                            ) {
-                                Text("Claim", color = inviteYellow, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
-                            }
+                            Text("Claim", color = inviteYellow, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
                         }
                     }
                 }
                 
-                // Bottom rules hata diye gaye hain
-                // Bas thora sa blank space chhora hai taaki floating button page ke end ko cover na kare
                 Spacer(Modifier.height(100.dp))
             }
         }
 
-        // Floating Invite Button - Bottom padding 40.dp se ghata kar 16.dp kardi taaki thora niche ho jaye
         InviteArt(
             "1788074191602~2.jpg",
             Modifier
@@ -319,7 +314,6 @@ fun InviteFriends(onBack: (() -> Unit)? = null, onClose: (() -> Unit)? = null) {
             key = InviteKey.GREEN
         )
 
-        // Bottom Share Sheet
         if (isSheetOpen) {
             Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f)).clickable { isSheetOpen = false }) {
                 Column(
