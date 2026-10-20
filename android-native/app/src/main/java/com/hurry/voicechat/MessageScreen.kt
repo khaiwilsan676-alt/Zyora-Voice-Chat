@@ -181,6 +181,7 @@ fun NativeChatScreen(
     val currentName = prefs.getString("name", "")?.takeIf { it.isNotBlank() } ?: "Zyora User"
     val currentAccountId = prefs.getString("accountId", currentUserId).orEmpty().ifBlank { currentUserId }
     val isOfficial = name == "Zyora Team" || name == "Zyora System"
+    var directSocket by remember(receiverId, currentUserId) { mutableStateOf<Socket?>(null) }
 
     var text by remember { mutableStateOf("") }
     var showOptions by remember { mutableStateOf(false) }
@@ -244,6 +245,7 @@ fun NativeChatScreen(
             reconnectionDelayMax = 5000
         }
         val chatSocket = IO.socket("https://hurry-voice-chat-lz75.onrender.com", opts)
+        directSocket = chatSocket
         val mainHandler = Handler(Looper.getMainLooper())
         val incoming = Emitter.Listener { args ->
             val payload = args.firstOrNull() as? JSONObject ?: return@Listener
@@ -285,6 +287,7 @@ fun NativeChatScreen(
         onDispose {
             chatSocket.off("private_message", incoming)
             chatSocket.off("private_message_history", history)
+            directSocket = null
             chatSocket.disconnect()
             chatSocket.close()
         }
@@ -578,14 +581,7 @@ fun NativeChatScreen(
                                                 .put("type", "message")
                                                 .put("timestamp", System.currentTimeMillis())
                                             if (!isOfficial && receiverId.isNotBlank() && currentUserId.isNotBlank()) {
-                                                runCatching {
-                                                    val socket = IO.socket("https://hurry-voice-chat-lz75.onrender.com")
-                                                    socket.connect()
-                                                    socket.emit("register", JSONObject().put("userId", currentUserId).put("accountId", currentAccountId))
-                                                    socket.emit("private_message", outgoing)
-                                                    socket.disconnect()
-                                                    socket.close()
-                                                }
+                                                directSocket?.emit("private_message", outgoing)
                                             }
                                             text = ""
                                             showEmojiPicker = false
