@@ -171,12 +171,15 @@ private fun MessageRow(chat: MessagePreview, onClick: () -> Unit) {
 fun NativeChatScreen(
     name: String,
     image: String,
+    receiverId: String = "",
+    currentUserId: String = "",
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("hurry_user", Context.MODE_PRIVATE) }
-    val currentPhoto = prefs.getString("photo", "") ?: ""
+    val currentPhoto = prefs.getString("photo", prefs.getString("image", "")) ?: ""
     val currentName = prefs.getString("name", "")?.takeIf { it.isNotBlank() } ?: "Zyora User"
+    val currentAccountId = prefs.getString("accountId", currentUserId).orEmpty().ifBlank { currentUserId }
     val isOfficial = name == "Zyora Team" || name == "Zyora System"
 
     var text by remember { mutableStateOf("") }
@@ -227,6 +230,63 @@ fun NativeChatScreen(
                 .putLong("${cacheKey}_last_timestamp", maxOf(prefs.getLong("${cacheKey}_last_timestamp", 0L), timestamp))
                 .apply()
             messages.add(false to value)
+        }
+    }
+
+    // Real-time one-to-one chat: register identity, load conversation history, and receive new messages.
+    DisposableEffect(receiverId, currentUserId, name) {
+        if (isOfficial || receiverId.isBlank() || currentUserId.isBlank()) return@DisposableEffect onDispose { }
+        val opts = IO.Options().apply {
+            transports = arrayOf("websocket")
+            reconnection = true
+            reconnectionAttempts = Int.MAX_VALUE
+            reconnectionDelay = 1000
+            reconnectionDelayMax = 5000
+        }
+        val chatSocket = IO.socket("https://hurry-voice-chat-lz75.onrender.com", opts)
+        val mainHandler = Handler(Looper.getMainLooper())
+        val incoming = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
+            val sender = payload.optString("senderId")
+            val receiver = payload.optString("receiverId")
+            if ((sender == receiverId && receiver == currentUserId) ||
+                (sender == currentUserId && receiver == receiverId)) {
+                val value = payload.optString("text")
+                if (value.isNotBlank()) mainHandler.post {
+                    val mine = sender == currentUserId
+                    if (messages.none { it.second == value && it.first == mine }) messages.add(mine to value)
+                }
+            }
+        }
+        val history = Emitter.Listener { args ->
+            val data = args.firstOrNull() as? JSONObject ?: return@Listener
+            val arr = data.optJSONArray("messages") ?: return@Listener
+            val loaded = mutableListOf<Pair<Boolean, String>>()
+            for (index in 0 until arr.length()) {
+                val msg = arr.optJSONObject(index) ?: continue
+                val value = msg.optString("text")
+                if (value.isNotBlank()) loaded.add((msg.optString("senderId") == currentUserId) to value)
+            }
+            mainHandler.post {
+                messages.clear()
+                messages.addAll(loaded)
+            }
+        }
+        chatSocket.on("private_message", incoming)
+        chatSocket.on("private_message_history", history)
+        chatSocket.on(Socket.EVENT_CONNECT) {
+            chatSocket.emit("register", JSONObject().put("userId", currentUserId).put("accountId", currentAccountId))
+            chatSocket.emit("private_message_history_request", JSONObject()
+                .put("userId", currentUserId)
+                .put("otherUserId", receiverId)
+                .put("chatId", listOf(currentUserId, receiverId).sorted().joinToString("_")))
+        }
+        chatSocket.connect()
+        onDispose {
+            chatSocket.off("private_message", incoming)
+            chatSocket.off("private_message_history", history)
+            chatSocket.disconnect()
+            chatSocket.close()
         }
     }
 
@@ -504,7 +564,29 @@ fun NativeChatScreen(
                                 IconButton(
                                     onClick = {
                                         if (text.isNotBlank()) {
-                                            messages.add(true to text.trim())
+                                            val outgoingText = text.trim()
+                                            messages.add(true to outgoingText)
+                                            val outgoing = JSONObject()
+                                                .put("id", "${currentUserId}_${System.currentTimeMillis()}")
+                                                .put("senderId", currentUserId)
+                                                .put("receiverId", receiverId)
+                                                .put("senderName", currentName)
+                                                .put("senderPhoto", currentPhoto)
+                                                .put("receiverName", name)
+                                                .put("receiverPhoto", image)
+                                                .put("text", outgoingText)
+                                                .put("type", "message")
+                                                .put("timestamp", System.currentTimeMillis())
+                                            if (!isOfficial && receiverId.isNotBlank() && currentUserId.isNotBlank()) {
+                                                runCatching {
+                                                    val socket = IO.socket("https://hurry-voice-chat-lz75.onrender.com")
+                                                    socket.connect()
+                                                    socket.emit("register", JSONObject().put("userId", currentUserId).put("accountId", currentAccountId))
+                                                    socket.emit("private_message", outgoing)
+                                                    socket.disconnect()
+                                                    socket.close()
+                                                }
+                                            }
                                             text = ""
                                             showEmojiPicker = false
                                             replyText = null
