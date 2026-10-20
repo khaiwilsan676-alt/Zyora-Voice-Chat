@@ -2,6 +2,8 @@ package com.hurry.voicechat
 
 import android.content.Context
 import android.net.Uri
+import android.view.ViewGroup
+import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -32,6 +34,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -42,6 +45,10 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.zIndex
 import coil3.compose.AsyncImage
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.PlayerView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -388,12 +395,78 @@ private fun RewardItemBox(item: Triple<String, String, String>, onClick: (String
                     "green" -> ColorFilter.colorMatrix(familyRemoveGreenMatrix)
                     else -> null
                 }
-                AsyncImage(model = familyAsset(item.second), contentDescription = null, modifier = Modifier.fillMaxSize().scale(if (item.third == "tall") 1f else 1.3f), contentScale = ContentScale.Crop, colorFilter = colorFilter)
+                if (item.second.substringBefore("?").substringAfterLast(".").lowercase() in setOf("mp4", "webm", "m4v")) {
+                    FamilyRewardVideo(
+                        url = familyAsset(item.second),
+                        modifier = Modifier.fillMaxSize().scale(if (item.third == "tall") 1f else 1.3f),
+                        rounded = true
+                    )
+                } else {
+                    AsyncImage(model = familyAsset(item.second), contentDescription = null, modifier = Modifier.fillMaxSize().scale(if (item.third == "tall") 1f else 1.3f), contentScale = ContentScale.Crop, colorFilter = colorFilter)
+                }
             }
         }
         Spacer(Modifier.height(6.dp))
         Row { repeat(5) { Icon(Icons.Default.Add, null, tint = familyGold, modifier = Modifier.size(10.dp)) } } 
         Text(item.first, color = Color(0xFFFDE68A), fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 4.dp))
+    }
+}
+
+// Real MP4 reward preview. Plays silently, loops, and fades in/out without player controls.
+@Composable
+private fun FamilyRewardVideo(
+    url: String,
+    modifier: Modifier = Modifier,
+    rounded: Boolean = true,
+    autoplay: Boolean = false
+) {
+    val context = LocalContext.current
+    val player = remember(url) {
+        ExoPlayer.Builder(context).build().apply {
+            setMediaItem(MediaItem.fromUri(url))
+            repeatMode = Player.REPEAT_MODE_ONE
+            volume = 0f
+            playWhenReady = autoplay
+            prepare()
+        }
+    }
+    var videoVisible by remember(url) { mutableStateOf(false) }
+    DisposableEffect(player) {
+        val listener = object : Player.Listener {
+            override fun onRenderedFirstFrame() { videoVisible = true }
+            override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                videoVisible = false
+            }
+        }
+        player.addListener(listener)
+        onDispose {
+            player.removeListener(listener)
+            player.release()
+        }
+    }
+    Box(modifier.clip(if (rounded) RoundedCornerShape(8.dp) else RoundedCornerShape(0.dp)).background(Color.Black)) {
+        AndroidView(
+            modifier = Modifier.fillMaxSize(),
+            factory = { ctx ->
+                PlayerView(ctx).apply {
+                    useController = false
+                    setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)
+                    layoutParams = FrameLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT
+                    )
+                    this.player = player
+                }
+            },
+            update = { it.player = player }
+        )
+        androidx.compose.animation.AnimatedVisibility(
+            visible = !videoVisible,
+            enter = androidx.compose.animation.fadeIn(),
+            exit = androidx.compose.animation.fadeOut()
+        ) {
+            Box(Modifier.fillMaxSize().background(Color(0xFF210D08)))
+        }
     }
 }
 
@@ -418,13 +491,22 @@ private fun FamilyRewardModal(url: String, title: String, onClose: () -> Unit) {
                     }
                 }
                 
-                AsyncImage(
-                    model = familyAsset(url),
-                    contentDescription = null,
-                    modifier = Modifier.size(320.dp).zIndex(1f),
-                    contentScale = ContentScale.Fit,
-                    colorFilter = if(url.contains("gemini") || url.contains("green")) ColorFilter.colorMatrix(familyRemoveGreenMatrix) else ColorFilter.colorMatrix(familyRemoveBlackMatrix)
-                )
+                if (url.substringBefore("?").substringAfterLast(".").lowercase() in setOf("mp4", "webm", "m4v")) {
+                    FamilyRewardVideo(
+                        url = familyAsset(url),
+                        modifier = Modifier.size(320.dp).zIndex(1f),
+                        rounded = false,
+                        autoplay = true
+                    )
+                } else {
+                    AsyncImage(
+                        model = familyAsset(url),
+                        contentDescription = null,
+                        modifier = Modifier.size(320.dp).zIndex(1f),
+                        contentScale = ContentScale.Fit,
+                        colorFilter = if(url.contains("gemini") || url.contains("green")) ColorFilter.colorMatrix(familyRemoveGreenMatrix) else ColorFilter.colorMatrix(familyRemoveBlackMatrix)
+                    )
+                }
                 
                 Row(modifier = Modifier.offset(y = (-20).dp).zIndex(2f)) {
                     repeat(5) { Icon(Icons.Default.Add, null, tint = familyGold, modifier = Modifier.size(32.dp)) } 
