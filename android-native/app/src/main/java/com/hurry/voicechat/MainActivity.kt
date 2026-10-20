@@ -193,6 +193,71 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
             ) else null
         )
     }
+    // Restore this account's existing room from the server after app reinstall/data refresh.
+    LaunchedEffect(userId) {
+        val stableOwnerId = authPrefs.getString("accountId", userId).orEmpty().ifBlank { userId }
+        if (stableOwnerId.isNotBlank()) {
+            withContext(Dispatchers.IO) {
+                runCatching {
+                    val encoded = java.net.URLEncoder.encode(stableOwnerId, "UTF-8")
+                    val connection = (URL("https://hurry-voice-chat-lz75.onrender.com/api/rooms?roomId=$encoded").openConnection() as HttpURLConnection).apply {
+                        connectTimeout = 10000
+                        readTimeout = 10000
+                    }
+                    try {
+                        if (connection.responseCode in 200..299) {
+                            val root = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
+                            val saved = root.optJSONObject("room") ?: root
+                            val serverRoom = HurryRoom(
+                                id = saved.optString("accountId", saved.optString("roomId", saved.optString("id", stableOwnerId))),
+                                name = saved.optString("name", saved.optString("roomName", "Room")).ifBlank { "Room" },
+                                image = saved.optString("dp", saved.optString("image", saved.optString("roomDp", ""))),
+                                announcement = saved.optString("message", saved.optString("announcement", "")),
+                                country = saved.optString("country", "🇮🇳"),
+                                locked = saved.optBoolean("isLocked", false),
+                                accountId = saved.optString("accountId", stableOwnerId)
+                            )
+                            withContext(Dispatchers.Main) {
+                                authPrefs.edit()
+                                    .putBoolean("mine_room_created", true)
+                                    .putString("mine_room_id", serverRoom.id)
+                                    .putString("mine_room_name", serverRoom.name)
+                                    .putString("mine_room_image", serverRoom.image)
+                                    .putString("mine_room_country", serverRoom.country)
+                                    .putString("mine_room_account_id", serverRoom.accountId)
+                                    .apply()
+                                mineCreatedRoom = serverRoom
+                            }
+                        } else if (mineCreatedRoom != null) {
+                            // Migrate a previously created local room to the permanent server record.
+                            val local = mineCreatedRoom!!
+                            val payload = JSONObject()
+                                .put("accountId", local.accountId.ifBlank { stableOwnerId })
+                                .put("roomId", local.id)
+                                .put("id", local.id)
+                                .put("name", local.name)
+                                .put("roomName", local.name)
+                                .put("dp", local.image)
+                                .put("roomDp", local.image)
+                                .put("country", local.country)
+                                .put("message", local.announcement)
+                                .put("announcement", local.announcement)
+                            val save = (URL("https://hurry-voice-chat-lz75.onrender.com/api/rooms").openConnection() as HttpURLConnection).apply {
+                                requestMethod = "PUT"
+                                connectTimeout = 10000
+                                readTimeout = 10000
+                                doOutput = true
+                                setRequestProperty("Content-Type", "application/json")
+                            }
+                            save.outputStream.use { it.write(payload.toString().toByteArray(Charsets.UTF_8)) }
+                            runCatching { save.inputStream.close() }
+                            save.disconnect()
+                        }
+                    } finally { connection.disconnect() }
+                }
+            }
+        }
+    }
     var tab by remember { mutableStateOf(HurryTab.HOME) }
     var homeMine by remember { mutableStateOf(false) }
     var keptRoom by remember {
