@@ -777,6 +777,85 @@ app.get("/api/users", async (req, res) => {
 });
 
 
+// ==============================================================
+ // PERSISTENT FOLLOW GRAPH + REAL-TIME FOLLOW COUNTS
+ // MongoDB stores each follower/target pair; Socket.IO broadcasts changes.
+ // ==============================================================
+app.get("/api/follows", async (req, res) => {
+  try {
+    if (!db) return res.status(503).json({ error: "DB not connected" });
+    const targetUid = String(req.query.targetUid || "").trim();
+    const followerId = String(req.query.followerId || "").trim();
+    if (!targetUid) return res.status(400).json({ error: "Missing targetUid" });
+
+    const follows = db.collection("userFollows");
+    const [followers, following] = await Promise.all([
+      follows.countDocuments({ targetUid }),
+      followerId ? follows.findOne({ targetUid, followerId }) : Promise.resolve(null),
+    ]);
+    const followerRows = await follows.find({ targetUid }).sort({ createdAt: 1 }).limit(500).toArray();
+    const ids = followerRows.map((row) => row.followerId).filter(Boolean);
+    let users = [];
+    if (ids.length) {
+      users = await db.collection("users").find({
+        $or: [{ uid: { $in: ids } }, { id: { $in: ids } }, { appLongId: { $in: ids } }],
+      }).project({ uid: 1, id: 1, name: 1, displayName: 1, userName: 1, image: 1, photo: 1, photoURL: 1, accountId: 1 }).toArray();
+    }
+    const byId = new Map();
+    for (const user of users) {
+      const id = String(user.uid || user.id || user.appLongId || "");
+      byId.set(id, {
+        id,
+        name: user.name || user.displayName || user.userName || "User",
+        image: user.image || user.photo || user.photoURL || "/default-avatar.png",
+        accountId: String(user.accountId || ""),
+      });
+    }
+    res.json({
+      success: true,
+      targetUid,
+      followers,
+      following: Boolean(following),
+      followerList: ids.map((id) => byId.get(String(id)) || { id: String(id), name: "User", image: "/default-avatar.png", accountId: "" }),
+    });
+  } catch (error) {
+    console.error("GET /api/follows error:", error);
+    res.status(500).json({ error: "Failed to load followers" });
+  }
+});
+
+app.post("/api/follows", async (req, res) => {
+  try {
+    if (!db) return res.status(503).json({ error: "DB not connected" });
+    const followerId = String(req.body?.followerId || "").trim();
+    const targetUid = String(req.body?.targetUid || "").trim();
+    const action = String(req.body?.action || "follow").toLowerCase();
+    if (!followerId || !targetUid) return res.status(400).json({ error: "Missing followerId or targetUid" });
+    if (followerId === targetUid) return res.status(400).json({ error: "Cannot follow yourself" });
+    if (action !== "follow" && action !== "unfollow") return res.status(400).json({ error: "Invalid action" });
+
+    const follows = db.collection("userFollows");
+    if (action === "follow") {
+      await follows.updateOne(
+        { followerId, targetUid },
+        { $setOnInsert: { followerId, targetUid, createdAt: Date.now() }, $set: { updatedAt: Date.now() } },
+        { upsert: true }
+      );
+    } else {
+      await follows.deleteOne({ followerId, targetUid });
+    }
+
+    const followers = await follows.countDocuments({ targetUid });
+    const following = action === "follow";
+    const payload = { targetUid, followerId, followers, following, action, timestamp: Date.now() };
+    io.emit("follow_updated", payload);
+    res.json({ success: true, ...payload });
+  } catch (error) {
+    console.error("POST /api/follows error:", error);
+    res.status(500).json({ error: "Failed to update follow" });
+  }
+});
+
 app.post("/api/users/block", async (req, res) => {
   try {
     if (!db) return res.status(503).json({ error: "DB not connected" });
