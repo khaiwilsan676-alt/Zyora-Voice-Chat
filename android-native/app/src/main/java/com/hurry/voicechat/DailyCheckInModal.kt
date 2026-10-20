@@ -30,13 +30,15 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import coil3.compose.AsyncImage
 
+const val BASE_IMG_URL = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/"
+
 data class SignInReward(val day: Int, val reward: String, val image: String)
 
 private val SIGN_IN_REWARDS = listOf(
-    SignInReward(1, "+5000", "file_00000000e56882119c217d508b6733dc.png"),
-    SignInReward(2, "+5000", "file_00000000e56882119c217d508b6733dc.png"),
-    SignInReward(3, "×2 Days", "/file_00000000d808821186c1b7b612eea3fc.png"),
-    SignInReward(4, "+10,000", "file_00000000e56882119c217d508b6733dc.png")
+    SignInReward(1, "+5000", BASE_IMG_URL + "file_00000000e56882119c217d508b6733dc.png"),
+    SignInReward(2, "+5000", BASE_IMG_URL + "file_00000000e56882119c217d508b6733dc.png"),
+    SignInReward(3, "×2 Days", BASE_IMG_URL + "file_00000000d808821186c1b7b612eea3fc.png"),
+    SignInReward(4, "+10,000", BASE_IMG_URL + "file_00000000e56882119c217d508b6733dc.png")
 )
 
 @Composable
@@ -52,7 +54,7 @@ fun DailyCheckInModal(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.60f))
+            // Black drop background remove kar diya hai
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
@@ -77,7 +79,7 @@ fun DailyCheckInModal(
             ) {
                 // Top Banner Image (Overlapping logic -mt-6 jaisa)
                 AsyncImage(
-                    model = "/file_000000004b6c8211855003bf899492fd.png",
+                    model = BASE_IMG_URL + "file_000000004b6c8211855003bf899492fd.png",
                     contentDescription = "Top Banner",
                     contentScale = ContentScale.FillWidth,
                     modifier = Modifier
@@ -146,11 +148,11 @@ fun DailyCheckInModal(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    AsyncImage(model = "/file_00000000e56882119c217d508b6733dc.png", contentDescription = null, modifier = Modifier.size(24.dp))
+                                    AsyncImage(model = BASE_IMG_URL + "file_00000000e56882119c217d508b6733dc.png", contentDescription = null, modifier = Modifier.size(24.dp))
                                     Text("+10,000", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFF374151))
                                 }
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    AsyncImage(model = "/IMG_20260903_141944.png", contentDescription = null, modifier = Modifier.size(32.dp))
+                                    AsyncImage(model = BASE_IMG_URL + "IMG_20260903_141944.png", contentDescription = null, modifier = Modifier.size(32.dp))
                                     Text("×1 Day", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFF374151))
                                 }
                             }
@@ -167,11 +169,11 @@ fun DailyCheckInModal(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    AsyncImage(model = "/file_00000000e56882119c217d508b6733dc.png", contentDescription = null, modifier = Modifier.size(24.dp))
+                                    AsyncImage(model = BASE_IMG_URL + "file_00000000e56882119c217d508b6733dc.png", contentDescription = null, modifier = Modifier.size(24.dp))
                                     Text("+10,000", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFF374151))
                                 }
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    AsyncImage(model = "/IMG-20260903-WA0076.jpg", contentDescription = null, modifier = Modifier.size(24.dp))
+                                    AsyncImage(model = BASE_IMG_URL + "IMG-20260903-WA0076.jpg", contentDescription = null, modifier = Modifier.size(24.dp))
                                     Text("×2 Days", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFF374151))
                                 }
                             }
@@ -245,7 +247,7 @@ private fun DayCard(
 ) {
     val borderColor = when {
         day < currentDay -> Color(0xFF4ADE80) // Green completed
-        day == currentDay -> Color(0xFF3B82F6) // Blue active (can add pulse animation if needed later)
+        day == currentDay -> Color(0xFF3B82F6) // Blue active
         else -> Color(0xFFE5E7EB) // Gray pending
     }
 
@@ -313,11 +315,10 @@ private fun Day7Card(currentDay: Int) {
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
             .border(2.dp, borderColor, RoundedCornerShape(8.dp))
-            .background(Color.White)
-            .padding(vertical = 12.dp),
+            .background(Color.White), // Faltu ki gap remove karne ke liye yaha se padding hata di
         contentAlignment = Alignment.Center
     ) {
-        // Gradient Label (Top Left)
+        // Gradient Label (Top Left) - Ab yeh ekdam exact top corner par attach rahega
         Box(
             modifier = Modifier
                 .align(Alignment.TopStart)
@@ -356,22 +357,24 @@ private fun Day7Card(currentDay: Int) {
             }
         }
 
-        // Content
+        // Content - Sab kuch ek Row mein theek se set (SpaceEvenly taaki perfect alignment mile)
         Row(
-            modifier = Modifier.padding(top = 16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 28.dp, bottom = 12.dp), // Content ko tag ke neeche push karne ke liye
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(20.dp)
+            horizontalArrangement = Arrangement.SpaceEvenly
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                AsyncImage(model = "/file_00000000e56882119c217d508b6733dc.png", contentDescription = null, modifier = Modifier.size(32.dp))
+                AsyncImage(model = BASE_IMG_URL + "file_00000000e56882119c217d508b6733dc.png", contentDescription = null, modifier = Modifier.size(32.dp))
                 Text("+15,000", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFF374151))
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                AsyncImage(model = "/file_0000000044388211996656afc9ce9c03.png", contentDescription = null, modifier = Modifier.size(40.dp))
+                AsyncImage(model = BASE_IMG_URL + "file_0000000044388211996656afc9ce9c03.png", contentDescription = null, modifier = Modifier.size(40.dp))
                 Text("×3 days", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFF374151))
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                AsyncImage(model = "/IMG-20260903-WA0077.jpg", contentDescription = null, modifier = Modifier.size(40.dp))
+                AsyncImage(model = BASE_IMG_URL + "IMG-20260903-WA0077.jpg", contentDescription = null, modifier = Modifier.size(40.dp))
                 Text("×3 days", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFF374151))
             }
         }
