@@ -8,7 +8,14 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
+import io.socket.client.IO
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -27,14 +34,112 @@ fun PublicProfile(
     user: RoomProfileUser,
     onBack: () -> Unit = {},
     onFollow: () -> Unit = {},
-    onMessage: () -> Unit = {}
+    onMessage: () -> Unit = {},
+    currentUserId: String = ""
 ) {
     val blue = Color(0xFF268CFA)
     val avatar = user.image.ifBlank { PROFILE_ASSETS + "default-avatar.png" }
+    val targetUid = user.uid.ifBlank { user.id }.ifBlank { user.accountId }
+    var coverPhoto by remember(targetUid) { mutableStateOf("") }
+    var followerCount by remember(targetUid) { mutableIntStateOf(user.followers) }
+    var isFollowing by remember(targetUid) { mutableStateOf(user.isFollowing) }
+    var followBusy by remember(targetUid) { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(targetUid, currentUserId) {
+        if (targetUid.isBlank()) return@LaunchedEffect
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val url = URL("https://hurry-voice-chat-lz75.onrender.com/api/follows?targetUid=" +
+                    java.net.URLEncoder.encode(targetUid, "UTF-8") + "&followerId=" +
+                    java.net.URLEncoder.encode(currentUserId, "UTF-8"))
+                val conn = (url.openConnection() as HttpURLConnection).apply { connectTimeout = 10000; readTimeout = 10000 }
+                try {
+                    if (conn.responseCode in 200..299) {
+                        val json = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
+                        val count = json.optInt("followers", user.followers)
+                        val following = json.optBoolean("following", user.isFollowing)
+                        withContext(Dispatchers.Main) {
+                            followerCount = count
+                            isFollowing = following
+                        }
+                    }
+                } finally { conn.disconnect() }
+            }
+            runCatching {
+                val url = URL("https://hurry-voice-chat-lz75.onrender.com/api/users?uid=" +
+                    java.net.URLEncoder.encode(targetUid, "UTF-8"))
+                val conn = (url.openConnection() as HttpURLConnection).apply { connectTimeout = 10000; readTimeout = 10000 }
+                try {
+                    if (conn.responseCode in 200..299) {
+                        val root = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
+                        val profile = root.optJSONObject("user") ?: root.optJSONArray("users")?.optJSONObject(0)
+                        val cover = profile?.optString("coverPhoto", profile.optString("coverImage", "")).orEmpty()
+                        withContext(Dispatchers.Main) { coverPhoto = cover }
+                    }
+                } finally { conn.disconnect() }
+            }
+        }
+    }
+
+    DisposableEffect(targetUid, currentUserId) {
+        val socket = runCatching { IO.socket("https://hurry-voice-chat-lz75.onrender.com") }.getOrNull()
+        val listener = io.socket.emitter.Emitter.Listener { args ->
+            val data = args.firstOrNull() as? JSONObject ?: return@Listener
+            if (data.optString("targetUid") == targetUid) {
+                followerCount = data.optInt("followers", followerCount)
+                if (data.optString("followerId") == currentUserId) {
+                    isFollowing = data.optBoolean("following", data.optString("action") == "follow")
+                }
+            }
+        }
+        socket?.on("follow_updated", listener)
+        socket?.connect()
+        onDispose { socket?.off("follow_updated", listener); socket?.disconnect(); socket?.close() }
+    }
+
+    val toggleFollow: () -> Unit = {
+        if (currentUserId.isNotBlank() && targetUid.isNotBlank() && currentUserId != targetUid && !followBusy) {
+            val nextFollowing = !isFollowing
+            isFollowing = nextFollowing
+            followerCount = (followerCount + if (nextFollowing) 1 else -1).coerceAtLeast(0)
+            followBusy = true
+            scope.launch {
+                val result = withContext(Dispatchers.IO) {
+                    runCatching {
+                        val conn = (URL("https://hurry-voice-chat-lz75.onrender.com/api/follows").openConnection() as HttpURLConnection).apply {
+                            requestMethod = "POST"
+                            connectTimeout = 10000
+                            readTimeout = 10000
+                            doOutput = true
+                            setRequestProperty("Content-Type", "application/json")
+                        }
+                        try {
+                            val body = JSONObject().put("followerId", currentUserId).put("targetUid", targetUid)
+                                .put("action", if (nextFollowing) "follow" else "unfollow").toString()
+                            conn.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
+                            if (conn.responseCode !in 200..299) error("Follow update failed")
+                            val json = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
+                            Triple(json.optBoolean("success"), json.optInt("followers", followerCount), json.optBoolean("following", nextFollowing))
+                        } finally { conn.disconnect() }
+                    }.getOrNull()
+                }
+                if (result?.first == true) {
+                    followerCount = result.second
+                    isFollowing = result.third
+                    onFollow()
+                } else {
+                    isFollowing = !nextFollowing
+                    followerCount = (followerCount + if (nextFollowing) -1 else 1).coerceAtLeast(0)
+                }
+                followBusy = false
+            }
+        }
+    }
     Column(Modifier.fillMaxSize().background(Color.White)) {
         Box(Modifier.fillMaxWidth().height(350.dp).background(Color(0xFF263445))) {
             AsyncImage(
-                model = avatar,
+                model = coverPhoto.ifBlank { avatar },
                 contentDescription = "Profile cover",
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
@@ -71,7 +176,7 @@ fun PublicProfile(
                 horizontalArrangement = Arrangement.SpaceAround,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                ProfileStat(user.followers.toString(), "Fans")
+                ProfileStat(followerCount.toString(), "Fans")
                 ProfileStat("0", "Following")
                 ProfileStat("0", "Visitors")
                 ProfileStat("0", "Friends")
@@ -91,8 +196,8 @@ fun PublicProfile(
             )
             HorizontalDivider(color = Color(0xFFF0F0F0))
             Row(Modifier.fillMaxWidth().padding(vertical = 14.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Box(Modifier.weight(1f).height(42.dp).clip(RoundedCornerShape(22.dp)).background(blue).clickable(onClick = onFollow), contentAlignment = Alignment.Center) {
-                    Text(if (user.isFollowing) "Following" else "+ Follow", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                Box(Modifier.weight(1f).height(42.dp).clip(RoundedCornerShape(22.dp)).background(if (isFollowing) Color(0xFFEAF2FC) else blue).clickable(onClick = toggleFollow), contentAlignment = Alignment.Center) {
+                    Text(if (isFollowing) "Following" else "+ Follow", color = if (isFollowing) Color(0xFF2676D2) else Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                 }
                 Box(Modifier.weight(1f).height(42.dp).clip(RoundedCornerShape(22.dp)).background(Color(0xFFF1F7FF)).clickable(onClick = onMessage), contentAlignment = Alignment.Center) {
                     Text("Message", color = blue, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
