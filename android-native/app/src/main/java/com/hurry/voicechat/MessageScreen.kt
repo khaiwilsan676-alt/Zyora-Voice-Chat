@@ -256,7 +256,7 @@ fun NativeChatScreen(
                 val value = payload.optString("text")
                 if (value.isNotBlank()) mainHandler.post {
                     val mine = sender == currentUserId
-                    if (messages.none { it.second == value && it.first == mine }) messages.add(mine to value)
+                    messages.add(mine to value)
                 }
             }
         }
