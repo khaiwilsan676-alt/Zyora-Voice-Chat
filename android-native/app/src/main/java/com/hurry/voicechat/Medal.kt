@@ -283,9 +283,9 @@ fun Medal(onBack: () -> Unit = {}, medals: List<HurryMedal> = emptyList()) {
                             MedalVideo(
                                 video = medal.video, 
                                 modifier = Modifier.size((medal.size.coerceAtMost(250) / 2).dp).aspectRatio(1f), 
-                                animated = false, 
+                                animated = true,
                                 variant = medal.variant,
-                                isColorless = true
+                                isColorless = false
                             )
                         }
                         Text(medal.name, color = Color(0xFFE4DFED), fontSize = 13.sp, maxLines = 1, textAlign = TextAlign.Center)
