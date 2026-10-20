@@ -55,7 +55,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Calendar
 
-// GITHUB LINK AUTO-ADDER (Sab Images aur Videos par ye link add hoga)
+// GITHUB LINK AUTO-ADDER
 private const val FAMILY_ASSET_BASE = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/"
 private fun familyAsset(file: String): String {
     return if (file.startsWith("http")) file else FAMILY_ASSET_BASE + file.removePrefix("/")
@@ -82,7 +82,7 @@ private val familyRemoveBlackMatrix = ColorMatrix(floatArrayOf(
     1.5f, 1.5f, 1.5f, 0f, -0.2f
 ))
 
-// GRAYSCALE + GREEN REMOVE MATRIX (For inactive tabs)
+// GRAYSCALE + GREEN REMOVE MATRIX
 private val familyGrayscaleGreenMatrix = ColorMatrix(floatArrayOf(
     0.33f, 0.59f, 0.11f, 0f, 0f,
     0.33f, 0.59f, 0.11f, 0f, 0f,
@@ -102,6 +102,15 @@ private val familyRules = listOf(
     "9. Any benefits or relationships formed within the family are the result of voluntary actions taken by the members themselves and have no connection to Zaho."
 )
 
+// ⭐ Reward item data (vehicle ka video bhi carry karta hai)
+private data class RewardItemData(
+    val title: String,
+    val thumbnail: String,
+    val type: String, // "black" | "green" | "vehicle" | "mixed" | "tag" | "tall"
+    val videoUrl: String = "",
+    val isWinnerReward: Boolean = false
+)
+
 @Composable
 fun Family(onBack: () -> Unit) {
     val context = LocalContext.current
@@ -115,9 +124,10 @@ fun Family(onBack: () -> Unit) {
     var familyImage by remember { mutableStateOf(prefs.getString("familyImage", "") ?: "") }
     var createBusy by remember { mutableStateOf(false) }
     var createError by remember { mutableStateOf<String?>(null) }
-    
-    var activeModal by remember { mutableStateOf<Pair<String, String>?>(null) } 
-    
+
+    // ⭐ Triple: (url, title, isWinnerReward)
+    var activeModal by remember { mutableStateOf<Triple<String, String, Boolean>?>(null) }
+
     val scope = rememberCoroutineScope()
     val walletDao = remember { WalletDatabase.get(context).walletDao() }
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
@@ -178,12 +188,17 @@ fun Family(onBack: () -> Unit) {
                     }
                 }
             })
-            "top" -> FamilyTop(onBack = { view = "main" }, onRules = { showRules = true }, activeRank = activeRank, onRank = { activeRank = it }, onOpenModal = { url, title -> activeModal = Pair(url, title) })
+            "top" -> FamilyTop(onBack = { view = "main" }, onRules = { showRules = true }, activeRank = activeRank, onRank = { activeRank = it }, onOpenModal = { url, title, isWinner -> activeModal = Triple(url, title, isWinner) })
             else -> FamilyHome(onBack = onBack, onRules = { showRules = true }, seconds = seconds, activeRank = activeRank, onRank = { activeRank = it; if (it == 2) view = "top" }, onCreate = { view = "create" })
         }
-        
+
         if (activeModal != null) {
-            FamilyRewardModal(url = activeModal!!.first, title = activeModal!!.second, onClose = { activeModal = null })
+            FamilyRewardModal(
+                url = activeModal!!.first,
+                title = activeModal!!.second,
+                isWinnerReward = activeModal!!.third,
+                onClose = { activeModal = null }
+            )
         }
 
         if (showRules) FamilyRules(onClose = { showRules = false })
@@ -219,10 +234,33 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, ac
 
             Spacer(Modifier.height(10.dp))
 
-            Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.Bottom) {
-                AsyncImage(model = familyAsset("IMG_20260901_230303.jpg"), contentDescription = null, modifier = Modifier.weight(1f).height(100.dp).clickable { onRank(0) }, contentScale = ContentScale.Fit, colorFilter = if (activeRank == 0) ColorFilter.colorMatrix(familyRemoveGreenMatrix) else ColorFilter.colorMatrix(familyGrayscaleGreenMatrix))
-                AsyncImage(model = familyAsset("IMG_20260901_230319.jpg"), contentDescription = null, modifier = Modifier.weight(1.2f).height(120.dp).clickable { onRank(1) }.zIndex(1f), contentScale = ContentScale.Fit, colorFilter = if (activeRank == 1) ColorFilter.colorMatrix(familyRemoveGreenMatrix) else ColorFilter.colorMatrix(familyGrayscaleGreenMatrix))
-                AsyncImage(model = familyAsset("IMG_20260901_230330.jpg"), contentDescription = null, modifier = Modifier.weight(1f).height(100.dp).clickable { onRank(2) }, contentScale = ContentScale.Fit, colorFilter = if (activeRank == 2) ColorFilter.colorMatrix(familyRemoveGreenMatrix) else ColorFilter.colorMatrix(familyGrayscaleGreenMatrix))
+            // ⭐ 3 IMAGES — EKDAM EQUAL SIZE, EK ROW MEIN
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                AsyncImage(
+                    model = familyAsset("IMG_20260901_230303.jpg"),
+                    contentDescription = null,
+                    modifier = Modifier.weight(1f).height(110.dp).clickable { onRank(0) },
+                    contentScale = ContentScale.Fit,
+                    colorFilter = if (activeRank == 0) ColorFilter.colorMatrix(familyRemoveGreenMatrix) else ColorFilter.colorMatrix(familyGrayscaleGreenMatrix)
+                )
+                AsyncImage(
+                    model = familyAsset("IMG_20260901_230319.jpg"),
+                    contentDescription = null,
+                    modifier = Modifier.weight(1f).height(110.dp).clickable { onRank(1) },
+                    contentScale = ContentScale.Fit,
+                    colorFilter = if (activeRank == 1) ColorFilter.colorMatrix(familyRemoveGreenMatrix) else ColorFilter.colorMatrix(familyGrayscaleGreenMatrix)
+                )
+                AsyncImage(
+                    model = familyAsset("IMG_20260901_230330.jpg"),
+                    contentDescription = null,
+                    modifier = Modifier.weight(1f).height(110.dp).clickable { onRank(2) },
+                    contentScale = ContentScale.Fit,
+                    colorFilter = if (activeRank == 2) ColorFilter.colorMatrix(familyRemoveGreenMatrix) else ColorFilter.colorMatrix(familyGrayscaleGreenMatrix)
+                )
             }
 
             Row(Modifier.fillMaxWidth().padding(top = 20.dp, bottom = 10.dp).background(Brush.horizontalGradient(listOf(Color.Transparent, familyGold.copy(alpha = .12f), Color.Transparent))).border(1.dp, familyGold.copy(alpha = .18f)), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
@@ -237,7 +275,7 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, ac
             }
 
             AsyncImage(model = familyAsset("1788258921361~2.jpg"), contentDescription = "Top three families", modifier = Modifier.fillMaxWidth().height(150.dp), contentScale = ContentScale.FillBounds, colorFilter = ColorFilter.colorMatrix(familyRemoveGreenMatrix))
-            
+
             for (rank in 4..50) {
                 Box(Modifier.fillMaxWidth().height(64.dp), contentAlignment = Alignment.CenterStart) {
                     AsyncImage(model = familyAsset("1788259008478~2.jpg"), contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.FillBounds, colorFilter = ColorFilter.colorMatrix(familyRemoveGreenMatrix))
@@ -247,20 +285,18 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, ac
             Spacer(Modifier.height(110.dp))
         }
 
-        // PERFECT BOTTOM OVERLAP, WIDE, AND LOWERED FIX
-        Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().offset(y = 28.dp)) { // 28dp se aur niche laya
+        Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().offset(y = 28.dp)) {
             AsyncImage(
-                model = familyAsset("file_000000009d1081f59878648feb821b5e.png"), 
-                contentDescription = null, 
-                modifier = Modifier.fillMaxWidth().scale(1.15f), // Scale 1.15x se aur Wide ho gaya
+                model = familyAsset("file_000000009d1081f59878648feb821b5e.png"),
+                contentDescription = null,
+                modifier = Modifier.fillMaxWidth().scale(1.15f),
                 contentScale = ContentScale.FillWidth
             )
-            // matchParentSize() isse Create button exactly center overlap karega
             Box(Modifier.matchParentSize(), contentAlignment = Alignment.Center) {
                 AsyncImage(
-                    model = familyAsset("file_0000000056508230808da89fb794a97f.png"), 
-                    contentDescription = "Create Family", 
-                    modifier = Modifier.fillMaxWidth(0.5f).clickable(onClick = onCreate), 
+                    model = familyAsset("file_0000000056508230808da89fb794a97f.png"),
+                    contentDescription = "Create Family",
+                    modifier = Modifier.fillMaxWidth(0.5f).clickable(onClick = onCreate),
                     contentScale = ContentScale.Fit
                 )
             }
@@ -272,7 +308,7 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, ac
 // TOP RANKINGS REWARDS CARDS (View 3)
 // --------------------------------------------------------
 @Composable
-private fun FamilyTop(onBack: () -> Unit, onRules: () -> Unit, activeRank: Int, onRank: (Int) -> Unit, onOpenModal: (String, String) -> Unit) {
+private fun FamilyTop(onBack: () -> Unit, onRules: () -> Unit, activeRank: Int, onRank: (Int) -> Unit, onOpenModal: (String, String, Boolean) -> Unit) {
     val scrollState = rememberScrollState()
 
     Box(Modifier.fillMaxSize().background(familyBrown)) {
@@ -295,54 +331,121 @@ private fun FamilyTop(onBack: () -> Unit, onRules: () -> Unit, activeRank: Int, 
 
             Spacer(Modifier.height(10.dp))
 
-            Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.Bottom) {
-                AsyncImage(model = familyAsset("IMG_20260901_230303.jpg"), contentDescription = null, modifier = Modifier.weight(1f).height(100.dp).clickable { onRank(0) }, contentScale = ContentScale.Fit, colorFilter = if (activeRank == 0) ColorFilter.colorMatrix(familyRemoveGreenMatrix) else ColorFilter.colorMatrix(familyGrayscaleGreenMatrix))
-                AsyncImage(model = familyAsset("IMG_20260901_230319.jpg"), contentDescription = null, modifier = Modifier.weight(1.2f).height(120.dp).clickable { onRank(1) }.zIndex(1f), contentScale = ContentScale.Fit, colorFilter = if (activeRank == 1) ColorFilter.colorMatrix(familyRemoveGreenMatrix) else ColorFilter.colorMatrix(familyGrayscaleGreenMatrix))
-                AsyncImage(model = familyAsset("IMG_20260901_230330.jpg"), contentDescription = null, modifier = Modifier.weight(1f).height(100.dp).clickable { onRank(2) }, contentScale = ContentScale.Fit, colorFilter = if (activeRank == 2) ColorFilter.colorMatrix(familyRemoveGreenMatrix) else ColorFilter.colorMatrix(familyGrayscaleGreenMatrix))
+            // ⭐ 3 IMAGES — EKDAM EQUAL SIZE, EK ROW MEIN
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                AsyncImage(
+                    model = familyAsset("IMG_20260901_230303.jpg"),
+                    contentDescription = null,
+                    modifier = Modifier.weight(1f).height(110.dp).clickable { onRank(0) },
+                    contentScale = ContentScale.Fit,
+                    colorFilter = if (activeRank == 0) ColorFilter.colorMatrix(familyRemoveGreenMatrix) else ColorFilter.colorMatrix(familyGrayscaleGreenMatrix)
+                )
+                AsyncImage(
+                    model = familyAsset("IMG_20260901_230319.jpg"),
+                    contentDescription = null,
+                    modifier = Modifier.weight(1f).height(110.dp).clickable { onRank(1) },
+                    contentScale = ContentScale.Fit,
+                    colorFilter = if (activeRank == 1) ColorFilter.colorMatrix(familyRemoveGreenMatrix) else ColorFilter.colorMatrix(familyGrayscaleGreenMatrix)
+                )
+                AsyncImage(
+                    model = familyAsset("IMG_20260901_230330.jpg"),
+                    contentDescription = null,
+                    modifier = Modifier.weight(1f).height(110.dp).clickable { onRank(2) },
+                    contentScale = ContentScale.Fit,
+                    colorFilter = if (activeRank == 2) ColorFilter.colorMatrix(familyRemoveGreenMatrix) else ColorFilter.colorMatrix(familyGrayscaleGreenMatrix)
+                )
             }
 
             Spacer(Modifier.height(40.dp))
 
-            RewardCard(title = "TOP 1 Reward", 
-                item1 = Triple("Medal *7 days", "1000196572-background (1).mp4", "black"), 
-                item2 = Triple("Top1 Tag *7 days", "", "tag"), 
-                item3 = Triple("Vehicle *7 days", "IMG_20260918_141104.jpg", "vehicle"), 
-                frame = Triple("Frames *7 days", "gemini_generated_video_0d259062.mp4", "green"),
-                familyFrame = Triple("Family Frame *7 d", "", "tag"),
-                roomTheme = Triple("Room Theme *7 d", "IMG-20260914-WA0043.jpg", "tall"),
+            RewardCard(
+                title = "TOP 1 Reward",
+                item1 = RewardItemData("Medal *7 days", "1000196572-background (1).mp4", "black"),
+                item2 = RewardItemData("Top1 Tag *7 days", "", "tag"),
+                item3 = RewardItemData(
+                    "Vehicle *7 days",
+                    "IMG_20260918_141104.jpg",
+                    "vehicle",
+                    videoUrl = "gemini_generated_video_e407ad86~2.mp4"
+                ),
+                frame = RewardItemData(
+                    "Frames *7 days",
+                    "gemini_generated_video_0d259062.mp4",
+                    "green",
+                    isWinnerReward = true
+                ),
+                familyFrame = RewardItemData("Family Frame *7 d", "", "tag"),
+                roomTheme = RewardItemData("Room Theme *7 d", "IMG-20260914-WA0043.jpg", "tall"),
                 onClick = onOpenModal, label = "TOP1 Family"
             )
 
             Spacer(Modifier.height(40.dp))
 
-            RewardCard(title = "TOP 2 Reward", 
-                item1 = Triple("Medal *7 days", "1000196573-background (1).mp4", "black"), 
-                item2 = Triple("Top2 Tag *7 days", "", "tag"), 
-                item3 = Triple("Vehicle *7 days", "IMG_20260919_010054.jpg", "vehicle"), 
-                frame = Triple("Frames *7 days", "gemini_generated_video_0d259062.mp4", "green"),
-                familyFrame = Triple("Family Frame *7 d", "", "tag"),
-                roomTheme = Triple("Room Theme *7 d", "IMG-20260914-WA0045.jpg", "tall"),
+            RewardCard(
+                title = "TOP 2 Reward",
+                item1 = RewardItemData("Medal *7 days", "1000196573-background (1).mp4", "black"),
+                item2 = RewardItemData("Top2 Tag *7 days", "", "tag"),
+                item3 = RewardItemData(
+                    "Vehicle *7 days",
+                    "IMG_20260919_010054.jpg",
+                    "vehicle",
+                    videoUrl = "VID_20260919_010017.mp4"
+                ),
+                frame = RewardItemData(
+                    "Frames *7 days",
+                    "gemini_generated_video_0d259062.mp4",
+                    "green",
+                    isWinnerReward = true
+                ),
+                familyFrame = RewardItemData("Family Frame *7 d", "", "tag"),
+                roomTheme = RewardItemData("Room Theme *7 d", "IMG-20260914-WA0045.jpg", "tall"),
                 onClick = onOpenModal, label = "TOP2 Family"
             )
 
             Spacer(Modifier.height(40.dp))
 
-            RewardCard(title = "TOP 3 Reward", 
-                item1 = Triple("Medal *7 days", "1000196574-background (1).mp4", "black"), 
-                item2 = Triple("Top3 Tag *7 days", "", "tag"), 
-                item3 = Triple("Vehicle *7 days", "IMG_20260919_222412.jpg", "mixed"), 
-                frame = Triple("Frames *7 days", "gemini_generated_video_123c050b~2.mp4", "black"),
-                familyFrame = Triple("Family Frame *7 d", "", "tag"),
-                roomTheme = Triple("Room Theme *7 d", "IMG-20260914-WA0046.jpg", "tall"),
+            RewardCard(
+                title = "TOP 3 Reward",
+                item1 = RewardItemData("Medal *7 days", "1000196574-background (1).mp4", "black"),
+                item2 = RewardItemData("Top3 Tag *7 days", "", "tag"),
+                item3 = RewardItemData(
+                    "Vehicle *7 days",
+                    "IMG_20260919_222412.jpg",
+                    "mixed",
+                    videoUrl = "VID_20260919_222502.mp4"
+                ),
+                frame = RewardItemData(
+                    "Frames *7 days",
+                    "gemini_generated_video_123c050b~2.mp4",
+                    "black",
+                    isWinnerReward = true
+                ),
+                familyFrame = RewardItemData("Family Frame *7 d", "", "tag"),
+                roomTheme = RewardItemData("Room Theme *7 d", "IMG-20260914-WA0046.jpg", "tall"),
                 onClick = onOpenModal, label = "TOP3 Family"
             )
 
             Spacer(Modifier.height(40.dp))
 
-            RewardCard(title = "TOP 4 TO 10\nReward", 
-                item1 = Triple("Medal *3 days", "", "tag"), 
-                item2 = Triple("Frames *3 days", "gemini_generated_video_0d259062.mp4", "green"), 
-                item3 = Triple("Vehicle *3 days", "IMG_20260919_222041.jpg", "mixed"), 
+            RewardCard(
+                title = "TOP 4 TO 10\nReward",
+                item1 = RewardItemData("Medal *3 days", "", "tag"),
+                item2 = RewardItemData(
+                    "Frames *3 days",
+                    "gemini_generated_video_0d259062.mp4",
+                    "green",
+                    isWinnerReward = true
+                ),
+                item3 = RewardItemData(
+                    "Vehicle *3 days",
+                    "IMG_20260919_222041.jpg",
+                    "mixed",
+                    videoUrl = "VID_20260919_222549.mp4"
+                ),
                 frame = null, familyFrame = null, roomTheme = null,
                 onClick = onOpenModal, label = "TOP4-10 Family"
             )
@@ -352,9 +455,19 @@ private fun FamilyTop(onBack: () -> Unit, onRules: () -> Unit, activeRank: Int, 
     }
 }
 
-// REWARD CARD COMPONENT
+// REWARD CARD COMPONENT — ⭐ frame row THODA UPAR
 @Composable
-private fun RewardCard(title: String, item1: Triple<String, String, String>, item2: Triple<String, String, String>, item3: Triple<String, String, String>, frame: Triple<String, String, String>?, familyFrame: Triple<String, String, String>?, roomTheme: Triple<String, String, String>?, onClick: (String, String) -> Unit, label: String) {
+private fun RewardCard(
+    title: String,
+    item1: RewardItemData,
+    item2: RewardItemData,
+    item3: RewardItemData,
+    frame: RewardItemData?,
+    familyFrame: RewardItemData?,
+    roomTheme: RewardItemData?,
+    onClick: (String, String, Boolean) -> Unit,
+    label: String
+) {
     Box(Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
         Box(Modifier.fillMaxWidth().padding(top = 20.dp).background(familyCardBg, RoundedCornerShape(12.dp)).border(2.dp, familyGold, RoundedCornerShape(12.dp)).padding(top = 40.dp, bottom = 24.dp)) {
             Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -364,19 +477,23 @@ private fun RewardCard(title: String, item1: Triple<String, String, String>, ite
                     RewardItemBox(item3, onClick, label)
                 }
                 if (frame != null && familyFrame != null) {
-                    Spacer(Modifier.height(20.dp))
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                    // ⭐ FRAME ROW THODA UPAR — Spacer 20→8 + offset -8dp
+                    Spacer(Modifier.height(8.dp))
+                    Row(
+                        Modifier.fillMaxWidth().offset(y = (-8).dp),
+                        horizontalArrangement = Arrangement.Center
+                    ) {
                         Box(Modifier.weight(1f), contentAlignment = Alignment.Center) { RewardItemBox(frame, onClick, label) }
                         Box(Modifier.weight(1f), contentAlignment = Alignment.Center) { RewardItemBox(familyFrame, onClick, label) }
                     }
                 }
                 if (roomTheme != null) {
-                    Spacer(Modifier.height(20.dp))
+                    Spacer(Modifier.height(16.dp))
                     RewardItemBox(roomTheme, onClick, label)
                 }
             }
         }
-        
+
         Box(Modifier.align(Alignment.TopCenter).offset(y = (-5).dp), contentAlignment = Alignment.Center) {
             AsyncImage(model = familyAsset("file_00000000b9048207a6cb463144ef26f4.png"), contentDescription = null, modifier = Modifier.width(220.dp).height(50.dp), contentScale = ContentScale.Fit)
             Text(title, color = Color.White, fontWeight = FontWeight.Black, fontSize = 11.sp, textAlign = TextAlign.Center, modifier = Modifier.offset(y = (-2).dp))
@@ -384,35 +501,78 @@ private fun RewardCard(title: String, item1: Triple<String, String, String>, ite
     }
 }
 
-// REWARD THUMBNAIL BOX
+// REWARD THUMBNAIL BOX — image fully inside card + fade top/bottom + no +++++
 @Composable
-private fun RewardItemBox(item: Triple<String, String, String>, onClick: (String, String) -> Unit, label: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(if(item.third == "tall") 160.dp else 90.dp).clickable { if(item.second.isNotBlank()) onClick(item.second, label) }) {
-        Box(Modifier.fillMaxWidth().aspectRatio(if(item.third == "tall") 0.8f else 1f).background(Brush.verticalGradient(listOf(Color(0xFF8C3A19), Color(0xFF5C1A06))), RoundedCornerShape(12.dp)).border(2.dp, familyGold, RoundedCornerShape(12.dp)).padding(4.dp), contentAlignment = Alignment.Center) {
-            if (item.second.isNotBlank()) {
-                val colorFilter = when(item.third) {
-                    "black" -> ColorFilter.colorMatrix(familyRemoveBlackMatrix)
-                    "green" -> ColorFilter.colorMatrix(familyRemoveGreenMatrix)
-                    else -> null
-                }
-                if (item.second.substringBefore("?").substringAfterLast(".").lowercase() in setOf("mp4", "webm", "m4v")) {
-                    FamilyRewardVideo(
-                        url = familyAsset(item.second),
-                        modifier = Modifier.fillMaxSize().scale(if (item.third == "tall") 1f else 1.3f),
-                        rounded = true
+private fun RewardItemBox(
+    item: RewardItemData,
+    onClick: (String, String, Boolean) -> Unit,
+    label: String
+) {
+    val clickUrl = item.videoUrl.ifBlank { item.thumbnail }
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .width(if (item.type == "tall") 160.dp else 90.dp)
+            .clickable { if (clickUrl.isNotBlank()) onClick(clickUrl, label, item.isWinnerReward) }
+    ) {
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .aspectRatio(if (item.type == "tall") 0.8f else 1f)
+                .clip(RoundedCornerShape(12.dp))
+                .background(
+                    Brush.verticalGradient(listOf(Color(0xFF8C3A19), Color(0xFF5C1A06))),
+                    RoundedCornerShape(12.dp)
+                )
+                .border(2.dp, familyGold, RoundedCornerShape(12.dp))
+                .padding(4.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Box(Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp))) {
+                if (item.thumbnail.isNotBlank()) {
+                    val colorFilter = when (item.type) {
+                        "black" -> ColorFilter.colorMatrix(familyRemoveBlackMatrix)
+                        "green" -> ColorFilter.colorMatrix(familyRemoveGreenMatrix)
+                        "mixed" -> ColorFilter.colorMatrix(familyRemoveBlackMatrix)
+                        else -> null
+                    }
+                    if (item.thumbnail.substringBefore("?").substringAfterLast(".").lowercase() in setOf("mp4", "webm", "m4v")) {
+                        FamilyRewardVideo(
+                            url = familyAsset(item.thumbnail),
+                            modifier = Modifier.fillMaxSize(),
+                            rounded = false
+                        )
+                    } else {
+                        AsyncImage(
+                            model = familyAsset(item.thumbnail),
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop,
+                            colorFilter = colorFilter
+                        )
+                    }
+
+                    // ⭐ FADE TOP + BOTTOM OVERLAY
+                    Box(
+                        Modifier.fillMaxSize().background(
+                            Brush.verticalGradient(
+                                0f to Color.Black.copy(alpha = 0.7f),
+                                0.20f to Color.Transparent,
+                                0.80f to Color.Transparent,
+                                1f to Color.Black.copy(alpha = 0.7f)
+                            )
+                        )
                     )
-                } else {
-                    AsyncImage(model = familyAsset(item.second), contentDescription = null, modifier = Modifier.fillMaxSize().scale(if (item.third == "tall") 1f else 1.3f), contentScale = ContentScale.Crop, colorFilter = colorFilter)
                 }
             }
         }
         Spacer(Modifier.height(6.dp))
-        Row { repeat(5) { Icon(Icons.Default.Add, null, tint = familyGold, modifier = Modifier.size(10.dp)) } } 
-        Text(item.first, color = Color(0xFFFDE68A), fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 4.dp))
+        Text(item.title, color = Color(0xFFFDE68A), fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 4.dp))
     }
 }
 
-// Real MP4 reward preview. Plays silently, loops, and fades in/out without player controls.
+// Real MP4 reward preview
 @Composable
 private fun FamilyRewardVideo(
     url: String,
@@ -470,46 +630,88 @@ private fun FamilyRewardVideo(
     }
 }
 
-// VIDEO MODAL UI POPUP WITH MISSING BARS/LINES ADDED
+// VIDEO MODAL UI POPUP
 @Composable
-private fun FamilyRewardModal(url: String, title: String, onClose: () -> Unit) {
+private fun FamilyRewardModal(
+    url: String,
+    title: String,
+    isWinnerReward: Boolean,
+    onClose: () -> Unit
+) {
     Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.8f)).clickable(onClick = onClose), contentAlignment = Alignment.Center) {
+        Box(
+            Modifier
+                .fillMaxSize()
+                .background(
+                    if (isWinnerReward) Color.Black.copy(alpha = 0.8f)
+                    else Color.Black.copy(alpha = 0.35f)
+                )
+                .clickable(onClick = onClose),
+            contentAlignment = Alignment.Center
+        ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                // MISSING LINES/BARS ADDED HERE
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.offset(y = 24.dp).zIndex(2f)) {
-                    Column(horizontalAlignment = Alignment.End, modifier = Modifier.padding(end = 6.dp)) {
-                        Box(Modifier.width(32.dp).height(2.dp).background(familyGold))
-                        Spacer(Modifier.height(3.dp))
-                        Box(Modifier.width(20.dp).height(2.dp).background(familyGold))
-                    }
-                    Text(title, color = familyGold, fontSize = 24.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Serif)
-                    Column(horizontalAlignment = Alignment.Start, modifier = Modifier.padding(start = 6.dp)) {
-                        Box(Modifier.width(32.dp).height(2.dp).background(familyGold))
-                        Spacer(Modifier.height(3.dp))
-                        Box(Modifier.width(20.dp).height(2.dp).background(familyGold))
+
+                if (isWinnerReward) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.offset(y = 24.dp).zIndex(2f)
+                    ) {
+                        Column(horizontalAlignment = Alignment.End, modifier = Modifier.padding(end = 6.dp)) {
+                            Box(Modifier.width(32.dp).height(2.dp).background(familyGold))
+                            Spacer(Modifier.height(3.dp))
+                            Box(Modifier.width(20.dp).height(2.dp).background(familyGold))
+                        }
+                        Text(title, color = familyGold, fontSize = 24.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Serif)
+                        Column(horizontalAlignment = Alignment.Start, modifier = Modifier.padding(start = 6.dp)) {
+                            Box(Modifier.width(32.dp).height(2.dp).background(familyGold))
+                            Spacer(Modifier.height(3.dp))
+                            Box(Modifier.width(20.dp).height(2.dp).background(familyGold))
+                        }
                     }
                 }
-                
-                if (url.substringBefore("?").substringAfterLast(".").lowercase() in setOf("mp4", "webm", "m4v")) {
-                    FamilyRewardVideo(
-                        url = familyAsset(url),
-                        modifier = Modifier.size(320.dp).zIndex(1f),
-                        rounded = false,
-                        autoplay = true
-                    )
-                } else {
-                    AsyncImage(
-                        model = familyAsset(url),
-                        contentDescription = null,
-                        modifier = Modifier.size(320.dp).zIndex(1f),
-                        contentScale = ContentScale.Fit,
-                        colorFilter = if(url.contains("gemini") || url.contains("green")) ColorFilter.colorMatrix(familyRemoveGreenMatrix) else ColorFilter.colorMatrix(familyRemoveBlackMatrix)
-                    )
-                }
-                
-                Row(modifier = Modifier.offset(y = (-20).dp).zIndex(2f)) {
-                    repeat(5) { Icon(Icons.Default.Add, null, tint = familyGold, modifier = Modifier.size(32.dp)) } 
+
+                val isVideo = url.substringBefore("?").substringAfterLast(".").lowercase() in setOf("mp4", "webm", "m4v")
+
+                val contentModifier = if (isWinnerReward)
+                    Modifier.size(320.dp).zIndex(1f)
+                else
+                    Modifier.fillMaxWidth().fillMaxHeight(0.75f).zIndex(1f)
+
+                Box(contentModifier) {
+                    if (isVideo) {
+                        FamilyRewardVideo(
+                            url = familyAsset(url),
+                            modifier = Modifier.fillMaxSize(),
+                            rounded = false,
+                            autoplay = true
+                        )
+                    } else {
+                        AsyncImage(
+                            model = familyAsset(url),
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Fit,
+                            colorFilter = when {
+                                url.contains("VID_") -> null
+                                url.contains("gemini") || url.contains("green") -> ColorFilter.colorMatrix(familyRemoveGreenMatrix)
+                                else -> ColorFilter.colorMatrix(familyRemoveBlackMatrix)
+                            }
+                        )
+                    }
+
+                    // ⭐ Vehicle/mixed modals fade
+                    if (!isWinnerReward) {
+                        Box(
+                            Modifier.fillMaxSize().background(
+                                Brush.verticalGradient(
+                                    0f to Color.Black.copy(alpha = 0.65f),
+                                    0.15f to Color.Transparent,
+                                    0.70f to Color.Transparent,
+                                    1f to Color.Black.copy(alpha = 0.65f)
+                                )
+                            )
+                        )
+                    }
                 }
             }
         }
