@@ -12,7 +12,7 @@ interface MedalItem {
   name: string
   video: string
   stars: number
-  category: 'achievement' | 'gift' | 'activity'
+  category: 'achievement' | 'gift' | 'activity' | 'dummy'
   variant?: 'black' | 'green'
 
   cardVideoSize: string
@@ -535,7 +535,7 @@ export default function Medal({ onBack }: MedalProps) {
       cardVideoSize: '500px',
       cardVideoTop: '50%',
       sheetVideoSize: '700px',
-      sheetVideoTop: '85%', // Changed from 120%
+      sheetVideoTop: '85%',
       tierGroup: 'rich',
       giftText: '0/5000000000000 Coins Of gifts Send',
     },
@@ -549,7 +549,7 @@ export default function Medal({ onBack }: MedalProps) {
       cardVideoSize: '500px',
       cardVideoTop: '50%',
       sheetVideoSize: '700px',
-      sheetVideoTop: '85%', // Changed from 120%
+      sheetVideoTop: '85%',
       tierGroup: 'rich',
       giftText: '0/400000000000 Coins Of gifts Send',
     },
@@ -563,7 +563,7 @@ export default function Medal({ onBack }: MedalProps) {
       cardVideoSize: '500px',
       cardVideoTop: '50%',
       sheetVideoSize: '700px',
-      sheetVideoTop: '85%', // Changed from 120%
+      sheetVideoTop: '85%',
       tierGroup: 'rich',
       giftText: '0/30000000000  Coins Of gifts Send',
     },
@@ -577,8 +577,38 @@ export default function Medal({ onBack }: MedalProps) {
       cardVideoSize: '400px',
       cardVideoTop: '50%',
       sheetVideoSize: '660px',
-      sheetVideoTop: '85%', // Changed from 120%
+      sheetVideoTop: '85%',
+      tierGroup: 'supergamer', // Added tierGroup to enable tabs and button
       giftText: '0/1000000000000 Coins You won from game',
+    },
+    // Dummy items for Super Gamer Tier Tabs (Hidden from main list)
+    {
+      id: 'new-1-b',
+      name: 'Super Gamer 2',
+      video: '/1000201032-background.mp4',
+      stars: 4,
+      category: 'dummy',
+      variant: 'black',
+      cardVideoSize: '400px',
+      cardVideoTop: '50%',
+      sheetVideoSize: '660px',
+      sheetVideoTop: '85%',
+      tierGroup: 'supergamer',
+      giftText: '0/2000000000000 Coins You won from game',
+    },
+    {
+      id: 'new-1-c',
+      name: 'Super Gamer 3',
+      video: '/1000201032-background.mp4',
+      stars: 4,
+      category: 'dummy',
+      variant: 'black',
+      cardVideoSize: '400px',
+      cardVideoTop: '50%',
+      sheetVideoSize: '660px',
+      sheetVideoTop: '85%',
+      tierGroup: 'supergamer',
+      giftText: '0/3000000000000 Coins You won from game',
     },
     {
       id: 'new-2',
@@ -590,7 +620,7 @@ export default function Medal({ onBack }: MedalProps) {
       cardVideoSize: '500px',
       cardVideoTop: '78%',
       sheetVideoSize: '700px',
-      sheetVideoTop: '105%', // Changed from 140%
+      sheetVideoTop: '105%',
       tierGroup: 'millionaire',
       giftText: '0/1000000 Online Recharge',
     },
@@ -604,7 +634,7 @@ export default function Medal({ onBack }: MedalProps) {
       cardVideoSize: '500px',
       cardVideoTop: '78%',
       sheetVideoSize: '700px',
-      sheetVideoTop: '102%', // Changed from 137%
+      sheetVideoTop: '102%',
       tierGroup: 'millionaire',
       giftText: '0/50000000 Online Recharge',
     },
@@ -618,7 +648,7 @@ export default function Medal({ onBack }: MedalProps) {
       cardVideoSize: '440px',
       cardVideoTop: '78%',
       sheetVideoSize: '700px',
-      sheetVideoTop: '102%', // Changed from 137%
+      sheetVideoTop: '102%',
       tierGroup: 'millionaire',
       giftText: '0/100000000 Online Recharge',
     },
@@ -632,7 +662,7 @@ export default function Medal({ onBack }: MedalProps) {
       cardVideoSize: '300px',
       cardVideoTop: '50%',
       sheetVideoSize: '500px',
-      sheetVideoTop: '85%', // Changed from 120%
+      sheetVideoTop: '85%',
       tierGroup: 'roomtop',
       giftText: 'Event Based',
     },
@@ -646,7 +676,7 @@ export default function Medal({ onBack }: MedalProps) {
       cardVideoSize: '300px',
       cardVideoTop: '50%',
       sheetVideoSize: '500px',
-      sheetVideoTop: '85%', // Changed from 120%
+      sheetVideoTop: '85%',
       tierGroup: 'roomtop',
       giftText: 'Event Based',
     },
@@ -660,7 +690,7 @@ export default function Medal({ onBack }: MedalProps) {
       cardVideoSize: '300px',
       cardVideoTop: '55%',
       sheetVideoSize: '500px',
-      sheetVideoTop: '85%', // Changed from 120%
+      sheetVideoTop: '85%',
       tierGroup: 'roomtop',
       giftText: 'Event Based',
     },
@@ -674,7 +704,7 @@ export default function Medal({ onBack }: MedalProps) {
       cardVideoSize: '400px',
       cardVideoTop: '80%',
       sheetVideoSize: '700px',
-      sheetVideoTop: '115%', // Changed from 150%
+      sheetVideoTop: '115%',
       tierGroup: 'medal111213',
       giftText: '0/50000 Coins Of gifts Send',
     },
@@ -688,7 +718,7 @@ export default function Medal({ onBack }: MedalProps) {
       cardVideoSize: '400px',
       cardVideoTop: '80%',
       sheetVideoSize: '700px',
-      sheetVideoTop: '115%', // Changed from 150%
+      sheetVideoTop: '115%',
       tierGroup: 'medal111213',
       giftText: '0/50000 Coins Of gifts Send',
     },
@@ -702,7 +732,7 @@ export default function Medal({ onBack }: MedalProps) {
       cardVideoSize: '400px',
       cardVideoTop: '80%',
       sheetVideoSize: '700px',
-      sheetVideoTop: '115%', // Changed from 150%
+      sheetVideoTop: '115%',
       tierGroup: 'medal111213',
       giftText: '0/50000 Coins Of gifts Send',
     },
@@ -716,7 +746,7 @@ export default function Medal({ onBack }: MedalProps) {
       cardVideoSize: '500px',
       cardVideoTop: '50%',
       sheetVideoSize: '700px',
-      sheetVideoTop: '85%', // Changed from 120%
+      sheetVideoTop: '85%',
       tierGroup: 'vip',
       giftText: '0/50000 Coins Of gifts Send',
     },
@@ -730,7 +760,7 @@ export default function Medal({ onBack }: MedalProps) {
       cardVideoSize: '500px',
       cardVideoTop: '50%',
       sheetVideoSize: '700px',
-      sheetVideoTop: '85%', // Changed from 120%
+      sheetVideoTop: '85%',
       tierGroup: 'vip',
       giftText: '0/50000 Coins Of gifts Send',
     },
@@ -744,7 +774,7 @@ export default function Medal({ onBack }: MedalProps) {
       cardVideoSize: '500px',
       cardVideoTop: '50%',
       sheetVideoSize: '700px',
-      sheetVideoTop: '85%', // Changed from 120%
+      sheetVideoTop: '85%',
       tierGroup: 'vip',
       giftText: '0/50000 Coins Of gifts Send',
     },
