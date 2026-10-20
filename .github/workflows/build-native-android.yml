@@ -7,6 +7,7 @@ on:
       - main
     paths:
       - 'android-native/**'
+      - 'android/**'
       - '.github/workflows/build-native-android.yml'
   pull_request:
     branches:
@@ -21,6 +22,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 
