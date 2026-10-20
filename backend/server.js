@@ -572,6 +572,58 @@ app.put("/api/rooms", async (req, res) => {
   }
 });
 
+// Persistent room follows: stored by stable user ID so follows survive reinstall.
+app.get("/api/room-follows", async (req, res) => {
+  try {
+    if (!db) return res.status(503).json({ error: "MongoDB is not connected" });
+    const userId = String(req.query.userId || "").trim();
+    if (!userId) return res.status(400).json({ error: "Missing userId" });
+    const follows = await db.collection("roomFollows").find({ userId }).sort({ followedAt: -1 }).limit(500).toArray();
+    return res.json({ follows: follows.map(({ _id, ...item }) => item) });
+  } catch (error) {
+    console.error("GET /api/room-follows error:", error);
+    return res.status(500).json({ error: "Failed to fetch room follows" });
+  }
+});
+
+app.post("/api/room-follows", async (req, res) => {
+  try {
+    if (!db) return res.status(503).json({ error: "MongoDB is not connected" });
+    const userId = String(req.body?.userId || "").trim();
+    const roomId = String(req.body?.roomId || "").trim();
+    if (!userId || !roomId) return res.status(400).json({ error: "Missing userId or roomId" });
+    const room = await db.collection("rooms").findOne({ $or: [{ accountId: roomId }, { id: roomId }, { roomId }] });
+    const follow = {
+      userId, roomId,
+      roomName: String(req.body?.roomName || room?.name || room?.roomName || "Room"),
+      roomImage: String(req.body?.roomImage || room?.dp || room?.image || room?.roomDp || ""),
+      roomCountry: String(req.body?.roomCountry || room?.country || "🇮🇳"),
+      followerName: String(req.body?.followerName || "User"),
+      followerImage: String(req.body?.followerImage || ""),
+      followedAt: Date.now()
+    };
+    await db.collection("roomFollows").updateOne({ userId, roomId }, { $set: follow }, { upsert: true });
+    return res.json({ success: true, follow });
+  } catch (error) {
+    console.error("POST /api/room-follows error:", error);
+    return res.status(500).json({ error: "Failed to follow room" });
+  }
+});
+
+app.delete("/api/room-follows", async (req, res) => {
+  try {
+    if (!db) return res.status(503).json({ error: "MongoDB is not connected" });
+    const userId = String(req.query.userId || "").trim();
+    const roomId = String(req.query.roomId || "").trim();
+    if (!userId || !roomId) return res.status(400).json({ error: "Missing userId or roomId" });
+    await db.collection("roomFollows").deleteOne({ userId, roomId });
+    return res.json({ success: true });
+  } catch (error) {
+    console.error("DELETE /api/room-follows error:", error);
+    return res.status(500).json({ error: "Failed to unfollow room" });
+  }
+});
+
 app.get("/api/users", async (req, res) => {
   try {
     if (!db) {
