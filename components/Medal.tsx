@@ -360,18 +360,22 @@ const UnequippedMedalsScreen = ({ onClose }: { onClose: () => void }) => {
 const RulesScreen = ({ onClose }: { onClose: () => void }) => {
   return (
     <div className="fixed inset-0 z-[100] flex flex-col justify-end">
+      {/* Dark Overlay - ispe click karne se sheet band ho jayegi */}
       <div
         className="absolute inset-0 bg-black/60 transition-opacity"
         onClick={onClose}
       />
 
+      {/* Bottom Sheet - Medal background ke match karta hua color */}
       <div className="relative w-full h-[75vh] bg-[#2a1b5e] rounded-t-3xl flex flex-col font-sans overflow-hidden animate-slide-up shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+        {/* Header - NO X icon, only title */}
         <div className="relative flex items-center justify-center pt-6 pb-4 flex-shrink-0 border-b border-white/10">
           <h1 className="text-xl font-medium text-white tracking-wide">
             Rules
           </h1>
         </div>
 
+        {/* Content - Scrollable */}
         <div className="flex-1 overflow-y-auto px-5 pb-10 pt-4 text-white text-[13px] leading-relaxed">
           <h2 className="text-[16px] font-bold mb-3 text-[#facc15]">
             *Rules*
@@ -915,24 +919,48 @@ export default function Medal({ onBack }: MedalProps) {
       </div>
 
       {selectedMedal && displayMedal && (
-        <div className="fixed inset-0 z-50 overflow-hidden animate-fade-in bg-[#081228] flex flex-col h-[100dvh]">
-          
-          {/* NEW STARRY BACKGROUND LAYER (No black behind light) */}
-          <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
-            {/* Base glow (Rich Blue instead of black) */}
-            <div className="absolute -top-1/4 left-1/2 -translate-x-1/2 w-[150vw] h-[100vh] bg-[radial-gradient(ellipse_at_top,_rgba(40,90,255,0.4)_0%,_rgba(8,18,40,0)_60%)] blur-3xl"></div>
-            {/* Light rays */}
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[120vw] h-[80vh] bg-[conic-gradient(from_180deg_at_50%_0%,_transparent_0deg,_rgba(80,140,255,0.2)_40deg,_rgba(80,140,255,0.35)_50deg,_rgba(80,140,255,0.2)_60deg,_transparent_100deg)] blur-2xl opacity-90"></div>
-            {/* Stars layer 1 */}
-            <div className="absolute inset-0 opacity-40 bg-[radial-gradient(circle_at_center,_white_1px,_transparent_1.5px)] bg-[size:40px_40px]"></div>
-            {/* Stars layer 2 */}
-            <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_center,_white_1px,_transparent_1.5px)] bg-[size:60px_60px] bg-[position:20px_20px]"></div>
-            {/* Bottom fade */}
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#081228]/80 to-[#081228]"></div>
-          </div>
-          {/* END BACKGROUND */}
+        <div
+          className="fixed inset-0 z-50 overflow-y-auto overflow-x-hidden animate-fade-in"
+          style={{
+            background:
+              'radial-gradient(130% 90% at 50% -10%, #2a1663 0%, #150a3a 32%, #07031a 62%, #02010a 100%)',
+          }}
+        >
+          {/* ====== AMBIENT GLOW / SHINE LAYERS ====== */}
+          <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
+            {/* top big purple halo */}
+            <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[560px] h-[560px] rounded-full bg-[#4c1d95]/45 blur-[130px]" />
+            {/* gold aura behind medal area */}
+            <div className="absolute top-[12%] left-1/2 -translate-x-1/2 w-[340px] h-[340px] rounded-full bg-[#facc15]/15 blur-[90px] animate-glow-pulse" />
+            {/* bottom left blue */}
+            <div className="absolute -bottom-24 -left-16 w-[320px] h-[320px] rounded-full bg-[#1d4ed8]/30 blur-[110px]" />
+            {/* bottom right violet */}
+            <div className="absolute -bottom-24 -right-16 w-[320px] h-[320px] rounded-full bg-[#7c3aed]/30 blur-[110px]" />
+            {/* center soft white light */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[420px] h-[420px] rounded-full bg-white/[0.04] blur-[80px]" />
 
-          <div className="relative w-full h-[30vh] z-10 flex-shrink-0">
+            {/* star field */}
+            <div
+              className="absolute inset-0 opacity-50 animate-twinkle"
+              style={{
+                backgroundImage:
+                  'radial-gradient(1px 1px at 20% 22%, #ffffff 50%, transparent 51%),' +
+                  'radial-gradient(1px 1px at 72% 18%, #ffffff 50%, transparent 51%),' +
+                  'radial-gradient(1.5px 1.5px at 40% 68%, #ffffff 50%, transparent 51%),' +
+                  'radial-gradient(1px 1px at 85% 58%, #ffe9a8 50%, transparent 51%),' +
+                  'radial-gradient(1px 1px at 12% 84%, #ffffff 50%, transparent 51%),' +
+                  'radial-gradient(1.5px 1.5px at 56% 40%, #ffe9a8 50%, transparent 51%),' +
+                  'radial-gradient(1px 1px at 30% 46%, #ffffff 50%, transparent 51%),' +
+                  'radial-gradient(1px 1px at 90% 32%, #ffffff 50%, transparent 51%)',
+                backgroundRepeat: 'no-repeat',
+              }}
+            />
+
+            {/* diagonal light sweep */}
+            <div className="absolute inset-0 bg-[linear-gradient(115deg,transparent_35%,rgba(255,255,255,0.06)_50%,transparent_65%)] animate-sheen" />
+          </div>
+
+          <div className="relative z-10 w-full h-[30vh]">
             <img
               src="/IMG_20260924_132006.png"
               alt=""
@@ -956,6 +984,9 @@ export default function Medal({ onBack }: MedalProps) {
             >
               <HelpCircle size={22} className="opacity-80" />
             </button>
+
+            {/* Glow behind the medal video */}
+            <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] rounded-full bg-[#facc15]/10 blur-[70px]" />
 
             <div
               className="absolute left-1/2 -translate-x-1/2 z-30 pointer-events-none overflow-hidden"
@@ -994,14 +1025,14 @@ export default function Medal({ onBack }: MedalProps) {
             </div>
           </div>
 
-          <div className="relative z-20 flex flex-col items-center w-full max-w-md mx-auto px-6 pb-6 flex-1 justify-end">
+          <div className="relative z-20 flex flex-col items-center w-full max-w-md mx-auto px-6 pb-16">
             <img
               src="/IMG_20260924_132112.png"
               alt="frame"
-              className="w-64 h-64 object-contain pointer-events-none mt-2"
+              className="w-72 h-72 object-contain pointer-events-none mt-14"
             />
 
-            <div className="relative -mt-12 z-10">
+            <div className="relative -mt-15 z-10">
               <div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 flex items-center gap-[2px] whitespace-nowrap z-20 pointer-events-none">
                 {Array.from({ length: displayMedal.stars }).map((_, i) => (
                   <Star
@@ -1011,7 +1042,7 @@ export default function Medal({ onBack }: MedalProps) {
                   />
                 ))}
               </div>
-              <h3 className="text-[22px] font-bold text-white tracking-wide drop-shadow-md">
+              <h3 className="text-[22px] font-bold text-white tracking-wide drop-shadow-[0_0_12px_rgba(250,204,21,0.35)]">
                 {displayMedal.name}
               </h3>
             </div>
@@ -1021,8 +1052,8 @@ export default function Medal({ onBack }: MedalProps) {
             </p>
 
             {showTabs && (
-              <div className="flex flex-col items-center mt-4 relative z-10 w-full px-4">
-                <div className="flex items-center justify-center gap-2 mb-4">
+              <div className="flex flex-col items-center mt-4 relative z-10">
+                <div className="flex items-center justify-center gap-2">
                   {tierMedals.map((_, i) => (
                     <React.Fragment key={i}>
                       {i > 0 && (
@@ -1033,7 +1064,7 @@ export default function Medal({ onBack }: MedalProps) {
                         alt={`${i + 1}`}
                         onClick={() => setActiveTier(i)}
                         draggable={false}
-                        className={`w-10 h-10 object-contain cursor-pointer transition-all duration-200 ${
+                        className={`w-12 h-12 object-contain cursor-pointer transition-all duration-200 ${
                           activeTier === i
                             ? 'rounded-md border-2 border-[#facc15] shadow-[0_0_8px_rgba(250,204,21,0.35)]'
                             : 'opacity-70'
@@ -1042,13 +1073,12 @@ export default function Medal({ onBack }: MedalProps) {
                     </React.Fragment>
                   ))}
                 </div>
-                
-                {/* Golden pill shape button */}
-                <div className="w-full max-w-[320px]">
-                  <div className="w-full py-[12px] rounded-full bg-gradient-to-b from-[#FCEAB4] via-[#E6BA75] to-[#C78A3D] text-[#4A2E0B] font-bold text-[16px] text-center tracking-wide shadow-[0_4px_15px_rgba(230,186,117,0.4)] border border-[#FCEAB4]/60 cursor-pointer active:scale-95 transition-transform">
-                    Not Obtained
-                  </div>
-                </div>
+
+                {/* ====== SHINY "NOT OBTAINED" PILL (Obtained button style) ====== */}
+                <span className="relative mt-2 inline-flex items-center justify-center overflow-hidden rounded-full px-4 py-[3px] text-[10px] font-bold tracking-wider text-[#3b2500] bg-gradient-to-b from-[#fff3b0] via-[#facc15] to-[#b8860b] border border-[#fff6c9]/80 shadow-[0_0_12px_rgba(250,204,21,0.65),0_0_28px_rgba(250,204,21,0.3),inset_0_1px_0_rgba(255,255,255,0.9),inset_0_-1px_0_rgba(0,0,0,0.18)]">
+                  <span className="pointer-events-none absolute top-0 left-0 h-full w-1/3 animate-shine bg-gradient-to-r from-transparent via-white/80 to-transparent" />
+                  <span className="relative z-10">Not Obtained</span>
+                </span>
               </div>
             )}
           </div>
@@ -1060,6 +1090,39 @@ export default function Medal({ onBack }: MedalProps) {
             }
             .animate-fade-in {
               animation: fadeIn 0.3s ease-out forwards;
+            }
+
+            @keyframes glowPulse {
+              0%, 100% { opacity: 0.6; transform: translateX(-50%) scale(1); }
+              50% { opacity: 1; transform: translateX(-50%) scale(1.12); }
+            }
+            .animate-glow-pulse {
+              animation: glowPulse 4.5s ease-in-out infinite;
+            }
+
+            @keyframes twinkle {
+              0%, 100% { opacity: 0.35; }
+              50% { opacity: 0.8; }
+            }
+            .animate-twinkle {
+              animation: twinkle 5s ease-in-out infinite;
+            }
+
+            @keyframes sheen {
+              0% { transform: translateX(-120%); }
+              100% { transform: translateX(120%); }
+            }
+            .animate-sheen {
+              animation: sheen 7s ease-in-out infinite;
+            }
+
+            @keyframes shine {
+              0% { transform: translateX(-200%) skewX(-20deg); }
+              60% { transform: translateX(400%) skewX(-20deg); }
+              100% { transform: translateX(400%) skewX(-20deg); }
+            }
+            .animate-shine {
+              animation: shine 2.4s ease-in-out infinite;
             }
           `}</style>
         </div>
