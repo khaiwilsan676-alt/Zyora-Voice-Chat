@@ -535,7 +535,7 @@ export default function Medal({ onBack }: MedalProps) {
       cardVideoSize: '500px',
       cardVideoTop: '50%',
       sheetVideoSize: '700px',
-      sheetVideoTop: '120%',
+      sheetVideoTop: '85%', // Changed from 120%
       tierGroup: 'rich',
       giftText: '0/5000000000000 Coins Of gifts Send',
     },
@@ -549,7 +549,7 @@ export default function Medal({ onBack }: MedalProps) {
       cardVideoSize: '500px',
       cardVideoTop: '50%',
       sheetVideoSize: '700px',
-      sheetVideoTop: '120%',
+      sheetVideoTop: '85%', // Changed from 120%
       tierGroup: 'rich',
       giftText: '0/400000000000 Coins Of gifts Send',
     },
@@ -563,7 +563,7 @@ export default function Medal({ onBack }: MedalProps) {
       cardVideoSize: '500px',
       cardVideoTop: '50%',
       sheetVideoSize: '700px',
-      sheetVideoTop: '120%',
+      sheetVideoTop: '85%', // Changed from 120%
       tierGroup: 'rich',
       giftText: '0/30000000000  Coins Of gifts Send',
     },
@@ -577,7 +577,7 @@ export default function Medal({ onBack }: MedalProps) {
       cardVideoSize: '400px',
       cardVideoTop: '50%',
       sheetVideoSize: '660px',
-      sheetVideoTop: '120%',
+      sheetVideoTop: '85%', // Changed from 120%
       giftText: '0/1000000000000 Coins You won from game',
     },
     {
@@ -590,7 +590,7 @@ export default function Medal({ onBack }: MedalProps) {
       cardVideoSize: '500px',
       cardVideoTop: '78%',
       sheetVideoSize: '700px',
-      sheetVideoTop: '140%',
+      sheetVideoTop: '105%', // Changed from 140%
       tierGroup: 'millionaire',
       giftText: '0/1000000 Online Recharge',
     },
@@ -604,7 +604,7 @@ export default function Medal({ onBack }: MedalProps) {
       cardVideoSize: '500px',
       cardVideoTop: '78%',
       sheetVideoSize: '700px',
-      sheetVideoTop: '137%',
+      sheetVideoTop: '102%', // Changed from 137%
       tierGroup: 'millionaire',
       giftText: '0/50000000 Online Recharge',
     },
@@ -618,7 +618,7 @@ export default function Medal({ onBack }: MedalProps) {
       cardVideoSize: '440px',
       cardVideoTop: '78%',
       sheetVideoSize: '700px',
-      sheetVideoTop: '137%',
+      sheetVideoTop: '102%', // Changed from 137%
       tierGroup: 'millionaire',
       giftText: '0/100000000 Online Recharge',
     },
@@ -632,7 +632,7 @@ export default function Medal({ onBack }: MedalProps) {
       cardVideoSize: '300px',
       cardVideoTop: '50%',
       sheetVideoSize: '500px',
-      sheetVideoTop: '120%',
+      sheetVideoTop: '85%', // Changed from 120%
       tierGroup: 'roomtop',
       giftText: 'Event Based',
     },
@@ -646,7 +646,7 @@ export default function Medal({ onBack }: MedalProps) {
       cardVideoSize: '300px',
       cardVideoTop: '50%',
       sheetVideoSize: '500px',
-      sheetVideoTop: '120%',
+      sheetVideoTop: '85%', // Changed from 120%
       tierGroup: 'roomtop',
       giftText: 'Event Based',
     },
@@ -660,7 +660,7 @@ export default function Medal({ onBack }: MedalProps) {
       cardVideoSize: '300px',
       cardVideoTop: '55%',
       sheetVideoSize: '500px',
-      sheetVideoTop: '120%',
+      sheetVideoTop: '85%', // Changed from 120%
       tierGroup: 'roomtop',
       giftText: 'Event Based',
     },
@@ -674,7 +674,7 @@ export default function Medal({ onBack }: MedalProps) {
       cardVideoSize: '400px',
       cardVideoTop: '80%',
       sheetVideoSize: '700px',
-      sheetVideoTop: '150%',
+      sheetVideoTop: '115%', // Changed from 150%
       tierGroup: 'medal111213',
       giftText: '0/50000 Coins Of gifts Send',
     },
@@ -688,7 +688,7 @@ export default function Medal({ onBack }: MedalProps) {
       cardVideoSize: '400px',
       cardVideoTop: '80%',
       sheetVideoSize: '700px',
-      sheetVideoTop: '150%',
+      sheetVideoTop: '115%', // Changed from 150%
       tierGroup: 'medal111213',
       giftText: '0/50000 Coins Of gifts Send',
     },
@@ -702,7 +702,7 @@ export default function Medal({ onBack }: MedalProps) {
       cardVideoSize: '400px',
       cardVideoTop: '80%',
       sheetVideoSize: '700px',
-      sheetVideoTop: '150%',
+      sheetVideoTop: '115%', // Changed from 150%
       tierGroup: 'medal111213',
       giftText: '0/50000 Coins Of gifts Send',
     },
@@ -716,7 +716,7 @@ export default function Medal({ onBack }: MedalProps) {
       cardVideoSize: '500px',
       cardVideoTop: '50%',
       sheetVideoSize: '700px',
-      sheetVideoTop: '120%',
+      sheetVideoTop: '85%', // Changed from 120%
       tierGroup: 'vip',
       giftText: '0/50000 Coins Of gifts Send',
     },
@@ -730,7 +730,7 @@ export default function Medal({ onBack }: MedalProps) {
       cardVideoSize: '500px',
       cardVideoTop: '50%',
       sheetVideoSize: '700px',
-      sheetVideoTop: '120%',
+      sheetVideoTop: '85%', // Changed from 120%
       tierGroup: 'vip',
       giftText: '0/50000 Coins Of gifts Send',
     },
@@ -744,7 +744,7 @@ export default function Medal({ onBack }: MedalProps) {
       cardVideoSize: '500px',
       cardVideoTop: '50%',
       sheetVideoSize: '700px',
-      sheetVideoTop: '120%',
+      sheetVideoTop: '85%', // Changed from 120%
       tierGroup: 'vip',
       giftText: '0/50000 Coins Of gifts Send',
     },
@@ -921,7 +921,6 @@ export default function Medal({ onBack }: MedalProps) {
       </div>
 
       {selectedMedal && displayMedal && (
-        // YAHAN SCROLL BAND KAR DIYA HAI (overflow-hidden)
         <div className="fixed inset-0 z-50 bg-black overflow-hidden animate-fade-in flex flex-col">
           <div className="relative w-full h-[30vh] flex-shrink-0">
             <img
