@@ -74,7 +74,7 @@ fun PublicProfile(
                     if (conn.responseCode in 200..299) {
                         val root = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
                         val profile = root.optJSONObject("user") ?: root.optJSONArray("users")?.optJSONObject(0)
-                        val cover = profile?.optString("coverPhoto", profile.optString("coverImage", "")).orEmpty()
+                        val cover = if (profile == null) "" else profile.optString("coverPhoto", profile.optString("coverImage", ""))
                         withContext(Dispatchers.Main) { coverPhoto = cover }
                     }
                 } finally { conn.disconnect() }
