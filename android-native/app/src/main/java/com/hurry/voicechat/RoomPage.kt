@@ -9,11 +9,10 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -33,9 +32,10 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.style.TextAlign
@@ -117,33 +117,36 @@ fun SystemBellIcon(modifier: Modifier = Modifier) {
     }
 }
 
-// Thick strip bar — Fix applied to enable volume and timeline scrubbing/dragging
 @Composable
 private fun ThickBar(
     progress: Float,
     modifier: Modifier = Modifier,
-    height: Dp = 14.dp, // Adjusted for better touch target
+    height: Dp = 6.dp,
     activeColor: Color = Color(0xFF3B82F6),
     inactiveColor: Color = Color.White.copy(alpha = 0.15f),
-    onProgressChanged: ((Float) -> Unit)? = null
+    onProgressChange: ((Float) -> Unit)? = null
 ) {
+    var barWidth by remember { mutableIntStateOf(0) }
     Box(
         modifier
             .fillMaxWidth()
             .height(height)
             .clip(RoundedCornerShape(height / 2))
             .background(inactiveColor)
+            .onSizeChanged { barWidth = it.width }
             .then(
-                if (onProgressChanged != null) {
-                    Modifier.pointerInput(Unit) {
-                        detectTapGestures { offset ->
-                            onProgressChanged((offset.x / size.width.toFloat()).coerceIn(0f, 1f))
+                if (onProgressChange != null) {
+                    Modifier
+                        .pointerInput(Unit) {
+                            detectTapGestures { offset ->
+                                if (barWidth > 0) onProgressChange((offset.x / barWidth).coerceIn(0f, 1f))
+                            }
                         }
-                    }.pointerInput(Unit) {
-                        detectDragGestures { change, _ ->
-                            onProgressChanged((change.position.x / size.width.toFloat()).coerceIn(0f, 1f))
+                        .pointerInput(Unit) {
+                            detectDragGestures { change, _ ->
+                                if (barWidth > 0) onProgressChange((change.position.x / barWidth).coerceIn(0f, 1f))
+                            }
                         }
-                    }
                 } else Modifier
             )
     ) {
@@ -218,7 +221,6 @@ fun RoomPage(
     val imeVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
     var keyboardShownForChat by remember { mutableStateOf(false) }
 
-    // Fake ticker to keep progress bar moving
     LaunchedEffect(isMusicPlaying, miniMusicTrack) {
         while (isMusicPlaying && miniMusicTrack != null) {
             kotlinx.coroutines.delay(1000)
@@ -242,7 +244,6 @@ fun RoomPage(
         }
     }
 
-    // Music control helpers
     fun musicPlayPause() {
         val track = miniMusicTrack ?: return
         runCatching {
@@ -469,7 +470,6 @@ fun RoomPage(
                 Icon(Icons.Default.ChevronRight, null, tint = Color(0xFFEEF3A3), modifier = Modifier.padding(start = 4.dp).size(10.dp))
             }
             if (musicControllerMinimized && miniMusicTrack != null) {
-                // FIXED: Pill Rotation Stopped
                 Row(modifier = Modifier.height(26.dp).clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha = 0.30f)).clickable { musicControllerMinimized = false }.padding(start = 2.dp, end = 10.dp),verticalAlignment = Alignment.CenterVertically,horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     AsyncImage(model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_00000000ee70820b9fd0dfe71739874e.png",contentDescription = "Music",modifier = Modifier.size(22.dp),contentScale = ContentScale.Fit)
                     Text(text = miniMusicTrack?.name.orEmpty(),color = Color.White,fontSize = 11.sp,fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,maxLines = 1,overflow = TextOverflow.Clip,modifier = Modifier.widthIn(max = 68.dp).basicMarquee(iterations = Int.MAX_VALUE))
@@ -557,7 +557,9 @@ fun RoomPage(
                                 AsyncImage(model=message.senderImage.ifBlank{"https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/default-avatar.png"},contentDescription=message.sender,modifier=Modifier.size(24.dp).clip(CircleShape),contentScale=ContentScale.Crop)
                                 Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){
                                     Text(message.sender,color=Color.White.copy(alpha=.95f),fontSize=12.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold)
-                                    androidx.compose.material3.Icon(imageVector=Icons.Filled.Home,contentDescription=null,modifier=Modifier.size(12.dp),tint=Color.White)
+                                    if (message.senderAccountId == roomOwner.accountId.ifBlank { roomOwner.id }) {
+                                        androidx.compose.material3.Icon(imageVector=Icons.Filled.Home,contentDescription=null,modifier=Modifier.size(12.dp),tint=Color.White)
+                                    }
                                 }
                             }
                             Text("Enter the Room",color=Color.White,fontSize=12.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Medium, modifier=Modifier.padding(start=2.dp))
@@ -585,9 +587,12 @@ fun RoomPage(
                         }
                         if(selfSeatIndex>=0) RoomFooterButton(onClick={showEmoji=true},description="Emoji",icon=R.drawable.ic_hurry_emoji)
                     }
-                    Box(Modifier.width(68.dp).wrapContentSize(unbounded = true),contentAlignment=Alignment.Center){
-                        AsyncImage(model="https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/file_0000000019c4821180028eebae10dbfc.png",contentDescription="Gift",modifier=Modifier.requiredSize(130.dp).clickable{showGift=true},contentScale=ContentScale.Fit)
-                    }
+                    AsyncImage(
+                        model="https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/file_0000000019c4821180028eebae10dbfc.png",
+                        contentDescription="Gift",
+                        modifier=Modifier.size(56.dp).clickable{showGift=true},
+                        contentScale=ContentScale.Fit
+                    )
                     Row(Modifier.weight(1f),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp,Alignment.End)){
                         RoomFooterButton(onClick={showMessageSheet=true},description="Message Box Menu",icon=R.drawable.ic_hurry_mail)
                         RoomFooterButton(onClick={showMenu=true},description="Apps Menu",icon=R.drawable.ic_hurry_apps)
@@ -619,16 +624,18 @@ fun RoomPage(
             AsyncImage(model="https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/file_000000002a8c81fab8232bebeeeb45cc.png",contentDescription="Games",modifier=Modifier.size(56.dp).clickable { showGames=true },contentScale=ContentScale.Fit)
         }
         
-        // FIXED: Entry Toast Blue Banner Moved to the Right side
-        Column(Modifier.align(Alignment.BottomEnd).padding(bottom=LocalConfiguration.current.screenHeightDp.dp*0.35f, end=0.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
+        Column(Modifier.align(Alignment.BottomStart).padding(bottom=LocalConfiguration.current.screenHeightDp.dp*0.33f),verticalArrangement=Arrangement.spacedBy(4.dp)) {
             entryToasts.toList().forEach { toast ->
                 key(toast.id) {
                     val visibleState = remember { androidx.compose.animation.core.MutableTransitionState(false).apply { targetState = true } }
-                    AnimatedVisibility(visibleState = visibleState, enter=slideInHorizontally(initialOffsetX={ _ -> screenWidthPx + 100 }, animationSpec = tween(durationMillis = 800, easing = LinearOutSlowInEasing)) + fadeIn(animationSpec = tween(800))) {
-                        Row(Modifier.clip(RoundedCornerShape(topStart=50.dp,bottomStart=50.dp,topEnd=0.dp,bottomEnd=0.dp)).background(Brush.horizontalGradient(listOf(Color(0xF52563EB),Color(0xF52563EB),Color.Transparent))).padding(start=10.dp,end=14.dp,top=2.dp,bottom=2.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(6.dp)) {
-                            AsyncImage(model=toast.image.ifBlank{"https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/default-avatar.png"},contentDescription=toast.name,modifier=Modifier.size(20.dp).clip(CircleShape),contentScale=ContentScale.Crop)
-                            Text(toast.name,color=Color.White,fontSize=12.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold,maxLines=1,modifier=Modifier.widthIn(max=95.dp))
-                            Text("Enter the Room",color=Color.White,fontSize=11.sp,maxLines=1)
+                    AnimatedVisibility(
+                        visibleState = visibleState, 
+                        enter=slideInHorizontally(initialOffsetX={ _ -> screenWidthPx }, animationSpec = tween(durationMillis = 800, easing = LinearOutSlowInEasing)) + fadeIn(animationSpec = tween(800))
+                    ) {
+                        Row(Modifier.fillMaxWidth(0.75f).clip(RoundedCornerShape(topStart=0.dp,bottomStart=0.dp,topEnd=50.dp,bottomEnd=50.dp)).background(Brush.horizontalGradient(listOf(Color(0xF52563EB),Color(0x002563EB)))).padding(start=10.dp,end=10.dp,top=2.dp,bottom=2.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+                            AsyncImage(model=toast.image.ifBlank{"https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/default-avatar.png"},contentDescription=toast.name,modifier=Modifier.size(24.dp).clip(CircleShape),contentScale=ContentScale.Crop)
+                            Text(toast.name,color=Color.White,fontSize=13.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold,maxLines=1,modifier=Modifier.widthIn(max=95.dp))
+                            Text("Enter the Room",color=Color.White,fontSize=12.sp,maxLines=1)
                         }
                     }
                 }
@@ -682,17 +689,15 @@ fun RoomPage(
                     Spacer(Modifier.height(8.dp))
 
                     val progressFraction = if (musicDuration > 0f) (musicCurrentTime / musicDuration).coerceIn(0f, 1f) else 0f
-                    // FIXED: Piche Aage Kaam Working - Interactivity added to progress
                     ThickBar(
                         progress = progressFraction,
-                        height = 14.dp,
+                        height = 6.dp,
                         activeColor = Color(0xFF3B82F6),
                         inactiveColor = Color.White.copy(alpha = 0.15f),
                         modifier = Modifier.fillMaxWidth(),
-                        onProgressChanged = { frac ->
+                        onProgressChange = { newProgress ->
                             if (musicDuration > 0f) {
-                                musicCurrentTime = frac * musicDuration
-                                // Intent call to backend service optional here
+                                musicCurrentTime = newProgress * musicDuration
                             }
                         }
                     )
@@ -733,15 +738,14 @@ fun RoomPage(
                     Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.VolumeUp, "Volume", tint = Color.White, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(8.dp))
-                        // FIXED: Volume SeekBar/Patti dragging Working
                         ThickBar(
                             progress = musicVolume,
-                            height = 14.dp,
+                            height = 6.dp,
                             activeColor = Color(0xFF3B82F6),
                             inactiveColor = Color.White.copy(alpha = 0.15f),
                             modifier = Modifier.weight(1f),
-                            onProgressChanged = { frac ->
-                                musicVolume = frac
+                            onProgressChange = { newVolume ->
+                                musicVolume = newVolume
                             }
                         )
                         Spacer(Modifier.width(8.dp))
@@ -824,12 +828,10 @@ fun RoomPage(
             if(seat!=null) SeatActionSheet(seat=seat,isOwner=accountId==roomOwner.accountId.ifBlank{roomOwner.id},isMySeat=seat.occupied && seat.accountId==accountId,onDismiss={showSeatSheet=false;selectedSeat=0},onTake={ if(!seat.occupied && !seat.locked){seats[selectedSeat-1]=seat.copy(occupied=true,userName=currentUser.name,userImage=currentUser.image,accountId=accountId);showSeatSheet=false;selectedSeat=0} },onLeave={seats[selectedSeat-1]=seat.copy(occupied=false,userName="",userImage="",accountId="",muted=false,speaking=false);showSeatSheet=false;selectedSeat=0},onMute={seats[selectedSeat-1]=seat.copy(muted=!seat.muted);showSeatSheet=false;selectedSeat=0},onLock={seats[selectedSeat-1]=seat.copy(locked=!seat.locked);showSeatSheet=false;selectedSeat=0},onInvite={clipboard.setText(AnnotatedString("Join room $roomName — seat $selectedSeat (ID: $roomId)"));showSeatSheet=false;selectedSeat=0})
         }
         if(selectedSeat>0 && seats.firstOrNull{it.number==selectedSeat}?.occupied==true && !showSeatSheet) MemberSheet(seats.first{it.number==selectedSeat}){selectedSeat=0}
-        
-        // FIXED: Bottom Message Sheet 15dp Top Corners 
         if(showMessageSheet) {
             val screenHeight = LocalConfiguration.current.screenHeightDp
             Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=.30f)).clickable{showMessageSheet=false},contentAlignment=Alignment.BottomCenter) {
-                Surface(modifier=Modifier.fillMaxWidth().height((screenHeight * .60f).dp).background(Color.White).clickable(enabled=false) {},color=Color.White,contentColor=Color.Black,shape=RoundedCornerShape(topStart=15.dp,topEnd=15.dp),shadowElevation=16.dp) {
+                Surface(modifier=Modifier.fillMaxWidth().height((screenHeight * .60f).dp).background(Color.White).clickable(enabled=false) {},color=Color.White,contentColor=Color.Black,shape=RoundedCornerShape(15.dp),shadowElevation=16.dp) {
                     Column(Modifier.fillMaxSize().background(Color.White)) { MessageScreen(onChat={ _, _, _ -> showMessageSheet=false }, embeddedSheet=true, onBack={ showMessageSheet=false }) }
                 }
             }
