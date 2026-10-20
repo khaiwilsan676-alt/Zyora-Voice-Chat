@@ -85,25 +85,34 @@ private fun MedalVideo(
     isColorless: Boolean = false
 ) {
     val context = LocalContext.current
-    val player = remember(video) {
-        ExoPlayer.Builder(context).build().apply {
+    // Grid tiles are static previews. Do not allocate/prepare a separate ExoPlayer for
+    // every tile; on lower-memory phones this can exhaust video decoders and crash the app.
+    val player = remember(video, animated) {
+        if (animated) ExoPlayer.Builder(context).build().apply {
             setMediaItem(MediaItem.fromUri(medalAsset(video)))
             repeatMode = Player.REPEAT_MODE_ONE
             volume = 0f
-            playWhenReady = animated
+            playWhenReady = true
             prepare()
-        }
+        } else null
     }
     DisposableEffect(player) {
-        onDispose { player.release() }
+        onDispose { player?.release() }
     }
-    
-    AndroidView(
+
+    if (!animated) {
+        AsyncImage(
+            model = medalAsset("IMG_20260924_132022.png"),
+            contentDescription = null,
+            modifier = modifier.aspectRatio(1f),
+            contentScale = ContentScale.Fit
+        )
+    } else if (player != null) AndroidView(
         modifier = modifier.aspectRatio(1f),
         factory = { ctx ->
             android.view.TextureView(ctx).apply {
                 isOpaque = false
-                
+
                 player.setVideoTextureView(this)
 
                 val baseValues = if (variant == "green") {
@@ -173,9 +182,8 @@ private fun MedalVideo(
             }
         },
         update = { view ->
-            player.playWhenReady = animated
-            if (animated && player.playbackState == Player.STATE_IDLE) player.prepare()
-            if (!animated && player.playbackState == Player.STATE_READY) player.pause()
+            player.playWhenReady = true
+            if (player.playbackState == Player.STATE_IDLE) player.prepare()
         }
     )
 }
