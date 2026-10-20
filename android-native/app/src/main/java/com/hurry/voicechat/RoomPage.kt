@@ -183,6 +183,28 @@ fun RoomPage(
     var copiedId by remember { mutableStateOf("") }
     var roomName by remember{mutableStateOf(roomOwner.name.ifBlank{"Room"})}
     var roomImage by remember{mutableStateOf(roomOwner.image)}
+    LaunchedEffect(roomId) {
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val encoded = java.net.URLEncoder.encode(roomId, "UTF-8")
+                val conn = (java.net.URL("https://hurry-voice-chat-lz75.onrender.com/api/rooms?roomId=$encoded").openConnection() as java.net.HttpURLConnection).apply { connectTimeout=10000; readTimeout=10000 }
+                try {
+                    if (conn.responseCode in 200..299) {
+                        val root = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
+                        val saved = root.optJSONObject("room") ?: root
+                        val name = saved.optString("name", saved.optString("roomName", "")).takeUnless { it == "null" }.orEmpty()
+                        val image = saved.optString("dp", saved.optString("image", saved.optString("roomDp", ""))).takeUnless { it == "null" }.orEmpty()
+                        val message = saved.optString("message", saved.optString("announcement", "")).takeUnless { it == "null" }.orEmpty()
+                        launch(Dispatchers.Main) {
+                            if (name.isNotBlank()) roomName = name
+                            if (image.isNotBlank()) roomImage = image
+                            announcement = message
+                        }
+                    }
+                } finally { conn.disconnect() }
+            }
+        }
+    }
     var followed by remember{mutableStateOf(false)}
     LaunchedEffect(roomId, accountId) {
         if (accountId.isBlank() || accountId == "guest") return@LaunchedEffect
@@ -877,7 +899,22 @@ fun RoomPage(
         if(showStore) StorePage(onBack={showStore=false}, initialView=storeInitialView)
         if(showInfo) RoomInfo(isOpen=true,onClose={showInfo=false},isRoomOwner=accountId==roomOwner.accountId.ifBlank{roomOwner.id},roomOwner=RoomInfoOwner(id=roomOwner.id,uid=roomOwner.uid,accountId=roomOwner.accountId.ifBlank{roomOwner.id},name=roomOwner.name,image=roomOwner.image),roomData=RoomInfoData(roomName,roomImage,announcement,roomId),roomFollowers=roomFollowers,onOpenProfile={ follower -> seats.firstOrNull{it.accountId==follower.accountId}?.let{selectedSeat=it.number};showInfo=false },onCopyId={ id -> clipboard.setText(AnnotatedString(id));copiedId=id },copied=copiedId==roomId)
         if(showActiveUsers) ActiveUsers(isOpen=true,onClose={showActiveUsers=false},roomUsers=activeRoomUsers,currentUser=ActiveUserNative(accountId,currentUser.name,currentUser.image),roomOwnerId=roomOwner.accountId.ifBlank{roomOwner.id},onOpenProfile={ user -> seats.firstOrNull{it.accountId==user.accountId}?.let{selectedSeat=it.number};showActiveUsers=false },onCopyUserId={ id -> clipboard.setText(AnnotatedString(id));copiedId=id })
-        if(showSettings) RoomSettingPage(initial = RoomSettingsDataNative(roomName=roomName,roomDp=roomImage,announcement=announcement,isLocked=locked),roomOwnerId=roomId,currentUserId=accountId,onBack={showSettings=false},onSave={saved->roomName=saved.roomName;roomImage=saved.roomDp;announcement=saved.announcement;locked=saved.isLocked;showSettings=false})
+        if(showSettings) RoomSettingPage(initial = RoomSettingsDataNative(roomName=roomName,roomDp=roomImage,announcement=announcement,isLocked=locked),roomOwnerId=roomId,currentUserId=accountId,onBack={showSettings=false},onSave={saved->
+            roomName=saved.roomName;roomImage=saved.roomDp;announcement=saved.announcement;locked=saved.isLocked;showSettings=false
+            launch(Dispatchers.IO) {
+                runCatching {
+                    val conn = (java.net.URL("https://hurry-voice-chat-lz75.onrender.com/api/rooms").openConnection() as java.net.HttpURLConnection).apply {
+                        requestMethod="PUT"; connectTimeout=10000; readTimeout=10000; doOutput=true
+                        setRequestProperty("Content-Type","application/json")
+                    }
+                    val payload = JSONObject().put("accountId", roomId).put("id", roomId).put("name", saved.roomName).put("dp", saved.roomDp).put("image", saved.roomDp).put("message", saved.announcement).put("announcement", saved.announcement).put("isLocked", saved.isLocked).put("country", roomOwner.country)
+                    conn.outputStream.use { it.write(payload.toString().toByteArray(Charsets.UTF_8)) }
+                    val status=conn.responseCode
+                    if (status !in 200..299) throw java.io.IOException("Room save failed: HTTP $status")
+                    conn.disconnect()
+                }
+            }
+        })
         if(showGift) GiftPicker(open=true,onClose={showGift=false},seats=seats.toList(),roomId=roomId,currentUserAccountId=accountId,currentUserName=currentUser.name,currentUserImage=currentUser.image,roomUsers=activeRoomUsers)
         if(showGames) GamesSheet(onClose={showGames=false},onWildParty={showGames=false;showWildParty=true},onFruitParty={showGames=false;showFruitParty=true})
         if(showRoomTask) Roomtask(onBack={showRoomTask=false})
