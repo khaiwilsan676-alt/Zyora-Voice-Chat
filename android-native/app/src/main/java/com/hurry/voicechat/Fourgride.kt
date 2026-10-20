@@ -43,10 +43,12 @@ import coil3.compose.AsyncImage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-// ✅ GLOBAL STATE — sheet close hone ke baad bhi survive karta hai
+// ✅ GLOBAL STATE — Ab ye compose state use karta hai so sheet aur mini card dono real-time sync rahenge
 object MusicPlaybackState {
-    var currentPlayingUri: String? = null
-    var isPlaying: Boolean = false
+    var currentPlayingUri: String? by mutableStateOf(null)
+    var isPlaying: Boolean by mutableStateOf(false)
+    var currentTrack: NativeMusicTrack? by mutableStateOf(null) // Track data store karne ke liye
+    var isMusicPageOpen: Boolean by mutableStateOf(false) // Ye track karega ki card dikhana hai ya nahi
 }
 
 data class NativeMusicTrack(val id: String, val name: String, val url: String, val duration: Long = 0L)
@@ -112,10 +114,6 @@ fun Fourgride(
     val musicPrefs = remember { context.getSharedPreferences("zyora_phone_music", android.content.Context.MODE_PRIVATE) }
     var musicTracks by remember { mutableStateOf(emptyList<NativeMusicTrack>()) }
 
-    // ✅ INIT from global state (survives sheet close)
-    var playingUri by remember { mutableStateOf(MusicPlaybackState.currentPlayingUri) }
-    var isPlaying by remember { mutableStateOf(MusicPlaybackState.isPlaying) }
-
     LaunchedEffect(Unit) {
         musicTracks = musicPrefs.getStringSet("uris", emptySet()).orEmpty().mapNotNull { raw ->
             runCatching {
@@ -165,6 +163,11 @@ fun Fourgride(
         } else {
             musicPicker.launch(arrayOf("audio/*"))
         }
+    }
+    
+    // ✅ Yeh strictly control karega ki mini card sheet open hone pe hide ho jaye
+    LaunchedEffect(showMusic) {
+        MusicPlaybackState.isMusicPageOpen = showMusic
     }
 
     LaunchedEffect(showMusic, musicTracks.size) {
@@ -271,12 +274,11 @@ fun Fourgride(
 
     if (showMusic) {
         BackHandler(enabled = true) {
-            val currentTrack = musicTracks.firstOrNull { it.url == playingUri }
-            // Yahan logic add kiya gaya hai
-            if (isPlaying && currentTrack != null) {
-                onMusicMinimize?.invoke(currentTrack) // Sirf tabhi controller show hoga agar play ho raha hai
+            val currentTrack = musicTracks.firstOrNull { it.url == MusicPlaybackState.currentPlayingUri } ?: MusicPlaybackState.currentTrack
+            if (MusicPlaybackState.isPlaying && currentTrack != null) {
+                onMusicMinimize?.invoke(currentTrack) 
             } else {
-                onMusicMinimize?.invoke(null) // Warna koi controller nahi dikhega
+                onMusicMinimize?.invoke(null) 
             }
             showMusic = false
             onClose()
@@ -286,9 +288,8 @@ fun Fourgride(
                 Box(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp), contentAlignment = Alignment.Center) {
                     IconButton(
                         onClick = {
-                            val currentTrack = musicTracks.firstOrNull { it.url == playingUri }
-                            // Yahan bhi same logic button click ke liye add kiya hai
-                            if (isPlaying && currentTrack != null) {
+                            val currentTrack = musicTracks.firstOrNull { it.url == MusicPlaybackState.currentPlayingUri } ?: MusicPlaybackState.currentTrack
+                            if (MusicPlaybackState.isPlaying && currentTrack != null) {
                                 onMusicMinimize?.invoke(currentTrack)
                             } else {
                                 onMusicMinimize?.invoke(null)
@@ -319,33 +320,29 @@ fun Fourgride(
                                     )
                                 }
                                 IconButton(onClick = {
-                                    if (playingUri == track.url && isPlaying) {
+                                    if (MusicPlaybackState.currentPlayingUri == track.url && MusicPlaybackState.isPlaying) {
                                         context.startService(Intent(context, RoomMusicService::class.java).setAction(RoomMusicService.ACTION_PAUSE))
-                                        isPlaying = false
                                         MusicPlaybackState.isPlaying = false
-                                        MusicPlaybackState.currentPlayingUri = playingUri
                                     } else {
                                         val playIntent = Intent(context, RoomMusicService::class.java)
                                             .setAction(RoomMusicService.ACTION_PLAY)
                                             .putExtra(RoomMusicService.EXTRA_URI, track.url)
                                             .putExtra(RoomMusicService.EXTRA_TITLE, track.name)
                                         ContextCompat.startForegroundService(context, playIntent)
-                                        playingUri = track.url
-                                        isPlaying = true
                                         MusicPlaybackState.currentPlayingUri = track.url
                                         MusicPlaybackState.isPlaying = true
+                                        MusicPlaybackState.currentTrack = track
                                         onMusicPlay?.invoke(track)
                                     }
                                 }) {
-                                    Icon(if (playingUri == track.url && isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, contentDescription = "Play music", tint = Color.White)
+                                    Icon(if (MusicPlaybackState.currentPlayingUri == track.url && MusicPlaybackState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, contentDescription = "Play music", tint = Color.White)
                                 }
                                 IconButton(onClick = {
-                                    if (playingUri == track.url) {
+                                    if (MusicPlaybackState.currentPlayingUri == track.url) {
                                         context.startService(Intent(context, RoomMusicService::class.java).setAction(RoomMusicService.ACTION_STOP))
-                                        playingUri = null
-                                        isPlaying = false
                                         MusicPlaybackState.currentPlayingUri = null
                                         MusicPlaybackState.isPlaying = false
+                                        MusicPlaybackState.currentTrack = null
                                     }
                                     musicTracks = musicTracks.filterNot { it.id == track.id }
                                     musicPrefs.edit().putStringSet("uris", musicTracks.map { it.id }.toSet()).apply()
@@ -495,5 +492,78 @@ private fun ToolCell(
             if (toggle != null) Box(Modifier.align(Alignment.BottomEnd).clickable(onClick = onClick)) { ToolToggle(toggle) }
         }
         Text(title, modifier = Modifier.padding(top = 4.dp), fontSize = 10.sp, color = Color(0xFF374151), maxLines = 1, softWrap = false)
+    }
+}
+
+// ✅ YEH TERA MUSIC CONTROLLER CARD HAI - Isko Room UI me jahan man waha rakh lena
+// Yeh sirf tab dikhega jab (1) Music page band ho, aur (2) Koi song play ho raha ho ya paused ho.
+@Composable
+fun MiniMusicControllerCard(modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val playingUri = MusicPlaybackState.currentPlayingUri
+    val isPlaying = MusicPlaybackState.isPlaying
+    val track = MusicPlaybackState.currentTrack
+    val isMusicPageOpen = MusicPlaybackState.isMusicPageOpen
+
+    // Agar Music sheet open nahi hai aur track selected hai, tabhi show hoga
+    if (!isMusicPageOpen && playingUri != null && track != null) {
+        Card(
+            modifier = modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            shape = RoundedCornerShape(50),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF1F2937)),
+            elevation = CardDefaults.cardElevation(4.dp)
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Chhota sa music icon
+                Icon(Icons.Default.PlayArrow, contentDescription = null, tint = Color(0xFF3B82F6), modifier = Modifier.size(24.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                
+                // Song ka naam
+                Text(
+                    text = track.name,
+                    color = Color.White,
+                    fontSize = 14.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
+                
+                // Play/Pause button controller
+                IconButton(onClick = {
+                    if (isPlaying) {
+                        context.startService(Intent(context, RoomMusicService::class.java).setAction(RoomMusicService.ACTION_PAUSE))
+                        MusicPlaybackState.isPlaying = false
+                    } else {
+                        val playIntent = Intent(context, RoomMusicService::class.java)
+                            .setAction(RoomMusicService.ACTION_PLAY)
+                            .putExtra(RoomMusicService.EXTRA_URI, track.url)
+                            .putExtra(RoomMusicService.EXTRA_TITLE, track.name)
+                        ContextCompat.startForegroundService(context, playIntent)
+                        MusicPlaybackState.isPlaying = true
+                    }
+                }) {
+                    Icon(
+                        imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                        contentDescription = "Play/Pause",
+                        tint = Color.White
+                    )
+                }
+                
+                // Close/Stop Button
+                IconButton(onClick = {
+                    context.startService(Intent(context, RoomMusicService::class.java).setAction(RoomMusicService.ACTION_STOP))
+                    MusicPlaybackState.currentPlayingUri = null
+                    MusicPlaybackState.isPlaying = false
+                    MusicPlaybackState.currentTrack = null
+                }) {
+                    Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White.copy(alpha = 0.7f))
+                }
+            }
+        }
     }
 }
