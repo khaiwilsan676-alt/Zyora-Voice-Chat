@@ -921,8 +921,24 @@ export default function Medal({ onBack }: MedalProps) {
       </div>
 
       {selectedMedal && displayMedal && (
-        <div className="fixed inset-0 z-50 bg-black overflow-y-auto overflow-x-hidden animate-fade-in">
-          <div className="relative w-full h-[30vh]">
+        <div className="fixed inset-0 z-50 overflow-y-auto overflow-x-hidden animate-fade-in bg-[#030610]">
+          
+          {/* NEW STARRY BACKGROUND LAYER (Matches First SS) */}
+          <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+            {/* Deep space base glow */}
+            <div className="absolute -top-1/4 left-1/2 -translate-x-1/2 w-[150vw] h-[100vh] bg-[radial-gradient(ellipse_at_top,_rgba(40,80,200,0.3)_0%,_transparent_70%)] blur-3xl"></div>
+            {/* Light rays */}
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[120vw] h-[80vh] bg-[conic-gradient(from_180deg_at_50%_0%,_transparent_0deg,_rgba(60,120,255,0.15)_40deg,_rgba(60,120,255,0.25)_50deg,_rgba(60,120,255,0.15)_60deg,_transparent_100deg)] blur-2xl opacity-80"></div>
+            {/* Stars layer 1 */}
+            <div className="absolute inset-0 opacity-30 bg-[radial-gradient(circle_at_center,_white_1px,_transparent_1.5px)] bg-[size:40px_40px]"></div>
+            {/* Stars layer 2 */}
+            <div className="absolute inset-0 opacity-15 bg-[radial-gradient(circle_at_center,_white_1px,_transparent_1.5px)] bg-[size:60px_60px] bg-[position:20px_20px]"></div>
+            {/* Bottom fade */}
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#030610]/80 to-[#030610]"></div>
+          </div>
+          {/* END NEW BACKGROUND */}
+
+          <div className="relative w-full h-[30vh] z-10">
             <img
               src="/IMG_20260924_132006.png"
               alt=""
@@ -1011,8 +1027,8 @@ export default function Medal({ onBack }: MedalProps) {
             </p>
 
             {showTabs && (
-              <div className="flex flex-col items-center mt-4 relative z-10">
-                <div className="flex items-center justify-center gap-2">
+              <div className="flex flex-col items-center mt-6 relative z-10 w-full px-4">
+                <div className="flex items-center justify-center gap-2 mb-6">
                   {tierMedals.map((_, i) => (
                     <React.Fragment key={i}>
                       {i > 0 && (
@@ -1032,9 +1048,13 @@ export default function Medal({ onBack }: MedalProps) {
                     </React.Fragment>
                   ))}
                 </div>
-                <span className="mt-2 text-white bg-gray-600/70 rounded-md px-3 py-[2px] text-[10px] font-medium">
-                  Not Obtained
-                </span>
+                
+                {/* UPDATED BUTTON: Golden pill shape like "obtained" button from 2nd SS */}
+                <div className="w-full max-w-[320px]">
+                  <div className="w-full py-[14px] rounded-full bg-gradient-to-b from-[#FCEAB4] via-[#E6BA75] to-[#C78A3D] text-[#4A2E0B] font-bold text-[17px] text-center tracking-wide shadow-[0_4px_15px_rgba(230,186,117,0.4)] border border-[#FCEAB4]/60 cursor-pointer active:scale-95 transition-transform">
+                    Not Obtained
+                  </div>
+                </div>
               </div>
             )}
           </div>
