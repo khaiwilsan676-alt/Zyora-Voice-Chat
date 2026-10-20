@@ -1,5 +1,6 @@
 package com.hurry.voicechat
 
+import android.content.Intent
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
@@ -37,10 +38,16 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
+import androidx.core.content.ContextCompat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import androidx.compose.ui.graphics.asImageBitmap
@@ -51,69 +58,44 @@ import io.socket.client.Socket
 import io.socket.emitter.Emitter
 import org.json.JSONArray
 import org.json.JSONObject
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.basicMarquee
 import coil3.compose.AsyncImage
 
-// Optimized Shader-like CPU logic to prevent room hanging (Replaced old Canva logic)
+// Optimized Shader-like CPU logic to prevent room hanging
 @Composable
 fun TransparentGreenImage(url: String, modifier: Modifier = Modifier) {
     var bitmap by remember(url) { mutableStateOf<android.graphics.Bitmap?>(null) }
-    
     LaunchedEffect(url) {
         bitmap = withContext(Dispatchers.IO) {
             runCatching {
                 val source = java.net.URL(url).openStream().use { android.graphics.BitmapFactory.decodeStream(it) } ?: return@runCatching null
                 val result = source.copy(android.graphics.Bitmap.Config.ARGB_8888, true)
-                
                 val width = result.width
                 val height = result.height
                 val pixels = IntArray(width * height)
-                
                 result.getPixels(pixels, 0, width, 0, 0, width, height)
-                
                 for (i in pixels.indices) {
                     val color = pixels[i]
                     val r = (color shr 16) and 0xFF
                     val g = (color shr 8) and 0xFF
                     val b = color and 0xFF
-                    
-                    if (g > 90 && g > r * 1.1 && g > b * 1.1) {
-                        pixels[i] = android.graphics.Color.TRANSPARENT
-                    }
+                    if (g > 90 && g > r * 1.1 && g > b * 1.1) pixels[i] = android.graphics.Color.TRANSPARENT
                 }
-                
                 result.setPixels(pixels, 0, width, 0, 0, width, height)
                 result
             }.getOrNull()
         }
     }
-    
-    bitmap?.let { 
-        Image(
-            bitmap = it.asImageBitmap(), 
-            contentDescription = null, 
-            modifier = modifier, 
-            contentScale = ContentScale.Fit
-        ) 
-    }
+    bitmap?.let { Image(bitmap = it.asImageBitmap(), contentDescription = null, modifier = modifier, contentScale = ContentScale.Fit) }
 }
 
-// User ki SVG ko Compose Canvas mein draw kiya
 @Composable
 fun SystemBellIcon(modifier: Modifier = Modifier) {
     Canvas(modifier = modifier) {
         val scaleX = size.width / 512f
         val scaleY = size.height / 512f
-        
-        drawCircle(
-            color = Color(0xFF1685FF),
-            radius = 65f * scaleX,
-            center = Offset(256f * scaleX, 256f * scaleY)
-        )
-        
+        drawCircle(color = Color(0xFF1685FF), radius = 65f * scaleX, center = Offset(256f * scaleX, 256f * scaleY))
         val bellPath = Path().apply {
             moveTo(256f * scaleX, 229f * scaleY)
             cubicTo(246f * scaleX, 229f * scaleY, 241f * scaleX, 238f * scaleY, 241f * scaleX, 249f * scaleY)
@@ -128,11 +110,32 @@ fun SystemBellIcon(modifier: Modifier = Modifier) {
             close()
         }
         drawPath(bellPath, color = Color.White)
-        
-        drawOval(
-            color = Color.White,
-            topLeft = Offset((256f - 5f) * scaleX, (288f - 3.5f) * scaleY),
-            size = androidx.compose.ui.geometry.Size(10f * scaleX, 7f * scaleY)
+        drawOval(color = Color.White, topLeft = Offset((256f - 5f) * scaleX, (288f - 3.5f) * scaleY), size = androidx.compose.ui.geometry.Size(10f * scaleX, 7f * scaleY))
+    }
+}
+
+// Thick strip bar — no line, just patti
+@Composable
+private fun ThickBar(
+    progress: Float,
+    modifier: Modifier = Modifier,
+    height: Dp = 6.dp,
+    activeColor: Color = Color(0xFF3B82F6),
+    inactiveColor: Color = Color.White.copy(alpha = 0.15f),
+) {
+    Box(
+        modifier
+            .fillMaxWidth()
+            .height(height)
+            .clip(RoundedCornerShape(height / 2))
+            .background(inactiveColor)
+    ) {
+        Box(
+            Modifier
+                .fillMaxWidth(progress.coerceIn(0f, 1f))
+                .fillMaxHeight()
+                .clip(RoundedCornerShape(height / 2))
+                .background(activeColor)
         )
     }
 }
@@ -155,6 +158,7 @@ fun RoomPage(
     val roomId=roomOwner.id.ifBlank{roomOwner.accountId.ifBlank{roomOwner.uid.ifBlank{"default-room"}}}
     val accountId=currentUser.accountId.ifBlank{currentUser.uid.ifBlank{currentUser.id.ifBlank{"guest"}}}
     val clipboard = LocalClipboardManager.current
+    val appContext = LocalContext.current
     var copiedId by remember { mutableStateOf("") }
     var roomName by remember{mutableStateOf(roomOwner.name.ifBlank{"Room"})}
     var roomImage by remember{mutableStateOf(roomOwner.image)}
@@ -197,7 +201,7 @@ fun RoomPage(
     val imeVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
     var keyboardShownForChat by remember { mutableStateOf(false) }
 
-    // Fake playback ticker to keep UI alive
+    // Fake ticker to keep progress bar moving
     LaunchedEffect(isMusicPlaying, miniMusicTrack) {
         while (isMusicPlaying && miniMusicTrack != null) {
             kotlinx.coroutines.delay(1000)
@@ -206,11 +210,80 @@ fun RoomPage(
                     musicCurrentTime = (musicCurrentTime + 1f).coerceAtMost(musicDuration)
                 } else if (musicPlaylist.isNotEmpty()) {
                     currentTrackIndex = (currentTrackIndex + 1) % musicPlaylist.size
-                    miniMusicTrack = musicPlaylist[currentTrackIndex]
+                    val nextTrack = musicPlaylist[currentTrackIndex]
+                    miniMusicTrack = nextTrack
                     musicCurrentTime = 0f
+                    runCatching {
+                        val intent = Intent(appContext, RoomMusicService::class.java)
+                            .setAction(RoomMusicService.ACTION_PLAY)
+                            .putExtra(RoomMusicService.EXTRA_URI, nextTrack.url)
+                            .putExtra(RoomMusicService.EXTRA_TITLE, nextTrack.name)
+                        ContextCompat.startForegroundService(appContext, intent)
+                    }
                 }
             }
         }
+    }
+
+    // Music control helpers
+    fun musicPlayPause() {
+        val track = miniMusicTrack ?: return
+        runCatching {
+            if (isMusicPlaying) {
+                appContext.startService(Intent(appContext, RoomMusicService::class.java).setAction(RoomMusicService.ACTION_PAUSE))
+                isMusicPlaying = false
+            } else {
+                val intent = Intent(appContext, RoomMusicService::class.java)
+                    .setAction(RoomMusicService.ACTION_PLAY)
+                    .putExtra(RoomMusicService.EXTRA_URI, track.url)
+                    .putExtra(RoomMusicService.EXTRA_TITLE, track.name)
+                ContextCompat.startForegroundService(appContext, intent)
+                isMusicPlaying = true
+            }
+        }
+    }
+
+    fun musicNext() {
+        if (musicPlaylist.isEmpty()) return
+        currentTrackIndex = (currentTrackIndex + 1) % musicPlaylist.size
+        val nextTrack = musicPlaylist[currentTrackIndex]
+        miniMusicTrack = nextTrack
+        musicCurrentTime = 0f
+        runCatching {
+            val intent = Intent(appContext, RoomMusicService::class.java)
+                .setAction(RoomMusicService.ACTION_PLAY)
+                .putExtra(RoomMusicService.EXTRA_URI, nextTrack.url)
+                .putExtra(RoomMusicService.EXTRA_TITLE, nextTrack.name)
+            ContextCompat.startForegroundService(appContext, intent)
+        }
+        isMusicPlaying = true
+    }
+
+    fun musicPrev() {
+        if (musicPlaylist.isEmpty()) return
+        currentTrackIndex = (currentTrackIndex - 1 + musicPlaylist.size) % musicPlaylist.size
+        val prevTrack = musicPlaylist[currentTrackIndex]
+        miniMusicTrack = prevTrack
+        musicCurrentTime = 0f
+        runCatching {
+            val intent = Intent(appContext, RoomMusicService::class.java)
+                .setAction(RoomMusicService.ACTION_PLAY)
+                .putExtra(RoomMusicService.EXTRA_URI, prevTrack.url)
+                .putExtra(RoomMusicService.EXTRA_TITLE, prevTrack.name)
+            ContextCompat.startForegroundService(appContext, intent)
+        }
+        isMusicPlaying = true
+    }
+
+    fun musicClose() {
+        runCatching {
+            appContext.startService(Intent(appContext, RoomMusicService::class.java).setAction(RoomMusicService.ACTION_STOP))
+        }
+        miniMusicTrack = null
+        isMusicPlaying = false
+        musicPlaylist = emptyList()
+        musicCurrentTime = 0f
+        musicDuration = 0f
     }
 
     BackHandler(enabled = true) {
@@ -239,28 +312,19 @@ fun RoomPage(
     
     val configuration = LocalConfiguration.current
     val density = LocalDensity.current
-    val screenWidthPx = remember(configuration, density) {
-        with(density) { configuration.screenWidthDp.dp.roundToPx() }
-    }
+    val screenWidthPx = remember(configuration, density) { with(density) { configuration.screenWidthDp.dp.roundToPx() } }
     
     LaunchedEffect(showChat, imeVisible) {
-        if (!showChat) {
-            keyboardShownForChat = false
-        } else if (imeVisible) {
-            keyboardShownForChat = true
-        } else if (keyboardShownForChat) {
-            showChat = false
-            keyboardShownForChat = false
-        }
+        if (!showChat) keyboardShownForChat = false
+        else if (imeVisible) keyboardShownForChat = true
+        else if (keyboardShownForChat) { showChat = false; keyboardShownForChat = false }
     }
     LaunchedEffect(showChat) {
         if (showChat) {
             kotlinx.coroutines.delay(120)
             runCatching { chatFocusRequester.requestFocus() }
             keyboardController?.show()
-        } else {
-            keyboardController?.hide()
-        }
+        } else keyboardController?.hide()
     }
     
     var announcement by remember{mutableStateOf("")}
@@ -276,7 +340,6 @@ fun RoomPage(
         val roomSocket = IO.socket("https://hurry-voice-chat-lz75.onrender.com")
         roomSocketRef.value=roomSocket
         val mainHandler = Handler(Looper.getMainLooper())
-        
         val presenceListener = Emitter.Listener { args ->
             val payload = args.firstOrNull() as? JSONObject
             if (payload != null && payload.optString("roomId") == roomId) {
@@ -285,16 +348,11 @@ fun RoomPage(
                 for (index in 0 until usersJson.length()) {
                     val user = usersJson.optJSONObject(index) ?: continue
                     val userId = user.optString("accountId", user.optString("userId"))
-                    if (userId.isNotBlank()) parsed.add(ActiveUserNative(
-                        accountId=userId,
-                        name=user.optString("name","User").ifBlank{"User"},
-                        image=user.optString("image","")
-                    ))
+                    if (userId.isNotBlank()) parsed.add(ActiveUserNative(accountId=userId,name=user.optString("name","User").ifBlank{"User"},image=user.optString("image","")))
                 }
                 mainHandler.post { backendRoomUsers.clear(); backendRoomUsers.addAll(parsed) }
             }
         }
-        
         val messageListener = Emitter.Listener { args ->
             val payload = args.firstOrNull() as? JSONObject
             if (payload != null && payload.optString("roomId") == roomId) {
@@ -312,20 +370,16 @@ fun RoomPage(
                 }
             }
         }
-        
         val clearedListener = Emitter.Listener { args ->
             val payload=args.firstOrNull() as? JSONObject
             if(payload!=null && payload.optString("roomId")==roomId) {
-                mainHandler.post { 
+                mainHandler.post {
                     messages.clear()
-                    showOfficialAnnouncement = false 
-                    clearedBy = payload.optString("userName").ifBlank { 
-                        backendRoomUsers.firstOrNull { it.accountId == payload.optString("userId") }?.name ?: "Admin"
-                    }
+                    showOfficialAnnouncement = false
+                    clearedBy = payload.optString("userName").ifBlank { backendRoomUsers.firstOrNull { it.accountId == payload.optString("userId") }?.name ?: "Admin" }
                 }
             }
         }
-        
         val seatListener = Emitter.Listener { args ->
             val payload = args.firstOrNull() as? JSONObject
             if (payload != null && payload.optString("roomId") == roomId) {
@@ -335,78 +389,42 @@ fun RoomPage(
                     val seat = seatsJson.optJSONObject(index) ?: continue
                     val user = seat.optJSONObject("user")
                     val gif = seat.optJSONObject("gif")
-                    parsed.add(NativeRoomSeat(
-                        number=seat.optInt("number",index+1),
-                        occupied=seat.optBoolean("isOccupied",user != null),
-                        locked=seat.optBoolean("isLocked",false),
-                        muted=seat.optBoolean("isMuted",false),
-                        speaking=seat.optBoolean("isSpeaking",false),
-                        userName=if (user == null) "" else user.optString("name","User"),
-                        userImage=if (user == null) "" else user.optString("image",user.optString("dp","")),
-                        accountId=if (user == null) "" else user.optString("accountId",user.optString("userId","")),
-                        gifSrc=gif?.optString("src","") ?: "",
-                        gifTimestamp=gif?.optLong("timestamp",0L) ?: 0L
-                    ))
+                    parsed.add(NativeRoomSeat(number=seat.optInt("number",index+1),occupied=seat.optBoolean("isOccupied",user != null),locked=seat.optBoolean("isLocked",false),muted=seat.optBoolean("isMuted",false),speaking=seat.optBoolean("isSpeaking",false),userName=if (user == null) "" else user.optString("name","User"),userImage=if (user == null) "" else user.optString("image",user.optString("dp","")),accountId=if (user == null) "" else user.optString("accountId",user.optString("userId","")),gifSrc=gif?.optString("src","") ?: "",gifTimestamp=gif?.optLong("timestamp",0L) ?: 0L))
                 }
                 mainHandler.post {
                     val byNumber = parsed.associateBy { it.number }
-                    for (index in seats.indices) {
-                        val number = seats[index].number
-                        seats[index] = byNumber[number] ?: NativeRoomSeat(number=number)
-                    }
+                    for (index in seats.indices) { val number = seats[index].number; seats[index] = byNumber[number] ?: NativeRoomSeat(number=number) }
                     parsed.filter { it.number !in seats.map(NativeRoomSeat::number) }.forEach { seats.add(it) }
                 }
             }
         }
-        
         var joinMessageSent = false
         val connectListener = Emitter.Listener {
-            val joinPayload = JSONObject()
-                .put("roomId",roomId)
-                .put("userId",currentUser.uid.ifBlank{currentUser.id.ifBlank{accountId}})
-                .put("accountId",accountId)
-                .put("roomOwnerId",roomOwner.uid.ifBlank{roomOwner.id.ifBlank{roomOwner.accountId.ifBlank{roomId}}})
-                .put("name",currentUser.name)
-                .put("dp",currentUser.image)
+            val joinPayload = JSONObject().put("roomId",roomId).put("userId",currentUser.uid.ifBlank{currentUser.id.ifBlank{accountId}}).put("accountId",accountId).put("roomOwnerId",roomOwner.uid.ifBlank{roomOwner.id.ifBlank{roomOwner.accountId.ifBlank{roomId}}}).put("name",currentUser.name).put("dp",currentUser.image)
             roomSocket.emit("room_join",joinPayload)
-            
             if (!joinMessageSent && accountId != "guest") {
                 joinMessageSent = true
                 val joinCreatedAt = System.currentTimeMillis()
                 val joinId = "$accountId-$joinCreatedAt"
                 val joinName = currentUser.name.ifBlank { "User" }
                 val joinImage = currentUser.image.ifBlank { "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/default-avatar.png" }
-                val joinMessage = JSONObject()
-                    .put("id",joinId)
-                    .put("roomId",roomId)
-                    .put("senderId",accountId)
-                    .put("senderAccountId",accountId)
-                    .put("senderName",joinName)
-                    .put("senderAvatar",joinImage)
-                    .put("text","Enter the Room")
-                    .put("type","join")
-                    .put("createdAt",joinCreatedAt)
+                val joinMessage = JSONObject().put("id",joinId).put("roomId",roomId).put("senderId",accountId).put("senderAccountId",accountId).put("senderName",joinName).put("senderAvatar",joinImage).put("text","Enter the Room").put("type","join").put("createdAt",joinCreatedAt)
                 val nativeJoin = NativeRoomMessage(joinId,"Enter the Room",joinName,joinImage,accountId,joinCreatedAt,"join")
                 mainHandler.post {
                     if (messages.none { it.id == joinId }) messages.add(nativeJoin)
-                    if (entryToasts.none { it.id == joinId }) {
-                        entryToasts.add(NativeEntryToast(joinId,joinName,joinImage))
-                        mainHandler.postDelayed({ entryToasts.removeAll { it.id == joinId } },4000)
-                    }
+                    if (entryToasts.none { it.id == joinId }) { entryToasts.add(NativeEntryToast(joinId,joinName,joinImage)); mainHandler.postDelayed({ entryToasts.removeAll { it.id == joinId } },4000) }
                 }
                 roomSocket.emit("room_message",joinMessage)
             }
             roomSocket.emit("room_presence_request",JSONObject().put("roomId",roomId))
             roomSocket.emit("room_seats_request",JSONObject().put("roomId",roomId))
         }
-        
         roomSocket.on("room_presence",presenceListener)
         roomSocket.on("room_message",messageListener)
         roomSocket.on("room_chat_cleared",clearedListener)
         roomSocket.on("room_seats",seatListener)
         roomSocket.on(Socket.EVENT_CONNECT,connectListener)
         roomSocket.connect()
-        
         onDispose {
             if (!keepingRoomForMini) roomSocket.emit("room_leave",JSONObject().put("roomId",roomId).put("userId",accountId).put("accountId",accountId))
             roomSocket.off("room_presence",presenceListener)
@@ -422,81 +440,190 @@ fun RoomPage(
     }
 
     Box(Modifier.fillMaxSize().background(Color.Black)){
-        JitsiRoomAudio(
-            roomId = roomId,
-            userName = currentUser.name,
-            canSpeak = seats.any { it.occupied && it.accountId == accountId && !it.muted },
-            onSpeakingChanged = { localVoiceSpeaking = it }
-        )
+        JitsiRoomAudio(roomId=roomId,userName=currentUser.name,canSpeak=seats.any { it.occupied && it.accountId == accountId && !it.muted },onSpeakingChanged={localVoiceSpeaking=it})
         AsyncImage(model="https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/1784875884052~2.jpg",contentDescription="Room theme background",modifier=Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
 
-        // TOP ROW: Trophy (SAME position) + Music Pill beside it (when minimized)
-        Row(
-            modifier = Modifier.align(Alignment.TopStart).padding(top = 84.dp, start = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            // Trophy — SAME as original
-            Row(
-                modifier = Modifier
-                    .height(22.dp)
-                    .background(Brush.horizontalGradient(listOf(Color(0xE6242B35), Color(0x99242B35), Color.Transparent)))
-                    .clickable { showInfo = true }
-                    .padding(start = 12.dp, end = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                TransparentGreenImage(
-                    url = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/1788258883971~2.jpg",
-                    modifier = Modifier.size(16.dp)
-                )
+        // TOP ROW: Trophy + Music Pill
+        Row(modifier = Modifier.align(Alignment.TopStart).padding(top = 84.dp, start = 4.dp),verticalAlignment = Alignment.CenterVertically,horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(modifier = Modifier.height(22.dp).background(Brush.horizontalGradient(listOf(Color(0xE6242B35),Color(0x99242B35),Color.Transparent))).clickable { showInfo = true }.padding(start = 12.dp, end = 12.dp),verticalAlignment = Alignment.CenterVertically) {
+                TransparentGreenImage(url = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/1788258883971~2.jpg",modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(6.dp))
                 Text("0", color = Color(0xFFEEF3A3), fontSize = 12.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, letterSpacing = 0.1.sp)
                 Icon(Icons.Default.ChevronRight, null, tint = Color(0xFFEEF3A3), modifier = Modifier.padding(start = 4.dp).size(10.dp))
             }
-
-            // Music Pill — only when minimized
             if (musicControllerMinimized && miniMusicTrack != null) {
-                val pillRotation = rememberInfiniteTransition(label = "musicPillRotation")
-                    .animateFloat(
-                        initialValue = 0f,
-                        targetValue = 360f,
-                        animationSpec = infiniteRepeatable(tween(4000, easing = LinearEasing), RepeatMode.Restart),
-                        label = "musicPillAngle"
-                    )
-                Row(
-                    modifier = Modifier
-                        .height(26.dp)
-                        .clip(RoundedCornerShape(50))
-                        .background(Color.Black.copy(alpha = 0.30f))
-                        .clickable { musicControllerMinimized = false }
-                        .padding(start = 2.dp, end = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    AsyncImage(
-                        model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20260815_133309.png",
-                        contentDescription = "Music",
-                        modifier = Modifier.size(22.dp).graphicsLayer { rotationZ = if (isMusicPlaying) pillRotation.value else 0f },
-                        contentScale = ContentScale.Fit
-                    )
-                    Text(
-                        text = miniMusicTrack?.name.orEmpty(),
-                        color = Color.White,
-                        fontSize = 11.sp,
-                        fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Clip,
-                        modifier = Modifier.widthIn(max = 68.dp).basicMarquee(iterations = Int.MAX_VALUE)
-                    )
+                val pillRotation = rememberInfiniteTransition(label = "musicPillRotation").animateFloat(initialValue = 0f,targetValue = 360f,animationSpec = infiniteRepeatable(tween(4000, easing = LinearEasing), RepeatMode.Restart),label = "musicPillAngle")
+                Row(modifier = Modifier.height(26.dp).clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha = 0.30f)).clickable { musicControllerMinimized = false }.padding(start = 2.dp, end = 10.dp),verticalAlignment = Alignment.CenterVertically,horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    AsyncImage(model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20260815_133309.png",contentDescription = "Music",modifier = Modifier.size(22.dp).graphicsLayer { rotationZ = if (isMusicPlaying) pillRotation.value else 0f },contentScale = ContentScale.Fit)
+                    Text(text = miniMusicTrack?.name.orEmpty(),color = Color.White,fontSize = 11.sp,fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,maxLines = 1,overflow = TextOverflow.Clip,modifier = Modifier.widthIn(max = 68.dp).basicMarquee(iterations = Int.MAX_VALUE))
                 }
             }
         }
 
-        // FULL MUSIC CONTROLLER CARD
+        Column(Modifier.fillMaxSize().imePadding()){
+            Row(Modifier.fillMaxWidth().padding(top=40.dp,start=0.dp,end=8.dp),verticalAlignment=Alignment.CenterVertically){ 
+                Row(modifier = Modifier.height(44.dp).clip(RoundedCornerShape(topEnd = 50.dp, bottomEnd = 50.dp)).background(Color.Black.copy(alpha = 0.3f)).clickable { showInfo = true }.padding(start = 4.dp, end = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    AsyncImage(model = roomImage,contentDescription = "Room profile",modifier = Modifier.size(44.dp).clip(RoundedCornerShape(8.dp)),contentScale = ContentScale.Crop)
+                    Column(Modifier.padding(start = 8.dp), verticalArrangement = Arrangement.Center) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(text = roomName,color = Color.White,fontSize = 13.sp,fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,maxLines = 1,modifier = Modifier.widthIn(max = 85.dp).basicMarquee(iterations = Int.MAX_VALUE),overflow = TextOverflow.Clip)
+                            Text(roomCountryFlag(roomOwner.country), color = Color.White, fontSize = 13.sp)
+                            if (accountId != roomOwner.accountId.ifBlank { roomOwner.id }) {
+                                Box(Modifier.size(20.dp).clip(CircleShape).background(Color(0xFF3B82F6)).clickable { followed = !followed; onFollowToggle(roomId, followed) }, contentAlignment = Alignment.Center) {
+                                    Icon(imageVector = if(followed) Icons.Default.Check else Icons.Default.Add,contentDescription = "Follow",tint = Color.White,modifier = Modifier.size(14.dp))
+                                }
+                            }
+                        }
+                        Text("ID:" + roomOwner.accountId.ifBlank { roomOwner.id.ifBlank { roomId } }, color = Color.White.copy(alpha = 0.9f), fontSize = 10.sp, modifier = Modifier.offset(y = (-3).dp))
+                    }
+                }
+                Spacer(Modifier.weight(1f))
+                Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){
+                    Row(modifier=Modifier.height(32.dp).clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha=.30f)).clickable{showActiveUsers=true}.padding(horizontal=12.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){
+                        Image(painterResource(R.drawable.ic_hurry_people),contentDescription="Active users",modifier=Modifier.size(16.dp))
+                        Text(backendRoomUsers.size.toString(),color=Color.White,fontSize=12.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold)
+                    }
+                    if(accountId==roomOwner.accountId.ifBlank{roomOwner.id}) {
+                        Box(Modifier.size(32.dp).clip(CircleShape).background(Color.Black.copy(alpha=.30f)).clickable{showSettings=true},contentAlignment=Alignment.Center){Image(painterResource(R.drawable.ic_hurry_settings),contentDescription="Room settings",modifier=Modifier.size(18.dp))}
+                    }
+                    Box(Modifier.size(32.dp).clip(CircleShape).background(Color.Black.copy(alpha=.30f)).clickable{showExitMenu=true},contentAlignment=Alignment.Center){Image(painterResource(R.drawable.ic_hurry_power),contentDescription="Exit room",modifier=Modifier.size(18.dp))}
+                }
+            }
+            
+            Column(Modifier.fillMaxWidth().padding(horizontal=10.dp).padding(top=44.dp, bottom=8.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                seats.chunked(5).forEach { rowSeats ->
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.SpaceBetween) {
+                        rowSeats.forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, isSpeaking = seat.speaking || (seat.accountId == accountId && localVoiceSpeaking)) { selectedSeat = seat.number; showSeatSheet = true } }
+                    }
+                }
+            }
+
+            val chatListState = androidx.compose.foundation.lazy.rememberLazyListState()
+            LaunchedEffect(messages.size, imeVisible) { if (messages.isNotEmpty()) chatListState.animateScrollToItem(messages.lastIndex) }
+            
+            LazyColumn(state=chatListState,modifier=Modifier.fillMaxWidth().weight(1f).padding(horizontal=10.dp),contentPadding=PaddingValues(bottom=8.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
+                if (showOfficialAnnouncement) {
+                    item {
+                        Column(Modifier.fillMaxWidth().padding(start=4.dp, top=8.dp, end=82.dp, bottom=2.dp)) {
+                            Column(Modifier.fillMaxWidth(.92f).clip(RoundedCornerShape(8.dp)).background(Color.Black.copy(alpha=.30f)).padding(horizontal=14.dp,vertical=12.dp)) {
+                                Text("Official announcement: Welcome to Zyora. Any content related to porn, fraud, or fake official accounts will result in a ban!",color=Color(0xFFE2C67D),fontSize=13.sp,lineHeight=16.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Medium)
+                            }
+                        }
+                    }
+                } else if (clearedBy.isNotBlank()) {
+                    item {
+                        Column(Modifier.fillMaxWidth().padding(start=4.dp, top=8.dp, end=82.dp, bottom=2.dp)) {
+                            Column(Modifier.fillMaxWidth(.92f).clip(RoundedCornerShape(8.dp)).background(Color.Black.copy(alpha=.30f)).padding(horizontal=14.dp,vertical=12.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) { SystemBellIcon(modifier = Modifier.size(24.dp)); Text("System", color = Color.Gray, fontSize = 12.sp) }
+                                Spacer(Modifier.height(4.dp))
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(clearedBy, color = Color(0xFFE2C67D), fontSize = 13.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
+                                    Text(" Cleared Chat messages", color = Color.White, fontSize = 13.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
+                                }
+                            }
+                        }
+                    }
+                }
+                if(announcement.isNotBlank()) {
+                    item {
+                        Column(Modifier.fillMaxWidth().padding(start=4.dp, end=82.dp, bottom=2.dp)) {
+                            Column(Modifier.fillMaxWidth(.92f).clip(RoundedCornerShape(8.dp)).background(Color.Black.copy(alpha=.30f)).padding(horizontal=14.dp,vertical=12.dp)) {
+                                Text("ANNOUNCEMENT: $announcement",color=Color(0xFFE2C67D),fontSize=13.sp,lineHeight=16.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Medium)
+                            }
+                        }
+                    }
+                }
+                items(messages,key={it.id}){message ->
+                    if(message.type=="join") {
+                        Column(Modifier.padding(vertical=2.dp).wrapContentWidth().clip(RoundedCornerShape(8.dp)).background(Color.Black.copy(alpha=.30f)).padding(horizontal=12.dp,vertical=4.dp),horizontalAlignment=Alignment.Start,verticalArrangement=Arrangement.spacedBy(2.dp)){
+                            Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                                AsyncImage(model=message.senderImage.ifBlank{"https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/default-avatar.png"},contentDescription=message.sender,modifier=Modifier.size(24.dp).clip(CircleShape),contentScale=ContentScale.Crop)
+                                Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){
+                                    Text(message.sender,color=Color.White.copy(alpha=.95f),fontSize=12.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold)
+                                    androidx.compose.material3.Icon(imageVector=Icons.Filled.Home,contentDescription=null,modifier=Modifier.size(12.dp),tint=Color.White)
+                                }
+                            }
+                            Text("Enter the Room",color=Color.White,fontSize=12.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Medium, modifier=Modifier.padding(start=2.dp))
+                        }
+                    } else NativeMessage(message)
+                }
+            }
+            
+            if(showChat) {
+                Row(Modifier.fillMaxWidth().background(Color.White).padding(horizontal=10.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                    IconButton(onClick={showEmoji=!showEmoji},modifier=Modifier.size(38.dp)){Image(painterResource(R.drawable.ic_hurry_chat_image),contentDescription="Attach image",modifier=Modifier.size(26.dp))}
+                    androidx.compose.foundation.text.BasicTextField(value=input,onValueChange={input=it},modifier=Modifier.weight(1f).focusRequester(chatFocusRequester).padding(vertical=10.dp),singleLine=true,textStyle=androidx.compose.ui.text.TextStyle(color=Color.Black,fontSize=15.sp),cursorBrush=SolidColor(Color.Blue),decorationBox={innerTextField -> Box { if(input.isEmpty()) Text("Type a message...",color=Color.Gray,fontSize=15.sp); innerTextField() }})
+                    IconButton(onClick={if(input.isNotBlank()){messages.add(NativeRoomMessage(System.currentTimeMillis().toString(),input,currentUser.name,currentUser.image,accountId));input=""}},modifier=Modifier.size(38.dp)){Icon(Icons.Default.Send,null,tint=Color(0xFF3B82F6),modifier=Modifier.size(26.dp))}
+                }
+            } else {
+                Row(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal=8.dp, vertical=6.dp).height(44.dp),verticalAlignment=Alignment.CenterVertically){
+                    Row(Modifier.weight(1f),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){
+                        RoomFooterButton(onClick={showChat=true},description="Say Hi Chat",icon=R.drawable.ic_hurry_chat)
+                        val selfSeatIndex=seats.indexOfFirst{it.occupied && it.accountId==accountId}
+                        if(selfSeatIndex>=0) {
+                            val seat = seats[selfSeatIndex]
+                            Box(Modifier.size(42.dp).clip(CircleShape).background(Color.Black.copy(alpha=.30f)).clickable{seats[selfSeatIndex]=seat.copy(muted=!seat.muted)},contentAlignment=Alignment.Center) {
+                                Icon(imageVector = if (seat.muted) Icons.Default.MicOff else Icons.Default.Mic,contentDescription = "Microphone",tint = Color.White,modifier = Modifier.size(28.dp))
+                            }
+                        }
+                        if(selfSeatIndex>=0) RoomFooterButton(onClick={showEmoji=true},description="Emoji",icon=R.drawable.ic_hurry_emoji)
+                    }
+                    // ✅ FIX: Box width kept center, size scaled up via requiredSize(145.dp) with unbounded to not disturb row constraints
+                    Box(Modifier.width(68.dp).wrapContentSize(unbounded = true),contentAlignment=Alignment.Center){
+                        AsyncImage(model="https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/file_0000000019c4821180028eebae10dbfc.png",contentDescription="Gift",modifier=Modifier.requiredSize(145.dp).clickable{showGift=true},contentScale=ContentScale.Fit)
+                    }
+                    Row(Modifier.weight(1f),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp,Alignment.End)){
+                        RoomFooterButton(onClick={showMessageSheet=true},description="Message Box Menu",icon=R.drawable.ic_hurry_mail)
+                        RoomFooterButton(onClick={showMenu=true},description="Apps Menu",icon=R.drawable.ic_hurry_apps)
+                    }
+                }
+            }
+        }
+        
+        val sideBannerImages = listOf(
+            "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261018_165235.png",
+            "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/1788339681679~2.jpg"
+        )
+        val sideBannerPager = androidx.compose.foundation.pager.rememberPagerState(pageCount = { sideBannerImages.size })
+        LaunchedEffect(Unit) { while (true) { kotlinx.coroutines.delay(3000); if (!sideBannerPager.isScrollInProgress) sideBannerPager.animateScrollToPage((sideBannerPager.currentPage + 1) % sideBannerImages.size) } }
+
+        Column(modifier=Modifier.align(Alignment.BottomEnd).padding(end=10.dp, bottom=68.dp).heightIn(max=330.dp).verticalScroll(rememberScrollState()),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(2.dp)) {
+            Column(horizontalAlignment=Alignment.CenterHorizontally) {
+                androidx.compose.foundation.pager.HorizontalPager(state = sideBannerPager,modifier = Modifier.size(60.dp, 84.dp).clip(RoundedCornerShape(8.dp))) { page ->
+                    AsyncImage(model = sideBannerImages[page],contentDescription = "Room side banner",modifier = Modifier.fillMaxSize(),contentScale = ContentScale.Crop)
+                }
+                Row(horizontalArrangement=Arrangement.spacedBy(2.dp), verticalAlignment=Alignment.CenterVertically, modifier=Modifier.padding(top=4.dp)) {
+                    repeat(sideBannerImages.size) { i ->
+                        val isActive = sideBannerPager.currentPage == i
+                        Box(Modifier.size(if (isActive) 6.dp else 4.dp).clip(CircleShape).background(if (isActive) Color.White else Color.White.copy(alpha=.4f)))
+                    }
+                }
+            }
+            TransparentGreenImage(url="https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG-20260902-WA0066.jpg",modifier=Modifier.size(63.dp).clickable { showRoomTask=true })
+            AsyncImage(model="https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/file_000000002a8c81fab8232bebeeeb45cc.png",contentDescription="Games",modifier=Modifier.size(56.dp).clickable { showGames=true },contentScale=ContentScale.Fit)
+        }
+        
+        Column(Modifier.align(Alignment.BottomStart).padding(bottom=LocalConfiguration.current.screenHeightDp.dp*0.33f,start=8.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
+            entryToasts.toList().forEach { toast ->
+                key(toast.id) {
+                    val visibleState = remember { androidx.compose.animation.core.MutableTransitionState(false).apply { targetState = true } }
+                    AnimatedVisibility(visibleState = visibleState, enter=slideInHorizontally(initialOffsetX={ _ -> screenWidthPx + 100 }, animationSpec = tween(durationMillis = 800, easing = LinearOutSlowInEasing)) + fadeIn(animationSpec = tween(800))) {
+                        Row(Modifier.clip(RoundedCornerShape(topStart=50.dp,bottomStart=50.dp,topEnd=0.dp,bottomEnd=0.dp)).background(Brush.horizontalGradient(listOf(Color(0xF52563EB),Color(0xF52563EB),Color.Transparent))).padding(start=6.dp,end=10.dp,top=2.dp,bottom=2.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+                            AsyncImage(model=toast.image.ifBlank{"https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/default-avatar.png"},contentDescription=toast.name,modifier=Modifier.size(20.dp).clip(CircleShape),contentScale=ContentScale.Crop)
+                            Text(toast.name,color=Color.White,fontSize=12.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold,maxLines=1,modifier=Modifier.widthIn(max=95.dp))
+                            Text("Enter the Room",color=Color.White,fontSize=11.sp,maxLines=1)
+                        }
+                    }
+                }
+            }
+        }
+
+        // ==================== MUSIC CONTROLLER CARD ====================
         if (miniMusicTrack != null && !musicControllerMinimized) {
             val track = miniMusicTrack!!
             Box(
                 modifier = Modifier.align(Alignment.BottomCenter)
+                    .zIndex(10f)
                     .padding(horizontal = 16.dp)
                     .padding(bottom = (configuration.screenHeightDp * 0.08f).dp)
                     .fillMaxWidth()
@@ -511,13 +638,7 @@ fun RoomPage(
                             Modifier.align(Alignment.TopStart)
                                 .size(24.dp).clip(CircleShape)
                                 .background(Color.White.copy(alpha = 0.10f))
-                                .clickable {
-                                    miniMusicTrack = null
-                                    isMusicPlaying = false
-                                    musicPlaylist = emptyList()
-                                    musicCurrentTime = 0f
-                                    musicDuration = 0f
-                                },
+                                .clickable { musicClose() },
                             contentAlignment = Alignment.Center
                         ) { Icon(Icons.Default.Close, "Close", tint = Color.White, modifier = Modifier.size(14.dp)) }
 
@@ -543,17 +664,15 @@ fun RoomPage(
 
                     Spacer(Modifier.height(8.dp))
 
-                    Slider(
-                        value = musicCurrentTime,
-                        onValueChange = { musicCurrentTime = it },
-                        valueRange = 0f..(if (musicDuration > 0f) musicDuration else 1f),
-                        colors = SliderDefaults.colors(
-                            thumbColor = Color(0xFF3B82F6),
-                            activeTrackColor = Color(0xFF3B82F6),
-                            inactiveTrackColor = Color.White.copy(alpha = 0.3f)
-                        ),
-                        modifier = Modifier.fillMaxWidth().height(20.dp)
+                    val progressFraction = if (musicDuration > 0f) (musicCurrentTime / musicDuration).coerceIn(0f, 1f) else 0f
+                    ThickBar(
+                        progress = progressFraction,
+                        height = 6.dp,
+                        activeColor = Color(0xFF3B82F6),
+                        inactiveColor = Color.White.copy(alpha = 0.15f),
+                        modifier = Modifier.fillMaxWidth()
                     )
+                    Spacer(Modifier.height(2.dp))
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Text(formatMusicTime(musicCurrentTime), color = Color.White.copy(alpha = 0.6f), fontSize = 9.sp)
                         Text(formatMusicTime(musicDuration), color = Color.White.copy(alpha = 0.6f), fontSize = 9.sp)
@@ -562,24 +681,14 @@ fun RoomPage(
                     Spacer(Modifier.height(4.dp))
 
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(
-                            onClick = {
-                                if (musicPlaylist.isNotEmpty()) {
-                                    currentTrackIndex = (currentTrackIndex - 1 + musicPlaylist.size) % musicPlaylist.size
-                                    miniMusicTrack = musicPlaylist[currentTrackIndex]
-                                    musicCurrentTime = 0f
-                                    isMusicPlaying = true
-                                }
-                            },
-                            modifier = Modifier.size(36.dp)
-                        ) { Icon(Icons.Default.SkipPrevious, "Prev", tint = Color.White, modifier = Modifier.size(22.dp)) }
-
+                        IconButton(onClick = { musicPrev() }, modifier = Modifier.size(36.dp)) {
+                            Icon(Icons.Default.SkipPrevious, "Prev", tint = Color.White, modifier = Modifier.size(22.dp))
+                        }
                         Spacer(Modifier.width(16.dp))
-
                         Box(
                             Modifier.size(44.dp).clip(CircleShape)
                                 .background(Color.White.copy(alpha = 0.10f))
-                                .clickable { isMusicPlaying = !isMusicPlaying },
+                                .clickable { musicPlayPause() },
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
@@ -589,20 +698,10 @@ fun RoomPage(
                                 modifier = Modifier.size(26.dp)
                             )
                         }
-
                         Spacer(Modifier.width(16.dp))
-
-                        IconButton(
-                            onClick = {
-                                if (musicPlaylist.isNotEmpty()) {
-                                    currentTrackIndex = (currentTrackIndex + 1) % musicPlaylist.size
-                                    miniMusicTrack = musicPlaylist[currentTrackIndex]
-                                    musicCurrentTime = 0f
-                                    isMusicPlaying = true
-                                }
-                            },
-                            modifier = Modifier.size(36.dp)
-                        ) { Icon(Icons.Default.SkipNext, "Next", tint = Color.White, modifier = Modifier.size(22.dp)) }
+                        IconButton(onClick = { musicNext() }, modifier = Modifier.size(36.dp)) {
+                            Icon(Icons.Default.SkipNext, "Next", tint = Color.White, modifier = Modifier.size(22.dp))
+                        }
                     }
 
                     Spacer(Modifier.height(4.dp))
@@ -610,16 +709,12 @@ fun RoomPage(
                     Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.VolumeUp, "Volume", tint = Color.White, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(8.dp))
-                        Slider(
-                            value = musicVolume,
-                            onValueChange = { musicVolume = it },
-                            valueRange = 0f..1f,
-                            colors = SliderDefaults.colors(
-                                thumbColor = Color(0xFF3B82F6),
-                                activeTrackColor = Color(0xFF3B82F6),
-                                inactiveTrackColor = Color.White.copy(alpha = 0.3f)
-                            ),
-                            modifier = Modifier.weight(1f).height(20.dp)
+                        ThickBar(
+                            progress = musicVolume,
+                            height = 6.dp,
+                            activeColor = Color(0xFF3B82F6),
+                            inactiveColor = Color.White.copy(alpha = 0.15f),
+                            modifier = Modifier.weight(1f)
                         )
                         Spacer(Modifier.width(8.dp))
                         Text(
@@ -634,322 +729,6 @@ fun RoomPage(
                 }
             }
         }
-
-        Column(Modifier.fillMaxSize().imePadding()){
-            
-            Row(Modifier.fillMaxWidth().padding(top=40.dp,start=0.dp,end=8.dp),verticalAlignment=Alignment.CenterVertically){ 
-                
-                Row(
-                    modifier = Modifier
-                        .height(44.dp) 
-                        .clip(RoundedCornerShape(topEnd = 50.dp, bottomEnd = 50.dp))
-                        .background(Color.Black.copy(alpha = 0.3f))
-                        .clickable { showInfo = true }
-                        .padding(start = 4.dp, end = 16.dp), 
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    AsyncImage(
-                        model = roomImage,
-                        contentDescription = "Room profile",
-                        modifier = Modifier.size(44.dp).clip(RoundedCornerShape(8.dp)), 
-                        contentScale = ContentScale.Crop
-                    )
-                    Column(Modifier.padding(start = 8.dp), verticalArrangement = Arrangement.Center) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text(
-                                text = roomName,
-                                color = Color.White,
-                                fontSize = 13.sp,
-                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                                maxLines = 1,
-                                modifier = Modifier
-                                    .widthIn(max = 85.dp)
-                                    .basicMarquee(iterations = Int.MAX_VALUE),
-                                overflow = TextOverflow.Clip
-                            )
-                            Text(roomCountryFlag(roomOwner.country), color = Color.White, fontSize = 13.sp)
-                            if (accountId != roomOwner.accountId.ifBlank { roomOwner.id }) {
-                                Box(
-                                    Modifier
-                                        .size(20.dp)
-                                        .clip(CircleShape)
-                                        .background(Color(0xFF3B82F6)) 
-                                        .clickable { followed = !followed; onFollowToggle(roomId, followed) },
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = if(followed) Icons.Default.Check else Icons.Default.Add,
-                                        contentDescription = "Follow",
-                                        tint = Color.White,
-                                        modifier = Modifier.size(14.dp)
-                                    )
-                                }
-                            }
-                        }
-                        Text("ID:" + roomOwner.accountId.ifBlank { roomOwner.id.ifBlank { roomId } }, color = Color.White.copy(alpha = 0.9f), fontSize = 10.sp, modifier = Modifier.offset(y = (-3).dp))
-                    }
-                }
-
-                Spacer(Modifier.weight(1f))
-
-                Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){
-                    Row(
-                        modifier=Modifier.height(32.dp).clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha=.30f)).clickable{showActiveUsers=true}.padding(horizontal=12.dp),
-                        verticalAlignment=Alignment.CenterVertically,
-                        horizontalArrangement=Arrangement.spacedBy(4.dp) 
-                    ){
-                        Image(painterResource(R.drawable.ic_hurry_people),contentDescription="Active users",modifier=Modifier.size(16.dp))
-                        Text(backendRoomUsers.size.toString(),color=Color.White,fontSize=12.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold)
-                    }
-                    if(accountId==roomOwner.accountId.ifBlank{roomOwner.id}) {
-                        Box(
-                            Modifier.size(32.dp).clip(CircleShape).background(Color.Black.copy(alpha=.30f)).clickable{showSettings=true},
-                            contentAlignment=Alignment.Center
-                        ){Image(painterResource(R.drawable.ic_hurry_settings),contentDescription="Room settings",modifier=Modifier.size(18.dp))}
-                    }
-                    Box(
-                        Modifier.size(32.dp).clip(CircleShape).background(Color.Black.copy(alpha=.30f)).clickable{showExitMenu=true},
-                        contentAlignment=Alignment.Center
-                    ){Image(painterResource(R.drawable.ic_hurry_power),contentDescription="Exit room",modifier=Modifier.size(18.dp))}
-                }
-            }
-            
-            Column(
-                Modifier.fillMaxWidth().padding(horizontal=10.dp).padding(top=44.dp, bottom=8.dp),
-                verticalArrangement=Arrangement.spacedBy(10.dp)
-            ) {
-                seats.chunked(5).forEach { rowSeats ->
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.SpaceBetween) {
-                        rowSeats.forEach { seat ->
-                            NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, isSpeaking = seat.speaking || (seat.accountId == accountId && localVoiceSpeaking)) {
-                                selectedSeat = seat.number
-                                showSeatSheet = true
-                            }
-                        }
-                    }
-                }
-            }
-
-            val chatListState = androidx.compose.foundation.lazy.rememberLazyListState()
-            
-            LaunchedEffect(messages.size, imeVisible) {
-                if (messages.isNotEmpty()) {
-                    chatListState.animateScrollToItem(messages.lastIndex)
-                }
-            }
-            
-            LazyColumn(
-                state=chatListState,
-                modifier=Modifier.fillMaxWidth().weight(1f).padding(horizontal=10.dp),
-                contentPadding=PaddingValues(bottom=8.dp),
-                verticalArrangement=Arrangement.spacedBy(8.dp)
-            ){
-                if (showOfficialAnnouncement) {
-                    item {
-                        Column(Modifier.fillMaxWidth().padding(start=4.dp, top=8.dp, end=82.dp, bottom=2.dp)) {
-                            Column(Modifier.fillMaxWidth(.92f).clip(RoundedCornerShape(8.dp)).background(Color.Black.copy(alpha=.30f)).padding(horizontal=14.dp,vertical=12.dp)) {
-                                Text("Official announcement: Welcome to Zyora. Any content related to porn, fraud, or fake official accounts will result in a ban!",color=Color(0xFFE2C67D),fontSize=13.sp,lineHeight=16.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Medium)
-                            }
-                        }
-                    }
-                } else if (clearedBy.isNotBlank()) {
-                    item {
-                        Column(Modifier.fillMaxWidth().padding(start=4.dp, top=8.dp, end=82.dp, bottom=2.dp)) {
-                            Column(Modifier.fillMaxWidth(.92f).clip(RoundedCornerShape(8.dp)).background(Color.Black.copy(alpha=.30f)).padding(horizontal=14.dp,vertical=12.dp)) {
-                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    SystemBellIcon(modifier = Modifier.size(24.dp)) 
-                                    Text("System", color = Color.Gray, fontSize = 12.sp)
-                                }
-                                Spacer(Modifier.height(4.dp))
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(clearedBy, color = Color(0xFFE2C67D), fontSize = 13.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
-                                    Text(" Cleared Chat messages", color = Color.White, fontSize = 13.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium) 
-                                }
-                            }
-                        }
-                    }
-                }
-                
-                if(announcement.isNotBlank()) {
-                    item {
-                        Column(Modifier.fillMaxWidth().padding(start=4.dp, end=82.dp, bottom=2.dp)) {
-                            Column(Modifier.fillMaxWidth(.92f).clip(RoundedCornerShape(8.dp)).background(Color.Black.copy(alpha=.30f)).padding(horizontal=14.dp,vertical=12.dp)) {
-                                Text("ANNOUNCEMENT: $announcement",color=Color(0xFFE2C67D),fontSize=13.sp,lineHeight=16.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Medium)
-                            }
-                        }
-                    }
-                }
-
-                items(messages,key={it.id}){message ->
-                    if(message.type=="join") {
-                        Column(
-                            Modifier.padding(vertical=2.dp)
-                                .wrapContentWidth()
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(Color.Black.copy(alpha=.30f))
-                                .padding(horizontal=12.dp,vertical=4.dp),
-                            horizontalAlignment=Alignment.Start,
-                            verticalArrangement=Arrangement.spacedBy(2.dp)
-                        ){
-                            Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
-                                AsyncImage(model=message.senderImage.ifBlank{"https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/default-avatar.png"},contentDescription=message.sender,modifier=Modifier.size(24.dp).clip(CircleShape),contentScale=ContentScale.Crop)
-                                Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){
-                                    Text(message.sender,color=Color.White.copy(alpha=.95f),fontSize=12.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold)
-                                    androidx.compose.material3.Icon(imageVector=Icons.Filled.Home,contentDescription=null,modifier=Modifier.size(12.dp),tint=Color.White)
-                                }
-                            }
-                            Text("Enter the Room",color=Color.White,fontSize=12.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Medium, modifier=Modifier.padding(start=2.dp))
-                        }
-                    } else NativeMessage(message)
-                }
-            }
-            
-            if(showChat) {
-                Row(Modifier.fillMaxWidth().background(Color.White).padding(horizontal=10.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
-                    IconButton(onClick={showEmoji=!showEmoji},modifier=Modifier.size(38.dp)){Image(painterResource(R.drawable.ic_hurry_chat_image),contentDescription="Attach image",modifier=Modifier.size(26.dp))}
-                    androidx.compose.foundation.text.BasicTextField(
-                        value=input,
-                        onValueChange={input=it},
-                        modifier=Modifier.weight(1f).focusRequester(chatFocusRequester).padding(vertical=10.dp),
-                        singleLine=true,
-                        textStyle=androidx.compose.ui.text.TextStyle(color=Color.Black,fontSize=15.sp),
-                        cursorBrush=SolidColor(Color.Blue),
-                        decorationBox={innerTextField -> Box { if(input.isEmpty()) Text("Type a message...",color=Color.Gray,fontSize=15.sp); innerTextField() }}
-                    )
-                    IconButton(onClick={if(input.isNotBlank()){messages.add(NativeRoomMessage(System.currentTimeMillis().toString(),input,currentUser.name,currentUser.image,accountId));input=""}},modifier=Modifier.size(38.dp)){Icon(Icons.Default.Send,null,tint=Color(0xFF3B82F6),modifier=Modifier.size(26.dp))}
-                }
-            } else {
-                Row(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal=8.dp, vertical=6.dp).height(44.dp),verticalAlignment=Alignment.CenterVertically){
-                    Row(Modifier.weight(1f),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){
-                        RoomFooterButton(onClick={showChat=true},description="Say Hi Chat",icon=R.drawable.ic_hurry_chat)
-                        
-                        val selfSeatIndex=seats.indexOfFirst{it.occupied && it.accountId==accountId}
-                        if(selfSeatIndex>=0) {
-                            val seat = seats[selfSeatIndex]
-                            Box(
-                                Modifier.size(42.dp).clip(CircleShape).background(Color.Black.copy(alpha=.30f))
-                                .clickable{seats[selfSeatIndex]=seat.copy(muted=!seat.muted)},
-                                contentAlignment=Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = if (seat.muted) Icons.Default.MicOff else Icons.Default.Mic,
-                                    contentDescription = "Microphone",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(28.dp)
-                                )
-                            }
-                        }
-                        if(selfSeatIndex>=0) RoomFooterButton(onClick={showEmoji=true},description="Emoji",icon=R.drawable.ic_hurry_emoji)
-                    }
-                    
-                    Box(Modifier.size(62.dp),contentAlignment=Alignment.Center){
-                        AsyncImage(model="https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/file_0000000019c4821180028eebae10dbfc.png",contentDescription="Gift",modifier=Modifier.size(125.dp).clickable{showGift=true},contentScale=ContentScale.Fit)
-                    }
-                    
-                    Row(Modifier.weight(1f),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp,Alignment.End)){
-                        RoomFooterButton(onClick={showMessageSheet=true},description="Message Box Menu",icon=R.drawable.ic_hurry_mail)
-                        RoomFooterButton(onClick={showMenu=true},description="Apps Menu",icon=R.drawable.ic_hurry_apps)
-                    }
-                }
-            }
-        }
-        
-        val sideBannerImages = listOf(
-            "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261018_165235.png",
-            "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/1788339681679~2.jpg"
-        )
-        val sideBannerPager = androidx.compose.foundation.pager.rememberPagerState(pageCount = { sideBannerImages.size })
-        
-        LaunchedEffect(Unit) {
-            while (true) {
-                kotlinx.coroutines.delay(3000)
-                if (!sideBannerPager.isScrollInProgress) {
-                    val nextPage = (sideBannerPager.currentPage + 1) % sideBannerImages.size
-                    sideBannerPager.animateScrollToPage(nextPage)
-                }
-            }
-        }
-
-        Column(
-            modifier=Modifier.align(Alignment.BottomEnd)
-                .padding(end=10.dp, bottom=68.dp) 
-                .heightIn(max=330.dp)
-                .verticalScroll(rememberScrollState()),
-            horizontalAlignment=Alignment.CenterHorizontally,
-            verticalArrangement=Arrangement.spacedBy(2.dp)
-        ) {
-            Column(horizontalAlignment=Alignment.CenterHorizontally) {
-                androidx.compose.foundation.pager.HorizontalPager(
-                    state = sideBannerPager,
-                    modifier = Modifier.size(60.dp, 84.dp).clip(RoundedCornerShape(8.dp))
-                ) { page ->
-                    AsyncImage(
-                        model = sideBannerImages[page],
-                        contentDescription = "Room side banner",
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
-                    )
-                }
-                Row(
-                    horizontalArrangement=Arrangement.spacedBy(2.dp), 
-                    verticalAlignment=Alignment.CenterVertically, 
-                    modifier=Modifier.padding(top=4.dp)
-                ) {
-                    repeat(sideBannerImages.size) { i ->
-                        val isActive = sideBannerPager.currentPage == i
-                        Box(
-                            Modifier
-                                .size(if (isActive) 6.dp else 4.dp)
-                                .clip(CircleShape)
-                                .background(if (isActive) Color.White else Color.White.copy(alpha=.4f))
-                        )
-                    }
-                }
-            }
-            
-            TransparentGreenImage(
-                url="https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG-20260902-WA0066.jpg",
-                modifier=Modifier.size(63.dp).clickable { showRoomTask=true }
-            )
-            
-            AsyncImage(
-                model="https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/file_000000002a8c81fab8232bebeeeb45cc.png",
-                contentDescription="Games",
-                modifier=Modifier.size(56.dp).clickable { showGames=true },
-                contentScale=ContentScale.Fit
-            )
-        }
-        
-        Column(
-            Modifier.align(Alignment.BottomStart).padding(bottom=LocalConfiguration.current.screenHeightDp.dp*0.33f,start=8.dp),
-            verticalArrangement=Arrangement.spacedBy(4.dp)
-        ) {
-            entryToasts.toList().forEach { toast ->
-                key(toast.id) {
-                    val visibleState = remember { androidx.compose.animation.core.MutableTransitionState(false).apply { targetState = true } }
-                    
-                    AnimatedVisibility(
-                        visibleState = visibleState,
-                        enter=slideInHorizontally(
-                            initialOffsetX={ fullWidth -> screenWidthPx + fullWidth }, 
-                            animationSpec = tween(durationMillis = 800, easing = LinearOutSlowInEasing)
-                        ) + fadeIn(animationSpec = tween(800))
-                    ) {
-                        Row(
-                            Modifier.clip(RoundedCornerShape(topStart=50.dp,bottomStart=50.dp,topEnd=0.dp,bottomEnd=0.dp))
-                                .background(Brush.horizontalGradient(listOf(Color(0xF52563EB),Color(0xF52563EB),Color.Transparent)))
-                                .padding(start=6.dp,end=10.dp,top=4.dp,bottom=4.dp),
-                            verticalAlignment=Alignment.CenterVertically,
-                            horizontalArrangement=Arrangement.spacedBy(6.dp)
-                        ) {
-                            AsyncImage(model=toast.image.ifBlank{"https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/default-avatar.png"},contentDescription=toast.name,modifier=Modifier.size(24.dp).clip(CircleShape),contentScale=ContentScale.Crop)
-                            Text(toast.name,color=Color.White,fontSize=12.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold,maxLines=1,modifier=Modifier.widthIn(max=95.dp))
-                            Text("Enter the Room",color=Color.White,fontSize=11.sp,maxLines=1)
-                        }
-                    }
-                }
-            }
-        }
         
         if(showExitMenu) RoomExitMenu(
             onKeep={keepingRoomForMini=true;showExitMenu=false;onKeepRoom(roomName,roomImage,roomId)},
@@ -960,7 +739,7 @@ fun RoomPage(
             onClose={showMenu=false},
             onClearChat={
                 messages.clear()
-                showOfficialAnnouncement = false 
+                showOfficialAnnouncement = false
                 val clearerName = currentUser.name.ifBlank { "User" }
                 clearedBy = clearerName
                 roomSocketRef.value?.emit("room_chat_clear",JSONObject().put("roomId",roomId).put("userId",accountId).put("userName",clearerName).put("timestamp",System.currentTimeMillis()))
@@ -975,7 +754,7 @@ fun RoomPage(
                 musicPlaylist = listOf(track)
                 currentTrackIndex = 0
                 musicCurrentTime = 0f
-                musicDuration = 180f
+                musicDuration = if (track.duration > 0) track.duration / 1000f else 180f
                 isMusicPlaying = true
                 musicControllerMinimized = false
             },
@@ -991,127 +770,38 @@ fun RoomPage(
         )
         
         val activeRoomUsers = backendRoomUsers.toList()
-        val roomFollowers = seats.filter { it.occupied && it.accountId.isNotBlank() && it.accountId != roomOwner.accountId && it.accountId != roomOwner.id }
-            .map { RoomInfoFollower(it.accountId,it.userName,it.userImage) }
-            
+        val roomFollowers = seats.filter { it.occupied && it.accountId.isNotBlank() && it.accountId != roomOwner.accountId && it.accountId != roomOwner.id }.map { RoomInfoFollower(it.accountId,it.userName,it.userImage) }
         if(showStore) StorePage(onBack={showStore=false}, initialView=storeInitialView)
-        if(showInfo) RoomInfo(
-            isOpen=true,
-            onClose={showInfo=false},
-            isRoomOwner=accountId==roomOwner.accountId.ifBlank{roomOwner.id},
-            roomOwner=RoomInfoOwner(id=roomOwner.id,uid=roomOwner.uid,accountId=roomOwner.accountId.ifBlank{roomOwner.id},name=roomOwner.name,image=roomOwner.image),
-            roomData=RoomInfoData(roomName,roomImage,announcement,roomId),
-            roomFollowers=roomFollowers,
-            onOpenProfile={ follower -> seats.firstOrNull{it.accountId==follower.accountId}?.let{selectedSeat=it.number};showInfo=false },
-            onCopyId={ id -> clipboard.setText(AnnotatedString(id));copiedId=id },
-            copied=copiedId==roomId
-        )
-        if(showActiveUsers) ActiveUsers(
-            isOpen=true,
-            onClose={showActiveUsers=false},
-            roomUsers=activeRoomUsers,
-            currentUser=ActiveUserNative(accountId,currentUser.name,currentUser.image),
-            roomOwnerId=roomOwner.accountId.ifBlank{roomOwner.id},
-            onOpenProfile={ user -> seats.firstOrNull{it.accountId==user.accountId}?.let{selectedSeat=it.number};showActiveUsers=false },
-            onCopyUserId={ id -> clipboard.setText(AnnotatedString(id));copiedId=id }
-        )
-        if(showSettings) RoomSettingPage(
-            initial = RoomSettingsDataNative(
-                roomName = roomName,
-                roomDp = roomImage,
-                announcement = announcement,
-                isLocked = locked
-            ),
-            roomOwnerId = roomId,
-            currentUserId = accountId,
-            onBack = { showSettings = false },
-            onSave = { saved ->
-                roomName = saved.roomName
-                roomImage = saved.roomDp
-                announcement = saved.announcement
-                locked = saved.isLocked
-                showSettings = false
-            }
-        )
-        if(showGift) GiftPicker(
-            open=true,
-            onClose={showGift=false},
-            seats=seats.toList(),
-            roomId=roomId,
-            currentUserAccountId=accountId,
-            currentUserName=currentUser.name,
-            currentUserImage=currentUser.image,
-            roomUsers=activeRoomUsers
-        )
-        
-        if(showGames) GamesSheet(
-            onClose={showGames=false},
-            onWildParty={showGames=false;showWildParty=true},
-            onFruitParty={showGames=false;showFruitParty=true}
-        )
-        
+        if(showInfo) RoomInfo(isOpen=true,onClose={showInfo=false},isRoomOwner=accountId==roomOwner.accountId.ifBlank{roomOwner.id},roomOwner=RoomInfoOwner(id=roomOwner.id,uid=roomOwner.uid,accountId=roomOwner.accountId.ifBlank{roomOwner.id},name=roomOwner.name,image=roomOwner.image),roomData=RoomInfoData(roomName,roomImage,announcement,roomId),roomFollowers=roomFollowers,onOpenProfile={ follower -> seats.firstOrNull{it.accountId==follower.accountId}?.let{selectedSeat=it.number};showInfo=false },onCopyId={ id -> clipboard.setText(AnnotatedString(id));copiedId=id },copied=copiedId==roomId)
+        if(showActiveUsers) ActiveUsers(isOpen=true,onClose={showActiveUsers=false},roomUsers=activeRoomUsers,currentUser=ActiveUserNative(accountId,currentUser.name,currentUser.image),roomOwnerId=roomOwner.accountId.ifBlank{roomOwner.id},onOpenProfile={ user -> seats.firstOrNull{it.accountId==user.accountId}?.let{selectedSeat=it.number};showActiveUsers=false },onCopyUserId={ id -> clipboard.setText(AnnotatedString(id));copiedId=id })
+        if(showSettings) RoomSettingPage(initial = RoomSettingsDataNative(roomName=roomName,roomDp=roomImage,announcement=announcement,isLocked=locked),roomOwnerId=roomId,currentUserId=accountId,onBack={showSettings=false},onSave={saved->roomName=saved.roomName;roomImage=saved.roomDp;announcement=saved.announcement;locked=saved.isLocked;showSettings=false})
+        if(showGift) GiftPicker(open=true,onClose={showGift=false},seats=seats.toList(),roomId=roomId,currentUserAccountId=accountId,currentUserName=currentUser.name,currentUserImage=currentUser.image,roomUsers=activeRoomUsers)
+        if(showGames) GamesSheet(onClose={showGames=false},onWildParty={showGames=false;showWildParty=true},onFruitParty={showGames=false;showFruitParty=true})
         if(showRoomTask) Roomtask(onBack={showRoomTask=false})
         if(showWildParty) Wildparty(onClose={showWildParty=false},onMinimize={showWildParty=false})
         if(showFruitParty) Fruitparty(onClose={showFruitParty=false},onMinimize={showFruitParty=false})
-        if(showEmoji) EmojiPicker(
-            onClose={showEmoji=false},
-            onSelectEmoji={ sticker ->
-                val seatIndex=seats.indexOfFirst{it.occupied && it.accountId==accountId}
-                if(seatIndex>=0){
-                    val timestamp=System.currentTimeMillis()
-                    val selected=seats[seatIndex]
-                    seats[seatIndex]=selected.copy(gifSrc=sticker.src,gifTimestamp=timestamp)
-                    roomSocketRef.value?.emit(
-                        "room_seat_action",
-                        JSONObject()
-                            .put("roomId",roomId)
-                            .put("userId",accountId)
-                            .put("action","emoji")
-                            .put("seatNumber",selected.number)
-                            .put("user",JSONObject().put("name",currentUser.name.ifBlank{"User"}).put("image",currentUser.image.ifBlank{"https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/default-avatar.png"}).put("accountId",accountId))
-                            .put("src",sticker.src)
-                            .put("timestamp",timestamp)
-                    )
-                    Handler(Looper.getMainLooper()).postDelayed({
-                        if(seats.getOrNull(seatIndex)?.gifTimestamp==timestamp){
-                            seats[seatIndex]=seats[seatIndex].copy(gifSrc="",gifTimestamp=0L)
-                        }
-                    },5000)
-                }
+        if(showEmoji) EmojiPicker(onClose={showEmoji=false},onSelectEmoji={ sticker ->
+            val seatIndex=seats.indexOfFirst{it.occupied && it.accountId==accountId}
+            if(seatIndex>=0){
+                val timestamp=System.currentTimeMillis()
+                val selected=seats[seatIndex]
+                seats[seatIndex]=selected.copy(gifSrc=sticker.src,gifTimestamp=timestamp)
+                roomSocketRef.value?.emit("room_seat_action",JSONObject().put("roomId",roomId).put("userId",accountId).put("action","emoji").put("seatNumber",selected.number).put("user",JSONObject().put("name",currentUser.name.ifBlank{"User"}).put("image",currentUser.image.ifBlank{"https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/default-avatar.png"}).put("accountId",accountId)).put("src",sticker.src).put("timestamp",timestamp))
+                
+                Handler(Looper.getMainLooper()).postDelayed({ if(seats.getOrNull(seatIndex)?.gifTimestamp==timestamp) seats[seatIndex]=seats[seatIndex].copy(gifSrc="",gifTimestamp=0L) },3000)
             }
-        )
-        
+        })
         if(showSeatSheet && selectedSeat>0) {
             val seat=seats.firstOrNull{it.number==selectedSeat}
-            if(seat!=null) SeatActionSheet(
-                seat=seat,
-                isOwner=accountId==roomOwner.accountId.ifBlank{roomOwner.id},
-                isMySeat=seat.occupied && seat.accountId==accountId,
-                onDismiss={showSeatSheet=false;selectedSeat=0},
-                onTake={ if(!seat.occupied && !seat.locked){seats[selectedSeat-1]=seat.copy(occupied=true,userName=currentUser.name,userImage=currentUser.image,accountId=accountId);showSeatSheet=false;selectedSeat=0} },
-                onLeave={seats[selectedSeat-1]=seat.copy(occupied=false,userName="",userImage="",accountId="",muted=false,speaking=false);showSeatSheet=false;selectedSeat=0},
-                onMute={seats[selectedSeat-1]=seat.copy(muted=!seat.muted);showSeatSheet=false;selectedSeat=0},
-                onLock={seats[selectedSeat-1]=seat.copy(locked=!seat.locked);showSeatSheet=false;selectedSeat=0},
-                onInvite={clipboard.setText(AnnotatedString("Join room $roomName — seat $selectedSeat (ID: $roomId)"));showSeatSheet=false;selectedSeat=0}
-            )
+            if(seat!=null) SeatActionSheet(seat=seat,isOwner=accountId==roomOwner.accountId.ifBlank{roomOwner.id},isMySeat=seat.occupied && seat.accountId==accountId,onDismiss={showSeatSheet=false;selectedSeat=0},onTake={ if(!seat.occupied && !seat.locked){seats[selectedSeat-1]=seat.copy(occupied=true,userName=currentUser.name,userImage=currentUser.image,accountId=accountId);showSeatSheet=false;selectedSeat=0} },onLeave={seats[selectedSeat-1]=seat.copy(occupied=false,userName="",userImage="",accountId="",muted=false,speaking=false);showSeatSheet=false;selectedSeat=0},onMute={seats[selectedSeat-1]=seat.copy(muted=!seat.muted);showSeatSheet=false;selectedSeat=0},onLock={seats[selectedSeat-1]=seat.copy(locked=!seat.locked);showSeatSheet=false;selectedSeat=0},onInvite={clipboard.setText(AnnotatedString("Join room $roomName — seat $selectedSeat (ID: $roomId)"));showSeatSheet=false;selectedSeat=0})
         }
-        if(selectedSeat>0 && seats.firstOrNull{it.number==selectedSeat}?.occupied==true && !showSeatSheet) {
-            MemberSheet(seats.first{it.number==selectedSeat}){selectedSeat=0}
-        }
-        
+        if(selectedSeat>0 && seats.firstOrNull{it.number==selectedSeat}?.occupied==true && !showSeatSheet) MemberSheet(seats.first{it.number==selectedSeat}){selectedSeat=0}
         if(showMessageSheet) {
             val screenHeight = LocalConfiguration.current.screenHeightDp
             Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=.30f)).clickable{showMessageSheet=false},contentAlignment=Alignment.BottomCenter) {
-                Surface(
-                    modifier=Modifier.fillMaxWidth().height((screenHeight * .60f).dp).background(Color.White).clickable(enabled=false) {},
-                    color=Color.White,
-                    contentColor=Color.Black,
-                    shape=RoundedCornerShape(topStart=15.dp,topEnd=15.dp),
-                    shadowElevation=16.dp
-                ) {
-                    Column(Modifier.fillMaxSize().background(Color.White)) {
-                        MessageScreen(onChat={ _, _, _ -> showMessageSheet=false }, embeddedSheet=true, onBack={ showMessageSheet=false })
-                    }
+                // ✅ FIX: shape = RoundedCornerShape(topStart=12.dp,topEnd=12.dp) same as Seat menu sheet
+                Surface(modifier=Modifier.fillMaxWidth().height((screenHeight * .60f).dp).background(Color.White).clickable(enabled=false) {},color=Color.White,contentColor=Color.Black,shape=RoundedCornerShape(topStart=12.dp,topEnd=12.dp),shadowElevation=16.dp) {
+                    Column(Modifier.fillMaxSize().background(Color.White)) { MessageScreen(onChat={ _, _, _ -> showMessageSheet=false }, embeddedSheet=true, onBack={ showMessageSheet=false }) }
                 }
             }
         }
@@ -1124,12 +814,9 @@ private fun formatMusicTime(seconds: Float): String {
     return "${t / 60}:${(t % 60).toString().padStart(2, '0')}"
 }
 
-@Composable private fun SeatActionSheet(
-    seat:NativeRoomSeat,isOwner:Boolean,isMySeat:Boolean,onDismiss:()->Unit,
-    onTake:()->Unit,onLeave:()->Unit,onMute:()->Unit,onLock:()->Unit,onInvite:()->Unit
-){
+@Composable private fun SeatActionSheet(seat:NativeRoomSeat,isOwner:Boolean,isMySeat:Boolean,onDismiss:()->Unit,onTake:()->Unit,onLeave:()->Unit,onMute:()->Unit,onLock:()->Unit,onInvite:()->Unit){
     Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=.30f)).clickable{onDismiss()},contentAlignment=Alignment.BottomCenter){
-        Surface(Modifier.fillMaxWidth(),color=Color.White.copy(alpha=.96f),shape=RoundedCornerShape(topStart=24.dp,topEnd=24.dp)){
+        Surface(Modifier.fillMaxWidth(),color=Color.White.copy(alpha=.96f),shape=RoundedCornerShape(topStart=12.dp,topEnd=12.dp)){
             Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal=16.dp,vertical=12.dp),verticalArrangement=Arrangement.spacedBy(2.dp)){
                 if(!seat.occupied && !isMySeat) SeatSheetAction("Take Mic",enabled=!seat.locked,onClick=onTake)
                 if(isMySeat) SeatSheetAction("Leave Seat",onClick=onLeave)
@@ -1142,9 +829,7 @@ private fun formatMusicTime(seconds: Float): String {
 }
 
 @Composable private fun SeatSheetAction(label:String,enabled:Boolean=true,onClick:()->Unit){
-    TextButton(onClick=onClick,enabled=enabled,modifier=Modifier.fillMaxWidth().height(44.dp),shape=RoundedCornerShape(10.dp)){
-        Text(label,color=if(enabled)Color(0xFF171717) else Color.Gray,fontSize=14.sp)
-    }
+    TextButton(onClick=onClick,enabled=enabled,modifier=Modifier.fillMaxWidth().height(44.dp),shape=RoundedCornerShape(10.dp)){ Text(label,color=if(enabled)Color(0xFF171717) else Color.Gray,fontSize=14.sp) }
 }
 
 @Composable private fun RoomFooterButton(onClick:()->Unit,description:String,icon:Int){
@@ -1157,107 +842,69 @@ private fun formatMusicTime(seconds: Float): String {
     val voicePulse = rememberInfiniteTransition(label = "voice-wave")
     val waveProgress by voicePulse.animateFloat(initialValue = 0.15f, targetValue = 1f, animationSpec = infiniteRepeatable(animation = tween(850, easing = LinearEasing), repeatMode = RepeatMode.Restart), label = "voice-wave-progress")
     val raw="https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/"
-    Column(
-        horizontalAlignment=Alignment.CenterHorizontally,
-        modifier=Modifier.width(62.dp).clickable(onClick=onClick) 
-    ){
+    
+    var showGif by remember(seat.gifTimestamp) { mutableStateOf(seat.gifSrc.isNotBlank()) }
+    LaunchedEffect(seat.gifTimestamp) {
+        if (seat.gifTimestamp != 0L && seat.gifSrc.isNotBlank()) {
+            showGif = true
+            kotlinx.coroutines.delay(3000)
+            showGif = false
+        } else {
+            showGif = false
+        }
+    }
+
+    Column(horizontalAlignment=Alignment.CenterHorizontally,modifier=Modifier.width(62.dp).clickable(onClick=onClick)){
         Box(Modifier.size(62.dp),contentAlignment=Alignment.Center){ 
             Canvas(Modifier.fillMaxSize()) {
                 val blue = !seat.locked
-                val ringBrush = Brush.linearGradient(
-                    colors = if(blue) listOf(
-                        Color(0xFFD9F7FF),Color(0xFF91E1FF),Color(0xFF4DBFEF),
-                        Color(0xFF299DD6),Color(0xFF167DB9)
-                    ) else listOf(
-                        Color(0xFFF3F4F6),Color(0xFFD1D5DB),Color(0xFF9CA3AF),
-                        Color(0xFF6B7280),Color(0xFF4B5563)
-                    ),
-                    start=Offset(size.width*100f/512f,size.height*55f/512f),
-                    end=Offset(size.width*420f/512f,size.height*460f/512f)
-                )
+                val ringBrush = Brush.linearGradient(colors = if(blue) listOf(Color(0xFFD9F7FF),Color(0xFF91E1FF),Color(0xFF4DBFEF),Color(0xFF299DD6),Color(0xFF167DB9)) else listOf(Color(0xFFF3F4F6),Color(0xFFD1D5DB),Color(0xFF9CA3AF),Color(0xFF6B7280),Color(0xFF4B5563)),start=Offset(size.width*100f/512f,size.height*55f/512f),end=Offset(size.width*420f/512f,size.height*460f/512f))
                 val radius=size.minDimension*225f/512f
                 val center=Offset(size.width/2f,size.height/2f)
-                drawCircle(
-                    color=if(blue) Color(0xFF55C6F3).copy(alpha=.25f) else Color(0xFF9CA3AF).copy(alpha=.25f),
-                    radius=radius+size.minDimension*7.5f/512f,
-                    center=center,
-                    style=Stroke(width=size.minDimension*15f/512f)
-                )
+                drawCircle(color=if(blue) Color(0xFF55C6F3).copy(alpha=.25f) else Color(0xFF9CA3AF).copy(alpha=.25f),radius=radius+size.minDimension*7.5f/512f,center=center,style=Stroke(width=size.minDimension*15f/512f))
                 if (isSpeaking) {
                     val pulseRadius = size.minDimension * (0.45f + waveProgress * 0.42f)
                     drawCircle(color = Color(0xFF168CFF).copy(alpha = 0.65f * (1f - waveProgress)), radius = pulseRadius, center = center, style = Stroke(width = size.minDimension * 0.055f))
                     drawCircle(color = Color(0xFF45B7FF).copy(alpha = 0.42f * (1f - waveProgress)), radius = pulseRadius * 0.78f, center = center, style = Stroke(width = size.minDimension * 0.035f))
                 }
                 drawCircle(brush=ringBrush,radius=radius,center=center,style=Stroke(width=size.minDimension*10f/512f))
-                val shine = Brush.horizontalGradient(
-                    colors=listOf(Color.White.copy(alpha=0f),Color.White.copy(alpha=.75f),Color.White.copy(alpha=.95f),Color.White.copy(alpha=0f)),
-                    startX=0f,endX=size.width
-                )
-                val topHighlight=Path().apply {
-                    moveTo(size.width*98f/512f,size.height*134f/512f)
-                    cubicTo(size.width*113f/512f,size.height*108f/512f,size.width*132f/512f,size.height*92f/512f,size.width*153f/512f,size.height*79f/512f)
-                    cubicTo(size.width*174f/512f,size.height*67f/512f,size.width*196f/512f,size.height*59f/512f,size.width*218f/512f,size.height*56f/512f)
-                }
+                val shine = Brush.horizontalGradient(colors=listOf(Color.White.copy(alpha=0f),Color.White.copy(alpha=.75f),Color.White.copy(alpha=.95f),Color.White.copy(alpha=0f)),startX=0f,endX=size.width)
+                val topHighlight=Path().apply { moveTo(size.width*98f/512f,size.height*134f/512f); cubicTo(size.width*113f/512f,size.height*108f/512f,size.width*132f/512f,size.height*92f/512f,size.width*153f/512f,size.height*79f/512f); cubicTo(size.width*174f/512f,size.height*67f/512f,size.width*196f/512f,size.height*59f/512f,size.width*218f/512f,size.height*56f/512f) }
                 drawPath(topHighlight,shine,style=Stroke(width=size.minDimension*7.5f/512f,cap=StrokeCap.Round))
-                val bottomHighlight=Path().apply {
-                    moveTo(size.width*207f/512f,size.height*452f/512f)
-                    cubicTo(size.width*258f/512f,size.height*466f/512f,size.width*316f/512f,size.height*456f/512f,size.width*361f/512f,size.height*428f/512f)
-                    cubicTo(size.width*378f/512f,size.height*417f/512f,size.width*392f/512f,size.height*404f/512f,size.width*404f/512f,size.height*388f/512f)
-                }
+                val bottomHighlight=Path().apply { moveTo(size.width*207f/512f,size.height*452f/512f); cubicTo(size.width*258f/512f,size.height*466f/512f,size.width*316f/512f,size.height*456f/512f,size.width*361f/512f,size.height*428f/512f); cubicTo(size.width*378f/512f,size.height*417f/512f,size.width*392f/512f,size.height*404f/512f,size.width*404f/512f,size.height*388f/512f) }
                 drawPath(bottomHighlight,shine,style=Stroke(width=size.minDimension*7f/512f,cap=StrokeCap.Round))
             }
-            Box(
-                Modifier.fillMaxSize(.91f).clip(CircleShape),
-                contentAlignment=Alignment.Center
-            ){
-                if(seat.locked) {
-                    AsyncImage(model=raw+"file_0000000015a48211b000ee447a786f7c.png",contentDescription="Locked seat",modifier=Modifier.fillMaxSize(.62f),contentScale=ContentScale.Fit)
-                } else if(seat.occupied&&seat.userImage.isNotBlank()) {
-                    AsyncImage(model=seat.userImage,contentDescription=seat.userName,modifier=Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
-                } else {
-                    AsyncImage(model=raw+"file_000000003e7482309b7f6e7f2a922160.png",contentDescription="Empty seat",modifier=Modifier.fillMaxSize(.65f),contentScale=ContentScale.Fit)
-                }
+            Box(Modifier.fillMaxSize(.91f).clip(CircleShape),contentAlignment=Alignment.Center){
+                if(seat.locked) AsyncImage(model=raw+"file_0000000015a48211b000ee447a786f7c.png",contentDescription="Locked seat",modifier=Modifier.fillMaxSize(.62f),contentScale=ContentScale.Fit)
+                else if(seat.occupied&&seat.userImage.isNotBlank()) AsyncImage(model=seat.userImage,contentDescription=seat.userName,modifier=Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
+                else AsyncImage(model=raw+"file_000000003e7482309b7f6e7f2a922160.png",contentDescription="Empty seat",modifier=Modifier.fillMaxSize(.65f),contentScale=ContentScale.Fit)
             }
-            if(seat.gifSrc.isNotBlank()) AsyncImage(
-                model=seat.gifSrc+"?t="+seat.gifTimestamp,
-                contentDescription="Emoji reaction",
-                modifier=Modifier.fillMaxSize(),
-                contentScale=ContentScale.Fit
-            )
-            if(seat.muted) {
-                Box(Modifier.align(Alignment.BottomEnd).clip(CircleShape).background(Color.Red).padding(2.dp)) {
-                    Icon(Icons.Default.MicOff,null,tint=Color.White,modifier=Modifier.size(12.dp))
-                }
-            }
+            
+            if(showGif && seat.gifSrc.isNotBlank()) AsyncImage(model=seat.gifSrc,contentDescription="Emoji reaction",modifier=Modifier.fillMaxSize(),contentScale=ContentScale.Fit)
+            
+            if(seat.muted) Box(Modifier.align(Alignment.BottomEnd).clip(CircleShape).background(Color.Red).padding(2.dp)) { Icon(Icons.Default.MicOff,null,tint=Color.White,modifier=Modifier.size(12.dp)) }
         }
-        Text(if(seat.occupied)seat.userName else seat.number.toString(),color=Color.White.copy(.9f),fontSize=11.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
+        
+        if (seat.occupied && seat.accountId == ownerId) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+                Box(Modifier.size(14.dp).clip(CircleShape).background(Color(0xFF3B82F6)), contentAlignment = Alignment.Center) {
+                    androidx.compose.material3.Icon(imageVector = Icons.Filled.Home, contentDescription = "Owner", tint = Color.White, modifier = Modifier.size(9.dp))
+                }
+                Spacer(Modifier.width(4.dp))
+                Text(seat.userName, color = Color.White.copy(.9f), fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+            }
+        } else {
+            Text(if (seat.occupied) seat.userName else seat.number.toString(), color = Color.White.copy(.9f), fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
     }
 }
 
 @Composable private fun NativeMessage(m:NativeRoomMessage){
-    Row(
-        Modifier.fillMaxWidth().padding(vertical=2.dp),
-        verticalAlignment=Alignment.Top,
-        horizontalArrangement=Arrangement.Start
-    ){
-        AsyncImage(
-            model=m.senderImage.ifBlank{"https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/default-avatar.png"},
-            contentDescription=m.sender,
-            modifier=Modifier.padding(top=2.dp).size(28.dp).clip(CircleShape).border(1.dp, Color.White.copy(alpha=.1f), CircleShape),
-            contentScale=ContentScale.Crop
-        )
-        Column(
-            Modifier.padding(start=8.dp).fillMaxWidth(.75f),
-            verticalArrangement=Arrangement.spacedBy(2.dp)
-        ){
+    Row(Modifier.fillMaxWidth().padding(vertical=2.dp),verticalAlignment=Alignment.Top,horizontalArrangement=Arrangement.Start){
+        AsyncImage(model=m.senderImage.ifBlank{"https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/default-avatar.png"},contentDescription=m.sender,modifier=Modifier.padding(top=2.dp).size(28.dp).clip(CircleShape).border(1.dp, Color.White.copy(alpha=.1f), CircleShape),contentScale=ContentScale.Crop)
+        Column(Modifier.padding(start=8.dp).fillMaxWidth(.75f),verticalArrangement=Arrangement.spacedBy(2.dp)){
             Text(m.sender,color=Color.White.copy(alpha=.9f),fontSize=12.sp,lineHeight=13.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold,maxLines=1,overflow=TextOverflow.Ellipsis)
-            Box(
-                Modifier.align(Alignment.Start)
-                    .clip(RoundedCornerShape(topStart=2.dp,topEnd=12.dp,bottomStart=12.dp,bottomEnd=12.dp))
-                    .background(Color.Black.copy(alpha=.40f))
-                    .border(0.5.dp,Color.White.copy(alpha=.15f),RoundedCornerShape(topStart=2.dp,topEnd=12.dp,bottomStart=12.dp,bottomEnd=12.dp))
-                    .padding(horizontal=10.dp,vertical=8.dp)
-            ){
+            Box(Modifier.align(Alignment.Start).clip(RoundedCornerShape(topStart=2.dp,topEnd=12.dp,bottomStart=12.dp,bottomEnd=12.dp)).background(Color.Black.copy(alpha=.40f)).border(0.5.dp,Color.White.copy(alpha=.15f),RoundedCornerShape(topStart=2.dp,topEnd=12.dp,bottomStart=12.dp,bottomEnd=12.dp)).padding(horizontal=10.dp,vertical=8.dp)){
                 Text(m.text,color=Color.White,fontSize=13.sp,lineHeight=18.sp,softWrap=true)
             }
         }
@@ -1267,22 +914,8 @@ private fun formatMusicTime(seconds: Float): String {
 @Composable private fun RoomExitMenu(onKeep:()->Unit,onExit:()->Unit,onDismiss:()->Unit){
     val raw="https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/"
     Box(Modifier.fillMaxSize().background(Color.Transparent).clickable{onDismiss()},contentAlignment=Alignment.TopCenter){
-        
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(48.percentHeight)
-                .background(Brush.verticalGradient(listOf(Color.Black,Color.Black,Color.Black.copy(alpha=.5f),Color.Transparent)))
-                .clickable(enabled=false){}
-        )
-        
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(32.percentHeight),
-            horizontalAlignment=Alignment.CenterHorizontally,
-            verticalArrangement=Arrangement.Center
-        ){
+        Box(modifier = Modifier.fillMaxWidth().height(48.percentHeight).background(Brush.verticalGradient(listOf(Color.Black,Color.Black,Color.Black.copy(alpha=.5f),Color.Transparent))).clickable(enabled=false){})
+        Column(modifier = Modifier.fillMaxWidth().height(32.percentHeight),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){
             Row(Modifier.fillMaxWidth().padding(horizontal=42.dp).offset(y=(-4).dp),horizontalArrangement=Arrangement.spacedBy(64.dp),verticalAlignment=Alignment.CenterVertically){
                 Column(horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(8.dp),modifier=Modifier.weight(1f)){
                     AsyncImage(model=raw+"IMG_20261002_113229.png",contentDescription="Keep",modifier=Modifier.size(67.dp).clickable{onKeep()},contentScale=ContentScale.Fit)
@@ -1300,45 +933,15 @@ private fun formatMusicTime(seconds: Float): String {
 private val Int.percentHeight: androidx.compose.ui.unit.Dp
     @Composable get() = androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp.dp * this / 100
 
-@Composable private fun RoomMenu(owner:Boolean,onClose:()->Unit,onSettings:()->Unit,onClearChat:()->Unit,onLeave:()->Unit){
-    Box(Modifier.fillMaxSize().background(Color.Black.copy(.35f)).clickable{onClose()},contentAlignment=Alignment.BottomCenter){
-        Surface(Modifier.fillMaxWidth().padding(14.dp),color=Color(0xFF181818),shape=RoundedCornerShape(22.dp)){
-            Column(Modifier.padding(18.dp),horizontalAlignment=Alignment.CenterHorizontally){
-                Text("Room",color=Color.White,fontSize=17.sp)
-                if(owner)TextButton(onClick=onSettings){Text("Room settings",color=Color.White)}
-                TextButton(onClick=onClearChat){Text("Clear Chat",color=Color.White)}
-                TextButton(onClick=onLeave){Text("Leave room",color=Color.White)}
-                TextButton(onClick=onClose){Text("Cancel",color=Color.White.copy(.7f))}
-            }
-        }
-    }
-}
-
 @Composable private fun MemberSheet(seat:NativeRoomSeat,onClose:()->Unit)=SimpleSheet("Member",onClose){
     AsyncImage(model=seat.userImage,contentDescription=null,modifier=Modifier.size(76.dp).clip(CircleShape),contentScale=ContentScale.Crop)
     Text(seat.userName,color=Color.White,fontSize=17.sp);Text("ID: "+seat.accountId,color=Color.White.copy(.65f),fontSize=12.sp)
 }
 
-@Composable private fun RoomSettings(name:String,announcement:String,locked:Boolean,onName:(String)->Unit,onAnnouncement:(String)->Unit,onLocked:(Boolean)->Unit,onClose:()->Unit,onSave:()->Unit)=SimpleSheet("Room settings",onClose){
-    OutlinedTextField(name,onName,singleLine=true,label={Text("Room name")})
-    Spacer(Modifier.height(8.dp));OutlinedTextField(announcement,onAnnouncement,singleLine=true,label={Text("Announcement")})
-    Row(verticalAlignment=Alignment.CenterVertically){Text("Lock room",color=Color.White,modifier=Modifier.weight(1f));TextButton(onClick={onLocked(!locked)}){Text(if(locked)"ON" else "OFF",color=Color.White)}}
-    TextButton(onClick=onSave){Text("Save",color=Color.White)}
-}
-
-@Composable private fun GiftSheet(onClose:()->Unit)=SimpleSheet("Gift",onClose){
-    Row(Modifier.horizontalScroll(rememberScrollState())){listOf("Hot","Lucky","Luxury","Event").forEach{TextButton(onClick={}){Text(it,color=Color.White)}}}
-    Text("Select a gift",color=Color.White.copy(.7f),modifier=Modifier.padding(12.dp))
-}
-
 @Composable private fun GamesSheet(onClose:()->Unit,onWildParty:()->Unit,onFruitParty:()->Unit){
     val raw="https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/"
     Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=.30f)).clickable{onClose()},contentAlignment=Alignment.BottomCenter){
-        Surface(
-            Modifier.fillMaxWidth().clickable(enabled=false){},
-            color=Color.Black.copy(alpha=0.92f),
-            shape=RoundedCornerShape(topStart=15.dp,topEnd=15.dp)
-        ){
+        Surface(Modifier.fillMaxWidth().clickable(enabled=false){},color=Color.Black.copy(alpha=0.92f),shape=RoundedCornerShape(topStart=15.dp,topEnd=15.dp)){
             Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(start=16.dp,end=16.dp,top=12.dp,bottom=24.dp)){
                 Text("Games",color=Color.White,fontSize=16.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Bold)
                 Spacer(Modifier.height(16.dp))
@@ -1346,29 +949,17 @@ private val Int.percentHeight: androidx.compose.ui.unit.Dp
                     Column(Modifier.clickable{onWildParty()}, horizontalAlignment=Alignment.CenterHorizontally){
                         AsyncImage(model=raw+"file_000000009d808211b8ffb7c2183b4ef5.png",contentDescription="Wild party",modifier=Modifier.size(56.dp),contentScale=ContentScale.Fit)
                         Spacer(Modifier.height(2.dp))
-                        Text("Wild party",color=Color.White,fontSize=10.sp,maxLines=1)
+                        Text("Wild party",color=Color.White,fontSize=10.sp,maxLines=1,softWrap=false)
                     }
                     Column(Modifier.clickable{onFruitParty()}, horizontalAlignment=Alignment.CenterHorizontally){
-                        AsyncImage(model=raw+"file_00000000c9e08211ab3e8c4d511b7965.png",contentDescription="Fruit party",modifier=Modifier.size(54.dp).clip(RoundedCornerShape(6.dp)),contentScale=ContentScale.Fit) 
+                        AsyncImage(model=raw+"file_00000000c9e08211ab3e8c4d511b7965.png",contentDescription="Fruit party",modifier=Modifier.size(54.dp).clip(RoundedCornerShape(6.dp)),contentScale=ContentScale.Fit)
                         Spacer(Modifier.height(2.dp))
-                        Text("Fruit party",color=Color.White,fontSize=10.sp,maxLines=1)
+                        Text("Fruit party",color=Color.White,fontSize=10.sp,maxLines=1,softWrap=false)
                     }
                 }
             }
         }
     }
-}
-
-@Composable private fun MusicSheet(onClose:()->Unit){
-    var volume by remember{mutableFloatStateOf(1f)}
-    SimpleSheet("Music",onClose){
-        Row(verticalAlignment=Alignment.CenterVertically){Icon(Icons.Default.MusicNote,null,tint=Color.White);Slider(volume,{volume=it},Modifier.weight(1f));Text((volume*100).toInt().toString()+"%",color=Color.White,fontSize=11.sp)}
-        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.Center){TextButton(onClick={}){Text("Previous",color=Color.White)};TextButton(onClick={}){Text("Play",color=Color.White)};TextButton(onClick={}){Text("Next",color=Color.White)}}
-    }
-}
-
-@Composable private fun EmojiSheet(onClose:()->Unit,onEmoji:(String)->Unit)=SimpleSheet("Emoji",onClose){
-    Row(Modifier.horizontalScroll(rememberScrollState())){listOf("😀","😂","😍","😎","🥰","😭","🔥","❤️").forEach{Text(it,fontSize=27.sp,modifier=Modifier.padding(7.dp).clickable{onEmoji(it)})}}
 }
 
 @Composable private fun SimpleSheet(title:String,onClose:()->Unit,content: @Composable () -> Unit){
@@ -1395,3 +986,4 @@ private fun roomCountryFlag(country: String): String {
         else -> country
     }
 }
+
