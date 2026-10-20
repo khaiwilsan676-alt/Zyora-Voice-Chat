@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.core.content.ContextCompat
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -901,7 +902,7 @@ fun RoomPage(
         if(showActiveUsers) ActiveUsers(isOpen=true,onClose={showActiveUsers=false},roomUsers=activeRoomUsers,currentUser=ActiveUserNative(accountId,currentUser.name,currentUser.image),roomOwnerId=roomOwner.accountId.ifBlank{roomOwner.id},onOpenProfile={ user -> seats.firstOrNull{it.accountId==user.accountId}?.let{selectedSeat=it.number};showActiveUsers=false },onCopyUserId={ id -> clipboard.setText(AnnotatedString(id));copiedId=id })
         if(showSettings) RoomSettingPage(initial = RoomSettingsDataNative(roomName=roomName,roomDp=roomImage,announcement=announcement,isLocked=locked),roomOwnerId=roomId,currentUserId=accountId,onBack={showSettings=false},onSave={saved->
             roomName=saved.roomName;roomImage=saved.roomDp;announcement=saved.announcement;locked=saved.isLocked;showSettings=false
-            launch(Dispatchers.IO) {
+            CoroutineScope(Dispatchers.IO).launch {
                 runCatching {
                     val conn = (java.net.URL("https://hurry-voice-chat-lz75.onrender.com/api/rooms").openConnection() as java.net.HttpURLConnection).apply {
                         requestMethod="PUT"; connectTimeout=10000; readTimeout=10000; doOutput=true
