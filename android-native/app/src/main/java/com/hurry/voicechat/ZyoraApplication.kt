@@ -16,7 +16,7 @@ class ZyoraApplication : Application(), ImageLoaderFactory {
         return ImageLoader.Builder(this)
             .memoryCache {
                 MemoryCache.Builder()
-                    .maxSizePercent(this, 0.20)
+                    .maxSizePercent(this@ZyoraApplication, 0.20)
                     .build()
             }
             .diskCache {
