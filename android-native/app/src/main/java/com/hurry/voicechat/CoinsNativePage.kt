@@ -160,7 +160,7 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int) {
                 runCatching {
                     val localBalance = dao.getUserData()?.balance ?: 0L
                     val encodedId = URLEncoder.encode(walletUserId, "UTF-8")
-                    val connection = (URL("https://hurry-voice-chat-lz75.onrender.com/api/lucky-bag/wallet/$encodedId?initialBalance=$localBalance").openConnection() as HttpURLConnection).apply {
+                    val connection = (URL("https://zyora-voice-chat.onrender.com/api/lucky-bag/wallet/$encodedId?initialBalance=$localBalance").openConnection() as HttpURLConnection).apply {
                         connectTimeout = 8000
                         readTimeout = 8000
                     }
