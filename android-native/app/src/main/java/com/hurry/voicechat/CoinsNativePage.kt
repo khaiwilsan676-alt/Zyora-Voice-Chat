@@ -31,6 +31,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
+import java.net.URLEncoder
 
 private const val RAW_WALLET = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/"
 
@@ -129,6 +133,11 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int) {
     val context = LocalContext.current
     val dao = remember { WalletDatabase.get(context).walletDao() }
     val scope = rememberCoroutineScope()
+    val authPrefs = remember { context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE) }
+    val walletUserId = remember {
+        authPrefs.getString("accountId", null)?.takeIf { it.isNotBlank() }
+            ?: authPrefs.getString("uid", "").orEmpty()
+    }
 
     var tab by remember { mutableStateOf(initialTab) }
     var coins by remember { mutableStateOf(0L) }
@@ -141,12 +150,33 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int) {
     var showPayUsingSheet by remember { mutableStateOf(false) }
     var showDetails by remember { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(Unit) {
-        while (true) {
-            coins = loadBalance(dao)
-            diamonds = loadDiamonds(dao)
-            delay(1000)
+    LaunchedEffect(walletUserId) {
+        coins = loadBalance(dao)
+        diamonds = loadDiamonds(dao)
+        // Seed the server wallet once from the existing on-device balance, then
+        // use the MongoDB balance as the source of truth for Lucky Bag claims/refunds.
+        if (walletUserId.isNotBlank()) {
+            withContext(Dispatchers.IO) {
+                runCatching {
+                    val localBalance = dao.getUserData()?.balance ?: 0L
+                    val encodedId = URLEncoder.encode(walletUserId, "UTF-8")
+                    val connection = (URL("https://hurry-voice-chat-lz75.onrender.com/api/lucky-bag/wallet/$encodedId?initialBalance=$localBalance").openConnection() as HttpURLConnection).apply {
+                        connectTimeout = 8000
+                        readTimeout = 8000
+                    }
+                    try {
+                        if (connection.responseCode in 200..299) {
+                            val wallet = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
+                            val serverBalance = wallet.optLong("balance").coerceAtLeast(0L)
+                            val existing = dao.getUserData() ?: UserDataEntity()
+                            dao.saveUserData(existing.copy(balance = serverBalance))
+                        }
+                    } finally { connection.disconnect() }
+                }
+            }
         }
+        coins = loadBalance(dao)
+        diamonds = loadDiamonds(dao)
     }
 
     if (showDetails != null) {
