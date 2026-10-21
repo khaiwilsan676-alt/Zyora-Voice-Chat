@@ -7,6 +7,7 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -151,7 +152,8 @@ fun LuckyBagNotificationSlider(currentUserId: String, onGoToRoom: (String, Strin
                                 color = Color(0xFFFFE5A1),
                                 fontSize = 12.sp,
                                 maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
+                                overflow = TextOverflow.Clip,
+                                modifier = Modifier.basicMarquee(iterations = Int.MAX_VALUE)
                             )
                         }
                         Spacer(Modifier.width(7.dp))
