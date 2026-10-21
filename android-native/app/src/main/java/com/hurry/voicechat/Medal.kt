@@ -283,7 +283,7 @@ fun Medal(onBack: () -> Unit = {}, medals: List<HurryMedal> = emptyList()) {
                             MedalVideo(
                                 video = medal.video, 
                                 modifier = Modifier.size((medal.size.coerceAtMost(250) / 2).dp).aspectRatio(1f), 
-                                animated = true,
+                                animated = false, // <-- YE HAI FIX! Grid me animated false karne se decoder bachega aur crash nahi hoga.
                                 variant = medal.variant,
                                 isColorless = false
                             )
