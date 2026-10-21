@@ -77,11 +77,11 @@ export default function SeatItem({
             <>
               <div className="relative w-full h-full rounded-full overflow-visible">
                 <img
-                  src={user.image || "/default-avatar.png"}
+                  src={user.image || "/file_00000000d0408211a5b096ee1cc2d12a.png"}
                   alt={user.name}
                   className="w-full h-full rounded-full object-cover pointer-events-none"
                   draggable={false}
-                  onError={(e) => { (e.target as HTMLImageElement).src = "/default-avatar.png" }}
+                  onError={(e) => { const img = e.currentTarget; if (!img.src.endsWith("/file_00000000d0408211a5b096ee1cc2d12a.png")) img.src = "/file_00000000d0408211a5b096ee1cc2d12a.png"; }}
                   onClick={onAvatarClick}
                   style={{ 
                     cursor: 'pointer', 
