@@ -30,7 +30,7 @@ private val LuckyCream = Color(0xFFF5D9A8)
 private val LuckyPink = Color(0xFFFE3C68)
 
 @Composable
-fun LuckyBag(onClose: () -> Unit = {}, onSent: () -> Unit = {}) {
+fun LuckyBag(senderName: String, senderImage: String, onClose: () -> Unit = {}, onSent: (String, String) -> Unit = { _, _ -> }) {
     var selectedCoins by remember { mutableIntStateOf(10000) }
     var recipients by remember { mutableIntStateOf(5) }
     var showClaim by remember { mutableStateOf(false) }
@@ -107,7 +107,7 @@ fun LuckyBag(onClose: () -> Unit = {}, onSent: () -> Unit = {}) {
                     Button(
                         onClick = {
                             showClaim = false
-                            onSent()
+                            onSent(senderName, senderImage)
                             onClose()
                         },
                         modifier = Modifier.fillMaxWidth(0.90f).align(Alignment.CenterHorizontally).padding(top = 18.dp).height(48.dp),
