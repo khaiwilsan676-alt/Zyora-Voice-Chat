@@ -1322,8 +1322,20 @@ private fun formatMusicTime(seconds: Float): String {
 }
 
 @Composable private fun NativeSeat(seat:NativeRoomSeat,ownerId:String,isSpeaking:Boolean=seat.speaking,onClick:()->Unit){
-    val voicePulse = rememberInfiniteTransition(label = "voice-wave")
-    val waveProgress by voicePulse.animateFloat(initialValue = 0.15f, targetValue = 1f, animationSpec = infiniteRepeatable(animation = tween(850, easing = LinearEasing), repeatMode = RepeatMode.Restart), label = "voice-wave-progress")
+    // Only animate the speaking seat. Running an infinite animation on all 15
+    // seats keeps the whole room redrawing even when nobody is talking.
+    val waveProgress = if (isSpeaking) {
+        val voicePulse = rememberInfiniteTransition(label = "voice-wave")
+        voicePulse.animateFloat(
+            initialValue = 0.15f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(850, easing = LinearEasing),
+                repeatMode = RepeatMode.Restart
+            ),
+            label = "voice-wave-progress"
+        ).value
+    } else 0.15f
     val raw="https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/"
     
     var showGif by remember(seat.gifTimestamp) { mutableStateOf(seat.gifSrc.isNotBlank()) }
