@@ -515,7 +515,7 @@ app.get("/api/rooms", async (req, res) => {
     });
 
     if (!hasIncrementalSyncParam && redis) {
-      try { await redis.set(roomCacheKey, JSON.stringify(safeRooms), { ex: 30 }); }
+      try { await redis.set(roomCacheKey, JSON.stringify(safeRooms), { ex: 21600 }); }
       catch (cacheError) { console.warn("Room Redis cache write skipped:", cacheError.message); }
     }
     res.set("Cache-Control", "public, max-age=15, stale-while-revalidate=30");
