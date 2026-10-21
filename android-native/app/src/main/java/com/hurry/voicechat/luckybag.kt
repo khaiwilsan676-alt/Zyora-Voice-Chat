@@ -169,6 +169,9 @@ fun LuckyBag(senderId: String, senderName: String, senderImage: String, roomId: 
                     ) {
                         Text(if (sending) "Sending..." else "Send", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp)
                     }
+                    sendError?.let {
+                        Text(it, color = Color.Red, fontSize = 12.sp, modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = 6.dp))
+                    }
                 }
             }
         }
