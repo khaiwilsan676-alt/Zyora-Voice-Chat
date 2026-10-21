@@ -103,7 +103,8 @@ fun LuckyBagNotificationSlider(currentUserId: String, onGoToRoom: (String, Strin
             modifier = Modifier
                 .fillMaxWidth()
                 .statusBarsPadding()
-                .padding(top = 2.dp, horizontal = 8.dp)
+                .padding(top = 2.dp)
+                .padding(horizontal = 8.dp)
         ) {
             val item = banner
             if (item != null) {
