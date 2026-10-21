@@ -314,6 +314,7 @@ fun Fourgride(
                                 onMusicMinimize?.invoke(null)
                             }
                             showMusic = false
+                            MusicPlaybackState.isMusicPageOpen = false
                             onClose()
                         },
                         modifier = Modifier.align(Alignment.CenterStart)
