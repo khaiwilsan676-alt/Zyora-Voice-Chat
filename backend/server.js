@@ -1036,6 +1036,12 @@ app.get("/api/lucky-bag/wallet/:userId", async (req, res) => {
   try {
     const userId = String(req.params.userId || "").trim();
     if (!userId) return res.status(400).json({ error: "userId required" });
+    const initialBalance = Math.max(0, Math.floor(Number(req.query.initialBalance || 0)));
+    await luckyBagWallets().updateOne(
+      { userId },
+      { $setOnInsert: { userId, balance: initialBalance, createdAt: Date.now() } },
+      { upsert: true }
+    );
     const wallet = await luckyBagWallets().findOne({ userId });
     res.json({ userId, balance: Number(wallet?.balance || 0) });
   } catch (err) {
@@ -2545,6 +2551,15 @@ async function startServer() {
       db = mongoClient.db("hurry");
 
       console.log("MongoDB connected");
+      // Resume pending refunds after server restart; the database remains the source of truth.
+      const pendingBags = await db.collection("luckyBags").find({ status: "open" }).toArray();
+      for (const bag of pendingBags) {
+        if (Number(bag.expiresAt) <= Date.now() && Number(bag.claimedCount || 0) === 0) {
+          await refundLuckyBag(bag.bagId);
+        } else if (Number(bag.expiresAt) > Date.now()) {
+          scheduleLuckyBagRefund(bag);
+        }
+      }
     } else {
       console.log("MongoDB URI not configured - starting Socket.IO without MongoDB");
     }
