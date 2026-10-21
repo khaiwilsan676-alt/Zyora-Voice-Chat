@@ -108,6 +108,7 @@ fun Fourgride(
     onMusicPlay: ((NativeMusicTrack) -> Unit)? = null,
     onMusicPlaybackChanged: ((NativeMusicTrack, Boolean) -> Unit)? = null,
     onMusicMinimize: ((NativeMusicTrack?) -> Unit)? = null,
+    onMusicPlaylistChanged: ((List<NativeMusicTrack>) -> Unit)? = null,
     onOpenStore: ((String) -> Unit)? = null
 ) {
     val context = LocalContext.current
@@ -169,6 +170,10 @@ fun Fourgride(
     // ✅ Yeh strictly control karega ki mini card sheet open hone pe hide ho jaye
     LaunchedEffect(showMusic) {
         MusicPlaybackState.isMusicPageOpen = showMusic
+    }
+
+    LaunchedEffect(musicTracks) {
+        onMusicPlaylistChanged?.invoke(musicTracks)
     }
 
     LaunchedEffect(showMusic, musicTracks.size) {
