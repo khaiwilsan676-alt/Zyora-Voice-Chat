@@ -149,6 +149,7 @@ fun Fourgride(
     var giftEffect by remember { mutableStateOf(prefs.getBoolean("gift_effect", false)) }
     var showMusic by remember { mutableStateOf(false) }
     var showLuckyBag by remember { mutableStateOf(false) }
+    var hideToolsAfterLucky by remember { mutableStateOf(false) }
 
     var showDeviceMusic by remember { mutableStateOf(false) }
     var deviceMusicTracks by remember { mutableStateOf<List<DeviceMusicItem>>(emptyList()) }
@@ -225,11 +226,11 @@ fun Fourgride(
         ToolItem("My-Iteam", "IMG_20260814_110545.png") { onOpenStore?.invoke("bag") }
     )
     val playTools = listOf(
-        ToolItem("Lucky bag", "1790602570756~2.jpg") { showLuckyBag = true },
+        ToolItem("Lucky bag", "1790602570756~2.jpg") { hideToolsAfterLucky = true; showLuckyBag = true },
         ToolItem("Pk Battle", "IMG_20260814_110802.png") { }
     )
 
-    if (!showLuckyBag) {
+    if (!hideToolsAfterLucky) {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
         Box(Modifier.fillMaxSize().clickable { onClose() })
         Column(
@@ -271,7 +272,7 @@ fun Fourgride(
 
             Text("Play Tools", modifier = Modifier.padding(top = 8.dp, bottom = 8.dp), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF1F2937))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                ToolCell(Modifier.weight(1f), "Lucky bag", base + "1790602570756~2.jpg", onClick = { showLuckyBag = true })
+                ToolCell(Modifier.weight(1f), "Lucky bag", base + "1790602570756~2.jpg", onClick = { hideToolsAfterLucky = true; showLuckyBag = true })
                 ToolCell(Modifier.weight(1f), "Pk Battle", base + "IMG_20260814_110802.png", onClick = {})
                 Spacer(Modifier.weight(1f))
                 Spacer(Modifier.weight(1f))
