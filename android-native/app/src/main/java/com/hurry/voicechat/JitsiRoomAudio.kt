@@ -113,11 +113,13 @@ fun JitsiRoomAudio(roomId: String, userName: String, canSpeak: Boolean, onSpeaki
                       let desiredMuted = ${initialMuted};
                       let api = null;
                       let retryTimer = null;
+                      let joinTimer = null;
                       let retryDelay = 1000;
                       let starting = false;
                       function scheduleReconnect() {
                         if (retryTimer) return;
                         starting = false;
+                        if (joinTimer) { clearTimeout(joinTimer); joinTimer = null; }
                         // Schedule first so dispose-triggered leave events cannot start duplicate retries.
                         retryTimer = setTimeout(function() { retryTimer = null; startConference(); }, retryDelay);
                         retryDelay = Math.min(retryDelay * 2, 15000);
@@ -150,10 +152,16 @@ fun JitsiRoomAudio(roomId: String, userName: String, canSpeak: Boolean, onSpeaki
                         let localParticipantId = null;
                       api.addEventListener('videoConferenceJoined', function(event) {
                         starting = false;
+                        if (joinTimer) { clearTimeout(joinTimer); joinTimer = null; }
                         retryDelay = 1000;
                         localParticipantId = event && event.id ? event.id : null;
                         window.setZyoraMuted(desiredMuted);
                       });
+                      // Some WebView/network failures never emit connectionFailed.
+                      // Retry if the room has not joined within 25 seconds.
+                      joinTimer = setTimeout(function() {
+                        if (starting) scheduleReconnect();
+                      }, 25000);
                       api.addEventListener('connectionFailed', scheduleReconnect);
                       api.addEventListener('conferenceFailed', scheduleReconnect);
                       api.addEventListener('videoConferenceLeft', scheduleReconnect);
