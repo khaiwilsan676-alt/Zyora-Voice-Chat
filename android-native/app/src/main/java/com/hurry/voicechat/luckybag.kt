@@ -134,7 +134,7 @@ fun LuckyBag(senderId: String, senderName: String, senderImage: String, roomId: 
                                             .put("roomName", roomName)
                                             .put("amount", selectedCoins)
                                             .put("recipients", recipients)
-                                        val connection = (URL("https://hurry-voice-chat-lz75.onrender.com/api/lucky-bag/send").openConnection() as HttpURLConnection).apply {
+                                        val connection = (URL("https://zyora-voice-chat.onrender.com/api/lucky-bag/send").openConnection() as HttpURLConnection).apply {
                                             requestMethod = "POST"
                                             connectTimeout = 12000
                                             readTimeout = 15000
