@@ -1,3 +1,5 @@
+package com.hurry.voicechat
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
