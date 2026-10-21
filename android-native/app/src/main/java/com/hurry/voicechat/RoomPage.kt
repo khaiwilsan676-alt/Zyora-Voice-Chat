@@ -186,6 +186,9 @@ fun RoomPage(
     var roomName by remember{mutableStateOf(roomOwner.name.ifBlank{"Room"})}
     var roomImage by remember{mutableStateOf(roomOwner.image)}
     var announcement by remember{mutableStateOf("")}
+    // Keep the selected mic mode stable across room re-entry and settings opens.
+    var roomMicMode by remember(roomId) { mutableIntStateOf(appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).getInt("micMode_$roomId", 10)) }
+    var roomTheme by remember(roomId) { mutableStateOf(appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).getString("theme_$roomId", "forest-night") ?: "forest-night") }
     
     // Lucky Bag States
     var showFloatingLuckyBag by remember { mutableStateOf(false) }
@@ -238,10 +241,15 @@ fun RoomPage(
                         val name = saved.optString("name", saved.optString("roomName", "")).takeUnless { it == "null" }.orEmpty()
                         val image = saved.optString("dp", saved.optString("image", saved.optString("roomDp", ""))).takeUnless { it == "null" }.orEmpty()
                         val message = saved.optString("message", saved.optString("announcement", "")).takeUnless { it == "null" }.orEmpty()
+                        val savedMicMode = saved.optInt("micMode", roomMicMode).let { if (it in listOf(5, 10, 15)) it else roomMicMode }
+                        val savedTheme = saved.optString("theme", roomTheme).takeUnless { it.isBlank() || it == "null" } ?: roomTheme
                         launch(Dispatchers.Main) {
                             if (name.isNotBlank()) roomName = name
                             if (image.isNotBlank()) roomImage = image
                             announcement = message
+                            roomMicMode = savedMicMode
+                            roomTheme = savedTheme
+                            appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).edit().putInt("micMode_$roomId", savedMicMode).putString("theme_$roomId", savedTheme).apply()
                         }
                     }
                 } finally { conn.disconnect() }
@@ -1023,8 +1031,9 @@ fun RoomPage(
         if(showStore) StorePage(onBack={showStore=false}, initialView=storeInitialView)
         if(showInfo) RoomInfo(isOpen=true,onClose={showInfo=false},isRoomOwner=accountId==roomOwner.accountId.ifBlank{roomOwner.id},roomOwner=RoomInfoOwner(id=roomOwner.id,uid=roomOwner.uid,accountId=roomOwner.accountId.ifBlank{roomOwner.id},name=roomOwner.name,image=roomOwner.image),roomData=RoomInfoData(roomName,roomImage,announcement,roomId),roomFollowers=roomFollowers,onOpenProfile={ follower -> seats.firstOrNull{it.accountId==follower.accountId}?.let{selectedSeat=it.number};showInfo=false },onCopyId={ id -> clipboard.setText(AnnotatedString(id));copiedId=id },copied=copiedId==roomId)
         if(showActiveUsers) ActiveUsers(isOpen=true,onClose={showActiveUsers=false},roomUsers=activeRoomUsers,currentUser=ActiveUserNative(accountId,currentUser.name,currentUser.image),roomOwnerId=roomOwner.accountId.ifBlank{roomOwner.id},onOpenProfile={ user -> seats.firstOrNull{it.accountId==user.accountId}?.let{selectedSeat=it.number};showActiveUsers=false },onCopyUserId={ id -> clipboard.setText(AnnotatedString(id));copiedId=id })
-        if(showSettings) RoomSettingPage(initial = RoomSettingsDataNative(roomName=roomName,roomDp=roomImage,announcement=announcement,isLocked=locked),roomOwnerId=roomId,currentUserId=accountId,onBack={showSettings=false},onSave={saved->
-            roomName=saved.roomName;roomImage=saved.roomDp;announcement=saved.announcement;locked=saved.isLocked;showSettings=false
+        if(showSettings) RoomSettingPage(initial = RoomSettingsDataNative(roomName=roomName,roomDp=roomImage,announcement=announcement,micMode=roomMicMode,theme=roomTheme,isLocked=locked),roomOwnerId=roomId,currentUserId=accountId,onBack={showSettings=false},onSave={saved->
+            roomName=saved.roomName;roomImage=saved.roomDp;announcement=saved.announcement;roomMicMode=saved.micMode;roomTheme=saved.theme;locked=saved.isLocked;showSettings=false
+            appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).edit().putInt("micMode_$roomId", saved.micMode).putString("theme_$roomId", saved.theme).apply()
             CoroutineScope(Dispatchers.IO).launch {
                 runCatching {
                     val conn = (java.net.URL("https://hurry-voice-chat-lz75.onrender.com/api/rooms").openConnection() as java.net.HttpURLConnection).apply {
