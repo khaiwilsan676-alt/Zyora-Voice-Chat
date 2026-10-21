@@ -273,17 +273,9 @@ fun HomeScreen(
         else list.filter { countryMatches(it.country, selectedCountry) }
     }
 
-    var displayedRooms by remember { mutableStateOf(emptyList<HurryRoom>()) }
-    LaunchedEffect(filteredRooms) {
-        displayedRooms = emptyList()
-        if (filteredRooms.isNotEmpty()) {
-            val chunks = filteredRooms.chunked(2) 
-            for (chunk in chunks) {
-                displayedRooms = displayedRooms + chunk 
-                kotlinx.coroutines.delay(40) 
-            }
-        }
-    }
+    // Build rows once per room-list change. LazyColumn renders only visible rows;
+    // avoid repeatedly copying the growing list and triggering a full recomposition every 40ms.
+    val roomRows = remember(filteredRooms) { filteredRooms.chunked(2) }
 
     Column(
         Modifier.fillMaxSize().background(Color(0xFFF5F5F5))
@@ -462,7 +454,6 @@ fun HomeScreen(
                         }
                     }
                 } else {
-                    val roomRows = displayedRooms.chunked(2) 
                     items(
                         items = roomRows,
                         key = { row -> row.first().id }
