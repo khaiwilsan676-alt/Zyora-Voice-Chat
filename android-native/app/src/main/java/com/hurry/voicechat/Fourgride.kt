@@ -112,7 +112,8 @@ fun Fourgride(
     onMusicPlaybackChanged: ((NativeMusicTrack, Boolean) -> Unit)? = null,
     onMusicMinimize: ((NativeMusicTrack?) -> Unit)? = null,
     onMusicPlaylistChanged: ((List<NativeMusicTrack>) -> Unit)? = null,
-    onOpenStore: ((String) -> Unit)? = null
+    onOpenStore: ((String) -> Unit)? = null,
+    onLuckyBagSent: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("hurry_room_tools", android.content.Context.MODE_PRIVATE) }
@@ -483,7 +484,7 @@ fun Fourgride(
     }
 
     if (showLuckyBag) {
-        LuckyBag(onClose = { showLuckyBag = false; onClose() })
+        LuckyBag(onClose = { showLuckyBag = false; onClose() }, onSent = { onLuckyBagSent?.invoke() })
     }
 }
 
