@@ -473,6 +473,18 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                     }
                 )
             }
+            LuckyBagNotificationSlider(
+                currentUserId = userId,
+                onGoToRoom = { roomId, roomName ->
+                    openedRoom = HurryRoom(
+                        id = roomId,
+                        name = roomName.ifBlank { "Room" },
+                        image = "",
+                        country = "🇮🇳",
+                        accountId = roomId
+                    )
+                }
+            )
         }
     }
 }
