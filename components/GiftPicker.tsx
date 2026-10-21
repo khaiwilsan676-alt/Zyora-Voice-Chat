@@ -60,25 +60,33 @@ const loadWalletBalance = async (): Promise<number> => {
   }
 };
 
-const updateWalletBalance = async (delta: number): Promise<void> => {
+const updateWalletBalance = async (delta: number): Promise<number | null> => {
+  if (!Number.isFinite(delta)) return null;
   try {
     const db = await initWalletDB();
-    return new Promise((resolve, reject) => {
+    return await new Promise<number | null>((resolve) => {
       const tx = db.transaction(SHARED_STORE, "readwrite");
       const store = tx.objectStore(SHARED_STORE);
       const req = store.get("user_data");
       req.onsuccess = () => {
-        const data = req.result;
-        const current = data?.balance ?? DEFAULT_BALANCE;
+        const data = req.result || {};
+        const current = Math.max(0, Number(data.balance) || 0);
+        // A gift can only be sent if the latest shared wallet balance covers it.
+        if (delta < 0 && current < Math.abs(delta)) {
+          resolve(null);
+          return;
+        }
         const next = Math.max(0, current + delta);
-        const putReq = store.put({ ...(data || {}), balance: next }, "user_data");
-        putReq.onsuccess = () => resolve();
-        putReq.onerror = () => reject(putReq.error);
+        store.put({ ...data, balance: next }, "user_data");
+        tx.oncomplete = () => resolve(next);
+        tx.onerror = () => resolve(null);
+        tx.onabort = () => resolve(null);
       };
-      req.onerror = () => reject(req.error);
+      req.onerror = () => resolve(null);
     });
   } catch (e) {
     console.error("Wallet update failed", e);
+    return null;
   }
 };
 
@@ -620,8 +628,16 @@ export default function GiftPicker({
       netDeductionCost = totalSendCost - luckyReturnAmount;
     }
 
-    setWalletBalance((p) => Math.max(0, p - netDeductionCost));
-    await updateWalletBalance(-netDeductionCost);
+    // Debit/credit the same shared wallet used by Wallet, Store and the games.
+    // Re-check inside the IndexedDB readwrite transaction to avoid stale-balance sends.
+    const updatedBalance = await updateWalletBalance(-netDeductionCost);
+    if (updatedBalance === null) {
+      setWalletBalance(await loadWalletBalance());
+      setSending(false);
+      triggerInsufficient("Insufficient Balance", true);
+      return;
+    }
+    setWalletBalance(updatedBalance);
     await recordGiftTransaction(selectedGiftObj.name, -netDeductionCost);
 
     if (roomId && currentUserAccountId && recipientIds.length > 0) {
