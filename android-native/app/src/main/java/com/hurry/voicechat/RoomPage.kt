@@ -305,33 +305,45 @@ fun RoomPage(
     }
 
     fun musicNext() {
-        if (musicPlaylist.isEmpty()) return
-        currentTrackIndex = (currentTrackIndex + 1) % musicPlaylist.size
-        val nextTrack = musicPlaylist[currentTrackIndex]
+        val tracks = musicPlaylist.ifEmpty { MusicPlaybackState.playlist }
+        if (tracks.isEmpty()) return
+        val activeUri = miniMusicTrack?.url ?: MusicPlaybackState.currentPlayingUri
+        val activeIndex = tracks.indexOfFirst { it.url == activeUri }.let { if (it >= 0) it else currentTrackIndex }
+        currentTrackIndex = (activeIndex + 1).mod(tracks.size)
+        val nextTrack = tracks[currentTrackIndex]
         miniMusicTrack = nextTrack
         musicCurrentTime = 0f
+        musicDuration = if (nextTrack.duration > 0L) nextTrack.duration / 1000f else 180f
+        MusicPlaybackState.currentPlayingUri = nextTrack.url
+        MusicPlaybackState.currentTrack = nextTrack
+        MusicPlaybackState.isPlaying = true
         runCatching {
-            val intent = Intent(appContext, RoomMusicService::class.java)
+            ContextCompat.startForegroundService(appContext, Intent(appContext, RoomMusicService::class.java)
                 .setAction(RoomMusicService.ACTION_PLAY)
                 .putExtra(RoomMusicService.EXTRA_URI, nextTrack.url)
-                .putExtra(RoomMusicService.EXTRA_TITLE, nextTrack.name)
-            ContextCompat.startForegroundService(appContext, intent)
+                .putExtra(RoomMusicService.EXTRA_TITLE, nextTrack.name))
         }
         isMusicPlaying = true
     }
 
     fun musicPrev() {
-        if (musicPlaylist.isEmpty()) return
-        currentTrackIndex = (currentTrackIndex - 1 + musicPlaylist.size) % musicPlaylist.size
-        val prevTrack = musicPlaylist[currentTrackIndex]
+        val tracks = musicPlaylist.ifEmpty { MusicPlaybackState.playlist }
+        if (tracks.isEmpty()) return
+        val activeUri = miniMusicTrack?.url ?: MusicPlaybackState.currentPlayingUri
+        val activeIndex = tracks.indexOfFirst { it.url == activeUri }.let { if (it >= 0) it else currentTrackIndex }
+        currentTrackIndex = (activeIndex - 1 + tracks.size).mod(tracks.size)
+        val prevTrack = tracks[currentTrackIndex]
         miniMusicTrack = prevTrack
         musicCurrentTime = 0f
+        musicDuration = if (prevTrack.duration > 0L) prevTrack.duration / 1000f else 180f
+        MusicPlaybackState.currentPlayingUri = prevTrack.url
+        MusicPlaybackState.currentTrack = prevTrack
+        MusicPlaybackState.isPlaying = true
         runCatching {
-            val intent = Intent(appContext, RoomMusicService::class.java)
+            ContextCompat.startForegroundService(appContext, Intent(appContext, RoomMusicService::class.java)
                 .setAction(RoomMusicService.ACTION_PLAY)
                 .putExtra(RoomMusicService.EXTRA_URI, prevTrack.url)
-                .putExtra(RoomMusicService.EXTRA_TITLE, prevTrack.name)
-            ContextCompat.startForegroundService(appContext, intent)
+                .putExtra(RoomMusicService.EXTRA_TITLE, prevTrack.name))
         }
         isMusicPlaying = true
     }
@@ -875,6 +887,7 @@ fun RoomPage(
             onToggleSpeaker={speaker=!speaker},
             onMusicPlaylistChanged={ tracks ->
                 musicPlaylist = tracks
+                MusicPlaybackState.playlist = tracks
                 val selectedUri = miniMusicTrack?.url ?: MusicPlaybackState.currentPlayingUri
                 val selectedIndex = tracks.indexOfFirst { it.url == selectedUri }
                 if (selectedIndex >= 0) currentTrackIndex = selectedIndex
