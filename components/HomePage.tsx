@@ -1151,7 +1151,16 @@ export default function HomePage({ onLogout }: HomePageProps) {
     };
 
     void loadRoomsSafe();
-    const interval = setInterval(() => { void loadRoomsSafe(); }, 12000);
+    // Keep room data cached and use Socket.IO for live changes. Poll only as a
+    // low-frequency fallback, and never spend mobile data while the app is hidden.
+    const refreshRoomsIfVisible = () => {
+      if (document.visibilityState === 'visible' && navigator.onLine) {
+        void loadRoomsSafe();
+      }
+    };
+    const interval = setInterval(refreshRoomsIfVisible, 60000);
+    document.addEventListener('visibilitychange', refreshRoomsIfVisible);
+    window.addEventListener('online', refreshRoomsIfVisible);
 
     const fetchRoomsWithTimeout = async () => {
       try {
@@ -1213,6 +1222,8 @@ export default function HomePage({ onLogout }: HomePageProps) {
     return () => {
       isMounted = false;
       clearInterval(interval);
+      document.removeEventListener('visibilitychange', refreshRoomsIfVisible);
+      window.removeEventListener('online', refreshRoomsIfVisible);
     };
   }, []);
 
