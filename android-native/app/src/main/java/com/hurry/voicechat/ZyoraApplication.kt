@@ -5,6 +5,7 @@ import coil3.ImageLoader
 import coil3.ImageLoaderFactory
 import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
+import okio.Path.Companion.toPath
 
 /**
  * Shared image loader for the native app.
@@ -21,7 +22,7 @@ class ZyoraApplication : Application(), ImageLoaderFactory {
             }
             .diskCache {
                 DiskCache.Builder()
-                    .directory(cacheDir.resolve("zyora_image_cache"))
+                    .directory(cacheDir.resolve("zyora_image_cache").absolutePath.toPath())
                     .maxSizeBytes(96L * 1024L * 1024L)
                     .build()
             }
