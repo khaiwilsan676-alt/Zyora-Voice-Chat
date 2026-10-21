@@ -77,6 +77,14 @@ class RoomMusicService : Service() {
                 }
             }
             ACTION_PAUSE -> runCatching { if (player?.isPlaying == true) player?.pause() }
+            ACTION_SEEK -> runCatching {
+                val position = intent.getIntExtra(EXTRA_POSITION_MS, 0).coerceAtLeast(0)
+                player?.let { active -> active.seekTo(position.coerceAtMost(active.duration.coerceAtLeast(0))) }
+            }
+            ACTION_VOLUME -> runCatching {
+                val volume = intent.getFloatExtra(EXTRA_VOLUME, 1f).coerceIn(0f, 1f)
+                player?.setVolume(volume, volume)
+            }
             ACTION_STOP -> {
                 releasePlayer()
                 stopForeground(STOP_FOREGROUND_REMOVE)
@@ -134,8 +142,12 @@ class RoomMusicService : Service() {
         const val ACTION_PLAY = "com.hurry.voicechat.roommusic.PLAY"
         const val ACTION_PAUSE = "com.hurry.voicechat.roommusic.PAUSE"
         const val ACTION_STOP = "com.hurry.voicechat.roommusic.STOP"
+        const val ACTION_SEEK = "com.hurry.voicechat.roommusic.SEEK"
+        const val ACTION_VOLUME = "com.hurry.voicechat.roommusic.VOLUME"
         const val EXTRA_URI = "track_uri"
         const val EXTRA_TITLE = "track_title"
+        const val EXTRA_POSITION_MS = "position_ms"
+        const val EXTRA_VOLUME = "volume"
         private const val CHANNEL_ID = "zyora_room_music"
         private const val NOTIFICATION_ID = 7301
     }
