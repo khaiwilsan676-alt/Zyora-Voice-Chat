@@ -16,19 +16,19 @@ export const metadata: Metadata = {
   },
 
   icons: {
-    icon: 'https://hurry-voice-chat.vercel.app/logo.png',
-    apple: 'https://hurry-voice-chat.vercel.app/logo.png',
+    icon: 'https://zyora-voice-chat.vercel.app/logo.png',
+    apple: 'https://zyora-voice-chat.vercel.app/logo.png',
   },
 
   openGraph: {
     title: 'Zyora',
     description:
       'Join Zyora, connect with friends, and discover new people.',
-    url: 'https://hurry-voice-chat.vercel.app/HurryOfficial',
+    url: 'https://zyora-voice-chat.vercel.app/HurryOfficial',
     siteName: 'Zyora',
     images: [
       {
-        url: 'https://hurry-voice-chat.vercel.app/logo.png',
+        url: 'https://zyora-voice-chat.vercel.app/logo.png',
         width: 550,
         height: 550,
         alt: 'Zyora',
@@ -43,7 +43,7 @@ export const metadata: Metadata = {
     title: 'Zyora',
     description:
       'Join Zyora, connect with friends, and discover new people.',
-    images: ['https://hurry-voice-chat.vercel.app/logo.png'],
+    images: ['https://zyora-voice-chat.vercel.app/logo.png'],
   },
 }
 
@@ -83,7 +83,7 @@ export default function RootLayout({
 
         <link
           rel="apple-touch-icon"
-          href="https://hurry-voice-chat.vercel.app/logo.png"
+          href="https://zyora-voice-chat.vercel.app/logo.png"
         />
 
         <meta
