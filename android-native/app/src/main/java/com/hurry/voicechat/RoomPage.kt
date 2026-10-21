@@ -1140,7 +1140,7 @@ fun RoomPage(
                                 textAlign = TextAlign.Center, modifier = Modifier.padding(top = 5.dp)
                             )
                             luckyBagClaimError?.let {
-                                Text(it, color = Color(0xFFB91C1C), fontSize = 11.sp, textAlign = TextAlign.Center, modifier = Modifier.padding(horizontal = 12.dp, top = 4.dp))
+                                Text(it, color = Color(0xFFB91C1C), fontSize = 11.sp, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 4.dp).padding(horizontal = 12.dp))
                             }
                         }
                     }
