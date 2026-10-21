@@ -200,7 +200,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
             withContext(Dispatchers.IO) {
                 runCatching {
                     val encoded = java.net.URLEncoder.encode(stableOwnerId, "UTF-8")
-                    val connection = (URL("https://hurry-voice-chat-lz75.onrender.com/api/rooms?roomId=$encoded").openConnection() as HttpURLConnection).apply {
+                    val connection = (URL("https://zyora-voice-chat.onrender.com/api/rooms?roomId=$encoded").openConnection() as HttpURLConnection).apply {
                         connectTimeout = 10000
                         readTimeout = 10000
                     }
@@ -242,7 +242,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                                 .put("country", local.country)
                                 .put("message", local.announcement)
                                 .put("announcement", local.announcement)
-                            val save = (URL("https://hurry-voice-chat-lz75.onrender.com/api/rooms").openConnection() as HttpURLConnection).apply {
+                            val save = (URL("https://zyora-voice-chat.onrender.com/api/rooms").openConnection() as HttpURLConnection).apply {
                                 requestMethod = "PUT"
                                 connectTimeout = 10000
                                 readTimeout = 10000
@@ -406,7 +406,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                                                         .put("roomAdmin", it.accountId)
                                                         .put("message", it.name + "'s Room Notice")
                                                         .put("theme", "default")
-                                                    val connection = (URL("https://hurry-voice-chat-lz75.onrender.com/api/rooms").openConnection() as HttpURLConnection).apply {
+                                                    val connection = (URL("https://zyora-voice-chat.onrender.com/api/rooms").openConnection() as HttpURLConnection).apply {
                                                         requestMethod = "PUT"
                                                         connectTimeout = 10000
                                                         readTimeout = 10000
