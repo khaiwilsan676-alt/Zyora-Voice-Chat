@@ -3,6 +3,7 @@ package com.hurry.voicechat
 import android.Manifest
 import android.content.Context
 import android.media.AudioManager
+import android.os.Build
 import android.content.pm.PackageManager
 import android.webkit.PermissionRequest
 import android.webkit.WebChromeClient
@@ -33,32 +34,39 @@ import org.json.JSONObject
 fun JitsiRoomAudio(roomId: String, userName: String, canSpeak: Boolean, onSpeakingChanged: (Boolean) -> Unit = {}) {
     val context = LocalContext.current
 
-    // Keep the room's WebRTC audio on Android's communication route while
-    // this room is open, then restore the user's previous audio routing.
+    // Do not force loudspeaker: WebRTC/Android can route to wired and Bluetooth headsets.
     DisposableEffect(context, roomId) {
         val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
         val previousMode = audioManager.mode
-        @Suppress("DEPRECATION")
-        val previousSpeakerphone = audioManager.isSpeakerphoneOn
         audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
-        @Suppress("DEPRECATION")
-        run { audioManager.isSpeakerphoneOn = true }
-        onDispose {
-            @Suppress("DEPRECATION")
-            run { audioManager.isSpeakerphoneOn = previousSpeakerphone }
-            audioManager.mode = previousMode
-        }
+        onDispose { audioManager.mode = previousMode }
     }
     var hasMicPermission by remember {
         mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED)
     }
-    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        hasMicPermission = granted
+    var hasBluetoothPermission by remember {
+        mutableStateOf(Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
+            ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED)
+    }
+    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { results ->
+        hasMicPermission = results[Manifest.permission.RECORD_AUDIO] == true ||
+            ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+        hasBluetoothPermission = Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
+            results[Manifest.permission.BLUETOOTH_CONNECT] == true ||
+            ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
     }
     val webViewState = remember { mutableStateOf<WebView?>(null) }
 
-    LaunchedEffect(canSpeak, hasMicPermission) {
-        if (canSpeak && !hasMicPermission) permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+    LaunchedEffect(canSpeak, hasMicPermission, hasBluetoothPermission) {
+        if (canSpeak && !hasMicPermission) {
+            val permissions = mutableListOf(Manifest.permission.RECORD_AUDIO)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !hasBluetoothPermission) {
+                permissions.add(Manifest.permission.BLUETOOTH_CONNECT)
+            }
+            permissionLauncher.launch(permissions.toTypedArray())
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !hasBluetoothPermission) {
+            permissionLauncher.launch(arrayOf(Manifest.permission.BLUETOOTH_CONNECT))
+        }
         webViewState.value?.evaluateJavascript(
             "window.setZyoraMuted && window.setZyoraMuted(${!(canSpeak && hasMicPermission)});", null
         )
