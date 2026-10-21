@@ -1238,7 +1238,7 @@ fun RoomPage(
                             // Divider Line
                             Box(Modifier.fillMaxWidth().height(2.dp).padding(horizontal = 24.dp).background(Color(0xFFF5EBD8)))
                             Row(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 18.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                                Text("Received 30/30", color = Color(0xFFD29A72), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                Text("Received ${luckyBagClaimAmount} Coins", color = Color(0xFFD29A72), fontSize = 14.sp, fontWeight = FontWeight.Bold)
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text("Details", color = Color(0xFFD29A72), fontSize = 14.sp, fontWeight = FontWeight.Bold)
                                     Icon(Icons.Default.ChevronRight, null, tint = Color(0xFFD29A72), modifier = Modifier.size(16.dp))
