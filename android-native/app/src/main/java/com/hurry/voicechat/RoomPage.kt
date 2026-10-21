@@ -194,6 +194,34 @@ fun RoomPage(
     var luckyBagSenderName by remember { mutableStateOf("") }
     var luckyBagSenderImage by remember { mutableStateOf("") }\n    var luckyBagId by remember { mutableStateOf("") }\n    var luckyBagClaiming by remember { mutableStateOf(false) }\n    var luckyBagClaimError by remember { mutableStateOf<String?>(null) }\n    var luckyBagClaimAmount by remember { mutableLongStateOf(0L) }
 
+    // A user who enters from the global GO banner may have missed the live socket event.
+    // Restore the latest active bag for this room from the server.
+    LaunchedEffect(roomId, accountId) {
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val encodedRoom = java.net.URLEncoder.encode(roomId, "UTF-8")
+                val connection = (java.net.URL("https://hurry-voice-chat-lz75.onrender.com/api/lucky-bag/room/$encodedRoom").openConnection() as java.net.HttpURLConnection).apply {
+                    connectTimeout = 8000
+                    readTimeout = 8000
+                }
+                try {
+                    if (connection.responseCode in 200..299) {
+                        val root = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
+                        val bag = root.optJSONObject("bag")
+                        if (bag != null && bag.optString("senderId") != accountId) {
+                            withContext(Dispatchers.Main) {
+                                luckyBagId = bag.optString("bagId")
+                                luckyBagSenderName = bag.optString("senderName", "User")
+                                luckyBagSenderImage = bag.optString("senderImage", "")
+                                showFloatingLuckyBag = true
+                            }
+                        }
+                    }
+                } finally { connection.disconnect() }
+            }
+        }
+    }
+
     LaunchedEffect(roomId) {
         withContext(Dispatchers.IO) {
             runCatching {
