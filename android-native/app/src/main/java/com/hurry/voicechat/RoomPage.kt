@@ -1,4 +1,4 @@
-package com.hurry.voicechat
+Package com.hurry.voicechat
 
 import android.content.Intent
 import androidx.activity.compose.BackHandler
@@ -46,6 +46,7 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -185,6 +186,12 @@ fun RoomPage(
     var roomName by remember{mutableStateOf(roomOwner.name.ifBlank{"Room"})}
     var roomImage by remember{mutableStateOf(roomOwner.image)}
     var announcement by remember{mutableStateOf("")}
+    
+    // Lucky Bag States
+    var showFloatingLuckyBag by remember { mutableStateOf(true) }
+    var showLuckyBagCenterReveal by remember { mutableStateOf(false) }
+    var showLuckyBagClaimedCard by remember { mutableStateOf(false) }
+
     LaunchedEffect(roomId) {
         withContext(Dispatchers.IO) {
             runCatching {
@@ -364,6 +371,8 @@ fun RoomPage(
 
     BackHandler(enabled = true) {
         when {
+            showLuckyBagClaimedCard -> showLuckyBagClaimedCard = false
+            showLuckyBagCenterReveal -> showLuckyBagCenterReveal = false
             showExitMenu -> showExitMenu = false
             showChat -> { showChat = false; keyboardController?.hide() }
             showMessageSheet -> showMessageSheet = false
@@ -698,7 +707,24 @@ fun RoomPage(
         val sideBannerPager = androidx.compose.foundation.pager.rememberPagerState(pageCount = { sideBannerImages.size })
         LaunchedEffect(Unit) { while (true) { kotlinx.coroutines.delay(3000); if (!sideBannerPager.isScrollInProgress) sideBannerPager.animateScrollToPage((sideBannerPager.currentPage + 1) % sideBannerImages.size) } }
 
-        Column(modifier=Modifier.align(Alignment.BottomEnd).padding(end=10.dp, bottom=68.dp).heightIn(max=330.dp).verticalScroll(rememberScrollState()),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(2.dp)) {
+        Column(modifier=Modifier.align(Alignment.BottomEnd).padding(end=10.dp, bottom=68.dp).heightIn(max=380.dp).verticalScroll(rememberScrollState()),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(2.dp)) {
+            
+            // ---> LUCKY BAG FLOATING ICON <---
+            if (showFloatingLuckyBag) {
+                AsyncImage(
+                    model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261021_170707.png",
+                    contentDescription = "Lucky Bag Sent",
+                    modifier = Modifier
+                        .padding(bottom = 6.dp)
+                        .size(62.dp)
+                        .clickable { 
+                            showLuckyBagCenterReveal = true
+                            showFloatingLuckyBag = false 
+                        },
+                    contentScale = ContentScale.Fit
+                )
+            }
+
             Column(horizontalAlignment=Alignment.CenterHorizontally) {
                 androidx.compose.foundation.pager.HorizontalPager(state = sideBannerPager,modifier = Modifier.size(60.dp, 84.dp).clip(RoundedCornerShape(8.dp))) { page ->
                     AsyncImage(model = sideBannerImages[page],contentDescription = "Room side banner",modifier = Modifier.fillMaxSize(),contentScale = ContentScale.Crop)
@@ -1014,6 +1040,124 @@ fun RoomPage(
             Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=.30f)).clickable{showMessageSheet=false},contentAlignment=Alignment.BottomCenter) {
                 Surface(modifier=Modifier.fillMaxWidth().height((screenHeight * .60f).dp).background(Color.White).clickable(enabled=false) {},color=Color.White,contentColor=Color.Black,shape=RoundedCornerShape(12.dp),shadowElevation=16.dp) {
                     Column(Modifier.fillMaxSize().clip(RoundedCornerShape(12.dp)).background(Color.White)) { MessageScreen(onChat={ _, _, _ -> showMessageSheet=false }, embeddedSheet=true, onBack={ showMessageSheet=false }) }
+                }
+            }
+        }
+        
+        // ==================== CENTER LUCKY BAG OVERLAY ====================
+        if (showLuckyBagCenterReveal) {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.6f))
+                    .clickable { showLuckyBagCenterReveal = false },
+                contentAlignment = Alignment.Center
+            ) {
+                Box(
+                    modifier = Modifier.fillMaxWidth(0.9f),
+                    contentAlignment = Alignment.BottomCenter
+                ) {
+                    AsyncImage(
+                        model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261021_170648.png",
+                        contentDescription = "Lucky Bag Claim Reveal",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 420.dp)
+                            .clickable(enabled = false) {}, // absorb clicks to prevent dismissing when tapping image
+                        contentScale = ContentScale.Fit
+                    )
+                    
+                    Box(
+                        modifier = Modifier
+                            .offset(y = 12.dp) // overlaps bottom
+                            .width(220.dp)
+                            .height(86.dp)
+                            .clip(RoundedCornerShape(50))
+                            .background(Brush.verticalGradient(listOf(Color(0xFFFFF2A2), Color(0xFFFFE28A), Color(0xFFF4C46B), Color(0xFFFFF0A0))))
+                            .border(3.dp, Color(0xFFFFEDB0), RoundedCornerShape(50))
+                            .padding(6.dp)
+                            .clip(RoundedCornerShape(50))
+                            .background(Brush.verticalGradient(listOf(Color(0xFFFFE7A0), Color(0xFFF5C66E), Color(0xFFFFEDB0))))
+                            .border(3.dp, Color(0xFFF5D27D), RoundedCornerShape(50))
+                            .padding(6.dp)
+                            .clip(RoundedCornerShape(50))
+                            .background(Brush.verticalGradient(listOf(Color(0xFFFFF0C9), Color(0xFFFFDDA0), Color(0xFFFFCC85))))
+                            .border(3.dp, Color(0xFFFFF0C4), RoundedCornerShape(50))
+                            .clickable {
+                                // Close this reveal and open the fully Detailed Card
+                                showLuckyBagCenterReveal = false
+                                showLuckyBagClaimedCard = true
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Open",
+                            color = Color(0xFFDF182B),
+                            fontSize = 28.sp,
+                            fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold
+                        )
+                    }
+                }
+            }
+        }
+        
+        // ==================== CLAIMED CARD NATIVE OVERLAY ====================
+        if (showLuckyBagClaimedCard) {
+            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=0.6f)).clickable { showLuckyBagClaimedCard=false }, contentAlignment = Alignment.Center) {
+                Box(Modifier.fillMaxWidth(0.85f).aspectRatio(0.59f).clickable(enabled=false){}) {
+                    // Packet Red Background
+                    Box(Modifier.fillMaxSize().padding(top = 40.dp).clip(RoundedCornerShape(32.dp)).background(Brush.linearGradient(listOf(Color(0xFFFF6449), Color(0xFFFF263F), Color(0xFFE90037)))))
+                    
+                    // Cream Card Layout
+                    Box(Modifier.align(Alignment.TopCenter).fillMaxWidth(0.9f).fillMaxHeight(0.72f).clip(RoundedCornerShape(24.dp)).background(Brush.verticalGradient(listOf(Color(0xFFFFF7E5), Color(0xFFFFF0D4))))) {
+                        Column(Modifier.align(Alignment.BottomCenter).padding(bottom = 66.dp).fillMaxWidth()) {
+                            // Divider Line
+                            Box(Modifier.fillMaxWidth().height(2.dp).padding(horizontal = 24.dp).background(Color(0xFFF5EBD8)))
+                            Row(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 18.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                Text("Received 30/30", color = Color(0xFFD29A72), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text("Details", color = Color(0xFFD29A72), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                    Icon(Icons.Default.ChevronRight, null, tint = Color(0xFFD29A72), modifier = Modifier.size(16.dp))
+                                }
+                            }
+                        }
+                    }
+
+                    // Bottom Canvas for the curved packet flap and lower red pocket
+                    Canvas(Modifier.align(Alignment.BottomCenter).fillMaxWidth().fillMaxHeight(0.35f)) {
+                        val w = size.width
+                        val h = size.height
+                        
+                        // Curved gold packet divider
+                        val goldBrush = Brush.verticalGradient(listOf(Color(0xFFFFF8C9), Color(0xFFFFD76D), Color(0xFFFFAD36), Color(0xFFFFF0A9)))
+                        val goldPath = Path().apply {
+                            moveTo(0f, h * 0.15f)
+                            quadraticBezierTo(w / 2f, -h * 0.05f, w, h * 0.15f)
+                            lineTo(w, h * 0.28f)
+                            quadraticBezierTo(w / 2f, h * 0.08f, 0f, h * 0.28f)
+                            close()
+                        }
+                        drawPath(goldPath, goldBrush)
+                        
+                        // Lower red packet section
+                        val redBrush = Brush.verticalGradient(listOf(Color(0xFFFF6449), Color(0xFFE90037)))
+                        val redPath = Path().apply {
+                            moveTo(0f, h * 0.26f)
+                            quadraticBezierTo(w / 2f, h * 0.06f, w, h * 0.26f)
+                            lineTo(w, h)
+                            lineTo(0f, h)
+                            close()
+                        }
+                        drawPath(redPath, redBrush)
+                    }
+
+                    // Big Golden Confirm Button
+                    Box(Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp).fillMaxWidth(0.85f).height(62.dp).clip(RoundedCornerShape(50)).background(Color(0xFFFF304D)).border(3.dp, Color(0xFFFFDC73), RoundedCornerShape(50)).padding(5.dp).clip(RoundedCornerShape(50)).background(Brush.verticalGradient(listOf(Color(0xFFFFF2B9), Color(0xFFFFD28A), Color(0xFFFFAC45), Color(0xFFFFE8A0)))).border(3.dp, Color(0xFFFFF0AD), RoundedCornerShape(50)).clickable {
+                        // Confirm button click - close the card
+                        showLuckyBagClaimedCard = false
+                    }, contentAlignment = Alignment.Center) {
+                        Text("Confirm", color = Color(0xFF9A4F1C), fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
+                    }
                 }
             }
         }
