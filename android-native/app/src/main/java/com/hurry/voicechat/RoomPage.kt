@@ -188,7 +188,7 @@ fun RoomPage(
     var announcement by remember{mutableStateOf("")}
     
     // Lucky Bag States
-    var showFloatingLuckyBag by remember { mutableStateOf(true) }
+    var showFloatingLuckyBag by remember { mutableStateOf(false) }
     var showLuckyBagCenterReveal by remember { mutableStateOf(false) }
     var showLuckyBagClaimedCard by remember { mutableStateOf(false) }
 
@@ -955,7 +955,8 @@ fun RoomPage(
                 storeInitialView = if (view.equals("bag", true)) "bag" else "store"
                 showStore = true
                 showMenu = false
-            }
+            },
+            onLuckyBagSent={ showFloatingLuckyBag = true }
         )
         
         val activeRoomUsers = backendRoomUsers.toList()
@@ -1069,9 +1070,9 @@ fun RoomPage(
                     
                     Box(
                         modifier = Modifier
-                            .offset(y = 12.dp) // overlaps bottom
-                            .width(220.dp)
-                            .height(86.dp)
+                             .offset(y = 4.dp) // slightly higher
+                            .width(190.dp)
+                            .height(72.dp)
                             .clip(RoundedCornerShape(50))
                             .background(Brush.verticalGradient(listOf(Color(0xFFFFF2A2), Color(0xFFFFE28A), Color(0xFFF4C46B), Color(0xFFFFF0A0))))
                             .border(3.dp, Color(0xFFFFEDB0), RoundedCornerShape(50))
@@ -1093,7 +1094,7 @@ fun RoomPage(
                         Text(
                             text = "Open",
                             color = Color(0xFFDF182B),
-                            fontSize = 28.sp,
+                            fontSize = 23.sp,
                             fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold
                         )
                     }
@@ -1106,7 +1107,7 @@ fun RoomPage(
             Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=0.6f)).clickable { showLuckyBagClaimedCard=false }, contentAlignment = Alignment.Center) {
                 Box(Modifier.fillMaxWidth(0.85f).aspectRatio(0.59f).clickable(enabled=false){}) {
                     // Packet Red Background
-                    Box(Modifier.fillMaxSize().padding(top = 40.dp).clip(RoundedCornerShape(32.dp)).background(Brush.linearGradient(listOf(Color(0xFFFF6449), Color(0xFFFF263F), Color(0xFFE90037)))))
+                    Box(Modifier.fillMaxSize().padding(top = 40.dp).clip(RoundedCornerShape(topStart=32.dp, topEnd=32.dp, bottomStart=18.dp, bottomEnd=18.dp)).background(Brush.linearGradient(listOf(Color(0xFFFF6449), Color(0xFFFF263F), Color(0xFFE90037)))))
                     
                     // Cream Card Layout
                     Box(Modifier.align(Alignment.TopCenter).fillMaxWidth(0.9f).fillMaxHeight(0.72f).clip(RoundedCornerShape(24.dp)).background(Brush.verticalGradient(listOf(Color(0xFFFFF7E5), Color(0xFFFFF0D4))))) {
