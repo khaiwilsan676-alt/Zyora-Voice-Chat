@@ -120,8 +120,10 @@ fun LuckyBag(senderId: String, senderName: String, senderImage: String, roomId: 
                             scope.launch {
                                 val result = withContext(Dispatchers.IO) {
                                     runCatching {
+                                        val existingWalletBalance = WalletDatabase.get(context).walletDao().getUserData()?.balance ?: 0L
                                         val payload = JSONObject()
                                             .put("senderId", senderId)
+                                            .put("initialBalance", existingWalletBalance)
                                             .put("senderName", senderName)
                                             .put("senderImage", senderImage)
                                             .put("roomId", roomId)
