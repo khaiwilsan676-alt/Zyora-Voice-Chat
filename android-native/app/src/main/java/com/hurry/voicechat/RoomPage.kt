@@ -192,7 +192,11 @@ fun RoomPage(
     var showLuckyBagCenterReveal by remember { mutableStateOf(false) }
     var showLuckyBagClaimedCard by remember { mutableStateOf(false) }
     var luckyBagSenderName by remember { mutableStateOf("") }
-    var luckyBagSenderImage by remember { mutableStateOf("") }\n    var luckyBagId by remember { mutableStateOf("") }\n    var luckyBagClaiming by remember { mutableStateOf(false) }\n    var luckyBagClaimError by remember { mutableStateOf<String?>(null) }\n    var luckyBagClaimAmount by remember { mutableLongStateOf(0L) }
+    var luckyBagSenderImage by remember { mutableStateOf("") }
+    var luckyBagId by remember { mutableStateOf("") }
+    var luckyBagClaiming by remember { mutableStateOf(false) }
+    var luckyBagClaimError by remember { mutableStateOf<String?>(null) }
+    var luckyBagClaimAmount by remember { mutableLongStateOf(0L) }
 
     // A user who enters from the global GO banner may have missed the live socket event.
     // Restore the latest active bag for this room from the server.
@@ -494,7 +498,19 @@ fun RoomPage(
                 }
             }
         }
-        val luckyBagBannerListener = Emitter.Listener { args ->\n            val payload = args.firstOrNull() as? JSONObject ?: return@Listener\n            if (payload.optString("roomId") == roomId && payload.optString("senderId") != accountId) {\n                mainHandler.post {\n                    luckyBagId = payload.optString("bagId")\n                    luckyBagSenderName = payload.optString("senderName", "User")\n                    luckyBagSenderImage = payload.optString("senderImage", "")\n                    luckyBagClaimError = null\n                    showFloatingLuckyBag = true\n                }\n            }\n        }\n        val seatListener = Emitter.Listener { args ->
+        val luckyBagBannerListener = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
+            if (payload.optString("roomId") == roomId && payload.optString("senderId") != accountId) {
+                mainHandler.post {
+                    luckyBagId = payload.optString("bagId")
+                    luckyBagSenderName = payload.optString("senderName", "User")
+                    luckyBagSenderImage = payload.optString("senderImage", "")
+                    luckyBagClaimError = null
+                    showFloatingLuckyBag = true
+                }
+            }
+        }
+        val seatListener = Emitter.Listener { args ->
             val payload = args.firstOrNull() as? JSONObject
             if (payload != null && payload.optString("roomId") == roomId) {
                 val seatsJson = payload.optJSONArray("seats") ?: JSONArray()
@@ -536,7 +552,8 @@ fun RoomPage(
         roomSocket.on("room_presence",presenceListener)
         roomSocket.on("room_message",messageListener)
         roomSocket.on("room_chat_cleared",clearedListener)
-        roomSocket.on("room_seats",seatListener)\n        roomSocket.on("lucky_bag_banner",luckyBagBannerListener)
+        roomSocket.on("room_seats",seatListener)
+        roomSocket.on("lucky_bag_banner",luckyBagBannerListener)
         roomSocket.on(Socket.EVENT_CONNECT,connectListener)
         roomSocket.connect()
         onDispose {
@@ -544,7 +561,8 @@ fun RoomPage(
             roomSocket.off("room_presence",presenceListener)
             roomSocket.off("room_message",messageListener)
             roomSocket.off("room_chat_cleared",clearedListener)
-            roomSocket.off("room_seats",seatListener)\n            roomSocket.off("lucky_bag_banner",luckyBagBannerListener)
+            roomSocket.off("room_seats",seatListener)
+            roomSocket.off("lucky_bag_banner",luckyBagBannerListener)
             roomSocket.off(Socket.EVENT_CONNECT,connectListener)
             roomSocket.disconnect()
             roomSocket.close()
@@ -986,12 +1004,17 @@ fun RoomPage(
                 showStore = true
                 showMenu = false
             },
+            luckyBagSenderId = accountId,
             luckyBagSenderName = currentUser.name.ifBlank { "User" },
             luckyBagSenderImage = currentUser.image,
-            onLuckyBagSent={ name, image ->
+            luckyBagRoomId = roomId,
+            luckyBagRoomName = roomName,
+            onLuckyBagSent={ name, image, amount, recipients, bagId ->
                 luckyBagSenderName = name
                 luckyBagSenderImage = image
-                showFloatingLuckyBag = true
+                luckyBagId = bagId
+                luckyBagClaimAmount = amount
+                showFloatingLuckyBag = false
             }
         )
         
