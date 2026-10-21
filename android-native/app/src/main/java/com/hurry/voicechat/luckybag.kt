@@ -12,6 +12,13 @@ import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -30,11 +37,11 @@ private val LuckyCream = Color(0xFFF5D9A8)
 private val LuckyPink = Color(0xFFFE3C68)
 
 @Composable
-fun LuckyBag(senderName: String, senderImage: String, onClose: () -> Unit = {}, onSent: (String, String) -> Unit = { _, _ -> }) {
+fun LuckyBag(senderId: String, senderName: String, senderImage: String, roomId: String, roomName: String, onClose: () -> Unit = {}, onSent: (String, String, Long, Int, String) -> Unit = { _, _, _, _, _ -> }) {
     var selectedCoins by remember { mutableIntStateOf(10000) }
     var recipients by remember { mutableIntStateOf(5) }
     var showClaim by remember { mutableStateOf(false) }
-    var showRules by remember { mutableStateOf(false) }
+    var showRules by remember { mutableStateOf(false) }\n    var sending by remember { mutableStateOf(false) }\n    var sendError by remember { mutableStateOf<String?>(null) }\n    val context = LocalContext.current\n    val scope = rememberCoroutineScope()
 
     BackHandler(enabled = true) {
         when {
@@ -105,16 +112,56 @@ fun LuckyBag(senderName: String, senderImage: String, onClose: () -> Unit = {}, 
                         }
                     }
                     Button(
+                        enabled = !sending,
                         onClick = {
-                            showClaim = false
-                            onSent(senderName, senderImage)
-                            onClose()
+                            if (sending) return@Button
+                            sending = true
+                            sendError = null
+                            scope.launch {
+                                val result = withContext(Dispatchers.IO) {
+                                    runCatching {
+                                        val payload = JSONObject()
+                                            .put("senderId", senderId)
+                                            .put("senderName", senderName)
+                                            .put("senderImage", senderImage)
+                                            .put("roomId", roomId)
+                                            .put("roomName", roomName)
+                                            .put("amount", selectedCoins)
+                                            .put("recipients", recipients)
+                                        val connection = (URL("https://hurry-voice-chat-lz75.onrender.com/api/lucky-bag/send").openConnection() as HttpURLConnection).apply {
+                                            requestMethod = "POST"
+                                            connectTimeout = 12000
+                                            readTimeout = 15000
+                                            doOutput = true
+                                            setRequestProperty("Content-Type", "application/json")
+                                        }
+                                        connection.outputStream.use { it.write(payload.toString().toByteArray(Charsets.UTF_8)) }
+                                        val status = connection.responseCode
+                                        val stream = if (status in 200..299) connection.inputStream else connection.errorStream
+                                        val response = stream.bufferedReader().use { it.readText() }
+                                        connection.disconnect()
+                                        val json = JSONObject(response)
+                                        if (status !in 200..299 || !json.optBoolean("success")) {
+                                            throw IllegalStateException(json.optString("error", "Lucky Bag send failed"))
+                                        }
+                                        json
+                                    }
+                                }
+                                sending = false
+                                result.onSuccess { json ->
+                                    onSent(senderName, senderImage, selectedCoins.toLong(), recipients, json.optString("bagId"))
+                                    showClaim = false
+                                    onClose()
+                                }.onFailure { error ->
+                                    sendError = error.message ?: "Lucky Bag send failed"
+                                }
+                            }
                         },
                         modifier = Modifier.fillMaxWidth(0.90f).align(Alignment.CenterHorizontally).padding(top = 18.dp).height(48.dp),
                         shape = RoundedCornerShape(50),
                         colors = ButtonDefaults.buttonColors(containerColor = LuckyPink)
                     ) {
-                        Text("Send", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                        Text(if (sending) "Sending..." else "Send", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp)
                     }
                 }
             }
