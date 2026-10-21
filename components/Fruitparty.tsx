@@ -422,6 +422,7 @@ export default function Fruitparty({ onClose, onMinimize, isMinimized = false }:
   }, []);
 
   useEffect(() => {
+    const processResult = async () => {
     if (gameState.phase === 'result' && gameState.round !== processedRound && isLoadedFromDB) {
       
       const currentBets = { ...stateRefs.current.bets };
@@ -524,9 +525,11 @@ export default function Fruitparty({ onClose, onMinimize, isMinimized = false }:
         }
       }
     }
+    };
+    void processResult();
   }, [gameState.phase, gameState.round, processedRound, isLoadedFromDB]);
 
-  const handleBetClick = (fruitId: number) => {
+  const handleBetClick = async (fruitId: number) => {
     if (gameState.phase === 'betting' && activeBtn !== null) {
       const betValues = { 1: 1000, 2: 50000, 3: 1000000, 4: 5000000 };
       const betAmt = betValues[activeBtn as keyof typeof betValues];
