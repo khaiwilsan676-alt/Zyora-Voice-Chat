@@ -1,6 +1,6 @@
 import { io, Socket } from "socket.io-client";
 
-const SOCKET_URL = "https://hurry-voice-chat-lz75.onrender.com";
+const SOCKET_URL = "https://zyora-voice-chat.onrender.com";
 
 export const socket: Socket = io(SOCKET_URL, {
   transports: ["websocket"],
