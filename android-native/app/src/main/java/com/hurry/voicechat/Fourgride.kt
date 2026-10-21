@@ -49,6 +49,8 @@ object MusicPlaybackState {
     var isPlaying: Boolean by mutableStateOf(false)
     var currentTrack: NativeMusicTrack? by mutableStateOf(null) // Track data store karne ke liye
     var isMusicPageOpen: Boolean by mutableStateOf(false) // Ye track karega ki card dikhana hai ya nahi
+    var wasPlayedOnMusicPage: Boolean by mutableStateOf(false)
+    var musicPageBackPressed: Boolean by mutableStateOf(false)
 }
 
 data class NativeMusicTrack(val id: String, val name: String, val url: String, val duration: Long = 0L)
@@ -220,7 +222,7 @@ fun Fourgride(
             giftEffect = !giftEffect
             prefs.edit().putBoolean("gift_effect", giftEffect).apply()
         },
-        ToolItem("Music", "IMG_20260814_144255.png") { showMusic = true },
+        ToolItem("Music", "IMG_20260814_144255.png") { MusicPlaybackState.wasPlayedOnMusicPage = false; MusicPlaybackState.musicPageBackPressed = false; showMusic = true },
         ToolItem("Speaker", "IMG_20260814_110628.png") { onToggleSpeaker() },
         ToolItem("Store", "IMG_20260814_110501.png") { onOpenStore?.invoke("store") },
         ToolItem("My-Iteam", "IMG_20260814_110545.png") { onOpenStore?.invoke("bag") }
@@ -258,7 +260,7 @@ fun Fourgride(
             }
 
             Row(Modifier.fillMaxWidth().padding(bottom = 16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                ToolCell(Modifier.weight(1f), "Music", base + "IMG_20260814_144255.png", onClick = { showMusic = true })
+                ToolCell(Modifier.weight(1f), "Music", base + "IMG_20260814_144255.png", onClick = { MusicPlaybackState.wasPlayedOnMusicPage = false; MusicPlaybackState.musicPageBackPressed = false; showMusic = true })
                 Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
                     AsyncImage(model = base + "IMG_20260814_110628.png", contentDescription = "Speaker", modifier = Modifier.size(48.dp), contentScale = ContentScale.Fit)
                     Row(Modifier.padding(top = 4.dp).clickable { onToggleSpeaker() }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -286,8 +288,10 @@ fun Fourgride(
         BackHandler(enabled = true) {
             val currentTrack = musicTracks.firstOrNull { it.url == MusicPlaybackState.currentPlayingUri } ?: MusicPlaybackState.currentTrack
             if (MusicPlaybackState.currentPlayingUri != null && currentTrack != null) {
+                MusicPlaybackState.musicPageBackPressed = MusicPlaybackState.wasPlayedOnMusicPage && MusicPlaybackState.isPlaying
                 onMusicMinimize?.invoke(currentTrack) 
             } else {
+                MusicPlaybackState.musicPageBackPressed = false
                 onMusicMinimize?.invoke(null) 
             }
             showMusic = false
@@ -301,8 +305,10 @@ fun Fourgride(
                         onClick = {
                             val currentTrack = musicTracks.firstOrNull { it.url == MusicPlaybackState.currentPlayingUri } ?: MusicPlaybackState.currentTrack
                             if (MusicPlaybackState.currentPlayingUri != null && currentTrack != null) {
+                                MusicPlaybackState.musicPageBackPressed = MusicPlaybackState.wasPlayedOnMusicPage && MusicPlaybackState.isPlaying
                                 onMusicMinimize?.invoke(currentTrack)
                             } else {
+                                MusicPlaybackState.musicPageBackPressed = false
                                 onMusicMinimize?.invoke(null)
                             }
                             showMusic = false
