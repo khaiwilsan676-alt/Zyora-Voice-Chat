@@ -467,7 +467,7 @@ export default function Fourgride({
                     onClick={(e) => { e.stopPropagation(); setShowLuckyBag(true); }}
                     className="transition-transform hover:scale-105"
                   >
-                    <img src="/1790602570756~2.jpg" alt="Lucky bag" className="w-12 h-12 object-contain" />
+                    <img src="/IMG_20261021_170707.png" alt="Lucky bag" className="w-12 h-12 object-contain" />
                   </button>
                   <span className="text-[10px] text-gray-700 mt-1">Lucky bag</span>
                 </div>
