@@ -83,8 +83,13 @@ private val familyRemoveBlackMatrix = ColorMatrix(floatArrayOf(
     1.5f, 1.5f, 1.5f, 0f, -0.2f
 ))
 
-// NORMAL GRAYSCALE FOR INACTIVE TABS
-private val familyGrayscaleMatrix = ColorMatrix().apply { setToSaturation(0f) }
+// GRAYSCALE + GREEN REMOVE MATRIX
+private val familyGrayscaleGreenMatrix = ColorMatrix(floatArrayOf(
+    0.33f, 0.59f, 0.11f, 0f, 0f,
+    0.33f, 0.59f, 0.11f, 0f, 0f,
+    0.33f, 0.59f, 0.11f, 0f, 0f,
+    1.5f, -2.5f, 1.5f, 1f, 0f
+))
 
 private val familyRules = listOf(
     "1. The top 10 families in the weekly family rankings will receive various rewards. Rewards are distributed every Sunday at 5:30 AM (GMT+5:30).",
@@ -215,8 +220,8 @@ fun Family(onBack: () -> Unit) {
 private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, activeRank: Int, onRank: (Int) -> Unit, onCreate: () -> Unit) {
     val scrollState = rememberScrollState()
 
-    Box(Modifier.fillMaxSize().background(familyDark)) {
-        // Background Image placed absolute at top
+    // Added verticalScroll directly to the parent Box so background scrolls with the page
+    Box(Modifier.fillMaxSize().background(familyDark).verticalScroll(scrollState)) {
         Box(Modifier.fillMaxWidth().height(400.dp)) {
             AsyncImage(
                 model = familyAsset("file_00000000f5f8821191b648b5822e3909.png"),
@@ -231,12 +236,7 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, ac
             )))
         }
 
-        // Pura page verticalScroll me daal diya hai - Top se lekar Rank 50 aur Create button tak pura scroll hoga!
-        Column(
-            Modifier
-                .fillMaxSize()
-                .verticalScroll(scrollState)
-        ) {
+        Column(Modifier.fillMaxSize()) {
             Row(
                 Modifier
                     .fillMaxWidth()
@@ -252,37 +252,38 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, ac
             Box(Modifier.fillMaxWidth().height(240.dp).padding(top = 10.dp)) {
                 AsyncImage(model = familyAsset("1788258909655~2.jpg"), contentDescription = null, modifier = Modifier.align(Alignment.CenterStart).offset(x = (-10).dp, y = 30.dp).size(160.dp), contentScale = ContentScale.Fit, colorFilter = ColorFilter.colorMatrix(familyRemoveGreenMatrix))
                 AsyncImage(model = familyAsset("1788258915366~2.jpg"), contentDescription = null, modifier = Modifier.align(Alignment.CenterEnd).offset(x = 10.dp, y = 30.dp).size(160.dp), contentScale = ContentScale.Fit, colorFilter = ColorFilter.colorMatrix(familyRemoveGreenMatrix))
-                AsyncImage(model = familyAsset("IMG_20260901_161023.png"), contentDescription = null, modifier = Modifier.align(Alignment.TopCenter).offset(y = (-15).dp).size(260.dp).zIndex(2f), contentScale = ContentScale.Fit, colorFilter = ColorFilter.colorMatrix(familyRemoveGreenMatrix))
+                // Middle image moved slightly UP by changing offset y to -35.dp
+                AsyncImage(model = familyAsset("IMG_20260901_161023.png"), contentDescription = null, modifier = Modifier.align(Alignment.TopCenter).offset(y = (-35).dp).size(260.dp).zIndex(2f), contentScale = ContentScale.Fit, colorFilter = ColorFilter.colorMatrix(familyRemoveGreenMatrix))
             }
 
             Spacer(Modifier.height(10.dp))
 
-            // ⭐ 3 CARDS
+            // ⭐ OLD 3 IMAGES ROW RESTORED
             Row(
                 Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 AsyncImage(
-                    model = familyAsset("IMG_20261021_131207.png"),
+                    model = familyAsset("IMG_20260901_230303.jpg"),
                     contentDescription = null,
                     modifier = Modifier.weight(1f).height(110.dp).clickable { onRank(0) },
                     contentScale = ContentScale.Fit,
-                    colorFilter = if (activeRank == 0) null else ColorFilter.colorMatrix(familyGrayscaleMatrix)
+                    colorFilter = if (activeRank == 0) ColorFilter.colorMatrix(familyRemoveGreenMatrix) else ColorFilter.colorMatrix(familyGrayscaleGreenMatrix)
                 )
                 AsyncImage(
-                    model = familyAsset("IMG_20261021_131138.png"),
+                    model = familyAsset("IMG_20260901_230319.jpg"),
                     contentDescription = null,
                     modifier = Modifier.weight(1f).height(110.dp).clickable { onRank(1) },
                     contentScale = ContentScale.Fit,
-                    colorFilter = if (activeRank == 1) null else ColorFilter.colorMatrix(familyGrayscaleMatrix)
+                    colorFilter = if (activeRank == 1) ColorFilter.colorMatrix(familyRemoveGreenMatrix) else ColorFilter.colorMatrix(familyGrayscaleGreenMatrix)
                 )
                 AsyncImage(
-                    model = familyAsset("IMG_20261021_131054.png"),
+                    model = familyAsset("IMG_20260901_230330.jpg"),
                     contentDescription = null,
                     modifier = Modifier.weight(1f).height(110.dp).clickable { onRank(2) },
                     contentScale = ContentScale.Fit,
-                    colorFilter = if (activeRank == 2) null else ColorFilter.colorMatrix(familyGrayscaleMatrix)
+                    colorFilter = if (activeRank == 2) ColorFilter.colorMatrix(familyRemoveGreenMatrix) else ColorFilter.colorMatrix(familyGrayscaleGreenMatrix)
                 )
             }
 
@@ -297,9 +298,18 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, ac
                 Text("%02d".format(seconds % 60), color = Color.White, modifier = Modifier.background(Color(0xFF1A0F02), RoundedCornerShape(4.dp)).padding(4.dp), fontWeight = FontWeight.Bold)
             }
 
-            AsyncImage(model = familyAsset("1788258921361~2.jpg"), contentDescription = "Top three families", modifier = Modifier.fillMaxWidth().height(150.dp), contentScale = ContentScale.FillBounds, colorFilter = ColorFilter.colorMatrix(familyRemoveGreenMatrix))
+            // ⭐ RANK 1, 2, 3 CARDS IN LIST WITHOUT TEXT
+            Box(Modifier.fillMaxWidth().height(64.dp)) {
+                AsyncImage(model = familyAsset("IMG_20261021_131207.png"), contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.FillBounds)
+            }
+            Box(Modifier.fillMaxWidth().height(64.dp)) {
+                AsyncImage(model = familyAsset("IMG_20261021_131138.png"), contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.FillBounds)
+            }
+            Box(Modifier.fillMaxWidth().height(64.dp)) {
+                AsyncImage(model = familyAsset("IMG_20261021_131054.png"), contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.FillBounds)
+            }
 
-            // RANKS 4 TO 50
+            // RANKS 4 TO 50 WITH TEXT
             for (rank in 4..50) {
                 Box(Modifier.fillMaxWidth().height(64.dp), contentAlignment = Alignment.CenterStart) {
                     AsyncImage(model = familyAsset("1788259008478~2.jpg"), contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.FillBounds, colorFilter = ColorFilter.colorMatrix(familyRemoveGreenMatrix))
@@ -309,7 +319,7 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, ac
 
             Spacer(Modifier.height(30.dp))
 
-            // CREATE FAMILY BUTTON INSIDE SCROLL - AB SAB SCROLL HOGA
+            // CREATE FAMILY BUTTON
             Box(Modifier.fillMaxWidth().padding(bottom = 40.dp)) {
                 AsyncImage(
                     model = familyAsset("file_000000009d1081f59878648feb821b5e.png"),
@@ -331,13 +341,14 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, ac
 }
 
 // --------------------------------------------------------
-// TOP RANKINGS REWARDS CARDS (View 3) - FULL PAGE SCROLL
+// TOP RANKINGS REWARDS CARDS (View 3)
 // --------------------------------------------------------
 @Composable
 private fun FamilyTop(onBack: () -> Unit, onRules: () -> Unit, activeRank: Int, onRank: (Int) -> Unit, onOpenModal: (String, String, Boolean, String) -> Unit) {
     val scrollState = rememberScrollState()
 
-    Box(Modifier.fillMaxSize().background(familyBrown)) {
+    // Full page scroll fixed here too
+    Box(Modifier.fillMaxSize().background(familyBrown).verticalScroll(scrollState)) {
         Box(Modifier.fillMaxWidth().height(400.dp)) {
             AsyncImage(model = familyAsset("file_00000000f5f8821191b648b5822e3909.png"), contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
             Box(Modifier.fillMaxSize().background(Brush.verticalGradient(
@@ -347,7 +358,7 @@ private fun FamilyTop(onBack: () -> Unit, onRules: () -> Unit, activeRank: Int, 
             )))
         }
 
-        Column(Modifier.fillMaxSize().verticalScroll(scrollState)) {
+        Column(Modifier.fillMaxSize()) {
             Row(Modifier.fillMaxWidth().statusBarsPadding().padding(top = 8.dp, start = 8.dp, end = 16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Back", tint = Color.White, modifier = Modifier.size(28.dp)) }
                 FamilyQuestion(Modifier.size(28.dp).clickable(onClick = onRules))
@@ -356,36 +367,38 @@ private fun FamilyTop(onBack: () -> Unit, onRules: () -> Unit, activeRank: Int, 
             Box(Modifier.fillMaxWidth().height(240.dp).padding(top = 10.dp)) {
                 AsyncImage(model = familyAsset("1788258909655~2.jpg"), contentDescription = null, modifier = Modifier.align(Alignment.CenterStart).offset(x = (-10).dp, y = 30.dp).size(160.dp), contentScale = ContentScale.Fit, colorFilter = ColorFilter.colorMatrix(familyRemoveGreenMatrix))
                 AsyncImage(model = familyAsset("1788258915366~2.jpg"), contentDescription = null, modifier = Modifier.align(Alignment.CenterEnd).offset(x = 10.dp, y = 30.dp).size(160.dp), contentScale = ContentScale.Fit, colorFilter = ColorFilter.colorMatrix(familyRemoveGreenMatrix))
-                AsyncImage(model = familyAsset("IMG_20260901_161023.png"), contentDescription = null, modifier = Modifier.align(Alignment.TopCenter).offset(y = (-15).dp).size(260.dp).zIndex(2f), contentScale = ContentScale.Fit, colorFilter = ColorFilter.colorMatrix(familyRemoveGreenMatrix))
+                // Middle image moved up by setting offset y to -35.dp
+                AsyncImage(model = familyAsset("IMG_20260901_161023.png"), contentDescription = null, modifier = Modifier.align(Alignment.TopCenter).offset(y = (-35).dp).size(260.dp).zIndex(2f), contentScale = ContentScale.Fit, colorFilter = ColorFilter.colorMatrix(familyRemoveGreenMatrix))
             }
 
             Spacer(Modifier.height(10.dp))
 
+            // ⭐ OLD 3 IMAGES ROW RESTORED
             Row(
                 Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 AsyncImage(
-                    model = familyAsset("IMG_20261021_131207.png"),
+                    model = familyAsset("IMG_20260901_230303.jpg"),
                     contentDescription = null,
                     modifier = Modifier.weight(1f).height(110.dp).clickable { onRank(0) },
                     contentScale = ContentScale.Fit,
-                    colorFilter = if (activeRank == 0) null else ColorFilter.colorMatrix(familyGrayscaleMatrix)
+                    colorFilter = if (activeRank == 0) ColorFilter.colorMatrix(familyRemoveGreenMatrix) else ColorFilter.colorMatrix(familyGrayscaleGreenMatrix)
                 )
                 AsyncImage(
-                    model = familyAsset("IMG_20261021_131138.png"),
+                    model = familyAsset("IMG_20260901_230319.jpg"),
                     contentDescription = null,
                     modifier = Modifier.weight(1f).height(110.dp).clickable { onRank(1) },
                     contentScale = ContentScale.Fit,
-                    colorFilter = if (activeRank == 1) null else ColorFilter.colorMatrix(familyGrayscaleMatrix)
+                    colorFilter = if (activeRank == 1) ColorFilter.colorMatrix(familyRemoveGreenMatrix) else ColorFilter.colorMatrix(familyGrayscaleGreenMatrix)
                 )
                 AsyncImage(
-                    model = familyAsset("IMG_20261021_131054.png"),
+                    model = familyAsset("IMG_20260901_230330.jpg"),
                     contentDescription = null,
                     modifier = Modifier.weight(1f).height(110.dp).clickable { onRank(2) },
                     contentScale = ContentScale.Fit,
-                    colorFilter = if (activeRank == 2) null else ColorFilter.colorMatrix(familyGrayscaleMatrix)
+                    colorFilter = if (activeRank == 2) ColorFilter.colorMatrix(familyRemoveGreenMatrix) else ColorFilter.colorMatrix(familyGrayscaleGreenMatrix)
                 )
             }
 
@@ -571,7 +584,8 @@ private fun RewardItemBox(
                             url = familyAsset(item.thumbnail),
                             type = item.type,
                             modifier = Modifier.fillMaxSize(),
-                            rounded = false
+                            rounded = false,
+                            autoplay = true // Added Autoplay true here
                         )
                     } else {
                         AsyncImage(
@@ -653,6 +667,9 @@ private fun FamilyRewardVideo(
             factory = { ctx ->
                 PlayerView(ctx).apply {
                     useController = false
+                    surfaceType = androidx.media3.ui.PlayerView.SURFACE_TYPE_TEXTURE_VIEW
+                    // RESIZE_MODE_ZOOM added below to ensure square proper cropping
+                    resizeMode = androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM
                     setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)
                     layoutParams = FrameLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
@@ -697,25 +714,7 @@ private fun FamilyRewardModal(
             contentAlignment = Alignment.Center
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-
-                if (isWinnerReward) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.offset(y = 24.dp).zIndex(2f)
-                    ) {
-                        Column(horizontalAlignment = Alignment.End, modifier = Modifier.padding(end = 6.dp)) {
-                            Box(Modifier.width(32.dp).height(2.dp).background(familyGold))
-                            Spacer(Modifier.height(3.dp))
-                            Box(Modifier.width(20.dp).height(2.dp).background(familyGold))
-                        }
-                        Text(title, color = familyGold, fontSize = 24.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Serif)
-                        Column(horizontalAlignment = Alignment.Start, modifier = Modifier.padding(start = 6.dp)) {
-                            Box(Modifier.width(32.dp).height(2.dp).background(familyGold))
-                            Spacer(Modifier.height(3.dp))
-                            Box(Modifier.width(20.dp).height(2.dp).background(familyGold))
-                        }
-                    }
-                }
+                // Yellow text "Top family 1, 2, 3" that was shown over the video has been entirely removed here as requested.
 
                 val isVideo = url.substringBefore("?").substringAfterLast(".").lowercase() in setOf("mp4", "webm", "m4v")
 
