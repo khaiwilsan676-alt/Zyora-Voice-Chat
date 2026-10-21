@@ -47,12 +47,12 @@ fun Wildparty(
                         post { onMinimize() }
                     }
                 }, "NativeWildParty")
-                loadUrl("https://hurry-voice-chat.vercel.app/native-wildparty")
+                loadUrl("https://zyora-voice-chat.vercel.app/native-wildparty")
             }
         },
         update = { view ->
             if (view.url.isNullOrBlank()) {
-                view.loadUrl("https://hurry-voice-chat.vercel.app/native-wildparty")
+                view.loadUrl("https://zyora-voice-chat.vercel.app/native-wildparty")
             }
         }
     )
