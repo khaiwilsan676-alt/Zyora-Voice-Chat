@@ -229,6 +229,7 @@ fun Fourgride(
         ToolItem("Pk Battle", "IMG_20260814_110802.png") { }
     )
 
+    if (!showLuckyBag) {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
         Box(Modifier.fillMaxSize().clickable { onClose() })
         Column(
@@ -276,6 +277,8 @@ fun Fourgride(
                 Spacer(Modifier.weight(1f))
             }
         }
+    }
+
     }
 
     if (showMusic) {
