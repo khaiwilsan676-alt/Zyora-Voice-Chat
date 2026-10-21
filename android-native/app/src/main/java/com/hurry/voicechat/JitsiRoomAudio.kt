@@ -67,7 +67,9 @@ fun JitsiRoomAudio(roomId: String, userName: String, canSpeak: Boolean, onSpeaki
     AndroidView(
         modifier = Modifier.size(1.dp).alpha(0.01f),
         factory = { viewContext ->
-            val roomName = JSONObject.quote("HurryVoice-$roomId")
+            // Keep Jitsi room names stable and URL-safe even when backend IDs contain punctuation.
+            val safeRoomId = roomId.trim().replace(Regex("[^A-Za-z0-9_-]"), "-").take(120).ifBlank { "default-room" }
+            val roomName = JSONObject.quote("ZyoraVoice-$safeRoomId")
             val displayName = JSONObject.quote(userName.ifBlank { "User" })
             val initialMuted = !(canSpeak && hasMicPermission)
             WebView(viewContext).apply {
@@ -102,12 +104,25 @@ fun JitsiRoomAudio(roomId: String, userName: String, canSpeak: Boolean, onSpeaki
                     <script>
                       let desiredMuted = ${initialMuted};
                       let api = null;
+                      let retryTimer = null;
+                      let retryDelay = 1000;
+                      let starting = false;
+                      function scheduleReconnect() {
+                        if (retryTimer) return;
+                        starting = false;
+                        try { if (api) api.dispose(); } catch (e) {}
+                        api = null;
+                        retryTimer = setTimeout(function() { retryTimer = null; startConference(); }, retryDelay);
+                        retryDelay = Math.min(retryDelay * 2, 15000);
+                      }
                       window.setZyoraMuted = function(muted) {
                         desiredMuted = !!muted;
                         if (api) { try { api.executeCommand('setAudioMute', desiredMuted); } catch (e) {} }
                       };
                       function startConference() {
+                        if (starting) return;
                         if (typeof JitsiMeetExternalAPI === 'undefined') { setTimeout(startConference, 500); return; }
+                        starting = true;
                         api = new JitsiMeetExternalAPI('meet.jit.si', {
                           roomName: ${roomName},
                           parentNode: document.getElementById('meet'),
@@ -125,9 +140,14 @@ fun JitsiRoomAudio(roomId: String, userName: String, canSpeak: Boolean, onSpeaki
                         });
                         let localParticipantId = null;
                       api.addEventListener('videoConferenceJoined', function(event) {
+                        starting = false;
+                        retryDelay = 1000;
                         localParticipantId = event && event.id ? event.id : null;
                         window.setZyoraMuted(desiredMuted);
                       });
+                      api.addEventListener('connectionFailed', scheduleReconnect);
+                      api.addEventListener('conferenceFailed', scheduleReconnect);
+                      api.addEventListener('videoConferenceLeft', scheduleReconnect);
                       api.addEventListener('audioLevelChanged', function(event) {
                         if (localParticipantId && event && event.participantId === localParticipantId) {
                           try { ZyoraVoiceBridge.onVoiceActivity(!desiredMuted && event.audioLevel > 0.08); } catch (e) {}
