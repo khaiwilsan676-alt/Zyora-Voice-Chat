@@ -1,6 +1,6 @@
 const API_URL =
   process.env.NEXT_PUBLIC_BACKEND_URL ||
-  "https://hurry-voice-chat-lz75.onrender.com";
+  "https://zyora-voice-chat.onrender.com";
 
 export const apiUrl = (path: string) => {
   const cleanPath = path.startsWith("/") ? path : `/${path}`;
