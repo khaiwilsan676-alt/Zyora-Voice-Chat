@@ -45,10 +45,10 @@ export default function ActiveUsers({
                     onClick={() => onOpenProfile({ name: user.name, image: user.image, accountId: user.accountId })}
                   >
                     <img 
-                      src={user.image || "/default-avatar.png"} 
+                      src={user.image || "/file_00000000d0408211a5b096ee1cc2d12a.png"} 
                       alt={user.name} 
                       className="w-full h-full object-cover" 
-                      onError={(e) => { (e.target as HTMLImageElement).src = "/default-avatar.png" }} 
+                      onError={(e) => { const img = e.currentTarget; if (!img.src.endsWith("/file_00000000d0408211a5b096ee1cc2d12a.png")) img.src = "/file_00000000d0408211a5b096ee1cc2d12a.png"; }} 
                     />
                   </div>
                   <div className="flex-1 min-w-0">
