@@ -6,8 +6,6 @@ plugins {
     id("com.google.gms.google-services")
 }
 android {
-    // Bundle public images inside the APK so fallback DPs work offline.
-    sourceSets.getByName("main").assets.srcDir("../../public")
     namespace = "com.hurry.voicechat"
     compileSdk = 36
     defaultConfig {
