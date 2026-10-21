@@ -60,9 +60,43 @@ async function loadStateFromDB() {
 async function saveStateToDB(state: any) {
   try {
     const db = await initDB();
-    const tx = db.transaction(STORE_NAME, 'readwrite');
-    tx.objectStore(STORE_NAME).put(state, 'user_data');
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, 'readwrite');
+      const store = tx.objectStore(STORE_NAME);
+      const req = store.get('user_data');
+      req.onsuccess = () => {
+        const existing = req.result || {};
+        // The wallet balance is shared with Wallet.tsx and Wild Party.
+        // Save only Fruit Party statistics without overwriting the latest coin balance.
+        const { balance: _gameBalance, ...gameState } = state;
+        store.put({ ...existing, ...gameState }, 'user_data');
+      };
+      req.onerror = () => reject(req.error);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error);
+    });
   } catch (e) {}
+}
+
+async function updateSharedCoinBalance(delta: number): Promise<number> {
+  const db = await initDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    const req = store.get('user_data');
+    let next = 0;
+    req.onsuccess = () => {
+      const existing = req.result || {};
+      const current = Math.max(0, Number(existing.balance) || 0);
+      next = Math.max(0, current + delta);
+      store.put({ ...existing, balance: next }, 'user_data');
+    };
+    req.onerror = () => reject(req.error);
+    tx.oncomplete = () => resolve(next);
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error);
+  });
 }
 
 function WebGLShaderImage({ src }: { src: string }) {
@@ -105,7 +139,7 @@ export default function Fruitparty({ onClose, onMinimize, isMinimized = false }:
   const [winners, setWinners] = useState<string[]>([]);
   const [roundHistory, setRoundHistory] = useState<HistoryItem[]>([]);
   
-  const [balance, setBalance] = useState(82927);
+  const [balance, setBalance] = useState(0);
   const [totalWon, setTotalWon] = useState(0);
   const [bets, setBets] = useState<Record<number, number>>(isAppMinimizedSession ? sessionBetsGlobal : {});
   
@@ -434,7 +468,9 @@ export default function Fruitparty({ onClose, onMinimize, isMinimized = false }:
       }
 
       if (winnerImgToSave) {
-        const nextBalance = stateRefs.current.balance + earned;
+        const nextBalance = earned > 0
+          ? await updateSharedCoinBalance(earned)
+          : stateRefs.current.balance;
         const nextTotalWon = stateRefs.current.totalWon + earned;
 
         setBalance(nextBalance);
@@ -496,7 +532,8 @@ export default function Fruitparty({ onClose, onMinimize, isMinimized = false }:
       const betAmt = betValues[activeBtn as keyof typeof betValues];
       
       if (balance >= betAmt) {
-        setBalance(prev => prev - betAmt);
+        const nextBalance = await updateSharedCoinBalance(-betAmt);
+        setBalance(nextBalance);
         recordTransaction('Bet placed on Fruit Party', -betAmt);
         setBets(prev => {
           const updated = { ...prev, [fruitId]: (prev[fruitId] || 0) + betAmt };
