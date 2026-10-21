@@ -146,7 +146,19 @@ fun LuckyBag(senderId: String, senderName: String, senderImage: String, roomId: 
                                         val stream = if (status in 200..299) connection.inputStream else connection.errorStream
                                         val response = stream.bufferedReader().use { it.readText() }
                                         connection.disconnect()
-                                        val json = JSONObject(response)
+                                        val json = try {
+                                            JSONObject(response)
+                                        } catch (_: Exception) {
+                                            val preview = response.replace(Regex("\\s+"), " ").take(180)
+                                            throw IllegalStateException(
+                                                if (response.trimStart().startsWith("<!DOCTYPE", ignoreCase = true) ||
+                                                    response.trimStart().startsWith("<html", ignoreCase = true)) {
+                                                    "Lucky Bag server returned an HTML page (HTTP $status), not JSON. The backend deployment or API URL is unavailable. Please redeploy/check the backend."
+                                                } else {
+                                                    "Lucky Bag server returned an invalid response (HTTP $status): $preview"
+                                                }
+                                            )
+                                        }
                                         if (status !in 200..299 || !json.optBoolean("success")) {
                                             throw IllegalStateException(json.optString("error", "Lucky Bag send failed"))
                                         }
