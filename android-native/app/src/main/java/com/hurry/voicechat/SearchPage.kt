@@ -102,7 +102,7 @@ fun SearchPage(onBack:()->Unit={},onOpenProfile:(RoomProfileUser)->Unit={}) {
   results=withContext(Dispatchers.IO) {
    runCatching {
     val encoded=URLEncoder.encode(q,"UTF-8")
-    val conn=URL("https://hurry-voice-chat-lz75.onrender.com/api/users?search=$encoded&accountId=$encoded&q=$encoded").openConnection() as HttpURLConnection
+    val conn=URL("https://zyora-voice-chat.onrender.com/api/users?search=$encoded&accountId=$encoded&q=$encoded").openConnection() as HttpURLConnection
     conn.connectTimeout=9000; conn.readTimeout=9000
     try {
      val status=conn.responseCode
