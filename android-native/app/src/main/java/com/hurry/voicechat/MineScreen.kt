@@ -110,7 +110,7 @@ fun MineNativePage(onBack: () -> Unit, createdRoom: HurryRoom? = null, onCreateR
                         if (createdRoom == null) {
                             Text("+", color=Color.White, fontSize=32.sp)
                         } else {
-                            AsyncImage(model=createdRoom.image, contentDescription=null, modifier=Modifier.fillMaxSize().clip(RoundedCornerShape(50)))
+                            FallbackAsyncImage(model=createdRoom.image, contentDescription=null, modifier=Modifier.fillMaxSize().clip(RoundedCornerShape(50)))
                         }
                     }
                     Spacer(Modifier.width(16.dp))
