@@ -30,7 +30,7 @@ import io.socket.client.Socket
 import org.json.JSONObject
 import kotlinx.coroutines.delay
 
-private const val LUCKY_BAG_SOCKET_URL = "https://hurry-voice-chat-lz75.onrender.com"
+private const val LUCKY_BAG_SOCKET_URL = "https://zyora-voice-chat.onrender.com"
 private const val LUCKY_BAG_BANNER_IMAGE = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_000000001abc8211b1623dee45d87328.png"
 
 private data class LuckyBagBannerData(
