@@ -1061,7 +1061,7 @@ fun RoomPage(
                 seats[seatIndex]=selected.copy(gifSrc=sticker.src,gifTimestamp=timestamp)
                 roomSocketRef.value?.emit("room_seat_action",JSONObject().put("roomId",roomId).put("userId",accountId).put("action","emoji").put("seatNumber",selected.number).put("user",JSONObject().put("name",currentUser.name.ifBlank{"User"}).put("image",currentUser.image.ifBlank{"https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/default-avatar.png"}).put("accountId",accountId)).put("src",sticker.src).put("timestamp",timestamp))
                 
-                Handler(Looper.getMainLooper()).postDelayed({ if(seats.getOrNull(seatIndex)?.gifTimestamp==timestamp) seats[seatIndex]=seats[seatIndex].copy(gifSrc="",gifTimestamp=0L) },3000)
+                Handler(Looper.getMainLooper()).postDelayed({ if(seats.getOrNull(seatIndex)?.gifTimestamp==timestamp) seats[seatIndex]=seats[seatIndex].copy(gifSrc="",gifTimestamp=0L) },5000)
             }
         })
         if(showSeatSheet && selectedSeat>0) {
@@ -1351,7 +1351,7 @@ private fun formatMusicTime(seconds: Float): String {
     LaunchedEffect(seat.gifTimestamp) {
         if (seat.gifTimestamp != 0L && seat.gifSrc.isNotBlank()) {
             showGif = true
-            kotlinx.coroutines.delay(3000)
+            kotlinx.coroutines.delay(5000)
             showGif = false
         } else {
             showGif = false
