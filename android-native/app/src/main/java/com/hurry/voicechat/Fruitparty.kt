@@ -60,12 +60,12 @@ fun Fruitparty(
                         post { onMinimize?.invoke() }
                     }
                 }, "NativeFruitPartyBridge")
-                loadUrl("https://hurry-voice-chat.vercel.app/native-fruitparty")
+                loadUrl("https://zyora-voice-chat.vercel.app/native-fruitparty")
             }
         },
         update = { view ->
             if (view.url.isNullOrBlank()) {
-                view.loadUrl("https://hurry-voice-chat.vercel.app/native-fruitparty")
+                view.loadUrl("https://zyora-voice-chat.vercel.app/native-fruitparty")
             }
         }
     )
