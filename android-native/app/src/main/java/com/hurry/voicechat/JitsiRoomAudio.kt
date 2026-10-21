@@ -134,21 +134,37 @@ fun JitsiRoomAudio(roomId: String, userName: String, canSpeak: Boolean, onSpeaki
                         if (starting) return;
                         if (typeof JitsiMeetExternalAPI === 'undefined') { setTimeout(startConference, 500); return; }
                         starting = true;
-                        api = new JitsiMeetExternalAPI('meet.jit.si', {
-                          roomName: ${roomName},
-                          parentNode: document.getElementById('meet'),
-                          width: '1px',
-                          height: '1px',
-                          configOverwrite: {
-                            startAudioOnly: true,
-                            startWithAudioMuted: true,
-                            startWithVideoMuted: true,
-                            prejoinConfig: { enabled: false },
-                            disableDeepLinking: true
-                          },
-                          interfaceConfigOverwrite: { TOOLBAR_BUTTONS: [] },
-                          userInfo: { displayName: ${displayName} }
-                        });
+                        try {
+                          api = new JitsiMeetExternalAPI('meet.jit.si', {
+                            roomName: ${roomName},
+                            parentNode: document.getElementById('meet'),
+                            width: '1px',
+                            height: '1px',
+                            configOverwrite: {
+                              startAudioOnly: true,
+                              startWithAudioMuted: true,
+                              startWithVideoMuted: true,
+                              prejoinConfig: { enabled: false },
+                              disableDeepLinking: true
+                            },
+                            interfaceConfigOverwrite: { TOOLBAR_BUTTONS: [] },
+                            userInfo: { displayName: ${displayName} }
+                          });
+                        } catch (error) {
+                          // A WebView/Jitsi constructor exception previously left starting=true forever.
+                          console.error('Zyora Jitsi initialization failed; retrying', error);
+                          starting = false;
+                          api = null;
+                          if (joinTimer) { clearTimeout(joinTimer); joinTimer = null; }
+                          if (!retryTimer) {
+                            retryTimer = setTimeout(function() {
+                              retryTimer = null;
+                              startConference();
+                            }, retryDelay);
+                            retryDelay = Math.min(retryDelay * 2, 15000);
+                          }
+                          return;
+                        }
                         let localParticipantId = null;
                       api.addEventListener('videoConferenceJoined', function(event) {
                         starting = false;
