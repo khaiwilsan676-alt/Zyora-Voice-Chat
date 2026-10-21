@@ -41,7 +41,11 @@ fun LuckyBag(senderId: String, senderName: String, senderImage: String, roomId: 
     var selectedCoins by remember { mutableIntStateOf(10000) }
     var recipients by remember { mutableIntStateOf(5) }
     var showClaim by remember { mutableStateOf(false) }
-    var showRules by remember { mutableStateOf(false) }\n    var sending by remember { mutableStateOf(false) }\n    var sendError by remember { mutableStateOf<String?>(null) }\n    val context = LocalContext.current\n    val scope = rememberCoroutineScope()
+    var showRules by remember { mutableStateOf(false) }
+    var sending by remember { mutableStateOf(false) }
+    var sendError by remember { mutableStateOf<String?>(null) }
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     BackHandler(enabled = true) {
         when {
