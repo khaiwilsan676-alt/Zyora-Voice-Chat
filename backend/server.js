@@ -1063,8 +1063,9 @@ app.post("/api/lucky-bag/send", async (req, res) => {
         ![5,10,30,50].includes(recipients)) {
       return res.status(400).json({ error: "Invalid Lucky Bag details" });
     }
+    const initialBalance = Math.max(0, Math.floor(Number(req.body?.initialBalance || 0)));
     await luckyBagWallets().updateOne(
-      { userId: senderId }, { $setOnInsert: { userId: senderId, balance: 0, createdAt: Date.now() } }, { upsert: true }
+      { userId: senderId }, { $setOnInsert: { userId: senderId, balance: initialBalance, createdAt: Date.now() } }, { upsert: true }
     );
     const debit = await luckyBagWallets().updateOne(
       { userId: senderId, balance: { $gte: amount } },
