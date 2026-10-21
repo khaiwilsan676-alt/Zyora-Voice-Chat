@@ -28,6 +28,10 @@ fun Wildparty(
                 settings.javaScriptEnabled = true
                 settings.domStorageEnabled = true
                 settings.databaseEnabled = true
+                settings.mediaPlaybackRequiresUserGesture = false
+                settings.useWideViewPort = true
+                settings.loadWithOverviewMode = true
+                settings.setSupportZoom(false)
                 settings.allowFileAccess = false
                 settings.allowContentAccess = true
                 webChromeClient = WebChromeClient()
