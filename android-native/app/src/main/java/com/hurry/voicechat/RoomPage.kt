@@ -191,6 +191,8 @@ fun RoomPage(
     var showFloatingLuckyBag by remember { mutableStateOf(false) }
     var showLuckyBagCenterReveal by remember { mutableStateOf(false) }
     var showLuckyBagClaimedCard by remember { mutableStateOf(false) }
+    var luckyBagSenderName by remember { mutableStateOf("") }
+    var luckyBagSenderImage by remember { mutableStateOf("") }
 
     LaunchedEffect(roomId) {
         withContext(Dispatchers.IO) {
@@ -956,7 +958,13 @@ fun RoomPage(
                 showStore = true
                 showMenu = false
             },
-            onLuckyBagSent={ showFloatingLuckyBag = true }
+            luckyBagSenderName = currentUser.name.ifBlank { "User" },
+            luckyBagSenderImage = currentUser.image,
+            onLuckyBagSent={ name, image ->
+                luckyBagSenderName = name
+                luckyBagSenderImage = image
+                showFloatingLuckyBag = true
+            }
         )
         
         val activeRoomUsers = backendRoomUsers.toList()
@@ -1058,15 +1066,30 @@ fun RoomPage(
                     modifier = Modifier.fillMaxWidth(0.9f),
                     contentAlignment = Alignment.BottomCenter
                 ) {
-                    AsyncImage(
-                        model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261021_170648.png",
-                        contentDescription = "Lucky Bag Claim Reveal",
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(max = 420.dp)
-                            .clickable(enabled = false) {}, // absorb clicks to prevent dismissing when tapping image
-                        contentScale = ContentScale.Fit
-                    )
+                    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
+                        AsyncImage(
+                            model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261021_170648.png",
+                            contentDescription = "Lucky Bag Claim Reveal",
+                            modifier = Modifier.fillMaxWidth().heightIn(max = 420.dp).clickable(enabled = false) {},
+                            contentScale = ContentScale.Fit
+                        )
+                        Column(
+                            modifier = Modifier.align(Alignment.TopCenter).padding(top = 34.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            AsyncImage(
+                                model = luckyBagSenderImage.ifBlank { "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/default-avatar.png" },
+                                contentDescription = "Lucky Bag sender avatar",
+                                modifier = Modifier.size(58.dp).clip(CircleShape).border(2.dp, Color(0xFFFFE4A0), CircleShape),
+                                contentScale = ContentScale.Crop
+                            )
+                            Text(
+                                text = "Lucky Bag from ${luckyBagSenderName.ifBlank { "User" }}",
+                                color = Color(0xFF8B3B26), fontSize = 14.sp, fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.Center, modifier = Modifier.padding(top = 5.dp)
+                            )
+                        }
+                    }
                     
                     Box(
                         modifier = Modifier
@@ -1109,6 +1132,23 @@ fun RoomPage(
                     // Packet Red Background
                     Box(Modifier.fillMaxSize().padding(top = 40.dp).clip(RoundedCornerShape(topStart=32.dp, topEnd=32.dp, bottomStart=18.dp, bottomEnd=18.dp)).background(Brush.linearGradient(listOf(Color(0xFFFF6449), Color(0xFFFF263F), Color(0xFFE90037)))))
                     
+                    Column(
+                        modifier = Modifier.align(Alignment.TopCenter).zIndex(2f).offset(y = 8.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        AsyncImage(
+                            model = luckyBagSenderImage.ifBlank { "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/default-avatar.png" },
+                            contentDescription = "Lucky Bag sender avatar",
+                            modifier = Modifier.size(62.dp).clip(CircleShape).border(3.dp, Color(0xFFFFD875), CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
+                        Text(
+                            text = "Lucky Bag from ${luckyBagSenderName.ifBlank { "User" }}",
+                            color = Color(0xFF8B3B26), fontSize = 14.sp, fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center, modifier = Modifier.padding(top = 5.dp)
+                        )
+                    }
+
                     // Cream Card Layout
                     Box(Modifier.align(Alignment.TopCenter).fillMaxWidth(0.9f).fillMaxHeight(0.72f).clip(RoundedCornerShape(24.dp)).background(Brush.verticalGradient(listOf(Color(0xFFFFF7E5), Color(0xFFFFF0D4))))) {
                         Column(Modifier.align(Alignment.BottomCenter).padding(bottom = 66.dp).fillMaxWidth()) {
