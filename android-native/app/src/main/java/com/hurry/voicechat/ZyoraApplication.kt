@@ -5,7 +5,6 @@ import coil3.ImageLoader
 import coil3.SingletonImageLoader
 import coil3.PlatformContext
 import coil3.disk.DiskCache
-import coil3.gif.GifDecoder
 import coil3.memory.MemoryCache
 import okio.Path.Companion.toPath
 
@@ -17,9 +16,6 @@ import okio.Path.Companion.toPath
 class ZyoraApplication : Application(), SingletonImageLoader.Factory {
     override fun newImageLoader(context: PlatformContext): ImageLoader {
         return ImageLoader.Builder(context)
-            .components {
-                add(GifDecoder.Factory())
-            }
             .memoryCache {
                 MemoryCache.Builder()
                     .maxSizePercent(context, 0.20)
