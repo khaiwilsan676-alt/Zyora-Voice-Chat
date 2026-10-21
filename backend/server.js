@@ -2557,47 +2557,53 @@ app.post("/api/daily-checkin", async (req, res) => {
 
 const PORT = process.env.PORT || 10000;
 
-async function startServer() {
+app.get("/health", (_req, res) => {
+  res.status(200).json({
+    status: "ok",
+    service: "Zyora Backend",
+    socket: "ready",
+    database: db ? "mongodb-connected" : "mongodb-unavailable",
+  });
+});
+
+let mongoConnectInProgress = false;
+async function connectMongoAndRestore() {
+  if (!mongoClient || mongoConnectInProgress || db) return;
+  mongoConnectInProgress = true;
   try {
-    if (mongoClient) {
-      await mongoClient.connect();
-
-      db = mongoClient.db("hurry");
-
-      console.log("MongoDB connected");
-      // Resume pending refunds after server restart; the database remains the source of truth.
-      const pendingBags = await db.collection("luckyBags").find({ status: "open" }).toArray();
-      for (const bag of pendingBags) {
-        if (Number(bag.expiresAt) <= Date.now() && Number(bag.claimedCount || 0) === 0) {
-          await refundLuckyBag(bag.bagId);
-        } else if (Number(bag.expiresAt) > Date.now()) {
-          scheduleLuckyBagRefund(bag);
-        }
-      }
-    } else {
-      console.log("MongoDB URI not configured - starting Socket.IO without MongoDB");
-    }
-
+    await mongoClient.connect();
+    db = mongoClient.db("hurry");
     console.log("MongoDB connected");
 
-    server.listen(
-      PORT,
-      "0.0.0.0",
-      () => {
-        console.log(
-          `Hurry Backend running on port ${PORT}`
-        );
+    // Resume pending Lucky Bag refunds after restarts; MongoDB remains the source of truth.
+    const pendingBags = await db.collection("luckyBags").find({ status: "open" }).toArray();
+    for (const bag of pendingBags) {
+      if (Number(bag.expiresAt) <= Date.now() && Number(bag.claimedCount || 0) === 0) {
+        await refundLuckyBag(bag.bagId);
+      } else if (Number(bag.expiresAt) > Date.now()) {
+        scheduleLuckyBagRefund(bag);
       }
-    );
+    }
   } catch (error) {
-    console.error(
-      "MongoDB connection failed"
-    );
-
-    console.error(error.message);
-
-    process.exit(1);
+    console.error("MongoDB connection/restore failed:", error.message);
+  } finally {
+    mongoConnectInProgress = false;
   }
 }
 
-startServer();
+function startMongoRetryLoop() {
+  if (!mongoClient) {
+    console.error("MONGODB_URI not configured; data APIs will return JSON 503 until configured.");
+    return;
+  }
+  void connectMongoAndRestore();
+  const retryTimer = setInterval(() => {
+    if (!db) void connectMongoAndRestore();
+  }, 5000);
+  if (typeof retryTimer.unref === "function") retryTimer.unref();
+}
+
+server.listen(PORT, "0.0.0.0", () => {
+  console.log(`Zyora Backend listening on port ${PORT}`);
+  startMongoRetryLoop();
+});
