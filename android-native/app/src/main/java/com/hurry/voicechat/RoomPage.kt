@@ -192,7 +192,7 @@ fun RoomPage(
     var showLuckyBagCenterReveal by remember { mutableStateOf(false) }
     var showLuckyBagClaimedCard by remember { mutableStateOf(false) }
     var luckyBagSenderName by remember { mutableStateOf("") }
-    var luckyBagSenderImage by remember { mutableStateOf("") }
+    var luckyBagSenderImage by remember { mutableStateOf("") }\n    var luckyBagId by remember { mutableStateOf("") }\n    var luckyBagClaiming by remember { mutableStateOf(false) }\n    var luckyBagClaimError by remember { mutableStateOf<String?>(null) }\n    var luckyBagClaimAmount by remember { mutableLongStateOf(0L) }
 
     LaunchedEffect(roomId) {
         withContext(Dispatchers.IO) {
@@ -466,7 +466,7 @@ fun RoomPage(
                 }
             }
         }
-        val seatListener = Emitter.Listener { args ->
+        val luckyBagBannerListener = Emitter.Listener { args ->\n            val payload = args.firstOrNull() as? JSONObject ?: return@Listener\n            if (payload.optString("roomId") == roomId && payload.optString("senderId") != accountId) {\n                mainHandler.post {\n                    luckyBagId = payload.optString("bagId")\n                    luckyBagSenderName = payload.optString("senderName", "User")\n                    luckyBagSenderImage = payload.optString("senderImage", "")\n                    luckyBagClaimError = null\n                    showFloatingLuckyBag = true\n                }\n            }\n        }\n        val seatListener = Emitter.Listener { args ->
             val payload = args.firstOrNull() as? JSONObject
             if (payload != null && payload.optString("roomId") == roomId) {
                 val seatsJson = payload.optJSONArray("seats") ?: JSONArray()
@@ -508,7 +508,7 @@ fun RoomPage(
         roomSocket.on("room_presence",presenceListener)
         roomSocket.on("room_message",messageListener)
         roomSocket.on("room_chat_cleared",clearedListener)
-        roomSocket.on("room_seats",seatListener)
+        roomSocket.on("room_seats",seatListener)\n        roomSocket.on("lucky_bag_banner",luckyBagBannerListener)
         roomSocket.on(Socket.EVENT_CONNECT,connectListener)
         roomSocket.connect()
         onDispose {
@@ -516,7 +516,7 @@ fun RoomPage(
             roomSocket.off("room_presence",presenceListener)
             roomSocket.off("room_message",messageListener)
             roomSocket.off("room_chat_cleared",clearedListener)
-            roomSocket.off("room_seats",seatListener)
+            roomSocket.off("room_seats",seatListener)\n            roomSocket.off("lucky_bag_banner",luckyBagBannerListener)
             roomSocket.off(Socket.EVENT_CONNECT,connectListener)
             roomSocket.disconnect()
             roomSocket.close()
@@ -1107,15 +1107,47 @@ fun RoomPage(
                             .clip(RoundedCornerShape(50))
                             .background(Brush.verticalGradient(listOf(Color(0xFFFFF0C9), Color(0xFFFFDDA0), Color(0xFFFFCC85))))
                             .border(3.dp, Color(0xFFFFF0C4), RoundedCornerShape(50))
-                            .clickable {
-                                // Close this reveal and open the fully Detailed Card
-                                showLuckyBagCenterReveal = false
-                                showLuckyBagClaimedCard = true
+                            .clickable(enabled = !luckyBagClaiming) {
+                                if (luckyBagId.isBlank()) {
+                                    luckyBagClaimError = "Lucky Bag is unavailable"
+                                } else {
+                                    luckyBagClaiming = true
+                                    luckyBagClaimError = null
+                                    CoroutineScope(Dispatchers.IO).launch {
+                                        val result = runCatching {
+                                            val payload = JSONObject().put("bagId", luckyBagId).put("userId", accountId)
+                                            val connection = (java.net.URL("https://hurry-voice-chat-lz75.onrender.com/api/lucky-bag/claim").openConnection() as java.net.HttpURLConnection).apply {
+                                                requestMethod = "POST"
+                                                connectTimeout = 12000
+                                                readTimeout = 15000
+                                                doOutput = true
+                                                setRequestProperty("Content-Type", "application/json")
+                                            }
+                                            connection.outputStream.use { it.write(payload.toString().toByteArray(Charsets.UTF_8)) }
+                                            val status = connection.responseCode
+                                            val stream = if (status in 200..299) connection.inputStream else connection.errorStream
+                                            val body = stream.bufferedReader().use { it.readText() }
+                                            connection.disconnect()
+                                            val json = JSONObject(body)
+                                            if (status !in 200..299 || !json.optBoolean("success")) throw IllegalStateException(json.optString("error", "Claim failed"))
+                                            json
+                                        }
+                                        withContext(Dispatchers.Main) {
+                                            luckyBagClaiming = false
+                                            result.onSuccess { json ->
+                                                luckyBagClaimAmount = json.optLong("amount")
+                                                showLuckyBagCenterReveal = false
+                                                showLuckyBagClaimedCard = true
+                                                showFloatingLuckyBag = false
+                                            }.onFailure { err -> luckyBagClaimError = err.message ?: "Claim failed" }
+                                        }
+                                    }
+                                }
                             },
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "Open",
+                            text = if (luckyBagClaiming) "Opening..." else "Open",
                             color = Color(0xFFDF182B),
                             fontSize = 23.sp,
                             fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold
