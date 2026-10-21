@@ -421,11 +421,36 @@ app.get("/api/rooms/image", async (req, res) => {
 
 app.get("/api/rooms", async (req, res) => {
   try {
+    const roomId = req.query.roomId;
+
+    // Keep existing room cards usable during a temporary MongoDB outage.
+    // Redis is only a stale-read fallback here; MongoDB remains the source of truth.
     if (!db) {
+      if (redis) {
+        try {
+          const cachedRooms = await redis.get("rooms:list:v1");
+          const parsedRooms = typeof cachedRooms === "string"
+            ? JSON.parse(cachedRooms)
+            : cachedRooms;
+          if (Array.isArray(parsedRooms)) {
+            res.set("Cache-Control", "no-store");
+            if (roomId) {
+              const cachedRoom = parsedRooms.find((room) =>
+                [room.accountId, room.id, room.roomId].some(
+                  (id) => id != null && String(id) === String(roomId)
+                )
+              );
+              if (cachedRoom) return res.json({ room: cachedRoom, stale: true });
+              return res.status(404).json({ error: "Room not found in cached room list" });
+            }
+            return res.json({ rooms: parsedRooms, serverTime: Date.now(), stale: true });
+          }
+        } catch (cacheError) {
+          console.warn("Room stale-cache fallback skipped:", cacheError.message);
+        }
+      }
       return res.status(503).json({ error: "MongoDB is not connected" });
     }
-
-    const roomId = req.query.roomId;
     const hasIncrementalSyncParam = req.query.sinceUpdatedAt !== undefined;
     const sinceUpdatedAt = Math.max(0, Number(req.query.sinceUpdatedAt) || 0);
     if (roomId) {
