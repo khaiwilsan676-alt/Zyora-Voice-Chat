@@ -1131,6 +1131,19 @@ app.post("/api/lucky-bag/claim", async (req, res) => {
     res.status(503).json({ error: "Could not claim Lucky Bag" });
   }
 });
+app.get("/api/lucky-bag/room/:roomId", async (req, res) => {
+  try {
+    const roomId = String(req.params.roomId || "");
+    const bag = await luckyBags().findOne(
+      { roomId, status: "open", expiresAt: { $gt: Date.now() } },
+      { sort: { createdAt: -1 } }
+    );
+    if (!bag) return res.json({ bag: null });
+    res.json({ bag: { bagId: bag.bagId, senderId: bag.senderId, senderName: bag.senderName, senderImage: bag.senderImage, roomId: bag.roomId, roomName: bag.roomName, amount: bag.amount, recipients: bag.recipients, claimedCount: bag.claimedCount, expiresAt: bag.expiresAt } });
+  } catch (err) {
+    res.status(503).json({ error: "Lucky Bag unavailable" });
+  }
+});
 app.get("/api/lucky-bag/:bagId", async (req, res) => {
   try {
     const bag = await luckyBags().findOne({ bagId: String(req.params.bagId) });
