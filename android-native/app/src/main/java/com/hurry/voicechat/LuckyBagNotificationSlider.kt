@@ -5,6 +5,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.basicMarquee
@@ -44,6 +45,7 @@ private data class LuckyBagBannerData(
 )
 
 /** Global banner layer: mounted above the active page so it can appear on every tab/screen. */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun LuckyBagNotificationSlider(currentUserId: String, onGoToRoom: (String, String) -> Unit) {
     var banner by remember { mutableStateOf<LuckyBagBannerData?>(null) }
