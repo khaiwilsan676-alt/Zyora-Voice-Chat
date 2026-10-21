@@ -21,6 +21,7 @@ import androidx.core.app.NotificationCompat
 class RoomMusicService : Service() {
     private var player: MediaPlayer? = null
     private var currentUri: String? = null
+    private var playbackVolume: Float = 1f
 
     override fun onCreate() {
         super.onCreate()
@@ -53,6 +54,7 @@ class RoomMusicService : Service() {
                                     .build()
                             )
                             setDataSource(this@RoomMusicService, Uri.parse(uri))
+                            setVolume(playbackVolume, playbackVolume)
                             setOnCompletionListener {
                                 releasePlayer()
                                 stopForeground(STOP_FOREGROUND_REMOVE)
@@ -82,8 +84,8 @@ class RoomMusicService : Service() {
                 player?.let { active -> active.seekTo(position.coerceAtMost(active.duration.coerceAtLeast(0))) }
             }
             ACTION_VOLUME -> runCatching {
-                val volume = intent.getFloatExtra(EXTRA_VOLUME, 1f).coerceIn(0f, 1f)
-                player?.setVolume(volume, volume)
+                playbackVolume = intent.getFloatExtra(EXTRA_VOLUME, 1f).coerceIn(0f, 1f)
+                player?.setVolume(playbackVolume, playbackVolume)
             }
             ACTION_STOP -> {
                 releasePlayer()
