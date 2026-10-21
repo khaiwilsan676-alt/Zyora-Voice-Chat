@@ -42,7 +42,7 @@ let hasInitialLoaded = false;
 // ==========================================
 const SHARED_DB = 'FruitPartyDB';
 const SHARED_STORE = 'GameState';
-const DEFAULT_BALANCE = 82927;
+const DEFAULT_BALANCE = 0;
 
 const initWalletDB = (): Promise<IDBDatabase> =>
   new Promise((resolve, reject) => {
