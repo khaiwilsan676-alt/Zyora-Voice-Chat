@@ -97,7 +97,8 @@ export default function RoomInfo({
               <div className="flex items-center gap-3">
                 <div className="w-14 h-14 rounded-xl overflow-hidden border border-gray-200 flex-shrink-0">
                   <img 
-                    src={roomData.roomDp}
+                    src={roomData.roomDp || "/file_00000000d0408211a5b096ee1cc2d12a.png"}
+                    onError={(e) => { const img = e.currentTarget; if (!img.src.endsWith("/file_00000000d0408211a5b096ee1cc2d12a.png")) img.src = "/file_00000000d0408211a5b096ee1cc2d12a.png"; }}
                     alt="Room" 
                     className="w-full h-full object-cover" 
                   />
@@ -152,10 +153,10 @@ export default function RoomInfo({
                   })}
                 >
                   <img 
-                    src={roomOwner.image || "/default-avatar.png"} 
+                    src={roomOwner.image || "/file_00000000d0408211a5b096ee1cc2d12a.png"} 
                     alt={roomOwner.name} 
                     className="w-full h-full object-cover" 
-                    onError={(e) => { (e.target as HTMLImageElement).src = "/default-avatar.png" }} 
+                    onError={(e) => { const img = e.currentTarget; if (!img.src.endsWith("/file_00000000d0408211a5b096ee1cc2d12a.png")) img.src = "/file_00000000d0408211a5b096ee1cc2d12a.png"; }} 
                   />
                 </div>
                 <div className="flex-1 min-w-0 flex items-center gap-2">
@@ -179,15 +180,15 @@ export default function RoomInfo({
                     className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0 cursor-pointer" 
                     onClick={() => onOpenProfile({ 
                       name: follower.name, 
-                      image: follower.image || "/default-avatar.png", 
+                      image: follower.image || "/file_00000000d0408211a5b096ee1cc2d12a.png", 
                       accountId: follower.accountId 
                     })}
                   >
                     <img 
-                      src={follower.image || "/default-avatar.png"} 
+                      src={follower.image || "/file_00000000d0408211a5b096ee1cc2d12a.png"} 
                       alt={follower.name} 
                       className="w-full h-full object-cover" 
-                      onError={(e) => { (e.target as HTMLImageElement).src = "/default-avatar.png" }} 
+                      onError={(e) => { (e.target as HTMLImageElement).src = "/file_00000000d0408211a5b096ee1cc2d12a.png" }} 
                     />
                   </div>
                   <div className="flex-1 min-w-0">
