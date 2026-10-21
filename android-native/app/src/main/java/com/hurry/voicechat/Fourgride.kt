@@ -474,7 +474,7 @@ fun Fourgride(
     }
 
     if (showLuckyBag) {
-        LuckyBag(onClose = { showLuckyBag = false })
+        LuckyBag(onClose = { showLuckyBag = false; onClose() }
     }
 }
 
