@@ -486,7 +486,7 @@ fun Fourgride(
     }
 
     if (showLuckyBag) {
-        LuckyBag(senderName = luckyBagSenderName, senderImage = luckyBagSenderImage, onClose = { showLuckyBag = false; onClose() }, onSent = { name, image -> onLuckyBagSent?.invoke(name, image) })
+        LuckyBag(senderId = luckyBagSenderId, senderName = luckyBagSenderName, senderImage = luckyBagSenderImage, roomId = luckyBagRoomId, roomName = luckyBagRoomName, onClose = { showLuckyBag = false; onClose() }, onSent = { name, image, amount, recipients, bagId -> onLuckyBagSent?.invoke(name, image, amount, recipients, bagId) })
     }
 }
 
