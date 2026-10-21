@@ -50,7 +50,7 @@ fun PublicProfile(
         if (targetUid.isBlank()) return@LaunchedEffect
         withContext(Dispatchers.IO) {
             runCatching {
-                val url = URL("https://hurry-voice-chat-lz75.onrender.com/api/follows?targetUid=" +
+                val url = URL("https://zyora-voice-chat.onrender.com/api/follows?targetUid=" +
                     java.net.URLEncoder.encode(targetUid, "UTF-8") + "&followerId=" +
                     java.net.URLEncoder.encode(currentUserId, "UTF-8"))
                 val conn = (url.openConnection() as HttpURLConnection).apply { connectTimeout = 10000; readTimeout = 10000 }
@@ -67,7 +67,7 @@ fun PublicProfile(
                 } finally { conn.disconnect() }
             }
             runCatching {
-                val url = URL("https://hurry-voice-chat-lz75.onrender.com/api/users?uid=" +
+                val url = URL("https://zyora-voice-chat.onrender.com/api/users?uid=" +
                     java.net.URLEncoder.encode(targetUid, "UTF-8"))
                 val conn = (url.openConnection() as HttpURLConnection).apply { connectTimeout = 10000; readTimeout = 10000 }
                 try {
@@ -83,7 +83,7 @@ fun PublicProfile(
     }
 
     DisposableEffect(targetUid, currentUserId) {
-        val socket = runCatching { IO.socket("https://hurry-voice-chat-lz75.onrender.com") }.getOrNull()
+        val socket = runCatching { IO.socket("https://zyora-voice-chat.onrender.com") }.getOrNull()
         val listener = io.socket.emitter.Emitter.Listener { args ->
             val data = args.firstOrNull() as? JSONObject ?: return@Listener
             if (data.optString("targetUid") == targetUid) {
@@ -107,7 +107,7 @@ fun PublicProfile(
             scope.launch {
                 val result = withContext(Dispatchers.IO) {
                     runCatching {
-                        val conn = (URL("https://hurry-voice-chat-lz75.onrender.com/api/follows").openConnection() as HttpURLConnection).apply {
+                        val conn = (URL("https://zyora-voice-chat.onrender.com/api/follows").openConnection() as HttpURLConnection).apply {
                             requestMethod = "POST"
                             connectTimeout = 10000
                             readTimeout = 10000
