@@ -1,4 +1,4 @@
-Package com.hurry.voicechat
+package com.hurry.voicechat
 
 import android.content.Intent
 import androidx.activity.compose.BackHandler
