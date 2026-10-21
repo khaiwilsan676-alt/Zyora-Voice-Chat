@@ -1159,6 +1159,20 @@ export default function HomePage({ onLogout }: HomePageProps) {
       }
     };
     const interval = setInterval(refreshRoomsIfVisible, 60000);
+    let lastScrollRefreshAt = 0;
+    const refreshWhenRoomsReachBottom = () => {
+      if (document.visibilityState !== 'visible' || !navigator.onLine) return;
+      const doc = document.documentElement;
+      const nearBottom = window.scrollY + window.innerHeight >= doc.scrollHeight - 180;
+      const now = Date.now();
+      // When the user scrolls down to the room-list loading area, refresh once;
+      // throttle repeated scroll events to avoid wasting mobile data.
+      if (nearBottom && now - lastScrollRefreshAt >= 15000) {
+        lastScrollRefreshAt = now;
+        void loadRoomsSafe();
+      }
+    };
+    window.addEventListener('scroll', refreshWhenRoomsReachBottom, { passive: true });
     document.addEventListener('visibilitychange', refreshRoomsIfVisible);
     window.addEventListener('online', refreshRoomsIfVisible);
 
@@ -1222,6 +1236,7 @@ export default function HomePage({ onLogout }: HomePageProps) {
     return () => {
       isMounted = false;
       clearInterval(interval);
+      window.removeEventListener('scroll', refreshWhenRoomsReachBottom);
       document.removeEventListener('visibilitychange', refreshRoomsIfVisible);
       window.removeEventListener('online', refreshRoomsIfVisible);
     };
