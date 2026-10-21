@@ -51,6 +51,7 @@ object MusicPlaybackState {
     var isMusicPageOpen: Boolean by mutableStateOf(false) // Ye track karega ki card dikhana hai ya nahi
     var wasPlayedOnMusicPage: Boolean by mutableStateOf(false)
     var musicPageBackPressed: Boolean by mutableStateOf(false)
+    var playlist: List<NativeMusicTrack> by mutableStateOf(emptyList())
 }
 
 data class NativeMusicTrack(val id: String, val name: String, val url: String, val duration: Long = 0L)
@@ -176,6 +177,7 @@ fun Fourgride(
     }
 
     LaunchedEffect(musicTracks) {
+        MusicPlaybackState.playlist = musicTracks
         onMusicPlaylistChanged?.invoke(musicTracks)
     }
 
