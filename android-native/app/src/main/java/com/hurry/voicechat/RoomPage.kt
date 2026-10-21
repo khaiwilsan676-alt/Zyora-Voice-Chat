@@ -580,8 +580,8 @@ fun RoomPage(
     }
 
     Box(Modifier.fillMaxSize().background(Color.Black)){
-        JitsiRoomAudio(roomId=roomId,userName=currentUser.name,canSpeak=seats.any { it.occupied && it.accountId == accountId && !it.muted },onSpeakingChanged={localVoiceSpeaking=it})
-        AsyncImage(model="https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/1784875884052~2.jpg",contentDescription="Room theme background",modifier=Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
+        JitsiRoomAudio(roomId=roomId,userName=currentUser.name,canSpeak=seats.any { it.number <= roomMicMode && it.occupied && it.accountId == accountId && !it.muted },onSpeakingChanged={localVoiceSpeaking=it})
+        AsyncImage(model=when(roomTheme) { "mood-light" -> "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/1784533036732~2.jpg"; "custom" -> appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).getString("customTheme_$roomId", null) ?: "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/1784875884052~2.jpg"; else -> "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/1784875884052~2.jpg" },contentDescription="Room theme background",modifier=Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
 
         // TOP ROW: Trophy + Music Pill
         Row(modifier = Modifier.align(Alignment.TopStart).padding(top = 84.dp, start = 4.dp),verticalAlignment = Alignment.CenterVertically,horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -663,7 +663,7 @@ fun RoomPage(
             }
             
             Column(Modifier.fillMaxWidth().padding(horizontal=10.dp).padding(top=44.dp, bottom=8.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
-                seats.chunked(5).forEach { rowSeats ->
+                seats.take(roomMicMode.coerceIn(5, 15)).chunked(5).forEach { rowSeats ->
                     Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.SpaceBetween) {
                         rowSeats.forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, isSpeaking = seat.speaking || (seat.accountId == accountId && localVoiceSpeaking)) { selectedSeat = seat.number; showSeatSheet = true } }
                     }
