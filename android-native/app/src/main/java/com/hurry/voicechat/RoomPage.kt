@@ -776,6 +776,13 @@ fun RoomPage(
                         onProgressChange = { newProgress ->
                             if (musicDuration > 0f) {
                                 musicCurrentTime = newProgress * musicDuration
+                                runCatching {
+                                    appContext.startService(
+                                        Intent(appContext, RoomMusicService::class.java)
+                                            .setAction(RoomMusicService.ACTION_SEEK)
+                                            .putExtra(RoomMusicService.EXTRA_POSITION_MS, (musicCurrentTime * 1000f).toInt())
+                                    )
+                                }
                             }
                         }
                     )
@@ -824,6 +831,13 @@ fun RoomPage(
                             modifier = Modifier.weight(1f),
                             onProgressChange = { newVolume ->
                                 musicVolume = newVolume
+                                runCatching {
+                                    appContext.startService(
+                                        Intent(appContext, RoomMusicService::class.java)
+                                            .setAction(RoomMusicService.ACTION_VOLUME)
+                                            .putExtra(RoomMusicService.EXTRA_VOLUME, newVolume)
+                                    )
+                                }
                             }
                         )
                         Spacer(Modifier.width(8.dp))
@@ -859,6 +873,12 @@ fun RoomPage(
             onTogglePublicMsg={publicMsgOff=!publicMsgOff},
             speaker=speaker,
             onToggleSpeaker={speaker=!speaker},
+            onMusicPlaylistChanged={ tracks ->
+                musicPlaylist = tracks
+                val selectedUri = miniMusicTrack?.url ?: MusicPlaybackState.currentPlayingUri
+                val selectedIndex = tracks.indexOfFirst { it.url == selectedUri }
+                if (selectedIndex >= 0) currentTrackIndex = selectedIndex
+            },
             onMusicPlay={ track ->
                 miniMusicTrack = track
                 musicPlaylist = listOf(track)
