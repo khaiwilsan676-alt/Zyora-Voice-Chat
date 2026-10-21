@@ -13,7 +13,7 @@ import coil3.compose.rememberAsyncImagePainter
  * Shows the bundled Zyora fallback immediately while a remote avatar loads,
  * and keeps it visible if the source is missing, broken, or unavailable offline.
  */
-private const val ZYORA_FALLBACK_ASSET = "file:///android_asset/file_00000000d0408211a5b096ee1cc2d12a.png"
+private const val ZYORA_FALLBACK_ASSET = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_00000000d0408211a5b096ee1cc2d12a.png"
 
 @Composable
 fun FallbackAsyncImage(
