@@ -721,7 +721,7 @@ fun RoomPage(
         }
 
         // ==================== MUSIC CONTROLLER CARD ====================
-        if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.isMusicPageOpen) {
+        if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.isMusicPageOpen && MusicPlaybackState.wasPlayedOnMusicPage && MusicPlaybackState.musicPageBackPressed) {
             val track = miniMusicTrack!!
             Box(
                 modifier = Modifier.align(Alignment.BottomCenter)
@@ -881,6 +881,8 @@ fun RoomPage(
             },
             onMusicPlay={ track ->
                 miniMusicTrack = track
+                MusicPlaybackState.wasPlayedOnMusicPage = true
+                MusicPlaybackState.musicPageBackPressed = false
                 if (musicPlaylist.none { it.url == track.url }) musicPlaylist = listOf(track)
                 currentTrackIndex = musicPlaylist.indexOfFirst { it.url == track.url }.coerceAtLeast(0)
                 musicCurrentTime = 0f
@@ -901,9 +903,11 @@ fun RoomPage(
             onMusicMinimize={ track ->
                 if (track != null) {
                     miniMusicTrack = track
+                    MusicPlaybackState.musicPageBackPressed = MusicPlaybackState.wasPlayedOnMusicPage && MusicPlaybackState.isPlaying
+                    MusicPlaybackState.isMusicPageOpen = false
                     musicControllerMinimized = false
                 } else {
-                    miniMusicTrack = null
+                    MusicPlaybackState.musicPageBackPressed = false
                     musicControllerMinimized = false
                 }
                 showMenu = false
