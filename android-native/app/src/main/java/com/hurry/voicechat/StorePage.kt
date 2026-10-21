@@ -4,6 +4,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -19,14 +20,19 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.viewinterop.AndroidView
 import android.net.Uri
 import android.graphics.Bitmap
@@ -39,6 +45,7 @@ import kotlinx.coroutines.withContext
 import coil3.compose.AsyncImage
 import java.net.URL
 import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.roundToInt
 
 private val StoreBlue = Color(0xFF1D4ED8)
@@ -178,8 +185,11 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
             ) {
                 items(visibleItems, key = { it.id }) { item ->
                     val theme = item.tab == "Theme"
+                    val isVehicle = item.tab == "Vehicle"
+                    val isFrame = item.tab == "Avatar Frame"
                     val owned = ownedIds.contains(item.id)
                     val equipped = equippedIds.contains(item.id)
+                    
                     Box(
                         Modifier.fillMaxWidth().then(if (theme) Modifier.height(200.dp) else Modifier.wrapContentHeight())
                             .clip(RoundedCornerShape(5.dp))
@@ -199,15 +209,16 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                                // Try Button with decreased height
                                 Text(
                                     "Try",
                                     color = if (theme) Color.White else StoreBlue,
-                                    fontSize = 11.sp,
+                                    fontSize = 10.sp,
                                     modifier = Modifier
                                         .clip(CircleShape)
                                         .then(if (theme) Modifier.background(Color(0x33FFFFFF)).border(1.dp, Color.White, CircleShape) else Modifier.border(1.dp, StoreBlue, CircleShape))
                                         .clickable { tryItem = item }
-                                        .padding(horizontal = 10.dp, vertical = 3.dp)
+                                        .padding(horizontal = 8.dp, vertical = 2.dp)
                                 )
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text("◷", color = if (theme) Color.White else Color.Gray, fontSize = 12.sp)
@@ -216,9 +227,13 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
                                 }
                             }
                             if (!theme) {
-                                val mediaModifier = Modifier.fillMaxWidth().height(if (item.tab == "Vehicle" || item.tab == "Avatar Frame") 120.dp else 80.dp)
+                                val mediaModifier = Modifier.fillMaxWidth().height(if (isVehicle || isFrame) 120.dp else 80.dp)
                                 if (item.image.endsWith(".mp4", ignoreCase = true)) {
-                                    StoreVideoPreview(StoreAssetBase + item.image, mediaModifier)
+                                    // Video paused in grid view
+                                    StoreVideoPreview(StoreAssetBase + item.image, mediaModifier, pause = true)
+                                } else if (isVehicle || isFrame) {
+                                    // Green removal applied to vehicle & frame images
+                                    StoreChromaImage(StoreAssetBase + item.image, item.name, mediaModifier)
                                 } else {
                                     AsyncImage(model = StoreAssetBase + item.image, contentDescription = item.name, modifier = mediaModifier)
                                 }
@@ -253,11 +268,13 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
                                                     equippedIds.removeAll { id -> nativeStoreItems.find { it.id == id }?.tab == item.tab }
                                                     equippedIds.add(item.id)
                                                 }
-                                            } else selectedItem = item
+                                            } else {
+                                                selectedItem = item // Buy modal open
+                                            }
                                         },
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Text(if (owned) if (equipped) "Using" else "Use" else "Buy", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    Text(if (owned) if (equipped) "Equipped" else "Equip" else "Buy", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                                 }
                             }
                         }
@@ -267,46 +284,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
         }
     }
 
-    if (tryItem != null) {
-        val item = tryItem!!
-        ModalBottomSheet(onDismissRequest = { tryItem = null }, containerColor = Color.White) {
-            Column(
-                Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 20.dp, vertical = 8.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text("Preview", color = Color(0xFF111827), fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                Spacer(Modifier.height(14.dp))
-                Box(
-                    Modifier.fillMaxWidth().height(if (item.tab == "Theme") 300.dp else 240.dp)
-                        .clip(RoundedCornerShape(16.dp)).background(Color(0xFFF5F6F8)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    val source = item.video ?: item.image
-                    if (source.endsWith(".mp4", ignoreCase = true)) {
-                        StoreVideoPreview(StoreAssetBase + source, Modifier.fillMaxSize())
-                    } else {
-                        StoreChromaImage(
-                            url = StoreAssetBase + source,
-                            description = item.name,
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = if (item.tab == "Theme") ContentScale.Crop else ContentScale.Fit
-                        )
-                    }
-                }
-                Text(item.name, modifier = Modifier.padding(top = 12.dp), color = Color(0xFF111827), fontSize = 17.sp, fontWeight = FontWeight.Bold)
-                Text("★".repeat(item.stars), modifier = Modifier.padding(top = 4.dp), color = Color(0xFFF59E0B), fontSize = 17.sp)
-                Row(Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 20.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    OutlinedButton(onClick = { tryItem = null }, modifier = Modifier.weight(1f)) { Text("Close") }
-                    Button(
-                        onClick = { selectedItem = item; tryItem = null },
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(containerColor = StoreCyan, contentColor = Color.White)
-                    ) { Text("Buy", fontWeight = FontWeight.Bold) }
-                }
-            }
-        }
-    }
-
+    // Buy Modal Bottom Sheet
     if (selectedItem != null) {
         val item = selectedItem!!
         ModalBottomSheet(onDismissRequest = { selectedItem = null }, containerColor = Color.White, dragHandle = {
@@ -316,7 +294,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
                 Text("Purchase", color = Color(0xFF111827), fontSize = 17.sp, fontWeight = FontWeight.Bold)
                 val previewSource = item.video ?: item.image
                 if (previewSource.endsWith(".mp4", ignoreCase = true)) {
-                    StoreVideoPreview(StoreAssetBase + previewSource, Modifier.size(180.dp))
+                    StoreVideoPreview(StoreAssetBase + previewSource, Modifier.size(180.dp), pause = false)
                 } else {
                     AsyncImage(model = StoreAssetBase + previewSource, contentDescription = item.name, modifier = Modifier.size(180.dp))
                 }
@@ -360,6 +338,183 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
         }
     }
 
+    // ==========================================
+    // Exact TSX-like Try Dialogs (No Bottom Sheet)
+    // ==========================================
+    if (tryItem != null) {
+        val item = tryItem!!
+        Dialog(
+            onDismissRequest = { tryItem = null },
+            properties = DialogProperties(
+                usePlatformDefaultWidth = false,
+                dismissOnBackPress = true,
+                dismissOnClickOutside = true
+            )
+        ) {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = if (item.tab == "Theme") 0.7f else if (item.tab == "Chat Bubble") 0.6f else 0.5f))
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) { tryItem = null },
+                contentAlignment = Alignment.Center
+            ) {
+                when (item.tab) {
+                    "Theme" -> {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable(enabled = false) {}) {
+                            Box(Modifier.width(230.dp).height(480.dp).border(4.dp, Color.Yellow, RoundedCornerShape(24.dp)).clip(RoundedCornerShape(24.dp)).background(Color.Black)) {
+                                AsyncImage(model = StoreAssetBase + item.image, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                            }
+                            Row(Modifier.padding(top = 16.dp)) {
+                                Text("★".repeat(item.stars) + "☆".repeat(5 - item.stars), color = Color.Yellow, fontSize = 20.sp)
+                            }
+                            Text(item.name, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp))
+                        }
+                    }
+                    "Avatar Frame" -> {
+                        Box(
+                            Modifier.width(300.dp).height(300.dp).background(Color.White, RoundedCornerShape(16.dp)).clickable(enabled = false) {},
+                            contentAlignment = Alignment.BottomCenter
+                        ) {
+                            Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                Spacer(Modifier.height(40.dp))
+                                Text(item.name, fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
+                                    Text("◷", color = Color.Gray, fontSize = 13.sp)
+                                    Spacer(Modifier.width(4.dp))
+                                    Text(item.duration, color = Color.Gray, fontSize = 13.sp)
+                                }
+                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp, bottom = 16.dp)) {
+                                    AsyncImage(model = StoreAssetBase + "file_00000000e56882119c217d508b6733dc.png", contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Spacer(Modifier.width(6.dp))
+                                    Text("%,d".format(item.price), fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                                }
+                                val isOwned = ownedIds.contains(item.id)
+                                val isEquipped = equippedIds.contains(item.id)
+                                Button(
+                                    onClick = {
+                                        if (isOwned) {
+                                            if (isEquipped) equippedIds.remove(item.id) else {
+                                                equippedIds.removeAll { id -> nativeStoreItems.find { it.id == id }?.tab == item.tab }
+                                                equippedIds.add(item.id)
+                                            }
+                                        } else if (balance >= item.price) {
+                                            balance -= item.price
+                                            ownedIds.add(item.id)
+                                        }
+                                        tryItem = null
+                                    },
+                                    modifier = Modifier.fillMaxWidth().height(42.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = StoreBlue)
+                                ) {
+                                    Text(if (isOwned) if (isEquipped) "Equipped" else "Equip" else "Buy", fontWeight = FontWeight.Bold)
+                                }
+                                Spacer(Modifier.height(8.dp))
+                                OutlinedButton(
+                                    onClick = { tryItem = null },
+                                    modifier = Modifier.fillMaxWidth().height(42.dp),
+                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Gray),
+                                    border = BorderStroke(1.dp, Color.LightGray)
+                                ) {
+                                    Text("Cancel", fontWeight = FontWeight.Bold)
+                                }
+                            }
+                            Box(Modifier.align(Alignment.TopCenter).offset(y = (-55).dp).size(110.dp), contentAlignment = Alignment.Center) {
+                                Box(Modifier.size(80.dp).clip(CircleShape).background(Color.Gray), contentAlignment = Alignment.Center) {
+                                    Text("U", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Bold)
+                                }
+                                val source = item.video ?: item.image
+                                if (source.endsWith(".mp4", true)) {
+                                    // Video playing when Try modal is open
+                                    StoreVideoPreview(StoreAssetBase + source, Modifier.fillMaxSize(), pause = false)
+                                } else {
+                                    StoreChromaImage(StoreAssetBase + source, item.name, Modifier.fillMaxSize())
+                                }
+                            }
+                        }
+                    }
+                    "Chat Bubble" -> {
+                        Column(
+                            Modifier.width(260.dp).background(Color.White, RoundedCornerShape(22.dp)).padding(top = 20.dp, bottom = 16.dp, start = 16.dp, end = 16.dp).clickable(enabled = false) {},
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 12.dp)) {
+                                Box(Modifier.size(16.dp).border(5.dp, Color(0xFFE5E7EB), CircleShape).background(Color.White))
+                                Spacer(Modifier.width(8.dp))
+                                Text("3D", color = Color(0xFF9CA3AF), fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+                            }
+                            Box(Modifier.size(120.dp), contentAlignment = Alignment.Center) {
+                                AsyncImage(model = StoreAssetBase + item.image, contentDescription = null, modifier = Modifier.fillMaxSize())
+                                Text(
+                                    "Zyora",
+                                    color = Color.White,
+                                    fontSize = 24.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    style = androidx.compose.ui.text.TextStyle(
+                                        shadow = Shadow(color = Color(0xE6FFD700), blurRadius = 12f)
+                                    )
+                                )
+                            }
+                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 12.dp)) {
+                                AsyncImage(model = StoreAssetBase + "file_00000000e56882119c217d508b6733dc.png", contentDescription = null, modifier = Modifier.size(28.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text("%,d".format(item.price), fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = Color.Black)
+                            }
+                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 2.dp, bottom = 12.dp).alpha(0.6f)) {
+                                AsyncImage(model = StoreAssetBase + "file_00000000e56882119c217d508b6733dc.png", contentDescription = null, modifier = Modifier.size(14.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text("%,d".format(item.price * 2), fontSize = 14.sp, color = Color.Gray, textDecoration = TextDecoration.LineThrough)
+                            }
+
+                            Button(
+                                onClick = {
+                                    if (!ownedIds.contains(item.id) && balance >= item.price) {
+                                        balance -= item.price
+                                        ownedIds.add(item.id)
+                                    }
+                                    tryItem = null
+                                },
+                                modifier = Modifier.fillMaxWidth().height(42.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00C88C))
+                            ) {
+                                Text("Buy", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                            }
+                            Spacer(Modifier.height(8.dp))
+                            Button(
+                                onClick = { tryItem = null },
+                                modifier = Modifier.fillMaxWidth().height(42.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF2F2F2), contentColor = Color(0xFF8A8A8A))
+                            ) {
+                                Text("Cancel", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                    else -> { // Vehicle Try Dialog - Center screen, big preview
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable(enabled = false) {}) {
+                            Box(Modifier.fillMaxWidth().height(360.dp), contentAlignment = Alignment.Center) {
+                                val source = item.video ?: item.image
+                                if (source.endsWith(".mp4", true)) {
+                                    // Video playing when Try modal is open
+                                    StoreVideoPreview(StoreAssetBase + source, Modifier.fillMaxSize(), pause = false)
+                                } else {
+                                    // Chroma applied to Try popup too
+                                    StoreChromaImage(StoreAssetBase + source, item.name, Modifier.fillMaxSize())
+                                }
+                            }
+                            Row(Modifier.padding(top = 16.dp)) {
+                                Text("★".repeat(item.stars) + "☆".repeat(5 - item.stars), color = Color.Yellow, fontSize = 20.sp)
+                            }
+                            Text(item.name, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp))
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Send Modal
     if (sendItem != null) {
         ModalBottomSheet(onDismissRequest = { sendItem = null; searchQuery = "" }, containerColor = Color.White) {
             Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 20.dp)) {
@@ -386,6 +541,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
     }
 }
 
+// Fixed Green Removal (100% matched with TSX WebGL Shader)
 @Composable
 private fun StoreChromaImage(
     url: String,
@@ -407,15 +563,21 @@ private fun StoreChromaImage(
                         val r = (color ushr 16) and 0xFF
                         val g = (color ushr 8) and 0xFF
                         val b = color and 0xFF
-                        val base = max(r, b)
-                        val greenExcess = g - base
-                        if (g > 70 && greenExcess > 18) {
-                            val strength = ((greenExcess - 18f) / 72f).coerceIn(0f, 1f)
-                            val smooth = strength * strength * (3f - 2f * strength)
-                            val alpha = (a * (1f - smooth)).roundToInt().coerceIn(0, 255)
-                            val cleanGreen = minOf(g, base + 12)
-                            pixels[i] = (alpha shl 24) or (r shl 16) or (cleanGreen shl 8) or b
-                        }
+                        
+                        val maxRB = max(r, b)
+                        val greenness = g - maxRB
+                        
+                        // Exact TSX Math: smoothstep(0.04, 0.15, greenness)
+                        val edge0 = 10.2f  // 0.04 * 255
+                        val edge1 = 38.25f // 0.15 * 255
+                        val t = ((greenness.toFloat() - edge0) / (edge1 - edge0)).coerceIn(0f, 1f)
+                        val blend = t * t * (3f - 2f * t)
+                        
+                        // Exact TSX Math: min(despilled.g, maxRB + 0.05)
+                        val despilledG = min(g, maxRB + 13) // 0.05 * 255 = 12.75
+
+                        val finalAlpha = (a * (1f - blend)).roundToInt().coerceIn(0, 255)
+                        pixels[i] = (finalAlpha shl 24) or (r shl 16) or (despilledG shl 8) or b
                     }
                     Bitmap.createBitmap(pixels, original.width, original.height, Bitmap.Config.ARGB_8888)
                 }
@@ -433,7 +595,7 @@ private fun StoreChromaImage(
 }
 
 @Composable
-private fun StoreVideoPreview(url: String, modifier: Modifier = Modifier) {
+private fun StoreVideoPreview(url: String, modifier: Modifier = Modifier, pause: Boolean = false) {
     val context = androidx.compose.ui.platform.LocalContext.current
     AndroidView(
         modifier = modifier,
@@ -443,7 +605,12 @@ private fun StoreVideoPreview(url: String, modifier: Modifier = Modifier) {
             videoView.setVideoURI(Uri.parse(url))
             videoView.setOnPreparedListener { player ->
                 player.isLooping = true
-                videoView.start()
+                if (!pause) {
+                    videoView.start()
+                } else {
+                    player.seekTo(100) // Shows a frame instead of black screen
+                    videoView.pause()
+                }
             }
             videoView.setOnErrorListener { _, _, _ -> true }
             videoView
@@ -454,7 +621,12 @@ private fun StoreVideoPreview(url: String, modifier: Modifier = Modifier) {
                 view.setVideoURI(Uri.parse(url))
                 view.setOnPreparedListener { player ->
                     player.isLooping = true
-                    view.start()
+                    if (!pause) {
+                        view.start()
+                    } else {
+                        player.seekTo(100)
+                        view.pause()
+                    }
                 }
             }
         }
