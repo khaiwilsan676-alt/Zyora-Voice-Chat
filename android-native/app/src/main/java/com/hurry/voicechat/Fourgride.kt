@@ -113,9 +113,12 @@ fun Fourgride(
     onMusicMinimize: ((NativeMusicTrack?) -> Unit)? = null,
     onMusicPlaylistChanged: ((List<NativeMusicTrack>) -> Unit)? = null,
     onOpenStore: ((String) -> Unit)? = null,
+    luckyBagSenderId: String = "",
     luckyBagSenderName: String = "User",
     luckyBagSenderImage: String = "",
-    onLuckyBagSent: ((String, String) -> Unit)? = null
+    luckyBagRoomId: String = "",
+    luckyBagRoomName: String = "Room",
+    onLuckyBagSent: ((String, String, Long, Int, String) -> Unit)? = null
 ) {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("hurry_room_tools", android.content.Context.MODE_PRIVATE) }
