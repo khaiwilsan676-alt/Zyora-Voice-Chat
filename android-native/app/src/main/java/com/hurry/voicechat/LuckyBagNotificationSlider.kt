@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -119,7 +120,7 @@ fun LuckyBagNotificationSlider(currentUserId: String, onGoToRoom: (String, Strin
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         AsyncImage(
-                            model = item.senderImage.ifBlank { null },
+                            model = item.senderImage.takeIf { it.isNotBlank() } ?: "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/default-avatar.png",
                             contentDescription = "Sender avatar",
                             modifier = Modifier.size(43.dp).clip(RoundedCornerShape(8.dp))
                                 .background(Color(0xFF55466B)),
@@ -156,7 +157,12 @@ fun LuckyBagNotificationSlider(currentUserId: String, onGoToRoom: (String, Strin
                         Spacer(Modifier.width(7.dp))
                         Box(
                             Modifier.height(34.dp).width(56.dp).clip(RoundedCornerShape(50))
-                                .background(Color(0xFFFFC84B)),
+                                .background(Color(0xFFFFC84B))
+                                .clickable {
+                                    onGoToRoom(item.roomId, item.roomName)
+                                    visible = false
+                                    banner = null
+                                },
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
