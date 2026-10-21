@@ -667,7 +667,6 @@ private fun FamilyRewardVideo(
             factory = { ctx ->
                 PlayerView(ctx).apply {
                     useController = false
-                    surfaceType = androidx.media3.ui.PlayerView.SURFACE_TYPE_TEXTURE_VIEW
                     // RESIZE_MODE_ZOOM added below to ensure square proper cropping
                     resizeMode = androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM
                     setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)
