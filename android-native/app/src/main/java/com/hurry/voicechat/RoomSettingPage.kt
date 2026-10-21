@@ -83,7 +83,7 @@ data class RoomSettingsDataNative(
 private data class RoomThemeChoice(val id: String, val name: String, val image: String)
 private data class NativeSettingMember(val accountId: String, val name: String, val image: String)
 
-private const val SETTINGS_API = "https://hurry-voice-chat-lz75.onrender.com"
+private const val SETTINGS_API = "https://zyora-voice-chat.onrender.com"
 private const val RAW_SETTINGS = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/"
 
 private val roomThemeChoices = listOf(
