@@ -881,8 +881,8 @@ fun RoomPage(
             },
             onMusicPlay={ track ->
                 miniMusicTrack = track
-                musicPlaylist = listOf(track)
-                currentTrackIndex = 0
+                if (musicPlaylist.none { it.url == track.url }) musicPlaylist = listOf(track)
+                currentTrackIndex = musicPlaylist.indexOfFirst { it.url == track.url }.coerceAtLeast(0)
                 musicCurrentTime = 0f
                 musicDuration = if (track.duration > 0) track.duration / 1000f else 180f
                 isMusicPlaying = true
