@@ -653,7 +653,6 @@ private fun FamilyRewardVideo(
             factory = { ctx ->
                 PlayerView(ctx).apply {
                     useController = false
-                    surfaceType = androidx.media3.ui.PlayerView.SURFACE_TYPE_TEXTURE_VIEW
                     setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)
                     layoutParams = FrameLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
