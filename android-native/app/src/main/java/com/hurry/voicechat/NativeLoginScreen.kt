@@ -58,7 +58,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 private val HURRY_FIREBASE_API_KEY: String get() = BuildConfig.FIREBASE_API_KEY
-private const val HURRY_API_BASE = "https://hurry-voice-chat-lz75.onrender.com"
+private const val HURRY_API_BASE = "https://zyora-voice-chat.onrender.com"
 private const val HURRY_VIDEO = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/gemini_generated_video_99a3cc1a~3.mp4"
 private const val HURRY_LOGO = "file:///android_asset/logo.png"
 
