@@ -608,16 +608,14 @@ private fun RoomListCard(
                 .clip(RoundedCornerShape(10.dp))
                 .background(Color(0xFFE5E7EB))
         ) {
-            AsyncImage(
-                model = if (
-                    room.image.isBlank() ||
-                    room.image.equals("undefined", ignoreCase = true) ||
-                    room.image.equals("null", ignoreCase = true) ||
-                    room.image.endsWith("/default-avatar.png") ||
-                    room.image.equals("default-avatar.png", ignoreCase = true)
-                ) RAW + "IMG_20261009_170410.png"
-                else if (room.image.startsWith("http")) room.image
-                else RAW + room.image.trimStart('/'),
+            FallbackAsyncImage(
+                model = if (room.image.startsWith("http")) room.image
+                    else if (room.image.isBlank() ||
+                        room.image.equals("undefined", ignoreCase = true) ||
+                        room.image.equals("null", ignoreCase = true) ||
+                        room.image.endsWith("/default-avatar.png") ||
+                        room.image.equals("default-avatar.png", ignoreCase = true)) ""
+                    else RAW + room.image.trimStart('/'),
                 contentDescription = null,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
