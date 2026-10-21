@@ -26,12 +26,26 @@ object HurryApi {
             val parsedRooms = buildList {
                 for (i in 0 until array.length()) {
                     val o = array.optJSONObject(i) ?: continue
-                    val id = o.optString("accountId", o.optString("roomId", o.optString("id")))
+                    val id = o.optString("roomId").takeIf { it.isNotBlank() && it != "null" }
+                        ?: o.optString("accountId").takeIf { it.isNotBlank() && it != "null" }
+                        ?: o.optString("id").takeIf { it.isNotBlank() && it != "null" }
+                        ?: continue
+                    // Support DP field names used by both legacy and current room records.
+                    val rawImage = sequenceOf("roomDp", "dp", "image", "roomImage", "avatarUrl", "profileImage")
+                        .map { key -> o.optString(key, "").trim() }
+                        .firstOrNull { it.isNotEmpty() && it != "null" && it != "undefined" }
+                        .orEmpty()
+                    val roomImage = when {
+                        rawImage.startsWith("data:image/", ignoreCase = true) || rawImage.isBlank() ->
+                            "$API_BASE/api/rooms/image?roomId=${java.net.URLEncoder.encode(id, "UTF-8")}"
+                        rawImage.startsWith("/") -> "$API_BASE$rawImage"
+                        else -> rawImage
+                    }
                     add(
                         HurryRoom(
                             id = id,
                             name = o.optString("roomName", o.optString("name", "Room")),
-                            image = o.optString("roomDp", o.optString("image", "")),
+                            image = roomImage,
                             announcement = o.optString("announcement", o.optString("message", "")),
                             country = o.optString("country", "🇮🇳"),
                             locked = o.optBoolean("isLocked", false)
