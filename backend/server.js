@@ -985,6 +985,156 @@ app.get("/api/privateMessages", async (req, res) => {
   }
 });
 
+
+/* Persistent Lucky Bag wallet ledger (MongoDB; Firebase is not used for app data). */
+const luckyBagTimers = new Map();
+const luckyBagWallets = () => {
+  if (!db) throw new Error("MongoDB is not connected");
+  return db.collection("luckyBagWallets");
+};
+const luckyBags = () => {
+  if (!db) throw new Error("MongoDB is not connected");
+  return db.collection("luckyBags");
+};
+const luckyBagTransactions = () => {
+  if (!db) throw new Error("MongoDB is not connected");
+  return db.collection("luckyBagTransactions");
+};
+async function creditLuckyBagWallet(userId, amount) {
+  await luckyBagWallets().updateOne(
+    { userId: String(userId) },
+    { $inc: { balance: Number(amount) }, $set: { updatedAt: Date.now() }, $setOnInsert: { userId: String(userId) } },
+    { upsert: true }
+  );
+}
+async function refundLuckyBag(bagId) {
+  const bag = await luckyBags().findOne({ bagId: String(bagId), status: "open", claimedCount: 0 });
+  if (!bag) return false;
+  const result = await luckyBags().updateOne(
+    { bagId: String(bagId), status: "open", claimedCount: 0 },
+    { $set: { status: "refunded", refundedAt: Date.now() } }
+  );
+  if (!result.modifiedCount) return false;
+  await creditLuckyBagWallet(bag.senderId, bag.amount);
+  await luckyBagTransactions().insertOne({
+    userId: bag.senderId, type: "lucky_bag_refund", amount: bag.amount,
+    bagId: bag.bagId, createdAt: Date.now()
+  });
+  io.emit("lucky_bag_refunded", { bagId: bag.bagId, senderId: bag.senderId, amount: bag.amount });
+  return true;
+}
+function scheduleLuckyBagRefund(bag) {
+  const wait = Math.max(0, Number(bag.expiresAt) - Date.now());
+  const timer = setTimeout(() => {
+    refundLuckyBag(bag.bagId).catch((err) => console.error("Lucky Bag refund error:", err.message))
+      .finally(() => luckyBagTimers.delete(String(bag.bagId)));
+  }, wait);
+  if (typeof timer.unref === "function") timer.unref();
+  luckyBagTimers.set(String(bag.bagId), timer);
+}
+app.get("/api/lucky-bag/wallet/:userId", async (req, res) => {
+  try {
+    const userId = String(req.params.userId || "").trim();
+    if (!userId) return res.status(400).json({ error: "userId required" });
+    const wallet = await luckyBagWallets().findOne({ userId });
+    res.json({ userId, balance: Number(wallet?.balance || 0) });
+  } catch (err) {
+    res.status(503).json({ error: "Lucky Bag wallet unavailable" });
+  }
+});
+app.post("/api/lucky-bag/send", async (req, res) => {
+  try {
+    const senderId = String(req.body?.senderId || "").trim();
+    const senderName = String(req.body?.senderName || "User").trim().slice(0, 80);
+    const senderImage = String(req.body?.senderImage || "").slice(0, 1000);
+    const roomId = String(req.body?.roomId || "").trim();
+    const roomName = String(req.body?.roomName || "Room").trim().slice(0, 100);
+    const amount = Number(req.body?.amount);
+    const recipients = Number(req.body?.recipients);
+    const bagId = String(req.body?.bagId || require("crypto").randomUUID());
+    if (!senderId || !roomId || !Number.isSafeInteger(amount) || amount <= 0 ||
+        ![10000,100000,200000,500000,1000000,1500000,2000000].includes(amount) ||
+        ![5,10,30,50].includes(recipients)) {
+      return res.status(400).json({ error: "Invalid Lucky Bag details" });
+    }
+    await luckyBagWallets().updateOne(
+      { userId: senderId }, { $setOnInsert: { userId: senderId, balance: 0, createdAt: Date.now() } }, { upsert: true }
+    );
+    const debit = await luckyBagWallets().updateOne(
+      { userId: senderId, balance: { $gte: amount } },
+      { $inc: { balance: -amount }, $set: { updatedAt: Date.now() } }
+    );
+    if (!debit.modifiedCount) return res.status(409).json({ error: "Insufficient coins", balance: Number((await luckyBagWallets().findOne({userId:senderId}))?.balance || 0) });
+    const now = Date.now();
+    const bag = { bagId, senderId, senderName, senderImage, roomId, roomName, amount, recipients, claimedCount: 0, claimedTotal: 0, status: "open", createdAt: now, expiresAt: now + 5 * 60 * 1000 };
+    try {
+      await luckyBags().insertOne(bag);
+      await luckyBagTransactions().insertOne({ userId: senderId, type: "lucky_bag_send", amount: -amount, bagId, createdAt: now });
+    } catch (err) {
+      await creditLuckyBagWallet(senderId, amount);
+      throw err;
+    }
+    io.emit("lucky_bag_banner", { bagId, senderId, senderName, senderImage, roomId, roomName, amount, recipients, expiresAt: bag.expiresAt });
+    scheduleLuckyBagRefund(bag);
+    res.json({ success: true, bagId, balance: Number((await luckyBagWallets().findOne({userId:senderId}))?.balance || 0), expiresAt: bag.expiresAt });
+  } catch (err) {
+    console.error("POST /api/lucky-bag/send error:", err.message);
+    res.status(503).json({ error: "Could not send Lucky Bag" });
+  }
+});
+app.post("/api/lucky-bag/claim", async (req, res) => {
+  try {
+    const bagId = String(req.body?.bagId || "").trim();
+    const userId = String(req.body?.userId || "").trim();
+    if (!bagId || !userId) return res.status(400).json({ error: "bagId and userId required" });
+    const bag = await luckyBags().findOne({ bagId });
+    if (!bag) return res.status(404).json({ error: "Lucky Bag not found" });
+    if (bag.senderId === userId) return res.status(403).json({ error: "Sender cannot claim own Lucky Bag" });
+    if (bag.status !== "open" || Date.now() >= bag.expiresAt) {
+      if (bag.status === "open" && bag.claimedCount === 0) await refundLuckyBag(bagId);
+      return res.status(410).json({ error: "Lucky Bag expired or closed" });
+    }
+    const claimKey = { bagId, userId };
+    const existing = await luckyBags().findOne({ bagId, claims: { $elemMatch: { userId } } }, { projection: { claims: 1 } });
+    if (existing) return res.status(409).json({ error: "Already claimed this Lucky Bag" });
+    const current = await luckyBags().findOne({ bagId, status: "open" });
+    if (!current || current.claimedCount >= current.recipients) return res.status(409).json({ error: "Lucky Bag is empty" });
+    const slotsLeft = current.recipients - current.claimedCount;
+    const coinsLeft = current.amount - current.claimedTotal;
+    const share = slotsLeft <= 1 ? coinsLeft : Math.max(1, Math.floor(Math.random() * Math.max(2, Math.floor(coinsLeft / slotsLeft) * 2)));
+    const amount = Math.min(coinsLeft, share);
+    const claimUpdate = await luckyBags().updateOne(
+      { bagId, status: "open", claimedCount: current.claimedCount, claimedTotal: current.claimedTotal, claims: { $not: { $elemMatch: { userId } } } },
+      { $inc: { claimedCount: 1, claimedTotal: amount }, $push: { claims: { userId, amount, claimedAt: Date.now() } } }
+    );
+    if (!claimUpdate.modifiedCount) return res.status(409).json({ error: "Another claim was processed; try again" });
+    await creditLuckyBagWallet(userId, amount);
+    await luckyBagTransactions().insertOne({ userId, type: "lucky_bag_claim", amount, bagId, createdAt: Date.now() });
+    const after = await luckyBags().findOne({ bagId });
+    if (after && after.claimedCount >= after.recipients) {
+      await luckyBags().updateOne({ bagId, status: "open" }, { $set: { status: "claimed", completedAt: Date.now() } });
+      const timer = luckyBagTimers.get(bagId);
+      if (timer) clearTimeout(timer);
+      luckyBagTimers.delete(bagId);
+    }
+    io.emit("lucky_bag_claimed", { bagId, userId, amount, claimedCount: after?.claimedCount || 1, recipients: current.recipients });
+    const wallet = await luckyBagWallets().findOne({ userId });
+    res.json({ success: true, amount, balance: Number(wallet?.balance || 0), claimedCount: after?.claimedCount || 1, recipients: current.recipients });
+  } catch (err) {
+    console.error("POST /api/lucky-bag/claim error:", err.message);
+    res.status(503).json({ error: "Could not claim Lucky Bag" });
+  }
+});
+app.get("/api/lucky-bag/:bagId", async (req, res) => {
+  try {
+    const bag = await luckyBags().findOne({ bagId: String(req.params.bagId) });
+    if (!bag) return res.status(404).json({ error: "Lucky Bag not found" });
+    res.json({ bagId: bag.bagId, senderId: bag.senderId, senderName: bag.senderName, senderImage: bag.senderImage, roomId: bag.roomId, roomName: bag.roomName, amount: bag.amount, recipients: bag.recipients, claimedCount: bag.claimedCount, claimedTotal: bag.claimedTotal, status: bag.status, expiresAt: bag.expiresAt, claims: bag.claims || [] });
+  } catch (err) {
+    res.status(503).json({ error: "Lucky Bag unavailable" });
+  }
+});
+
 app.get("/", (_req, res) => {
   res.json({
     status: "ok",
