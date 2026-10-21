@@ -230,7 +230,7 @@ fun Fourgride(
         ToolItem("My-Iteam", "IMG_20260814_110545.png") { onOpenStore?.invoke("bag") }
     )
     val playTools = listOf(
-        ToolItem("Lucky bag", "1790602570756~2.jpg") { hideToolsAfterLucky = true; showLuckyBag = true },
+        ToolItem("Lucky bag", "IMG_20261021_170707.png") { hideToolsAfterLucky = true; showLuckyBag = true },
         ToolItem("Pk Battle", "IMG_20260814_110802.png") { }
     )
 
