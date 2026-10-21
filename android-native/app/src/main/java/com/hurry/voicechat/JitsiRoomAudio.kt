@@ -7,6 +7,7 @@ import android.os.Build
 import android.content.pm.PackageManager
 import android.webkit.PermissionRequest
 import android.webkit.WebChromeClient
+import android.webkit.CookieManager
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -81,9 +82,14 @@ fun JitsiRoomAudio(roomId: String, userName: String, canSpeak: Boolean, onSpeaki
             val displayName = JSONObject.quote(userName.ifBlank { "User" })
             val initialMuted = !(canSpeak && hasMicPermission)
             WebView(viewContext).apply {
+                // Jitsi's embedded conference uses cross-site cookies inside its WebView iframe.
+                // Without third-party cookies some Android builds stay stuck before joining.
+                CookieManager.getInstance().setAcceptCookie(true)
+                CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
                 webViewState.value = this
                 settings.javaScriptEnabled = true
                 settings.domStorageEnabled = true
+                settings.databaseEnabled = true
                 settings.mediaPlaybackRequiresUserGesture = false
                 settings.javaScriptCanOpenWindowsAutomatically = true
                 settings.cacheMode = WebSettings.LOAD_DEFAULT
