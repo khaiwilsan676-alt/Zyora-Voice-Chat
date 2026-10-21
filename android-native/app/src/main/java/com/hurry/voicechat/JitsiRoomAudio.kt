@@ -110,10 +110,11 @@ fun JitsiRoomAudio(roomId: String, userName: String, canSpeak: Boolean, onSpeaki
                       function scheduleReconnect() {
                         if (retryTimer) return;
                         starting = false;
-                        try { if (api) api.dispose(); } catch (e) {}
-                        api = null;
+                        // Schedule first so dispose-triggered leave events cannot start duplicate retries.
                         retryTimer = setTimeout(function() { retryTimer = null; startConference(); }, retryDelay);
                         retryDelay = Math.min(retryDelay * 2, 15000);
+                        try { if (api) api.dispose(); } catch (e) {}
+                        api = null;
                       }
                       window.setZyoraMuted = function(muted) {
                         desiredMuted = !!muted;
