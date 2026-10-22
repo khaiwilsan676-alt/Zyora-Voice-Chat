@@ -735,11 +735,7 @@ app.get("/api/users", async (req, res) => {
         }
       }
 
-      const regex = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\    const q = searchQuery || accountId || uid;
-    if (q) {
       const regex = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
-      const numericQ = !isNaN(Number(q)) && q.trim() !== "" ? Number(q) : null;
-
       const orConditions = ['), 'i');
 
       const orConditions = [
