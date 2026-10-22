@@ -775,12 +775,12 @@ fun RoomPage(
                             Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
                                 FallbackAsyncImage(model=message.senderImage,contentDescription=message.sender,modifier=Modifier.size(24.dp).clip(CircleShape),contentScale=ContentScale.Crop)
                                 Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){
+                                    Text(message.sender,color=Color.White.copy(alpha=.95f),fontSize=12.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold)
                                     if (message.senderAccountId == roomOwner.accountId.ifBlank { roomOwner.id }) {
                                         Box(Modifier.size(14.dp).clip(CircleShape).background(Color(0xFF3B82F6)),contentAlignment=Alignment.Center) {
                                             androidx.compose.material3.Icon(imageVector=Icons.Filled.Home,contentDescription="Owner",modifier=Modifier.size(9.dp),tint=Color.White)
                                         }
                                     }
-                                    Text(message.sender,color=Color.White.copy(alpha=.95f),fontSize=12.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold)
                                 }
                             }
                             Text("Enter the Room",color=Color.White,fontSize=12.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Medium, modifier=Modifier.padding(start=2.dp))
