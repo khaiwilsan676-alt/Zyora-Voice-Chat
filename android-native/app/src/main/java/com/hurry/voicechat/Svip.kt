@@ -1,5 +1,7 @@
 package com.hurry.voicechat
 
+import android.view.TextureView
+import android.view.ViewGroup
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -12,13 +14,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
-import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
@@ -124,8 +126,7 @@ fun SvipPage(onBack: () -> Unit = {}) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .zIndex(20f)
-                    .alpha(0.85f), // Blend slight transparency
+                    .zIndex(20f),
                 contentAlignment = Alignment.Center
             ) {
                 SvipVideoPlayer(videoUrl = "$baseUrl/1000197130-background%20(1).mp4")
@@ -200,7 +201,7 @@ fun SvipPage(onBack: () -> Unit = {}) {
     }
 }
 
-// ExoPlayer Implementation for AutoPlay Muted Video
+// ExoPlayer Implementation for AutoPlay Muted Video with Green Screen Removal
 @Composable
 fun SvipVideoPlayer(videoUrl: String) {
     val context = LocalContext.current
@@ -221,33 +222,34 @@ fun SvipVideoPlayer(videoUrl: String) {
         }
     }
 
-    // Ye matrix green color ko daba kar background theme ke hisaab se blend karne me madad karega
-    val greenBlendMatrix = remember {
+    // CHROMA KEY MAGIC MATRIX: Yeh sirf aur sirf Green color ko transparent (alpha 0) karega!
+    val greenScreenMatrix = remember {
         ColorMatrix(floatArrayOf(
-            1f, 0f, 0f, 0f, 0f,   // Red normally
-            0f, 0.1f, 0f, 0f, 0f, // Green ko almost khatam kar diya hai blend ke liye
-            0f, 0f, 1f, 0f, 0f,   // Blue normally
-            0f, 0f, 0f, 0.9f, 0f  // Alpha thoda sa transparent
+            1f,   0f,    0f,   0f,  0f,    // Red (No change)
+            0f,   1f,    0f,   0f,  0f,    // Green (No change visual, but used below)
+            0f,   0f,    1f,   0f,  0f,    // Blue (No change)
+            2.5f, -3.5f, 2.5f, 0f,  255f   // Alpha (Agar Green bohot zyada hai, toh transparency 100% ho jayegi)
         ))
     }
 
     AndroidView(
-        factory = { ctx ->
-            // Yaha TextureView use kiya hai taaki Compose ka scale aur graphicsLayer perfectly kaam kare
-            android.view.TextureView(ctx)
-        },
-        update = { textureView ->
-            exoPlayer.setVideoTextureView(textureView)
+        factory = {
+            TextureView(context).apply {
+                isOpaque = false // Transparent background zaroori hai!
+                layoutParams = ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
+                exoPlayer.setVideoTextureView(this)
+            }
         },
         modifier = Modifier
             .fillMaxWidth()
-            .aspectRatio(1f) // Video ekdam square kar diya
-            .scale(1.4f) // Video size thora barra (bada) kar diya
+            .aspectRatio(1f) // Video ekdam SQUARE mein crop hogi
+            .clip(RectangleShape) // Square se bahar kuch nahi jayega
             .graphicsLayer {
-                // Ekdam transparent blead aur mix ke liye
-                compositingStrategy = CompositingStrategy.Offscreen
-                colorFilter = ColorFilter.colorMatrix(greenBlendMatrix)
+                // ColorFilter apply kar diya jo sirf Green color ko nikal dega aur mix karega
+                colorFilter = ColorFilter.colorMatrix(greenScreenMatrix)
             }
     )
 }
-
