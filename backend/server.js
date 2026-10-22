@@ -1011,12 +1011,62 @@ app.get("/api/privateMessages", async (req, res) => {
 });
 
 
-/* Persistent Lucky Bag wallet ledger (MongoDB; Firebase is not used for app data). */
+/* One permanent wallet per user: users.coins is the canonical coin balance.
+   Legacy luckyBagWallets is read only for one-time migration; new writes go to users. */
 const luckyBagTimers = new Map();
-const luckyBagWallets = () => {
+const walletUserQuery = (userId) => ({ $or: [
+  { uid: String(userId) }, { id: String(userId) }, { appLongId: String(userId) },
+  { accountId: String(userId) }, { accountNumber: String(userId) },
+  { displayUserNumber: String(userId) }
+] });
+async function ensureWalletUser(userId) {
   if (!db) throw new Error("MongoDB is not connected");
-  return db.collection("luckyBagWallets");
-};
+  const users = db.collection("users");
+  let user = await users.findOne(walletUserQuery(userId));
+  if (!user) {
+    const legacy = await db.collection("luckyBagWallets").findOne({ userId: String(userId) });
+    const initialCoins = Number(legacy?.balance ?? 0);
+    await users.updateOne({ uid: String(userId) }, { $setOnInsert: {
+      uid: String(userId), id: String(userId), appLongId: String(userId),
+      coins: initialCoins, diamonds: 0, createdAt: Date.now()
+    } }, { upsert: true });
+    user = await users.findOne(walletUserQuery(userId));
+  }
+  if (user && !Number.isFinite(Number(user.coins))) {
+    const legacy = await db.collection("luckyBagWallets").findOne({ userId: String(userId) });
+    const initialCoins = Number(user.balance ?? legacy?.balance ?? 0);
+    await users.updateOne({ _id: user._id }, { $set: { coins: Math.max(0, initialCoins) } });
+    user.coins = Math.max(0, initialCoins);
+  } else if (user && user.coins == null) {
+    const legacy = await db.collection("luckyBagWallets").findOne({ userId: String(userId) });
+    const initialCoins = Number(user.balance ?? legacy?.balance ?? 0);
+    await users.updateOne({ _id: user._id }, { $set: { coins: Math.max(0, initialCoins) } });
+    user.coins = Math.max(0, initialCoins);
+  }
+  return user;
+}
+async function walletBalance(userId) {
+  const user = await ensureWalletUser(userId);
+  return Math.max(0, Number(user?.coins ?? 0));
+}
+async function creditWallet(userId, amount) {
+  const value = Number(amount);
+  if (!Number.isFinite(value) || value <= 0) throw new Error("Invalid wallet credit");
+  await ensureWalletUser(userId);
+  const result = await db.collection("users").updateOne(walletUserQuery(userId), {
+    $inc: { coins: value }, $set: { walletUpdatedAt: Date.now() }
+  });
+  if (!result.modifiedCount) throw new Error("Wallet user not found");
+}
+async function debitWallet(userId, amount) {
+  const value = Number(amount);
+  if (!Number.isFinite(value) || value <= 0) return false;
+  await ensureWalletUser(userId);
+  const result = await db.collection("users").updateOne({
+    ...walletUserQuery(userId), coins: { $gte: value }
+  }, { $inc: { coins: -value }, $set: { walletUpdatedAt: Date.now() } });
+  return Boolean(result.modifiedCount);
+}
 const luckyBags = () => {
   if (!db) throw new Error("MongoDB is not connected");
   return db.collection("luckyBags");
@@ -1026,11 +1076,7 @@ const luckyBagTransactions = () => {
   return db.collection("luckyBagTransactions");
 };
 async function creditLuckyBagWallet(userId, amount) {
-  await luckyBagWallets().updateOne(
-    { userId: String(userId) },
-    { $inc: { balance: Number(amount) }, $set: { updatedAt: Date.now() }, $setOnInsert: { userId: String(userId) } },
-    { upsert: true }
-  );
+  await creditWallet(userId, amount);
 }
 async function refundLuckyBag(bagId) {
   const bag = await luckyBags().findOne({ bagId: String(bagId), status: "open", claimedCount: 0 });
@@ -1061,15 +1107,9 @@ app.get("/api/lucky-bag/wallet/:userId", async (req, res) => {
   try {
     const userId = String(req.params.userId || "").trim();
     if (!userId) return res.status(400).json({ error: "userId required" });
-    // MongoDB is the permanent source of truth. Never seed/reset a server wallet
-    // from a client-provided local balance; that value can be stale or forged.
-    await luckyBagWallets().updateOne(
-      { userId },
-      { $setOnInsert: { userId, balance: 0, createdAt: Date.now() } },
-      { upsert: true }
-    );
-    const wallet = await luckyBagWallets().findOne({ userId });
-    res.json({ userId, balance: Number(wallet?.balance || 0) });
+    // Return the Mine > Wallet page's canonical MongoDB balance.
+    const balance = await walletBalance(userId);
+    res.json({ userId, balance });
   } catch (err) {
     res.status(503).json({ error: "Lucky Bag wallet unavailable" });
   }
@@ -1089,15 +1129,9 @@ app.post("/api/lucky-bag/send", async (req, res) => {
         ![5,10,30,50].includes(recipients)) {
       return res.status(400).json({ error: "Invalid Lucky Bag details" });
     }
-    // Do not trust a client-supplied/local balance to initialize the permanent wallet.
-    await luckyBagWallets().updateOne(
-      { userId: senderId }, { $setOnInsert: { userId: senderId, balance: 0, createdAt: Date.now() } }, { upsert: true }
-    );
-    const debit = await luckyBagWallets().updateOne(
-      { userId: senderId, balance: { $gte: amount } },
-      { $inc: { balance: -amount }, $set: { updatedAt: Date.now() } }
-    );
-    if (!debit.modifiedCount) return res.status(409).json({ error: "Insufficient coins", balance: Number((await luckyBagWallets().findOne({userId:senderId}))?.balance || 0) });
+    // Debit the same MongoDB users.coins balance used by Mine > Wallet.
+    const debit = await debitWallet(senderId, amount);
+    if (!debit) return res.status(409).json({ error: "Insufficient coins", balance: await walletBalance(senderId) });
     const now = Date.now();
     const bag = { bagId, senderId, senderName, senderImage, roomId, roomName, amount, recipients, claimedCount: 0, claimedTotal: 0, status: "open", createdAt: now, expiresAt: now + 5 * 60 * 1000 };
     try {
@@ -1109,7 +1143,7 @@ app.post("/api/lucky-bag/send", async (req, res) => {
     }
     io.emit("lucky_bag_banner", { bagId, senderId, senderName, senderImage, roomId, roomName, amount, recipients, expiresAt: bag.expiresAt });
     scheduleLuckyBagRefund(bag);
-    res.json({ success: true, bagId, balance: Number((await luckyBagWallets().findOne({userId:senderId}))?.balance || 0), expiresAt: bag.expiresAt });
+    res.json({ success: true, bagId, balance: await walletBalance(senderId), expiresAt: bag.expiresAt });
   } catch (err) {
     console.error("POST /api/lucky-bag/send error:", err.message);
     res.status(503).json({ error: "Could not send Lucky Bag" });
@@ -1151,8 +1185,8 @@ app.post("/api/lucky-bag/claim", async (req, res) => {
       luckyBagTimers.delete(bagId);
     }
     io.emit("lucky_bag_claimed", { bagId, userId, amount, claimedCount: after?.claimedCount || 1, recipients: current.recipients });
-    const wallet = await luckyBagWallets().findOne({ userId });
-    res.json({ success: true, amount, balance: Number(wallet?.balance || 0), claimedCount: after?.claimedCount || 1, recipients: current.recipients });
+    const balance = await walletBalance(userId);
+    res.json({ success: true, amount, balance, claimedCount: after?.claimedCount || 1, recipients: current.recipients });
   } catch (err) {
     console.error("POST /api/lucky-bag/claim error:", err.message);
     res.status(503).json({ error: "Could not claim Lucky Bag" });
