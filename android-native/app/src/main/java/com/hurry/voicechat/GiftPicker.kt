@@ -84,7 +84,7 @@ fun GiftPicker(
     var selected by remember { mutableStateOf<Int?>(null) }
     var recipientMode by remember { mutableStateOf("mic") }
     var selectedTargets by remember { mutableStateOf(setOf<String>()) }
-    var balance by remember { mutableIntStateOf(0) }
+    var balance by remember { mutableLongStateOf(0L) }
     var playingVideo by remember { mutableStateOf<String?>(null) }
     var insufficient by remember { mutableStateOf(false) }
     val ink = Color.White
@@ -93,7 +93,7 @@ fun GiftPicker(
     val visibleSeats = seats.mapNotNull { it as? NativeRoomSeat }.filter { it.occupied }
     LaunchedEffect(Unit) {
         while (true) {
-            balance = context.getSharedPreferences("hurry_wallet", android.content.Context.MODE_PRIVATE).getInt("balance", 0)
+            balance = WalletDatabase.get(context).walletDao().getUserData()?.balance?.coerceAtLeast(0L) ?: 0L
             delay(1000)
         }
     }
