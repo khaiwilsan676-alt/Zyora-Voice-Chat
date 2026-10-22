@@ -1,5 +1,6 @@
 package com.hurry.voicechat
 
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -69,20 +70,20 @@ fun DailyCheckInModal(
             
             Box(
                 modifier = Modifier
-                    .fillMaxWidth(0.92f) // Yahan width thodi kam ki hai main card ki
+                    .fillMaxWidth()
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
                         onClick = {} // Prevents closing when clicking inside the modal
                     ),
-                contentAlignment = Alignment.TopCenter 
+                contentAlignment = Alignment.TopCenter
             ) {
                 
                 // Main White Box
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 36.dp) 
+                        .padding(top = 36.dp)
                         .clip(RoundedCornerShape(24.dp))
                         .background(Color.White)
                         .border(2.dp, Color(0xFF3B82F6), RoundedCornerShape(24.dp))
@@ -102,25 +103,28 @@ fun DailyCheckInModal(
                                     .weight(1f)
                                     .aspectRatio(1f)
                             ) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    // Fixed height box taaki text ek line mein aaye
-                                    Box(modifier = Modifier.height(32.dp), contentAlignment = Alignment.Center) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center,
+                                    modifier = Modifier.fillMaxSize()
+                                ) {
+                                    Box(modifier = Modifier.height(28.dp), contentAlignment = Alignment.Center) {
                                         AsyncImage(
                                             model = item.image,
                                             contentDescription = "reward",
-                                            modifier = Modifier.size(32.dp)
+                                            modifier = Modifier.size(28.dp) // Size thoda adjust kiya taaki text na kate
                                         )
                                     }
-                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Spacer(modifier = Modifier.height(2.dp))
                                     Text(
                                         text = item.reward,
                                         fontSize = 10.sp,
                                         fontWeight = FontWeight.SemiBold,
                                         color = Color(0xFF374151),
                                         maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis, // Text ko truncate karega agar bada hua
-                                        textAlign = TextAlign.Center, // Center align rahega
-                                        modifier = Modifier.padding(horizontal = 2.dp) // Edges se thoda gap dega taaki bahar na jaye
+                                        overflow = TextOverflow.Ellipsis, // Text bahar jane ki jagah '...' show karega (safe bounds)
+                                        textAlign = TextAlign.Center,
+                                        modifier = Modifier.fillMaxWidth()
                                     )
                                 }
                             }
@@ -223,14 +227,14 @@ fun DailyCheckInModal(
                     }
                 }
 
-                // Top Banner Image (Upar shift kiya hai)
+                // Top Banner Image (Oupar move karne ke liye offset add kiya hai)
                 AsyncImage(
                     model = BASE_IMG_URL + "file_000000004b6c8211855003bf899492fd.png",
                     contentDescription = "Top Banner",
                     contentScale = ContentScale.FillWidth,
                     modifier = Modifier
                         .fillMaxWidth(0.95f)
-                        .offset(y = (-16).dp) // Banner ko thoda sa aur upar kar diya
+                        .offset(y = (-24).dp) // <- Is line se banner theek se upar nikal aayega
                         .zIndex(20f)
                 )
             }
@@ -248,7 +252,7 @@ fun DailyCheckInModal(
                 Icon(
                     imageVector = Icons.Default.Close,
                     contentDescription = "Close",
-                    tint = Color.Black, 
+                    tint = Color.Black,
                     modifier = Modifier.size(24.dp)
                 )
             }
@@ -294,8 +298,13 @@ private fun DayCard(
             )
         }
 
-        // Main Content
-        Box(modifier = Modifier.padding(top = 16.dp)) {
+        // Main Content (Safe padding for text to stay inside)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = 18.dp, bottom = 4.dp, start = 2.dp, end = 2.dp),
+            contentAlignment = Alignment.Center
+        ) {
             content()
         }
 
