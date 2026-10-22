@@ -795,7 +795,7 @@ fun RoomPage(
                     AsyncImage(
                         model="https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/file_0000000019c4821180028eebae10dbfc.png",
                         contentDescription="Gift",
-                        modifier=Modifier.size(65.dp).clickable{showGift=true},
+                        modifier=Modifier.size(56.dp).clickable{showGift=true}.scale(1.1f),
                         contentScale=ContentScale.Fit
                     )
                     Row(Modifier.weight(1f),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp,Alignment.End)){
