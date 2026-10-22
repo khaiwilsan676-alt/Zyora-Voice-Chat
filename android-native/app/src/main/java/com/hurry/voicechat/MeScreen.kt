@@ -1,6 +1,9 @@
 package com.hurry.voicechat
 
 import android.content.Context
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.widget.Toast
 import android.content.ContextWrapper
 import android.app.Activity
 import androidx.compose.foundation.background
@@ -91,8 +94,22 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
                         Spacer(Modifier.width(16.dp))
                         Column {
                             Text(name, fontSize = 24.sp, fontWeight = FontWeight.Normal, color = Color(0xFF111827))
-                            Text("ID: $account", fontSize = 12.sp, fontWeight = FontWeight.Normal, color = Color(0xFF374151))
-                            if (phone.isNotBlank()) Text(phone, fontSize = 12.sp, fontWeight = FontWeight.Normal, color = Color(0xFF4B5563))
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text("ID: $account", fontSize = 12.sp, fontWeight = FontWeight.Normal, color = Color(0xFF374151))
+                                androidx.compose.foundation.Canvas(
+                                    Modifier.size(16.dp).clickable {
+                                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                        clipboard.setPrimaryClip(ClipData.newPlainText("ID", account))
+                                        Toast.makeText(context, "Copied", Toast.LENGTH_SHORT).show()
+                                    }
+                                ) {
+                                    val ink = Color(0xFF374151)
+                                    val stroke = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.4.dp.toPx())
+                                    drawRoundRect(ink, topLeft = androidx.compose.ui.geometry.Offset(size.width * 0.30f, size.height * 0.08f), size = androidx.compose.ui.geometry.Size(size.width * 0.58f, size.height * 0.60f), cornerRadius = androidx.compose.ui.geometry.CornerRadius(1.5.dp.toPx()), style = stroke)
+                                    drawRoundRect(ink, topLeft = androidx.compose.ui.geometry.Offset(size.width * 0.10f, size.height * 0.30f), size = androidx.compose.ui.geometry.Size(size.width * 0.58f, size.height * 0.60f), cornerRadius = androidx.compose.ui.geometry.CornerRadius(1.5.dp.toPx()), style = stroke)
+                                }
+                            }
+                            if (phone.isNotBlank()) Text(phone, fontSize = 12.sp, color = Color(0xFF4B5563))
                         }
                     }
                     Text("›", fontSize = 32.sp, color = Color(0xFF374151), modifier = Modifier.padding(top = 10.dp).clickable { onPublicProfile(RoomProfileUser(id = uid, uid = uid, accountId = account.ifBlank { uid }, name = name, image = photo, country = "India")) })
