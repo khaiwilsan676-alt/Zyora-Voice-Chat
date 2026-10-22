@@ -438,7 +438,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                                 "Invite Friends" -> InviteFriends(onBack = { openedMePage = null })
                                 "Family" -> Family(onBack = { openedMePage = null })
                                 "Level" -> Level(onBack = { openedMePage = null })
-                                "Medal" -> Medal(onBack = { openedMePage = null })
+                                "Medal" -> MedalScreen(onBack = { openedMePage = null })
                                 "Store" -> StorePage(onBack = { openedMePage = null })
                                 "Bag" -> StorePage(onBack = { openedMePage = null }, initialView = "bag")
                                 "Seller Center" -> SellerCenter(onBack = { openedMePage = null })
