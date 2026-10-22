@@ -157,6 +157,22 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int) {
         if (walletUserId.isNotBlank()) {
             withContext(Dispatchers.IO) {
                 runCatching {
+                    // One-time migration: preserve this device's existing balance only if MongoDB has no wallet yet.
+                    val localBalance = loadBalance(dao)
+                    val initConnection = (URL("https://zyora-voice-chat.onrender.com/api/wallet/initialize").openConnection() as HttpURLConnection).apply {
+                        requestMethod = "POST"
+                        doOutput = true
+                        connectTimeout = 8000
+                        readTimeout = 8000
+                        setRequestProperty("Content-Type", "application/json")
+                    }
+                    try {
+                        initConnection.outputStream.bufferedWriter().use { writer ->
+                            writer.write(JSONObject().put("userId", walletUserId).put("localBalance", localBalance).toString())
+                        }
+                        if (initConnection.responseCode !in 200..299) throw IllegalStateException("Wallet migration failed")
+                    } finally { initConnection.disconnect() }
+
                     val encodedId = URLEncoder.encode(walletUserId, "UTF-8")
                     val connection = (URL("https://zyora-voice-chat.onrender.com/api/lucky-bag/wallet/$encodedId").openConnection() as HttpURLConnection).apply {
                         connectTimeout = 8000
