@@ -74,7 +74,7 @@ interface Message {
 
 interface RoomUser { accountId: string; name: string; image: string; }
 interface MusicTrack { id: string; name: string; url: string; }
-interface EntryToastData { id: string; name: string; image: string; }
+interface EntryToastData { id: string; name: string; image: string; isOwner?: boolean; }
 
 const THEME_BACKGROUNDS: { [key: string]: string } = {
   'forest-night': '/1784875884052~2.jpg',
@@ -281,7 +281,7 @@ const EntryToastStack = memo(function EntryToastStack({ toasts }: { toasts: Entr
           key={t.id}
           className="entry-toast mb-1 flex items-center gap-2 shadow-lg"
           style={{
-            background: 'rgba(0,0,0,0.88)',
+            background: 'linear-gradient(to right, rgba(37,99,235,0.95) 0%, rgba(37,99,235,0.95) 55%, rgba(37,99,235,0) 100%)',
             borderRadius: '999px 0 0 999px',
             padding: '4px 48px 4px 6px',
             minWidth: '230px',
@@ -299,6 +299,7 @@ const EntryToastStack = memo(function EntryToastStack({ toasts }: { toasts: Entr
           <span className="text-white font-semibold truncate" style={{ fontSize: '12px', maxWidth: '95px' }}>
             {t.name}
           </span>
+          {t.isOwner && <HouseIcon size={16} className="shrink-0" />}
           <span className="text-white/95 whitespace-nowrap" style={{ fontSize: '11px' }}>
             Enter the Room
           </span>
@@ -677,7 +678,7 @@ useEffect(() => {
       const toastId = incoming.id;
       setEntryToasts((prev) => {
         if (prev.some((t) => t.id === toastId)) return prev;
-        return [...prev, { id: toastId, name: incoming.sender, image: incoming.senderImage }];
+        return [...prev, { id: toastId, name: incoming.sender, image: incoming.senderImage, isOwner: String(incoming.senderAccountId || '') === String(roomOwnerId) }];
       });
       setTimeout(() => {
         setEntryToasts((prev) => prev.filter((t) => t.id !== toastId));
@@ -1659,13 +1660,13 @@ if (showSettingPage) return (
               {roomInfoTab === 'profile' ? (
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
-                    <div className="rounded-md overflow-hidden border border-white/15 flex-shrink-0" style={{ width: '80px', height: '80px' }}>
-                      <img src={roomDp} alt="Room" className="w-full h-full object-cover" loading="eager" decoding="async" />
+                    <div className="rounded-full overflow-hidden flex-shrink-0" style={{ width: '48px', height: '48px' }}>
+                      <img src={localUser.image || "/default-avatar.png"} alt={localUser.name || "User"} className="w-full h-full object-cover" loading="eager" decoding="async" onError={(e) => { (e.target as HTMLImageElement).src = "/default-avatar.png"; }} />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <h3 className="font-semibold text-white text-sm truncate">{roomName || 'Room'}</h3>
+                      <h3 className="font-semibold text-white text-sm truncate">{localUser.name || "User"}</h3>
                       <div className="flex items-center gap-1 text-[10px] text-white/60">
-                        <span className="truncate">ID: {roomOwner.accountId}</span>
+                        <span className="truncate">ID: {localUser.accountId || userAccountId}</span>
                         <button onClick={handleCopyId} className="p-0.5 hover:bg-white/10 rounded transition-colors cursor-pointer shrink-0" title="Copy ID">
                           <svg viewBox="0 0 24 24" className="fill-none stroke-white/70 stroke-[2] stroke-linecap-round stroke-linejoin-round" style={{ width: '12px', height: '12px' }}>
                             <rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
@@ -1673,6 +1674,9 @@ if (showSettingPage) return (
                         </button>
                         {copied && <span className="text-green-400 text-xs shrink-0">Copied!</span>}
                       </div>
+                    </div>
+                    <div className="shrink-0 self-start">
+                      <HouseIcon size={26} />
                     </div>
                   </div>
                   <div><span className="text-[10px] text-white/50 font-medium">Host</span><p className="text-xs font-medium text-white mt-0.5">{localUser.name || "Unknown"}</p></div>
