@@ -33,6 +33,17 @@ if (process.env.UPSTASH_REDIS2_REST_URL && process.env.UPSTASH_REDIS2_REST_TOKEN
   console.log("Redis credentials 2 not provided, secondary Redis integration disabled.");
 }
 
+async function checkRedisConnection() {
+  if (!redis) return { configured: false, connected: false };
+  try {
+    await redis.ping();
+    return { configured: true, connected: true };
+  } catch (error) {
+    console.warn("Redis health check failed:", error.message);
+    return { configured: true, connected: false };
+  }
+}
+
 async function setOnlineStatus(userId) {
   if (!redis) return;
   try {
@@ -72,6 +83,7 @@ async function removeSecondaryStatus(userId) {
 module.exports = {
   redis,
   redis2,
+  checkRedisConnection,
   setOnlineStatus,
   removeOnlineStatus,
   setSecondaryStatus,
