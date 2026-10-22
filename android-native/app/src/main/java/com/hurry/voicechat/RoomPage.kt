@@ -177,7 +177,8 @@ fun RoomPage(
     onClose:()->Unit={},
     onBack:()->Unit=onClose,
     onKeepRoom:(String,String,String)->Unit={_,_,_->},
-    onFollowToggle:(String,Boolean)->Unit={_,_->}
+    onFollowToggle:(String,Boolean)->Unit={_,_->},
+    onRoomSupport:()->Unit={}
 ) {
     val roomId=roomOwner.id.ifBlank{roomOwner.accountId.ifBlank{roomOwner.uid.ifBlank{"default-room"}}}
     val accountId=currentUser.accountId.ifBlank{currentUser.uid.ifBlank{currentUser.id.ifBlank{"guest"}}}
@@ -469,6 +470,7 @@ fun RoomPage(
             showLuckyBagCenterReveal -> showLuckyBagCenterReveal = false
             showExitMenu -> showExitMenu = false
             showChat -> { showChat = false; keyboardController?.hide() }
+            selectedOfficialChat != null -> selectedOfficialChat = null
             showMessageSheet -> showMessageSheet = false
             showMenu -> showMenu = false
             showStore -> showStore = false
@@ -835,7 +837,7 @@ fun RoomPage(
 
             Column(horizontalAlignment=Alignment.CenterHorizontally) {
                 androidx.compose.foundation.pager.HorizontalPager(state = sideBannerPager,modifier = Modifier.size(60.dp, 84.dp).clip(RoundedCornerShape(8.dp))) { page ->
-                    AsyncImage(model = sideBannerImages[page],contentDescription = "Room side banner",modifier = Modifier.fillMaxSize(),contentScale = ContentScale.Crop)
+                    AsyncImage(model = sideBannerImages[page],contentDescription = "Room side banner",modifier = Modifier.fillMaxSize().clickable(indication = null, interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }) { if (page == 0) onRoomSupport() },contentScale = ContentScale.Crop)
                 }
                 Row(horizontalArrangement=Arrangement.spacedBy(2.dp), verticalAlignment=Alignment.CenterVertically, modifier=Modifier.padding(top=4.dp)) {
                     repeat(sideBannerImages.size) { i ->
