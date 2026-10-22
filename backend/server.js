@@ -1585,7 +1585,7 @@ io.on("connection", (socket) => {
     }
   );
 
-  socket.on("coin_transfer", ({ roomId, senderId, recipientIds, amount, giftName, giftImage, giftType, transferId, luckyGift, senderName, senderImage, recipientName, recipientImage, multiplier } = {}) => {
+  socket.on("coin_transfer", async ({ roomId, senderId, recipientIds, amount, giftName, giftImage, giftType, transferId, luckyGift, senderName, senderImage, recipientName, recipientImage, multiplier } = {}) => {
     const room = String(roomId || "");
     const sender = String(senderId || "");
     const value = Number(amount);
@@ -1711,9 +1711,32 @@ io.on("connection", (socket) => {
       timestamp: Date.now(),
     };
 
-    // Deliver the same transfer to the room. Each client credits only when its
-    // own accountId/userId is one of the selected recipientIds.
-    io.to(`room:${room}`).emit("coin_transfer_received", transferPayload);
+    // Persist the gift against the same MongoDB wallet used by Mine > Wallet.
+    // Never broadcast a successful gift if the sender could not pay.
+    try {
+      if (!db) throw new Error("MongoDB wallet unavailable");
+      const paid = await debitWallet(sender, Math.floor(value));
+      if (!paid) {
+        socket.emit("coin_transfer_failed", { transferId: eventId || undefined, reason: "insufficient_coins" });
+        return;
+      }
+      const diamondCredit = Math.max(0, Math.floor(diamondAmount));
+      for (const recipientId of validRecipients) {
+        await ensureWalletUser(recipientId);
+        await db.collection("users").updateOne(walletUserQuery(recipientId), {
+          $inc: { diamonds: diamondCredit },
+          $set: { walletUpdatedAt: Date.now() }
+        });
+      }
+      if (luckyReturnAmount > 0) await creditWallet(sender, luckyReturnAmount);
+      io.to("room:" + room).emit("coin_transfer_received", transferPayload);
+      socket.emit("wallet_balance_updated", {
+        userId: sender, balance: await walletBalance(sender), transferId: eventId || undefined
+      });
+    } catch (error) {
+      console.error("coin_transfer wallet persistence failed:", error.message);
+      socket.emit("coin_transfer_failed", { transferId: eventId || undefined, reason: "wallet_unavailable" });
+    }
   });
 
   socket.on(
