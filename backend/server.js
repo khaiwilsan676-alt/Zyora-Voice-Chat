@@ -1061,10 +1061,11 @@ app.get("/api/lucky-bag/wallet/:userId", async (req, res) => {
   try {
     const userId = String(req.params.userId || "").trim();
     if (!userId) return res.status(400).json({ error: "userId required" });
-    const initialBalance = Math.max(0, Math.floor(Number(req.query.initialBalance || 0)));
+    // MongoDB is the permanent source of truth. Never seed/reset a server wallet
+    // from a client-provided local balance; that value can be stale or forged.
     await luckyBagWallets().updateOne(
       { userId },
-      { $setOnInsert: { userId, balance: initialBalance, createdAt: Date.now() } },
+      { $setOnInsert: { userId, balance: 0, createdAt: Date.now() } },
       { upsert: true }
     );
     const wallet = await luckyBagWallets().findOne({ userId });
@@ -1088,9 +1089,9 @@ app.post("/api/lucky-bag/send", async (req, res) => {
         ![5,10,30,50].includes(recipients)) {
       return res.status(400).json({ error: "Invalid Lucky Bag details" });
     }
-    const initialBalance = Math.max(0, Math.floor(Number(req.body?.initialBalance || 0)));
+    // Do not trust a client-supplied/local balance to initialize the permanent wallet.
     await luckyBagWallets().updateOne(
-      { userId: senderId }, { $setOnInsert: { userId: senderId, balance: initialBalance, createdAt: Date.now() } }, { upsert: true }
+      { userId: senderId }, { $setOnInsert: { userId: senderId, balance: 0, createdAt: Date.now() } }, { upsert: true }
     );
     const debit = await luckyBagWallets().updateOne(
       { userId: senderId, balance: { $gte: amount } },
