@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { MoreVertical, X, ChevronDown, Search, Star, Sparkles, Gamepad2, Timer, Send, ImageIcon, Megaphone, CheckCircle2, MessageSquare, Bot, ArrowLeft, User, Key, Lock, Camera, ShieldAlert, Eye, EyeOff, Fingerprint } from 'lucide-react';
+import { MoreVertical, X, ChevronDown, Search, Star, Sparkles, Gamepad2, Timer, Send, ImageIcon, Megaphone, CheckCircle2, MessageSquare, Bot, ArrowLeft, User, Key, Lock, Camera, ShieldAlert, Eye, EyeOff, Fingerprint, Fingerprint } from 'lucide-react';
 import { auth } from '@/src/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { socket } from '@/src/lib/socket';
@@ -264,46 +264,99 @@ const SidebarCategory = ({ icon, title, items, activeItem, setActiveItem, setIsS
 // ==============================================================
 const FingerprintAuth = ({ onLoginSuccess }: { onLoginSuccess: () => void }) => {
   const [fingerprintCount, setFingerprintCount] = useState<number>(0);
-  const [step, setStep] = useState<'idle' | 'scanning' | 'passcode'>('idle');
-  const [passcode, setPasscode] = useState('');
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const count = parseInt(localStorage.getItem('zyora_fingerprints_count') || '0');
-      setFingerprintCount(count);
+    try {
+      const saved = localStorage.getItem('zyora_owner_biometric_credential');
+      setFingerprintCount(saved ? 1 : 0);
+    } catch {
+      setFingerprintCount(0);
     }
   }, []);
 
-  const handleAddFingerprint = () => {
-    if (fingerprintCount < 2) {
-      const newCount = fingerprintCount + 1;
-      localStorage.setItem('zyora_fingerprints_count', newCount.toString());
-      setFingerprintCount(newCount);
-      alert(`Fingerprint ${newCount} successfully added!`);
-    }
+  const base64UrlEncode = (value: ArrayBuffer) => {
+    const bytes = new Uint8Array(value);
+    let binary = '';
+    bytes.forEach((byte) => { binary += String.fromCharCode(byte); });
+    return btoa(binary).replace(/\\+/g, '-').replace(/\\//g, '_').replace(/=+$/g, '');
   };
 
-  const startScan = () => {
-    if (fingerprintCount === 0) {
-      setError('Please add at least 1 fingerprint first!');
+  const base64UrlDecode = (value: string) => {
+    const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
+    const binary = atob(normalized + '='.repeat((4 - normalized.length % 4) % 4));
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+    return bytes;
+  };
+
+  const addFingerprint = async () => {
+    if (!window.isSecureContext || !('PublicKeyCredential' in window) || !navigator.credentials) {
+      setError('Fingerprint login needs HTTPS and a browser/device that supports biometrics.');
       return;
     }
+    setBusy(true);
     setError('');
-    setStep('scanning');
-    
-    setTimeout(() => {
-      setStep('passcode');
-    }, 1500); 
+    try {
+      const challenge = crypto.getRandomValues(new Uint8Array(32));
+      const credential = await navigator.credentials.create({
+        publicKey: {
+          challenge,
+          rp: { name: 'Zyora Owner', id: window.location.hostname },
+          user: {
+            id: crypto.getRandomValues(new Uint8Array(16)),
+            name: 'zyora-owner',
+            displayName: 'Zyora Owner',
+          },
+          pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
+          authenticatorSelection: {
+            authenticatorAttachment: 'platform',
+            userVerification: 'required',
+            residentKey: 'preferred',
+          },
+          timeout: 60000,
+          attestation: 'none',
+        },
+      }) as PublicKeyCredential | null;
+      if (!credential) throw new Error('Fingerprint setup was cancelled.');
+      localStorage.setItem('zyora_owner_biometric_credential', base64UrlEncode(credential.rawId));
+      setFingerprintCount(1);
+      setError('');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not set up fingerprint on this device.');
+    } finally {
+      setBusy(false);
+    }
   };
 
-  const handlePasscodeSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (passcode.toUpperCase() === 'ZYORA OWNER' || passcode.toUpperCase() === 'ZYORA CEO') {
-      setError('');
+  const loginWithFingerprint = async () => {
+    if (!window.isSecureContext || !navigator.credentials) {
+      setError('Fingerprint login needs HTTPS and a supported browser.');
+      return;
+    }
+    const savedId = localStorage.getItem('zyora_owner_biometric_credential');
+    if (!savedId) {
+      setError('First tap Add Fingerprint to register this device.');
+      return;
+    }
+    setBusy(true);
+    setError('');
+    try {
+      const assertion = await navigator.credentials.get({
+        publicKey: {
+          challenge: crypto.getRandomValues(new Uint8Array(32)),
+          allowCredentials: [{ type: 'public-key', id: base64UrlDecode(savedId) }],
+          userVerification: 'required',
+          timeout: 60000,
+        },
+      });
+      if (!assertion) throw new Error('Fingerprint verification was cancelled.');
       onLoginSuccess();
-    } else {
-      setError('Invalid Access Key!');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Fingerprint verification failed.');
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -313,68 +366,28 @@ const FingerprintAuth = ({ onLoginSuccess }: { onLoginSuccess: () => void }) => 
         <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
           <Fingerprint className="w-8 h-8 text-white" />
         </div>
-        <h1 className="text-2xl font-black text-slate-800 mb-6">Staff Authentication</h1>
-
-        {step === 'idle' && (
-          <div className="space-y-6 mt-4">
+        <h1 className="text-2xl font-black text-slate-800 mb-2">Zyora Owner Login</h1>
+        <p className="text-sm text-slate-500 mb-6">Use your device fingerprint / biometric authentication.</p>
+        <div className="space-y-4">
+          <button
+            onClick={loginWithFingerprint}
+            disabled={busy || fingerprintCount === 0}
+            className="w-full py-5 bg-slate-900 text-white rounded-2xl font-extrabold flex flex-col items-center justify-center gap-3 hover:bg-slate-800 disabled:opacity-50 transition-colors shadow-lg active:scale-[0.98]"
+          >
+            <Fingerprint className="w-10 h-10 text-indigo-400" />
+            <span>{busy ? 'Verifying...' : 'Scan Fingerprint to Login'}</span>
+          </button>
+          {fingerprintCount === 0 && (
             <button
-              onClick={startScan}
-              className="w-full py-5 bg-slate-900 text-white rounded-2xl font-extrabold flex flex-col items-center justify-center gap-3 hover:bg-slate-800 transition-colors shadow-lg active:scale-[0.98]"
+              onClick={addFingerprint}
+              disabled={busy}
+              className="w-full text-sm font-extrabold text-indigo-600 bg-indigo-50 px-4 py-3 rounded-xl hover:bg-indigo-100 disabled:opacity-50 transition-colors"
             >
-              <Fingerprint className="w-10 h-10 text-indigo-400" />
-              <span className="tracking-wide">Scan Fingerprint to Login</span>
+              {busy ? 'Setting up...' : '+ Add Fingerprint'}
             </button>
-
-            {error && <p className="text-red-500 text-xs font-bold">{error}</p>}
-
-            {fingerprintCount < 2 && (
-              <div className="pt-4 border-t border-slate-200">
-                <button
-                  onClick={handleAddFingerprint}
-                  className="w-full text-sm font-extrabold text-indigo-600 bg-indigo-50 px-4 py-3 rounded-xl hover:bg-indigo-100 transition-colors"
-                >
-                  + Add Fingerprint ({fingerprintCount}/2)
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-
-        {step === 'scanning' && (
-          <div className="py-10 flex flex-col items-center">
-            <div className="relative">
-              <Fingerprint className="w-20 h-20 text-indigo-600 animate-pulse relative z-10" />
-              <div className="absolute inset-0 bg-indigo-500 rounded-full blur-xl opacity-30 animate-pulse"></div>
-            </div>
-            <p className="text-sm font-bold text-slate-500 mt-6 tracking-widest uppercase">Scanning Biometrics...</p>
-          </div>
-        )}
-
-        {step === 'passcode' && (
-          <form onSubmit={handlePasscodeSubmit} className="space-y-5 mt-2 animate-in fade-in zoom-in duration-300">
-            <div>
-              <label className="block text-[11px] font-extrabold text-slate-600 uppercase tracking-wider mb-2 text-left">
-                Security Key
-              </label>
-              <input
-                type="text"
-                value={passcode}
-                onChange={(e) => setPasscode(e.target.value)}
-                placeholder="ZYORA OWNER / CEO"
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:border-indigo-500 text-center uppercase shadow-sm"
-                autoFocus
-              />
-            </div>
-            {error && <p className="text-red-500 text-xs font-bold">{error}</p>}
-            <button
-              type="submit"
-              className="w-full py-3.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm font-extrabold rounded-xl shadow-lg hover:from-indigo-700 hover:to-purple-700 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
-            >
-              <ShieldAlert className="w-4 h-4" />
-              Verify & Login
-            </button>
-          </form>
-        )}
+          )}
+          {error && <p role="alert" className="text-red-500 text-xs font-bold break-words">{error}</p>}
+        </div>
       </div>
     </div>
   );
