@@ -717,9 +717,19 @@ fun RoomPage(
             }
             
             Column(Modifier.fillMaxWidth().padding(horizontal=10.dp).padding(top=44.dp, bottom=8.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
-                seats.take(roomMicMode.coerceIn(5, 15)).chunked(5).forEach { rowSeats ->
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.SpaceBetween) {
-                        rowSeats.forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, isSpeaking = seat.speaking || (seat.accountId == accountId && localVoiceSpeaking)) { selectedSeat = seat.number; showSeatSheet = true } }
+                if (roomMicMode == 5) {
+                    // Five-mic layout: one centered mic in row one, four mics in row two.
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                        seats.take(1).forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, isSpeaking = seat.speaking || (seat.accountId == accountId && localVoiceSpeaking)) { selectedSeat = seat.number; showSeatSheet = true } }
+                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        seats.drop(1).take(4).forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, isSpeaking = seat.speaking || (seat.accountId == accountId && localVoiceSpeaking)) { selectedSeat = seat.number; showSeatSheet = true } }
+                    }
+                } else {
+                    seats.take(roomMicMode.coerceIn(5, 15)).chunked(5).forEach { rowSeats ->
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            rowSeats.forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, isSpeaking = seat.speaking || (seat.accountId == accountId && localVoiceSpeaking)) { selectedSeat = seat.number; showSeatSheet = true } }
+                        }
                     }
                 }
             }
