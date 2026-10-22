@@ -31,6 +31,8 @@ import kotlinx.coroutines.withContext
 
 // --- Helper Data Classes & Functions ---
 
+typealias RoomProfileUser = RoomUser
+
 data class RoomUser(
     val id: String? = null,
     val uid: String? = null,
