@@ -153,14 +153,12 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int) {
     LaunchedEffect(walletUserId) {
         coins = loadBalance(dao)
         diamonds = loadDiamonds(dao)
-        // Seed the server wallet once from the existing on-device balance, then
-        // use the MongoDB balance as the source of truth for Lucky Bag claims/refunds.
+        // MongoDB is the permanent wallet source of truth; never seed it from local Room data.
         if (walletUserId.isNotBlank()) {
             withContext(Dispatchers.IO) {
                 runCatching {
-                    val localBalance = dao.getUserData()?.balance ?: 0L
                     val encodedId = URLEncoder.encode(walletUserId, "UTF-8")
-                    val connection = (URL("https://zyora-voice-chat.onrender.com/api/lucky-bag/wallet/$encodedId?initialBalance=$localBalance").openConnection() as HttpURLConnection).apply {
+                    val connection = (URL("https://zyora-voice-chat.onrender.com/api/lucky-bag/wallet/$encodedId").openConnection() as HttpURLConnection).apply {
                         connectTimeout = 8000
                         readTimeout = 8000
                     }
