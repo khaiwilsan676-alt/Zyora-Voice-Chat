@@ -272,7 +272,7 @@ fun RoomPage(
                     }.getOrNull()
                 }
             }
-            roomAdminUsers = found.filterNotNull()
+            roomAdminUsers = found
         }
     }
 
