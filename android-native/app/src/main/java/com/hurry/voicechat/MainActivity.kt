@@ -59,6 +59,7 @@ class MainActivity : ComponentActivity() {
         // Keep the foreground app awake so Android does not dim/timeout the display while in use.
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         enableEdgeToEdge()
+        window.isNavigationBarContrastEnforced = false
         WindowInsetsControllerCompat(window, window.decorView).apply {
             isAppearanceLightStatusBars = true
             isAppearanceLightNavigationBars = true
