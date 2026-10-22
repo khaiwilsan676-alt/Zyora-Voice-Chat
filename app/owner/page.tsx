@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { MoreVertical, X, ChevronDown, Search, Star, Sparkles, Gamepad2, Timer, Send, ImageIcon, Megaphone, CheckCircle2, MessageSquare, Bot, ArrowLeft, User, Key, Lock, Camera, ShieldAlert, Eye, EyeOff, Fingerprint, Fingerprint } from 'lucide-react';
+import { MoreVertical, X, ChevronDown, Search, Star, Sparkles, Gamepad2, Timer, Send, ImageIcon, Megaphone, CheckCircle2, MessageSquare, Bot, ArrowLeft, User, Key, Lock, Camera, ShieldAlert, Eye, EyeOff, Fingerprint } from 'lucide-react';
 import { auth } from '@/src/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { socket } from '@/src/lib/socket';
