@@ -79,21 +79,27 @@ async function saveStateToDB(state: any) {
   } catch (e) {}
 }
 
-async function updateSharedCoinBalance(delta: number): Promise<number> {
+async function updateSharedCoinBalance(delta: number): Promise<number | null> {
   const db = await initDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, 'readwrite');
     const store = tx.objectStore(STORE_NAME);
     const req = store.get('user_data');
-    let next = 0;
+    let next: number | null = null;
     req.onsuccess = () => {
       const existing = req.result || {};
       const current = Math.max(0, Number(existing.balance) || 0);
-      next = Math.max(0, current + delta);
+      if (delta < 0 && current < Math.abs(delta)) {
+        tx.abort();
+        return;
+      }
+      next = current + delta;
       store.put({ ...existing, balance: next }, 'user_data');
     };
     req.onerror = () => reject(req.error);
     tx.oncomplete = () => resolve(next);
+    tx.onerror = () => resolve(null);
+    tx.onabort = () => resolve(null);
     tx.onerror = () => reject(tx.error);
     tx.onabort = () => reject(tx.error);
   });
@@ -474,6 +480,7 @@ export default function Fruitparty({ onClose, onMinimize, isMinimized = false }:
           : stateRefs.current.balance;
         const nextTotalWon = stateRefs.current.totalWon + earned;
 
+        if (nextBalance === null) return;
         setBalance(nextBalance);
         setTotalWon(nextTotalWon);
         setLastRoundStats({ bet: totalBetThisRound, won: earned });
@@ -536,6 +543,7 @@ export default function Fruitparty({ onClose, onMinimize, isMinimized = false }:
       
       if (balance >= betAmt) {
         const nextBalance = await updateSharedCoinBalance(-betAmt);
+        if (nextBalance === null) return;
         setBalance(nextBalance);
         recordTransaction('Bet placed on Fruit Party', -betAmt);
         setBets(prev => {
