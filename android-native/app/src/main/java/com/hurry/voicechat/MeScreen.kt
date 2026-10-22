@@ -102,40 +102,39 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
                                     },
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    androidx.compose.foundation.Canvas(Modifier.size(14.dp)) {
-                                        // Match the reference app's lucide Copy icon (14px, 2px stroke).
-                                        val ink = Color(0xFF4B5563)
-                                        val sx = size.width / 24f
-                                        val sy = size.height / 24f
-                                        val stroke = androidx.compose.ui.graphics.drawscope.Stroke(
-                                            width = 2f * sx,
-                                            cap = androidx.compose.ui.graphics.StrokeCap.Round,
-                                            join = androidx.compose.ui.graphics.StrokeJoin.Round
+                                    androidx.compose.foundation.Canvas(Modifier.size(16.dp)) {
+                                        val strokeW = 1.5.dp.toPx()
+                                        val w = size.width
+                                        val h = size.height
+                                        val backPath = androidx.compose.ui.graphics.Path().apply {
+                                            moveTo(w * 0.3f, h * 0.3f)
+                                            lineTo(w * 0.3f, h * 0.15f)
+                                            quadraticBezierTo(w * 0.3f, 0f, w * 0.45f, 0f)
+                                            lineTo(w * 0.85f, 0f)
+                                            quadraticBezierTo(w, 0f, w, h * 0.15f)
+                                            lineTo(w, h * 0.55f)
+                                            quadraticBezierTo(w, h * 0.7f, w * 0.85f, h * 0.7f)
+                                            lineTo(w * 0.7f, h * 0.7f)
+                                        }
+                                        drawPath(
+                                            path = backPath,
+                                            color = Color(0xFF4B5563),
+                                            style = androidx.compose.ui.graphics.drawscope.Stroke(
+                                                width = strokeW,
+                                                cap = androidx.compose.ui.graphics.StrokeCap.Round,
+                                                join = androidx.compose.ui.graphics.StrokeJoin.Round
+                                            )
                                         )
-                                        val back = androidx.compose.ui.graphics.Path().apply {
-                                            moveTo(8f*sx, 8f*sy)
-                                            lineTo(8f*sx, 4f*sy)
-                                            cubicTo(8f*sx, 2.9f*sy, 8.9f*sx, 2f*sy, 10f*sx, 2f*sy)
-                                            lineTo(18f*sx, 2f*sy)
-                                            cubicTo(19.1f*sx, 2f*sy, 20f*sx, 2.9f*sy, 20f*sx, 4f*sy)
-                                            lineTo(20f*sx, 12f*sy)
-                                            cubicTo(20f*sx, 13.1f*sy, 19.1f*sx, 14f*sy, 18f*sx, 14f*sy)
-                                            lineTo(14f*sx, 14f*sy)
-                                        }
-                                        drawPath(back, ink, style = stroke)
-                                        val front = androidx.compose.ui.graphics.Path().apply {
-                                            moveTo(6f*sx, 6f*sy)
-                                            lineTo(14f*sx, 6f*sy)
-                                            cubicTo(15.1f*sx, 6f*sy, 16f*sx, 6.9f*sy, 16f*sx, 8f*sy)
-                                            lineTo(16f*sx, 18f*sy)
-                                            cubicTo(16f*sx, 19.1f*sy, 15.1f*sx, 20f*sy, 14f*sx, 20f*sy)
-                                            lineTo(4f*sx, 20f*sy)
-                                            cubicTo(2.9f*sx, 20f*sy, 2f*sx, 19.1f*sy, 2f*sx, 18f*sy)
-                                            lineTo(2f*sx, 8f*sy)
-                                            cubicTo(2f*sx, 6.9f*sy, 2.9f*sx, 6f*sy, 4f*sx, 6f*sy)
-                                            close()
-                                        }
-                                        drawPath(front, ink, style = stroke)
+                                        drawRoundRect(
+                                            color = Color(0xFF4B5563),
+                                            topLeft = androidx.compose.ui.geometry.Offset(0f, h * 0.3f),
+                                            size = androidx.compose.ui.geometry.Size(w * 0.7f, h * 0.7f),
+                                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(w * 0.15f, h * 0.15f),
+                                            style = androidx.compose.ui.graphics.drawscope.Stroke(
+                                                width = strokeW,
+                                                join = androidx.compose.ui.graphics.StrokeJoin.Round
+                                            )
+                                        )
                                     }
                                 }
                             }
@@ -279,10 +278,8 @@ private fun MeMenuIcon(type: MeIconType) {
                 AsyncImage(RAW_ME + item.asset, null, Modifier.size(if (item.label == "Seller Center") 40.dp else 32.dp), contentScale = ContentScale.Crop)
                 Spacer(Modifier.width(16.dp))
                 
-                // Ye `weight(1f)` label ko baaki saari jagah dekar next items ko ekdam right push kar dega
                 Text(item.label, Modifier.weight(1f), fontSize = 15.sp, fontWeight = FontWeight.Normal, color = Color(0xFF171717))
                 
-                // Ye dono cheezein ekdam `>` icon se pehle render hongi
                 if (item.label == "Family") {
                     Text("Join Now", fontSize = 12.sp, color = Color(0xFF6B7280), modifier = Modifier.padding(end = 8.dp))
                 } else if (item.label == "Invite Friends") {
@@ -293,7 +290,6 @@ private fun MeMenuIcon(type: MeIconType) {
                         contentScale = ContentScale.Fit
                     )
                 } else if (item.label == "Level") {
-                    // Ye Box teri image ko center-left align karega aur usko overlap karke "Lv.0" show karega
                     Box(
                         modifier = Modifier.padding(end = 8.dp),
                         contentAlignment = Alignment.CenterStart
@@ -301,23 +297,22 @@ private fun MeMenuIcon(type: MeIconType) {
                         AsyncImage(
                             model = RAW_ME + "IMG_20260917_220530.png",
                             contentDescription = null,
-                            modifier = Modifier.height(20.dp), // Adjust height accordingly
+                            modifier = Modifier.height(25.dp), // Image teri requirement ke hisaab se badi hai
                             contentScale = ContentScale.Fit,
                             colorFilter = androidx.compose.ui.graphics.ColorFilter.colorMatrix(
-                                androidx.compose.ui.graphics.ColorMatrix().apply { setToSaturation(0f) } // Ye line image ko colorless banati hai
+                                androidx.compose.ui.graphics.ColorMatrix().apply { setToSaturation(0f) }
                             )
                         )
                         Text(
                             text = "Lv.0",
-                            fontSize = 11.sp,
+                            fontSize = 10.sp, // Text thora aur chota kar diya (11.sp se 10.sp)
                             fontWeight = FontWeight.Bold,
                             color = Color.White,
-                            modifier = Modifier.padding(start = 6.dp) // Thoda right khiskaya taaki center-left mein sahi dikhe
+                            modifier = Modifier.padding(start = 6.dp) // Padding wapas pehle wali kardi!
                         )
                     }
                 }
 
-                // Uske theek baad yahan pe `>` icon aayega
                 Text("›", fontSize = 25.sp, color = Color(0xFFAAAAAA))
             }
         }
