@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.background
@@ -304,7 +305,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
     }
 
     HurryTheme {
-        Box(Modifier.fillMaxSize()) {
+        Box(Modifier.fillMaxSize().navigationBarsPadding()) {
             if (openedPublicProfile != null) {
                 PublicProfile(user=openedPublicProfile!!,onBack={openedPublicProfile=null},onMessage={ openedChat = Triple(openedPublicProfile!!.uid.ifBlank { openedPublicProfile!!.id }.ifBlank { openedPublicProfile!!.accountId }, openedPublicProfile!!.name, openedPublicProfile!!.image) },currentUserId=userId)
             } else if (openedRoomSupport) {
