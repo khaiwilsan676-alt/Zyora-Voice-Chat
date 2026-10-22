@@ -42,7 +42,7 @@ async function initDB(): Promise<IDBDatabase> {
   return dbPromise;
 }
 
-async function loadBalanceFromDB(): Promise<number> {
+async function loadBalanceFromDB(): Promise<number | null> {
   try {
     const db = await initDB();
     return new Promise((resolve) => {
@@ -55,10 +55,10 @@ async function loadBalanceFromDB(): Promise<number> {
           resolve(DEFAULT_BALANCE);
         }
       };
-      req.onerror = () => resolve(DEFAULT_BALANCE);
+      req.onerror = () => resolve(null);
     });
   } catch {
-    return DEFAULT_BALANCE;
+    return null;
   }
 }
 
@@ -500,7 +500,7 @@ export default function Wallet({ onBack, initialTab = 'wallet' }: WalletProps) {
       const bal = await loadBalanceFromDB()
       const diamondBal = await loadDiamondBalanceFromDB()
       if (isMounted) {
-        setWalletBalance(bal)
+        if (bal !== null) setWalletBalance(bal)
         setDiamondBalance(diamondBal)
       }
     }
