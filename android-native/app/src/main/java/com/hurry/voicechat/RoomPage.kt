@@ -190,8 +190,8 @@ fun RoomPage(
     var roomMicMode by remember(roomId) { mutableIntStateOf(appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).getInt("micMode_$roomId", 10)) }
     var roomTheme by remember(roomId) { mutableStateOf(appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).getString("theme_$roomId", "forest-night") ?: "forest-night") }
     
-    // Use the same stable UID as Mine > Wallet for all Lucky Bag coin operations.
-    val canonicalWalletUserId = currentUser.uid.ifBlank { currentUser.id.ifBlank { accountId } }
+    // Match the established Mine > Wallet key so Lucky Bag debits the same MongoDB wallet.
+    val canonicalWalletUserId = accountId.ifBlank { currentUser.uid.ifBlank { currentUser.id } }
 
     // Lucky Bag States
     var showFloatingLuckyBag by remember { mutableStateOf(false) }
