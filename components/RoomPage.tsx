@@ -1384,9 +1384,11 @@ if (showSettingPage) return (
                       <div className="flex flex-col min-w-0">
                         <div className="flex items-center gap-0.5 min-w-0">
                           <span className="font-semibold text-white/95 leading-none truncate" style={{ fontSize: 'var(--msg-name-size)' }}>{msg.sender}</span>
-                          <span className="flex items-center justify-center shrink-0" style={{ width: 'calc(var(--msg-avatar-size) * 0.7)', height: 'calc(var(--msg-avatar-size) * 0.7)' }}>
-                            <HouseIcon size={14} style={{ width: '100%', height: '100%' }} />
-                          </span>
+                          {String(msg.senderAccountId || '') === String(roomOwnerId) && (
+                            <span className="flex items-center justify-center shrink-0" style={{ width: 'calc(var(--msg-avatar-size) * 0.7)', height: 'calc(var(--msg-avatar-size) * 0.7)' }}>
+                              <HouseIcon size={14} style={{ width: '100%', height: '100%' }} />
+                            </span>
+                          )}
                         </div>
                         <span className="text-white/80 leading-none mt-0.5" style={{ fontSize: 'var(--msg-jointime-size)' }}>Enter the Room</span>
                       </div>
