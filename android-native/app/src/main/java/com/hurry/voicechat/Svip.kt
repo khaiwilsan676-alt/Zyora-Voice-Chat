@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.zIndex
+import androidx.media3.common.C // <-- YE IMPORT ADD KIYA HAI VIDEO FIX KE LIYE
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
@@ -212,6 +213,8 @@ fun SvipVideoPlayer(videoUrl: String) {
             repeatMode = Player.REPEAT_MODE_ALL
             playWhenReady = true
             volume = 0f // Muted
+            // YAHI HAI FIX: Is line ki wajah se ab video stretch (kicchi kicchi) nahi hogi, center mein crop hoke fit hogi
+            videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING 
             prepare()
         }
     }
