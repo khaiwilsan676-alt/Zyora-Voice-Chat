@@ -5,7 +5,7 @@ const http = require("http");
 const cors = require("cors");
 const { Server } = require("socket.io");
 const { MongoClient } = require("mongodb");
-const { redis, setOnlineStatus, removeOnlineStatus, setSecondaryStatus, removeSecondaryStatus } = require("./redis");
+const { redis, checkRedisConnection, setOnlineStatus, removeOnlineStatus, setSecondaryStatus, removeSecondaryStatus } = require("./redis");
 
 const app = express();
 const server = http.createServer(app);
@@ -1179,6 +1179,15 @@ app.get("/api/lucky-bag/:bagId", async (req, res) => {
   } catch (err) {
     res.status(503).json({ error: "Lucky Bag unavailable" });
   }
+});
+
+app.get("/health/redis", async (_req, res) => {
+  const health = await checkRedisConnection();
+  return res.status(health.connected ? 200 : 503).json({
+    service: "redis",
+    configured: health.configured,
+    connected: health.connected,
+  });
 });
 
 app.get("/", (_req, res) => {
