@@ -280,7 +280,7 @@ const FingerprintAuth = ({ onLoginSuccess }: { onLoginSuccess: () => void }) => 
     const bytes = new Uint8Array(value);
     let binary = '';
     bytes.forEach((byte) => { binary += String.fromCharCode(byte); });
-    return btoa(binary).replace(/\\+/g, '-').replace(/\\//g, '_').replace(/=+$/g, '');
+    return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
   };
 
   const base64UrlDecode = (value: string) => {
