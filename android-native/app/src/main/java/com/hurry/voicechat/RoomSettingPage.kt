@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -203,6 +204,53 @@ fun RoomSettingPage(
     var saving by remember { mutableStateOf(false) }
     var saveError by remember { mutableStateOf("") }
     val members = remember { mutableStateListOf<NativeSettingMember>() }
+
+    LaunchedEffect(adminSearch, sheet) {
+        val q = adminSearch.trim()
+        if (sheet != "admin" || q.isBlank()) return@LaunchedEffect
+        delay(180)
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val encoded = java.net.URLEncoder.encode(q, "UTF-8")
+                val conn = (URL("$SETTINGS_API/api/users?search=$encoded&accountId=$encoded&q=$encoded").openConnection() as HttpURLConnection).apply {
+                    connectTimeout = 2500
+                    readTimeout = 2500
+                }
+                try {
+                    if (conn.responseCode !in 200..299) return@runCatching emptyList<NativeSettingMember>()
+                    val body = conn.inputStream.bufferedReader().use { it.readText() }
+                    val root = body.trim()
+                    val arr = if (root.startsWith("[")) JSONArray(root) else {
+                        val obj = JSONObject(root)
+                        obj.optJSONArray("users") ?: obj.optJSONArray("results")
+                            ?: JSONArray().apply { (obj.optJSONObject("user"))?.let { put(it) } }
+                    }
+                    (0 until arr.length()).mapNotNull { i ->
+                        val u = arr.optJSONObject(i) ?: return@mapNotNull null
+                        val id = u.optString("accountId").takeUnless { it == "null" }.orEmpty()
+                            .ifBlank { u.optString("accountNumber").takeUnless { it == "null" }.orEmpty() }
+                            .ifBlank { u.optString("displayUserNumber").takeUnless { it == "null" }.orEmpty() }
+                            .ifBlank { u.optString("uid").takeUnless { it == "null" }.orEmpty() }
+                            .ifBlank { u.optString("id").takeUnless { it == "null" }.orEmpty() }
+                        if (id.isBlank()) null else NativeSettingMember(
+                            id,
+                            u.optString("name").takeUnless { it == "null" }.orEmpty()
+                                .ifBlank { u.optString("displayName").ifBlank { u.optString("userName", "User") } },
+                            u.optString("image").takeUnless { it == "null" }.orEmpty()
+                                .ifBlank { u.optString("photoURL").ifBlank { u.optString("avatar", "") } }
+                        )
+                    }
+                } finally { conn.disconnect() }
+            }.getOrDefault(emptyList())
+        }.let { found ->
+            if (sheet == "admin" && adminSearch.trim() == q) {
+                found.forEach { result ->
+                    val index = members.indexOfFirst { it.accountId == result.accountId }
+                    if (index >= 0) members[index] = result else members.add(0, result)
+                }
+            }
+        }
+    }
 
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) scope.launch {
@@ -557,43 +605,37 @@ fun RoomSettingPage(
                 }
             }
         }
-        "admin" -> BottomSheetModal(scrimAlpha = 0.5f, heightFraction = 0.4f, dark = true, onDismiss = { sheet = "" }) {
-            Column(Modifier.fillMaxSize().navigationBarsPadding()) {
+        "admin" -> BottomSheetModal(scrimAlpha = 0.35f, heightFraction = 0.5f, dark = false, onDismiss = { sheet = "" }) {
+            Column(Modifier.fillMaxSize().navigationBarsPadding().background(Color.White)) {
                 Row(
-                    Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+                    Modifier.fillMaxWidth().padding(start = 12.dp, end = 16.dp, top = 8.dp, bottom = 6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
-                        Modifier.size(36.dp).clip(CircleShape).clickable { sheet = "" },
+                        Modifier.size(38.dp).clip(CircleShape).clickable { sheet = "" },
                         contentAlignment = Alignment.Center
-                    ) { Icon(Icons.Default.KeyboardArrowLeft, null, tint = Color.White, modifier = Modifier.size(20.dp)) }
+                    ) { Icon(Icons.Default.ArrowBack, "Back", tint = gray800, modifier = Modifier.size(22.dp)) }
                     Text(
-                        "Admin Center", Modifier.weight(1f),
-                        fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White, textAlign = TextAlign.Center
+                        "Admin", Modifier.weight(1f),
+                        fontSize = 16.sp, fontWeight = FontWeight.Bold, color = gray800, textAlign = TextAlign.Center
                     )
-                    Box(
-                        Modifier.size(36.dp).clip(CircleShape).clickable { sheet = "admin-help" },
-                        contentAlignment = Alignment.Center
-                    ) { Text("?", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold) }
+                    Spacer(Modifier.size(38.dp))
                 }
-                Box(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
+                Box(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp)) {
                     Box(
-                        Modifier.fillMaxWidth()
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(Color.White.copy(alpha = 0.1f))
-                            .padding(horizontal = 12.dp, vertical = 8.dp)
+                        Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp))
+                            .background(gray100).padding(horizontal = 12.dp, vertical = 10.dp)
                     ) {
                         BasicTextField(
                             value = adminSearch,
-                            onValueChange = { adminSearch = it },
+                            onValueChange = { adminSearch = it.filter { ch -> ch.isDigit() } },
                             modifier = Modifier.fillMaxWidth(),
-                            textStyle = TextStyle(fontSize = 12.sp, color = Color.White),
+                            textStyle = TextStyle(fontSize = 13.sp, color = gray800),
                             singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             decorationBox = { inner ->
                                 Box {
-                                    if (adminSearch.isEmpty()) Text(
-                                        "Search a ID for Admin", color = gray400, fontSize = 12.sp
-                                    )
+                                    if (adminSearch.isEmpty()) Text("Search user by ID", color = gray400, fontSize = 13.sp)
                                     inner()
                                 }
                             }
@@ -601,7 +643,7 @@ fun RoomSettingPage(
                     }
                 }
                 val filtered = members.filter {
-                    it.accountId.contains(adminSearch, true) || it.name.contains(adminSearch, true)
+                    adminSearch.isBlank() || it.accountId.contains(adminSearch, true)
                 }
                 LazyColumn(
                     Modifier.weight(1f).padding(horizontal = 16.dp, vertical = 4.dp),
@@ -610,45 +652,39 @@ fun RoomSettingPage(
                     items(filtered, key = { it.accountId }) { member ->
                         val isAdmin = admins.contains(member.accountId)
                         Row(
-                            Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
-                                .background(Color.White.copy(alpha = 0.05f))
-                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                            Modifier.fillMaxWidth().padding(vertical = 3.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             AsyncImage(
                                 model = member.image.ifBlank { RAW_SETTINGS + "default-avatar.png" },
                                 contentDescription = member.name,
-                                modifier = Modifier.size(36.dp).clip(CircleShape)
-                                    .border(1.dp, Color.White.copy(alpha = 0.1f), CircleShape),
+                                modifier = Modifier.size(38.dp).clip(CircleShape),
                                 contentScale = ContentScale.Crop
                             )
                             Column(Modifier.weight(1f).padding(start = 10.dp)) {
-                                Text(
-                                    member.name, color = Color.White, fontSize = 12.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    maxLines = 1, overflow = TextOverflow.Ellipsis
-                                )
-                                Text("ID: ${member.accountId}", color = gray400, fontSize = 10.sp)
+                                Text(member.name, color = gray800, fontSize = 13.sp,
+                                    fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text("ID: ${member.accountId}", color = gray500, fontSize = 10.sp)
                             }
                             Box(
-                                Modifier.clip(RoundedCornerShape(8.dp))
-                                    .background(if (isAdmin) Color(0xFF2563EB) else blue500)
+                                Modifier.clip(RoundedCornerShape(7.dp))
+                                    .background(if (isAdmin) gray200 else blue500)
                                     .clickable {
                                         admins = if (isAdmin) admins.filterNot { it == member.accountId }
                                         else if (admins.size < 20) admins + member.accountId else admins
                                     }
-                                    .padding(horizontal = 12.dp, vertical = 6.dp)
+                                    .padding(horizontal = 15.dp, vertical = 7.dp)
                             ) {
-                                Text(
-                                    if (isAdmin) "×1 Admin" else "Admin",
-                                    color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold
-                                )
+                                Text(if (isAdmin) "Added" else "Add",
+                                    color = if (isAdmin) gray700 else Color.White,
+                                    fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                             }
                         }
                     }
                     if (filtered.isEmpty()) item {
-                        Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
-                            Text("No members found", color = gray400, fontSize = 12.sp)
+                        Box(Modifier.fillMaxWidth().padding(22.dp), contentAlignment = Alignment.Center) {
+                            Text(if (adminSearch.isBlank()) "Search by ID to add an admin" else "No user found",
+                                color = gray500, fontSize = 12.sp)
                         }
                     }
                 }
