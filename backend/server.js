@@ -710,8 +710,37 @@ app.get("/api/users", async (req, res) => {
 
     const q = searchQuery || accountId || uid;
     if (q) {
+      // Numeric ID search takes the indexed exact-match path first.
+      // The UI only accepts numeric IDs, so avoid expensive regex scans when possible.
+      const numericQ = /^\\d+$/.test(q) ? Number(q) : null;
+      if (numericQ !== null) {
+        const exactConditions = [
+          { accountId: q }, { accountNumber: q }, { "Account Number": q },
+          { displayUserNumber: q }, { uid: q }, { id: q }, { appLongId: q },
+          { accountId: numericQ }, { accountNumber: numericQ },
+          { displayUserNumber: numericQ }, { uid: q }, { id: q }
+        ];
+        const exactMatches = await users.find({ $or: exactConditions }).limit(20).toArray();
+        if (exactMatches.length) {
+          let exactUsers = exactMatches.map(normalizeUser);
+          if (isOnlineCheck) {
+            exactUsers = exactUsers.filter(u =>
+              onlineUsers.has(String(u.id)) || onlineUsers.has(String(u.uid)) || onlineUsers.has(String(u.accountId))
+            );
+          }
+          if (exactUsers.length) {
+            res.set("Cache-Control", "private, max-age=5, stale-while-revalidate=15");
+            return res.json({ users: exactUsers, user: exactUsers[0] });
+          }
+        }
+      }
+
+      const regex = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\    const q = searchQuery || accountId || uid;
+    if (q) {
       const regex = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
       const numericQ = !isNaN(Number(q)) && q.trim() !== "" ? Number(q) : null;
+
+      const orConditions = ['), 'i');
 
       const orConditions = [
         { accountId: q },
