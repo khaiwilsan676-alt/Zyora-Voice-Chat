@@ -323,6 +323,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                     ),
                     currentUser = RoomPageCurrentUser(id = userId, uid = userId, accountId = authPrefs.getString("accountId", userId).orEmpty(), name = authPrefs.getString("name", "User").orEmpty(), image = authPrefs.getString("image", "").orEmpty()),
                     onBack = { openedRoom = null },
+                    onRoomSupport = { openedRoomSupport = true },
                     onClose = {
                         if (keptRoom?.id == openedRoom?.id) {
                             keptRoom = null
