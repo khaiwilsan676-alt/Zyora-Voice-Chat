@@ -95,15 +95,20 @@ fun SearchPage(onBack:()->Unit={},onOpenProfile:(RoomProfileUser)->Unit={}) {
  var results by remember { mutableStateOf<List<SearchUserNative>>(emptyList()) }
  var searching by remember { mutableStateOf(false) }
  var hasSearched by remember { mutableStateOf(false) }
- val scope= rememberCoroutineScope()
- suspend fun performSearch(qInput:String) {
+ val searchCache = remember { mutableStateMapOf<String, List<SearchUserNative>>() }
+ var requestId by remember { mutableIntStateOf(0) }
+ suspend fun performSearch(qInput:String, requestToken:Int) {
   val q=qInput.trim(); if(q.isBlank()) { results=emptyList(); hasSearched=false; searching=false; return }
-  searching=true; hasSearched=true
-  results=withContext(Dispatchers.IO) {
+  searchCache[q]?.let { cached ->
+   if (requestToken == requestId) { results=cached; hasSearched=true; searching=false }
+   return
+  }
+  if (requestToken == requestId) { searching=true; hasSearched=true }
+  val fetched=withContext(Dispatchers.IO) {
    runCatching {
     val encoded=URLEncoder.encode(q,"UTF-8")
     val conn=URL("https://zyora-voice-chat.onrender.com/api/users?search=$encoded&accountId=$encoded&q=$encoded").openConnection() as HttpURLConnection
-    conn.connectTimeout=9000; conn.readTimeout=9000
+    conn.connectTimeout=3500; conn.readTimeout=3500
     try {
      val status=conn.responseCode
      if (status == HttpURLConnection.HTTP_NOT_FOUND) return@runCatching emptyList<SearchUserNative>()
@@ -144,12 +149,19 @@ fun SearchPage(onBack:()->Unit={},onOpenProfile:(RoomProfileUser)->Unit={}) {
     } finally { conn.disconnect() }
    }.getOrDefault(emptyList())
   }
-  searching=false
+  if (requestToken == requestId) {
+   searchCache[q] = fetched
+   results = fetched
+   searching = false
+  }
  }
  LaunchedEffect(query,tab) {
-  delay(350)
-  if(query.isNotBlank()) performSearch(query)
-  else { results=emptyList(); hasSearched=false; searching=false }
+  val token = ++requestId
+  val q = query.trim()
+  if (q.isBlank()) { results=emptyList(); hasSearched=false; searching=false; return@LaunchedEffect }
+  searchCache[q]?.let { results=it; hasSearched=true; searching=false; return@LaunchedEffect }
+  delay(180)
+  performSearch(q, token)
  }
  Column(Modifier.fillMaxSize().background(Color(0xFFF0F2F5))) {
   Row(Modifier.fillMaxWidth().background(Color(0xFFF0F2F5)).statusBarsPadding().padding(start=14.dp,end=14.dp,top=7.dp,bottom=6.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
