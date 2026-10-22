@@ -187,7 +187,7 @@ fun SvipPage(onBack: () -> Unit = {}) {
                     val placeable = measurable.measure(constraints)
                     layout(placeable.width, placeable.height) {
                         // Place exactly at 40% height, translating Y by -50% of image height
-                        val yOffset = (this@BoxWithConstraints.boxConstraints.maxHeight * 0.4f).toInt() - (placeable.height / 2)
+                        val yOffset = (boxConstraints.maxHeight * 0.4f).toInt() - (placeable.height / 2)
                         placeable.placeRelative(0, yOffset)
                     }
                 },
