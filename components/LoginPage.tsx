@@ -7,16 +7,52 @@ import { Device } from '@capacitor/device'
 import { socket } from "../src/lib/socket"
 import { ArrowLeft, ArrowRight, Eye, EyeOff, User } from 'lucide-react'
 import { 
-  GoogleAuthProvider, 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword 
 } from "firebase/auth";
-import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
-import { auth, googleProvider as provider } from "../src/lib/firebase";
+import { auth } from "../src/lib/firebase";
 
 interface LoginPageProps {
   onLoginSuccess?: (data?: any) => void
 }
+
+let supabaseClientPromise: Promise<any> | null = null;
+
+const getSupabaseAuthClient = async () => {
+  const supabaseUrl = "https://dyevntpajxeuxuaxapfz.supabase.co";
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseKey) {
+    throw new Error("Supabase public key is missing. Set NEXT_PUBLIC_SUPABASE_ANON_KEY in Vercel Environment Variables.");
+  }
+
+  if (!supabaseClientPromise) {
+    supabaseClientPromise = new Promise((resolve, reject) => {
+      const w = window as any;
+      if (w.supabase?.createClient) {
+        resolve(w.supabase.createClient(supabaseUrl, supabaseKey));
+        return;
+      }
+
+      const existing = document.querySelector<HTMLScriptElement>('script[data-zyora-supabase-sdk="true"]');
+      const script = existing || document.createElement("script");
+      script.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js";
+      script.async = true;
+      script.dataset.zyoraSupabaseSdk = "true";
+      script.onload = () => {
+        if (w.supabase?.createClient) resolve(w.supabase.createClient(supabaseUrl, supabaseKey));
+        else reject(new Error("Could not load Supabase Auth SDK."));
+      };
+      script.onerror = () => reject(new Error("Could not load Supabase Auth SDK. Check your internet connection."));
+      if (!existing) document.head.appendChild(script);
+    }).catch((error) => {
+      supabaseClientPromise = null;
+      throw error;
+    });
+  }
+
+  return supabaseClientPromise;
+};
 
 // Special Accounts Mapping
 const SPECIAL_ACCOUNTS: { [key: string]: string } = {
@@ -662,62 +698,28 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
     }
   }
 
-  // Direct Google Login - No sheet
+  // Google login uses Supabase Auth; Firebase remains for email/password only.
   const handleGoogleLogin = async () => {
     setAuthError(null);
 
-    // First, check ban before proceeding
     const isBanned = await checkBanBeforeLogin();
-    if (isBanned) {
-      return; // show ban message, stop login
-    }
+    if (isBanned) return;
 
     setLoading(true);
-
     try {
-      const result = await FirebaseAuthentication.signInWithGoogle();
-      const user = result.user;
-
-      if (!user?.uid) {
-        throw new Error("Google sign-in failed: user information not received.");
-      }
-
-      const userName = user.displayName || "Google User";
-      const userEmail = user.email || "";
-      const userPhoto = user.photoUrl || "/default-avatar.png";
-      const userUID = user.uid;
-
-      const syncResult = await syncUserToMongoDB(
-        userUID,
-        userName,
-        userEmail,
-        userPhoto
-      );
-
-      localStorage.setItem("userName", syncResult.name);
-      localStorage.setItem("userEmail", userEmail);
-      localStorage.setItem("userPhoto", syncResult.image);
-      localStorage.setItem("userUID", userUID);
-      localStorage.setItem("accountNumber", syncResult.accountId);
-
-      await processLoginSuccess({
-        uid: userUID,
-        id: userUID,
-        displayName: userName,
-        email: userEmail,
-        photoURL: userPhoto,
+      const supabase = await getSupabaseAuthClient();
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: window.location.origin,
+          queryParams: { access_type: "offline", prompt: "select_account" },
+        },
       });
 
+      if (error) throw error;
     } catch (error: any) {
-      console.error("Google login error:", error);
-      let errorMessage = "Google sign-in failed. Please try again.";
-      if (error?.message?.toLowerCase().includes("cancel")) {
-        errorMessage = "Google sign-in was cancelled.";
-      } else if (error?.message) {
-        errorMessage = error.message;
-      }
-      setAuthError(errorMessage);
-    } finally {
+      console.error("Supabase Google login error:", error);
+      setAuthError(error?.message || "Google sign-in failed. Please try again.");
       setLoading(false);
     }
   };
