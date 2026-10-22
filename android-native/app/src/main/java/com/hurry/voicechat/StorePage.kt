@@ -210,7 +210,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
                                 modifier = Modifier.fillMaxSize(),
                                 contentScale = ContentScale.Crop
                             )
-                            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .20f)))
+                            // 🎯 Yahan se black drop overlay hata diya jaisa tumne kaha! 
                         }
                         Column(
                             Modifier.fillMaxWidth().padding(5.dp),
@@ -236,13 +236,10 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
                             if (!theme) {
                                 val mediaModifier = Modifier.fillMaxWidth().height(if (isVehicle || isFrame) 120.dp else 80.dp)
                                 if (item.image.endsWith(".mp4", ignoreCase = true)) {
-                                    // VIDEO: Ab yahan real transparent video fix call hoga
                                     StoreVideoPreview(StoreAssetBase + item.image, mediaModifier, pause = true)
                                 } else if (isVehicle) {
-                                    // VEHICLE IMAGE: Green removal chalu hai
                                     StoreChromaImage(StoreAssetBase + item.image, item.name, mediaModifier)
                                 } else {
-                                    // FRAME IMAGE: Normal rahegi bina koi green removal ke
                                     AsyncImage(model = StoreAssetBase + item.image, contentDescription = item.name, modifier = mediaModifier)
                                 }
                             } else {
@@ -368,7 +365,8 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
                 when (item.tab) {
                     "Theme" -> {
                         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable(enabled = false) {}) {
-                            Box(Modifier.width(230.dp).height(480.dp).border(4.dp, Color.Yellow, RoundedCornerShape(24.dp)).clip(RoundedCornerShape(24.dp)).background(Color.Black)) {
+                            // 🎯 Yahan bhi background Color.Black se Transparent kar diya black drop hatane ke liye!
+                            Box(Modifier.width(230.dp).height(480.dp).border(4.dp, Color.Yellow, RoundedCornerShape(24.dp)).clip(RoundedCornerShape(24.dp)).background(Color.Transparent)) {
                                 AsyncImage(model = StoreAssetBase + item.image, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                             }
                             Row(Modifier.padding(top = 16.dp)) {
@@ -433,7 +431,6 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
                                 if (source.endsWith(".mp4", true)) {
                                     StoreVideoPreview(StoreAssetBase + source, Modifier.fillMaxSize(), pause = false)
                                 } else {
-                                    // FRAME IMAGES NORMAL RAHEGI YAHAN BHI
                                     AsyncImage(model = StoreAssetBase + source, contentDescription = null, modifier = Modifier.fillMaxSize())
                                 }
                             }
@@ -502,7 +499,6 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
                                 if (source.endsWith(".mp4", true)) {
                                     StoreVideoPreview(StoreAssetBase + source, Modifier.fillMaxSize(), pause = false)
                                 } else {
-                                    // YAHAN VEHICLE IMAGE KE LIYE GREEN REMOVE HOGA
                                     StoreChromaImage(StoreAssetBase + source, item.name, Modifier.fillMaxSize())
                                 }
                             }
@@ -543,7 +539,6 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
     }
 }
 
-// YAHAN VEHICLE IMAGE WALA GREEN REMOVER LOGIC WAISE HI HAI JAISA TUJHE CHAHIYE
 @Composable
 private fun StoreChromaImage(
     url: String,
@@ -594,20 +589,18 @@ private fun StoreChromaImage(
     }
 }
 
-// 🎯 MAIN FIX YAHAN HAI: VIDEOVIEW HATA KAR TEXTUREVIEW + COLORMATRIX LAGAYA! 
-// ISSE VIDEO KA GREEN COLOR EKDAM FADE / TRANSPARENT HO JAYEGA!
+// 🎯 BACCHA LAL-NEELA HONA FIXED HERE!
 @Composable
 private fun StoreVideoPreview(url: String, modifier: Modifier = Modifier, pause: Boolean = false) {
     val context = androidx.compose.ui.platform.LocalContext.current
     var isVideoReady by remember { mutableStateOf(false) } 
 
-    // Ye magic hack Matrix hai jo video player k upar green colour ko transparent kar dega
     val chromaMatrix = remember {
         ColorMatrix(floatArrayOf(
-            1f, 0f, 0f, 0f, 0f,     // Red normal rahega
-            0f, 0.4f, 0f, 0f, 0f,   // Green ka glow kam karne ke liye
-            0f, 0f, 1f, 0f, 0f,     // Blue normal rahega
-            2.5f, -4f, 2.5f, 1f, 0f // Alpha channel: Green ko completely minus karke Fade Transparent bana dega
+            1f, 0f, 0f, 0f, 0f,     // Red: Ekdam normal rahega
+            0f, 1f, 0f, 0f, 0f,     // 🎯 Green: Pehle 0.4f tha, jiski wajah se skin/baccha lal-neela dikh raha tha. Ab ye 1f hai so original colors bache rahenge!
+            0f, 0f, 1f, 0f, 0f,     // Blue: Ekdam normal rahega
+            2.5f, -4f, 2.5f, 1f, 0f // Alpha channel: Sirf green background transparent hone ke liye
         ))
     }
 
@@ -620,12 +613,11 @@ private fun StoreVideoPreview(url: String, modifier: Modifier = Modifier, pause:
             },
         contentAlignment = Alignment.Center
     ) {
-        // key(url) Ensure karta hai naya video click hone pe purana MediaPlayer proper clean ho
         key(url) {
             AndroidView(
                 factory = { ctx ->
                     val textureView = TextureView(ctx)
-                    textureView.isOpaque = false // Ye lazmi hai transparent/fade ke liye
+                    textureView.isOpaque = false // Transparent ke liye jaruri
                     
                     val mediaPlayer = MediaPlayer()
                     textureView.tag = mediaPlayer
