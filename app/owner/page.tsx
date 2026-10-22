@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { MoreVertical, X, ChevronDown, Search, Star, Sparkles, Gamepad2, Timer, Send, ImageIcon, Megaphone, CheckCircle2, MessageSquare, Bot, ArrowLeft, User, Key, Lock, Camera, ShieldAlert, Eye, EyeOff } from 'lucide-react';
+import { MoreVertical, X, ChevronDown, Search, Star, Sparkles, Gamepad2, Timer, Send, ImageIcon, Megaphone, CheckCircle2, MessageSquare, Bot, ArrowLeft, User, Key, Lock, Camera, ShieldAlert, Eye, EyeOff, Fingerprint } from 'lucide-react';
 import { auth } from '@/src/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { socket } from '@/src/lib/socket';
@@ -10,14 +10,6 @@ import Reports from '@/components/Reports';
 import OwnerBan from '@/components/ownerban';
 import { apiUrl } from "@/src/lib/api";
 
-// ==============================================================
-// VALID LOGIN CREDENTIALS
-// ==============================================================
-const VALID_CREDENTIALS = {
-  accountName: 'Zyora Owner',
-  password: 'Hurry.in-owner & ceo',
-  secretKey: '18 July 2026'
-};
 
 // ==============================================================
 // INDEXEDDB HELPERS
@@ -224,7 +216,6 @@ const WILD_DETAILS: Record<number, { name: string; emoji: string; img: string; m
   10: { name: 'Golden Dragon', emoji: '🐉', img: '/IMG_20260910_114515.png', mult: '100x' },
   11: { name: 'Phoenix', emoji: '🔥', img: '/IMG_20260910_114613.png', mult: '50x' },
 };
-
 // ==============================================================
 // SIDEBAR ACCORDION COMPONENT
 // ==============================================================
@@ -269,120 +260,125 @@ const SidebarCategory = ({ icon, title, items, activeItem, setActiveItem, setIsS
 };
 
 // ==============================================================
-// LOGIN FORM COMPONENT
+// FINGERPRINT AUTH COMPONENT
 // ==============================================================
-const LoginForm = ({ onLoginSuccess }: { onLoginSuccess: () => void }) => {
-  const [accountName, setAccountName] = useState('');
-  const [password, setPassword] = useState('');
-  const [secretKey, setSecretKey] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+const FingerprintAuth = ({ onLoginSuccess }: { onLoginSuccess: () => void }) => {
+  const [fingerprintCount, setFingerprintCount] = useState<number>(0);
+  const [step, setStep] = useState<'idle' | 'scanning' | 'passcode'>('idle');
+  const [passcode, setPasscode] = useState('');
   const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const count = parseInt(localStorage.getItem('zyora_fingerprints_count') || '0');
+      setFingerprintCount(count);
+    }
+  }, []);
+
+  const handleAddFingerprint = () => {
+    if (fingerprintCount < 2) {
+      const newCount = fingerprintCount + 1;
+      localStorage.setItem('zyora_fingerprints_count', newCount.toString());
+      setFingerprintCount(newCount);
+      alert(`Fingerprint ${newCount} successfully added!`);
+    }
+  };
+
+  const startScan = () => {
+    if (fingerprintCount === 0) {
+      setError('Please add at least 1 fingerprint first!');
+      return;
+    }
+    setError('');
+    setStep('scanning');
+    
+    setTimeout(() => {
+      setStep('passcode');
+    }, 1500); 
+  };
+
+  const handlePasscodeSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (
-      accountName.trim() === VALID_CREDENTIALS.accountName &&
-      password === VALID_CREDENTIALS.password &&
-      secretKey.trim() === VALID_CREDENTIALS.secretKey
-    ) {
+    if (passcode.toUpperCase() === 'ZYORA OWNER' || passcode.toUpperCase() === 'ZYORA CEO') {
       setError('');
       onLoginSuccess();
     } else {
-      setError('Invalid credentials. Please check and try again.');
+      setError('Invalid Access Key!');
     }
   };
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-[#1a1c29] via-[#232641] to-[#1a1c29] p-4">
-      <div className="w-full max-w-md bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl p-8 border border-white/20">
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 mx-auto mb-3 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
-            <ShieldAlert className="w-8 h-8 text-white" />
-          </div>
-          <h1 className="text-2xl font-black text-slate-800">Staff Panel Login</h1>
-          <p className="text-xs text-slate-500 font-medium mt-1">Enter your credentials to continue</p>
+      <div className="w-full max-w-md bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl p-8 border border-white/20 text-center relative">
+        <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
+          <Fingerprint className="w-8 h-8 text-white" />
         </div>
+        <h1 className="text-2xl font-black text-slate-800 mb-6">Staff Authentication</h1>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label className="block text-[11px] font-extrabold text-slate-600 uppercase tracking-wider mb-2">
-              Account Name
-            </label>
-            <div className="relative">
-              <div className="absolute left-3.5 top-3 text-slate-400">
-                <User className="w-4 h-4" />
+        {step === 'idle' && (
+          <div className="space-y-6 mt-4">
+            <button
+              onClick={startScan}
+              className="w-full py-5 bg-slate-900 text-white rounded-2xl font-extrabold flex flex-col items-center justify-center gap-3 hover:bg-slate-800 transition-colors shadow-lg active:scale-[0.98]"
+            >
+              <Fingerprint className="w-10 h-10 text-indigo-400" />
+              <span className="tracking-wide">Scan Fingerprint to Login</span>
+            </button>
+
+            {error && <p className="text-red-500 text-xs font-bold">{error}</p>}
+
+            {fingerprintCount < 2 && (
+              <div className="pt-4 border-t border-slate-200">
+                <button
+                  onClick={handleAddFingerprint}
+                  className="w-full text-sm font-extrabold text-indigo-600 bg-indigo-50 px-4 py-3 rounded-xl hover:bg-indigo-100 transition-colors"
+                >
+                  + Add Fingerprint ({fingerprintCount}/2)
+                </button>
               </div>
+            )}
+          </div>
+        )}
+
+        {step === 'scanning' && (
+          <div className="py-10 flex flex-col items-center">
+            <div className="relative">
+              <Fingerprint className="w-20 h-20 text-indigo-600 animate-pulse relative z-10" />
+              <div className="absolute inset-0 bg-indigo-500 rounded-full blur-xl opacity-30 animate-pulse"></div>
+            </div>
+            <p className="text-sm font-bold text-slate-500 mt-6 tracking-widest uppercase">Scanning Biometrics...</p>
+          </div>
+        )}
+
+        {step === 'passcode' && (
+          <form onSubmit={handlePasscodeSubmit} className="space-y-5 mt-2 animate-in fade-in zoom-in duration-300">
+            <div>
+              <label className="block text-[11px] font-extrabold text-slate-600 uppercase tracking-wider mb-2 text-left">
+                Security Key
+              </label>
               <input
                 type="text"
-                value={accountName}
-                onChange={(e) => setAccountName(e.target.value)}
-                placeholder="Zyora Owner"
-                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 placeholder:text-slate-400 caret-slate-900 focus:outline-none focus:border-indigo-500 focus:bg-white transition-colors"
+                value={passcode}
+                onChange={(e) => setPasscode(e.target.value)}
+                placeholder="ZYORA OWNER / CEO"
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:border-indigo-500 text-center uppercase shadow-sm"
+                autoFocus
               />
             </div>
-          </div>
-
-          <div>
-            <label className="block text-[11px] font-extrabold text-slate-600 uppercase tracking-wider mb-2">
-              Password
-            </label>
-            <div className="relative">
-              <div className="absolute left-3.5 top-3 text-slate-400">
-                <Lock className="w-4 h-4" />
-              </div>
-              <input
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Hurry.in-owner & ceo"
-                className="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 placeholder:text-slate-400 caret-slate-900 focus:outline-none focus:border-indigo-500 focus:bg-white transition-colors"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-3 text-slate-400 hover:text-slate-600"
-              >
-                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-[11px] font-extrabold text-slate-600 uppercase tracking-wider mb-2">
-              Secret Key
-            </label>
-            <div className="relative">
-              <div className="absolute left-3.5 top-3 text-slate-400">
-                <Key className="w-4 h-4" />
-              </div>
-              <input
-                type="text"
-                value={secretKey}
-                onChange={(e) => setSecretKey(e.target.value)}
-                placeholder="18 July 2026"
-                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 placeholder:text-slate-400 caret-slate-900 focus:outline-none focus:border-indigo-500 focus:bg-white transition-colors"
-              />
-            </div>
-          </div>
-
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-600 text-xs font-bold px-3 py-2.5 rounded-xl text-center">
-              {error}
-            </div>
-          )}
-
-          <button
-            type="submit"
-            className="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm font-extrabold rounded-xl shadow-lg hover:from-indigo-700 hover:to-purple-700 active:scale-[0.98] transition-all"
-          >
-            Login
-          </button>
-        </form>
+            {error && <p className="text-red-500 text-xs font-bold">{error}</p>}
+            <button
+              type="submit"
+              className="w-full py-3.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm font-extrabold rounded-xl shadow-lg hover:from-indigo-700 hover:to-purple-700 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+            >
+              <ShieldAlert className="w-4 h-4" />
+              Verify & Login
+            </button>
+          </form>
+        )}
       </div>
     </div>
   );
 };
-
 // ==============================================================
 // MAIN PAGE
 // ==============================================================
@@ -903,480 +899,478 @@ export default function StaffPanel() {
 
     return () => clearInterval(clock);
   }, []);
-
   const openTagModal = (user: UserRecord) => {
-    setSelectedTagUserData(user);
-    setIsTagModalOpen(true);
-    setTagSuccess('');
-    setSelectedTags([]);
-  };
+  setSelectedTagUserData(user);
+  setIsTagModalOpen(true);
+  setTagSuccess('');
+  setSelectedTags([]);
+};
 
-  const handleAssignTags = () => {
-    setTagSuccess('Tags updated successfully!');
-    setTimeout(() => setIsTagModalOpen(false), 1500);
-  };
+const handleAssignTags = () => {
+  setTagSuccess('Tags updated successfully!');
+  setTimeout(() => setIsTagModalOpen(false), 1500);
+};
 
-  const toggleTag = (tagId: string) => {
-    setSelectedTags(prev =>
-      prev.includes(tagId) ? prev.filter(t => t !== tagId) : [...prev, tagId]
-    );
-  };
-
-  const handleSearchQueryChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    setSearchQuery(val);
-
-    if (val.trim()) {
-      try {
-        const res = await fetch(apiUrl(`/api/users?search=${encodeURIComponent(val)}&accountId=${encodeURIComponent(val)}`));
-        if (res.ok) {
-          const data = await res.json();
-          const rawUsers = Array.isArray(data) ? data : (data?.users || []);
-          const fetchedList = rawUsers.map((u: any, index: number) => ({
-            id: String(u._id || u.id || u.uid || index + 1),
-            name: u.name || u.displayName || u.userName || 'User',
-            username: u.username || u.userName || `@${(u.name || 'user').toLowerCase().replace(/\s+/g, '')}`,
-            hurryId: String(u.accountId || u.displayUserNumber || u.appLongId || u.hurryId || u.id || '—'),
-            email: u.email || u.gmail || u.emailPhone || '—',
-            role: u.role || 'NORMAL',
-            image: u.image || u.photo || u.avatar || u.photoURL || ''
-          }));
-
-          setUsers(prev => {
-            const newUsers = [...prev];
-            fetchedList.forEach((u: any) => {
-              if (!newUsers.some(existing => existing.id === u.id)) {
-                newUsers.push(u);
-              }
-            });
-            return newUsers;
-          });
-        }
-      } catch (err) {
-        console.warn('API users fetch fallback:', err);
-      }
-    }
-  };
-
-  const filteredUsers = users.filter(u => {
-    const q = searchQuery.toLowerCase();
-    const matchesSearch =
-      u.name.toLowerCase().includes(q) ||
-      u.username.toLowerCase().includes(q) ||
-      u.email.toLowerCase().includes(q) ||
-      u.hurryId.toLowerCase().includes(q);
-
-    const matchesRole =
-      selectedRoleFilter === 'All Roles' ||
-      u.role.toUpperCase() === selectedRoleFilter.toUpperCase();
-
-    return matchesSearch && matchesRole;
-  });
-
-  const filteredGifts = ALL_GIFTS.filter(g => {
-    const typeOk = giftTabFilter === 'All' || g.type === giftTabFilter;
-    const searchOk = !giftSearchQuery.trim() || g.name.toLowerCase().includes(giftSearchQuery.toLowerCase());
-    return typeOk && searchOk;
-  });
-
-  const filteredThemes = ALL_STORE_THEMES.filter(t =>
-    !themeSearchQuery.trim() || t.name.toLowerCase().includes(themeSearchQuery.toLowerCase())
+const toggleTag = (tagId: string) => {
+  setSelectedTags(prev =>
+    prev.includes(tagId) ? prev.filter(t => t !== tagId) : [...prev, tagId]
   );
+};
 
-  const filteredSupportChats = supportChats.filter((chat) => {
-    const q = supportSearchQuery.toLowerCase();
-    return (
-      (chat.userName || '').toLowerCase().includes(q) ||
-      (chat.userId || '').toLowerCase().includes(q) ||
-      (chat.userAccountId || '').toLowerCase().includes(q) ||
-      (chat.userEmail || '').toLowerCase().includes(q)
-    );
-  });
+const handleSearchQueryChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const val = e.target.value;
+  setSearchQuery(val);
 
-  const privateConversations = React.useMemo(() => {
-    const pairMap = new Map<string, any>();
-    filteredPrivateMessages.forEach((msg) => {
-      const sId = msg.senderId || msg.senderAccountId || '';
-      const rId = msg.receiverId || msg.receiverAccountId || '';
-      if (!sId || !rId) return;
-      const key = [String(sId), String(rId)].sort().join('|||');
-      const existing = pairMap.get(key);
-      const ts = msg.timestamp || 0;
-      if (!existing || ts > (existing.timestamp || 0)) {
-        pairMap.set(key, {
-          key,
-          senderId: String(sId),
-          senderName: msg.senderName || 'User',
-          senderPhoto: msg.senderPhoto || '',
-          receiverId: String(rId),
-          receiverName: msg.receiverName || 'User',
-          receiverPhoto: msg.receiverPhoto || '',
-          timestamp: ts,
-          lastMessage: msg.text || (msg.imageUrl ? '📷 Image' : '')
+  if (val.trim()) {
+    try {
+      const res = await fetch(apiUrl(`/api/users?search=${encodeURIComponent(val)}&accountId=${encodeURIComponent(val)}`));
+      if (res.ok) {
+        const data = await res.json();
+        const rawUsers = Array.isArray(data) ? data : (data?.users || []);
+        const fetchedList = rawUsers.map((u: any, index: number) => ({
+          id: String(u._id || u.id || u.uid || index + 1),
+          name: u.name || u.displayName || u.userName || 'User',
+          username: u.username || u.userName || `@${(u.name || 'user').toLowerCase().replace(/\s+/g, '')}`,
+          hurryId: String(u.accountId || u.displayUserNumber || u.appLongId || u.hurryId || u.id || '—'),
+          email: u.email || u.gmail || u.emailPhone || '—',
+          role: u.role || 'NORMAL',
+          image: u.image || u.photo || u.avatar || u.photoURL || ''
+        }));
+
+        setUsers(prev => {
+          const newUsers = [...prev];
+          fetchedList.forEach((u: any) => {
+            if (!newUsers.some(existing => existing.id === u.id)) {
+              newUsers.push(u);
+            }
+          });
+          return newUsers;
         });
       }
-    });
-    return Array.from(pairMap.values()).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-  }, [filteredPrivateMessages]);
-
-  const selectedPrivateMessages = React.useMemo(() => {
-    if (!selectedPair) return [];
-    return privateMessages
-      .filter((m) => {
-        const sId = String(m.senderId || m.senderAccountId || '');
-        const rId = String(m.receiverId || m.receiverAccountId || '');
-        const a = selectedPair.senderId;
-        const b = selectedPair.receiverId;
-        return (sId === a && rId === b) || (sId === b && rId === a);
-      })
-      .sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
-  }, [privateMessages, selectedPair]);
-
-  if (!authChecked) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#1a1c29]">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-white"></div>
-      </div>
-    );
+    } catch (err) {
+      console.warn('API users fetch fallback:', err);
+    }
   }
+};
 
-  if (!isLoggedIn) {
-    return <LoginForm onLoginSuccess={handleLoginSuccess} />;
-  }
+const filteredUsers = users.filter(u => {
+  const q = searchQuery.toLowerCase();
+  const matchesSearch =
+    u.name.toLowerCase().includes(q) ||
+    u.username.toLowerCase().includes(q) ||
+    u.email.toLowerCase().includes(q) ||
+    u.hurryId.toLowerCase().includes(q);
 
+  const matchesRole =
+    selectedRoleFilter === 'All Roles' ||
+    u.role.toUpperCase() === selectedRoleFilter.toUpperCase();
+
+  return matchesSearch && matchesRole;
+});
+
+const filteredGifts = ALL_GIFTS.filter(g => {
+  const typeOk = giftTabFilter === 'All' || g.type === giftTabFilter;
+  const searchOk = !giftSearchQuery.trim() || g.name.toLowerCase().includes(giftSearchQuery.toLowerCase());
+  return typeOk && searchOk;
+});
+
+const filteredThemes = ALL_STORE_THEMES.filter(t =>
+  !themeSearchQuery.trim() || t.name.toLowerCase().includes(themeSearchQuery.toLowerCase())
+);
+
+const filteredSupportChats = supportChats.filter((chat) => {
+  const q = supportSearchQuery.toLowerCase();
   return (
-    <div className="flex h-screen bg-white font-sans overflow-hidden">
+    (chat.userName || '').toLowerCase().includes(q) ||
+    (chat.userId || '').toLowerCase().includes(q) ||
+    (chat.userAccountId || '').toLowerCase().includes(q) ||
+    (chat.userEmail || '').toLowerCase().includes(q)
+  );
+});
 
-      {isSidebarOpen && (
-        <div className="fixed inset-0 bg-black/50 z-40 md:hidden" onClick={() => setIsSidebarOpen(false)} />
-      )}
+const privateConversations = React.useMemo(() => {
+  const pairMap = new Map<string, any>();
+  filteredPrivateMessages.forEach((msg) => {
+    const sId = msg.senderId || msg.senderAccountId || '';
+    const rId = msg.receiverId || msg.receiverAccountId || '';
+    if (!sId || !rId) return;
+    const key = [String(sId), String(rId)].sort().join('|||');
+    const existing = pairMap.get(key);
+    const ts = msg.timestamp || 0;
+    if (!existing || ts > (existing.timestamp || 0)) {
+      pairMap.set(key, {
+        key,
+        senderId: String(sId),
+        senderName: msg.senderName || 'User',
+        senderPhoto: msg.senderPhoto || '',
+        receiverId: String(rId),
+        receiverName: msg.receiverName || 'User',
+        receiverPhoto: msg.receiverPhoto || '',
+        timestamp: ts,
+        lastMessage: msg.text || (msg.imageUrl ? '📷 Image' : '')
+      });
+    }
+  });
+  return Array.from(pairMap.values()).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+}, [filteredPrivateMessages]);
 
-      <aside className={`fixed inset-y-0 left-0 z-50 w-[260px] bg-[#1a1c29] flex flex-col flex-shrink-0 h-full overflow-y-auto border-r border-[#2a2d3e] transition-transform duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+const selectedPrivateMessages = React.useMemo(() => {
+  if (!selectedPair) return [];
+  return privateMessages
+    .filter((m) => {
+      const sId = String(m.senderId || m.senderAccountId || '');
+      const rId = String(m.receiverId || m.receiverAccountId || '');
+      const a = selectedPair.senderId;
+      const b = selectedPair.receiverId;
+      return (sId === a && rId === b) || (sId === b && rId === a);
+    })
+    .sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+}, [privateMessages, selectedPair]);
 
-        <div className="p-6 pb-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-white text-[19px] font-extrabold tracking-wide drop-shadow-md">Zyora</h1>
-            <p className="text-[10px] text-gray-300 font-bold tracking-widest mt-0.5">STAFF CONTROL PANEL</p>
-          </div>
-          <button onClick={() => setIsSidebarOpen(false)} className="text-gray-400 hover:text-white">
-            <X className="w-5 h-5" />
-          </button>
+if (!authChecked) {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-[#1a1c29]">
+      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-white"></div>
+    </div>
+  );
+}
+
+if (!isLoggedIn) {
+  return <FingerprintAuth onLoginSuccess={handleLoginSuccess} />;
+}
+
+return (
+  <div className="flex h-screen bg-white font-sans overflow-hidden">
+
+    {isSidebarOpen && (
+      <div className="fixed inset-0 bg-black/50 z-40 md:hidden" onClick={() => setIsSidebarOpen(false)} />
+    )}
+
+    <aside className={`fixed inset-y-0 left-0 z-50 w-[260px] bg-[#1a1c29] flex flex-col flex-shrink-0 h-full overflow-y-auto border-r border-[#2a2d3e] transition-transform duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+
+      <div className="p-6 pb-4 flex items-center justify-between">
+        <div>
+          <h1 className="text-white text-[19px] font-extrabold tracking-wide drop-shadow-md">Zyora</h1>
+          <p className="text-[10px] text-gray-300 font-bold tracking-widest mt-0.5">STAFF CONTROL PANEL</p>
+        </div>
+        <button onClick={() => setIsSidebarOpen(false)} className="text-gray-400 hover:text-white">
+          <X className="w-5 h-5" />
+        </button>
+      </div>
+
+      <nav className="flex-1 mt-2 space-y-1 pb-6">
+        <div className="flex items-center gap-3 px-6 py-3 text-[14px] font-bold text-white hover:bg-white/5 cursor-pointer transition-colors" onClick={() => setActiveTab('dashboard')}>
+          <span className="text-[16px] drop-shadow-md">🏠</span>
+          <span>Dashboard</span>
         </div>
 
-        <nav className="flex-1 mt-2 space-y-1 pb-6">
-          <div className="flex items-center gap-3 px-6 py-3 text-[14px] font-bold text-white hover:bg-white/5 cursor-pointer transition-colors" onClick={() => setActiveTab('dashboard')}>
-            <span className="text-[16px] drop-shadow-md">🏠</span>
-            <span>Dashboard</span>
+        <SidebarCategory
+          icon="👥" title="User Center" activeItem={activeTab} setActiveItem={setActiveTab} setIsSidebarOpen={setIsSidebarOpen}
+          items={[{ id: 'manage_users', label: 'Manage Users', icon: '👤' }, { id: 'host_apps', label: 'Host Applications', icon: '📝' }]}
+        />
+        <SidebarCategory
+          icon="🎙️" title="Live Rooms" activeItem={activeTab} setActiveItem={setActiveTab} setIsSidebarOpen={setIsSidebarOpen}
+          items={[{ id: 'manage_rooms', label: 'Manage Rooms', icon: '📻' }]}
+        />
+        <SidebarCategory
+          icon="🛒" title="Store" activeItem={activeTab} setActiveItem={setActiveTab} setIsSidebarOpen={setIsSidebarOpen}
+          items={[{ id: 'themes', label: 'Themes', icon: '🎨' }, { id: 'special_ids', label: 'Special IDs', icon: '💎' }, { id: 'gift_catalog', label: 'Gift Catalog', icon: '🎁' }]}
+        />
+        <SidebarCategory
+          icon="💰" title="Economy" activeItem={activeTab} setActiveItem={setActiveTab} setIsSidebarOpen={setIsSidebarOpen}
+          items={[{ id: 'wallet', label: 'Master Wallet', icon: '💳' }, { id: 'history', label: 'Send History', icon: '📜' }, { id: 'revenue', label: 'Bean Revenue', icon: '📈' }]}
+        />
+        <SidebarCategory
+          icon="📁" title="Content" activeItem={activeTab} setActiveItem={setActiveTab} setIsSidebarOpen={setIsSidebarOpen}
+          items={[{ id: 'events', label: 'Events', icon: '🎪' }, { id: 'banners', label: 'Banners', icon: '🖼️' }]}
+        />
+        <SidebarCategory
+          icon="🛡️" title="Moderation" activeItem={activeTab} setActiveItem={setActiveTab} setIsSidebarOpen={setIsSidebarOpen}
+          items={[
+            { id: 'feedback', label: 'User Feedback', icon: '💬' },
+            { id: 'ai_chats', label: 'AI Chats', icon: '🤖' },
+            { id: 'reports', label: 'Reports', icon: '🚫' },
+            { id: 'bans', label: 'Bans', icon: '⛔' },
+            { id: 'tickets', label: 'Private Chat', icon: '🎫' },
+            { id: 'official_msg', label: 'Official Msg', icon: '📢' }
+          ]}
+        />
+        <SidebarCategory
+          icon="⚙️" title="Platform" activeItem={activeTab} setActiveItem={setActiveTab} setIsSidebarOpen={setIsSidebarOpen}
+          items={[{ id: 'analytics', label: 'Analytics', icon: '📊' }, { id: 'agency', label: 'Agency Mgmt', icon: '🏢' }]}
+        />
+
+        <SidebarCategory
+          icon="🎮" title="Game Management" activeItem={activeTab} setActiveItem={setActiveTab} setIsSidebarOpen={setIsSidebarOpen}
+          items={[
+            { id: 'game_fruit_party', label: 'Fruit Party', icon: '🍓' },
+            { id: 'game_wild_party', label: 'Wild Party', icon: '🦁' }
+          ]}
+        />
+
+        <div className="flex items-center gap-3 px-6 py-3 text-[14px] font-bold text-white hover:bg-white/5 cursor-pointer transition-colors mt-2" onClick={() => setActiveTab('system')}>
+          <span className="text-[16px] drop-shadow-md">🛠️</span>
+          <span>System</span>
+        </div>
+      </nav>
+    </aside>
+
+    <main
+      className={`flex-1 flex flex-col h-full bg-[#f8f9fa] overflow-hidden transition-all duration-300 ${isSidebarOpen ? 'md:pl-[260px]' : 'md:pl-0'}`}
+      onClick={(e) => {
+        const target = e.target as HTMLElement;
+        if (target.closest('button, a, input, select, textarea, [role="button"]')) return;
+        if (typeof window !== 'undefined' && window.innerWidth >= 768 && isSidebarOpen) {
+          setIsSidebarOpen(false);
+        }
+      }}
+    >
+
+      <header className="bg-white p-3 border-b border-slate-200 flex items-center sticky top-0 z-30 shadow-sm">
+        <button
+          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg active:scale-95 transition-transform"
+        >
+          <MoreVertical className="w-6 h-6" />
+        </button>
+      </header>
+
+      {activeTab === 'manage_users' && (
+        <div className="flex flex-col h-full bg-white">
+          <div className="px-8 py-6 pb-4 border-b border-gray-100 flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-bold text-slate-800">Users</h2>
+              <p className="text-xs text-slate-400 mt-0.5">Real user database records with Firebase Gmail authentication</p>
+            </div>
+            <span className="text-xs font-semibold px-3 py-1 bg-slate-100 text-slate-600 rounded-full">
+              Total Users: {users.length}
+            </span>
           </div>
 
-          <SidebarCategory
-            icon="👥" title="User Center" activeItem={activeTab} setActiveItem={setActiveTab} setIsSidebarOpen={setIsSidebarOpen}
-            items={[{ id: 'manage_users', label: 'Manage Users', icon: '👤' }, { id: 'host_apps', label: 'Host Applications', icon: '📝' }]}
-          />
-          <SidebarCategory
-            icon="🎙️" title="Live Rooms" activeItem={activeTab} setActiveItem={setActiveTab} setIsSidebarOpen={setIsSidebarOpen}
-            items={[{ id: 'manage_rooms', label: 'Manage Rooms', icon: '📻' }]}
-          />
-          <SidebarCategory
-            icon="🛒" title="Store" activeItem={activeTab} setActiveItem={setActiveTab} setIsSidebarOpen={setIsSidebarOpen}
-            items={[{ id: 'themes', label: 'Themes', icon: '🎨' }, { id: 'special_ids', label: 'Special IDs', icon: '💎' }, { id: 'gift_catalog', label: 'Gift Catalog', icon: '🎁' }]}
-          />
-          <SidebarCategory
-            icon="💰" title="Economy" activeItem={activeTab} setActiveItem={setActiveTab} setIsSidebarOpen={setIsSidebarOpen}
-            items={[{ id: 'wallet', label: 'Master Wallet', icon: '💳' }, { id: 'history', label: 'Send History', icon: '📜' }, { id: 'revenue', label: 'Bean Revenue', icon: '📈' }]}
-          />
-          <SidebarCategory
-            icon="📁" title="Content" activeItem={activeTab} setActiveItem={setActiveTab} setIsSidebarOpen={setIsSidebarOpen}
-            items={[{ id: 'events', label: 'Events', icon: '🎪' }, { id: 'banners', label: 'Banners', icon: '🖼️' }]}
-          />
-          <SidebarCategory
-            icon="🛡️" title="Moderation" activeItem={activeTab} setActiveItem={setActiveTab} setIsSidebarOpen={setIsSidebarOpen}
-            items={[
-              { id: 'feedback', label: 'User Feedback', icon: '💬' },
-              { id: 'ai_chats', label: 'AI Chats', icon: '🤖' },
-              { id: 'reports', label: 'Reports', icon: '🚫' },
-              { id: 'bans', label: 'Bans', icon: '⛔' },
-              { id: 'tickets', label: 'Private Chat', icon: '🎫' },
-              { id: 'official_msg', label: 'Official Msg', icon: '📢' }
-            ]}
-          />
-          <SidebarCategory
-            icon="⚙️" title="Platform" activeItem={activeTab} setActiveItem={setActiveTab} setIsSidebarOpen={setIsSidebarOpen}
-            items={[{ id: 'analytics', label: 'Analytics', icon: '📊' }, { id: 'agency', label: 'Agency Mgmt', icon: '🏢' }]}
-          />
-
-          <SidebarCategory
-            icon="🎮" title="Game Management" activeItem={activeTab} setActiveItem={setActiveTab} setIsSidebarOpen={setIsSidebarOpen}
-            items={[
-              { id: 'game_fruit_party', label: 'Fruit Party', icon: '🍓' },
-              { id: 'game_wild_party', label: 'Wild Party', icon: '🦁' }
-            ]}
-          />
-
-          <div className="flex items-center gap-3 px-6 py-3 text-[14px] font-bold text-white hover:bg-white/5 cursor-pointer transition-colors mt-2" onClick={() => setActiveTab('system')}>
-            <span className="text-[16px] drop-shadow-md">🛠️</span>
-            <span>System</span>
-          </div>
-        </nav>
-      </aside>
-
-      <main
-        className={`flex-1 flex flex-col h-full bg-[#f8f9fa] overflow-hidden transition-all duration-300 ${isSidebarOpen ? 'md:pl-[260px]' : 'md:pl-0'}`}
-        onClick={(e) => {
-          const target = e.target as HTMLElement;
-          if (target.closest('button, a, input, select, textarea, [role="button"]')) return;
-          if (typeof window !== 'undefined' && window.innerWidth >= 768 && isSidebarOpen) {
-            setIsSidebarOpen(false);
-          }
-        }}
-      >
-
-        <header className="bg-white p-3 border-b border-slate-200 flex items-center sticky top-0 z-30 shadow-sm">
-          <button
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg active:scale-95 transition-transform"
-          >
-            <MoreVertical className="w-6 h-6" />
-          </button>
-        </header>
-
-        {activeTab === 'manage_users' && (
-          <div className="flex flex-col h-full bg-white">
-            <div className="px-8 py-6 pb-4 border-b border-gray-100 flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-bold text-slate-800">Users</h2>
-                <p className="text-xs text-slate-400 mt-0.5">Real user database records with Firebase Gmail authentication</p>
+          <div className="p-8 flex-1 overflow-y-auto">
+            <div className="flex flex-col gap-4 mb-6">
+              <div className="relative w-full max-w-3xl">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={handleSearchQueryChange}
+                  placeholder="Search by real name, email, Zyora ID, username..."
+                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-400 font-medium text-slate-900 placeholder:text-slate-400 caret-slate-900"
+                />
               </div>
-              <span className="text-xs font-semibold px-3 py-1 bg-slate-100 text-slate-600 rounded-full">
-                Total Users: {users.length}
-              </span>
+              <div className="flex flex-wrap gap-2 items-center">
+                <select
+                  value={selectedRoleFilter}
+                  onChange={(e) => setSelectedRoleFilter(e.target.value)}
+                  className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 outline-none hover:bg-slate-50 cursor-pointer"
+                >
+                  <option>All Roles</option>
+                  <option>NORMAL</option>
+                  <option>HOST</option>
+                  <option>AGENCY</option>
+                  <option>ADMIN</option>
+                </select>
+              </div>
             </div>
 
-            <div className="p-8 flex-1 overflow-y-auto">
-              <div className="flex flex-col gap-4 mb-6">
-                <div className="relative w-full max-w-3xl">
-                  <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={handleSearchQueryChange}
-                    placeholder="Search by real name, email, Zyora ID, username..."
-                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-400 font-medium text-slate-900 placeholder:text-slate-400 caret-slate-900"
-                  />
-                </div>
-                <div className="flex flex-wrap gap-2 items-center">
-                  <select
-                    value={selectedRoleFilter}
-                    onChange={(e) => setSelectedRoleFilter(e.target.value)}
-                    className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 outline-none hover:bg-slate-50 cursor-pointer"
-                  >
-                    <option>All Roles</option>
-                    <option>NORMAL</option>
-                    <option>HOST</option>
-                    <option>AGENCY</option>
-                    <option>ADMIN</option>
-                  </select>
-                </div>
+            {loadingUsers ? (
+              <div className="py-12 text-center text-slate-400 font-medium text-sm">
+                Loading real user database...
               </div>
-
-              {loadingUsers ? (
-                <div className="py-12 text-center text-slate-400 font-medium text-sm">
-                  Loading real user database...
-                </div>
-              ) : (
-                <div className="w-full overflow-x-auto">
-                  <table className="w-full text-left border-collapse min-w-[800px]">
-                    <thead>
-                      <tr className="border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                        <th className="py-4 pl-4 pr-2 w-12">S.No</th>
-                        <th className="py-4 px-2 w-1/3">User Profile & Avatar</th>
-                        <th className="py-4 px-2">User ID (MongoDB)</th>
-                        <th className="py-4 px-2">Email (Firebase Gmail)</th>
-                        <th className="py-4 px-2">Role</th>
-                        <th className="py-4 pr-4 text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-50">
-                      {filteredUsers.map((u, idx) => (
-                        <tr key={u.id} className="hover:bg-slate-50/50 transition-colors group">
-                          <td className="py-3 pl-4 pr-2 text-xs font-bold text-slate-500">{idx + 1}</td>
-                          <td className="py-3 px-2">
-                            <div className="flex items-center gap-3.5">
-                              {u.image ? (
-                                <div className="w-10 h-10 rounded-full overflow-hidden border border-slate-200 shrink-0">
-                                  <img
-                                    src={u.image}
-                                    alt={u.name}
-                                    className="w-full h-full object-cover"
-                                    onError={(e) => {
-                                      (e.target as HTMLImageElement).style.display = 'none';
-                                      const parent = (e.target as HTMLImageElement).parentElement;
-                                      if (parent && !parent.querySelector('.avatar-fallback')) {
-                                        const div = document.createElement('div');
-                                        div.className = 'avatar-fallback w-full h-full bg-indigo-100 text-indigo-600 font-bold flex items-center justify-center text-base';
-                                        div.textContent = u.name.charAt(0).toUpperCase();
-                                        parent.appendChild(div);
-                                      }
-                                    }}
-                                  />
-                                </div>
-                              ) : (
-                                <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-base drop-shadow-sm shrink-0">
-                                  {u.name.charAt(0).toUpperCase()}
-                                </div>
-                              )}
-                              <div className="flex flex-col">
-                                <span className="text-sm font-bold text-slate-800">{u.name}</span>
-                                <span className="text-[11px] text-slate-400 font-medium">{u.username}</span>
+            ) : (
+              <div className="w-full overflow-x-auto">
+                <table className="w-full text-left border-collapse min-w-[800px]">
+                  <thead>
+                    <tr className="border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      <th className="py-4 pl-4 pr-2 w-12">S.No</th>
+                      <th className="py-4 px-2 w-1/3">User Profile & Avatar</th>
+                      <th className="py-4 px-2">User ID (MongoDB)</th>
+                      <th className="py-4 px-2">Email (Firebase Gmail)</th>
+                      <th className="py-4 px-2">Role</th>
+                      <th className="py-4 pr-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {filteredUsers.map((u, idx) => (
+                      <tr key={u.id} className="hover:bg-slate-50/50 transition-colors group">
+                        <td className="py-3 pl-4 pr-2 text-xs font-bold text-slate-500">{idx + 1}</td>
+                        <td className="py-3 px-2">
+                          <div className="flex items-center gap-3.5">
+                            {u.image ? (
+                              <div className="w-10 h-10 rounded-full overflow-hidden border border-slate-200 shrink-0">
+                                <img
+                                  src={u.image}
+                                  alt={u.name}
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).style.display = 'none';
+                                    const parent = (e.target as HTMLImageElement).parentElement;
+                                    if (parent && !parent.querySelector('.avatar-fallback')) {
+                                      const div = document.createElement('div');
+                                      div.className = 'avatar-fallback w-full h-full bg-indigo-100 text-indigo-600 font-bold flex items-center justify-center text-base';
+                                      div.textContent = u.name.charAt(0).toUpperCase();
+                                      parent.appendChild(div);
+                                    }
+                                  }}
+                                />
                               </div>
+                            ) : (
+                              <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-base drop-shadow-sm shrink-0">
+                                {u.name.charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                            <div className="flex flex-col">
+                              <span className="text-sm font-bold text-slate-800">{u.name}</span>
+                              <span className="text-[11px] text-slate-400 font-medium">{u.username}</span>
                             </div>
-                          </td>
-                          <td className="py-3 px-2">
-                            <span className="text-sm font-bold text-[#8a92ff] tracking-wide">{u.hurryId}</span>
-                          </td>
-                          <td className="py-3 px-2">
-                            <span className="text-xs font-semibold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-md inline-block">
-                              {u.email}
-                            </span>
-                          </td>
-                          <td className="py-3 px-2">
-                            <span className={`px-2 py-1 rounded-md text-[10px] font-bold shadow-sm ${
-                              u.role === 'HOST' ? 'bg-purple-50 text-purple-600 border border-purple-100' :
-                              u.role === 'AGENCY' ? 'bg-orange-50 text-orange-600 border border-orange-100' :
-                              u.role === 'ADMIN' ? 'bg-red-50 text-red-600 border border-red-100' :
-                              'bg-blue-50 text-blue-600 border border-blue-100'
-                            }`}>
-                              {u.role}
-                            </span>
-                          </td>
-                          <td className="py-3 pr-4 text-right">
-                            <button onClick={() => openTagModal(u)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors">
-                              <MoreVertical className="w-4 h-4" />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                          </div>
+                        </td>
+                        <td className="py-3 px-2">
+                          <span className="text-sm font-bold text-[#8a92ff] tracking-wide">{u.hurryId}</span>
+                        </td>
+                        <td className="py-3 px-2">
+                          <span className="text-xs font-semibold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-md inline-block">
+                            {u.email}
+                          </span>
+                        </td>
+                        <td className="py-3 px-2">
+                          <span className={`px-2 py-1 rounded-md text-[10px] font-bold shadow-sm ${
+                            u.role === 'HOST' ? 'bg-purple-50 text-purple-600 border border-purple-100' :
+                            u.role === 'AGENCY' ? 'bg-orange-50 text-orange-600 border border-orange-100' :
+                            u.role === 'ADMIN' ? 'bg-red-50 text-red-600 border border-red-100' :
+                            'bg-blue-50 text-blue-600 border border-blue-100'
+                          }`}>
+                            {u.role}
+                          </span>
+                        </td>
+                        <td className="py-3 pr-4 text-right">
+                          <button onClick={() => openTagModal(u)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors">
+                            <MoreVertical className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
 
-                      {filteredUsers.length === 0 && (
-                        <tr>
-                          <td colSpan={6} className="py-8 text-center text-slate-400 font-medium text-sm">
-                            No users found matching query
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
+                    {filteredUsers.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="py-8 text-center text-slate-400 font-medium text-sm">
+                          No users found matching query
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
-        )}
+        </div>
+      )}
 
-        {activeTab === 'game_fruit_party' && (
-          <div className="p-8 max-w-5xl mx-auto w-full h-full overflow-y-auto">
-            <h2 className="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-2">
-              <span>🍓</span> Fruit Party Prediction
-            </h2>
+      {activeTab === 'game_fruit_party' && (
+        <div className="p-8 max-w-5xl mx-auto w-full h-full overflow-y-auto">
+          <h2 className="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-2">
+            <span>🍓</span> Fruit Party Prediction
+          </h2>
 
-            <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 space-y-6">
-              <div className="flex items-center gap-2 border-b border-slate-100 pb-4">
-                <Gamepad2 className="w-6 h-6 text-indigo-600" />
-                <h3 className="text-xl font-bold text-slate-800">
-                  Live Real-Time Winner Prediction
-                  <span className="text-[10px] bg-red-100 text-red-600 font-bold px-2.5 py-0.5 rounded-full ml-2 align-middle">Owner Advance View</span>
-                </h3>
+          <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 space-y-6">
+            <div className="flex items-center gap-2 border-b border-slate-100 pb-4">
+              <Gamepad2 className="w-6 h-6 text-indigo-600" />
+              <h3 className="text-xl font-bold text-slate-800">
+                Live Real-Time Winner Prediction
+                <span className="text-[10px] bg-red-100 text-red-600 font-bold px-2.5 py-0.5 rounded-full ml-2 align-middle">Owner Advance View</span>
+              </h3>
+            </div>
+
+            <div className="flex flex-col md:flex-row items-center justify-between gap-8 bg-[#f8f9fa] border border-slate-200 p-8 rounded-2xl">
+              <div className="flex flex-col items-center md:items-start gap-3">
+                <span className="text-xs text-slate-500 font-bold uppercase tracking-wider">Current Round ID</span>
+                <span className="text-4xl font-black text-slate-800">#{livePrediction.round}</span>
+                <div className="flex items-center gap-2 mt-1 bg-indigo-50 border border-indigo-200 px-4 py-2 rounded-xl">
+                  <Timer className="w-5 h-5 text-indigo-600" />
+                  <span className="text-sm font-bold text-indigo-700 uppercase tracking-wide">
+                    {livePrediction.phase} - {livePrediction.countdown}s
+                  </span>
+                </div>
               </div>
 
-              <div className="flex flex-col md:flex-row items-center justify-between gap-8 bg-[#f8f9fa] border border-slate-200 p-8 rounded-2xl">
-                <div className="flex flex-col items-center md:items-start gap-3">
-                  <span className="text-xs text-slate-500 font-bold uppercase tracking-wider">Current Round ID</span>
-                  <span className="text-4xl font-black text-slate-800">#{livePrediction.round}</span>
-                  <div className="flex items-center gap-2 mt-1 bg-indigo-50 border border-indigo-200 px-4 py-2 rounded-xl">
-                    <Timer className="w-5 h-5 text-indigo-600" />
-                    <span className="text-sm font-bold text-indigo-700 uppercase tracking-wide">
-                      {livePrediction.phase} - {livePrediction.countdown}s
+              <div className="flex flex-col items-center gap-3">
+                <div className="flex items-center gap-1.5 bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full font-extrabold text-xs tracking-wider animate-pulse border border-emerald-200">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>PREDICTED WINNER</span>
+                </div>
+
+                <div className="w-40 h-40 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 p-1 rounded-3xl shadow-2xl relative overflow-hidden flex flex-col items-center justify-center">
+                  <div className="w-full h-full bg-white rounded-[22px] flex flex-col items-center justify-center p-3">
+                    {livePrediction.winnerImg ? (
+                      <img src={livePrediction.winnerImg} alt={livePrediction.wName} className="w-16 h-16 object-contain drop-shadow-md mb-1" />
+                    ) : (
+                      <span className="text-5xl drop-shadow-md mb-1">{livePrediction.wEmoji}</span>
+                    )}
+                    <span className="font-black text-slate-800 text-base">{livePrediction.wName}</span>
+                    <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md mt-1">
+                      {livePrediction.wMult}
                     </span>
                   </div>
                 </div>
-
-                <div className="flex flex-col items-center gap-3">
-                  <div className="flex items-center gap-1.5 bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full font-extrabold text-xs tracking-wider animate-pulse border border-emerald-200">
-                    <Sparkles className="w-3.5 h-3.5" />
-                    <span>PREDICTED WINNER</span>
-                  </div>
-
-                  <div className="w-40 h-40 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 p-1 rounded-3xl shadow-2xl relative overflow-hidden flex flex-col items-center justify-center">
-                    <div className="w-full h-full bg-white rounded-[22px] flex flex-col items-center justify-center p-3">
-                      {livePrediction.winnerImg ? (
-                        <img src={livePrediction.winnerImg} alt={livePrediction.wName} className="w-16 h-16 object-contain drop-shadow-md mb-1" />
-                      ) : (
-                        <span className="text-5xl drop-shadow-md mb-1">{livePrediction.wEmoji}</span>
-                      )}
-                      <span className="font-black text-slate-800 text-base">{livePrediction.wName}</span>
-                      <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md mt-1">
-                        {livePrediction.wMult}
-                      </span>
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
-        )}
+        </div>
+      )}
 
-        {activeTab === 'game_wild_party' && (
-          <div className="p-8 max-w-5xl mx-auto w-full h-full overflow-y-auto">
-            <h2 className="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-2">
-              <span>🦁</span> Wild Party Prediction
-            </h2>
+      {activeTab === 'game_wild_party' && (
+        <div className="p-8 max-w-5xl mx-auto w-full h-full overflow-y-auto">
+          <h2 className="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-2">
+            <span>🦁</span> Wild Party Prediction
+          </h2>
 
-            <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 space-y-6">
-              <div className="flex items-center gap-2 border-b border-slate-100 pb-4">
-                <Gamepad2 className="w-6 h-6 text-orange-600" />
-                <h3 className="text-xl font-bold text-slate-800">
-                  Live Real-Time Winner Prediction
-                  <span className="text-[10px] bg-red-100 text-red-600 font-bold px-2.5 py-0.5 rounded-full ml-2 align-middle">Owner Advance View</span>
-                </h3>
+          <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 space-y-6">
+            <div className="flex items-center gap-2 border-b border-slate-100 pb-4">
+              <Gamepad2 className="w-6 h-6 text-orange-600" />
+              <h3 className="text-xl font-bold text-slate-800">
+                Live Real-Time Winner Prediction
+                <span className="text-[10px] bg-red-100 text-red-600 font-bold px-2.5 py-0.5 rounded-full ml-2 align-middle">Owner Advance View</span>
+              </h3>
+            </div>
+
+            <div className="flex flex-col md:flex-row items-center justify-between gap-8 bg-[#f8f9fa] border border-slate-200 p-8 rounded-2xl">
+              <div className="flex flex-col items-center md:items-start gap-3">
+                <span className="text-xs text-slate-500 font-bold uppercase tracking-wider">Current Round ID</span>
+                <span className="text-4xl font-black text-slate-800">#{wildPrediction.round}</span>
+                <div className="flex items-center gap-2 mt-1 bg-orange-50 border border-orange-200 px-4 py-2 rounded-xl">
+                  <Timer className="w-5 h-5 text-orange-600" />
+                  <span className="text-sm font-bold text-orange-700 uppercase tracking-wide">
+                    {wildPrediction.phase} - {wildPrediction.countdown}s
+                  </span>
+                </div>
               </div>
 
-              <div className="flex flex-col md:flex-row items-center justify-between gap-8 bg-[#f8f9fa] border border-slate-200 p-8 rounded-2xl">
-                <div className="flex flex-col items-center md:items-start gap-3">
-                  <span className="text-xs text-slate-500 font-bold uppercase tracking-wider">Current Round ID</span>
-                  <span className="text-4xl font-black text-slate-800">#{wildPrediction.round}</span>
-                  <div className="flex items-center gap-2 mt-1 bg-orange-50 border border-orange-200 px-4 py-2 rounded-xl">
-                    <Timer className="w-5 h-5 text-orange-600" />
-                    <span className="text-sm font-bold text-orange-700 uppercase tracking-wide">
-                      {wildPrediction.phase} - {wildPrediction.countdown}s
+              <div className="flex flex-col items-center gap-3">
+                <div className="flex items-center gap-1.5 bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full font-extrabold text-xs tracking-wider animate-pulse border border-emerald-200">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>PREDICTED WINNER</span>
+                </div>
+
+                <div className="w-40 h-40 bg-gradient-to-br from-amber-500 via-orange-500 to-red-500 p-1 rounded-3xl shadow-2xl relative overflow-hidden flex flex-col items-center justify-center">
+                  <div className="w-full h-full bg-white rounded-[22px] flex flex-col items-center justify-center p-3">
+                    {wildPrediction.winnerImg ? (
+                      <img src={wildPrediction.winnerImg} alt={wildPrediction.wName} className="w-16 h-16 object-contain drop-shadow-md mb-1" />
+                    ) : (
+                      <span className="text-5xl drop-shadow-md mb-1">{wildPrediction.wEmoji}</span>
+                    )}
+                    <span className="font-black text-slate-800 text-base">{wildPrediction.wName}</span>
+                    <span className="text-xs font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-md mt-1">
+                      {wildPrediction.wMult}
                     </span>
                   </div>
                 </div>
-
-                <div className="flex flex-col items-center gap-3">
-                  <div className="flex items-center gap-1.5 bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full font-extrabold text-xs tracking-wider animate-pulse border border-emerald-200">
-                    <Sparkles className="w-3.5 h-3.5" />
-                    <span>PREDICTED WINNER</span>
-                  </div>
-
-                  <div className="w-40 h-40 bg-gradient-to-br from-amber-500 via-orange-500 to-red-500 p-1 rounded-3xl shadow-2xl relative overflow-hidden flex flex-col items-center justify-center">
-                    <div className="w-full h-full bg-white rounded-[22px] flex flex-col items-center justify-center p-3">
-                      {wildPrediction.winnerImg ? (
-                        <img src={wildPrediction.winnerImg} alt={wildPrediction.wName} className="w-16 h-16 object-contain drop-shadow-md mb-1" />
-                      ) : (
-                        <span className="text-5xl drop-shadow-md mb-1">{wildPrediction.wEmoji}</span>
-                      )}
-                      <span className="font-black text-slate-800 text-base">{wildPrediction.wName}</span>
-                      <span className="text-xs font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-md mt-1">
-                        {wildPrediction.wMult}
-                      </span>
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
-        )}
-
-        {activeTab === 'themes' && (
+        </div>
+      )}
+              {activeTab === 'themes' && (
           <div className="p-8 max-w-6xl mx-auto w-full h-full overflow-y-auto">
             <div className="flex items-center justify-between mb-6 border-b border-slate-200 pb-4">
               <h2 className="text-2xl font-bold text-slate-800">All Store Themes</h2>
@@ -2260,4 +2254,4 @@ export default function StaffPanel() {
       )}
     </div>
   );
-        }
+                }
