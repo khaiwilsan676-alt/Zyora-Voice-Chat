@@ -698,6 +698,47 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
     }
   }
 
+  // Complete Supabase OAuth after Google redirects back to Zyora.
+  useEffect(() => {
+    let active = true;
+    const finishOAuth = async () => {
+      if (typeof window === "undefined") return;
+      const hasCode = new URLSearchParams(window.location.search).has("code");
+      const hasToken = window.location.hash.includes("access_token=");
+      if (!hasCode && !hasToken) return;
+      setLoading(true);
+      setAuthError(null);
+      try {
+        const supabase = await getSupabaseAuthClient();
+        let sessionResult = await supabase.auth.getSession();
+        if (sessionResult.error) throw sessionResult.error;
+        let session = sessionResult.data?.session;
+        if (!session && hasCode) {
+          const exchanged = await supabase.auth.exchangeCodeForSession(window.location.href);
+          if (exchanged.error) throw exchanged.error;
+          session = exchanged.data?.session;
+        }
+        if (!session?.user) throw new Error("Google returned without a session. Check the Supabase Google provider and redirect URL settings.");
+        if (!active) return;
+        const u = session.user;
+        await processLoginSuccess({
+          id: u.id, uid: u.id, email: u.email || "",
+          name: u.user_metadata?.full_name || u.user_metadata?.name || (u.email || "").split("@")[0] || "User",
+          image: u.user_metadata?.avatar_url || u.user_metadata?.picture || "",
+          photo: u.user_metadata?.avatar_url || u.user_metadata?.picture || ""
+        });
+        window.history.replaceState({}, document.title, window.location.pathname);
+      } catch (e: any) {
+        console.error("Google OAuth callback failed:", e);
+        if (active) setAuthError(e?.message || "Google authentication failed. Check Supabase provider settings.");
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+    void finishOAuth();
+    return () => { active = false; };
+  }, []);
+
   // Google login uses Supabase Auth; Firebase remains for email/password only.
   const handleGoogleLogin = async () => {
     setAuthError(null);
