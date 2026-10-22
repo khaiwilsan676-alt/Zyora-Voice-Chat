@@ -190,6 +190,9 @@ fun RoomPage(
     var roomMicMode by remember(roomId) { mutableIntStateOf(appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).getInt("micMode_$roomId", 10)) }
     var roomTheme by remember(roomId) { mutableStateOf(appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).getString("theme_$roomId", "forest-night") ?: "forest-night") }
     
+    // Use the same stable UID as Mine > Wallet for all Lucky Bag coin operations.
+    val canonicalWalletUserId = currentUser.uid.ifBlank { currentUser.id.ifBlank { accountId } }
+
     // Lucky Bag States
     var showFloatingLuckyBag by remember { mutableStateOf(false) }
     var showLuckyBagCenterReveal by remember { mutableStateOf(false) }
@@ -215,7 +218,7 @@ fun RoomPage(
                     if (connection.responseCode in 200..299) {
                         val root = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
                         val bag = root.optJSONObject("bag")
-                        if (bag != null && bag.optString("senderId") != accountId) {
+                        if (bag != null && bag.optString("senderId") != canonicalWalletUserId) {
                             withContext(Dispatchers.Main) {
                                 luckyBagId = bag.optString("bagId")
                                 luckyBagSenderName = bag.optString("senderName", "User")
@@ -1012,7 +1015,7 @@ fun RoomPage(
                 showStore = true
                 showMenu = false
             },
-            luckyBagSenderId = accountId,
+            luckyBagSenderId = canonicalWalletUserId,
             luckyBagSenderName = currentUser.name.ifBlank { "User" },
             luckyBagSenderImage = currentUser.image,
             luckyBagRoomId = roomId,
