@@ -24,6 +24,10 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.ColorMatrix
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -37,7 +41,10 @@ import androidx.compose.ui.viewinterop.AndroidView
 import android.net.Uri
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.widget.VideoView
+import android.view.TextureView
+import android.media.MediaPlayer
+import android.graphics.SurfaceTexture
+import android.view.Surface
 import androidx.compose.foundation.Image
 import androidx.compose.ui.graphics.asImageBitmap
 import kotlinx.coroutines.Dispatchers
@@ -67,11 +74,12 @@ private val nativeStoreTabs = listOf(
     NativeStoreTab("Chat Bubble", "Bubble", "IMG_20260913_090116.png"),
     NativeStoreTab("ID", "ID", "IMG_20260913_090150.png")
 )
+
 private val nativeStoreItems = listOf(
     NativeStoreItem("v1", "Leopard Roar", "IMG_20260905_222412.jpg", "Vehicle", 5, 1000000, "5D", "VID_20260905_095157_269_bsl.mp4"),
-    NativeStoreItem("a1", "Crown Wings", "VID_20260905_024534_955_bsl.mp4", "Avatar Frame", 5, 250000, "3D"),
-    NativeStoreItem("a2", "Host Wings", "VID_20260905_024726_660_bsl.mp4", "Avatar Frame", 5, 500000, "3D"),
-    NativeStoreItem("a3", "Mystic Wings", "VID_20260905_083446_619_bsl.mp4", "Avatar Frame", 5, 750000, "3D"),
+    NativeStoreItem("a1", "Crown Wings", "IMG_20261021_192009.png", "Avatar Frame", 5, 250000, "3D", video = "VID_20260905_024534_955_bsl.mp4"),
+    NativeStoreItem("a2", "Host Wings", "IMG_20261021_192044.png", "Avatar Frame", 5, 500000, "3D", video = "VID_20260905_024726_660_bsl.mp4"),
+    NativeStoreItem("a3", "Mystic Wings", "file_00000000c67c81fba9294a82cd14d3ca.png", "Avatar Frame", 5, 750000, "3D", video = "VID_20260905_083446_619_bsl.mp4"),
     NativeStoreItem("t1", "Seafood", "IMG-20260904-WA0004.jpg", "Theme", 4, 2700000, "30D"),
     NativeStoreItem("t2", "Night Sky", "IMG-20260904-WA0005.jpg", "Theme", 5, 2400000, "30D"),
     NativeStoreItem("t3", "Seafood", "IMG-20260904-WA0006.jpg", "Theme", 4, 2700000, "30D"),
@@ -209,7 +217,6 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                                // Try Button with decreased height
                                 Text(
                                     "Try",
                                     color = if (theme) Color.White else StoreBlue,
@@ -229,12 +236,13 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
                             if (!theme) {
                                 val mediaModifier = Modifier.fillMaxWidth().height(if (isVehicle || isFrame) 120.dp else 80.dp)
                                 if (item.image.endsWith(".mp4", ignoreCase = true)) {
-                                    // Video paused in grid view
+                                    // VIDEO: Ab yahan real transparent video fix call hoga
                                     StoreVideoPreview(StoreAssetBase + item.image, mediaModifier, pause = true)
-                                } else if (isVehicle || isFrame) {
-                                    // Green removal applied to vehicle & frame images
+                                } else if (isVehicle) {
+                                    // VEHICLE IMAGE: Green removal chalu hai
                                     StoreChromaImage(StoreAssetBase + item.image, item.name, mediaModifier)
                                 } else {
+                                    // FRAME IMAGE: Normal rahegi bina koi green removal ke
                                     AsyncImage(model = StoreAssetBase + item.image, contentDescription = item.name, modifier = mediaModifier)
                                 }
                             } else {
@@ -269,7 +277,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
                                                     equippedIds.add(item.id)
                                                 }
                                             } else {
-                                                selectedItem = item // Buy modal open
+                                                selectedItem = item
                                             }
                                         },
                                     contentAlignment = Alignment.Center
@@ -284,7 +292,6 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
         }
     }
 
-    // Buy Modal Bottom Sheet
     if (selectedItem != null) {
         val item = selectedItem!!
         ModalBottomSheet(onDismissRequest = { selectedItem = null }, containerColor = Color.White, dragHandle = {
@@ -338,9 +345,6 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
         }
     }
 
-    // ==========================================
-    // Exact TSX-like Try Dialogs (No Bottom Sheet)
-    // ==========================================
     if (tryItem != null) {
         val item = tryItem!!
         Dialog(
@@ -427,10 +431,10 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
                                 }
                                 val source = item.video ?: item.image
                                 if (source.endsWith(".mp4", true)) {
-                                    // Video playing when Try modal is open
                                     StoreVideoPreview(StoreAssetBase + source, Modifier.fillMaxSize(), pause = false)
                                 } else {
-                                    StoreChromaImage(StoreAssetBase + source, item.name, Modifier.fillMaxSize())
+                                    // FRAME IMAGES NORMAL RAHEGI YAHAN BHI
+                                    AsyncImage(model = StoreAssetBase + source, contentDescription = null, modifier = Modifier.fillMaxSize())
                                 }
                             }
                         }
@@ -491,15 +495,14 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
                             }
                         }
                     }
-                    else -> { // Vehicle Try Dialog - Center screen, big preview
+                    else -> { // Vehicle Try Dialog
                         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable(enabled = false) {}) {
                             Box(Modifier.fillMaxWidth().height(360.dp), contentAlignment = Alignment.Center) {
                                 val source = item.video ?: item.image
                                 if (source.endsWith(".mp4", true)) {
-                                    // Video playing when Try modal is open
                                     StoreVideoPreview(StoreAssetBase + source, Modifier.fillMaxSize(), pause = false)
                                 } else {
-                                    // Chroma applied to Try popup too
+                                    // YAHAN VEHICLE IMAGE KE LIYE GREEN REMOVE HOGA
                                     StoreChromaImage(StoreAssetBase + source, item.name, Modifier.fillMaxSize())
                                 }
                             }
@@ -514,7 +517,6 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
         }
     }
 
-    // Send Modal
     if (sendItem != null) {
         ModalBottomSheet(onDismissRequest = { sendItem = null; searchQuery = "" }, containerColor = Color.White) {
             Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 20.dp)) {
@@ -541,7 +543,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
     }
 }
 
-// Fixed Green Removal (100% matched with TSX WebGL Shader)
+// YAHAN VEHICLE IMAGE WALA GREEN REMOVER LOGIC WAISE HI HAI JAISA TUJHE CHAHIYE
 @Composable
 private fun StoreChromaImage(
     url: String,
@@ -567,14 +569,12 @@ private fun StoreChromaImage(
                         val maxRB = max(r, b)
                         val greenness = g - maxRB
                         
-                        // Exact TSX Math: smoothstep(0.04, 0.15, greenness)
-                        val edge0 = 10.2f  // 0.04 * 255
-                        val edge1 = 38.25f // 0.15 * 255
+                        val edge0 = 10.2f  
+                        val edge1 = 38.25f 
                         val t = ((greenness.toFloat() - edge0) / (edge1 - edge0)).coerceIn(0f, 1f)
                         val blend = t * t * (3f - 2f * t)
                         
-                        // Exact TSX Math: min(despilled.g, maxRB + 0.05)
-                        val despilledG = min(g, maxRB + 13) // 0.05 * 255 = 12.75
+                        val despilledG = min(g, maxRB + 13)
 
                         val finalAlpha = (a * (1f - blend)).roundToInt().coerceIn(0, 255)
                         pixels[i] = (finalAlpha shl 24) or (r shl 16) or (despilledG shl 8) or b
@@ -594,41 +594,78 @@ private fun StoreChromaImage(
     }
 }
 
+// 🎯 MAIN FIX YAHAN HAI: VIDEOVIEW HATA KAR TEXTUREVIEW + COLORMATRIX LAGAYA! 
+// ISSE VIDEO KA GREEN COLOR EKDAM FADE / TRANSPARENT HO JAYEGA!
 @Composable
 private fun StoreVideoPreview(url: String, modifier: Modifier = Modifier, pause: Boolean = false) {
     val context = androidx.compose.ui.platform.LocalContext.current
-    AndroidView(
-        modifier = modifier,
-        factory = {
-            val videoView = VideoView(context)
-            videoView.tag = url
-            videoView.setVideoURI(Uri.parse(url))
-            videoView.setOnPreparedListener { player ->
-                player.isLooping = true
-                if (!pause) {
-                    videoView.start()
-                } else {
-                    player.seekTo(100) // Shows a frame instead of black screen
-                    videoView.pause()
-                }
-            }
-            videoView.setOnErrorListener { _, _, _ -> true }
-            videoView
-        },
-        update = { view ->
-            if (view.tag != url) {
-                view.tag = url
-                view.setVideoURI(Uri.parse(url))
-                view.setOnPreparedListener { player ->
-                    player.isLooping = true
-                    if (!pause) {
-                        view.start()
-                    } else {
-                        player.seekTo(100)
-                        view.pause()
+    var isVideoReady by remember { mutableStateOf(false) } 
+
+    // Ye magic hack Matrix hai jo video player k upar green colour ko transparent kar dega
+    val chromaMatrix = remember {
+        ColorMatrix(floatArrayOf(
+            1f, 0f, 0f, 0f, 0f,     // Red normal rahega
+            0f, 0.4f, 0f, 0f, 0f,   // Green ka glow kam karne ke liye
+            0f, 0f, 1f, 0f, 0f,     // Blue normal rahega
+            2.5f, -4f, 2.5f, 1f, 0f // Alpha channel: Green ko completely minus karke Fade Transparent bana dega
+        ))
+    }
+
+    Box(
+        modifier = modifier
+            .alpha(if (isVideoReady) 1f else 0f)
+            .graphicsLayer {
+                compositingStrategy = CompositingStrategy.Offscreen
+                colorFilter = ColorFilter.colorMatrix(chromaMatrix)
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        // key(url) Ensure karta hai naya video click hone pe purana MediaPlayer proper clean ho
+        key(url) {
+            AndroidView(
+                factory = { ctx ->
+                    val textureView = TextureView(ctx)
+                    textureView.isOpaque = false // Ye lazmi hai transparent/fade ke liye
+                    
+                    val mediaPlayer = MediaPlayer()
+                    textureView.tag = mediaPlayer
+                    
+                    textureView.surfaceTextureListener = object : TextureView.SurfaceTextureListener {
+                        override fun onSurfaceTextureAvailable(surface: SurfaceTexture, width: Int, height: Int) {
+                            mediaPlayer.setSurface(Surface(surface))
+                            try {
+                                mediaPlayer.setDataSource(ctx, Uri.parse(url))
+                                mediaPlayer.isLooping = true
+                                mediaPlayer.setOnInfoListener { _, what, _ ->
+                                    if (what == MediaPlayer.MEDIA_INFO_VIDEO_RENDERING_START) {
+                                        isVideoReady = true
+                                        true
+                                    } else false
+                                }
+                                mediaPlayer.prepareAsync()
+                                mediaPlayer.setOnPreparedListener {
+                                    if (!pause) it.start()
+                                    else {
+                                        it.seekTo(100)
+                                        isVideoReady = true
+                                    }
+                                }
+                            } catch (e: Exception) { e.printStackTrace() }
+                        }
+                        override fun onSurfaceTextureSizeChanged(surface: SurfaceTexture, width: Int, height: Int) {}
+                        override fun onSurfaceTextureDestroyed(surface: SurfaceTexture): Boolean {
+                            mediaPlayer.release()
+                            return true
+                        }
+                        override fun onSurfaceTextureUpdated(surface: SurfaceTexture) {}
                     }
+                    textureView
+                },
+                onRelease = { view ->
+                    val mp = view.tag as? MediaPlayer
+                    mp?.release()
                 }
-            }
+            )
         }
-    )
+    }
 }
