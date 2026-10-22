@@ -43,6 +43,7 @@ data class RoomUser(
     val age: Int = 24,
     val country: String = "India",
     val flag: String = "🇮🇳",
+    val bio: String = "",
     val followers: Int = 0,
     val isFollowing: Boolean = false,
     val isOnline: Boolean = true,
