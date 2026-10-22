@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -39,6 +40,7 @@ fun RoomInfo(
     roomOwner:RoomInfoOwner,
     roomData:RoomInfoData,
     roomFollowers:List<RoomInfoFollower>,
+    roomAdmins:List<RoomInfoFollower> = emptyList(),
     onOpenProfile:(RoomInfoFollower)->Unit,
     onCopyId:(String)->Unit,
     copied:Boolean=false
@@ -115,27 +117,32 @@ fun RoomInfo(
                     }
                 }
             } else {
-                if (roomFollowers.isEmpty()) {
-                    Column(Modifier.fillMaxWidth().weight(1f).padding(16.dp),
-                        horizontalAlignment=Alignment.CenterHorizontally,
-                        verticalArrangement=Arrangement.Center) {
-                        MemberRow(roomOwner.name,roomOwner.image,roomOwner.accountId,true) {
-                            onOpenProfile(RoomInfoFollower(roomOwner.accountId,roomOwner.name,roomOwner.image))
+                LazyColumn(
+                    Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(7.dp)
+                ) {
+                    item {
+                        // Owner is a simple member row, not a full-width card.
+                        MemberRow(roomOwner.name, roomOwner.image, roomOwner.accountId, "Owner", Color(0xFF278CF5)) {
+                            onOpenProfile(RoomInfoFollower(roomOwner.accountId, roomOwner.name, roomOwner.image))
                         }
-                        Spacer(Modifier.height(8.dp))
-                        Text("No followers yet",modifier=Modifier.fillMaxWidth().padding(20.dp),
-                            textAlign=TextAlign.Center,fontSize=14.sp,color=Color(0xFF9CA3AF))
                     }
-                } else {
-                    LazyColumn(Modifier.fillMaxSize().padding(horizontal=16.dp,vertical=12.dp),
-                        verticalArrangement=Arrangement.spacedBy(8.dp)) {
-                        item {
-                            MemberRow(roomOwner.name,roomOwner.image,roomOwner.accountId,true) {
-                                onOpenProfile(RoomInfoFollower(roomOwner.accountId,roomOwner.name,roomOwner.image))
-                            }
+                    items(roomAdmins.filter { admin ->
+                        admin.accountId.isNotBlank() &&
+                            admin.accountId != roomOwner.accountId &&
+                            roomFollowers.none { it.accountId == admin.accountId }
+                    }, key = { "admin-${it.accountId}" }) { admin ->
+                        MemberRow(admin.name, admin.image, admin.accountId, "House", Color(0xFF22A447)) {
+                            onOpenProfile(admin)
                         }
-                        items(roomFollowers,key={it.accountId}) { f ->
-                            MemberRow(f.name,f.image,f.accountId,false) { onOpenProfile(f) }
+                    }
+                    items(roomFollowers.filter { it.accountId != roomOwner.accountId && roomAdmins.none { a -> a.accountId == it.accountId } }, key = { "member-${it.accountId}" }) { f ->
+                        MemberRow(f.name, f.image, f.accountId, "", Color.Transparent) { onOpenProfile(f) }
+                    }
+                    if (roomFollowers.isEmpty() && roomAdmins.isEmpty()) {
+                        item {
+                            Text("No members yet", modifier = Modifier.fillMaxWidth().padding(20.dp),
+                                textAlign = TextAlign.Center, fontSize = 13.sp, color = Color(0xFF9CA3AF))
                         }
                     }
                 }
@@ -145,20 +152,38 @@ fun RoomInfo(
 }
 
 @Composable
-private fun MemberRow(name:String,image:String,id:String,owner:Boolean,onClick:()->Unit) {
+private fun MemberRow(
+    name: String,
+    image: String,
+    id: String,
+    role: String,
+    roleColor: Color,
+    onClick: () -> Unit
+) {
     Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
-            .background(Color.White.copy(alpha=.06f)).clickable(onClick=onClick).padding(horizontal=12.dp,vertical=10.dp),
-        verticalAlignment=Alignment.CenterVertically
+        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 2.dp, vertical = 5.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
         AsyncImage(
-            model=if(image.isBlank()) "/default-avatar.png" else image,
-            contentDescription=name,
-            modifier=Modifier.size(36.dp).clip(CircleShape),
-            contentScale=ContentScale.Crop
+            model = if (image.isBlank()) "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/default-avatar.png" else image,
+            contentDescription = name,
+            modifier = Modifier.size(38.dp).clip(CircleShape),
+            contentScale = ContentScale.Crop
         )
-        Text(name,Modifier.weight(1f).padding(start=12.dp),fontSize=12.sp,
-            fontWeight=FontWeight.Medium,color=Color.White,maxLines=1)
-        if(owner) Text("⌂",fontSize=18.sp,color=Color.White)
+        Text(name.ifBlank { "User" }, Modifier.weight(1f).padding(start = 11.dp),
+            fontSize = 13.sp, fontWeight = FontWeight.Medium, color = Color.White, maxLines = 1)
+        if (role.isNotBlank()) {
+            Row(
+                Modifier.clip(RoundedCornerShape(5.dp)).background(roleColor).padding(horizontal = 7.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(3.dp)
+            ) {
+                if (role == "House") androidx.compose.material3.Icon(
+                    androidx.compose.material.icons.Icons.Default.Home,
+                    contentDescription = null, tint = Color.White, modifier = Modifier.size(12.dp)
+                )
+                Text(role, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
+            }
+        }
     }
 }
