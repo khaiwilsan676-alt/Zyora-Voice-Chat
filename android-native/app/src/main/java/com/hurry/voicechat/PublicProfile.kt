@@ -274,7 +274,7 @@ fun PublicProfileScreen(
                     Box(
                         modifier = Modifier
                             .padding(top = 24.dp)
-                            .border(bottom = BorderStroke(1.dp, Color(0xFFE5E7EB)), shape = RectangleShape)
+                            .border(BorderStroke(1.dp, Color(0xFFE5E7EB)), shape = RectangleShape)
                             .padding(bottom = 8.dp)
                     ) {
                         Text("Profile", color = Color(0xFF3B82F6), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
