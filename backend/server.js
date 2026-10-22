@@ -1034,7 +1034,7 @@ async function ensureWalletUser(userId) {
   }
   if (user && !Number.isFinite(Number(user.coins))) {
     const legacy = await db.collection("luckyBagWallets").findOne({ userId: String(userId) });
-    const initialCoins = Number(user.balance ?? legacy?.balance ?? 0);
+    const initialCoins = Math.max(Number(user.balance || 0), Number(legacy?.balance || 0));
     await users.updateOne({ _id: user._id }, { $set: { coins: Math.max(0, initialCoins) } });
     user.coins = Math.max(0, initialCoins);
   } else if (user && user.coins == null) {
