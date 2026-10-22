@@ -441,7 +441,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                                 "Store" -> StorePage(onBack = { openedMePage = null })
                                 "Bag" -> StorePage(onBack = { openedMePage = null }, initialView = "bag")
                                 "Seller Center" -> SellerCenter(onBack = { openedMePage = null })
-                                "SVIP" -> Svip(onBack = { openedMePage = null })
+                                "SVIP" -> SvipPage(onBack = { openedMePage = null })
                                 "Language Setting" -> LanguagePage(selectedLanguage = languageCode, onLanguageSelected = { code -> languageCode = code; languagePrefs.edit().putString("appLanguage", code).apply() }, onBack = { openedMePage = null })
                                 "Settings" -> SettingsPage(languageCode = languageCode, onBack = { openedMePage = null }, onLogout = {
                                     authPrefs.edit()
