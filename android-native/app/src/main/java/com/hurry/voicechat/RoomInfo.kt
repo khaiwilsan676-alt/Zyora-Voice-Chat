@@ -170,9 +170,20 @@ private fun MemberRow(
             modifier = Modifier.size(38.dp).clip(CircleShape),
             contentScale = ContentScale.Crop
         )
-        Text(name.ifBlank { "User" }, Modifier.weight(1f).padding(start = 11.dp),
+        if (role == "Owner") {
+            Box(
+                Modifier.padding(start = 11.dp, end = 5.dp).size(14.dp).clip(CircleShape).background(Color(0xFF3B82F6)),
+                contentAlignment = Alignment.Center
+            ) {
+                androidx.compose.material3.Icon(
+                    androidx.compose.material.icons.Icons.Default.Home,
+                    contentDescription = "Owner", tint = Color.White, modifier = Modifier.size(9.dp)
+                )
+            }
+        }
+        Text(name.ifBlank { "User" }, Modifier.weight(1f).padding(start = if (role == "Owner") 0.dp else 11.dp),
             fontSize = 13.sp, fontWeight = FontWeight.Medium, color = Color.White, maxLines = 1)
-        if (role.isNotBlank()) {
+        if (role.isNotBlank() && role != "Owner") {
             Row(
                 Modifier.clip(RoundedCornerShape(5.dp)).background(roleColor).padding(horizontal = 7.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
