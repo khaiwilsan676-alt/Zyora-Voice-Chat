@@ -26,7 +26,7 @@ import androidx.compose.ui.zIndex
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
-    import androidx.media3.ui.PlayerView
+import androidx.media3.ui.PlayerView
 import coil3.compose.AsyncImage
 
 @Composable
@@ -37,7 +37,7 @@ fun SvipPage(onBack: () -> Unit = {}) {
         initialValue = 0.7f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(2000, easing = EaseInOut),
+            animation = tween(2000, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
         ),
         label = "shine_alpha"
