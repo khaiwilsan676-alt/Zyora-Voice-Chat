@@ -281,7 +281,7 @@ const EntryToastStack = memo(function EntryToastStack({ toasts }: { toasts: Entr
           key={t.id}
           className="entry-toast mb-1 flex items-center gap-2 shadow-lg"
           style={{
-            background: 'rgba(0,0,0,0.88)',
+            background: 'linear-gradient(to right, rgba(37,99,235,0.95) 0%, rgba(37,99,235,0.95) 55%, rgba(37,99,235,0) 100%)',
             borderRadius: '999px 0 0 999px',
             padding: '4px 48px 4px 6px',
             minWidth: '230px',
