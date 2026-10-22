@@ -736,8 +736,6 @@ app.get("/api/users", async (req, res) => {
       }
 
       const regex = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
-      const orConditions = ['), 'i');
-
       const orConditions = [
         { accountId: q },
         { accountNumber: q },
