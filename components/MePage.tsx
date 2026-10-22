@@ -1183,6 +1183,13 @@ export default function MePage({ onLogout, onPublicProfileChange, onNavigate }: 
                   {item.badge}
                 </span>
               )}
+              {item.id === '3' && (
+                <img
+                  src="/IMG_20260911_230430.png"
+                  alt="Lv.1 - Lv.10"
+                  className="w-7 h-7 object-contain shrink-0"
+                />
+              )}
               <ChevronRight size={20} className="text-gray-400" />
             </div>
           ))}
