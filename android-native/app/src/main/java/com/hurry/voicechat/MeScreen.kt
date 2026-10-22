@@ -178,7 +178,7 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
 private fun nativeMeAccountNumber(uid: String): String {
     if (uid.isBlank()) return ""
     val special = when (uid) {
-        "HUSxSvQnabgU029dWYt1TUV04hd2" -> "100002"
+        "HUSxCrossnabgU029dWYt1TUV04hd2" -> "100002"
         "ADqW31RGBMaosOzy0HiqexKSD7h1" -> "100003"
         "100002" -> "100002"
         "100003" -> "100003"
@@ -260,6 +260,29 @@ private fun MeMenuIcon(type: MeIconType) {
                         modifier = Modifier.height(20.dp).padding(end = 8.dp),
                         contentScale = ContentScale.Fit
                     )
+                } else if (item.label == "Level") {
+                    // Ye Box teri image ko center-left align karega aur usko overlap karke "Lv.0" show karega
+                    Box(
+                        modifier = Modifier.padding(end = 8.dp),
+                        contentAlignment = Alignment.CenterStart
+                    ) {
+                        AsyncImage(
+                            model = RAW_ME + "IMG_20260917_220530.png",
+                            contentDescription = null,
+                            modifier = Modifier.height(20.dp), // Adjust height accordingly
+                            contentScale = ContentScale.Fit,
+                            colorFilter = androidx.compose.ui.graphics.ColorFilter.colorMatrix(
+                                androidx.compose.ui.graphics.ColorMatrix().apply { setToSaturation(0f) } // Ye line image ko colorless banati hai
+                            )
+                        )
+                        Text(
+                            text = "Lv.0",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                            modifier = Modifier.padding(start = 6.dp) // Thoda right khiskaya taaki center-left mein sahi dikhe
+                        )
+                    }
                 }
 
                 // Uske theek baad yahan pe `>` icon aayega
