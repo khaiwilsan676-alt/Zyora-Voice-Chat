@@ -42,7 +42,7 @@ const initWalletDB = (): Promise<IDBDatabase> => {
   return dbPromise;
 };
 
-const loadWalletBalance = async (): Promise<number> => {
+const loadWalletBalance = async (): Promise<number | null> => {
   try {
     const db = await initWalletDB();
     return new Promise((resolve) => {
@@ -53,10 +53,10 @@ const loadWalletBalance = async (): Promise<number> => {
           resolve(req.result.balance);
         } else resolve(DEFAULT_BALANCE);
       };
-      req.onerror = () => resolve(DEFAULT_BALANCE);
+      req.onerror = () => resolve(null);
     });
   } catch {
-    return DEFAULT_BALANCE;
+    return null;
   }
 };
 
@@ -481,7 +481,7 @@ export default function GiftPicker({
     let alive = true;
     const fetchBal = async () => {
       const b = await loadWalletBalance();
-      if (alive) setWalletBalance(b);
+      if (alive && b !== null) setWalletBalance(b);
     };
     fetchBal();
     const id = setInterval(fetchBal, 1000);
