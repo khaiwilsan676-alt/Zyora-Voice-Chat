@@ -24,7 +24,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
@@ -35,10 +34,10 @@ const val BASE_IMG_URL = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hu
 data class SignInReward(val day: Int, val reward: String, val image: String)
 
 private val SIGN_IN_REWARDS = listOf(
-    SignInReward(1, "+5000", BASE_IMG_URL + "file_00000000e56882119c217d508b6733dc.png"),
-    SignInReward(2, "+5000", BASE_IMG_URL + "file_00000000e56882119c217d508b6733dc.png"),
+    SignInReward(1, "+10,000", BASE_IMG_URL + "file_00000000e56882119c217d508b6733dc.png"),
+    SignInReward(2, "+10,000", BASE_IMG_URL + "file_00000000e56882119c217d508b6733dc.png"),
     SignInReward(3, "×2 Days", BASE_IMG_URL + "file_00000000d808821186c1b7b612eea3fc.png"),
-    SignInReward(4, "+10,000", BASE_IMG_URL + "file_00000000e56882119c217d508b6733dc.png")
+    SignInReward(4, "+15,000", BASE_IMG_URL + "file_00000000e56882119c217d508b6733dc.png")
 )
 
 @Composable
@@ -54,7 +53,6 @@ fun DailyCheckInModal(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            // Black drop background remove kar diya hai
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
@@ -75,28 +73,19 @@ fun DailyCheckInModal(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
                         onClick = {} // Prevents closing when clicking inside the modal
-                    )
+                    ),
+                contentAlignment = Alignment.TopCenter // Banner ko top par fix rakhne ke liye
             ) {
-                // Top Banner Image (Overlapping logic -mt-6 jaisa)
-                AsyncImage(
-                    model = BASE_IMG_URL + "file_000000004b6c8211855003bf899492fd.png",
-                    contentDescription = "Top Banner",
-                    contentScale = ContentScale.FillWidth,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .offset(y = 24.dp) // Adjusting to create the overlapping effect
-                        .zIndex(20f)
-                )
-
+                
                 // Main White Box
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 50.dp) // Push content down to accommodate the overlapping banner
+                        .padding(top = 36.dp) // Banner ko overlap karne ki jagah di hai
                         .clip(RoundedCornerShape(24.dp))
                         .background(Color.White)
                         .border(2.dp, Color(0xFF3B82F6), RoundedCornerShape(24.dp))
-                        .padding(start = 24.dp, end = 24.dp, top = 32.dp, bottom = 20.dp)
+                        .padding(start = 24.dp, end = 24.dp, top = 40.dp, bottom = 20.dp)
                 ) {
                     
                     // Row 1: Days 1 to 4
@@ -110,14 +99,18 @@ fun DailyCheckInModal(
                                 currentDay = currentDay,
                                 modifier = Modifier
                                     .weight(1f)
-                                    .aspectRatio(1f) // Square aspect ratio
+                                    .aspectRatio(1f)
                             ) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    AsyncImage(
-                                        model = item.image,
-                                        contentDescription = "reward",
-                                        modifier = Modifier.size(32.dp).padding(bottom = 4.dp)
-                                    )
+                                    // Fixed height box taaki text ek line mein aaye
+                                    Box(modifier = Modifier.height(32.dp), contentAlignment = Alignment.Center) {
+                                        AsyncImage(
+                                            model = item.image,
+                                            contentDescription = "reward",
+                                            modifier = Modifier.size(32.dp)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(4.dp))
                                     Text(
                                         text = item.reward,
                                         fontSize = 10.sp,
@@ -144,15 +137,20 @@ fun DailyCheckInModal(
                             modifier = Modifier.weight(1f).height(80.dp)
                         ) {
                             Row(
+                                modifier = Modifier.fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                horizontalArrangement = Arrangement.SpaceEvenly
                             ) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    AsyncImage(model = BASE_IMG_URL + "file_00000000e56882119c217d508b6733dc.png", contentDescription = null, modifier = Modifier.size(24.dp))
-                                    Text("+10,000", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFF374151))
+                                    Box(modifier = Modifier.height(32.dp), contentAlignment = Alignment.Center) {
+                                        AsyncImage(model = BASE_IMG_URL + "file_00000000e56882119c217d508b6733dc.png", contentDescription = null, modifier = Modifier.size(24.dp))
+                                    }
+                                    Text("+20,000", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFF374151))
                                 }
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    AsyncImage(model = BASE_IMG_URL + "IMG_20260903_141944.png", contentDescription = null, modifier = Modifier.size(32.dp))
+                                    Box(modifier = Modifier.height(32.dp), contentAlignment = Alignment.Center) {
+                                        AsyncImage(model = BASE_IMG_URL + "IMG_20260903_141944.png", contentDescription = null, modifier = Modifier.size(32.dp))
+                                    }
                                     Text("×1 Day", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFF374151))
                                 }
                             }
@@ -165,15 +163,20 @@ fun DailyCheckInModal(
                             modifier = Modifier.weight(1f).height(80.dp)
                         ) {
                             Row(
+                                modifier = Modifier.fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                horizontalArrangement = Arrangement.SpaceEvenly
                             ) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    AsyncImage(model = BASE_IMG_URL + "file_00000000e56882119c217d508b6733dc.png", contentDescription = null, modifier = Modifier.size(24.dp))
-                                    Text("+10,000", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFF374151))
+                                    Box(modifier = Modifier.height(32.dp), contentAlignment = Alignment.Center) {
+                                        AsyncImage(model = BASE_IMG_URL + "file_00000000e56882119c217d508b6733dc.png", contentDescription = null, modifier = Modifier.size(24.dp))
+                                    }
+                                    Text("+20,000", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFF374151))
                                 }
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    AsyncImage(model = BASE_IMG_URL + "IMG-20260903-WA0076.jpg", contentDescription = null, modifier = Modifier.size(24.dp))
+                                    Box(modifier = Modifier.height(32.dp), contentAlignment = Alignment.Center) {
+                                        AsyncImage(model = BASE_IMG_URL + "IMG-20260903-WA0076.jpg", contentDescription = null, modifier = Modifier.size(24.dp))
+                                    }
                                     Text("×2 Days", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFF374151))
                                 }
                             }
@@ -215,22 +218,32 @@ fun DailyCheckInModal(
                         )
                     }
                 }
+
+                // Top Banner Image (Ab perfect overlap karega card ke top edge par)
+                AsyncImage(
+                    model = BASE_IMG_URL + "file_000000004b6c8211855003bf899492fd.png",
+                    contentDescription = "Top Banner",
+                    contentScale = ContentScale.FillWidth,
+                    modifier = Modifier
+                        .fillMaxWidth(0.95f)
+                        .zIndex(20f)
+                )
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Close Button below modal
+            // Close Button below modal (Black/10 as requested)
             Box(
                 modifier = Modifier
                     .size(48.dp)
-                    .background(Color.White.copy(alpha = 0.20f), CircleShape)
+                    .background(Color.Black.copy(alpha = 0.10f), CircleShape)
                     .clickable(onClick = onClose),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.Close,
                     contentDescription = "Close",
-                    tint = Color.White,
+                    tint = Color.Black, // Icon black kiya taaki visible rahe
                     modifier = Modifier.size(24.dp)
                 )
             }
@@ -246,9 +259,9 @@ private fun DayCard(
     content: @Composable () -> Unit
 ) {
     val borderColor = when {
-        day < currentDay -> Color(0xFF4ADE80) // Green completed
-        day == currentDay -> Color(0xFF3B82F6) // Blue active
-        else -> Color(0xFFE5E7EB) // Gray pending
+        day < currentDay -> Color(0xFF4ADE80)
+        day == currentDay -> Color(0xFF3B82F6)
+        else -> Color(0xFFE5E7EB)
     }
 
     Box(
@@ -258,7 +271,7 @@ private fun DayCard(
             .background(Color.White),
         contentAlignment = Alignment.Center
     ) {
-        // Day Label (Top Left)
+        // Day Label
         Box(
             modifier = Modifier
                 .align(Alignment.TopStart)
@@ -281,7 +294,7 @@ private fun DayCard(
             content()
         }
 
-        // Completed Checkmark (Top Right)
+        // Completed Checkmark
         if (day < currentDay) {
             Box(
                 modifier = Modifier
@@ -315,10 +328,10 @@ private fun Day7Card(currentDay: Int) {
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
             .border(2.dp, borderColor, RoundedCornerShape(8.dp))
-            .background(Color.White), // Faltu ki gap remove karne ke liye yaha se padding hata di
+            .background(Color.White),
         contentAlignment = Alignment.Center
     ) {
-        // Gradient Label (Top Left) - Ab yeh ekdam exact top corner par attach rahega
+        // Gradient Label
         Box(
             modifier = Modifier
                 .align(Alignment.TopStart)
@@ -338,7 +351,6 @@ private fun Day7Card(currentDay: Int) {
             )
         }
 
-        // Checkmark (Top Right)
         if (7 < currentDay) {
             Box(
                 modifier = Modifier
@@ -357,24 +369,30 @@ private fun Day7Card(currentDay: Int) {
             }
         }
 
-        // Content - Sab kuch ek Row mein theek se set (SpaceEvenly taaki perfect alignment mile)
+        // Content
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 28.dp, bottom = 12.dp), // Content ko tag ke neeche push karne ke liye
+                .padding(top = 28.dp, bottom = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                AsyncImage(model = BASE_IMG_URL + "file_00000000e56882119c217d508b6733dc.png", contentDescription = null, modifier = Modifier.size(32.dp))
-                Text("+15,000", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFF374151))
+                Box(modifier = Modifier.height(40.dp), contentAlignment = Alignment.Center) {
+                    AsyncImage(model = BASE_IMG_URL + "file_00000000e56882119c217d508b6733dc.png", contentDescription = null, modifier = Modifier.size(32.dp))
+                }
+                Text("+30,000", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFF374151))
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                AsyncImage(model = BASE_IMG_URL + "file_0000000044388211996656afc9ce9c03.png", contentDescription = null, modifier = Modifier.size(40.dp))
+                Box(modifier = Modifier.height(40.dp), contentAlignment = Alignment.Center) {
+                    AsyncImage(model = BASE_IMG_URL + "file_0000000044388211996656afc9ce9c03.png", contentDescription = null, modifier = Modifier.size(40.dp))
+                }
                 Text("×3 days", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFF374151))
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                AsyncImage(model = BASE_IMG_URL + "IMG-20260903-WA0077.jpg", contentDescription = null, modifier = Modifier.size(40.dp))
+                Box(modifier = Modifier.height(40.dp), contentAlignment = Alignment.Center) {
+                    AsyncImage(model = BASE_IMG_URL + "IMG-20260903-WA0077.jpg", contentDescription = null, modifier = Modifier.size(40.dp))
+                }
                 Text("×3 days", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFF374151))
             }
         }
