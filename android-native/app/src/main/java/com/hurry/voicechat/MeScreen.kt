@@ -10,7 +10,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -44,8 +43,7 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
             currentContext.window.isStatusBarContrastEnforced = false
         }
     }
-    // Native login stores the authenticated Firebase profile in hurry_auth.
-    // Read the same preferences so the signed-in account ID appears on the Me page.
+    
     val prefs = remember { context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE) }
     val uid = prefs.getString("uid", "") ?: ""
     val email = prefs.getString("email", "") ?: ""
@@ -61,9 +59,9 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
 
     val topItems = listOf(
         MeMenu("Invite Friends", "IMG_20260915_225333.png"),
-        MeMenu("Family", "IMG_20260915_225349.png"),
-        MeMenu("Level", "IMG_20260915_225404.png"),
         MeMenu("Medal", "IMG_20260915_225426.png"),
+        MeMenu("Level", "IMG_20260915_225404.png"),
+        MeMenu("Family", "IMG_20260915_225349.png"),
         MeMenu("Store", "IMG_20260915_225447.png"),
         MeMenu("Bag", "IMG_20260915_225506.png"),
         MeMenu("Seller Center", "IMG_20260915_225536.png")
@@ -80,7 +78,7 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
                         listOf(Color(0xFF2563EB), Color(0xFFEFF6FF), Color(0xFFF1F1F1)),
                         startY = 0f, endY = 620f
                     )
-                ).padding(top = 36.dp, start = 16.dp, end = 16.dp, bottom = 16.dp)
+                ).padding(top = 56.dp, start = 16.dp, end = 16.dp, bottom = 16.dp)
             ) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
                     Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
@@ -177,7 +175,6 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
     }
 }
 
-
 private fun nativeMeAccountNumber(uid: String): String {
     if (uid.isBlank()) return ""
     val special = when (uid) {
@@ -249,7 +246,23 @@ private fun MeMenuIcon(type: MeIconType) {
             Row(Modifier.fillMaxWidth().clickable { onOpen(item.label) }.padding(horizontal = 16.dp, vertical = 13.dp), verticalAlignment = Alignment.CenterVertically) {
                 AsyncImage(RAW_ME + item.asset, null, Modifier.size(if (item.label == "Seller Center") 40.dp else 32.dp), contentScale = ContentScale.Crop)
                 Spacer(Modifier.width(16.dp))
+                
+                // Ye `weight(1f)` label ko baaki saari jagah dekar next items ko ekdam right push kar dega
                 Text(item.label, Modifier.weight(1f), fontSize = 15.sp, fontWeight = FontWeight.Normal, color = Color(0xFF171717))
+                
+                // Ye dono cheezein ekdam `>` icon se pehle render hongi
+                if (item.label == "Family") {
+                    Text("Join Now", fontSize = 12.sp, color = Color(0xFF6B7280), modifier = Modifier.padding(end = 8.dp))
+                } else if (item.label == "Invite Friends") {
+                    AsyncImage(
+                        model = RAW_ME + "IMG_20261022_212625.png",
+                        contentDescription = null,
+                        modifier = Modifier.height(20.dp).padding(end = 8.dp),
+                        contentScale = ContentScale.Fit
+                    )
+                }
+
+                // Uske theek baad yahan pe `>` icon aayega
                 Text("›", fontSize = 25.sp, color = Color(0xFFAAAAAA))
             }
         }
