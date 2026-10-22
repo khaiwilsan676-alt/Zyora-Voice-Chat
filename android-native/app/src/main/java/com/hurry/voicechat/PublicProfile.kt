@@ -21,6 +21,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.layout.ContentScale
@@ -519,4 +520,33 @@ fun EditRowItem(title: String, onClick: () -> Unit, content: @Composable () -> U
             content()
         }
     }
+}
+
+
+@Composable
+fun PublicProfile(
+    user: RoomProfileUser,
+    onBack: () -> Unit,
+    onMessage: () -> Unit = {},
+    currentUserId: String = ""
+) {
+    PublicProfileScreen(
+        onBack = onBack,
+        isOtherUser = true,
+        targetUser = TargetUser(
+            id = user.id,
+            uid = user.uid,
+            name = user.name,
+            displayAccountNumber = user.accountId,
+            accountId = user.accountId,
+            photo = user.image,
+            image = user.image,
+            gender = user.gender,
+            age = user.age,
+            followers = user.followers,
+            location = user.country,
+            country = user.country,
+            flag = user.flag
+        )
+    )
 }
