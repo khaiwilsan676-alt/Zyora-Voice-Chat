@@ -1,6 +1,5 @@
 package com.hurry.voicechat
 
-import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -24,6 +23,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
@@ -68,20 +69,20 @@ fun DailyCheckInModal(
             
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
+                    .fillMaxWidth(0.92f) // Yahan width thodi kam ki hai main card ki
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
                         onClick = {} // Prevents closing when clicking inside the modal
                     ),
-                contentAlignment = Alignment.TopCenter // Banner ko top par fix rakhne ke liye
+                contentAlignment = Alignment.TopCenter 
             ) {
                 
                 // Main White Box
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 36.dp) // Banner ko overlap karne ki jagah di hai
+                        .padding(top = 36.dp) 
                         .clip(RoundedCornerShape(24.dp))
                         .background(Color.White)
                         .border(2.dp, Color(0xFF3B82F6), RoundedCornerShape(24.dp))
@@ -116,7 +117,10 @@ fun DailyCheckInModal(
                                         fontSize = 10.sp,
                                         fontWeight = FontWeight.SemiBold,
                                         color = Color(0xFF374151),
-                                        maxLines = 1
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis, // Text ko truncate karega agar bada hua
+                                        textAlign = TextAlign.Center, // Center align rahega
+                                        modifier = Modifier.padding(horizontal = 2.dp) // Edges se thoda gap dega taaki bahar na jaye
                                     )
                                 }
                             }
@@ -219,20 +223,21 @@ fun DailyCheckInModal(
                     }
                 }
 
-                // Top Banner Image (Ab perfect overlap karega card ke top edge par)
+                // Top Banner Image (Upar shift kiya hai)
                 AsyncImage(
                     model = BASE_IMG_URL + "file_000000004b6c8211855003bf899492fd.png",
                     contentDescription = "Top Banner",
                     contentScale = ContentScale.FillWidth,
                     modifier = Modifier
                         .fillMaxWidth(0.95f)
+                        .offset(y = (-16).dp) // Banner ko thoda sa aur upar kar diya
                         .zIndex(20f)
                 )
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Close Button below modal (Black/10 as requested)
+            // Close Button below modal
             Box(
                 modifier = Modifier
                     .size(48.dp)
@@ -243,7 +248,7 @@ fun DailyCheckInModal(
                 Icon(
                     imageVector = Icons.Default.Close,
                     contentDescription = "Close",
-                    tint = Color.Black, // Icon black kiya taaki visible rahe
+                    tint = Color.Black, 
                     modifier = Modifier.size(24.dp)
                 )
             }
