@@ -56,6 +56,7 @@ fun SvipPage(onBack: () -> Unit = {}) {
     BoxWithConstraints(modifier = Modifier.fillMaxSize().background(Color.Black)) {
         val totalHeight = maxHeight
         val boxConstraints = constraints
+        val middleImageYOffset = (constraints.maxHeight * 0.4f).toInt()
 
         // ============ TOP SECTION (40% HEIGHT) ============
         Box(
@@ -193,7 +194,7 @@ fun SvipPage(onBack: () -> Unit = {}) {
                     val placeable = measurable.measure(constraints)
                     layout(placeable.width, placeable.height) {
                         // Place exactly at 40% height, translating Y by -50% of image height
-                        val yOffset = (boxConstraints.maxHeight * 0.4f).toInt() - (placeable.height / 2)
+                        val yOffset = middleImageYOffset - (placeable.height / 2)
                         placeable.placeRelative(0, yOffset)
                     }
                 },
