@@ -1103,6 +1103,33 @@ function scheduleLuckyBagRefund(bag) {
   if (typeof timer.unref === "function") timer.unref();
   luckyBagTimers.set(String(bag.bagId), timer);
 }
+app.post("/api/wallet/initialize", async (req, res) => {
+  try {
+    if (!db) return res.status(503).json({ error: "MongoDB is not connected" });
+    const userId = String(req.body?.userId || "").trim();
+    const localBalance = Math.max(0, Math.floor(Number(req.body?.localBalance) || 0));
+    if (!userId) return res.status(400).json({ error: "userId required" });
+    const users = db.collection("users");
+    let user = await users.findOne(walletUserQuery(userId));
+    if (!user) {
+      const legacy = await db.collection("luckyBagWallets").findOne({ userId });
+      const initialCoins = Math.max(localBalance, Number(legacy?.balance || 0));
+      await users.updateOne({ uid: userId }, { $setOnInsert: {
+        uid: userId, id: userId, appLongId: userId, coins: initialCoins,
+        diamonds: 0, createdAt: Date.now(), walletInitializedAt: Date.now()
+      } }, { upsert: true });
+    } else if (user.coins == null) {
+      const legacy = await db.collection("luckyBagWallets").findOne({ userId });
+      const initialCoins = Math.max(localBalance, Number(user.balance || 0), Number(legacy?.balance || 0));
+      await users.updateOne({ _id: user._id }, { $set: { coins: initialCoins, walletInitializedAt: Date.now() } });
+    }
+    return res.json({ success: true, balance: await walletBalance(userId) });
+  } catch (error) {
+    console.error("POST /api/wallet/initialize error:", error.message);
+    return res.status(503).json({ error: "Wallet initialization failed" });
+  }
+});
+
 app.get("/api/lucky-bag/wallet/:userId", async (req, res) => {
   try {
     const userId = String(req.params.userId || "").trim();
