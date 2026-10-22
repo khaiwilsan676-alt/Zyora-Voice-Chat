@@ -401,10 +401,9 @@ export default function StaffPanel() {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('hurry_staff_panel_auth');
-      if (saved === 'true') {
-        setIsLoggedIn(true);
-      }
+      // Require a fresh biometric verification whenever the owner panel is opened.
+      localStorage.removeItem('hurry_staff_panel_auth');
+      setIsLoggedIn(false);
       setAuthChecked(true);
     }
   }, []);
@@ -1048,26 +1047,9 @@ if (!authChecked) {
   );
 }
 
-// Fingerprint is optional; the panel remains available through the existing session flag.
+// The owner panel is locked until biometric fingerprint verification succeeds.
 if (!isLoggedIn) {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#1a1c29] via-[#232641] to-[#1a1c29] p-4">
-      <div className="w-full max-w-md rounded-3xl bg-white p-8 text-center shadow-2xl">
-        <h1 className="mb-2 text-2xl font-black text-slate-800">Zyora Owner Panel</h1>
-        <p className="mb-6 text-sm text-slate-500">Fingerprint login is optional. Continue to the panel without scanning.</p>
-        <button
-          type="button"
-          onClick={handleLoginSuccess}
-          className="w-full rounded-2xl bg-slate-900 px-5 py-4 font-extrabold text-white hover:bg-slate-800"
-        >
-          Continue Without Fingerprint
-        </button>
-        <div className="mt-4">
-          <FingerprintAuth onLoginSuccess={handleLoginSuccess} />
-        </div>
-      </div>
-    </div>
-  );
+  return <FingerprintAuth onLoginSuccess={handleLoginSuccess} />;
 }
 
 return (
