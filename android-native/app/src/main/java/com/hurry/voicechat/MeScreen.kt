@@ -94,17 +94,49 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
                             Text(name, fontSize = 24.sp, fontWeight = FontWeight.Normal, color = Color(0xFF111827))
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                 Text("ID: $account", fontSize = 12.sp, fontWeight = FontWeight.Normal, color = Color(0xFF374151))
-                                androidx.compose.foundation.Canvas(
-                                    Modifier.size(16.dp).clickable {
+                                Box(
+                                    modifier = Modifier.size(24.dp).clickable {
                                         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                                         clipboard.setPrimaryClip(ClipData.newPlainText("ID", account))
                                         Toast.makeText(context, "Copied", Toast.LENGTH_SHORT).show()
-                                    }
+                                    },
+                                    contentAlignment = Alignment.Center
                                 ) {
-                                    val ink = Color(0xFF374151)
-                                    val stroke = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.4.dp.toPx())
-                                    drawRoundRect(ink, topLeft = androidx.compose.ui.geometry.Offset(size.width * 0.30f, size.height * 0.08f), size = androidx.compose.ui.geometry.Size(size.width * 0.58f, size.height * 0.60f), cornerRadius = androidx.compose.ui.geometry.CornerRadius(1.5.dp.toPx()), style = stroke)
-                                    drawRoundRect(ink, topLeft = androidx.compose.ui.geometry.Offset(size.width * 0.10f, size.height * 0.30f), size = androidx.compose.ui.geometry.Size(size.width * 0.58f, size.height * 0.60f), cornerRadius = androidx.compose.ui.geometry.CornerRadius(1.5.dp.toPx()), style = stroke)
+                                    androidx.compose.foundation.Canvas(Modifier.size(14.dp)) {
+                                        // Match the reference app's lucide Copy icon (14px, 2px stroke).
+                                        val ink = Color(0xFF4B5563)
+                                        val sx = size.width / 24f
+                                        val sy = size.height / 24f
+                                        val stroke = androidx.compose.ui.graphics.drawscope.Stroke(
+                                            width = 2f * sx,
+                                            cap = androidx.compose.ui.graphics.StrokeCap.Round,
+                                            join = androidx.compose.ui.graphics.StrokeJoin.Round
+                                        )
+                                        val back = androidx.compose.ui.graphics.Path().apply {
+                                            moveTo(8f*sx, 8f*sy)
+                                            lineTo(8f*sx, 4f*sy)
+                                            cubicTo(8f*sx, 2.9f*sy, 8.9f*sx, 2f*sy, 10f*sx, 2f*sy)
+                                            lineTo(18f*sx, 2f*sy)
+                                            cubicTo(19.1f*sx, 2f*sy, 20f*sx, 2.9f*sy, 20f*sx, 4f*sy)
+                                            lineTo(20f*sx, 12f*sy)
+                                            cubicTo(20f*sx, 13.1f*sy, 19.1f*sx, 14f*sy, 18f*sx, 14f*sy)
+                                            lineTo(14f*sx, 14f*sy)
+                                        }
+                                        drawPath(back, ink, style = stroke)
+                                        val front = androidx.compose.ui.graphics.Path().apply {
+                                            moveTo(6f*sx, 6f*sy)
+                                            lineTo(14f*sx, 6f*sy)
+                                            cubicTo(15.1f*sx, 6f*sy, 16f*sx, 6.9f*sy, 16f*sx, 8f*sy)
+                                            lineTo(16f*sx, 18f*sy)
+                                            cubicTo(16f*sx, 19.1f*sy, 15.1f*sx, 20f*sy, 14f*sx, 20f*sy)
+                                            lineTo(4f*sx, 20f*sy)
+                                            cubicTo(2.9f*sx, 20f*sy, 2f*sx, 19.1f*sy, 2f*sx, 18f*sy)
+                                            lineTo(2f*sx, 8f*sy)
+                                            cubicTo(2f*sx, 6.9f*sy, 2.9f*sx, 6f*sy, 4f*sx, 6f*sy)
+                                            close()
+                                        }
+                                        drawPath(front, ink, style = stroke)
+                                    }
                                 }
                             }
                             if (phone.isNotBlank()) Text(phone, fontSize = 12.sp, color = Color(0xFF4B5563))
