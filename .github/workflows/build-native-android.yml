@@ -50,6 +50,7 @@ jobs:
         env:
           HURRY_VERSION_NAME: "1.0.${{ github.run_number }}"
           FIREBASE_API_KEY: ${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: gradle assembleDebug --no-daemon --stacktrace
 
       - name: Publish versioned Native APK
