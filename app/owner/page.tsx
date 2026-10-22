@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { MoreVertical, X, ChevronDown, Search, Star, Sparkles, Gamepad2, Timer, Send, ImageIcon, Megaphone, CheckCircle2, MessageSquare, Bot, ArrowLeft, User, Key, Lock, Camera, ShieldAlert, Eye, EyeOff } from 'lucide-react';
+import { MoreVertical, X, ChevronDown, Search, Star, Sparkles, Gamepad2, Timer, Send, ImageIcon, Megaphone, CheckCircle2, MessageSquare, Bot, ArrowLeft, User, Key, Lock, Camera, ShieldAlert, Eye, EyeOff, Fingerprint } from 'lucide-react';
 import { auth } from '@/src/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { socket } from '@/src/lib/socket';
@@ -277,6 +277,88 @@ const LoginForm = ({ onLoginSuccess }: { onLoginSuccess: () => void }) => {
   const [secretKey, setSecretKey] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [fingerprintBusy, setFingerprintBusy] = useState(false);
+  const [fingerprintAvailable, setFingerprintAvailable] = useState(false);
+
+  useEffect(() => {
+    setFingerprintAvailable(
+      typeof window !== 'undefined' &&
+      window.isSecureContext &&
+      !!window.PublicKeyCredential &&
+      !!navigator.credentials
+    );
+  }, []);
+
+  const handleFingerprintLogin = async () => {
+    if (!fingerprintAvailable || fingerprintBusy) return;
+    setFingerprintBusy(true);
+    setError('');
+    try {
+      const savedCredential = localStorage.getItem('zyora_owner_biometric_credential');
+      if (!savedCredential) {
+        setError('First enter your owner credentials and enable fingerprint login on this device.');
+        return;
+      }
+      const credentialId = Uint8Array.from(atob(savedCredential), c => c.charCodeAt(0));
+      const challenge = new Uint8Array(32);
+      crypto.getRandomValues(challenge);
+      const credential = await navigator.credentials.get({
+        publicKey: {
+          challenge,
+          allowCredentials: [{ type: 'public-key', id: credentialId }],
+          userVerification: 'required',
+          timeout: 60000
+        }
+      });
+      if (!credential) throw new Error('Fingerprint verification was cancelled.');
+      onLoginSuccess();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Fingerprint login failed. Use your owner credentials.');
+    } finally {
+      setFingerprintBusy(false);
+    }
+  };
+
+  const handleEnableFingerprint = async () => {
+    if (!fingerprintAvailable || fingerprintBusy) return;
+    if (
+      accountName.trim() !== VALID_CREDENTIALS.accountName ||
+      password !== VALID_CREDENTIALS.password ||
+      secretKey.trim() !== VALID_CREDENTIALS.secretKey
+    ) {
+      setError('Enter valid owner credentials first to enable fingerprint login.');
+      return;
+    }
+    setFingerprintBusy(true);
+    setError('');
+    try {
+      const challenge = new Uint8Array(32);
+      const userId = new Uint8Array(16);
+      crypto.getRandomValues(challenge);
+      crypto.getRandomValues(userId);
+      const credential = await navigator.credentials.create({
+        publicKey: {
+          challenge,
+          rp: { name: 'Zyora Owner Panel', id: window.location.hostname },
+          user: { id: userId, name: 'zyora-owner', displayName: 'Zyora Owner' },
+          pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
+          authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required', residentKey: 'preferred' },
+          timeout: 60000,
+          attestation: 'none'
+        }
+      });
+      if (!credential || !(credential instanceof PublicKeyCredential)) throw new Error('This device could not register fingerprint login.');
+      const id = new Uint8Array(credential.rawId);
+      let binary = '';
+      id.forEach(byte => { binary += String.fromCharCode(byte); });
+      localStorage.setItem('zyora_owner_biometric_credential', btoa(binary));
+      onLoginSuccess();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not enable fingerprint login on this device.');
+    } finally {
+      setFingerprintBusy(false);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -377,6 +459,27 @@ const LoginForm = ({ onLoginSuccess }: { onLoginSuccess: () => void }) => {
           >
             Login
           </button>
+          {fingerprintAvailable && (
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={handleFingerprintLogin}
+                disabled={fingerprintBusy}
+                className="w-full py-3 flex items-center justify-center gap-2 bg-slate-100 border border-slate-200 text-slate-700 text-sm font-extrabold rounded-xl disabled:opacity-60"
+              >
+                <Fingerprint className="w-5 h-5" />
+                {fingerprintBusy ? 'Verifying…' : 'Login with Fingerprint'}
+              </button>
+              <button
+                type="button"
+                onClick={handleEnableFingerprint}
+                disabled={fingerprintBusy}
+                className="w-full py-2 text-xs font-bold text-indigo-600 disabled:opacity-60"
+              >
+                Enable fingerprint on this device
+              </button>
+            </div>
+          )}
         </form>
       </div>
     </div>
