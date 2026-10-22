@@ -307,7 +307,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
     HurryTheme {
         Box(Modifier.fillMaxSize().navigationBarsPadding()) {
             if (openedPublicProfile != null) {
-                PublicProfile(user=openedPublicProfile!!,onBack={openedPublicProfile=null},onMessage={ openedChat = Triple(openedPublicProfile!!.uid.ifBlank { openedPublicProfile!!.id }.ifBlank { openedPublicProfile!!.accountId }, openedPublicProfile!!.name, openedPublicProfile!!.image) },currentUserId=userId)
+                PublicProfile(user=openedPublicProfile!!,onBack={openedPublicProfile=null},onMessage={ openedChat = Triple(openedPublicProfile!!.uid?.takeIf { it.isNotBlank() } ?: openedPublicProfile!!.id?.takeIf { it.isNotBlank() } ?: openedPublicProfile!!.accountId.orEmpty(), openedPublicProfile!!.name, openedPublicProfile!!.image) },currentUserId=userId)
             } else if (openedRoomSupport) {
                 RoomSupport(onBack = { openedRoomSupport = false })
             } else if (openedSearch) {
