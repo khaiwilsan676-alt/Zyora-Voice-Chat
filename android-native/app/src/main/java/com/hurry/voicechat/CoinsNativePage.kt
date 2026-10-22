@@ -134,10 +134,10 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int) {
     val dao = remember { WalletDatabase.get(context).walletDao() }
     val scope = rememberCoroutineScope()
     val authPrefs = remember { context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE) }
-    // Stable authenticated UID first; display account numbers can differ between screens.
+    // Keep the established accountId as the canonical wallet key; Lucky Bag uses this same ID.
     val walletUserId = remember {
-        authPrefs.getString("uid", null)?.takeIf { it.isNotBlank() }
-            ?: authPrefs.getString("accountId", "").orEmpty()
+        authPrefs.getString("accountId", null)?.takeIf { it.isNotBlank() }
+            ?: authPrefs.getString("uid", "").orEmpty()
     }
 
     var tab by remember { mutableStateOf(initialTab) }
