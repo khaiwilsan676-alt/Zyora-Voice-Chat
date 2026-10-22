@@ -1,68 +1,231 @@
 package com.hurry.voicechat
 
-import android.annotation.SuppressLint
-import android.app.Activity
-import android.webkit.JavascriptInterface
-import android.webkit.WebChromeClient
-import android.webkit.WebView
-import android.webkit.WebViewClient
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.runtime.Composable
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.zIndex
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
+import androidx.media3.exoplayer.ExoPlayer
+    import androidx.media3.ui.PlayerView
+import coil3.compose.AsyncImage
 
-@SuppressLint("SetJavaScriptEnabled")
 @Composable
-fun Svip(onBack: () -> Unit = {}) {
-    AndroidView(
-        modifier = Modifier.fillMaxSize(),
-        factory = { context ->
-            WebView(context).apply {
-                settings.javaScriptEnabled = true
-                settings.domStorageEnabled = true
-                settings.mediaPlaybackRequiresUserGesture = false
-                addJavascriptInterface(object { @JavascriptInterface fun close() { (context as? Activity)?.runOnUiThread { onBack() } } }, "NativeSvip")
-                webChromeClient = WebChromeClient()
-                webViewClient = WebViewClient()
-                setBackgroundColor(android.graphics.Color.BLACK)
-                loadDataWithBaseURL(
-                    "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/",
-                    """
-                    <!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-                    <style>
-                    *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;min-height:100%;background:#150C07;color:white;font-family:Arial,sans-serif;overflow-x:hidden}
-                    .wrap{position:relative;width:100%;min-height:100vh;overflow:hidden}.top{height:40vh;position:relative;z-index:3}
-                    .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-                    header{position:relative;z-index:5;display:flex;align-items:center;justify-content:space-between;width:100%;padding:calc(max(env(safe-area-inset-top,0px),var(--status-bar-height,0px)) + 8px) 12px 8px}
-                    .back{display:flex;align-items:center;justify-content:center;border:0;background:transparent;color:white;padding:4px;line-height:1;transition:opacity .15s}.back:active{opacity:.7}
-                    .title{position:absolute;left:50%;transform:translateX(-50%);top:calc(max(env(safe-area-inset-top,0px),var(--status-bar-height,0px)) + 12px);font-size:20px;font-weight:900;letter-spacing:1px}
-                    .icons{display:flex;gap:8px}.icons img{width:28px;height:28px;object-fit:contain}
-                    .videoWrap{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:2;pointer-events:none}
-                    video{display:none}canvas{width:125vw;height:125vw;object-fit:contain;transform:translateY(0)}
-                    .bottom{position:relative;z-index:1;min-height:60vh;display:flex;align-items:center;justify-content:center;background:#150C07;overflow:hidden}
-                    .shine{position:absolute;inset:0;background:radial-gradient(120% 60% at 50% 0%,rgba(255,215,120,.18),rgba(255,215,120,.06) 35%,transparent 70%),linear-gradient(180deg,rgba(255,200,90,.08),transparent 40%);animation:shine 4s ease-in-out infinite}
-                    @keyframes shine{0%,100%{opacity:.7}50%{opacity:1}}
-                    .coming{position:relative;font-size:24px;font-weight:900;letter-spacing:4px;white-space:nowrap}
-                    .middle{position:absolute;left:0;top:40vh;transform:translateY(-50%);width:100%;z-index:6;pointer-events:none}
-                    </style></head><body><div class="wrap">
-                    <section class="top"><img class="bg" src="file_00000000bd448211892548a9f0469619.png">
-                    <header><button class="back" onclick="if(window.NativeSvip){NativeSvip.close()}else{history.back()}" aria-label="Back"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></button><span class="title">SVIP</span><div class="icons"><img src="IMG_20260918_170725.png"><img src="IMG_20260918_170736.png"></div></header>
-                    <div class="videoWrap"><video id="v" src="1000197130-background%20(1).mp4" muted loop playsinline autoplay></video><canvas id="c"></canvas></div></section>
-                    <section class="bottom"><div class="shine"></div><span class="coming">SVIP COMING SOON</span></section>
-                    <img class="middle" src="file_00000000e5d881faa59ce174257e208e.png"></div>
-                    <script>
-                    const v=document.getElementById('v'),c=document.getElementById('c'),x=c.getContext('2d',{willReadFrequently:true});
-                    function draw(){if(v.readyState>=2&&v.videoWidth){if(c.width!==v.videoWidth||c.height!==v.videoHeight){c.width=v.videoWidth;c.height=v.videoHeight}
-                    x.clearRect(0,0,c.width,c.height);x.drawImage(v,0,0,c.width,c.height);const f=x.getImageData(0,0,c.width,c.height),d=f.data;
-                    for(let i=0;i<d.length;i+=4){const r=d[i],g=d[i+1],b=d[i+2];if(g>60&&g>r*1.15&&g>b*1.15)d[i+3]=0}x.putImageData(f,0,0)}requestAnimationFrame(draw)}
-                    v.play().catch(()=>{});requestAnimationFrame(draw);
-                    </script></body></html>
-                    """.trimIndent(),
-                    "text/html",
-                    "UTF-8",
-                    null
+fun SvipPage(onBack: () -> Unit = {}) {
+    // SVIP Shine Animation (0.7 -> 1.0 -> 0.7)
+    val infiniteTransition = rememberInfiniteTransition(label = "svip-shine")
+    val shineAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.7f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2000, easing = EaseInOut),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "shine_alpha"
+    )
+
+    // Base URL for your raw github images
+    val baseUrl = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public"
+
+    BoxWithConstraints(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+        val totalHeight = maxHeight
+
+        // ============ TOP SECTION (40% HEIGHT) ============
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(totalHeight * 0.4f)
+                .align(Alignment.TopCenter)
+                .zIndex(30f)
+        ) {
+            // Background Image
+            AsyncImage(
+                model = "$baseUrl/file_00000000bd448211892548a9f0469619.png",
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+
+            // Header (Safe Area)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                    .zIndex(40f),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Left: Back arrow
+                Icon(
+                    imageVector = Icons.Default.ArrowBack,
+                    contentDescription = "Back",
+                    tint = Color.White,
+                    modifier = Modifier
+                        .size(28.dp)
+                        .clickable { onBack() }
                 )
+
+                // Center: SVIP
+                Text(
+                    text = "SVIP",
+                    color = Color.White,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 2.sp,
+                    modifier = Modifier.offset(x = 12.dp) // centering offset balance
+                )
+
+                // Right: Images corner to corner
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    AsyncImage(
+                        model = "$baseUrl/IMG_20260918_170725.png",
+                        contentDescription = null,
+                        modifier = Modifier.size(28.dp),
+                        contentScale = ContentScale.Fit
+                    )
+                    AsyncImage(
+                        model = "$baseUrl/IMG_20260918_170736.png",
+                        contentDescription = "Crown",
+                        modifier = Modifier.size(28.dp),
+                        contentScale = ContentScale.Fit
+                    )
+                }
+            }
+
+            // Video Player (Loop, Muted, AutoPlay) - Placed under header, above background
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .zIndex(20f)
+                    .alpha(0.85f), // Blend slight transparency
+                contentAlignment = Alignment.Center
+            ) {
+                SvipVideoPlayer(videoUrl = "$baseUrl/1000197130-background%20(1).mp4")
             }
         }
+
+        // ============ BOTTOM SECTION (60% HEIGHT) ============
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(totalHeight * 0.6f)
+                .align(Alignment.BottomCenter)
+                .background(Color(0xFF150C07)) // Dark Brown Color
+                .zIndex(10f)
+        ) {
+            // Shining overlay (Golden Glow)
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .alpha(shineAlpha)
+                    .background(
+                        Brush.radialGradient(
+                            colors = listOf(
+                                Color(255, 215, 120, alpha = 46), // rgba(255, 215, 120, 0.18)
+                                Color(255, 215, 120, alpha = 15), // rgba(255, 215, 120, 0.06)
+                                Color.Transparent
+                            ),
+                            center = Offset(constraints.maxWidth / 2f, 0f),
+                            radius = constraints.maxWidth.toFloat() * 0.7f
+                        )
+                    )
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color(255, 200, 90, alpha = 20), // rgba(255, 200, 90, 0.08)
+                                Color.Transparent
+                            ),
+                            startY = 0f,
+                            endY = constraints.maxHeight * 0.4f
+                        )
+                    )
+            )
+
+            // SVIP COMING SOON Text
+            Text(
+                text = "SVIP COMING SOON",
+                color = Color.White,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 2.sp,
+                modifier = Modifier.align(Alignment.Center)
+            )
+        }
+
+        // ============ MIDDLE IMAGE (Exactly at connection line) ============
+        AsyncImage(
+            model = "$baseUrl/file_00000000e5d881faa59ce174257e208e.png",
+            contentDescription = null,
+            modifier = Modifier
+                .fillMaxWidth()
+                .zIndex(50f) // Subse upar taaki overlapping perfect ho
+                .layout { measurable, constraints ->
+                    val placeable = measurable.measure(constraints)
+                    layout(placeable.width, placeable.height) {
+                        // Place exactly at 40% height, translating Y by -50% of image height
+                        val yOffset = (this@BoxWithConstraints.constraints.maxHeight * 0.4f).toInt() - (placeable.height / 2)
+                        placeable.placeRelative(0, yOffset)
+                    }
+                },
+            contentScale = ContentScale.FillWidth
+        )
+    }
+}
+
+// ExoPlayer Implementation for AutoPlay Muted Video
+@Composable
+fun SvipVideoPlayer(videoUrl: String) {
+    val context = LocalContext.current
+    val exoPlayer = remember {
+        ExoPlayer.Builder(context).build().apply {
+            val mediaItem = MediaItem.fromUri(videoUrl)
+            setMediaItem(mediaItem)
+            repeatMode = Player.REPEAT_MODE_ALL
+            playWhenReady = true
+            volume = 0f // Muted
+            prepare()
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            exoPlayer.release()
+        }
+    }
+
+    AndroidView(
+        factory = {
+            PlayerView(context).apply {
+                player = exoPlayer
+                useController = false
+                // Note: Realtime green screen remove on Android requires a Custom Shader
+                // For now, setting a transparent shutter background helps blend it slightly
+                setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)
+            }
+        },
+        modifier = Modifier.fillMaxWidth().aspectRatio(1f) // Adjust scaling to match JS 125vw feel
     )
 }
