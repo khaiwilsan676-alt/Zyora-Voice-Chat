@@ -134,9 +134,10 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int) {
     val dao = remember { WalletDatabase.get(context).walletDao() }
     val scope = rememberCoroutineScope()
     val authPrefs = remember { context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE) }
+    // Stable authenticated UID first; display account numbers can differ between screens.
     val walletUserId = remember {
-        authPrefs.getString("accountId", null)?.takeIf { it.isNotBlank() }
-            ?: authPrefs.getString("uid", "").orEmpty()
+        authPrefs.getString("uid", null)?.takeIf { it.isNotBlank() }
+            ?: authPrefs.getString("accountId", "").orEmpty()
     }
 
     var tab by remember { mutableStateOf(initialTab) }
@@ -157,8 +158,8 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int) {
         if (walletUserId.isNotBlank()) {
             withContext(Dispatchers.IO) {
                 runCatching {
-                    // One-time migration: preserve this device's existing balance only if MongoDB has no wallet yet.
-                    val localBalance = loadBalance(dao)
+                    // Initialize the authenticated account on the server. Never seed from a device-local
+                    // balance, which may belong to another account and create a false wallet balance.
                     val initConnection = (URL("https://zyora-voice-chat.onrender.com/api/wallet/initialize").openConnection() as HttpURLConnection).apply {
                         requestMethod = "POST"
                         doOutput = true
@@ -168,7 +169,7 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int) {
                     }
                     try {
                         initConnection.outputStream.bufferedWriter().use { writer ->
-                            writer.write(JSONObject().put("userId", walletUserId).put("localBalance", localBalance).toString())
+                            writer.write(JSONObject().put("userId", walletUserId).put("localBalance", 0).toString())
                         }
                         if (initConnection.responseCode !in 200..299) throw IllegalStateException("Wallet migration failed")
                     } finally { initConnection.disconnect() }
