@@ -12,9 +12,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalContext
@@ -26,7 +31,6 @@ import androidx.compose.ui.zIndex
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.ui.PlayerView
 import coil3.compose.AsyncImage
 
 @Composable
@@ -217,16 +221,33 @@ fun SvipVideoPlayer(videoUrl: String) {
         }
     }
 
+    // Ye matrix green color ko daba kar background theme ke hisaab se blend karne me madad karega
+    val greenBlendMatrix = remember {
+        ColorMatrix(floatArrayOf(
+            1f, 0f, 0f, 0f, 0f,   // Red normally
+            0f, 0.1f, 0f, 0f, 0f, // Green ko almost khatam kar diya hai blend ke liye
+            0f, 0f, 1f, 0f, 0f,   // Blue normally
+            0f, 0f, 0f, 0.9f, 0f  // Alpha thoda sa transparent
+        ))
+    }
+
     AndroidView(
-        factory = {
-            PlayerView(context).apply {
-                player = exoPlayer
-                useController = false
-                // Note: Realtime green screen remove on Android requires a Custom Shader
-                // For now, setting a transparent shutter background helps blend it slightly
-                setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)
-            }
+        factory = { ctx ->
+            // Yaha TextureView use kiya hai taaki Compose ka scale aur graphicsLayer perfectly kaam kare
+            android.view.TextureView(ctx)
         },
-        modifier = Modifier.fillMaxWidth().aspectRatio(1f) // Adjust scaling to match JS 125vw feel
+        update = { textureView ->
+            exoPlayer.setVideoTextureView(textureView)
+        },
+        modifier = Modifier
+            .fillMaxWidth()
+            .aspectRatio(1f) // Video ekdam square kar diya
+            .scale(1.4f) // Video size thora barra (bada) kar diya
+            .graphicsLayer {
+                // Ekdam transparent blead aur mix ke liye
+                compositingStrategy = CompositingStrategy.Offscreen
+                colorFilter = ColorFilter.colorMatrix(greenBlendMatrix)
+            }
     )
 }
+
