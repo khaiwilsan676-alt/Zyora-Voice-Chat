@@ -253,7 +253,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
                                         .padding(horizontal = 8.dp, vertical = 2.dp)
                                 )
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text("◷", color = if (theme) Color.White else Color.LightGray, fontSize = 15.sp)
+                                    Text("◷", color = if (theme) Color.White else Color.LightGray, fontSize = 18.sp)
                                     Spacer(Modifier.width(3.dp))
                                     Text(item.duration, color = if (theme) Color.White else Color.LightGray, fontSize = 11.sp)
                                 }
@@ -448,7 +448,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
                                 Spacer(Modifier.height(40.dp))
                                 Text(item.name, fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Color.White)
                                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
-                                    Text("◷", color = Color.LightGray, fontSize = 16.sp)
+                                    Text("◷", color = Color.LightGray, fontSize = 18.sp)
                                     Spacer(Modifier.width(4.dp))
                                     Text(item.duration, color = Color.LightGray, fontSize = 13.sp)
                                 }
@@ -571,6 +571,8 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
                         }
                     }
                     else -> { 
+                        val alignBottom = item.id == "v9" || item.id == "v7" || item.id == "v2" || item.id == "v10"
+                        
                         val topFadeVal = when (item.id) {
                             "v10" -> 0.05f
                             "v9", "v7", "v6" -> 0.15f
@@ -587,7 +589,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
                             Modifier
                                 .fillMaxSize()
                                 .clickable(enabled = false) {}, 
-                            contentAlignment = Alignment.Center // Center Alignment as requested!
+                            contentAlignment = if (alignBottom) Alignment.BottomCenter else Alignment.Center
                         ) {
                             val isV1 = item.id == "v1"
                             val source = item.video ?: item.image
