@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
@@ -30,7 +31,7 @@ import coil3.compose.AsyncImage
 
 private const val RAW_URL = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/"
 
-// Helper property to fix image URLs (removes leading slash if any)
+// Helper property to fix image URLs
 private val String.fullUrl: String
     get() = if (this.startsWith("http")) this else RAW_URL + this.removePrefix("/")
 
@@ -52,6 +53,7 @@ fun DailyCheckInModal(
             dismissOnClickOutside = true
         )
     ) {
+        // Modal ko center se thoda niche (0.15f bias) align kiya hai 
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -61,8 +63,10 @@ fun DailyCheckInModal(
                     indication = null,
                     onClick = onClose 
                 ),
-            contentAlignment = Alignment.Center
+            contentAlignment = BiasAlignment(0f, 0.15f) 
         ) {
+            
+            // Ye Column card aur tere bottom wale close button ko stack karega
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -70,25 +74,46 @@ fun DailyCheckInModal(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 
+                // Box jo Banner aur Card ko overlap karwane ke liye hai
                 Box(
-                    modifier = Modifier.fillMaxWidth(),
-                    contentAlignment = Alignment.TopCenter
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    // White main box
+                    // 1. Naya SVGA Style Outer Card
                     Column(
                         modifier = Modifier
-                            .padding(top = 50.dp) // Space for overlapping banner
+                            .padding(top = 50.dp) // Banner ke overlap ke liye space
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(24.dp))
+                            .clip(RoundedCornerShape(32.dp))
                             .background(Color.White)
-                            .border(2.dp, Color(0xFF3B82F6), RoundedCornerShape(24.dp))
+                            .border(6.dp, Color(0xFFFFE57C), RoundedCornerShape(32.dp)) // SVG wala golden border
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null,
-                                onClick = {} // Prevent taps on white box from closing the modal
+                                onClick = {} // Card par click se dismiss na ho
                             )
-                            .padding(start = 24.dp, end = 24.dp, top = 60.dp, bottom = 20.dp)
+                            .padding(start = 20.dp, end = 20.dp, top = 60.dp, bottom = 24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
+                        
+                        // Subtitle (Sign in for 7 days for rich rewards)
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(Color(0xFFFFF3C9))
+                                .padding(vertical = 12.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "Sign in for 7 days for rich rewards",
+                                color = Color(0xFF80622E),
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
                         // Row 1: Days 1 to 4
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -117,48 +142,65 @@ fun DailyCheckInModal(
 
                         Spacer(modifier = Modifier.height(8.dp))
 
-                        // Row 3: Day 7
+                        // Row 3: Day 7 (Big Reward)
                         Day7Card(currentDay = currentDay)
 
-                        Spacer(modifier = Modifier.height(20.dp))
+                        Spacer(modifier = Modifier.height(24.dp))
 
-                        // Sign-in Button
+                        // Sign-in Button (SVG wala Gold Gradient)
                         val isButtonDisabled = claimedToday || currentDay > 7
+                        val buttonBrush = if (isButtonDisabled) {
+                            Brush.verticalGradient(listOf(Color(0xFF9CA3AF), Color(0xFF6B7280)))
+                        } else {
+                            Brush.verticalGradient(
+                                listOf(
+                                    Color(0xFFFFF080),
+                                    Color(0xFFFFD633),
+                                    Color(0xFFFFBB00),
+                                    Color(0xFFE99A00)
+                                )
+                            )
+                        }
+
                         Button(
                             onClick = onSignIn,
                             enabled = !isButtonDisabled,
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = if (isButtonDisabled) Color(0xFF9CA3AF) else Color(0xFF3B82F6),
-                                disabledContainerColor = Color(0xFF9CA3AF)
+                                containerColor = Color.Transparent, 
+                                disabledContainerColor = Color.Transparent
                             ),
-                            shape = RoundedCornerShape(12.dp),
+                            contentPadding = PaddingValues(),
+                            shape = RoundedCornerShape(50.dp),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(52.dp)
+                                .height(56.dp)
+                                .background(buttonBrush, RoundedCornerShape(50.dp))
                         ) {
                             Text(
-                                text = if (claimedToday) "Claimed Today — Come Back Tomorrow" else if (currentDay > 7) "All Rewards Claimed!" else "Sign In",
+                                text = if (claimedToday) "Claimed Today" else if (currentDay > 7) "All Rewards Claimed!" else "Sign in",
                                 color = Color.White,
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.ExtraBold
                             )
                         }
                     }
 
-                    // Banner Image - Overlaps the white box (Z-Index is implicitly higher because it's placed later in Box, but we enforce it)
+                    // 2. BANNER IMAGE - Ye offset wala banner wahi hai jisko tu aram se adjust kar sakta hai
                     AsyncImage(
                         model = "file_000000004b6c8211855003bf899492fd.png".fullUrl,
                         contentDescription = "Top Banner",
                         contentScale = ContentScale.FillWidth,
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .zIndex(1f)
+                            .fillMaxWidth(0.9f)
+                            .align(Alignment.TopCenter)
+                            .offset(y = (-5).dp) // <--- Yahan se Upar/Niche manage kar lena
+                            .zIndex(2f)
                     )
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Close (X) Button at the bottom
+                // 3. Tere Purane Code Wala CLOSE (X) BUTTON - Card se bahar, bottom me!
                 Box(
                     modifier = Modifier
                         .size(48.dp)
@@ -179,7 +221,7 @@ fun DailyCheckInModal(
     }
 }
 
-// ----------------- Helper UI Components -----------------
+// ----------------- Helper UI Components (SVG styled) -----------------
 
 @Composable
 private fun DayCard(day: Int, reward: String, image: String, currentDay: Int, modifier: Modifier = Modifier) {
@@ -187,10 +229,10 @@ private fun DayCard(day: Int, reward: String, image: String, currentDay: Int, mo
     
     Box(
         modifier = modifier
-            .aspectRatio(1f)
-            .clip(RoundedCornerShape(8.dp))
-            .background(Color.White)
-            .border(2.dp, borderColor, RoundedCornerShape(8.dp)),
+            .aspectRatio(0.85f)
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color(0xFFF3F3F3))
+            .border(2.dp, borderColor, RoundedCornerShape(12.dp)),
         contentAlignment = Alignment.Center
     ) {
         DayBadge(day = day)
@@ -198,20 +240,20 @@ private fun DayCard(day: Int, reward: String, image: String, currentDay: Int, mo
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
-            modifier = Modifier.padding(top = 12.dp)
+            modifier = Modifier.padding(top = 16.dp)
         ) {
             AsyncImage(
                 model = image.fullUrl,
                 contentDescription = null,
-                modifier = Modifier.size(40.dp),
+                modifier = Modifier.size(36.dp),
                 contentScale = ContentScale.Fit
             )
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(6.dp))
             Text(
                 text = reward,
                 fontSize = 10.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = Color(0xFF374151),
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF544B00),
                 maxLines = 1
             )
         }
@@ -228,10 +270,10 @@ private fun SpecialDayCard(day: Int, currentDay: Int, modifier: Modifier = Modif
 
     Box(
         modifier = modifier
-            .height(80.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(Color.White)
-            .border(2.dp, borderColor, RoundedCornerShape(8.dp)),
+            .height(90.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color(0xFFF3F3F3))
+            .border(2.dp, borderColor, RoundedCornerShape(12.dp)),
         contentAlignment = Alignment.Center
     ) {
         DayBadge(day = day)
@@ -253,29 +295,38 @@ private fun Day7Card(currentDay: Int) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .background(Color.White)
-            .border(2.dp, borderColor, RoundedCornerShape(8.dp))
-            .padding(16.dp),
+            .height(100.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color(0xFFFFF9EB))
+            .border(2.dp, borderColor, RoundedCornerShape(16.dp)),
         contentAlignment = Alignment.Center
     ) {
-        // Top Left Gradient Badge
+        // SVG Day 7 Badge Top-Left Corner 
         Box(
             modifier = Modifier
-                .absoluteOffset(x = (-16).dp, y = (-16).dp)
-                .clip(RoundedCornerShape(topStart = 8.dp, bottomEnd = 8.dp))
-                .background(Brush.horizontalGradient(listOf(Color(0xFFFBBF24), Color(0xFFF97316))))
-                .padding(horizontal = 8.dp, vertical = 2.dp)
+                .align(Alignment.TopStart)
+                .clip(RoundedCornerShape(topStart = 16.dp, bottomEnd = 16.dp))
+                .background(Brush.horizontalGradient(listOf(Color(0xFFFF5038), Color(0xFFFFB62B))))
+                .padding(horizontal = 12.dp, vertical = 6.dp)
         ) {
-            Text(
-                text = "7 Days Big Rewards",
-                color = Color.White,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Bold
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "7",
+                    color = Color.White,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.ExtraBold
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = "Big Reward",
+                    color = Color.White,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
 
-        Box(modifier = Modifier.padding(top = 12.dp)) {
+        Box(modifier = Modifier.padding(top = 12.dp, start = 16.dp)) {
             renderDay7Special()
         }
 
@@ -325,7 +376,7 @@ private fun RewardItemIcon(image: String, text: String, size: androidx.compose.u
             text = text,
             fontSize = 9.sp,
             fontWeight = FontWeight.Bold,
-            color = Color(0xFF374151),
+            color = Color(0xFF544B00), 
             textAlign = TextAlign.Center
         )
     }
@@ -338,16 +389,16 @@ private fun DayBadge(day: Int) {
     Box(
         modifier = Modifier
             .absoluteOffset(x = 0.dp, y = 0.dp)
-            .size(width = 24.dp, height = 20.dp)
-            .clip(RoundedCornerShape(topStart = 8.dp, bottomEnd = 8.dp))
-            .background(Color(0xFF3B82F6)),
+            .size(width = 30.dp, height = 24.dp)
+            .clip(RoundedCornerShape(topStart = 12.dp, bottomEnd = 12.dp))
+            .background(Color(0xFFFFE000)),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = day.toString(),
-            color = Color.White,
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Bold
+            color = Color(0xFF544B00),
+            fontSize = 12.sp,
+            fontWeight = FontWeight.ExtraBold
         )
     }
 }
@@ -358,7 +409,7 @@ private fun BoxScope.CompletedCheckmark() {
         modifier = Modifier
             .align(Alignment.TopEnd)
             .padding(4.dp)
-            .size(16.dp)
+            .size(18.dp)
             .clip(CircleShape)
             .background(Color(0xFF22C55E)),
         contentAlignment = Alignment.Center
@@ -375,9 +426,8 @@ private fun BoxScope.CompletedCheckmark() {
 @Composable
 private fun getBorderColor(day: Int, currentDay: Int): Color {
     return when {
-        day < currentDay -> Color(0xFF4ADE80) // green-400
+        day < currentDay -> Color(0xFF4ADE80)
         day == currentDay -> {
-            // Pulse animation logic for current day
             val infiniteTransition = rememberInfiniteTransition()
             val colorAlpha by infiniteTransition.animateFloat(
                 initialValue = 1f,
@@ -387,8 +437,9 @@ private fun getBorderColor(day: Int, currentDay: Int): Color {
                     repeatMode = RepeatMode.Reverse
                 )
             )
-            Color(0xFF3B82F6).copy(alpha = colorAlpha) // blue-500 pulsing
+            Color(0xFF3B82F6).copy(alpha = colorAlpha)
         }
-        else -> Color(0xFFE5E7EB) // gray-200
+        else -> Color.Transparent
     }
 }
+
