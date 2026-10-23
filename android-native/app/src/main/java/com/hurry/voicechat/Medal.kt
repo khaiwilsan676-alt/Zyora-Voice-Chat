@@ -16,8 +16,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -26,9 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.compose.ui.zIndex
 import coil3.compose.AsyncImage
-import kotlin.math.sin
 
 private const val RAW_URL = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/"
 private val String.fullUrl: String get() = if (this.startsWith("http")) this else RAW_URL + this.removePrefix("/")
@@ -82,10 +78,7 @@ fun MedalScreen(onBack: () -> Unit) {
             .fillMaxSize()
             .background(Color(0xFF02050E))
     ) {
-        // 1. WebGL/Starry Background equivalent
-        StarryBackground()
-
-        // 2. Top Gradient Mask Image
+        // 1. Top Gradient Mask Image (Dots hataye gaye hain)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -108,7 +101,7 @@ fun MedalScreen(onBack: () -> Unit) {
             )
         }
 
-        // 3. Main Content
+        // 2. Main Content
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -240,11 +233,11 @@ fun MedalScreen(onBack: () -> Unit) {
                             },
                         contentAlignment = Alignment.Center
                     ) {
-                        // Dummy Image/Video Placeholder (Grayscale)
+                        // 👇 COLORLESS IMAGE DISPLAY IN MAIN PAGE CARDS
                         AsyncImage(
-                            model = medal.video.fullUrl, // Ideally a thumbnail of the video
+                            model = medal.video.fullUrl,
                             contentDescription = null,
-                            colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) }),
+                            colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) }), // COLORLESS DONE
                             modifier = Modifier.size(medal.cardVideoSize.dp).align(Alignment.Center)
                         )
                         Text(
@@ -293,14 +286,14 @@ fun MedalScreen(onBack: () -> Unit) {
                             }
                         }
 
-                        // Video playing area (Colorful)
+                        // Medal Image display area
                         AsyncImage(
                             model = displayMedal.video.fullUrl,
                             contentDescription = null,
                             modifier = Modifier
                                 .size(displayMedal.sheetVideoSize.dp)
                                 .align(Alignment.Center)
-                                .offset(y = 20.dp) // adjust based on sheetVideoTop percentage
+                                .offset(y = 20.dp)
                         )
                     }
 
@@ -341,6 +334,7 @@ fun MedalScreen(onBack: () -> Unit) {
                             text = displayMedal.giftText,
                             color = Color(0xFF6B7280),
                             fontSize = 16.sp,
+                            textAlign = TextAlign.Center,
                             modifier = Modifier.padding(top = 4.dp)
                         )
 
@@ -349,8 +343,9 @@ fun MedalScreen(onBack: () -> Unit) {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
                                 tierMedals.indices.forEach { i ->
                                     if (i > 0) Text(" > ", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp, modifier = Modifier.padding(horizontal = 8.dp))
+                                    // 3 Tabs loop
                                     AsyncImage(
-                                        model = TIER_TAB_IMAGES[i].fullUrl,
+                                        model = TIER_TAB_IMAGES.getOrNull(i)?.fullUrl ?: TIER_TAB_IMAGES.last().fullUrl,
                                         contentDescription = null,
                                         modifier = Modifier
                                             .size(48.dp)
@@ -479,17 +474,17 @@ fun RulesBottomSheet(onDismiss: () -> Unit) {
         dragHandle = null,
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
     ) {
-        Column(modifier = Modifier.fillMaxWidth().fillMaxHeight(0.75f)) {
+        // Height 50vh (0.5f) set here
+        Column(modifier = Modifier.fillMaxWidth().fillMaxHeight(0.5f)) {
             Box(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp).drawBehind {
-                    drawLine(color = Color.White.copy(alpha = 0.1f), start = Offset(0f, size.height), end = Offset(size.width, size.height), strokeWidth = 1.dp.toPx())
-                },
+                // Underline removed
+                modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text(text = "Rules", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Medium)
             }
             
-            Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 16.dp)) {
+            Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp)) {
                 Text("*Rules*", color = Color(0xFFFACC15), fontSize = 16.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 12.dp))
                 
                 RuleSection("1. Important Information:", "(a) Before participating, please carefully review the event rules...\n(b) Your participation confirms that you have read...")
@@ -499,6 +494,16 @@ fun RulesBottomSheet(onDismiss: () -> Unit) {
                 RuleSection("5. Medal Benefits Expiration:", "(a) Medals generally have no expiration date...\n(b) Some medals are time-limited...\n(c) You can display a maximum of 10 medals at a time.\n(d) These will appear in your info card...\n(e) To check your medal status...")
                 RuleSection("6. Improving Medal Levels", "(=>) Your medal level is determined by your current task...")
                 RuleSection("7. Additional Notes:", "(a) We strictly prohibit any form of abuse...\n(b) We are constantly working to improve...\n(c) Medal rewards cannot be exchanged...")
+
+                // Right aligned "Regards, Zyora team"
+                Text(
+                    text = "Regards, Zyora team",
+                    color = Color.White,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 24.dp),
+                    textAlign = TextAlign.End
+                )
             }
         }
     }
@@ -512,33 +517,33 @@ fun RuleSection(title: String, desc: String) {
     }
 }
 
-@Composable
-fun StarryBackground() {
-    // Basic animated background mimicking WebGL shader
-    val infiniteTransition = rememberInfiniteTransition()
-    val time by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 10f,
-        animationSpec = infiniteRepeatable(tween(10000, easing = LinearEasing), RepeatMode.Restart)
-    )
-
-    Canvas(modifier = Modifier.fillMaxSize()) {
-        drawRect(Color(0xFF010205))
-        // Simple pulsing stars simulation
-        for (i in 0..50) {
-            val x = (i * 123.4f) % size.width
-            val y = (i * 321.4f) % size.height
-            val alpha = (sin(time + i) + 1f) / 2f
-            drawCircle(Color.White.copy(alpha = alpha * 0.5f), radius = 2f, center = Offset(x, y))
-        }
-    }
-}
-
-// Dummy Data Function
+// All real images mapped here
 fun getMedalsData(): List<MedalItem> = listOf(
-    MedalItem("1", "Rich", "/VID_20260924_124439.mp4", 5, "achievement", "green", 500, 0.5f, 700, 0.85f, "rich", "0/5000000000000 Coins Of gifts Send"),
-    MedalItem("2", "Rich", "/1000200509-background.mp4", 4, "achievement", "black", 500, 0.5f, 700, 0.85f, "rich", "0/400000000000 Coins Of gifts Send"),
-    MedalItem("new-1", "Super Gamer", "/1000201032-background.mp4", 4, "achievement", "black", 400, 0.5f, 660, 0.85f, "supergamer", "0/1000000000000 Coins You won from game"),
-    MedalItem("new-1-b", "Super Gamer 2", "/1000201032-background.mp4", 4, "dummy", "black", 400, 0.5f, 660, 0.85f, "supergamer", "0/2000000000000 Coins You won from game"),
-    // Add rest of the items exactly as they were in React...
+    // Rich
+    MedalItem("rich_1", "Rich I", "/IMG_20261023_110513.png", 1, "achievement", "black", 120, 0.5f, 200, 0.5f, "rich", "Send gifts to earn"),
+    MedalItem("rich_2", "Rich II", "/IMG_20261023_110533.png", 2, "achievement", "black", 120, 0.5f, 200, 0.5f, "rich", "Send gifts to earn"),
+    MedalItem("rich_3", "Rich III", "/IMG_20261023_110559.png", 3, "achievement", "black", 120, 0.5f, 200, 0.5f, "rich", "Send gifts to earn"),
+
+    // Room
+    MedalItem("room_1", "Room I", "/IMG_20261023_110628.png", 1, "achievement", "black", 120, 0.5f, 200, 0.5f, "room", "Room achievements"),
+    MedalItem("room_2", "Room II", "/IMG_20261023_110644.png", 2, "achievement", "black", 120, 0.5f, 200, 0.5f, "room", "Room achievements"),
+    MedalItem("room_3", "Room III", "/IMG_20261023_110705.png", 3, "achievement", "black", 120, 0.5f, 200, 0.5f, "room", "Room achievements"),
+
+    // Recharge
+    MedalItem("rech_1", "Recharge I", "/IMG_20261023_110734.png", 1, "achievement", "black", 120, 0.5f, 200, 0.5f, "recharge", "Recharge to earn"),
+    MedalItem("rech_2", "Recharge II", "/IMG_20261023_110756.png", 2, "achievement", "black", 120, 0.5f, 200, 0.5f, "recharge", "Recharge to earn"),
+    MedalItem("rech_3", "Recharge III", "/IMG_20261023_110825.png", 3, "achievement", "black", 120, 0.5f, 200, 0.5f, "recharge", "Recharge to earn"),
+
+    // Gamer
+    MedalItem("gamer_1", "Gamer", "/IMG_20261023_110852.png", 1, "achievement", "black", 120, 0.5f, 200, 0.5f, "gamer", "Play games to earn"),
+
+    // Event based 1
+    MedalItem("ev1_1", "Event I", "/IMG_20261023_110912.png", 1, "activity", "black", 120, 0.5f, 200, 0.5f, "event1", "Event rewards"),
+    MedalItem("ev1_2", "Event II", "/IMG_20261023_110930.png", 2, "activity", "black", 120, 0.5f, 200, 0.5f, "event1", "Event rewards"),
+    MedalItem("ev1_3", "Event III", "/IMG_20261023_111000.png", 3, "activity", "black", 120, 0.5f, 200, 0.5f, "event1", "Event rewards"),
+
+    // Event based 2
+    MedalItem("ev2_1", "Event Star I", "/IMG_20261023_111027.png", 1, "activity", "black", 120, 0.5f, 200, 0.5f, "event2", "Special event rewards"),
+    MedalItem("ev2_2", "Event Star II", "/IMG_20261023_111053.png", 2, "activity", "black", 120, 0.5f, 200, 0.5f, "event2", "Special event rewards"),
+    MedalItem("ev2_3", "Event Star III", "/IMG_20261023_111115.png", 3, "activity", "black", 120, 0.5f, 200, 0.5f, "event2", "Special event rewards")
 )
