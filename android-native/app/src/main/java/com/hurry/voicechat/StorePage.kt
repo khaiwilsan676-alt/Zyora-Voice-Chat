@@ -61,6 +61,7 @@ import kotlin.math.roundToInt
 private val StoreBlue = Color(0xFF1D4ED8)
 private val StoreBg = Color(0xFFF5F6F8)
 private val StoreCyan = Color(0xFF00B4D8)
+private val CardGrey = Color(0xFF242424) // Halka grey for cards
 private const val StoreAssetBase = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/"
 
 private data class NativeStoreTab(val id: String, val label: String, val icon: String)
@@ -128,8 +129,15 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
     val isBag = currentView == "bag"
     val visibleItems = nativeStoreItems.filter { it.tab == activeTab && (!isBag || ownedIds.contains(it.id)) }
 
-    Column(Modifier.fillMaxSize().background(StoreBg)) {
-        Column(Modifier.fillMaxWidth().background(StoreBg).statusBarsPadding()) {
+    // Dark theme glossy blue background
+    val darkGlossyBg = Brush.verticalGradient(
+        0.0f to Color(0xFF1D4ED8).copy(alpha = 0.5f), // Top 30% glossy blue mix
+        0.3f to Color.Black, // Clear Black starting at 30%
+        1.0f to Color.Black
+    )
+
+    Column(Modifier.fillMaxSize().background(darkGlossyBg)) {
+        Column(Modifier.fillMaxWidth().statusBarsPadding()) {
             Row(
                 Modifier.fillMaxWidth().height(52.dp).padding(horizontal = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -138,11 +146,11 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
                 Box(Modifier.size(36.dp).clip(CircleShape).clickable {
                     if (isBag) currentView = "store" else onBack()
                 }, contentAlignment = Alignment.Center) {
-                    Icon(Icons.Default.ArrowBack, "Back", tint = Color.Black, modifier = Modifier.size(26.dp))
+                    Icon(Icons.Default.ArrowBack, "Back", tint = Color.White, modifier = Modifier.size(26.dp))
                 }
-                Text(if (isBag) "Bag" else "Store", color = Color.Black, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Text(if (isBag) "Bag" else "Store", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 Text(
-                    if (isBag) "Store" else "Bag", color = StoreBlue, fontSize = 15.sp,
+                    if (isBag) "Store" else "Bag", color = Color(0xFF60A5FA), fontSize = 15.sp,
                     fontWeight = FontWeight.Bold, modifier = Modifier.clip(RoundedCornerShape(6.dp))
                         .clickable { currentView = if (isBag) "store" else "bag" }.padding(5.dp)
                 )
@@ -155,7 +163,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
                     val active = activeTab == tab.id
                     Box(
                         Modifier.width(63.dp).height(80.dp).clip(RoundedCornerShape(6.dp))
-                            .background(if (active) Color.Transparent else Color(0x33000000))
+                            .background(if (active) Color.Transparent else Color(0x33FFFFFF))
                             .clickable { activeTab = tab.id },
                         contentAlignment = Alignment.Center
                     ) {
@@ -183,14 +191,14 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
 
         if (activeTab == "ID") {
             Column(Modifier.fillMaxSize().padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Color.White).padding(20.dp)) {
-                    Text("Customize ID", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Color(0xFF111827))
+                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(CardGrey).padding(20.dp)) {
+                    Text("Customize ID", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Color.White)
                     Spacer(Modifier.height(16.dp))
-                    Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Color(0xFFF3F4F6)).padding(14.dp), contentAlignment = Alignment.Center) {
+                    Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Color(0xFF333333)).padding(14.dp), contentAlignment = Alignment.Center) {
                         Text("Start Your Customization Journey", fontSize = 14.sp, color = Color(0xFF9CA3AF), fontWeight = FontWeight.Medium)
                     }
                 }
-                Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Color(0xFFF3F4F6)).clickable { }.padding(14.dp), contentAlignment = Alignment.Center) {
+                Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Color(0xFF333333)).clickable { }.padding(14.dp), contentAlignment = Alignment.Center) {
                     Text("Customize", color = Color(0xFF9CA3AF), fontWeight = FontWeight.SemiBold)
                 }
             }
@@ -219,7 +227,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
                     Box(
                         Modifier.fillMaxWidth().then(if (theme) Modifier.height(200.dp) else Modifier.wrapContentHeight())
                             .clip(RoundedCornerShape(5.dp))
-                            .background(Color.White)
+                            .background(CardGrey) // Halka grey background
                     ) {
                         if (theme) {
                             AsyncImage(
@@ -236,18 +244,18 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
                             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                                 Text(
                                     "Try",
-                                    color = if (theme) Color.White else StoreBlue,
+                                    color = if (theme) Color.White else Color(0xFF60A5FA),
                                     fontSize = 10.sp,
                                     modifier = Modifier
                                         .clip(CircleShape)
-                                        .then(if (theme) Modifier.background(Color(0x33FFFFFF)).border(1.dp, Color.White, CircleShape) else Modifier.border(1.dp, StoreBlue, CircleShape))
+                                        .then(if (theme) Modifier.background(Color(0x33FFFFFF)).border(1.dp, Color.White, CircleShape) else Modifier.border(1.dp, Color(0xFF60A5FA), CircleShape))
                                         .clickable { tryItem = item }
                                         .padding(horizontal = 8.dp, vertical = 2.dp)
                                 )
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text("◷", color = if (theme) Color.White else Color.Gray, fontSize = 12.sp)
+                                    Text("◷", color = if (theme) Color.White else Color.LightGray, fontSize = 12.sp)
                                     Spacer(Modifier.width(3.dp))
-                                    Text(item.duration, color = if (theme) Color.White else Color.Gray, fontSize = 11.sp)
+                                    Text(item.duration, color = if (theme) Color.White else Color.LightGray, fontSize = 11.sp)
                                 }
                             }
                             if (!theme) {
@@ -261,12 +269,19 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
                                         Modifier.fillMaxWidth().height(if (isVehicle || isFrame) 120.dp else 80.dp)
                                     }
                                     
+                                    val gridBottomFade = if (isVehicle) {
+                                        when (item.id) {
+                                            "v2", "v4", "v6" -> 0.15f
+                                            else -> 0.1f
+                                        }
+                                    } else 0f
+                                    
                                     StoreVideoPreview(
                                         url = StoreAssetBase + item.image,
                                         modifier = mediaModifier,
                                         pause = true,
                                         topFade = if (isVehicle) 0.1f else 0f,
-                                        bottomFade = if (isVehicle) 0.1f else 0f,
+                                        bottomFade = gridBottomFade,
                                         removeGreenScreen = removeGreen
                                     )
                                 } else {
@@ -280,20 +295,21 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
                             Row(Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 8.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                                 AsyncImage(model = StoreAssetBase + "file_00000000e56882119c217d508b6733dc.png", contentDescription = "Coins", modifier = Modifier.size(16.dp))
                                 Spacer(Modifier.width(4.dp))
-                                Text("%,d".format(item.price), color = if (theme) Color.White else Color(0xFF111827), fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1)
+                                // Text color updated for dark theme
+                                Text("%,d".format(item.price), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1)
                             }
                             Row(
                                 Modifier.fillMaxWidth().height(30.dp)
                                     .clip(CircleShape)
                                     .border(1.dp, StoreBlue, CircleShape)
-                                    .background(Color.White)
+                                    .background(CardGrey)
                             ) {
                                 Box(
                                     Modifier.weight(1f).fillMaxHeight()
                                         .clickable { sendItem = item },
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Text("Send", color = StoreBlue, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    Text("Send", color = Color(0xFF60A5FA), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                                 }
                                 Box(
                                     Modifier.weight(1f).fillMaxHeight()
@@ -322,49 +338,56 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
 
     if (selectedItem != null) {
         val item = selectedItem!!
-        ModalBottomSheet(onDismissRequest = { selectedItem = null }, containerColor = Color.White, dragHandle = {
-            BottomSheetDefaults.DragHandle(color = Color(0xFFD1D5DB))
+        ModalBottomSheet(onDismissRequest = { selectedItem = null }, containerColor = Color(0xFF1E1E1E), dragHandle = {
+            BottomSheetDefaults.DragHandle(color = Color(0xFF6B7280))
         }) {
             Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Purchase", color = Color(0xFF111827), fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                Text("Purchase", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
                 val previewSource = item.video ?: item.image
                 if (previewSource.endsWith(".mp4", ignoreCase = true)) {
                     val isV1 = item.id == "v1"
                     val removeGreen = if (item.tab == "Vehicle") isV1 else true
                     val previewModifier = if (item.tab == "Vehicle" && !isV1) Modifier.width(180.dp).wrapContentHeight() else Modifier.size(180.dp)
                     
+                    val sheetBottomFade = if (item.tab == "Vehicle") {
+                        when (item.id) {
+                            "v2", "v4", "v6" -> 0.15f
+                            else -> 0.1f
+                        }
+                    } else 0f
+                    
                     StoreVideoPreview(
                         url = StoreAssetBase + previewSource,
                         modifier = previewModifier,
                         pause = false,
                         topFade = if (item.tab == "Vehicle") 0.1f else 0f,
-                        bottomFade = if (item.tab == "Vehicle") 0.1f else 0f,
+                        bottomFade = sheetBottomFade,
                         removeGreenScreen = removeGreen
                     )
                 } else {
                     AsyncImage(model = StoreAssetBase + previewSource, contentDescription = item.name, modifier = Modifier.size(180.dp))
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("%,d".format(item.price), color = Color(0xFF111827), fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                    Text("%,d".format(item.price), color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.width(6.dp))
                     AsyncImage(model = StoreAssetBase + "file_00000000e56882119c217d508b6733dc.png", contentDescription = "Coins", modifier = Modifier.size(24.dp))
                 }
-                Text(item.name, Modifier.fillMaxWidth().padding(top = 8.dp), fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Color(0xFF111827))
+                Text(item.name, Modifier.fillMaxWidth().padding(top = 8.dp), fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Color.White)
                 Row(Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 8.dp), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
-                    Text("Balance: ", fontSize = 13.sp, color = Color(0xFF4B5563), fontWeight = FontWeight.SemiBold)
+                    Text("Balance: ", fontSize = 13.sp, color = Color(0xFF9CA3AF), fontWeight = FontWeight.SemiBold)
                     AsyncImage(model = StoreAssetBase + "file_00000000e56882119c217d508b6733dc.png", contentDescription = "Coins", modifier = Modifier.size(16.dp))
-                    Text("%,d".format(balance), fontSize = 13.sp, color = Color(0xFF4B5563), fontWeight = FontWeight.SemiBold)
+                    Text("%,d".format(balance), fontSize = 13.sp, color = Color(0xFF9CA3AF), fontWeight = FontWeight.SemiBold)
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Box(Modifier.weight(1f).clip(CircleShape).background(Color(0xFFFFF7ED)).padding(vertical = 9.dp), contentAlignment = Alignment.Center) {
+                    Box(Modifier.weight(1f).clip(CircleShape).background(Color(0xFF33271C)).padding(vertical = 9.dp), contentAlignment = Alignment.Center) {
                         Text("✓  3days", color = Color(0xFFF97316), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                     }
-                    Box(Modifier.weight(1f).clip(CircleShape).background(Color(0xFFF9FAFB)).padding(vertical = 9.dp), contentAlignment = Alignment.Center) {
+                    Box(Modifier.weight(1f).clip(CircleShape).background(Color(0xFF2A2A2A)).padding(vertical = 9.dp), contentAlignment = Alignment.Center) {
                         Text("7days", color = Color(0xFF9CA3AF), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
                 Row(Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 22.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Button(onClick = { sendItem = item; selectedItem = null }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE0F2FE), contentColor = StoreBlue)) { Text("Send", fontWeight = FontWeight.Bold) }
+                    Button(onClick = { sendItem = item; selectedItem = null }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E3A8A), contentColor = Color(0xFF60A5FA))) { Text("Send", fontWeight = FontWeight.Bold) }
                     Button(onClick = {
                         if (ownedIds.contains(item.id)) {
                             if (equippedIds.contains(item.id)) equippedIds.remove(item.id) else {
@@ -397,7 +420,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
             Box(
                 Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = if (item.tab == "Theme") 0.7f else if (item.tab == "Chat Bubble") 0.6f else 0.5f))
+                    .background(Color.Transparent) // Remove black drop background here
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null
@@ -418,21 +441,21 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
                     }
                     "Avatar Frame" -> {
                         Box(
-                            Modifier.width(300.dp).height(300.dp).background(Color.White, RoundedCornerShape(16.dp)).clickable(enabled = false) {},
+                            Modifier.width(300.dp).height(300.dp).background(CardGrey, RoundedCornerShape(16.dp)).clickable(enabled = false) {},
                             contentAlignment = Alignment.BottomCenter
                         ) {
                             Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                                 Spacer(Modifier.height(40.dp))
-                                Text(item.name, fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                                Text(item.name, fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Color.White)
                                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
-                                    Text("◷", color = Color.Gray, fontSize = 13.sp)
+                                    Text("◷", color = Color.LightGray, fontSize = 13.sp)
                                     Spacer(Modifier.width(4.dp))
-                                    Text(item.duration, color = Color.Gray, fontSize = 13.sp)
+                                    Text(item.duration, color = Color.LightGray, fontSize = 13.sp)
                                 }
                                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp, bottom = 16.dp)) {
                                     AsyncImage(model = StoreAssetBase + "file_00000000e56882119c217d508b6733dc.png", contentDescription = null, modifier = Modifier.size(16.dp))
                                     Spacer(Modifier.width(6.dp))
-                                    Text("%,d".format(item.price), fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                                    Text("%,d".format(item.price), fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.White)
                                 }
                                 val isOwned = ownedIds.contains(item.id)
                                 val isEquipped = equippedIds.contains(item.id)
@@ -458,14 +481,13 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
                                 OutlinedButton(
                                     onClick = { tryItem = null },
                                     modifier = Modifier.fillMaxWidth().height(42.dp),
-                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Gray),
-                                    border = BorderStroke(1.dp, Color.LightGray)
+                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.LightGray),
+                                    border = BorderStroke(1.dp, Color.Gray)
                                 ) {
                                     Text("Cancel", fontWeight = FontWeight.Bold)
                                 }
                             }
                             
-                            // 🎯 Yahan custom size aur position setup kiya hai
                             val frameOffsetY = when (item.id) {
                                 "a3" -> (-65).dp
                                 "a5" -> (-60).dp
@@ -494,11 +516,11 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
                     }
                     "Chat Bubble" -> {
                         Column(
-                            Modifier.width(260.dp).background(Color.White, RoundedCornerShape(22.dp)).padding(top = 20.dp, bottom = 16.dp, start = 16.dp, end = 16.dp).clickable(enabled = false) {},
+                            Modifier.width(260.dp).background(CardGrey, RoundedCornerShape(22.dp)).padding(top = 20.dp, bottom = 16.dp, start = 16.dp, end = 16.dp).clickable(enabled = false) {},
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 12.dp)) {
-                                Box(Modifier.size(16.dp).border(5.dp, Color(0xFFE5E7EB), CircleShape).background(Color.White))
+                                Box(Modifier.size(16.dp).border(5.dp, Color(0xFF333333), CircleShape).background(CardGrey))
                                 Spacer(Modifier.width(8.dp))
                                 Text("3D", color = Color(0xFF9CA3AF), fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
                             }
@@ -517,7 +539,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
                             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 12.dp)) {
                                 AsyncImage(model = StoreAssetBase + "file_00000000e56882119c217d508b6733dc.png", contentDescription = null, modifier = Modifier.size(28.dp))
                                 Spacer(Modifier.width(6.dp))
-                                Text("%,d".format(item.price), fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = Color.Black)
+                                Text("%,d".format(item.price), fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
                             }
                             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 2.dp, bottom = 12.dp).alpha(0.6f)) {
                                 AsyncImage(model = StoreAssetBase + "file_00000000e56882119c217d508b6733dc.png", contentDescription = null, modifier = Modifier.size(14.dp))
@@ -536,13 +558,13 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
                                 modifier = Modifier.fillMaxWidth().height(42.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00C88C))
                             ) {
-                                Text("Buy", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                                Text("Buy", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
                             }
                             Spacer(Modifier.height(8.dp))
                             Button(
                                 onClick = { tryItem = null },
                                 modifier = Modifier.fillMaxWidth().height(42.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF2F2F2), contentColor = Color(0xFF8A8A8A))
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF333333), contentColor = Color(0xFF9CA3AF))
                             ) {
                                 Text("Cancel", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                             }
@@ -558,7 +580,8 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
                         }
                         val bottomFadeVal = when (item.id) {
                             "v10" -> 0.05f
-                            "v9", "v7", "v2", "v6" -> 0.0f
+                            "v2", "v4", "v6" -> 0.15f 
+                            "v9", "v7" -> 0.0f
                             else -> 0.10f
                         }
                         
@@ -590,14 +613,14 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
     }
 
     if (sendItem != null) {
-        ModalBottomSheet(onDismissRequest = { sendItem = null; searchQuery = "" }, containerColor = Color.White) {
+        ModalBottomSheet(onDismissRequest = { sendItem = null; searchQuery = "" }, containerColor = Color(0xFF1E1E1E)) {
             Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 20.dp)) {
-                Text("Send to friends", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color(0xFF111827))
-                Text("Contact", modifier = Modifier.padding(top = 14.dp, bottom = 8.dp), fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF1F2937))
-                Row(Modifier.fillMaxWidth().clip(CircleShape).background(Color(0xFFF3F4F6)).padding(horizontal = 14.dp, vertical = 11.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("Send to friends", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                Text("Contact", modifier = Modifier.padding(top = 14.dp, bottom = 8.dp), fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Color.LightGray)
+                Row(Modifier.fillMaxWidth().clip(CircleShape).background(Color(0xFF2A2A2A)).padding(horizontal = 14.dp, vertical = 11.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text("⌕", fontSize = 20.sp, color = Color.Gray)
                     Spacer(Modifier.width(8.dp))
-                    BasicTextField(value = searchQuery, onValueChange = { searchQuery = it }, singleLine = true, modifier = Modifier.fillMaxWidth(), textStyle = androidx.compose.ui.text.TextStyle(fontSize = 14.sp, color = Color(0xFF1F2937)), decorationBox = { inner ->
+                    BasicTextField(value = searchQuery, onValueChange = { searchQuery = it }, singleLine = true, modifier = Modifier.fillMaxWidth(), textStyle = androidx.compose.ui.text.TextStyle(fontSize = 14.sp, color = Color.White), decorationBox = { inner ->
                         if (searchQuery.isEmpty()) Text("Search friends...", fontSize = 14.sp, color = Color(0xFF9CA3AF))
                         inner()
                     })
@@ -605,8 +628,8 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
                 listOf("add please", "99❤️OWNER KABIR☆khan").filter { it.contains(searchQuery, true) }.forEachIndexed { index, name ->
                     Row(Modifier.fillMaxWidth().clickable { sendItem = null; searchQuery = "" }.padding(vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
                         AsyncImage(model = StoreAssetBase + if (index == 0) "IMG_20260913_090019.png" else "IMG_20260913_090057.png", contentDescription = name, modifier = Modifier.size(44.dp).clip(CircleShape))
-                        Text(name, Modifier.padding(start = 12.dp).weight(1f), fontSize = 14.sp, color = Color(0xFF1F2937), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text("Send", color = StoreBlue, fontWeight = FontWeight.Bold, modifier = Modifier.clickable { sendItem = null; searchQuery = "" }.padding(8.dp))
+                        Text(name, Modifier.padding(start = 12.dp).weight(1f), fontSize = 14.sp, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text("Send", color = Color(0xFF60A5FA), fontWeight = FontWeight.Bold, modifier = Modifier.clickable { sendItem = null; searchQuery = "" }.padding(8.dp))
                     }
                 }
                 Spacer(Modifier.height(18.dp))
