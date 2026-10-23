@@ -98,6 +98,7 @@ private val nativeStoreItems = listOf(
     NativeStoreItem("a5", "Gemshine", "file_00000000a77c8211a913aef88c4d9a4d.png", "Avatar Frame", 5, 249000, "3D"),
     NativeStoreItem("a6", "Love Beat", "file_00000000445482119241b60988ca201a.png", "Avatar Frame", 5, 300000, "3D"),
     NativeStoreItem("a7", "Golden Aura", "file_00000000406482119e4e67fbbe323a54.png", "Avatar Frame", 5, 199000, "3D"),
+    NativeStoreItem("a8", "Happy birthday", "file_00000000c21482118a018264cecee76c.png", "Avatar Frame", 5, 500000, "3D", video = "gemini_generated_video_c02dfa3d~2.mp4"),
     
     NativeStoreItem("t1", "Seafood", "IMG-20260904-WA0004.jpg", "Theme", 4, 2700000, "30D"),
     NativeStoreItem("t2", "Night Sky", "IMG-20260904-WA0005.jpg", "Theme", 5, 2400000, "30D"),
@@ -291,7 +292,18 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
                             } else {
                                 Spacer(Modifier.weight(1f).fillMaxWidth().height(80.dp))
                             }
-                            Text("★".repeat(item.stars) + "☆".repeat(5 - item.stars), color = Color(0xFFFFC928), fontSize = 16.sp, lineHeight = 18.sp)
+                            
+                            // Image based stars
+                            Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 2.dp)) {
+                                repeat(5) { index ->
+                                    if (index < item.stars) {
+                                        AsyncImage(model = StoreAssetBase + "file_0000000004e881fa84e61b8616f8eaf8.png", contentDescription = "Star", modifier = Modifier.size(14.dp))
+                                    } else {
+                                        AsyncImage(model = StoreAssetBase + "file_0000000004e881fa84e61b8616f8eaf8.png", contentDescription = "Star", modifier = Modifier.size(14.dp).alpha(0.3f))
+                                    }
+                                }
+                            }
+                            
                             Row(Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 8.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                                 AsyncImage(model = StoreAssetBase + "file_00000000e56882119c217d508b6733dc.png", contentDescription = "Coins", modifier = Modifier.size(16.dp))
                                 Spacer(Modifier.width(4.dp))
@@ -433,9 +445,18 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
                             Box(Modifier.width(230.dp).height(480.dp).border(4.dp, Color.Yellow, RoundedCornerShape(24.dp)).clip(RoundedCornerShape(24.dp)).background(Color.Transparent)) {
                                 AsyncImage(model = StoreAssetBase + item.image, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                             }
-                            Row(Modifier.padding(top = 16.dp)) {
-                                Text("★".repeat(item.stars) + "☆".repeat(5 - item.stars), color = Color.Yellow, fontSize = 20.sp)
+                            
+                            // Image based stars for dialog
+                            Row(Modifier.padding(top = 16.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                                repeat(5) { index ->
+                                    if (index < item.stars) {
+                                        AsyncImage(model = StoreAssetBase + "file_0000000004e881fa84e61b8616f8eaf8.png", contentDescription = "Star", modifier = Modifier.size(20.dp))
+                                    } else {
+                                        AsyncImage(model = StoreAssetBase + "file_0000000004e881fa84e61b8616f8eaf8.png", contentDescription = "Star", modifier = Modifier.size(20.dp).alpha(0.3f))
+                                    }
+                                }
                             }
+                            
                             Text(item.name, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp))
                         }
                     }
@@ -489,7 +510,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
                             }
                             
                             val frameOffsetY = when (item.id) {
-                                "a3" -> (-65).dp
+                                "a3" -> (-72).dp // Moved slightly up from -65.dp
                                 "a5" -> (-60).dp
                                 "a6" -> (-62).dp
                                 else -> (-55).dp
@@ -613,18 +634,63 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
     }
 
     if (sendItem != null) {
-        ModalBottomSheet(onDismissRequest = { sendItem = null; searchQuery = "" }, containerColor = Color(0xFF1E1E1E)) {
-            Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 20.dp)) {
-                Text("Send to friends", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                Text("Contact", modifier = Modifier.padding(top = 14.dp, bottom = 8.dp), fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Color.LightGray)
-                Row(Modifier.fillMaxWidth().clip(CircleShape).background(Color(0xFF2A2A2A)).padding(horizontal = 14.dp, vertical = 11.dp), verticalAlignment = Alignment.CenterVertically) {
+        ModalBottomSheet(
+            onDismissRequest = { sendItem = null; searchQuery = "" }, 
+            containerColor = Color(0xFF1E1E1E),
+            dragHandle = {}, // Top line (drag handle) ko hata diya
+            shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp) // Corner md (kam) kar diya
+        ) {
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight(0.5f) // 50Vh set kar diya
+                    .navigationBarsPadding()
+                    .padding(horizontal = 20.dp)
+            ) {
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                // Top Left Back Icon & Middle Heading "Gift"
+                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Default.ArrowBack,
+                        contentDescription = "Back",
+                        tint = Color.White,
+                        modifier = Modifier
+                            .align(Alignment.CenterStart)
+                            .clickable { sendItem = null; searchQuery = "" }
+                            .padding(4.dp)
+                    )
+                    Text("Gift", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Input bar (Contact text remove kar diya and corner md (kam) kar diya)
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp)) // pehle CircleShape tha, ab thoda kam round hai
+                        .background(Color(0xFF2A2A2A))
+                        .padding(horizontal = 14.dp, vertical = 11.dp), 
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text("⌕", fontSize = 20.sp, color = Color.Gray)
                     Spacer(Modifier.width(8.dp))
-                    BasicTextField(value = searchQuery, onValueChange = { searchQuery = it }, singleLine = true, modifier = Modifier.fillMaxWidth(), textStyle = androidx.compose.ui.text.TextStyle(fontSize = 14.sp, color = Color.White), decorationBox = { inner ->
-                        if (searchQuery.isEmpty()) Text("Search friends...", fontSize = 14.sp, color = Color(0xFF9CA3AF))
-                        inner()
-                    })
+                    BasicTextField(
+                        value = searchQuery, 
+                        onValueChange = { searchQuery = it }, 
+                        singleLine = true, 
+                        modifier = Modifier.fillMaxWidth(), 
+                        textStyle = androidx.compose.ui.text.TextStyle(fontSize = 14.sp, color = Color.White), 
+                        decorationBox = { inner ->
+                            if (searchQuery.isEmpty()) Text("Search friends...", fontSize = 14.sp, color = Color(0xFF9CA3AF))
+                            inner()
+                        }
+                    )
                 }
+                
+                Spacer(modifier = Modifier.height(12.dp))
+                
                 listOf("add please", "99❤️OWNER KABIR☆khan").filter { it.contains(searchQuery, true) }.forEachIndexed { index, name ->
                     Row(Modifier.fillMaxWidth().clickable { sendItem = null; searchQuery = "" }.padding(vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
                         AsyncImage(model = StoreAssetBase + if (index == 0) "IMG_20260913_090019.png" else "IMG_20260913_090057.png", contentDescription = name, modifier = Modifier.size(44.dp).clip(CircleShape))
