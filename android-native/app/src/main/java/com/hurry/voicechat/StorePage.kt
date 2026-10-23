@@ -80,13 +80,14 @@ private val nativeStoreTabs = listOf(
 
 private val nativeStoreItems = listOf(
     NativeStoreItem("v1", "Leopard Roar", "IMG_20261023_124625.png", "Vehicle", 5, 1000000, "5D", "VID_20260905_095157_269_bsl.mp4"),
+    NativeStoreItem("v10", "Shadow Beast", "file_0000000009a482118ab17c8d0629d193.png", "Vehicle", 5, 1200000, "5D", "Screenrecorder-2026-10-23-16-01-27-317~2.mp4"),
     NativeStoreItem("v2", "Speedster", "IMG_20261023_125302.png", "Vehicle", 5, 600000, "5D", "alioss_19_2025090317293759938~2.mp4"),
     NativeStoreItem("v3", "Blaze Runner", "IMG_20261023_125318.png", "Vehicle", 5, 549999, "5D", "alioss_19_2025120517555513292~2.mp4"),
     NativeStoreItem("v4", "Star Rider", "IMG_20261023_125335.png", "Vehicle", 5, 500000, "5D", "alioss_19_2025121720314422497~2.mp4"),
     NativeStoreItem("v5", "Sky Drift", "IMG_20261023_125357.png", "Vehicle", 5, 259000, "5D", "alioss_19_2026021110563339968~2.mp4"),
-    NativeStoreItem("v6", "Neon Flash", "IMG_20261023_125133.png", "Vehicle", 5, 890999, "5D", "alioss_16_2025092202374953873~2.mp4"), // Swapped from Shadow Wing
-    NativeStoreItem("v7", "Royal Cruiser", "IMG_20261023_125152.png", "Vehicle", 5, 425000, "5D", "alioss_16_2025080802251364763~2.mp4"), // Swapped from Neon Flash
-    NativeStoreItem("v8", "Shadow Wing", "IMG_20261023_125210.png", "Vehicle", 5, 525000, "5D", "alioss_16_2025092202291646319~2.mp4"), // Swapped from Royal Cruiser
+    NativeStoreItem("v6", "Neon Flash", "IMG_20261023_125133.png", "Vehicle", 5, 890999, "5D", "alioss_16_2025092202374953873~2.mp4"), 
+    NativeStoreItem("v7", "Royal Cruiser", "IMG_20261023_125152.png", "Vehicle", 5, 425000, "5D", "alioss_16_2025080802251364763~2.mp4"), 
+    NativeStoreItem("v8", "Shadow Wing", "IMG_20261023_125210.png", "Vehicle", 5, 525000, "5D", "alioss_16_2025092202291646319~2.mp4"), 
     NativeStoreItem("v9", "Galaxy Surfer", "IMG_20261023_125416.png", "Vehicle", 5, 359999, "5D", "alioss_17_2025041211424496804~2.mp4"),
 
     NativeStoreItem("a1", "Crown Wings", "IMG_20261021_192009.png", "Avatar Frame", 5, 250000, "3D", video = "VID_20260905_024534_955_bsl.mp4"),
@@ -252,6 +253,8 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
                             if (!theme) {
                                 if (item.image.endsWith(".mp4", ignoreCase = true)) {
                                     val isV1 = item.id == "v1"
+                                    val removeGreen = if (isVehicle) isV1 else true
+                                    
                                     val mediaModifier = if (isVehicle && !isV1) {
                                         Modifier.fillMaxWidth().wrapContentHeight()
                                     } else {
@@ -262,8 +265,9 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
                                         url = StoreAssetBase + item.image,
                                         modifier = mediaModifier,
                                         pause = true,
-                                        fadeEdges = isVehicle,
-                                        removeGreenScreen = isV1
+                                        topFade = if (isVehicle) 0.1f else 0f,
+                                        bottomFade = if (isVehicle) 0.1f else 0f,
+                                        removeGreenScreen = removeGreen
                                     )
                                 } else {
                                     val mediaModifier = Modifier.fillMaxWidth().height(if (isVehicle || isFrame) 120.dp else 80.dp)
@@ -326,14 +330,16 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
                 val previewSource = item.video ?: item.image
                 if (previewSource.endsWith(".mp4", ignoreCase = true)) {
                     val isV1 = item.id == "v1"
+                    val removeGreen = if (item.tab == "Vehicle") isV1 else true
                     val previewModifier = if (item.tab == "Vehicle" && !isV1) Modifier.width(180.dp).wrapContentHeight() else Modifier.size(180.dp)
                     
                     StoreVideoPreview(
                         url = StoreAssetBase + previewSource,
                         modifier = previewModifier,
                         pause = false,
-                        fadeEdges = item.tab == "Vehicle",
-                        removeGreenScreen = isV1
+                        topFade = if (item.tab == "Vehicle") 0.1f else 0f,
+                        bottomFade = if (item.tab == "Vehicle") 0.1f else 0f,
+                        removeGreenScreen = removeGreen
                     )
                 } else {
                     AsyncImage(model = StoreAssetBase + previewSource, contentDescription = item.name, modifier = Modifier.size(180.dp))
@@ -458,13 +464,28 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
                                     Text("Cancel", fontWeight = FontWeight.Bold)
                                 }
                             }
-                            Box(Modifier.align(Alignment.TopCenter).offset(y = (-55).dp).size(110.dp), contentAlignment = Alignment.Center) {
+                            
+                            // 🎯 Yahan custom size aur position setup kiya hai
+                            val frameOffsetY = when (item.id) {
+                                "a3" -> (-65).dp
+                                "a5" -> (-60).dp
+                                "a6" -> (-62).dp
+                                else -> (-55).dp
+                            }
+                            
+                            val frameSize = when (item.id) {
+                                "a3" -> 130.dp
+                                "a6" -> 120.dp
+                                else -> 110.dp
+                            }
+
+                            Box(Modifier.align(Alignment.TopCenter).offset(y = frameOffsetY).size(frameSize), contentAlignment = Alignment.Center) {
                                 Box(Modifier.size(80.dp).clip(CircleShape).background(Color.Gray), contentAlignment = Alignment.Center) {
                                     Text("U", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Bold)
                                 }
                                 val source = item.video ?: item.image
                                 if (source.endsWith(".mp4", true)) {
-                                    StoreVideoPreview(StoreAssetBase + source, Modifier.fillMaxSize(), pause = false)
+                                    StoreVideoPreview(StoreAssetBase + source, Modifier.fillMaxSize(), pause = false, removeGreenScreen = true)
                                 } else {
                                     AsyncImage(model = StoreAssetBase + source, contentDescription = null, modifier = Modifier.fillMaxSize())
                                 }
@@ -527,29 +548,40 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
                             }
                         }
                     }
-                    else -> { // Vehicle Try Dialog
-                        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable(enabled = false) {}) {
+                    else -> { 
+                        val alignBottom = item.id == "v9" || item.id == "v7" || item.id == "v2" || item.id == "v10"
+                        
+                        val topFadeVal = when (item.id) {
+                            "v10" -> 0.05f
+                            "v9", "v7", "v6" -> 0.15f
+                            else -> 0.10f
+                        }
+                        val bottomFadeVal = when (item.id) {
+                            "v10" -> 0.05f
+                            "v9", "v7", "v2", "v6" -> 0.0f
+                            else -> 0.10f
+                        }
+                        
+                        Box(
+                            Modifier
+                                .fillMaxSize()
+                                .clickable(enabled = false) {}, 
+                            contentAlignment = if (alignBottom) Alignment.BottomCenter else Alignment.Center
+                        ) {
                             val isV1 = item.id == "v1"
-                            val boxModifier = if (isV1) Modifier.fillMaxWidth().height(360.dp) else Modifier.fillMaxWidth().wrapContentHeight()
-                            
-                            Box(boxModifier, contentAlignment = Alignment.Center) {
-                                val source = item.video ?: item.image
-                                if (source.endsWith(".mp4", true)) {
-                                    StoreVideoPreview(
-                                        url = StoreAssetBase + source,
-                                        modifier = Modifier.fillMaxWidth(),
-                                        pause = false,
-                                        fadeEdges = true,
-                                        removeGreenScreen = isV1
-                                    )
-                                } else {
-                                    AsyncImage(model = StoreAssetBase + source, contentDescription = item.name, modifier = Modifier.fillMaxSize())
-                                }
+                            val source = item.video ?: item.image
+                            if (source.endsWith(".mp4", true)) {
+                                StoreVideoPreview(
+                                    url = StoreAssetBase + source,
+                                    modifier = Modifier.fillMaxWidth().wrapContentHeight(),
+                                    pause = false,
+                                    topFade = topFadeVal,
+                                    bottomFade = bottomFadeVal,
+                                    removeGreenScreen = isV1
+                                )
+                            } else {
+                                AsyncImage(model = StoreAssetBase + source, contentDescription = item.name, modifier = Modifier.fillMaxWidth())
                             }
-                            Row(Modifier.padding(top = 16.dp)) {
-                                Text("★".repeat(item.stars) + "☆".repeat(5 - item.stars), color = Color.Yellow, fontSize = 20.sp)
-                            }
-                            Text(item.name, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp))
                         }
                     }
                 }
@@ -638,7 +670,8 @@ private fun StoreVideoPreview(
     url: String, 
     modifier: Modifier = Modifier, 
     pause: Boolean = false, 
-    fadeEdges: Boolean = false,
+    topFade: Float = 0f,
+    bottomFade: Float = 0f,
     removeGreenScreen: Boolean = false 
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -654,18 +687,29 @@ private fun StoreVideoPreview(
         ))
     }
 
-    val fadeModifier = if (fadeEdges) {
+    val fadeModifier = if (topFade > 0f || bottomFade > 0f) {
         Modifier
             .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
             .drawWithContent {
                 drawContent()
+                
+                val stops = mutableListOf<Pair<Float, Color>>()
+                if (topFade > 0f) {
+                    stops.add(0.0f to Color.Transparent)
+                    stops.add(topFade to Color.Black)
+                } else {
+                    stops.add(0.0f to Color.Black)
+                }
+                
+                if (bottomFade > 0f) {
+                    stops.add(1f - bottomFade to Color.Black)
+                    stops.add(1.0f to Color.Transparent)
+                } else {
+                    stops.add(1.0f to Color.Black)
+                }
+
                 drawRect(
-                    brush = Brush.verticalGradient(
-                        0.0f to Color.Transparent, 
-                        0.1f to Color.Black, 
-                        0.9f to Color.Black,
-                        1.0f to Color.Transparent
-                    ),
+                    brush = Brush.verticalGradient(*stops.toTypedArray()),
                     blendMode = BlendMode.DstIn
                 )
             }
