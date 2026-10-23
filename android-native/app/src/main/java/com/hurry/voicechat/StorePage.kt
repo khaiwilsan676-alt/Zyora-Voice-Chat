@@ -22,6 +22,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.ColorMatrix
@@ -76,12 +79,20 @@ private val nativeStoreTabs = listOf(
 )
 
 private val nativeStoreItems = listOf(
-    NativeStoreItem("v1", "Leopard Roar", "IMG_20260905_222412.jpg", "Vehicle", 5, 1000000, "5D", "VID_20260905_095157_269_bsl.mp4"),
+    // 🎯 Vehicles Update Kar diye as requested
+    NativeStoreItem("v1", "Leopard Roar", "IMG_20261023_124625.png", "Vehicle", 5, 1000000, "5D", "VID_20260905_095157_269_bsl.mp4"),
+    NativeStoreItem("v2", "Speedster", "IMG_20261023_125302.png", "Vehicle", 5, 600000, "5D", "alioss_19_2025090317293759938~2.mp4"),
+    NativeStoreItem("v3", "Blaze Runner", "IMG_20261023_125318.png", "Vehicle", 5, 549999, "5D", "alioss_19_2025120517555513292~2.mp4"),
+    NativeStoreItem("v4", "Star Rider", "IMG_20261023_125335.png", "Vehicle", 5, 500000, "5D", "alioss_19_2025121720314422497~2.mp4"),
+    NativeStoreItem("v5", "Sky Drift", "IMG_20261023_125357.png", "Vehicle", 5, 259000, "5D", "alioss_19_2026021110563339968~2.mp4"),
+    NativeStoreItem("v6", "Neon Flash", "IMG_20261023_125133.png", "Vehicle", 5, 890999, "5D", "alioss_16_2025080802251364763~2.mp4"),
+    NativeStoreItem("v7", "Royal Cruiser", "IMG_20261023_125152.png", "Vehicle", 5, 425000, "5D", "alioss_16_2025092202291646319~2.mp4"),
+    NativeStoreItem("v8", "Shadow Wing", "IMG_20261023_125210.png", "Vehicle", 5, 525000, "5D", "alioss_16_2025092202374953873~2.mp4"),
+    NativeStoreItem("v9", "Galaxy Surfer", "IMG_20261023_125416.png", "Vehicle", 5, 359999, "5D", "alioss_17_2025041211424496804~2.mp4"),
+
     NativeStoreItem("a1", "Crown Wings", "IMG_20261021_192009.png", "Avatar Frame", 5, 250000, "3D", video = "VID_20260905_024534_955_bsl.mp4"),
     NativeStoreItem("a2", "Host Wings", "IMG_20261021_192044.png", "Avatar Frame", 5, 500000, "3D", video = "VID_20260905_024726_660_bsl.mp4"),
     NativeStoreItem("a3", "Mystic Wings", "file_00000000c67c81fba9294a82cd14d3ca.png", "Avatar Frame", 5, 750000, "3D", video = "VID_20260905_083446_619_bsl.mp4"),
-    
-    // 🎯 Yahan tumhare 4 naye Avatar Frames add kar diye gaye hain
     NativeStoreItem("a4", "Ninja Neo", "file_00000000b8048211813166b471b0cdf6.png", "Avatar Frame", 5, 700000, "3D"),
     NativeStoreItem("a5", "Gemshine", "file_00000000a77c8211a913aef88c4d9a4d.png", "Avatar Frame", 5, 249000, "3D"),
     NativeStoreItem("a6", "Love Beat", "file_00000000445482119241b60988ca201a.png", "Avatar Frame", 5, 300000, "3D"),
@@ -217,7 +228,6 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
                                 modifier = Modifier.fillMaxSize(),
                                 contentScale = ContentScale.Crop
                             )
-                            // 🎯 Yahan se black drop overlay hata diya jaisa tumne kaha! 
                         }
                         Column(
                             Modifier.fillMaxWidth().padding(5.dp),
@@ -243,10 +253,10 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
                             if (!theme) {
                                 val mediaModifier = Modifier.fillMaxWidth().height(if (isVehicle || isFrame) 120.dp else 80.dp)
                                 if (item.image.endsWith(".mp4", ignoreCase = true)) {
-                                    StoreVideoPreview(StoreAssetBase + item.image, mediaModifier, pause = true)
-                                } else if (isVehicle) {
-                                    StoreChromaImage(StoreAssetBase + item.image, item.name, mediaModifier)
+                                    // 🎯 Video hai to fadeEdges pass kiya (only for vehicles 10% fade)
+                                    StoreVideoPreview(StoreAssetBase + item.image, mediaModifier, pause = true, fadeEdges = isVehicle)
                                 } else {
+                                    // 🎯 Green remove wala StoreChromaImage hata diya Vehicle ke liye, ab simple load hoga
                                     AsyncImage(model = StoreAssetBase + item.image, contentDescription = item.name, modifier = mediaModifier)
                                 }
                             } else {
@@ -305,7 +315,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
                 Text("Purchase", color = Color(0xFF111827), fontSize = 17.sp, fontWeight = FontWeight.Bold)
                 val previewSource = item.video ?: item.image
                 if (previewSource.endsWith(".mp4", ignoreCase = true)) {
-                    StoreVideoPreview(StoreAssetBase + previewSource, Modifier.size(180.dp), pause = false)
+                    StoreVideoPreview(StoreAssetBase + previewSource, Modifier.size(180.dp), pause = false, fadeEdges = item.tab == "Vehicle")
                 } else {
                     AsyncImage(model = StoreAssetBase + previewSource, contentDescription = item.name, modifier = Modifier.size(180.dp))
                 }
@@ -372,7 +382,6 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
                 when (item.tab) {
                     "Theme" -> {
                         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable(enabled = false) {}) {
-                            // 🎯 Yahan bhi background Color.Black se Transparent kar diya black drop hatane ke liye!
                             Box(Modifier.width(230.dp).height(480.dp).border(4.dp, Color.Yellow, RoundedCornerShape(24.dp)).clip(RoundedCornerShape(24.dp)).background(Color.Transparent)) {
                                 AsyncImage(model = StoreAssetBase + item.image, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                             }
@@ -504,9 +513,10 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
                             Box(Modifier.fillMaxWidth().height(360.dp), contentAlignment = Alignment.Center) {
                                 val source = item.video ?: item.image
                                 if (source.endsWith(".mp4", true)) {
-                                    StoreVideoPreview(StoreAssetBase + source, Modifier.fillMaxSize(), pause = false)
+                                    // 🎯 Video Try dialog me bhi fadeEdges apply
+                                    StoreVideoPreview(StoreAssetBase + source, Modifier.fillMaxSize(), pause = false, fadeEdges = true)
                                 } else {
-                                    StoreChromaImage(StoreAssetBase + source, item.name, Modifier.fillMaxSize())
+                                    AsyncImage(model = StoreAssetBase + source, contentDescription = item.name, modifier = Modifier.fillMaxSize())
                                 }
                             }
                             Row(Modifier.padding(top = 16.dp)) {
@@ -546,6 +556,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
     }
 }
 
+// Ye function aise hi chhor raha hu taaki future ke liye bacha rahe, par ab image ke liye directly AsyncImage chalega.
 @Composable
 private fun StoreChromaImage(
     url: String,
@@ -596,23 +607,42 @@ private fun StoreChromaImage(
     }
 }
 
-// 🎯 BACCHA LAL-NEELA HONA FIXED HERE!
+// 🎯 FADE EDGES LOGIC ADDED HERE! (Top aur bottom 10% fade blend)
 @Composable
-private fun StoreVideoPreview(url: String, modifier: Modifier = Modifier, pause: Boolean = false) {
+private fun StoreVideoPreview(url: String, modifier: Modifier = Modifier, pause: Boolean = false, fadeEdges: Boolean = false) {
     val context = androidx.compose.ui.platform.LocalContext.current
     var isVideoReady by remember { mutableStateOf(false) } 
 
     val chromaMatrix = remember {
         ColorMatrix(floatArrayOf(
-            1f, 0f, 0f, 0f, 0f,     // Red: Ekdam normal rahega
-            0f, 1f, 0f, 0f, 0f,     // 🎯 Green: Pehle 0.4f tha, jiski wajah se skin/baccha lal-neela dikh raha tha. Ab ye 1f hai so original colors bache rahenge!
-            0f, 0f, 1f, 0f, 0f,     // Blue: Ekdam normal rahega
-            2.5f, -4f, 2.5f, 1f, 0f // Alpha channel: Sirf green background transparent hone ke liye
+            1f, 0f, 0f, 0f, 0f,     
+            0f, 1f, 0f, 0f, 0f,     
+            0f, 0f, 1f, 0f, 0f,     
+            2.5f, -4f, 2.5f, 1f, 0f 
         ))
     }
 
+    // Fade logic condition
+    val fadeModifier = if (fadeEdges) {
+        Modifier
+            .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+            .drawWithContent {
+                drawContent()
+                drawRect(
+                    brush = Brush.verticalGradient(
+                        0.0f to Color.Transparent,
+                        0.1f to Color.Black,
+                        0.9f to Color.Black,
+                        1.0f to Color.Transparent
+                    ),
+                    blendMode = BlendMode.DstIn
+                )
+            }
+    } else Modifier
+
     Box(
         modifier = modifier
+            .then(fadeModifier)
             .alpha(if (isVideoReady) 1f else 0f)
             .graphicsLayer {
                 compositingStrategy = CompositingStrategy.Offscreen
