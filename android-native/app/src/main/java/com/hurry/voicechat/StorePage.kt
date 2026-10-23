@@ -79,15 +79,14 @@ private val nativeStoreTabs = listOf(
 )
 
 private val nativeStoreItems = listOf(
-    // 🎯 Vehicles Update Kar diye as requested
     NativeStoreItem("v1", "Leopard Roar", "IMG_20261023_124625.png", "Vehicle", 5, 1000000, "5D", "VID_20260905_095157_269_bsl.mp4"),
     NativeStoreItem("v2", "Speedster", "IMG_20261023_125302.png", "Vehicle", 5, 600000, "5D", "alioss_19_2025090317293759938~2.mp4"),
     NativeStoreItem("v3", "Blaze Runner", "IMG_20261023_125318.png", "Vehicle", 5, 549999, "5D", "alioss_19_2025120517555513292~2.mp4"),
     NativeStoreItem("v4", "Star Rider", "IMG_20261023_125335.png", "Vehicle", 5, 500000, "5D", "alioss_19_2025121720314422497~2.mp4"),
     NativeStoreItem("v5", "Sky Drift", "IMG_20261023_125357.png", "Vehicle", 5, 259000, "5D", "alioss_19_2026021110563339968~2.mp4"),
-    NativeStoreItem("v6", "Neon Flash", "IMG_20261023_125133.png", "Vehicle", 5, 890999, "5D", "alioss_16_2025080802251364763~2.mp4"),
-    NativeStoreItem("v7", "Royal Cruiser", "IMG_20261023_125152.png", "Vehicle", 5, 425000, "5D", "alioss_16_2025092202291646319~2.mp4"),
-    NativeStoreItem("v8", "Shadow Wing", "IMG_20261023_125210.png", "Vehicle", 5, 525000, "5D", "alioss_16_2025092202374953873~2.mp4"),
+    NativeStoreItem("v6", "Neon Flash", "IMG_20261023_125133.png", "Vehicle", 5, 890999, "5D", "alioss_16_2025092202374953873~2.mp4"), // Swapped from Shadow Wing
+    NativeStoreItem("v7", "Royal Cruiser", "IMG_20261023_125152.png", "Vehicle", 5, 425000, "5D", "alioss_16_2025080802251364763~2.mp4"), // Swapped from Neon Flash
+    NativeStoreItem("v8", "Shadow Wing", "IMG_20261023_125210.png", "Vehicle", 5, 525000, "5D", "alioss_16_2025092202291646319~2.mp4"), // Swapped from Royal Cruiser
     NativeStoreItem("v9", "Galaxy Surfer", "IMG_20261023_125416.png", "Vehicle", 5, 359999, "5D", "alioss_17_2025041211424496804~2.mp4"),
 
     NativeStoreItem("a1", "Crown Wings", "IMG_20261021_192009.png", "Avatar Frame", 5, 250000, "3D", video = "VID_20260905_024534_955_bsl.mp4"),
@@ -251,12 +250,23 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
                                 }
                             }
                             if (!theme) {
-                                val mediaModifier = Modifier.fillMaxWidth().height(if (isVehicle || isFrame) 120.dp else 80.dp)
                                 if (item.image.endsWith(".mp4", ignoreCase = true)) {
-                                    // 🎯 Video hai to fadeEdges pass kiya (only for vehicles 10% fade)
-                                    StoreVideoPreview(StoreAssetBase + item.image, mediaModifier, pause = true, fadeEdges = isVehicle)
+                                    val isV1 = item.id == "v1"
+                                    val mediaModifier = if (isVehicle && !isV1) {
+                                        Modifier.fillMaxWidth().wrapContentHeight()
+                                    } else {
+                                        Modifier.fillMaxWidth().height(if (isVehicle || isFrame) 120.dp else 80.dp)
+                                    }
+                                    
+                                    StoreVideoPreview(
+                                        url = StoreAssetBase + item.image,
+                                        modifier = mediaModifier,
+                                        pause = true,
+                                        fadeEdges = isVehicle,
+                                        removeGreenScreen = isV1
+                                    )
                                 } else {
-                                    // 🎯 Green remove wala StoreChromaImage hata diya Vehicle ke liye, ab simple load hoga
+                                    val mediaModifier = Modifier.fillMaxWidth().height(if (isVehicle || isFrame) 120.dp else 80.dp)
                                     AsyncImage(model = StoreAssetBase + item.image, contentDescription = item.name, modifier = mediaModifier)
                                 }
                             } else {
@@ -315,7 +325,16 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
                 Text("Purchase", color = Color(0xFF111827), fontSize = 17.sp, fontWeight = FontWeight.Bold)
                 val previewSource = item.video ?: item.image
                 if (previewSource.endsWith(".mp4", ignoreCase = true)) {
-                    StoreVideoPreview(StoreAssetBase + previewSource, Modifier.size(180.dp), pause = false, fadeEdges = item.tab == "Vehicle")
+                    val isV1 = item.id == "v1"
+                    val previewModifier = if (item.tab == "Vehicle" && !isV1) Modifier.width(180.dp).wrapContentHeight() else Modifier.size(180.dp)
+                    
+                    StoreVideoPreview(
+                        url = StoreAssetBase + previewSource,
+                        modifier = previewModifier,
+                        pause = false,
+                        fadeEdges = item.tab == "Vehicle",
+                        removeGreenScreen = isV1
+                    )
                 } else {
                     AsyncImage(model = StoreAssetBase + previewSource, contentDescription = item.name, modifier = Modifier.size(180.dp))
                 }
@@ -510,11 +529,19 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
                     }
                     else -> { // Vehicle Try Dialog
                         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable(enabled = false) {}) {
-                            Box(Modifier.fillMaxWidth().height(360.dp), contentAlignment = Alignment.Center) {
+                            val isV1 = item.id == "v1"
+                            val boxModifier = if (isV1) Modifier.fillMaxWidth().height(360.dp) else Modifier.fillMaxWidth().wrapContentHeight()
+                            
+                            Box(boxModifier, contentAlignment = Alignment.Center) {
                                 val source = item.video ?: item.image
                                 if (source.endsWith(".mp4", true)) {
-                                    // 🎯 Video Try dialog me bhi fadeEdges apply
-                                    StoreVideoPreview(StoreAssetBase + source, Modifier.fillMaxSize(), pause = false, fadeEdges = true)
+                                    StoreVideoPreview(
+                                        url = StoreAssetBase + source,
+                                        modifier = Modifier.fillMaxWidth(),
+                                        pause = false,
+                                        fadeEdges = true,
+                                        removeGreenScreen = isV1
+                                    )
                                 } else {
                                     AsyncImage(model = StoreAssetBase + source, contentDescription = item.name, modifier = Modifier.fillMaxSize())
                                 }
@@ -556,7 +583,6 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
     }
 }
 
-// Ye function aise hi chhor raha hu taaki future ke liye bacha rahe, par ab image ke liye directly AsyncImage chalega.
 @Composable
 private fun StoreChromaImage(
     url: String,
@@ -607,11 +633,17 @@ private fun StoreChromaImage(
     }
 }
 
-// 🎯 FADE EDGES LOGIC ADDED HERE! (Top aur bottom 10% fade blend)
 @Composable
-private fun StoreVideoPreview(url: String, modifier: Modifier = Modifier, pause: Boolean = false, fadeEdges: Boolean = false) {
+private fun StoreVideoPreview(
+    url: String, 
+    modifier: Modifier = Modifier, 
+    pause: Boolean = false, 
+    fadeEdges: Boolean = false,
+    removeGreenScreen: Boolean = false 
+) {
     val context = androidx.compose.ui.platform.LocalContext.current
     var isVideoReady by remember { mutableStateOf(false) } 
+    var videoRatio by remember { mutableStateOf<Float?>(null) }
 
     val chromaMatrix = remember {
         ColorMatrix(floatArrayOf(
@@ -622,7 +654,6 @@ private fun StoreVideoPreview(url: String, modifier: Modifier = Modifier, pause:
         ))
     }
 
-    // Fade logic condition
     val fadeModifier = if (fadeEdges) {
         Modifier
             .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
@@ -630,8 +661,8 @@ private fun StoreVideoPreview(url: String, modifier: Modifier = Modifier, pause:
                 drawContent()
                 drawRect(
                     brush = Brush.verticalGradient(
-                        0.0f to Color.Transparent,
-                        0.1f to Color.Black,
+                        0.0f to Color.Transparent, 
+                        0.1f to Color.Black, 
                         0.9f to Color.Black,
                         1.0f to Color.Transparent
                     ),
@@ -640,13 +671,18 @@ private fun StoreVideoPreview(url: String, modifier: Modifier = Modifier, pause:
             }
     } else Modifier
 
+    val ratioModifier = videoRatio?.let { Modifier.aspectRatio(it) } ?: Modifier
+
     Box(
         modifier = modifier
             .then(fadeModifier)
+            .then(ratioModifier)
             .alpha(if (isVideoReady) 1f else 0f)
             .graphicsLayer {
-                compositingStrategy = CompositingStrategy.Offscreen
-                colorFilter = ColorFilter.colorMatrix(chromaMatrix)
+                if (removeGreenScreen) {
+                    compositingStrategy = CompositingStrategy.Offscreen
+                    colorFilter = ColorFilter.colorMatrix(chromaMatrix)
+                }
             },
         contentAlignment = Alignment.Center
     ) {
@@ -654,7 +690,7 @@ private fun StoreVideoPreview(url: String, modifier: Modifier = Modifier, pause:
             AndroidView(
                 factory = { ctx ->
                     val textureView = TextureView(ctx)
-                    textureView.isOpaque = false // Transparent ke liye jaruri
+                    textureView.isOpaque = false
                     
                     val mediaPlayer = MediaPlayer()
                     textureView.tag = mediaPlayer
@@ -665,6 +701,13 @@ private fun StoreVideoPreview(url: String, modifier: Modifier = Modifier, pause:
                             try {
                                 mediaPlayer.setDataSource(ctx, Uri.parse(url))
                                 mediaPlayer.isLooping = true
+                                
+                                mediaPlayer.setOnVideoSizeChangedListener { _, w, h ->
+                                    if (w > 0 && h > 0) {
+                                        videoRatio = w.toFloat() / h.toFloat()
+                                    }
+                                }
+                                
                                 mediaPlayer.setOnInfoListener { _, what, _ ->
                                     if (what == MediaPlayer.MEDIA_INFO_VIDEO_RENDERING_START) {
                                         isVideoReady = true
@@ -690,6 +733,7 @@ private fun StoreVideoPreview(url: String, modifier: Modifier = Modifier, pause:
                     }
                     textureView
                 },
+                modifier = Modifier.fillMaxSize(),
                 onRelease = { view ->
                     val mp = view.tag as? MediaPlayer
                     mp?.release()
