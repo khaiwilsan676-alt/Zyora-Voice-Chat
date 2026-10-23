@@ -30,7 +30,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.zIndex
-import androidx.media3.common.C // <-- YE IMPORT ADD KIYA HAI VIDEO FIX KE LIYE
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
@@ -56,7 +55,6 @@ fun SvipPage(onBack: () -> Unit = {}) {
     BoxWithConstraints(modifier = Modifier.fillMaxSize().background(Color.Black)) {
         val totalHeight = maxHeight
         val boxConstraints = constraints
-        val middleImageYOffset = (constraints.maxHeight * 0.4f).toInt()
 
         // ============ TOP SECTION (40% HEIGHT) ============
         Box(
@@ -194,7 +192,7 @@ fun SvipPage(onBack: () -> Unit = {}) {
                     val placeable = measurable.measure(constraints)
                     layout(placeable.width, placeable.height) {
                         // Place exactly at 40% height, translating Y by -50% of image height
-                        val yOffset = middleImageYOffset - (placeable.height / 2)
+                        val yOffset = (boxConstraints.maxHeight * 0.4f).toInt() - (placeable.height / 2)
                         placeable.placeRelative(0, yOffset)
                     }
                 },
@@ -207,6 +205,10 @@ fun SvipPage(onBack: () -> Unit = {}) {
 @Composable
 fun SvipVideoPlayer(videoUrl: String) {
     val context = LocalContext.current
+    
+    // Video ka real ratio track karne ke liye
+    var videoAspectRatio by remember { mutableFloatStateOf(1f) }
+
     val exoPlayer = remember {
         ExoPlayer.Builder(context).build().apply {
             val mediaItem = MediaItem.fromUri(videoUrl)
@@ -214,8 +216,15 @@ fun SvipVideoPlayer(videoUrl: String) {
             repeatMode = Player.REPEAT_MODE_ALL
             playWhenReady = true
             volume = 0f // Muted
-            // YAHI HAI FIX: Is line ki wajah se ab video stretch (kicchi kicchi) nahi hogi, center mein crop hoke fit hogi
-            videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING 
+            
+            // Yahan hum video ka asli ratio nikal rahe hain taaki stretch na ho
+            addListener(object : Player.Listener {
+                override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
+                    if (videoSize.width > 0 && videoSize.height > 0) {
+                        videoAspectRatio = videoSize.width.toFloat() / videoSize.height.toFloat()
+                    }
+                }
+            })
             prepare()
         }
     }
@@ -229,17 +238,17 @@ fun SvipVideoPlayer(videoUrl: String) {
     // CHROMA KEY MAGIC MATRIX: Yeh sirf aur sirf Green color ko transparent (alpha 0) karega!
     val greenScreenMatrix = remember {
         ColorMatrix(floatArrayOf(
-            1f,   0f,    0f,   0f,  0f,    // Red (No change)
-            0f,   1f,    0f,   0f,  0f,    // Green (No change visual, but used below)
-            0f,   0f,    1f,   0f,  0f,    // Blue (No change)
-            2.5f, -3.5f, 2.5f, 0f,  255f   // Alpha (Agar Green bohot zyada hai, toh transparency 100% ho jayegi)
+            1f,   0f,    0f,   0f,  0f,    // Red 
+            0f,   1f,    0f,   0f,  0f,    // Green 
+            0f,   0f,    1f,   0f,  0f,    // Blue 
+            2.5f, -3.5f, 2.5f, 0f,  255f   // Alpha 
         ))
     }
 
     AndroidView(
         factory = {
             TextureView(context).apply {
-                isOpaque = false // Transparent background zaroori hai!
+                isOpaque = false // Transparent background zaroori hai
                 layoutParams = ViewGroup.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.MATCH_PARENT
@@ -249,10 +258,41 @@ fun SvipVideoPlayer(videoUrl: String) {
         },
         modifier = Modifier
             .fillMaxWidth()
-            .aspectRatio(1f) // Video ekdam SQUARE mein crop hogi
-            .clip(RectangleShape) // Square se bahar kuch nahi jayega
+            .aspectRatio(1f) // Video ekdam SQUARE box me rahegi
+            .clip(RectangleShape) // Square se bahar jane wala hissa cut ho jayega
+            .layout { measurable, constraints ->
+                // === GUARANTEED CROP FIX === 
+                val boxWidth = constraints.maxWidth
+                val boxHeight = constraints.maxHeight
+
+                val videoWidth: Int
+                val videoHeight: Int
+
+                if (videoAspectRatio > 1f) {
+                    // Horizontal video
+                    videoHeight = boxHeight
+                    videoWidth = (boxHeight * videoAspectRatio).toInt()
+                } else {
+                    // Vertical ya Square video
+                    videoWidth = boxWidth
+                    videoHeight = (boxWidth / videoAspectRatio).toInt()
+                }
+
+                // Asli ratio mein draw karo
+                val placeable = measurable.measure(
+                    androidx.compose.ui.unit.Constraints.fixed(videoWidth, videoHeight)
+                )
+
+                // Center mein fit kar do bina dabaye
+                layout(boxWidth, boxHeight) {
+                    placeable.placeRelative(
+                        x = (boxWidth - videoWidth) / 2,
+                        y = (boxHeight - videoHeight) / 2
+                    )
+                }
+            }
             .graphicsLayer {
-                // ColorFilter apply kar diya jo sirf Green color ko nikal dega aur mix karega
+                // ColorFilter apply kar diya jo sirf Green color ko nikal dega
                 colorFilter = ColorFilter.colorMatrix(greenScreenMatrix)
             }
     )
