@@ -1,4 +1,4 @@
-herepackage com.hurry.voicechat
+package com.hurry.voicechat
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -158,7 +158,6 @@ fun Level(onBack: () -> Unit = {}) {
     }
     val userPhoto = userPrefs.getString("photo", "")?.trim().orEmpty()
     
-    // Top avatar image updated here
     val profilePainter = rememberAsyncImagePainter(model = levelAsset("file_0000000074a4821189d05fde51ca98f9.png"))
     
     val profileIntrinsic = profilePainter.intrinsicSize
@@ -243,7 +242,6 @@ fun Level(onBack: () -> Unit = {}) {
                         SectionHeading("--• Level •--")
                         
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-                            // Slightly taller square card, white 10% opacity
                             Column(
                                 Modifier
                                     .width(120.dp)
@@ -254,7 +252,6 @@ fun Level(onBack: () -> Unit = {}) {
                             ) {
                                 LevelAsset(tier.badge, Modifier.height(48.dp))
                                 Spacer(Modifier.height(10.dp))
-                                // "Lv.1 - Lv.10" ko "Lv.1 - 10" me convert kar diya
                                 val formattedRange = tier.range.replace(" - Lv.", " - ")
                                 Text(formattedRange, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                             }
@@ -265,7 +262,6 @@ fun Level(onBack: () -> Unit = {}) {
                         // --- REWARDS SECTION ---
                         SectionHeading("--• Rewards •--")
 
-                        // Rewards Grid
                         tier.rewards.chunked(3).forEach { rowItems ->
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                                 for (reward in rowItems) {
@@ -285,7 +281,6 @@ fun Level(onBack: () -> Unit = {}) {
                                         Text(reward.second, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
                                     }
                                 }
-                                // Empty spacing for grid if less than 3 cards in row
                                 repeat(3 - rowItems.size) {
                                     Spacer(Modifier.weight(1f))
                                 }
