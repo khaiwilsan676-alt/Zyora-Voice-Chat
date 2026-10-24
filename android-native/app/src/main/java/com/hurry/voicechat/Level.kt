@@ -26,7 +26,6 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Public
-import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -68,7 +67,6 @@ private val levelTiers = listOf(
 
 private val levelGold = Color(0xFFFCD34D)
 private val levelCardBrush = Brush.horizontalGradient(listOf(Color(0xFF06080D), Color(0xFF080D17), Color(0xFF132C54)))
-private val levelTextMuted = Color(0xFFB8BEC9)
 
 @Composable
 private fun LevelAsset(
@@ -81,17 +79,38 @@ private fun LevelAsset(
 }
 
 @Composable
-private fun LevelRewardRow(title: String, subtitle: String? = null, trailing: @Composable RowScope.() -> Unit) {
-    Row(
-        Modifier.fillMaxWidth().background(levelCardBrush, RoundedCornerShape(6.dp)).padding(horizontal = 14.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
+private fun SquareRewardCard(
+    title: String,
+    topLeftText: String? = null,
+    imageContent: @Composable () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(130.dp)
+            .background(levelCardBrush, RoundedCornerShape(12.dp))
+            .padding(8.dp)
     ) {
-        Column(Modifier.weight(1f).padding(end = 8.dp)) {
-            Text(title, color = Color.White, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
-            if (subtitle != null) Text(subtitle, color = Color(0xFF9CA3AF), fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp))
+        if (topLeftText != null) {
+            Text(
+                text = topLeftText,
+                color = Color.White.copy(alpha = 0.7f),
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.align(Alignment.TopStart)
+            )
         }
-        Row(verticalAlignment = Alignment.CenterVertically, content = trailing)
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                imageContent()
+            }
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(title, color = levelGold, fontSize = 12.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
     }
 }
 
@@ -176,14 +195,7 @@ fun Level(onBack: () -> Unit = {}) {
     val displayName = userName ?: userUid.take(8).ifBlank { "Guest" }
     var showUpgrade by remember { mutableStateOf(false) }
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
-    val activeTierIndex by remember {
-        derivedStateOf {
-            val first = listState.firstVisibleItemIndex
-            first.coerceIn(0, levelTiers.lastIndex)
-        }
-    }
-    val currentTier = levelTiers[activeTierIndex]
-
+    
     Box(Modifier.fillMaxSize().background(Color(0xFF04060A))) {
         LevelAsset("file_00000000e02481f4bb2153e2714aca47.png", Modifier.fillMaxWidth().height(280.dp).align(Alignment.TopCenter), contentScale = ContentScale.Crop)
         Box(
@@ -204,7 +216,8 @@ fun Level(onBack: () -> Unit = {}) {
                     }
                 }
 
-                Box(Modifier.fillMaxWidth().height((profileFrameHeight - 48.dp).coerceAtLeast(1.dp))) {
+                // Yaha (profileFrameHeight - 70.dp) kiya gaya hai gap kam karne ke liye
+                Box(Modifier.fillMaxWidth().height((profileFrameHeight - 70.dp).coerceAtLeast(1.dp))) {
                     Box(Modifier.width(profileFrameWidth).height(profileFrameHeight).offset(x = 0.dp, y = (-40).dp)) {
                         Image(
                             painter = profilePainter,
@@ -213,7 +226,9 @@ fun Level(onBack: () -> Unit = {}) {
                             contentScale = ContentScale.FillBounds
                         )
                         Row(Modifier.fillMaxSize().padding(horizontal = 32.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Box(Modifier.size(48.dp).clip(CircleShape).background(Color(0xFF626A75)), contentAlignment = Alignment.Center) {
+                            
+                            // Avatar 2% niche -> offset(y = 4.dp)
+                            Box(Modifier.offset(y = 4.dp).size(48.dp).clip(CircleShape).background(Color(0xFF626A75)), contentAlignment = Alignment.Center) {
                                 if (userPhoto.isNotBlank()) {
                                     AsyncImage(
                                         model = userPhoto,
@@ -227,106 +242,158 @@ fun Level(onBack: () -> Unit = {}) {
                             }
                             Spacer(Modifier.width(14.dp))
                             Column(Modifier.weight(1f)) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                
+                                // Name aur Badge 4% niche -> offset(y = 8.dp)
+                                Row(Modifier.offset(y = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                                     Text(displayName, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                     Spacer(Modifier.width(8.dp))
                                     LevelAsset(levelTiers[0].badge, Modifier.height(28.dp).width(58.dp))
                                 }
                                 Spacer(Modifier.height(8.dp))
-                                Box(Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(20.dp)).background(Color.White.copy(alpha=.25f))) {
+                                
+                                // Yellow patti 2% niche -> offset(y = 4.dp)
+                                Box(Modifier.offset(y = 4.dp).fillMaxWidth().height(6.dp).clip(RoundedCornerShape(20.dp)).background(Color.White.copy(alpha=.25f))) {
                                     Box(Modifier.fillMaxWidth(.38f).fillMaxHeight().clip(RoundedCornerShape(20.dp)).background(Brush.horizontalGradient(listOf(Color(0xFFFFE072), Color(0xFFF4B63F))))) {
                                         Box(Modifier.align(Alignment.CenterEnd).offset(x = 6.dp).size(12.dp).border(2.dp, Color(0xFFF4B63F), CircleShape).clip(CircleShape).background(Color.White))
                                     }
                                 }
-                                Text("4.5k/20.2k remaining to reach Level 5 >", color = Color.White.copy(alpha=.9f), fontSize = 10.5.sp, modifier = Modifier.padding(top = 5.dp), maxLines = 1)
+                                // Patti ke sath text bhi niche shift kiya takki gap na bigde
+                                Text("4.5k/20.2k remaining to reach Level 5 >", color = Color.White.copy(alpha=.9f), fontSize = 10.5.sp, modifier = Modifier.offset(y = 4.dp).padding(top = 5.dp), maxLines = 1)
                             }
                         }
                     }
-                }
-
-                Box(Modifier.fillMaxWidth().height(38.dp).padding(horizontal = 16.dp)) {
-                    LevelAsset("file_000000006688821197edc482e295d3fd.png", Modifier.align(Alignment.TopStart).offset(x = (-0).dp, y = (-14).dp).height(28.dp))
-                    Row(Modifier.align(Alignment.CenterStart).offset(y = (-16).dp), verticalAlignment = Alignment.CenterVertically) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(Icons.Default.ArrowUpward, null, tint = Color.White, modifier = Modifier.size(16.dp))
-                            Box(Modifier.width(14.dp).height(1.5.dp).background(Color.White, RoundedCornerShape(2.dp)))
-                            Spacer(Modifier.height(2.dp))
-                            Box(Modifier.width(8.dp).height(1.5.dp).background(Color.White, RoundedCornerShape(2.dp)))
-                        }
-                        Spacer(Modifier.width(8.dp))
-                        Text("Update level to ${currentTier.range}", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-                    }
-                    LevelAsset(currentTier.rightGraphic, Modifier.align(Alignment.CenterEnd).offset(y = (-18).dp, x = 6.dp).size(124.dp))
                 }
             }
 
             LazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxWidth().weight(1f),
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 28.dp),
-                verticalArrangement = Arrangement.spacedBy(36.dp)
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 28.dp)
             ) {
-                itemsIndexed(levelTiers, key = { index, tier -> tier.range }) { index, tier ->
-                    Column(Modifier.fillMaxWidth().padding(top = 4.dp)) {
-                        Row(Modifier.fillMaxWidth().heightIn(min = 60.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                            Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
-                                Text("⌃", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                                Spacer(Modifier.width(7.dp))
-                                Text("Upgrade to level ${tier.range}", color = Color.White, fontSize = 13.5.sp, fontWeight = FontWeight.Bold)
-                            }
-                            LevelAsset(tier.rightGraphic, Modifier.size(60.dp))
-                        }
+                itemsIndexed(levelTiers, key = { _, tier -> tier.range }) { index, tier ->
+                    Column(Modifier.fillMaxWidth().padding(top = 24.dp)) { 
+                        
+                        // 1. --- LEVEL SECTION ---
+                        Text(
+                            text = "-• Level •-", 
+                            color = Color.White, 
+                            fontSize = 17.sp, 
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp)
+                        )
 
-                        Row(Modifier.fillMaxWidth().padding(horizontal = 2.dp).padding(bottom = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Box(Modifier.weight(1f).height(76.dp).background(Brush.linearGradient(listOf(Color(0xFF06080D), Color(0xFF132C54).copy(alpha = .60f))), RoundedCornerShape(8.dp))) {
-                                Text("Lv.${tier.rewards[0].first}", color = Color.White.copy(alpha=.70f), fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.TopStart).padding(start = 6.dp, top = 4.dp))
-                                Column(Modifier.fillMaxSize().padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                                    LevelAsset("file_00000000b2d481fd8cd233482dbeb9ef.png", Modifier.size(32.dp))
-                                    Spacer(Modifier.height(6.dp))
-                                    Text(tier.rewards[0].second, color = Color.White.copy(alpha=.9f), fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
-                                }
-                            }
-                            Column(Modifier.weight(1f).height(76.dp).background(Brush.linearGradient(listOf(Color(0xFF06080D), Color(0xFF132C54).copy(alpha = .60f))), RoundedCornerShape(8.dp)).padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                                Box(Modifier.background(Brush.horizontalGradient(listOf(Color(0xFF177488), Color(0xFF1EA3B3))), RoundedCornerShape(5.dp)).padding(horizontal = 8.dp, vertical = 3.dp)) {
-                                    Text("Entry Tag", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-                                }
-                                Text("Entry", color = Color.White.copy(alpha=.9f), fontSize = 11.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 5.dp))
-                            }
-                            Column(Modifier.weight(1f).height(76.dp).background(Brush.linearGradient(listOf(Color(0xFF06080D), Color(0xFF132C54).copy(alpha = .60f))), RoundedCornerShape(8.dp)).padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                                Spacer(Modifier.size(32.dp))
-                                Text("Frame", color = Color.White.copy(alpha=.9f), fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                        val cornerLevelText = tier.range.replace(" - Lv.", "-") 
+                        val featuresList = mutableListOf<@Composable () -> Unit>()
+
+                        featuresList.add {
+                            SquareRewardCard("Level", cornerLevelText) {
+                                LevelAsset(tier.rightGraphic, Modifier.size(50.dp))
                             }
                         }
 
+                        featuresList.add {
+                            SquareRewardCard("Badge", cornerLevelText) {
+                                LevelAsset(tier.badge, Modifier.height(50.dp).width(80.dp))
+                            }
+                        }
+                        
+                        featuresList.add {
+                            SquareRewardCard("Entry Tag", cornerLevelText) {
+                                Box(Modifier.background(Brush.horizontalGradient(listOf(Color(0xFF177488), Color(0xFF1EA3B3))), RoundedCornerShape(5.dp)).padding(horizontal = 12.dp, vertical = 6.dp)) {
+                                    Text("Entry Tag", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+
+                        featuresList.add {
+                            SquareRewardCard("Avatar Frame", cornerLevelText) {
+                                Box(Modifier.size(46.dp).border(3.dp, levelGold, CircleShape))
+                            }
+                        }
+
+                        featuresList.add {
+                            SquareRewardCard(if (index == 0) "Lv.5" else "Room Send", cornerLevelText) {
+                                LevelAsset("file_00000000ac708211bca5d461c021b0af.png", Modifier.size(50.dp))
+                            }
+                        }
+
+                        if (index >= 2) {
+                            featuresList.add {
+                                SquareRewardCard("Background", cornerLevelText) {
+                                    Box(Modifier.size(46.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xFF131F33)), contentAlignment = Alignment.Center) {
+                                        Icon(Icons.Default.Image, contentDescription = null, tint = Color(0xFF6EE7B7), modifier = Modifier.size(24.dp))
+                                    }
+                                }
+                            }
+                        }
+
+                        if (index >= 7) {
+                            featuresList.add {
+                                SquareRewardCard("Theme", cornerLevelText) {
+                                    Box(Modifier.size(46.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xFF131F33)), contentAlignment = Alignment.Center) {
+                                        Icon(Icons.Default.Public, contentDescription = null, tint = Color(0xFFE879F9), modifier = Modifier.size(24.dp))
+                                    }
+                                }
+                            }
+                        }
+
+                        // Render Level Features Grid
+                        val chunkedFeatures = featuresList.chunked(3)
                         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            LevelRewardRow("Level ${tier.range.removePrefix("Lv.").replace(" - Lv.", "-Lv.")}", "Level badge upgraded") {
-                                LevelAsset(tier.badge, Modifier.height(40.dp).width(68.dp))
-                            }
-                            LevelRewardRow("Room Send image", if (index == 0) "Lv.5" else null) {
-                                LevelAsset("file_00000000ac708211bca5d461c021b0af.png", Modifier.size(32.dp))
-                            }
-                            if (index >= 2) {
-                                LevelRewardRow("Background Image") {
-                                    Box(Modifier.size(32.dp).clip(RoundedCornerShape(6.dp)).background(Color(0xFF131F33)), contentAlignment = Alignment.Center) {
-                                        Icon(Icons.Default.Image, contentDescription = null, tint = Color(0xFF6EE7B7), modifier = Modifier.size(18.dp))
+                            chunkedFeatures.forEach { rowItems ->
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                    rowItems.forEach { item ->
+                                        Box(Modifier.weight(1f)) { item() }
                                     }
-                                }
-                            }
-                            if (index >= 7) {
-                                LevelRewardRow("Room Theme") {
-                                    Box(Modifier.size(32.dp).clip(RoundedCornerShape(6.dp)).background(Color(0xFF131F33)), contentAlignment = Alignment.Center) {
-                                        Icon(Icons.Default.Public, contentDescription = null, tint = Color(0xFFE879F9), modifier = Modifier.size(18.dp))
+                                    repeat(3 - rowItems.size) {
+                                        Spacer(Modifier.weight(1f))
                                     }
-                                }
-                            }
-                            tier.rewards.drop(1).forEach { reward ->
-                                LevelRewardRow("Level ${reward.first} Reward") {
-                                    LevelAsset("file_00000000b2d481fd8cd233482dbeb9ef.png", Modifier.size(24.dp))
-                                    Spacer(Modifier.width(5.dp))
-                                    Text(reward.second, color = levelGold, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold)
                                 }
                             }
                         }
+
+
+                        // 2. --- REWARDS SECTION ---
+                        Spacer(Modifier.height(32.dp)) 
+
+                        Text(
+                            text = "-• Rewards •-", 
+                            color = Color.White, 
+                            fontSize = 17.sp, 
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp)
+                        )
+
+                        val coinRewardsList = mutableListOf<@Composable () -> Unit>()
+
+                        tier.rewards.forEach { reward ->
+                            coinRewardsList.add {
+                                SquareRewardCard(
+                                    title = reward.second, 
+                                    topLeftText = "Lv.${reward.first}"
+                                ) {
+                                    LevelAsset("file_00000000b2d481fd8cd233482dbeb9ef.png", Modifier.size(50.dp))
+                                }
+                            }
+                        }
+
+                        // Render Coin Rewards Grid
+                        val chunkedRewards = coinRewardsList.chunked(3)
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            chunkedRewards.forEach { rowItems ->
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                    rowItems.forEach { item ->
+                                        Box(Modifier.weight(1f)) { item() }
+                                    }
+                                    repeat(3 - rowItems.size) {
+                                        Spacer(Modifier.weight(1f))
+                                    }
+                                }
+                            }
+                        }
+
                     }
                 }
             }
