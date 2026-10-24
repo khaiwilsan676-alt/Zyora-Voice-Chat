@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -238,27 +239,11 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
                                 contentScale = ContentScale.Crop
                             )
                         }
+                        
                         Column(
                             Modifier.fillMaxWidth().padding(5.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text(
-                                    "Try",
-                                    color = if (theme) Color.White else Color(0xFF60A5FA),
-                                    fontSize = 10.sp,
-                                    modifier = Modifier
-                                        .clip(CircleShape)
-                                        .then(if (theme) Modifier.background(Color(0x33FFFFFF)).border(1.dp, Color.White, CircleShape) else Modifier.border(1.dp, Color(0xFF60A5FA), CircleShape))
-                                        .clickable { tryItem = item }
-                                        .padding(horizontal = 8.dp, vertical = 2.dp)
-                                )
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text("◷", color = if (theme) Color.White else Color.LightGray, fontSize = 18.sp)
-                                    Spacer(Modifier.width(3.dp))
-                                    Text(item.duration, color = if (theme) Color.White else Color.LightGray, fontSize = 11.sp)
-                                }
-                            }
                             if (!theme) {
                                 if (item.image.endsWith(".mp4", ignoreCase = true)) {
                                     val isV1 = item.id == "v1"
@@ -283,7 +268,8 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
                                         pause = true,
                                         topFade = if (isVehicle) 0.1f else 0f,
                                         bottomFade = gridBottomFade,
-                                        removeGreenScreen = removeGreen
+                                        removeGreenScreen = removeGreen,
+                                        mute = item.id == "a8"
                                     )
                                 } else {
                                     val mediaModifier = Modifier.fillMaxWidth().height(if (isVehicle || isFrame) 120.dp else 80.dp)
@@ -307,8 +293,9 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
                             Row(Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 8.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                                 AsyncImage(model = StoreAssetBase + "file_00000000e56882119c217d508b6733dc.png", contentDescription = "Coins", modifier = Modifier.size(16.dp))
                                 Spacer(Modifier.width(4.dp))
-                                // Text color updated for dark theme
+                                // Text color updated for dark theme & Added Duration next to price
                                 Text("%,d".format(item.price), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1)
+                                Text(" / ${item.duration}", color = Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Medium)
                             }
                             Row(
                                 Modifier.fillMaxWidth().height(30.dp)
@@ -342,6 +329,25 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
                                 }
                             }
                         }
+
+                        // Top right white play button inside black/10 circle
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(6.dp)
+                                .size(26.dp)
+                                .clip(CircleShape)
+                                .background(Color.Black.copy(alpha = 0.1f))
+                                .clickable { tryItem = item },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.PlayArrow,
+                                contentDescription = "Play",
+                                tint = Color.White,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -374,7 +380,8 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
                         pause = false,
                         topFade = if (item.tab == "Vehicle") 0.1f else 0f,
                         bottomFade = sheetBottomFade,
-                        removeGreenScreen = removeGreen
+                        removeGreenScreen = removeGreen,
+                        mute = item.id == "a8"
                     )
                 } else {
                     AsyncImage(model = StoreAssetBase + previewSource, contentDescription = item.name, modifier = Modifier.size(180.dp))
@@ -528,7 +535,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
                                 }
                                 val source = item.video ?: item.image
                                 if (source.endsWith(".mp4", true)) {
-                                    StoreVideoPreview(StoreAssetBase + source, Modifier.fillMaxSize(), pause = false, removeGreenScreen = true)
+                                    StoreVideoPreview(StoreAssetBase + source, Modifier.fillMaxSize(), pause = false, removeGreenScreen = true, mute = item.id == "a8")
                                 } else {
                                     AsyncImage(model = StoreAssetBase + source, contentDescription = null, modifier = Modifier.fillMaxSize())
                                 }
@@ -621,7 +628,8 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
                                     pause = false,
                                     topFade = topFadeVal,
                                     bottomFade = bottomFadeVal,
-                                    removeGreenScreen = isV1
+                                    removeGreenScreen = isV1,
+                                    mute = item.id == "a8"
                                 )
                             } else {
                                 AsyncImage(model = StoreAssetBase + source, contentDescription = item.name, modifier = Modifier.fillMaxWidth())
@@ -761,7 +769,8 @@ private fun StoreVideoPreview(
     pause: Boolean = false, 
     topFade: Float = 0f,
     bottomFade: Float = 0f,
-    removeGreenScreen: Boolean = false 
+    removeGreenScreen: Boolean = false,
+    mute: Boolean = false // New Parameter for mute
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     var isVideoReady by remember { mutableStateOf(false) } 
@@ -849,6 +858,9 @@ private fun StoreVideoPreview(
                                 }
                                 mediaPlayer.prepareAsync()
                                 mediaPlayer.setOnPreparedListener {
+                                    if (mute) {
+                                        it.setVolume(0f, 0f)
+                                    }
                                     if (!pause) it.start()
                                     else {
                                         it.seekTo(100)
