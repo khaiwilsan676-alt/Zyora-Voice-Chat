@@ -299,7 +299,7 @@ fun Level(onBack: () -> Unit = {}) {
                             val cornerLevelText = tier.range.replace(" - Lv.", "-") 
                             Box(Modifier.weight(1f)) {
                                 SquareRewardCard("", cornerLevelText) {
-                                    // Yahan maine ab sahi badge pass kiya hai (e.g. IMG_20260917_220530.png etc)
+                                    // YAHAN SIRF LEVEL BADGES USE HO RAHE HAIN (IMG_20260917_220530.png wagaira)
                                     LevelAsset(tier.badge, Modifier.size(50.dp))
                                 }
                             }
@@ -355,6 +355,7 @@ fun Level(onBack: () -> Unit = {}) {
                                     title = reward.second, 
                                     topLeftText = "Lv.${reward.first}"
                                 ) {
+                                    // YAHAN SIRF REWARD WALI IMAGE USE HO RAHI HAI (file_00000000b2d481fd8cd233482dbeb9ef.png)
                                     LevelAsset("file_00000000b2d481fd8cd233482dbeb9ef.png", Modifier.size(50.dp))
                                 }
                             }
