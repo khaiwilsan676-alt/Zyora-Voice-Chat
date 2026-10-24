@@ -12,6 +12,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -195,6 +196,10 @@ fun Level(onBack: () -> Unit = {}) {
     val displayName = userName ?: userUid.take(8).ifBlank { "Guest" }
     var showUpgrade by remember { mutableStateOf(false) }
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+
+    // YE RAHA VIEW MORE KA LOGIC 🔥
+    var showAllLevels by remember { mutableStateOf(false) }
+    var showAllRewards by remember { mutableStateOf(false) }
     
     Box(Modifier.fillMaxSize().background(Color(0xFF04060A))) {
         LevelAsset("file_00000000e02481f4bb2153e2714aca47.png", Modifier.fillMaxWidth().height(280.dp).align(Alignment.TopCenter), contentScale = ContentScale.Crop)
@@ -216,7 +221,6 @@ fun Level(onBack: () -> Unit = {}) {
                     }
                 }
 
-                // Yaha (profileFrameHeight - 70.dp) kiya gaya hai gap kam karne ke liye
                 Box(Modifier.fillMaxWidth().height((profileFrameHeight - 70.dp).coerceAtLeast(1.dp))) {
                     Box(Modifier.width(profileFrameWidth).height(profileFrameHeight).offset(x = 0.dp, y = (-40).dp)) {
                         Image(
@@ -227,7 +231,6 @@ fun Level(onBack: () -> Unit = {}) {
                         )
                         Row(Modifier.fillMaxSize().padding(horizontal = 32.dp), verticalAlignment = Alignment.CenterVertically) {
                             
-                            // Avatar 2% niche -> offset(y = 4.dp)
                             Box(Modifier.offset(y = 4.dp).size(48.dp).clip(CircleShape).background(Color(0xFF626A75)), contentAlignment = Alignment.Center) {
                                 if (userPhoto.isNotBlank()) {
                                     AsyncImage(
@@ -243,7 +246,6 @@ fun Level(onBack: () -> Unit = {}) {
                             Spacer(Modifier.width(14.dp))
                             Column(Modifier.weight(1f)) {
                                 
-                                // Name aur Badge 4% niche -> offset(y = 8.dp)
                                 Row(Modifier.offset(y = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                                     Text(displayName, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                     Spacer(Modifier.width(8.dp))
@@ -251,13 +253,11 @@ fun Level(onBack: () -> Unit = {}) {
                                 }
                                 Spacer(Modifier.height(8.dp))
                                 
-                                // Yellow patti 2% niche -> offset(y = 4.dp)
                                 Box(Modifier.offset(y = 4.dp).fillMaxWidth().height(6.dp).clip(RoundedCornerShape(20.dp)).background(Color.White.copy(alpha=.25f))) {
                                     Box(Modifier.fillMaxWidth(.38f).fillMaxHeight().clip(RoundedCornerShape(20.dp)).background(Brush.horizontalGradient(listOf(Color(0xFFFFE072), Color(0xFFF4B63F))))) {
                                         Box(Modifier.align(Alignment.CenterEnd).offset(x = 6.dp).size(12.dp).border(2.dp, Color(0xFFF4B63F), CircleShape).clip(CircleShape).background(Color.White))
                                     }
                                 }
-                                // Patti ke sath text bhi niche shift kiya takki gap na bigde
                                 Text("4.5k/20.2k remaining to reach Level 5 >", color = Color.White.copy(alpha=.9f), fontSize = 10.5.sp, modifier = Modifier.offset(y = 4.dp).padding(top = 5.dp), maxLines = 1)
                             }
                         }
@@ -268,108 +268,82 @@ fun Level(onBack: () -> Unit = {}) {
             LazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxWidth().weight(1f),
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 28.dp)
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 28.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                itemsIndexed(levelTiers, key = { _, tier -> tier.range }) { index, tier ->
-                    Column(Modifier.fillMaxWidth().padding(top = 24.dp)) { 
-                        
-                        // 1. --- LEVEL SECTION ---
-                        Text(
-                            text = "-• Level •-", 
-                            color = Color.White, 
-                            fontSize = 17.sp, 
-                            fontWeight = FontWeight.Bold,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp)
-                        )
+                
+                // 1. --- LEVEL SECTION ---
+                item {
+                    Text(
+                        text = "-• Level •-", 
+                        color = Color.White, 
+                        fontSize = 17.sp, 
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp)
+                    )
+                }
 
-                        val cornerLevelText = tier.range.replace(" - Lv.", "-") 
-                        val featuresList = mutableListOf<@Composable () -> Unit>()
-
-                        featuresList.add {
-                            SquareRewardCard("Level", cornerLevelText) {
-                                LevelAsset(tier.rightGraphic, Modifier.size(50.dp))
-                            }
-                        }
-
-                        featuresList.add {
-                            SquareRewardCard("Badge", cornerLevelText) {
-                                LevelAsset(tier.badge, Modifier.height(50.dp).width(80.dp))
-                            }
-                        }
-                        
-                        featuresList.add {
-                            SquareRewardCard("Entry Tag", cornerLevelText) {
-                                Box(Modifier.background(Brush.horizontalGradient(listOf(Color(0xFF177488), Color(0xFF1EA3B3))), RoundedCornerShape(5.dp)).padding(horizontal = 12.dp, vertical = 6.dp)) {
-                                    Text("Entry Tag", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                // Sirf 9 items show karna start me, warna saare
+                val visibleLevels = if (showAllLevels) levelTiers else levelTiers.take(9)
+                val levelChunks = visibleLevels.chunked(3)
+                
+                items(levelChunks) { rowTiers ->
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        rowTiers.forEach { tier ->
+                            val cornerLevelText = tier.range.replace(" - Lv.", "-") 
+                            Box(Modifier.weight(1f)) {
+                                SquareRewardCard("Level", cornerLevelText) {
+                                    LevelAsset(tier.rightGraphic, Modifier.size(50.dp))
                                 }
                             }
                         }
+                        repeat(3 - rowTiers.size) {
+                            Spacer(Modifier.weight(1f))
+                        }
+                    }
+                }
 
-                        featuresList.add {
-                            SquareRewardCard("Avatar Frame", cornerLevelText) {
-                                Box(Modifier.size(46.dp).border(3.dp, levelGold, CircleShape))
+                // Agar saare levels show nahi hue, toh "View more >" button dikhao bina kisi Square Card ke
+                if (!showAllLevels && levelTiers.size > 9) {
+                    item {
+                        Box(Modifier.fillMaxWidth().padding(top = 6.dp), contentAlignment = Alignment.Center) {
+                            Row(
+                                modifier = Modifier
+                                    .border(1.dp, Color(0xFF3B82F6), RoundedCornerShape(20.dp))
+                                    .clip(RoundedCornerShape(20.dp))
+                                    .clickable { showAllLevels = true }
+                                    .padding(horizontal = 16.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("View more >", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                             }
                         }
+                    }
+                }
 
-                        featuresList.add {
-                            SquareRewardCard(if (index == 0) "Lv.5" else "Room Send", cornerLevelText) {
-                                LevelAsset("file_00000000ac708211bca5d461c021b0af.png", Modifier.size(50.dp))
-                            }
-                        }
+                // 2. --- REWARDS SECTION ---
+                item {
+                    Spacer(Modifier.height(22.dp)) 
+                    Text(
+                        text = "-• Rewards •-", 
+                        color = Color.White, 
+                        fontSize = 17.sp, 
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp)
+                    )
+                }
 
-                        if (index >= 2) {
-                            featuresList.add {
-                                SquareRewardCard("Background", cornerLevelText) {
-                                    Box(Modifier.size(46.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xFF131F33)), contentAlignment = Alignment.Center) {
-                                        Icon(Icons.Default.Image, contentDescription = null, tint = Color(0xFF6EE7B7), modifier = Modifier.size(24.dp))
-                                    }
-                                }
-                            }
-                        }
-
-                        if (index >= 7) {
-                            featuresList.add {
-                                SquareRewardCard("Theme", cornerLevelText) {
-                                    Box(Modifier.size(46.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xFF131F33)), contentAlignment = Alignment.Center) {
-                                        Icon(Icons.Default.Public, contentDescription = null, tint = Color(0xFFE879F9), modifier = Modifier.size(24.dp))
-                                    }
-                                }
-                            }
-                        }
-
-                        // Render Level Features Grid
-                        val chunkedFeatures = featuresList.chunked(3)
-                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            chunkedFeatures.forEach { rowItems ->
-                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                    rowItems.forEach { item ->
-                                        Box(Modifier.weight(1f)) { item() }
-                                    }
-                                    repeat(3 - rowItems.size) {
-                                        Spacer(Modifier.weight(1f))
-                                    }
-                                }
-                            }
-                        }
-
-
-                        // 2. --- REWARDS SECTION ---
-                        Spacer(Modifier.height(32.dp)) 
-
-                        Text(
-                            text = "-• Rewards •-", 
-                            color = Color.White, 
-                            fontSize = 17.sp, 
-                            fontWeight = FontWeight.Bold,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp)
-                        )
-
-                        val coinRewardsList = mutableListOf<@Composable () -> Unit>()
-
-                        tier.rewards.forEach { reward ->
-                            coinRewardsList.add {
+                // Rewards me bhi start me sirf 9 coins wale items (baki view more ke peeche)
+                val allRewards = levelTiers.flatMap { it.rewards }
+                val visibleRewards = if (showAllRewards) allRewards else allRewards.take(9)
+                val rewardChunks = visibleRewards.chunked(3)
+                
+                items(rewardChunks) { rowRewards ->
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        rowRewards.forEach { reward ->
+                            Box(Modifier.weight(1f)) {
                                 SquareRewardCard(
                                     title = reward.second, 
                                     topLeftText = "Lv.${reward.first}"
@@ -378,24 +352,30 @@ fun Level(onBack: () -> Unit = {}) {
                                 }
                             }
                         }
-
-                        // Render Coin Rewards Grid
-                        val chunkedRewards = coinRewardsList.chunked(3)
-                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            chunkedRewards.forEach { rowItems ->
-                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                    rowItems.forEach { item ->
-                                        Box(Modifier.weight(1f)) { item() }
-                                    }
-                                    repeat(3 - rowItems.size) {
-                                        Spacer(Modifier.weight(1f))
-                                    }
-                                }
-                            }
+                        repeat(3 - rowRewards.size) {
+                            Spacer(Modifier.weight(1f))
                         }
-
                     }
                 }
+
+                // Rewards ka view more button (Sirf text, white color, blue border)
+                if (!showAllRewards && allRewards.size > 9) {
+                    item {
+                        Box(Modifier.fillMaxWidth().padding(top = 6.dp), contentAlignment = Alignment.Center) {
+                            Row(
+                                modifier = Modifier
+                                    .border(1.dp, Color(0xFF3B82F6), RoundedCornerShape(20.dp))
+                                    .clip(RoundedCornerShape(20.dp))
+                                    .clickable { showAllRewards = true }
+                                    .padding(horizontal = 16.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("View more >", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                            }
+                        }
+                    }
+                }
+                
             }
         }
     }
