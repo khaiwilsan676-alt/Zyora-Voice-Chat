@@ -6,6 +6,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import android.content.Context
+import android.widget.VideoView
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalConfiguration
@@ -14,6 +15,8 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -30,15 +33,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import coil3.compose.AsyncImage
 import coil3.compose.rememberAsyncImagePainter
+import kotlinx.coroutines.delay
 
 private const val LEVEL_ASSET_BASE = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/"
 private fun levelAsset(file: String) = LEVEL_ASSET_BASE + file
@@ -47,6 +54,12 @@ private data class NativeLevelTier(
     val range: String,
     val badge: String,
     val rewards: List<Pair<Int, String>>
+)
+
+private data class MedalItem(
+    val levelText: String,
+    val imageFile: String,
+    val videoFile: String
 )
 
 private val levelTiers = listOf(
@@ -60,6 +73,22 @@ private val levelTiers = listOf(
     NativeLevelTier("Lv.71 - Lv.80","IMG_20260917_220839.png",listOf(72 to "290,000,000",74 to "320,000,000",76 to "360,000,000",78 to "400,000,000",80 to "440,000,000")),
     NativeLevelTier("Lv.81 - Lv.90","IMG_20260917_220900.png",listOf(82 to "480,000,000",84 to "520,000,000",86 to "570,000,000",88 to "620,000,000",90 to "680,000,000")),
     NativeLevelTier("Lv.91 - Lv.100","IMG_20260917_220922.png",listOf(92 to "740,000,000",94 to "800,000,000",96 to "860,000,000",98 to "930,000,000",100 to "1,000,000,000"))
+)
+
+private val medalsList = listOf(
+    MedalItem("Lv.5", "IMG_20261024_153426.png", "1000220027-background.mp4"),
+    MedalItem("Lv.15", "file_00000000bd988211840a0dcbe09101ee.png", "1000220026-background.mp4"),
+    MedalItem("Lv.30", "IMG_20261024_153407.png", "1000220025-background.mp4"),
+    MedalItem("Lv.50", "IMG_20261024_153322.png", "1000220024-background.mp4"),
+    MedalItem("Lv.65", "IMG_20261024_153346.png", "1000220023-background.mp4"),
+    MedalItem("Lv.75", "IMG_20261024_153248.png", "1000220022-background.mp4"),
+    MedalItem("Lv.90", "IMG_20261024_153322.png", "1000220021-background.mp4")
+)
+
+// Background profile images
+private val profileBgImages = listOf(
+    "file_00000000edf082119f3c51da31cca16b.png",
+    "file_00000000acd48211ba29883fe47a0215.png"
 )
 
 @Composable
@@ -79,22 +108,67 @@ private fun SectionHeading(title: String) {
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text("--", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.width(8.dp))
-        Box(modifier = Modifier.size(5.dp).clip(CircleShape).background(Color.Yellow))
-        Spacer(Modifier.width(8.dp))
+        Box(modifier = Modifier.width(70.dp).height(1.5.dp).background(Brush.horizontalGradient(listOf(Color.Transparent, Color.White))))
+        Spacer(Modifier.width(4.dp))
+        Box(modifier = Modifier.size(3.dp).clip(CircleShape).background(Color(0xFF4DD0E1))) 
+        Spacer(Modifier.width(3.dp))
+        Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(Color(0xFFFFEB3B))) 
+        
+        Spacer(Modifier.width(12.dp))
         
         Text(
             text = title,
             color = Color.White,
-            fontSize = 15.sp,
-            fontWeight = FontWeight.Bold
+            fontSize = 17.sp,
+            fontWeight = FontWeight.Normal
         )
         
-        Spacer(Modifier.width(8.dp))
-        Box(modifier = Modifier.size(5.dp).clip(CircleShape).background(Color.Yellow))
-        Spacer(Modifier.width(8.dp))
-        Text("--", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.width(12.dp))
+        
+        Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(Color(0xFFFFEB3B))) 
+        Spacer(Modifier.width(3.dp))
+        Box(modifier = Modifier.size(3.dp).clip(CircleShape).background(Color(0xFF4DD0E1))) 
+        Spacer(Modifier.width(4.dp))
+        Box(modifier = Modifier.width(70.dp).height(1.5.dp).background(Brush.horizontalGradient(listOf(Color.White, Color.Transparent))))
+    }
+}
+
+@Composable
+private fun FullScreenVideoDialog(videoUrl: String, onDismiss: () -> Unit) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            decorFitsSystemWindows = false
+        )
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Transparent)
+                .clickable { onDismiss() }, 
+            contentAlignment = Alignment.Center
+        ) {
+            AndroidView(
+                factory = { ctx ->
+                    VideoView(ctx).apply {
+                        setVideoPath(videoUrl)
+                        setOnPreparedListener { mp ->
+                            mp.isLooping = false
+                            start()
+                        }
+                        setOnCompletionListener {
+                            onDismiss() 
+                        }
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        blendMode = BlendMode.Screen 
+                    }
+            )
+        }
     }
 }
 
@@ -179,12 +253,26 @@ fun Level(onBack: () -> Unit = {}) {
     val profileFrameWidth = LocalConfiguration.current.screenWidthDp.dp
     val profileFrameHeight = profileFrameWidth / profileAspect
     val displayName = userName ?: userUid.take(8).ifBlank { "Guest" }
+    
     var showUpgrade by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
 
-    // State handle karne ke liye, jab banda 'View More' / 'View Less' dabayega
     var showAllLevels by remember { mutableStateOf(false) }
     var showAllRewards by remember { mutableStateOf(false) }
+    
+    var selectedVideoUrl by remember { mutableStateOf<String?>(null) }
+
+    // Pager state customize profile ke carousel ke liye
+    val pagerState = rememberPagerState(pageCount = { profileBgImages.size })
+
+    // Auto scroll logic (Har 5 second me right slide karega)
+    LaunchedEffect(pagerState) {
+        while (true) {
+            delay(5000) 
+            val nextPage = (pagerState.currentPage + 1) % profileBgImages.size
+            pagerState.animateScrollToPage(nextPage)
+        }
+    }
 
     Box(Modifier.fillMaxSize().background(Color(0xFF04060A))) {
         LevelAsset("file_00000000e02481f4bb2153e2714aca47.png", Modifier.fillMaxWidth().height(280.dp).align(Alignment.TopCenter), contentScale = ContentScale.Crop)
@@ -205,6 +293,8 @@ fun Level(onBack: () -> Unit = {}) {
                         Icon(Icons.Default.HelpOutline, "How to upgrade", tint = Color.White, modifier = Modifier.size(24.dp))
                     }
                 }
+
+                Spacer(Modifier.height(16.dp))
 
                 Box(Modifier.fillMaxWidth().height((profileFrameHeight - 48.dp).coerceAtLeast(1.dp))) {
                     Box(Modifier.width(profileFrameWidth).height(profileFrameHeight).offset(x = 0.dp, y = (-40).dp)) {
@@ -234,13 +324,13 @@ fun Level(onBack: () -> Unit = {}) {
                                     Spacer(Modifier.width(8.dp))
                                     LevelAsset(levelTiers[0].badge, Modifier.height(28.dp).width(58.dp))
                                 }
-                                Spacer(Modifier.height(8.dp))
+                                Spacer(Modifier.height(3.dp)) 
                                 Box(Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(20.dp)).background(Color.White.copy(alpha=.25f))) {
                                     Box(Modifier.fillMaxWidth(.38f).fillMaxHeight().clip(RoundedCornerShape(20.dp)).background(Brush.horizontalGradient(listOf(Color(0xFFFFE072), Color(0xFFF4B63F))))) {
                                         Box(Modifier.align(Alignment.CenterEnd).offset(x = 6.dp).size(12.dp).border(2.dp, Color(0xFFF4B63F), CircleShape).clip(CircleShape).background(Color.White))
                                     }
                                 }
-                                Text("4.5k/20.2k remaining to reach Level 5 >", color = Color.White.copy(alpha=.9f), fontSize = 10.5.sp, modifier = Modifier.padding(top = 5.dp), maxLines = 1)
+                                Text("4.5k/20.2k remaining to reach Level 5 >", color = Color.White.copy(alpha=.9f), fontSize = 10.5.sp, modifier = Modifier.padding(top = 2.dp), maxLines = 1)
                             }
                         }
                     }
@@ -250,7 +340,7 @@ fun Level(onBack: () -> Unit = {}) {
             LazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxWidth().weight(1f),
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 40.dp)
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 32.dp, bottom = 40.dp)
             ) {
                 // ==========================================
                 // 1. LEVEL SECTION
@@ -260,7 +350,6 @@ fun Level(onBack: () -> Unit = {}) {
                     Spacer(Modifier.height(8.dp))
                 }
 
-                // Agar showAllLevels true hai to saare dikhao, nahi to sirf 9 (3x3 grid)
                 val visibleLevels = if (showAllLevels) levelTiers else levelTiers.take(9)
                 val chunkedLevels = visibleLevels.chunked(3)
                 
@@ -301,7 +390,6 @@ fun Level(onBack: () -> Unit = {}) {
                     Spacer(Modifier.height(10.dp))
                 }
 
-                // View More / View Less logic for Level
                 if (levelTiers.size > 9) {
                     item {
                         Box(
@@ -314,8 +402,8 @@ fun Level(onBack: () -> Unit = {}) {
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
                                 modifier = Modifier
-                                    .clickable { showAllLevels = !showAllLevels } // Toggle true/false
-                                    .border(1.dp, Color(0xFF3B82F6), RoundedCornerShape(4.dp)) 
+                                    .clickable { showAllLevels = !showAllLevels } 
+                                    .border(1.dp, Color(0xFF3B82F6), RoundedCornerShape(10.dp)) 
                                     .padding(horizontal = 16.dp, vertical = 6.dp)
                             )
                         }
@@ -323,9 +411,9 @@ fun Level(onBack: () -> Unit = {}) {
                 }
 
                 item {
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(16.dp))
                     HorizontalDivider(color = Color.White.copy(alpha = 0.05f))
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(16.dp))
                 }
 
                 // ==============================================
@@ -381,7 +469,6 @@ fun Level(onBack: () -> Unit = {}) {
                     Spacer(Modifier.height(10.dp))
                 }
 
-                // View More / View Less logic for Rewards
                 if (allRewards.size > 9) {
                     item {
                         Box(
@@ -394,16 +481,149 @@ fun Level(onBack: () -> Unit = {}) {
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
                                 modifier = Modifier
-                                    .clickable { showAllRewards = !showAllRewards } // Toggle true/false
-                                    .border(1.dp, Color(0xFF3B82F6), RoundedCornerShape(4.dp)) 
+                                    .clickable { showAllRewards = !showAllRewards } 
+                                    .border(1.dp, Color(0xFF3B82F6), RoundedCornerShape(10.dp)) 
                                     .padding(horizontal = 16.dp, vertical = 6.dp)
                             )
                         }
                     }
+                }
+
+                item {
+                    Spacer(Modifier.height(16.dp))
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.05f))
+                    Spacer(Modifier.height(16.dp))
+                }
+
+                // ==============================================
+                // 3. MEDAL SECTION 
+                // ==============================================
+                item {
+                    SectionHeading("Medal")
+                    Spacer(Modifier.height(8.dp))
+                }
+
+                val chunkedMedals = medalsList.chunked(3)
+                
+                items(chunkedMedals) { rowItems ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(), 
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        for (medal in rowItems) {
+                            Box(
+                                Modifier
+                                    .weight(1f)
+                                    .aspectRatio(0.85f)
+                                    .background(Color.White.copy(alpha = 0.1f), RoundedCornerShape(8.dp))
+                                    .clickable { 
+                                        selectedVideoUrl = levelAsset(medal.videoFile) 
+                                    }
+                                    .padding(8.dp)
+                            ) {
+                                LevelAsset(
+                                    file = medal.imageFile, 
+                                    modifier = Modifier
+                                        .size(42.dp)
+                                        .align(Alignment.Center) 
+                                )
+                                
+                                Text(
+                                    text = medal.levelText, 
+                                    color = Color.White, 
+                                    fontSize = 12.sp, 
+                                    fontWeight = FontWeight.ExtraBold,
+                                    modifier = Modifier.align(Alignment.BottomCenter) 
+                                )
+                            }
+                        }
+                        repeat(3 - rowItems.size) {
+                            Spacer(Modifier.weight(1f))
+                        }
+                    }
+                    Spacer(Modifier.height(10.dp))
+                }
+
+                item {
+                    Spacer(Modifier.height(16.dp))
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.05f))
+                    Spacer(Modifier.height(16.dp))
+                }
+
+                // ==============================================
+                // 4. CUSTOMIZE PROFILE BACKGROUND SECTION 
+                // ==============================================
+                item {
+                    SectionHeading("Customize Profile Background")
+                    Spacer(Modifier.height(8.dp))
+
+                    // Bada Box (2 rows jitni approximate height)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(260.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                    ) {
+                        // Image Pager
+                        HorizontalPager(
+                            state = pagerState,
+                            modifier = Modifier.fillMaxSize()
+                        ) { page ->
+                            LevelAsset(
+                                file = profileBgImages[page],
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop // Pura Cover karega
+                            )
+                        }
+
+                        // Top Left Badge (Ekdam chipka hua - padding 0 for the box layout)
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopStart)
+                                .background(
+                                    color = Color.Black.copy(alpha = 0.4f), // Black/10 (Transparent Card)
+                                    shape = RoundedCornerShape(bottomEnd = 8.dp)
+                                )
+                                .padding(horizontal = 12.dp, vertical = 6.dp)
+                        ) {
+                            Text(
+                                text = "Lv.25",
+                                color = Color.White,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        // Bottom Dots Indicator
+                        Row(
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .padding(bottom = 12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            repeat(profileBgImages.size) { index ->
+                                Box(
+                                    modifier = Modifier
+                                        .size(6.dp)
+                                        .clip(CircleShape)
+                                        .background(
+                                            if (pagerState.currentPage == index) Color.White else Color.Black
+                                        )
+                                )
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(16.dp))
                 }
             }
         }
     }
 
     if (showUpgrade) LevelUpgradeDialog { showUpgrade = false }
+
+    selectedVideoUrl?.let { videoUrl ->
+        FullScreenVideoDialog(videoUrl = videoUrl) {
+            selectedVideoUrl = null
+        }
+    }
 }
