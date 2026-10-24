@@ -66,7 +66,6 @@ private val levelTiers = listOf(
 )
 
 private val levelGold = Color(0xFFFCD34D)
-private val levelCardBrush = Brush.horizontalGradient(listOf(Color(0xFF06080D), Color(0xFF080D17), Color(0xFF132C54)))
 
 @Composable
 private fun LevelAsset(
@@ -88,7 +87,7 @@ private fun SquareRewardCard(
         modifier = Modifier
             .fillMaxWidth()
             .height(130.dp)
-            .background(levelCardBrush, RoundedCornerShape(4.dp))
+            .background(Color.White.copy(alpha = 0.1f), RoundedCornerShape(4.dp))
             .padding(8.dp)
     ) {
         if (topLeftText != null) {
@@ -110,7 +109,7 @@ private fun SquareRewardCard(
             }
             if (title.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(6.dp))
-                Text(title, color = levelGold, fontSize = 12.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(title, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
     }
@@ -204,7 +203,9 @@ fun Level(onBack: () -> Unit = {}) {
     var showAllRewards by remember { mutableStateOf(false) }
     
     Box(Modifier.fillMaxSize().background(Color(0xFF04060A))) {
-        LevelAsset("file_00000000e02481f4bb2153e2714aca47.png", Modifier.fillMaxWidth().height(280.dp).align(Alignment.TopCenter), contentScale = ContentScale.Crop)
+        // Yahan tera naya Top Banner image set kar diya hai
+        LevelAsset("file_0000000074a4821189d05fde51ca98f9.png", Modifier.fillMaxWidth().height(280.dp).align(Alignment.TopCenter), contentScale = ContentScale.Crop)
+        
         Box(
             Modifier.align(Alignment.TopStart).offset(x = (-40).dp, y = (-40).dp).size(260.dp)
                 .blur(90.dp).clip(CircleShape).background(Color(0x4D1D4ED8))
@@ -229,7 +230,7 @@ fun Level(onBack: () -> Unit = {}) {
                             painter = profilePainter,
                             contentDescription = "Top Card Frame",
                             modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.FillBounds
+                            contentScale = ContentScale.Crop 
                         )
                         Row(Modifier.fillMaxSize().padding(horizontal = 32.dp), verticalAlignment = Alignment.CenterVertically) {
                             
@@ -297,9 +298,8 @@ fun Level(onBack: () -> Unit = {}) {
                         rowTiers.forEach { tier ->
                             val cornerLevelText = tier.range.replace(" - Lv.", "-") 
                             Box(Modifier.weight(1f)) {
-                                SquareRewardCard("", cornerLevelText) {
-                                    // YAHAN SIRF LEVEL BADGES USE HO RAHE HAIN (IMG_20260917_220530.png wagaira)
-                                    LevelAsset(tier.badge, Modifier.size(50.dp))
+                                SquareRewardCard(title = cornerLevelText, topLeftText = null) {
+                                    LevelAsset(tier.badge, Modifier.size(75.dp))
                                 }
                             }
                         }
@@ -354,8 +354,7 @@ fun Level(onBack: () -> Unit = {}) {
                                     title = reward.second, 
                                     topLeftText = "Lv.${reward.first}"
                                 ) {
-                                    // YAHAN SIRF REWARD WALI IMAGE USE HO RAHI HAI (file_00000000b2d481fd8cd233482dbeb9ef.png)
-                                    LevelAsset("file_00000000b2d481fd8cd233482dbeb9ef.png", Modifier.size(50.dp))
+                                    LevelAsset("file_00000000b2d481fd8cd233482dbeb9ef.png", Modifier.size(60.dp))
                                 }
                             }
                         }
