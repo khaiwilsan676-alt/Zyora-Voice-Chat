@@ -699,7 +699,12 @@ export default function Family({ onBack }: FamilyProps) {
   // ==========================================
   if (currentView === 'create') {
     return (
-      <div className="min-h-screen bg-white flex flex-col font-sans text-black relative overflow-y-auto overflow-x-hidden">
+      <div 
+        className="min-h-screen flex flex-col font-sans text-[#1a1a1a] relative overflow-y-auto overflow-x-hidden"
+        style={{
+          background: 'linear-gradient(180deg, #FFFDE7 0%, #FFF9C4 30%, #FFFFFF 100%)'
+        }}
+      >
         <svg style={{ width: 0, height: 0, position: 'absolute' }} aria-hidden="true">
           <filter id="remove-white" colorInterpolationFilters="sRGB">
             <feColorMatrix type="matrix" values="
@@ -721,7 +726,7 @@ export default function Family({ onBack }: FamilyProps) {
 
         <div className="flex items-center justify-between px-2 py-4 flex-shrink-0" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 16px)' }}>
           <button onClick={() => setCurrentView('main')} className="p-2 cursor-pointer relative z-30 active:scale-95 transition-transform">
-            <ArrowLeft size={28} className="text-black" />
+            <ArrowLeft size={28} className="text-[#333]" />
           </button>
           {/* ⭐ Title aur right side ka sab kuch remove kar diya */}
         </div>
@@ -737,7 +742,7 @@ export default function Family({ onBack }: FamilyProps) {
             />
             <div 
               onClick={() => fileInputRef.current?.click()} 
-              className="w-24 h-24 border-2 border-[#FFD700] rounded-lg flex items-center justify-center cursor-pointer bg-gray-50/50 overflow-hidden relative"
+              className="w-24 h-24 border-2 border-[#d4af37] rounded-xl flex items-center justify-center cursor-pointer bg-white/60 overflow-hidden relative shadow-sm"
             >
               {familyImage ? (
                 <img src={familyImage} alt="Family" className="w-full h-full object-cover" />
@@ -749,55 +754,54 @@ export default function Family({ onBack }: FamilyProps) {
           </div>
           
           <div className="px-5 mt-2">
-            <label className="block text-sm font-bold text-black mb-2">Family name</label>
+            <label className="block text-[15px] font-bold text-[#333] mb-2">Family name</label>
             <input 
               type="text" 
               value={familyName}
               onChange={(e) => setFamilyName(e.target.value)}
-              className="w-full bg-[#F3F4F6] border-none rounded-xl p-4 text-black outline-none font-medium placeholder-gray-400" 
-              placeholder="" 
+              className="w-full bg-[#F2F2F2] border-none rounded-xl p-4 text-black outline-none font-medium placeholder-gray-400" 
+              placeholder="Enter your family name" 
             />
           </div>
           
           <div className="px-5 mt-2">
-            <label className="block text-sm font-bold text-black mb-2">Family Announcement</label>
-            <input 
-              type="text" 
+            <label className="block text-[15px] font-bold text-[#333] mb-2">Family Announcement</label>
+            <textarea 
               value={familyAnnouncement}
               onChange={(e) => setFamilyAnnouncement(e.target.value)}
-              className="w-full bg-[#F3F4F6] border-none rounded-xl p-4 text-black outline-none font-medium placeholder-gray-400" 
-              placeholder="" 
+              className="w-full bg-[#F2F2F2] border-none rounded-xl p-4 text-black outline-none font-medium placeholder-gray-400 resize-none h-28" 
+              placeholder="Enter your family announcement" 
             />
           </div>
           
           <div className="px-5 mt-2">
-            <h2 className="text-sm font-bold text-gray-500 mb-2">Setting</h2>
-            <div onClick={() => setShowApplyMode(true)} className="flex items-center justify-between bg-[#F3F4F6] p-4 rounded-xl cursor-pointer">
-              <span className="font-bold text-black">Apply Mode</span>
+            <h2 className="text-[15px] font-bold text-[#333] mb-2">Setting</h2>
+            <div onClick={() => setShowApplyMode(true)} className="flex items-center justify-between bg-[#F2F2F2] p-4 rounded-xl cursor-pointer">
+              <span className="font-bold text-black text-[15px]">Apply Mode</span>
               <ChevronRight className="text-gray-400" size={20} />
             </div>
           </div>
 
           <div className="px-6 mt-4">
-            <p className="text-[13px] text-gray-400 leading-snug mb-1">
+            <p className="text-[13px] text-gray-500 leading-snug mb-1">
               1. Creating a family requires ≥ LV.5
             </p>
-            <p className="text-[13px] text-gray-400 leading-snug mb-1">
+            <p className="text-[13px] text-gray-500 leading-snug mb-1">
               2. Family info can be modified once a week
             </p>
-            <p className="text-[13px] text-gray-400 leading-snug">
+            <p className="text-[13px] text-gray-500 leading-snug">
               3. If family with only 1 member for 7 days will be disbanded automatically
             </p>
           </div>
         </div>
 
-        <div className="fixed bottom-0 left-0 w-full flex flex-col items-center justify-end z-50 bg-transparent pointer-events-none pb-4">
+        <div className="fixed bottom-0 left-0 w-full flex flex-col items-center justify-end z-50 bg-transparent pointer-events-none pb-8">
           <button 
             onClick={handleCreate} 
-            className="pointer-events-auto hover:scale-105 active:scale-95 transition-transform cursor-pointer drop-shadow-2xl h-[52px] flex items-center justify-center bg-gradient-to-r from-[#00C9A7] to-[#00B4D8] rounded-full px-8 min-w-[280px] w-auto"
+            className="pointer-events-auto hover:scale-105 active:scale-95 transition-transform cursor-pointer drop-shadow-xl h-[52px] flex items-center justify-center bg-[#FFD700] rounded-full px-8 min-w-[280px] w-auto"
           >
-            <span className="text-white font-bold text-base tracking-wide whitespace-nowrap">
-              Created with 10,000,000 coins
+            <span className="text-[#1a1a1a] font-bold text-base tracking-wide whitespace-nowrap">
+              Create with 30000000 coins
             </span>
           </button>
         </div>
