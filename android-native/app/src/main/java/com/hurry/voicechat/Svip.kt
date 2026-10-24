@@ -257,7 +257,8 @@ fun SvipVideoPlayer(videoUrl: String) {
             }
         },
         modifier = Modifier
-            .fillMaxWidth(0.6f) // <-- Yahan maine 0.6f kar diya taaki video 10% aur choti ho jaye (total 40% choti)
+            .offset(y = 40.dp) // <-- EK DAM THORA SA NICHE KIYA BSS
+            .fillMaxWidth(0.6f) // <-- Yahan maine 0.6f kar diya taaki video 10% aur choti ho jaye
             .aspectRatio(1f) // Video ekdam SQUARE box me rahegi
             .clip(RectangleShape) // Square se bahar jane wala hissa cut ho jayega
             .layout { measurable, constraints ->
@@ -292,6 +293,8 @@ fun SvipVideoPlayer(videoUrl: String) {
                 }
             }
             .graphicsLayer {
+                // Ye 0.99f alpha black screen bug ko fix karega Compose mein (force offscreen render)
+                alpha = 0.99f 
                 // ColorFilter apply kar diya jo sirf Green color ko nikal dega
                 colorFilter = ColorFilter.colorMatrix(greenScreenMatrix)
             }
