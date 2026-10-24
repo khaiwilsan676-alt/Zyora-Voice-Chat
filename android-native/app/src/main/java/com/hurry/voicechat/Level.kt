@@ -12,8 +12,8 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -74,14 +74,28 @@ private fun LevelAsset(
 
 @Composable
 private fun SectionHeading(title: String) {
-    Text(
-        text = title,
-        color = Color.White,
-        fontSize = 15.sp,
-        fontWeight = FontWeight.Bold,
-        textAlign = TextAlign.Center,
-        modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp)
-    )
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text("--", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.width(8.dp))
+        Box(modifier = Modifier.size(5.dp).clip(CircleShape).background(Color.Yellow))
+        Spacer(Modifier.width(8.dp))
+        
+        Text(
+            text = title,
+            color = Color.White,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Bold
+        )
+        
+        Spacer(Modifier.width(8.dp))
+        Box(modifier = Modifier.size(5.dp).clip(CircleShape).background(Color.Yellow))
+        Spacer(Modifier.width(8.dp))
+        Text("--", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+    }
 }
 
 @Composable
@@ -166,7 +180,11 @@ fun Level(onBack: () -> Unit = {}) {
     val profileFrameHeight = profileFrameWidth / profileAspect
     val displayName = userName ?: userUid.take(8).ifBlank { "Guest" }
     var showUpgrade by remember { mutableStateOf(false) }
-    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    val listState = rememberLazyListState()
+
+    // State handle karne ke liye, jab banda 'View More' / 'View Less' dabayega
+    var showAllLevels by remember { mutableStateOf(false) }
+    var showAllRewards by remember { mutableStateOf(false) }
 
     Box(Modifier.fillMaxSize().background(Color(0xFF04060A))) {
         LevelAsset("file_00000000e02481f4bb2153e2714aca47.png", Modifier.fillMaxWidth().height(280.dp).align(Alignment.TopCenter), contentScale = ContentScale.Crop)
@@ -232,64 +250,155 @@ fun Level(onBack: () -> Unit = {}) {
             LazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxWidth().weight(1f),
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 40.dp),
-                verticalArrangement = Arrangement.spacedBy(24.dp)
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 40.dp)
             ) {
-                itemsIndexed(levelTiers, key = { _, tier -> tier.range }) { _, tier ->
-                    Column(Modifier.fillMaxWidth()) {
-                        
-                        // --- LEVEL SECTION ---
-                        SectionHeading("--• Level •--")
-                        
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-                            Column(
+                // ==========================================
+                // 1. LEVEL SECTION
+                // ==========================================
+                item {
+                    SectionHeading("Level") 
+                    Spacer(Modifier.height(8.dp))
+                }
+
+                // Agar showAllLevels true hai to saare dikhao, nahi to sirf 9 (3x3 grid)
+                val visibleLevels = if (showAllLevels) levelTiers else levelTiers.take(9)
+                val chunkedLevels = visibleLevels.chunked(3)
+                
+                items(chunkedLevels) { rowTiers ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(), 
+                        horizontalArrangement = Arrangement.spacedBy(10.dp) 
+                    ) {
+                        for (tier in rowTiers) {
+                            Box(
                                 Modifier
-                                    .width(120.dp)
+                                    .weight(1f)
                                     .aspectRatio(0.85f)
-                                    .background(Color.White.copy(alpha = 0.1f), RoundedCornerShape(8.dp)),
-                                verticalArrangement = Arrangement.Center,
-                                horizontalAlignment = Alignment.CenterHorizontally
+                                    .background(Color.White.copy(alpha = 0.1f), RoundedCornerShape(8.dp))
+                                    .padding(8.dp)
                             ) {
-                                LevelAsset(tier.badge, Modifier.height(48.dp))
-                                Spacer(Modifier.height(10.dp))
+                                LevelAsset(
+                                    file = tier.badge, 
+                                    modifier = Modifier
+                                        .height(38.dp)
+                                        .align(Alignment.Center) 
+                                )
+                                
                                 val formattedRange = tier.range.replace(" - Lv.", " - ")
-                                Text(formattedRange, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Text(
+                                    text = formattedRange, 
+                                    color = Color.White, 
+                                    fontSize = 11.sp, 
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.align(Alignment.BottomCenter) 
+                                )
                             }
                         }
-
-                        Spacer(Modifier.height(16.dp))
-
-                        // --- REWARDS SECTION ---
-                        SectionHeading("--• Rewards •--")
-
-                        tier.rewards.chunked(3).forEach { rowItems ->
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                for (reward in rowItems) {
-                                    Column(
-                                        Modifier
-                                            .weight(1f)
-                                            .aspectRatio(0.85f)
-                                            .background(Color.White.copy(alpha = 0.1f), RoundedCornerShape(8.dp))
-                                            .padding(4.dp),
-                                        verticalArrangement = Arrangement.Center,
-                                        horizontalAlignment = Alignment.CenterHorizontally
-                                    ) {
-                                        Text("Lv.${reward.first}", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                        Spacer(Modifier.height(6.dp))
-                                        LevelAsset("file_00000000b2d481fd8cd233482dbeb9ef.png", Modifier.size(28.dp))
-                                        Spacer(Modifier.height(6.dp))
-                                        Text(reward.second, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
-                                    }
-                                }
-                                repeat(3 - rowItems.size) {
-                                    Spacer(Modifier.weight(1f))
-                                }
-                            }
-                            Spacer(Modifier.height(10.dp))
+                        repeat(3 - rowTiers.size) {
+                            Spacer(Modifier.weight(1f))
                         }
-                        
-                        Spacer(Modifier.height(8.dp))
-                        HorizontalDivider(color = Color.White.copy(alpha = 0.05f))
+                    }
+                    Spacer(Modifier.height(10.dp))
+                }
+
+                // View More / View Less logic for Level
+                if (levelTiers.size > 9) {
+                    item {
+                        Box(
+                            modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 12.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = if (showAllLevels) "View Less <" else "View More >",
+                                color = Color.White,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier
+                                    .clickable { showAllLevels = !showAllLevels } // Toggle true/false
+                                    .border(1.dp, Color(0xFF3B82F6), RoundedCornerShape(4.dp)) 
+                                    .padding(horizontal = 16.dp, vertical = 6.dp)
+                            )
+                        }
+                    }
+                }
+
+                item {
+                    Spacer(Modifier.height(8.dp))
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.05f))
+                    Spacer(Modifier.height(8.dp))
+                }
+
+                // ==============================================
+                // 2. REWARDS SECTION
+                // ==============================================
+                item {
+                    SectionHeading("Rewards")
+                    Spacer(Modifier.height(8.dp))
+                }
+
+                val allRewards = levelTiers.flatMap { it.rewards }
+                val visibleRewards = if (showAllRewards) allRewards else allRewards.take(9)
+                val chunkedRewards = visibleRewards.chunked(3)
+
+                items(chunkedRewards) { rowItems ->
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        for (reward in rowItems) {
+                            Box(
+                                Modifier
+                                    .weight(1f)
+                                    .aspectRatio(0.85f)
+                                    .background(Color.White.copy(alpha = 0.1f), RoundedCornerShape(8.dp))
+                                    .padding(8.dp)
+                            ) {
+                                Text(
+                                    text = "Lv.${reward.first}", 
+                                    color = Color.White, 
+                                    fontSize = 11.sp, 
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.align(Alignment.TopStart) 
+                                )
+                                
+                                LevelAsset(
+                                    file = "file_00000000b2d481fd8cd233482dbeb9ef.png", 
+                                    modifier = Modifier
+                                        .size(42.dp)
+                                        .align(Alignment.Center) 
+                                )
+                                
+                                Text(
+                                    text = reward.second, 
+                                    color = Color.White, 
+                                    fontSize = 12.sp, 
+                                    fontWeight = FontWeight.ExtraBold,
+                                    modifier = Modifier.align(Alignment.BottomCenter)
+                                )
+                            }
+                        }
+                        repeat(3 - rowItems.size) {
+                            Spacer(Modifier.weight(1f))
+                        }
+                    }
+                    Spacer(Modifier.height(10.dp))
+                }
+
+                // View More / View Less logic for Rewards
+                if (allRewards.size > 9) {
+                    item {
+                        Box(
+                            modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 12.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = if (showAllRewards) "View Less <" else "View More >",
+                                color = Color.White,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier
+                                    .clickable { showAllRewards = !showAllRewards } // Toggle true/false
+                                    .border(1.dp, Color(0xFF3B82F6), RoundedCornerShape(4.dp)) 
+                                    .padding(horizontal = 16.dp, vertical = 6.dp)
+                            )
+                        }
                     }
                 }
             }
