@@ -56,7 +56,7 @@ private data class NativeLevelTier(
     val rewards: List<Pair<Int, String>>
 )
 
-private data class MedalItem(
+private data class NativeLevelMedalItem(
     val levelText: String,
     val imageFile: String,
     val videoFile: String
@@ -76,13 +76,13 @@ private val levelTiers = listOf(
 )
 
 private val medalsList = listOf(
-    MedalItem("Lv.5", "IMG_20261024_153426.png", "1000220027-background.mp4"),
-    MedalItem("Lv.15", "file_00000000bd988211840a0dcbe09101ee.png", "1000220026-background.mp4"),
-    MedalItem("Lv.30", "IMG_20261024_153407.png", "1000220025-background.mp4"),
-    MedalItem("Lv.50", "IMG_20261024_153322.png", "1000220024-background.mp4"),
-    MedalItem("Lv.65", "IMG_20261024_153346.png", "1000220023-background.mp4"),
-    MedalItem("Lv.75", "IMG_20261024_153248.png", "1000220022-background.mp4"),
-    MedalItem("Lv.90", "IMG_20261024_153322.png", "1000220021-background.mp4")
+    NativeLevelMedalItem("Lv.5", "IMG_20261024_153426.png", "1000220027-background.mp4"),
+    NativeLevelMedalItem("Lv.15", "file_00000000bd988211840a0dcbe09101ee.png", "1000220026-background.mp4"),
+    NativeLevelMedalItem("Lv.30", "IMG_20261024_153407.png", "1000220025-background.mp4"),
+    NativeLevelMedalItem("Lv.50", "IMG_20261024_153322.png", "1000220024-background.mp4"),
+    NativeLevelMedalItem("Lv.65", "IMG_20261024_153346.png", "1000220023-background.mp4"),
+    NativeLevelMedalItem("Lv.75", "IMG_20261024_153248.png", "1000220022-background.mp4"),
+    NativeLevelMedalItem("Lv.90", "IMG_20261024_153322.png", "1000220021-background.mp4")
 )
 
 // Background profile images
@@ -265,7 +265,7 @@ fun Level(onBack: () -> Unit = {}) {
     var selectedVideoUrl by remember { mutableStateOf<String?>(null) }
 
     // Using safe stable syntax for PagerState to avoid Compilation Error
-    val pagerState = rememberPagerState()
+    val pagerState = rememberPagerState { profileBgImages.size }
 
     // Auto scroll logic (Har 5 second me right slide karega)
     LaunchedEffect(pagerState) {
@@ -571,7 +571,6 @@ fun Level(onBack: () -> Unit = {}) {
                     ) {
                         // Image Pager (Safe syntax used here for older Compose versions)
                         HorizontalPager(
-                            pageCount = profileBgImages.size,
                             state = pagerState,
                             modifier = Modifier.fillMaxSize()
                         ) { page ->
