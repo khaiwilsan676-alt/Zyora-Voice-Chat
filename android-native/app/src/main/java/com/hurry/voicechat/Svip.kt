@@ -129,7 +129,7 @@ fun SvipPage(onBack: () -> Unit = {}) {
                     .zIndex(20f),
                 contentAlignment = Alignment.Center
             ) {
-                SvipVideoPlayer(videoUrl = "$baseUrl/1000197130-background%20(1).mp4")
+                SvipVideoPlayer(videoUrl = "$baseUrl/1000219772-background.mp4")
             }
         }
 
@@ -257,7 +257,7 @@ fun SvipVideoPlayer(videoUrl: String) {
             }
         },
         modifier = Modifier
-            .fillMaxWidth()
+            .fillMaxWidth(0.6f) // <-- Yahan maine 0.6f kar diya taaki video 10% aur choti ho jaye (total 40% choti)
             .aspectRatio(1f) // Video ekdam SQUARE box me rahegi
             .clip(RectangleShape) // Square se bahar jane wala hissa cut ho jayega
             .layout { measurable, constraints ->
