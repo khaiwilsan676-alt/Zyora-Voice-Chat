@@ -87,7 +87,8 @@ private fun SquareRewardCard(
         modifier = Modifier
             .fillMaxWidth()
             .height(130.dp)
-            .background(Color.White.copy(alpha = 0.1f), RoundedCornerShape(4.dp))
+            // Yahan white/10 se badal kar white/20 (alpha = 0.2f) kar diya hai
+            .background(Color.White.copy(alpha = 0.2f), RoundedCornerShape(4.dp))
             .padding(8.dp)
     ) {
         if (topLeftText != null) {
@@ -203,9 +204,7 @@ fun Level(onBack: () -> Unit = {}) {
     var showAllRewards by remember { mutableStateOf(false) }
     
     Box(Modifier.fillMaxSize().background(Color(0xFF04060A))) {
-        // Yahan tera naya Top Banner image set kar diya hai
-        LevelAsset("file_0000000074a4821189d05fde51ca98f9.png", Modifier.fillMaxWidth().height(280.dp).align(Alignment.TopCenter), contentScale = ContentScale.Crop)
-        
+        LevelAsset("file_00000000e02481f4bb2153e2714aca47.png", Modifier.fillMaxWidth().height(280.dp).align(Alignment.TopCenter), contentScale = ContentScale.Crop)
         Box(
             Modifier.align(Alignment.TopStart).offset(x = (-40).dp, y = (-40).dp).size(260.dp)
                 .blur(90.dp).clip(CircleShape).background(Color(0x4D1D4ED8))
@@ -230,7 +229,7 @@ fun Level(onBack: () -> Unit = {}) {
                             painter = profilePainter,
                             contentDescription = "Top Card Frame",
                             modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop 
+                            contentScale = ContentScale.Fit 
                         )
                         Row(Modifier.fillMaxSize().padding(horizontal = 32.dp), verticalAlignment = Alignment.CenterVertically) {
                             
@@ -271,7 +270,7 @@ fun Level(onBack: () -> Unit = {}) {
             LazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxWidth().weight(1f),
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 28.dp),
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 37.dp, bottom = 28.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 
