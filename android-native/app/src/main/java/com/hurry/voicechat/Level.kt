@@ -299,7 +299,8 @@ fun Level(onBack: () -> Unit = {}) {
                             val cornerLevelText = tier.range.replace(" - Lv.", "-") 
                             Box(Modifier.weight(1f)) {
                                 SquareRewardCard("", cornerLevelText) {
-                                    LevelAsset("file_000000006688821197edc482e295d3fd.png", Modifier.width(64.dp).height(32.dp))
+                                    // Yahan maine ab sahi badge pass kiya hai (e.g. IMG_20260917_220530.png etc)
+                                    LevelAsset(tier.badge, Modifier.size(50.dp))
                                 }
                             }
                         }
