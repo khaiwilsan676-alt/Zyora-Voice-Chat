@@ -101,11 +101,16 @@ private val nativeStoreItems = listOf(
     NativeStoreItem("a7", "Golden Aura", "file_00000000406482119e4e67fbbe323a54.png", "Avatar Frame", 5, 199000, "3D"),
     NativeStoreItem("a8", "Happy birthday", "file_00000000c21482118a018264cecee76c.png", "Avatar Frame", 5, 500000, "3D", video = "gemini_generated_video_c02dfa3d~2.mp4"),
     
-    // Aapke naye Themes yahan add kar diye gaye hain, purane waale hata diye
-    NativeStoreItem("t1", "Painted Skies", "IMG-20261024-WA0021.jpg", "Theme", 5, 899999, "30D"),
-    NativeStoreItem("t2", "Solace nature", "IMG-20261024-WA0022.jpg", "Theme", 5, 700000, "30D"),
-    NativeStoreItem("t3", "Time light", "IMG-20261024-WA0023.jpg", "Theme", 5, 1000000, "30D"),
-
+    NativeStoreItem("t1", "Seafood", "IMG-20260904-WA0004.jpg", "Theme", 4, 2700000, "30D"),
+    NativeStoreItem("t2", "Night Sky", "IMG-20260904-WA0005.jpg", "Theme", 5, 2400000, "30D"),
+    NativeStoreItem("t3", "Seafood", "IMG-20260904-WA0006.jpg", "Theme", 4, 2700000, "30D"),
+    NativeStoreItem("t4", "Night Sky", "IMG-20260904-WA0007.jpg", "Theme", 5, 2400000, "30D"),
+    NativeStoreItem("t5", "Seafood", "IMG-20260904-WA0040.jpg", "Theme", 4, 2700000, "30D"),
+    NativeStoreItem("t6", "Night Sky", "IMG-20260904-WA0041.jpg", "Theme", 5, 2400000, "30D"),
+    NativeStoreItem("t7", "Painted Skies", "IMG-20261024-WA0021.jpg", "Theme", 5, 899999, "30D"),
+    NativeStoreItem("t8", "Solace nature", "IMG-20261024-WA0022.jpg", "Theme", 5, 700000, "30D"),
+    NativeStoreItem("t9", "Time light", "IMG-20261024-WA0023.jpg", "Theme", 5, 1000000, "30D"),
+    
     NativeStoreItem("c1", "1", "file_000000003d888211822aa6837fe5013c.png", "Chat Bubble", 4, 500000, "3D"),
     NativeStoreItem("c2", "2", "file_000000006044821186ff566329797142.png", "Chat Bubble", 4, 250000, "2D"),
     NativeStoreItem("c3", "3", "file_00000000c44c81f598f62ae8a45e13a7.png", "Chat Bubble", 5, 300000, "3D"),
@@ -222,6 +227,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
                     val theme = item.tab == "Theme"
                     val isVehicle = item.tab == "Vehicle"
                     val isFrame = item.tab == "Avatar Frame"
+                    val isBubble = item.tab == "Chat Bubble" // Check added for Chat Bubble
                     val owned = ownedIds.contains(item.id)
                     val equipped = equippedIds.contains(item.id)
                     
@@ -251,7 +257,8 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
                                     val mediaModifier = if (isVehicle && !isV1) {
                                         Modifier.fillMaxWidth().wrapContentHeight()
                                     } else {
-                                        Modifier.fillMaxWidth().height(if (isVehicle || isFrame) 120.dp else 80.dp)
+                                        // Update here to include isBubble
+                                        Modifier.fillMaxWidth().height(if (isVehicle || isFrame || isBubble) 120.dp else 80.dp)
                                     }
                                     
                                     val gridBottomFade = if (isVehicle) {
@@ -271,7 +278,8 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
                                         mute = item.id == "a8"
                                     )
                                 } else {
-                                    val mediaModifier = Modifier.fillMaxWidth().height(if (isVehicle || isFrame) 120.dp else 80.dp)
+                                    // Update here to include isBubble
+                                    val mediaModifier = Modifier.fillMaxWidth().height(if (isVehicle || isFrame || isBubble) 120.dp else 80.dp)
                                     AsyncImage(model = StoreAssetBase + item.image, contentDescription = item.name, modifier = mediaModifier)
                                 }
                             } else {
@@ -886,4 +894,3 @@ private fun StoreVideoPreview(
         }
     }
 }
-
