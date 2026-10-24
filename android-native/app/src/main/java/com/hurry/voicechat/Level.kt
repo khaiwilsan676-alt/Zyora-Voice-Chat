@@ -235,6 +235,8 @@ private fun LevelUpgradeDialog(onDismiss: () -> Unit) {
     }
 }
 
+// Added OptIn to avoid experimental api errors for HorizontalPager in older compose versions
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun Level(onBack: () -> Unit = {}) {
     val context = LocalContext.current
@@ -262,15 +264,18 @@ fun Level(onBack: () -> Unit = {}) {
     
     var selectedVideoUrl by remember { mutableStateOf<String?>(null) }
 
-    // Pager state customize profile ke carousel ke liye
-    val pagerState = rememberPagerState(pageCount = { profileBgImages.size })
+    // Using safe stable syntax for PagerState to avoid Compilation Error
+    val pagerState = rememberPagerState()
 
     // Auto scroll logic (Har 5 second me right slide karega)
     LaunchedEffect(pagerState) {
         while (true) {
             delay(5000) 
-            val nextPage = (pagerState.currentPage + 1) % profileBgImages.size
-            pagerState.animateScrollToPage(nextPage)
+            // Avoid divide by zero if list is empty
+            if (profileBgImages.isNotEmpty()) {
+                val nextPage = (pagerState.currentPage + 1) % profileBgImages.size
+                pagerState.animateScrollToPage(nextPage)
+            }
         }
     }
 
@@ -564,8 +569,9 @@ fun Level(onBack: () -> Unit = {}) {
                             .height(260.dp)
                             .clip(RoundedCornerShape(8.dp))
                     ) {
-                        // Image Pager
+                        // Image Pager (Safe syntax used here for older Compose versions)
                         HorizontalPager(
+                            pageCount = profileBgImages.size,
                             state = pagerState,
                             modifier = Modifier.fillMaxSize()
                         ) { page ->
@@ -576,7 +582,7 @@ fun Level(onBack: () -> Unit = {}) {
                             )
                         }
 
-                        // Top Left Badge (Ekdam chipka hua - padding 0 for the box layout)
+                        // Top Left Badge (Ekdam chipka hua)
                         Box(
                             modifier = Modifier
                                 .align(Alignment.TopStart)
