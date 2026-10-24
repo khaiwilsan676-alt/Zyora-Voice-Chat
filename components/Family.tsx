@@ -700,7 +700,7 @@ export default function Family({ onBack }: FamilyProps) {
   if (currentView === 'create') {
     return (
       <div 
-        className="min-h-screen flex flex-col font-sans text-[#1a1a1a] relative overflow-y-auto overflow-x-hidden"
+        className="h-[100dvh] flex flex-col font-sans text-[#1a1a1a] relative overflow-hidden"
         style={{
           background: 'linear-gradient(180deg, #FFFDE7 0%, #FFF9C4 30%, #FFFFFF 100%)'
         }}
@@ -724,14 +724,14 @@ export default function Family({ onBack }: FamilyProps) {
           </filter>
         </svg>
 
-        <div className="flex items-center justify-between px-2 py-4 flex-shrink-0" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 16px)' }}>
+        <div className="flex items-center justify-between px-2 py-4 flex-shrink-0 relative" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 16px)' }}>
           <button onClick={() => setCurrentView('main')} className="p-2 cursor-pointer relative z-30 active:scale-95 transition-transform">
             <ArrowLeft size={28} className="text-[#333]" />
           </button>
-          {/* ⭐ Title aur right side ka sab kuch remove kar diya */}
+          <h1 className="absolute left-1/2 -translate-x-1/2 text-[17px] font-bold text-[#1a1a1a]">Create Family</h1>
         </div>
 
-        <div className="flex-1 w-full pb-36">
+        <div className="flex-1 w-full overflow-hidden pb-24">
           <div className="flex flex-col items-center mt-1">
             <input 
               type="file" 
@@ -795,7 +795,14 @@ export default function Family({ onBack }: FamilyProps) {
           </div>
         </div>
 
-        <div className="fixed bottom-0 left-0 w-full flex flex-col items-center justify-end z-50 bg-transparent pointer-events-none pb-8">
+        {/* Fixed Bottom Button Area */}
+        <div 
+          className="fixed bottom-0 left-0 w-full flex flex-col items-center justify-end z-50 px-4 pointer-events-none"
+          style={{ 
+            paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 20px)',
+            background: 'linear-gradient(to top, rgba(255, 253, 231, 1) 40%, rgba(255, 253, 231, 0) 100%)'
+          }}
+        >
           <button 
             onClick={handleCreate} 
             className="pointer-events-auto hover:scale-105 active:scale-95 transition-transform cursor-pointer drop-shadow-xl h-[52px] flex items-center justify-center bg-[#FFD700] rounded-full px-8 min-w-[280px] w-auto"
@@ -807,8 +814,14 @@ export default function Family({ onBack }: FamilyProps) {
         </div>
 
         {showApplyMode && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-end">
-            <div className="bg-white w-full h-[22vh] rounded-t-3xl p-6 flex flex-col shadow-2xl relative">
+          <div 
+            className="fixed inset-0 bg-black/50 z-50 flex items-end"
+            onClick={() => setShowApplyMode(false)}
+          >
+            <div 
+              className="bg-white w-full h-[22vh] rounded-t-3xl p-6 flex flex-col shadow-2xl relative"
+              onClick={(e) => e.stopPropagation()}
+            >
               <div onClick={() => { setApplyModeState('free'); setTimeout(() => setShowApplyMode(false), 200) }} className="flex items-center justify-between py-4 border-b border-gray-100 cursor-pointer">
                 <span className="font-bold text-black text-sm">Free mode</span>
                 <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${applyModeState === 'free' ? 'border-[#3b82f6]' : 'border-gray-300'}`}>
