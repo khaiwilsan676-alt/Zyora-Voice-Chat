@@ -89,7 +89,7 @@ private fun SquareRewardCard(
         modifier = Modifier
             .fillMaxWidth()
             .height(130.dp)
-            .background(levelCardBrush, RoundedCornerShape(12.dp))
+            .background(levelCardBrush, RoundedCornerShape(4.dp))
             .padding(8.dp)
     ) {
         if (topLeftText != null) {
@@ -106,11 +106,13 @@ private fun SquareRewardCard(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+            Box(modifier = Modifier.weight(1f).offset(y = 6.dp), contentAlignment = Alignment.Center) {
                 imageContent()
             }
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(title, color = levelGold, fontSize = 12.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (title.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(title, color = levelGold, fontSize = 12.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
         }
     }
 }
@@ -189,15 +191,16 @@ fun Level(onBack: () -> Unit = {}) {
     }
     val userPhoto = userPrefs.getString("photo", "")?.trim().orEmpty()
     val profilePainter = rememberAsyncImagePainter(model = levelAsset("file_000000007044820ea729df406d1dc320.png"))
-    val profileIntrinsic = profilePainter.intrinsicSize
-    val profileAspect = if (profileIntrinsic.width.isFinite() && profileIntrinsic.height.isFinite() && profileIntrinsic.width > 0f && profileIntrinsic.height > 0f) profileIntrinsic.width / profileIntrinsic.height else 3.25f
+    
     val profileFrameWidth = LocalConfiguration.current.screenWidthDp.dp
-    val profileFrameHeight = profileFrameWidth / profileAspect
+    val newProfileAspect = 2.2f 
+    val profileFrameHeight = profileFrameWidth / newProfileAspect
+    val originalContainerHeight = (profileFrameWidth / 3.25f) - 70.dp
+    
     val displayName = userName ?: userUid.take(8).ifBlank { "Guest" }
     var showUpgrade by remember { mutableStateOf(false) }
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
 
-    // YE RAHA VIEW MORE KA LOGIC 🔥
     var showAllLevels by remember { mutableStateOf(false) }
     var showAllRewards by remember { mutableStateOf(false) }
     
@@ -221,8 +224,8 @@ fun Level(onBack: () -> Unit = {}) {
                     }
                 }
 
-                Box(Modifier.fillMaxWidth().height((profileFrameHeight - 70.dp).coerceAtLeast(1.dp))) {
-                    Box(Modifier.width(profileFrameWidth).height(profileFrameHeight).offset(x = 0.dp, y = (-40).dp)) {
+                Box(Modifier.fillMaxWidth().height(originalContainerHeight.coerceAtLeast(1.dp))) {
+                    Box(Modifier.width(profileFrameWidth).height(profileFrameHeight).offset(x = 0.dp, y = (-10).dp)) {
                         Image(
                             painter = profilePainter,
                             contentDescription = "Top Card Frame",
@@ -274,17 +277,19 @@ fun Level(onBack: () -> Unit = {}) {
                 
                 // 1. --- LEVEL SECTION ---
                 item {
-                    Text(
-                        text = "-• Level •-", 
-                        color = Color.White, 
-                        fontSize = 17.sp, 
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp)
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(text = "-", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                        Text(text = "•", color = levelGold, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                        Text(text = " Level ", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                        Text(text = "•", color = levelGold, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                        Text(text = "-", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                    }
                 }
 
-                // Sirf 9 items show karna start me, warna saare
                 val visibleLevels = if (showAllLevels) levelTiers else levelTiers.take(9)
                 val levelChunks = visibleLevels.chunked(3)
                 
@@ -293,8 +298,8 @@ fun Level(onBack: () -> Unit = {}) {
                         rowTiers.forEach { tier ->
                             val cornerLevelText = tier.range.replace(" - Lv.", "-") 
                             Box(Modifier.weight(1f)) {
-                                SquareRewardCard("Level", cornerLevelText) {
-                                    LevelAsset(tier.rightGraphic, Modifier.size(50.dp))
+                                SquareRewardCard("", cornerLevelText) {
+                                    LevelAsset("file_000000006688821197edc482e295d3fd.png", Modifier.width(64.dp).height(32.dp))
                                 }
                             }
                         }
@@ -304,19 +309,18 @@ fun Level(onBack: () -> Unit = {}) {
                     }
                 }
 
-                // Agar saare levels show nahi hue, toh "View more >" button dikhao bina kisi Square Card ke
-                if (!showAllLevels && levelTiers.size > 9) {
+                if (levelTiers.size > 9) {
                     item {
                         Box(Modifier.fillMaxWidth().padding(top = 6.dp), contentAlignment = Alignment.Center) {
                             Row(
                                 modifier = Modifier
-                                    .border(1.dp, Color(0xFF3B82F6), RoundedCornerShape(20.dp))
-                                    .clip(RoundedCornerShape(20.dp))
-                                    .clickable { showAllLevels = true }
+                                    .border(1.dp, Color(0xFF3B82F6), RoundedCornerShape(8.dp))
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .clickable { showAllLevels = !showAllLevels }
                                     .padding(horizontal = 16.dp, vertical = 6.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text("View more >", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                Text(if (showAllLevels) "View less <" else "View more >", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                             }
                         }
                     }
@@ -325,17 +329,19 @@ fun Level(onBack: () -> Unit = {}) {
                 // 2. --- REWARDS SECTION ---
                 item {
                     Spacer(Modifier.height(22.dp)) 
-                    Text(
-                        text = "-• Rewards •-", 
-                        color = Color.White, 
-                        fontSize = 17.sp, 
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp)
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(text = "-", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                        Text(text = "•", color = levelGold, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                        Text(text = " Rewards ", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                        Text(text = "•", color = levelGold, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                        Text(text = "-", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                    }
                 }
 
-                // Rewards me bhi start me sirf 9 coins wale items (baki view more ke peeche)
                 val allRewards = levelTiers.flatMap { it.rewards }
                 val visibleRewards = if (showAllRewards) allRewards else allRewards.take(9)
                 val rewardChunks = visibleRewards.chunked(3)
@@ -358,19 +364,18 @@ fun Level(onBack: () -> Unit = {}) {
                     }
                 }
 
-                // Rewards ka view more button (Sirf text, white color, blue border)
-                if (!showAllRewards && allRewards.size > 9) {
+                if (allRewards.size > 9) {
                     item {
                         Box(Modifier.fillMaxWidth().padding(top = 6.dp), contentAlignment = Alignment.Center) {
                             Row(
                                 modifier = Modifier
-                                    .border(1.dp, Color(0xFF3B82F6), RoundedCornerShape(20.dp))
-                                    .clip(RoundedCornerShape(20.dp))
-                                    .clickable { showAllRewards = true }
+                                    .border(1.dp, Color(0xFF3B82F6), RoundedCornerShape(8.dp))
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .clickable { showAllRewards = !showAllRewards }
                                     .padding(horizontal = 16.dp, vertical = 6.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text("View more >", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                Text(if (showAllRewards) "View less <" else "View more >", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                             }
                         }
                     }
