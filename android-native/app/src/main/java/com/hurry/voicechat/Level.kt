@@ -19,7 +19,6 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.HelpOutline
@@ -33,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -62,6 +62,18 @@ private data class NativeLevelMedalItem(
     val videoFile: String
 )
 
+private data class NativeLevelFrameItem(
+    val levelText: String,
+    val imageFile: String
+)
+
+// Naya Vehicle Data Class
+private data class NativeLevelVehicleItem(
+    val levelText: String,
+    val imageFile: String,
+    val videoFile: String
+)
+
 private val levelTiers = listOf(
     NativeLevelTier("Lv.1 - Lv.10","IMG_20260917_220530.png",listOf(2 to "16,000",4 to "25,000",6 to "35,000",8 to "46,000",10 to "58,000")),
     NativeLevelTier("Lv.11 - Lv.20","IMG_20260917_220613.png",listOf(12 to "70,000",14 to "84,000",16 to "98,000",18 to "114,000",20 to "130,000")),
@@ -76,30 +88,38 @@ private val levelTiers = listOf(
 )
 
 private val medalsList = listOf(
-    NativeLevelMedalItem("Lv.5", "IMG_20261024_153426.png", "1000220027-background.mp4"),
-    NativeLevelMedalItem("Lv.15", "file_00000000bd988211840a0dcbe09101ee.png", "1000220026-background.mp4"),
-    NativeLevelMedalItem("Lv.30", "IMG_20261024_153407.png", "1000220025-background.mp4"),
+    NativeLevelMedalItem("Lv.5", "IMG_20261024_153426.png", "1000220021-background.mp4"),
+    NativeLevelMedalItem("Lv.15", "file_00000000bd988211840a0dcbe09101ee.png", "1000220022-background.mp4"),
+    NativeLevelMedalItem("Lv.30", "IMG_20261024_153407.png", "1000220023-background.mp4"),
     NativeLevelMedalItem("Lv.50", "IMG_20261024_153322.png", "1000220024-background.mp4"),
-    NativeLevelMedalItem("Lv.65", "IMG_20261024_153346.png", "1000220023-background.mp4"),
-    NativeLevelMedalItem("Lv.75", "IMG_20261024_153248.png", "1000220022-background.mp4"),
-    NativeLevelMedalItem("Lv.90", "IMG_20261024_153322.png", "1000220021-background.mp4")
+    NativeLevelMedalItem("Lv.65", "IMG_20261024_153346.png", "1000220025-background.mp4"),
+    NativeLevelMedalItem("Lv.75", "IMG_20261024_153248.png", "1000220026-background.mp4"),
+    NativeLevelMedalItem("Lv.90", "IMG_20261024_153322.png", "1000220027-background.mp4")
 )
 
-// Background profile images
+private val framesList = listOf(
+    NativeLevelFrameItem("Lv.5", "IMG_20261025_135250.png"),
+    NativeLevelFrameItem("Lv.10", "IMG_20261025_135305.png"),
+    NativeLevelFrameItem("Lv.25", "IMG_20261025_135331.png"),
+    NativeLevelFrameItem("Lv.40", "IMG_20261025_135358.png"),
+    NativeLevelFrameItem("Lv.55", "IMG_20261025_135714.png"),
+    NativeLevelFrameItem("Lv.80", "IMG_20261025_135736.png"),
+    NativeLevelFrameItem("Lv.100", "IMG_20261025_140657.png")
+)
+
+// Nayi Vehicles List
+private val vehiclesList = listOf(
+    NativeLevelVehicleItem("Lv.25", "IMG_20261025_124343.png", "alioss_17_2025111717234047534~2.mp4"),
+    NativeLevelVehicleItem("Lv.45", "IMG_20261025_124403.png", "alioss_17_2025110916541444937~2.mp4"),
+    NativeLevelVehicleItem("Lv.60", "IMG_20261025_124423.png", "alioss_17_2025103016391722282~2.mp4"),
+    NativeLevelVehicleItem("Lv.75", "IMG_20261025_124548.png", "alioss_16_2025080802181154988~2.mp4"),
+    NativeLevelVehicleItem("Lv.90", "IMG_20261025_124608.png", "alioss_17_2025110614082840769~2.mp4")
+)
+
 private val profileBgImages = listOf(
     "file_00000000edf082119f3c51da31cca16b.png",
     "file_00000000acd48211ba29883fe47a0215.png"
 )
-
-@Composable
-private fun LevelAsset(
-    file: String,
-    modifier: Modifier = Modifier,
-    description: String? = null,
-    contentScale: ContentScale = ContentScale.Fit
-) {
-    AsyncImage(model = levelAsset(file), contentDescription = description, modifier = modifier, contentScale = contentScale)
-}
 
 @Composable
 private fun SectionHeading(title: String) {
@@ -108,7 +128,7 @@ private fun SectionHeading(title: String) {
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(modifier = Modifier.width(70.dp).height(1.5.dp).background(Brush.horizontalGradient(listOf(Color.Transparent, Color.White))))
+        Box(modifier = Modifier.weight(1f).height(1.5.dp).background(Brush.horizontalGradient(listOf(Color.Transparent, Color.White))))
         Spacer(Modifier.width(4.dp))
         Box(modifier = Modifier.size(3.dp).clip(CircleShape).background(Color(0xFF4DD0E1))) 
         Spacer(Modifier.width(3.dp))
@@ -120,7 +140,10 @@ private fun SectionHeading(title: String) {
             text = title,
             color = Color.White,
             fontSize = 17.sp,
-            fontWeight = FontWeight.Normal
+            fontWeight = FontWeight.Normal,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center
         )
         
         Spacer(Modifier.width(12.dp))
@@ -129,12 +152,12 @@ private fun SectionHeading(title: String) {
         Spacer(Modifier.width(3.dp))
         Box(modifier = Modifier.size(3.dp).clip(CircleShape).background(Color(0xFF4DD0E1))) 
         Spacer(Modifier.width(4.dp))
-        Box(modifier = Modifier.width(70.dp).height(1.5.dp).background(Brush.horizontalGradient(listOf(Color.White, Color.Transparent))))
+        Box(modifier = Modifier.weight(1f).height(1.5.dp).background(Brush.horizontalGradient(listOf(Color.White, Color.Transparent))))
     }
 }
 
 @Composable
-private fun FullScreenVideoDialog(videoUrl: String, onDismiss: () -> Unit) {
+private fun FullScreenVideoDialog(videoUrl: String, isMedal: Boolean, onDismiss: () -> Unit) {
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(
@@ -142,6 +165,10 @@ private fun FullScreenVideoDialog(videoUrl: String, onDismiss: () -> Unit) {
             decorFitsSystemWindows = false
         )
     ) {
+        val dialogWindowProvider = androidx.compose.ui.platform.LocalView.current.parent as? androidx.compose.ui.window.DialogWindowProvider
+        dialogWindowProvider?.window?.setDimAmount(0f)
+        dialogWindowProvider?.window?.setBackgroundDrawableResource(android.R.color.transparent)
+
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -152,6 +179,9 @@ private fun FullScreenVideoDialog(videoUrl: String, onDismiss: () -> Unit) {
             AndroidView(
                 factory = { ctx ->
                     VideoView(ctx).apply {
+                        setZOrderOnTop(true) 
+                        holder.setFormat(android.graphics.PixelFormat.TRANSPARENT)
+                        
                         setVideoPath(videoUrl)
                         setOnPreparedListener { mp ->
                             mp.isLooping = false
@@ -165,7 +195,26 @@ private fun FullScreenVideoDialog(videoUrl: String, onDismiss: () -> Unit) {
                 modifier = Modifier
                     .fillMaxSize()
                     .graphicsLayer {
-                        blendMode = BlendMode.Screen 
+                        alpha = 0.99f 
+                        // Sirf medal video ka black background remove hoga
+                        if (isMedal) {
+                            blendMode = BlendMode.Screen
+                        }
+                    }
+                    .drawWithContent {
+                        drawContent()
+                        // Entry video me 10% top aur bottom fading mask background ke sath mix hone ke liye
+                        if (!isMedal) {
+                            drawRect(
+                                brush = Brush.verticalGradient(
+                                    0.0f to Color.Transparent,
+                                    0.1f to Color.Black,
+                                    0.9f to Color.Black,
+                                    1.0f to Color.Transparent
+                                ),
+                                blendMode = BlendMode.DstIn
+                            )
+                        }
                     }
             )
         }
@@ -235,7 +284,6 @@ private fun LevelUpgradeDialog(onDismiss: () -> Unit) {
     }
 }
 
-// Added OptIn to avoid experimental api errors for HorizontalPager in older compose versions
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun Level(onBack: () -> Unit = {}) {
@@ -262,16 +310,14 @@ fun Level(onBack: () -> Unit = {}) {
     var showAllLevels by remember { mutableStateOf(false) }
     var showAllRewards by remember { mutableStateOf(false) }
     
-    var selectedVideoUrl by remember { mutableStateOf<String?>(null) }
+    // Pair of VideoUrl and isMedal boolean
+    var selectedVideoData by remember { mutableStateOf<Pair<String, Boolean>?>(null) }
 
-    // Using safe stable syntax for PagerState to avoid Compilation Error
     val pagerState = rememberPagerState { profileBgImages.size }
 
-    // Auto scroll logic (Har 5 second me right slide karega)
     LaunchedEffect(pagerState) {
         while (true) {
             delay(5000) 
-            // Avoid divide by zero if list is empty
             if (profileBgImages.isNotEmpty()) {
                 val nextPage = (pagerState.currentPage + 1) % profileBgImages.size
                 pagerState.animateScrollToPage(nextPage)
@@ -280,7 +326,7 @@ fun Level(onBack: () -> Unit = {}) {
     }
 
     Box(Modifier.fillMaxSize().background(Color(0xFF04060A))) {
-        LevelAsset("file_00000000e02481f4bb2153e2714aca47.png", Modifier.fillMaxWidth().height(280.dp).align(Alignment.TopCenter), contentScale = ContentScale.Crop)
+        AsyncImage(model = levelAsset("file_00000000e02481f4bb2153e2714aca47.png"), contentDescription = null, Modifier.fillMaxWidth().height(280.dp).align(Alignment.TopCenter), contentScale = ContentScale.Crop)
         Box(
             Modifier.align(Alignment.TopStart).offset(x = (-40).dp, y = (-40).dp).size(260.dp)
                 .blur(90.dp).clip(CircleShape).background(Color(0x4D1D4ED8))
@@ -299,7 +345,7 @@ fun Level(onBack: () -> Unit = {}) {
                     }
                 }
 
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(40.dp))
 
                 Box(Modifier.fillMaxWidth().height((profileFrameHeight - 48.dp).coerceAtLeast(1.dp))) {
                     Box(Modifier.width(profileFrameWidth).height(profileFrameHeight).offset(x = 0.dp, y = (-40).dp)) {
@@ -327,7 +373,7 @@ fun Level(onBack: () -> Unit = {}) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(displayName, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                     Spacer(Modifier.width(8.dp))
-                                    LevelAsset(levelTiers[0].badge, Modifier.height(28.dp).width(58.dp))
+                                    AsyncImage(model = levelAsset(levelTiers[0].badge), contentDescription = null, modifier = Modifier.height(28.dp).width(58.dp))
                                 }
                                 Spacer(Modifier.height(3.dp)) 
                                 Box(Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(20.dp)).background(Color.White.copy(alpha=.25f))) {
@@ -345,7 +391,7 @@ fun Level(onBack: () -> Unit = {}) {
             LazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxWidth().weight(1f),
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 32.dp, bottom = 40.dp)
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 48.dp, bottom = 40.dp)
             ) {
                 // ==========================================
                 // 1. LEVEL SECTION
@@ -371,11 +417,10 @@ fun Level(onBack: () -> Unit = {}) {
                                     .background(Color.White.copy(alpha = 0.1f), RoundedCornerShape(8.dp))
                                     .padding(8.dp)
                             ) {
-                                LevelAsset(
-                                    file = tier.badge, 
-                                    modifier = Modifier
-                                        .height(38.dp)
-                                        .align(Alignment.Center) 
+                                AsyncImage(
+                                    model = levelAsset(tier.badge),
+                                    contentDescription = null,
+                                    modifier = Modifier.height(38.dp).align(Alignment.Center) 
                                 )
                                 
                                 val formattedRange = tier.range.replace(" - Lv.", " - ")
@@ -416,9 +461,7 @@ fun Level(onBack: () -> Unit = {}) {
                 }
 
                 item {
-                    Spacer(Modifier.height(16.dp))
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.05f))
-                    Spacer(Modifier.height(16.dp))
+                    Spacer(Modifier.height(24.dp))
                 }
 
                 // ==============================================
@@ -451,11 +494,10 @@ fun Level(onBack: () -> Unit = {}) {
                                     modifier = Modifier.align(Alignment.TopStart) 
                                 )
                                 
-                                LevelAsset(
-                                    file = "file_00000000b2d481fd8cd233482dbeb9ef.png", 
-                                    modifier = Modifier
-                                        .size(42.dp)
-                                        .align(Alignment.Center) 
+                                AsyncImage(
+                                    model = levelAsset("file_00000000b2d481fd8cd233482dbeb9ef.png"),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(42.dp).align(Alignment.Center) 
                                 )
                                 
                                 Text(
@@ -495,20 +537,84 @@ fun Level(onBack: () -> Unit = {}) {
                 }
 
                 item {
-                    Spacer(Modifier.height(16.dp))
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.05f))
-                    Spacer(Modifier.height(16.dp))
+                    Spacer(Modifier.height(24.dp))
                 }
 
                 // ==============================================
-                // 3. MEDAL SECTION 
+                // NEW FRAME SECTION (2-row height, 2 items per row)
+                // ==============================================
+                item {
+                    SectionHeading("Frame")
+                    Spacer(Modifier.height(8.dp))
+                }
+
+                val chunkedFrames = framesList.chunked(2)
+                
+                items(chunkedFrames) { rowItems ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        for (frame in rowItems) {
+                            Box(
+                                Modifier
+                                    .weight(1f)
+                                    .aspectRatio(0.6f) 
+                                    .background(Color.White.copy(alpha = 0.1f), RoundedCornerShape(8.dp))
+                                    .clip(RoundedCornerShape(8.dp)) 
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.TopStart)
+                                        .background(
+                                            color = Color.Black.copy(alpha = 0.4f),
+                                            shape = RoundedCornerShape(bottomEnd = 8.dp) 
+                                        )
+                                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                                ) {
+                                    Text(
+                                        text = frame.levelText,
+                                        color = Color.White,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+
+                                AsyncImage(
+                                    model = levelAsset(frame.imageFile),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(110.dp).align(Alignment.Center) 
+                                )
+
+                                Text(
+                                    text = "${frame.levelText} Frame",
+                                    color = Color.LightGray,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 8.dp)
+                                )
+                            }
+                        }
+                        repeat(2 - rowItems.size) {
+                            Spacer(Modifier.weight(1f))
+                        }
+                    }
+                    Spacer(Modifier.height(10.dp))
+                }
+
+                item {
+                    Spacer(Modifier.height(24.dp))
+                }
+
+                // ==============================================
+                // 3. MEDAL SECTION (2-row height, 2 items per row)
                 // ==============================================
                 item {
                     SectionHeading("Medal")
                     Spacer(Modifier.height(8.dp))
                 }
 
-                val chunkedMedals = medalsList.chunked(3)
+                val chunkedMedals = medalsList.chunked(2) 
                 
                 items(chunkedMedals) { rowItems ->
                     Row(
@@ -519,18 +625,18 @@ fun Level(onBack: () -> Unit = {}) {
                             Box(
                                 Modifier
                                     .weight(1f)
-                                    .aspectRatio(0.85f)
+                                    .aspectRatio(0.6f) 
                                     .background(Color.White.copy(alpha = 0.1f), RoundedCornerShape(8.dp))
                                     .clickable { 
-                                        selectedVideoUrl = levelAsset(medal.videoFile) 
+                                        // true passed for medal to remove black
+                                        selectedVideoData = levelAsset(medal.videoFile) to true 
                                     }
                                     .padding(8.dp)
                             ) {
-                                LevelAsset(
-                                    file = medal.imageFile, 
-                                    modifier = Modifier
-                                        .size(42.dp)
-                                        .align(Alignment.Center) 
+                                AsyncImage(
+                                    model = levelAsset(medal.imageFile),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(90.dp).align(Alignment.Center) 
                                 )
                                 
                                 Text(
@@ -542,7 +648,7 @@ fun Level(onBack: () -> Unit = {}) {
                                 )
                             }
                         }
-                        repeat(3 - rowItems.size) {
+                        repeat(2 - rowItems.size) {
                             Spacer(Modifier.weight(1f))
                         }
                     }
@@ -550,43 +656,112 @@ fun Level(onBack: () -> Unit = {}) {
                 }
 
                 item {
-                    Spacer(Modifier.height(16.dp))
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.05f))
-                    Spacer(Modifier.height(16.dp))
+                    Spacer(Modifier.height(24.dp))
                 }
 
                 // ==============================================
-                // 4. CUSTOMIZE PROFILE BACKGROUND SECTION 
+                // NAYA VEHICLE SECTION YAHAN HAI - Changed heading to Entry
                 // ==============================================
                 item {
-                    SectionHeading("Customize Profile Background")
+                    SectionHeading("Entry")
+                    Spacer(Modifier.height(8.dp))
+                }
+
+                val chunkedVehicles = vehiclesList.chunked(2)
+                
+                items(chunkedVehicles) { rowItems ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        for (vehicle in rowItems) {
+                            Box(
+                                Modifier
+                                    .weight(1f)
+                                    .aspectRatio(0.6f) // 2-Row height wali trick
+                                    .background(Color.White.copy(alpha = 0.1f), RoundedCornerShape(8.dp))
+                                    .clip(RoundedCornerShape(8.dp)) 
+                                    .clickable { 
+                                        // false passed for vehicle so black is not removed
+                                        selectedVideoData = levelAsset(vehicle.videoFile) to false 
+                                    }
+                            ) {
+                                // Top Left Label with Black Transparent Background
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.TopStart)
+                                        .background(
+                                            color = Color.Black.copy(alpha = 0.4f), // Black/10ish opactiy jaisa aapne kaha
+                                            shape = RoundedCornerShape(bottomEnd = 8.dp) 
+                                        )
+                                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                                ) {
+                                    Text(
+                                        text = vehicle.levelText,
+                                        color = Color.White,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+
+                                // Center Image
+                                AsyncImage(
+                                    model = levelAsset(vehicle.imageFile),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(110.dp).align(Alignment.Center) 
+                                )
+
+                                // Bottom Grey Text
+                                Text(
+                                    text = "${vehicle.levelText} Entry",
+                                    color = Color.LightGray, // Grey text
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 8.dp)
+                                )
+                            }
+                        }
+                        repeat(2 - rowItems.size) {
+                            Spacer(Modifier.weight(1f))
+                        }
+                    }
+                    Spacer(Modifier.height(10.dp))
+                }
+
+                item {
+                    Spacer(Modifier.height(24.dp))
+                }
+
+                // ==============================================
+                // 5. CUSTOMIZE PROFILE BACKGROUND SECTION 
+                // ==============================================
+                item {
+                    SectionHeading("Customize Profile Background") 
                     Spacer(Modifier.height(8.dp))
 
-                    // Bada Box (2 rows jitni approximate height)
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(260.dp)
                             .clip(RoundedCornerShape(8.dp))
                     ) {
-                        // Image Pager (Safe syntax used here for older Compose versions)
                         HorizontalPager(
                             state = pagerState,
                             modifier = Modifier.fillMaxSize()
                         ) { page ->
-                            LevelAsset(
-                                file = profileBgImages[page],
+                            AsyncImage(
+                                model = levelAsset(profileBgImages[page]),
+                                contentDescription = null,
                                 modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Crop // Pura Cover karega
+                                contentScale = ContentScale.Crop 
                             )
                         }
 
-                        // Top Left Badge (Ekdam chipka hua)
                         Box(
                             modifier = Modifier
                                 .align(Alignment.TopStart)
                                 .background(
-                                    color = Color.Black.copy(alpha = 0.4f), // Black/10 (Transparent Card)
+                                    color = Color.Black.copy(alpha = 0.4f), 
                                     shape = RoundedCornerShape(bottomEnd = 8.dp)
                                 )
                                 .padding(horizontal = 12.dp, vertical = 6.dp)
@@ -599,7 +774,6 @@ fun Level(onBack: () -> Unit = {}) {
                             )
                         }
 
-                        // Bottom Dots Indicator
                         Row(
                             modifier = Modifier
                                 .align(Alignment.BottomCenter)
@@ -626,9 +800,9 @@ fun Level(onBack: () -> Unit = {}) {
 
     if (showUpgrade) LevelUpgradeDialog { showUpgrade = false }
 
-    selectedVideoUrl?.let { videoUrl ->
-        FullScreenVideoDialog(videoUrl = videoUrl) {
-            selectedVideoUrl = null
+    selectedVideoData?.let { (videoUrl, isMedal) ->
+        FullScreenVideoDialog(videoUrl = videoUrl, isMedal = isMedal) {
+            selectedVideoData = null
         }
     }
 }
