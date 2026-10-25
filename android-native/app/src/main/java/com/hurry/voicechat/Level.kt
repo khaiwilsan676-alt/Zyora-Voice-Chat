@@ -1,5 +1,6 @@
 package com.hurry.voicechat
 
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -179,6 +180,16 @@ private fun FullScreenVideoDialog(videoUrl: String, isMedal: Boolean, overlayIma
     var videoAspectRatio by remember { mutableStateOf(9f / 16f) }
     val configuration = LocalConfiguration.current
 
+    val infiniteTransition = rememberInfiniteTransition()
+    val floatOffset by infiniteTransition.animateFloat(
+        initialValue = -8f, 
+        targetValue = 8f,   
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        )
+    )
+
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(
@@ -280,7 +291,8 @@ private fun FullScreenVideoDialog(videoUrl: String, isMedal: Boolean, overlayIma
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .padding(bottom = (configuration.screenHeightDp * 0.10f).dp)
-                        .fillMaxWidth(0.9f)
+                        .offset(y = floatOffset.dp) 
+                        .fillMaxWidth(0.6f) // Size yaha 0.6f hi hai
                         .wrapContentHeight(),
                     contentScale = ContentScale.FillWidth
                 )
@@ -893,7 +905,8 @@ fun Level(onBack: () -> Unit = {}) {
                         text = "Customized Your Profile Background Upload Image",
                         color = Color.LightGray,
                         fontSize = 12.sp,
-                        modifier = Modifier.padding(top = 4.dp, bottom = 8.dp)
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth().padding(top = 0.dp, bottom = 8.dp)
                     )
 
                     Box(
@@ -962,82 +975,86 @@ fun Level(onBack: () -> Unit = {}) {
                         text = "Customized your Room Theme upload image",
                         color = Color.LightGray,
                         fontSize = 12.sp,
-                        modifier = Modifier.padding(top = 4.dp, bottom = 8.dp)
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth().padding(top = 0.dp, bottom = 8.dp)
                     )
 
+                    // Image Card 380dp
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(260.dp)
-                            .background(Color.White.copy(alpha = 0.05f), RoundedCornerShape(8.dp))
+                            .height(380.dp)
                             .clip(RoundedCornerShape(8.dp))
                     ) {
-                        Column(modifier = Modifier.fillMaxSize()) {
-                            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                                HorizontalPager(
-                                    state = themePagerState,
-                                    modifier = Modifier.fillMaxSize()
-                                ) { page ->
-                                    AsyncImage(
-                                        model = levelAsset(themeBgImages[page]),
-                                        contentDescription = null,
-                                        modifier = Modifier.fillMaxSize(),
-                                        contentScale = ContentScale.Crop 
-                                    )
-                                }
+                        // Image ab poore card ko fill kar rahi hai (100% full fit)
+                        HorizontalPager(
+                            state = themePagerState,
+                            modifier = Modifier.fillMaxSize()
+                        ) { page ->
+                            AsyncImage(
+                                model = levelAsset(themeBgImages[page]),
+                                contentDescription = null,
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop 
+                            )
+                        }
 
+                        // Top Left Badge
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopStart)
+                                .background(
+                                    color = Color.Black.copy(alpha = 0.3f), 
+                                    shape = RoundedCornerShape(bottomEnd = 8.dp)
+                                )
+                                .padding(horizontal = 12.dp, vertical = 6.dp)
+                        ) {
+                            Text(
+                                text = "Lv.30",
+                                color = Color.White,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        // Yeh Dots Image ke bottom par overlap kar rahe hain
+                        Row(
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .padding(bottom = 12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            repeat(themeBgImages.size) { index ->
                                 Box(
                                     modifier = Modifier
-                                        .align(Alignment.TopStart)
+                                        .size(6.dp)
+                                        .clip(CircleShape)
                                         .background(
-                                            color = Color.Black.copy(alpha = 0.3f), 
-                                            shape = RoundedCornerShape(bottomEnd = 8.dp)
+                                            if (themePagerState.currentPage == index) Color.White else Color.Black
                                         )
-                                        .padding(horizontal = 12.dp, vertical = 6.dp)
-                                ) {
-                                    Text(
-                                        text = "Lv.30",
-                                        color = Color.White,
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                            }
-
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .background(Color.White.copy(alpha = 0.1f)) 
-                                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column {
-                                    StarRow(starCount = 3) 
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(
-                                        text = "Lv.30 Customized Theme",
-                                        color = Color.LightGray,
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                                
-                                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    repeat(themeBgImages.size) { index ->
-                                        Box(
-                                            modifier = Modifier
-                                                .size(6.dp)
-                                                .clip(CircleShape)
-                                                .background(
-                                                    if (themePagerState.currentPage == index) Color.White else Color.Black
-                                                )
-                                        )
-                                    }
-                                }
+                                )
                             }
                         }
                     }
+                    
+                    // Stars aur Text ko image ke bahar nikal diya aur center kar diya
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 12.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        StarRow(starCount = 3) 
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Lv.30 Customized Theme",
+                            color = Color.LightGray,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+
                     Spacer(Modifier.height(16.dp))
                 }
             }
