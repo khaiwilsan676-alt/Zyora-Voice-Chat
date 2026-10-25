@@ -378,43 +378,44 @@ private suspend fun googleSupabaseSignIn(context: android.content.Context): JSON
         throw IllegalStateException("Could not read the Google sign-in response. Please try again.")
     }
 
-    val supabaseKey = BuildConfig.SUPABASE_ANON_KEY
-    if (supabaseKey.isBlank()) {
-        throw IllegalStateException("Supabase public key is not configured for the native app.")
-    }
-    val connection = (URL("https://dyevntpajxeuxuaxapfz.supabase.co/auth/v1/token?grant_type=id_token").openConnection() as HttpURLConnection).apply {
+    // Authenticate the Google ID token with Firebase, so Google and Account login
+    // share the same Firebase UID/session. The account-picker UI above is unchanged.
+    val encodedToken = java.net.URLEncoder.encode(googleCredential.idToken, "UTF-8")
+    val postBody = "id_token=$encodedToken&providerId=google.com"
+    val connection = (URL("https://identitytoolkit.googleapis.com/v1/accounts:signInWithIdp?key=$HURRY_FIREBASE_API_KEY").openConnection() as HttpURLConnection).apply {
         requestMethod = "POST"
         connectTimeout = 15000
         readTimeout = 20000
         doOutput = true
         setRequestProperty("Content-Type", "application/json")
-        setRequestProperty("apikey", supabaseKey)
+        setRequestProperty("Accept", "application/json")
     }
     val body = JSONObject()
-        .put("provider", "google")
-        .put("id_token", googleCredential.idToken)
+        .put("postBody", postBody)
+        .put("requestUri", "http://localhost")
+        .put("returnIdpCredential", true)
+        .put("returnSecureToken", true)
     connection.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
     val code = connection.responseCode
     val stream = if (code in 200..299) connection.inputStream else connection.errorStream
     val response = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
     connection.disconnect()
     val result = runCatching { JSONObject(response) }.getOrElse {
-        throw IllegalStateException("Supabase Google sign-in returned an invalid response.")
+        throw IllegalStateException("Firebase Google sign-in returned an invalid response.")
     }
     if (code !in 200..299) {
-        throw IllegalStateException(result.optString("msg").ifBlank {
-            result.optString("message").ifBlank {
-                result.optJSONObject("error")?.optString("message") ?: "Supabase Google sign-in failed."
-            }
+        val firebaseCode = result.optJSONObject("error")?.optString("message").orEmpty()
+        throw IllegalStateException(when (firebaseCode) {
+            "OPERATION_NOT_ALLOWED" -> "Google sign-in is not enabled in Firebase Authentication."
+            "INVALID_IDP_RESPONSE", "INVALID_ID_TOKEN" -> "Google sign-in token was rejected. Check the Google OAuth client configured in Firebase."
+            "API_KEY_INVALID" -> "Firebase API key is invalid for this app."
+            else -> firebaseCode.ifBlank { "Firebase Google sign-in failed. Please try again." }
         })
     }
-    val user = result.optJSONObject("user") ?: throw IllegalStateException("Supabase did not return a user.")
-    val userId = user.optString("id")
-    if (userId.isBlank()) throw IllegalStateException("Supabase did not return a user ID.")
-    return JSONObject()
-        .put("localId", userId)
-        .put("email", user.optString("email"))
-        .put("idToken", result.optString("access_token"))
+    if (result.optString("localId").isBlank() || result.optString("idToken").isBlank()) {
+        throw IllegalStateException("Firebase did not return a valid Google user session.")
+    }
+    return result
 }
 
 private fun firebaseEmailAuth(email: String, password: String, create: Boolean): JSONObject {
