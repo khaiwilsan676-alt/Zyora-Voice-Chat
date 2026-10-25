@@ -22,10 +22,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.HelpOutline
-import androidx.compose.material.icons.filled.CardGiftcard
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -370,17 +366,6 @@ fun Level(onBack: () -> Unit = {}) {
     val userPhoto = userPrefs.getString("photo", "")?.trim().orEmpty()
     
     val profilePainter = rememberAsyncImagePainter(model = levelAsset("file_0000000074a4821189d05fde51ca98f9.png"))
-    
-    // FIX: Width wide (screen width) rahegi aur Height original image aspect ratio se aayegi.
-    val profileIntrinsic = profilePainter.intrinsicSize
-    val profileAspect = if (profileIntrinsic.width.isFinite() && profileIntrinsic.height.isFinite() && profileIntrinsic.width > 0f && profileIntrinsic.height > 0f) {
-        profileIntrinsic.width / profileIntrinsic.height
-    } else {
-        2.0f // Image load hone tak standard ratio (taki patla na dikhe)
-    }
-    val profileFrameWidth = configuration.screenWidthDp.dp
-    val profileFrameHeight = profileFrameWidth / profileAspect
-    
     val displayName = userName ?: userUid.take(8).ifBlank { "Guest" }
     
     var showUpgrade by remember { mutableStateOf(false) }
@@ -388,7 +373,6 @@ fun Level(onBack: () -> Unit = {}) {
 
     var showAllLevels by remember { mutableStateOf(false) }
     var showAllRewards by remember { mutableStateOf(false) }
-    
     var showAllFrames by remember { mutableStateOf(false) }
     var showAllMedals by remember { mutableStateOf(false) }
     var showAllVehicles by remember { mutableStateOf(false) }
@@ -444,42 +428,44 @@ fun Level(onBack: () -> Unit = {}) {
 
                 Spacer(Modifier.height(topBannerSpace))
 
-                Box(Modifier.fillMaxWidth().height((profileFrameHeight - 48.dp).coerceAtLeast(1.dp))) {
-                    Box(Modifier.width(profileFrameWidth).height(profileFrameHeight).offset(x = 0.dp, y = (-40).dp)) {
-                        Image(
-                            painter = profilePainter,
-                            contentDescription = "Top Card Frame",
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.FillWidth // Yeh ensures karega ki original image ke hisaab se fit baithe
-                        )
-                        Row(Modifier.fillMaxSize().padding(horizontal = 32.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Box(Modifier.size(48.dp).clip(CircleShape).background(Color(0xFF626A75)), contentAlignment = Alignment.Center) {
-                                if (userPhoto.isNotBlank()) {
-                                    AsyncImage(
-                                        model = userPhoto,
-                                        contentDescription = "User",
-                                        modifier = Modifier.fillMaxSize().clip(CircleShape),
-                                        contentScale = ContentScale.Crop
-                                    )
-                                } else {
-                                    Text(displayName.take(1).uppercase(), color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+                // YE RAHA TERA PERFECT TOP BANNER - No calculation, No offset, Original height without ANY cut!
+                Box(Modifier.fillMaxWidth()) {
+                    Image(
+                        painter = profilePainter,
+                        contentDescription = "Top Card Frame",
+                        modifier = Modifier.fillMaxWidth().wrapContentHeight(), // Natural original height legi image khud
+                        contentScale = ContentScale.FillWidth // Bina crop huye width aur height match hogi
+                    )
+                    Row(
+                        modifier = Modifier.matchParentSize().padding(horizontal = 32.dp), // Data center me fit ho jayega image ke
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(Modifier.size(48.dp).clip(CircleShape).background(Color(0xFF626A75)), contentAlignment = Alignment.Center) {
+                            if (userPhoto.isNotBlank()) {
+                                AsyncImage(
+                                    model = userPhoto,
+                                    contentDescription = "User",
+                                    modifier = Modifier.fillMaxSize().clip(CircleShape),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                Text(displayName.take(1).uppercase(), color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                        Spacer(Modifier.width(14.dp))
+                        Column(Modifier.weight(1f)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(displayName, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Spacer(Modifier.width(8.dp))
+                                AsyncImage(model = levelAsset(levelTiers[0].badge), contentDescription = null, modifier = Modifier.height(28.dp).width(58.dp))
+                            }
+                            Spacer(Modifier.height(3.dp)) 
+                            Box(Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(20.dp)).background(Color.White.copy(alpha=.25f))) {
+                                Box(Modifier.fillMaxWidth(.38f).fillMaxHeight().clip(RoundedCornerShape(20.dp)).background(Brush.horizontalGradient(listOf(Color(0xFFFFE072), Color(0xFFF4B63F))))) {
+                                    Box(Modifier.align(Alignment.CenterEnd).offset(x = 6.dp).size(12.dp).border(2.dp, Color(0xFFF4B63F), CircleShape).clip(CircleShape).background(Color.White))
                                 }
                             }
-                            Spacer(Modifier.width(14.dp))
-                            Column(Modifier.weight(1f)) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(displayName, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                    Spacer(Modifier.width(8.dp))
-                                    AsyncImage(model = levelAsset(levelTiers[0].badge), contentDescription = null, modifier = Modifier.height(28.dp).width(58.dp))
-                                }
-                                Spacer(Modifier.height(3.dp)) 
-                                Box(Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(20.dp)).background(Color.White.copy(alpha=.25f))) {
-                                    Box(Modifier.fillMaxWidth(.38f).fillMaxHeight().clip(RoundedCornerShape(20.dp)).background(Brush.horizontalGradient(listOf(Color(0xFFFFE072), Color(0xFFF4B63F))))) {
-                                        Box(Modifier.align(Alignment.CenterEnd).offset(x = 6.dp).size(12.dp).border(2.dp, Color(0xFFF4B63F), CircleShape).clip(CircleShape).background(Color.White))
-                                    }
-                                }
-                                Text("4.5k/20.2k remaining to reach Level 5 >", color = Color.White.copy(alpha=.9f), fontSize = 10.5.sp, modifier = Modifier.padding(top = 2.dp), maxLines = 1)
-                            }
+                            Text("4.5k/20.2k remaining to reach Level 5 >", color = Color.White.copy(alpha=.9f), fontSize = 10.5.sp, modifier = Modifier.padding(top = 2.dp), maxLines = 1)
                         }
                     }
                 }
@@ -988,7 +974,7 @@ fun Level(onBack: () -> Unit = {}) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .aspectRatio(9f / 16f)
+                            .height(200.dp)
                             .clip(RoundedCornerShape(8.dp))
                     ) {
                         HorizontalPager(
@@ -999,7 +985,7 @@ fun Level(onBack: () -> Unit = {}) {
                                 model = levelAsset(themeBgImages[page]),
                                 contentDescription = null,
                                 modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Crop 
+                                contentScale = ContentScale.Fit 
                             )
                         }
 
