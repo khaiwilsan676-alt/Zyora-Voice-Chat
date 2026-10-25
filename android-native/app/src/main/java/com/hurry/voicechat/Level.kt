@@ -292,7 +292,7 @@ private fun FullScreenVideoDialog(videoUrl: String, isMedal: Boolean, overlayIma
                         .align(Alignment.BottomCenter)
                         .padding(bottom = (configuration.screenHeightDp * 0.10f).dp)
                         .offset(y = floatOffset.dp) 
-                        .fillMaxWidth(0.6f) // Size yaha 0.6f hi hai
+                        .fillMaxWidth(0.6f) 
                         .wrapContentHeight(),
                     contentScale = ContentScale.FillWidth
                 )
@@ -371,10 +371,16 @@ fun Level(onBack: () -> Unit = {}) {
     
     val profilePainter = rememberAsyncImagePainter(model = levelAsset("file_0000000074a4821189d05fde51ca98f9.png"))
     
+    // FIX: Width wide (screen width) rahegi aur Height original image aspect ratio se aayegi.
     val profileIntrinsic = profilePainter.intrinsicSize
-    val profileAspect = if (profileIntrinsic.width.isFinite() && profileIntrinsic.height.isFinite() && profileIntrinsic.width > 0f && profileIntrinsic.height > 0f) profileIntrinsic.width / profileIntrinsic.height else 3.25f
+    val profileAspect = if (profileIntrinsic.width.isFinite() && profileIntrinsic.height.isFinite() && profileIntrinsic.width > 0f && profileIntrinsic.height > 0f) {
+        profileIntrinsic.width / profileIntrinsic.height
+    } else {
+        2.0f // Image load hone tak standard ratio (taki patla na dikhe)
+    }
     val profileFrameWidth = configuration.screenWidthDp.dp
     val profileFrameHeight = profileFrameWidth / profileAspect
+    
     val displayName = userName ?: userUid.take(8).ifBlank { "Guest" }
     
     var showUpgrade by remember { mutableStateOf(false) }
@@ -444,7 +450,7 @@ fun Level(onBack: () -> Unit = {}) {
                             painter = profilePainter,
                             contentDescription = "Top Card Frame",
                             modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.FillBounds
+                            contentScale = ContentScale.FillWidth // Yeh ensures karega ki original image ke hisaab se fit baithe
                         )
                         Row(Modifier.fillMaxSize().padding(horizontal = 32.dp), verticalAlignment = Alignment.CenterVertically) {
                             Box(Modifier.size(48.dp).clip(CircleShape).background(Color(0xFF626A75)), contentAlignment = Alignment.Center) {
@@ -979,14 +985,12 @@ fun Level(onBack: () -> Unit = {}) {
                         modifier = Modifier.fillMaxWidth().padding(top = 0.dp, bottom = 8.dp)
                     )
 
-                    // Image Card 380dp
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(380.dp)
+                            .aspectRatio(9f / 16f)
                             .clip(RoundedCornerShape(8.dp))
                     ) {
-                        // Image ab poore card ko fill kar rahi hai (100% full fit)
                         HorizontalPager(
                             state = themePagerState,
                             modifier = Modifier.fillMaxSize()
@@ -999,7 +1003,6 @@ fun Level(onBack: () -> Unit = {}) {
                             )
                         }
 
-                        // Top Left Badge
                         Box(
                             modifier = Modifier
                                 .align(Alignment.TopStart)
@@ -1017,7 +1020,6 @@ fun Level(onBack: () -> Unit = {}) {
                             )
                         }
 
-                        // Yeh Dots Image ke bottom par overlap kar rahe hain
                         Row(
                             modifier = Modifier
                                 .align(Alignment.BottomCenter)
@@ -1037,7 +1039,6 @@ fun Level(onBack: () -> Unit = {}) {
                         }
                     }
                     
-                    // Stars aur Text ko image ke bahar nikal diya aur center kar diya
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
