@@ -381,7 +381,6 @@ fun Level(onBack: () -> Unit = {}) {
     val pagerState = rememberPagerState { profileBgImages.size }
     val themePagerState = rememberPagerState { themeBgImages.size }
 
-    // DYNAMIC SPACING UPDATED YAHAN
     val topBannerSpace = 4.dp
     val newSectionTopPadding = 15.dp
 
@@ -956,7 +955,7 @@ fun Level(onBack: () -> Unit = {}) {
                 }
 
                 // ==============================================
-                // NEW: CUSTOMIZED THEME SECTION (LAMBAA KIYA HUA)
+                // NEW: CUSTOMIZED THEME SECTION 
                 // ==============================================
                 item {
                     SectionHeading("Customized Theme")
@@ -969,57 +968,64 @@ fun Level(onBack: () -> Unit = {}) {
                         modifier = Modifier.fillMaxWidth().padding(top = 0.dp, bottom = 8.dp)
                     )
 
+                    // Bada outer box taaki sub center rahe
                     Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .wrapContentHeight() // <-- Image ki height lega ab
-                            .defaultMinSize(minHeight = 350.dp) // <-- Jab tak image load na ho screen choti na ho jaye
-                            .clip(RoundedCornerShape(8.dp))
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.Center
                     ) {
-                        HorizontalPager(
-                            state = themePagerState,
-                            modifier = Modifier.fillMaxWidth().wrapContentHeight() // <-- Isko bhi wrap height de diya
-                        ) { page ->
-                            AsyncImage(
-                                model = levelAsset(themeBgImages[page]),
-                                contentDescription = null,
-                                modifier = Modifier.fillMaxWidth().wrapContentHeight(), // <-- Full width + Auto height
-                                contentScale = ContentScale.FillWidth // <-- Pura width cover karega, height image k hisab se khud calculate hogi
-                            )
-                        }
-
+                        // Ye raha tera Card - exactly 1 medal card (48% width) jitna bada
                         Box(
                             modifier = Modifier
-                                .align(Alignment.TopStart)
-                                .background(
-                                    color = Color.Black.copy(alpha = 0.3f), 
-                                    shape = RoundedCornerShape(bottomEnd = 8.dp)
-                                )
-                                .padding(horizontal = 12.dp, vertical = 6.dp)
+                                .fillMaxWidth(0.48f) 
+                                .height(280.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color.White.copy(alpha = 0.1f)) // Thoda background jisse card bounds clearly dikhein
                         ) {
-                            Text(
-                                text = "Lv.30",
-                                color = Color.White,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
+                            HorizontalPager(
+                                state = themePagerState,
+                                modifier = Modifier.fillMaxSize()
+                            ) { page ->
+                                AsyncImage(
+                                    model = levelAsset(themeBgImages[page]),
+                                    contentDescription = null,
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Fit // AB NO CROP, PURI IMAGE FIT HOGI
+                                )
+                            }
 
-                        Row(
-                            modifier = Modifier
-                                .align(Alignment.BottomCenter)
-                                .padding(bottom = 12.dp),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            repeat(themeBgImages.size) { index ->
-                                Box(
-                                    modifier = Modifier
-                                        .size(6.dp)
-                                        .clip(CircleShape)
-                                        .background(
-                                            if (themePagerState.currentPage == index) Color.White else Color.Black
-                                        )
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.TopStart)
+                                    .background(
+                                        color = Color.Black.copy(alpha = 0.4f), 
+                                        shape = RoundedCornerShape(bottomEnd = 8.dp)
+                                    )
+                                    .padding(horizontal = 10.dp, vertical = 4.dp)
+                            ) {
+                                Text(
+                                    text = "Lv.30",
+                                    color = Color.White,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold
                                 )
+                            }
+
+                            Row(
+                                modifier = Modifier
+                                    .align(Alignment.BottomCenter)
+                                    .padding(bottom = 12.dp),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                repeat(themeBgImages.size) { index ->
+                                    Box(
+                                        modifier = Modifier
+                                            .size(6.dp)
+                                            .clip(CircleShape)
+                                            .background(
+                                                if (themePagerState.currentPage == index) Color.White else Color.Black
+                                            )
+                                    )
+                                }
                             }
                         }
                     }
