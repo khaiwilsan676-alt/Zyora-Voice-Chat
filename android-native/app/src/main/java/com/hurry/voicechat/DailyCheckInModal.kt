@@ -393,24 +393,35 @@ private fun renderDay7Special() {
     }
 }
 
+// Yahan maine sabse bada change kiya hai tere instruction ke hisaab se:
+// Row hata kar Column kar diya hai.
+// Texts sab card 1,2,3,4 jese exact ek hi seedhi line me (bottom align) aaye iske liye ek 50.dp ka Box lagaya.
 @Composable
 private fun RewardItemIcon(image: String, text: String, size: androidx.compose.ui.unit.Dp) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
-        AsyncImage(
-            model = image.fullUrl,
-            contentDescription = null,
-            modifier = Modifier.size(size),
-            contentScale = ContentScale.Fit
-        )
+        Box(
+            modifier = Modifier.height(50.dp), // Fix height ensure karega ki saare texts "ek hi line m" aaye
+            contentAlignment = Alignment.BottomCenter // Images ek hi baseline pe rest karengi
+        ) {
+            AsyncImage(
+                model = image.fullUrl,
+                contentDescription = null,
+                modifier = Modifier.size(size),
+                contentScale = ContentScale.Fit
+            )
+        }
+        Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = text,
-            fontSize = 9.sp,
+            fontSize = 10.sp, // Jaisey 1,2,3,4 mein tha waisa hi kiya
             fontWeight = FontWeight.Bold,
             color = Color(0xFF544B00), 
-            textAlign = TextAlign.Start
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+            modifier = Modifier.offset(y = (-8).dp) // Exactly 1,2,3,4 jaisa offset
         )
     }
 }
