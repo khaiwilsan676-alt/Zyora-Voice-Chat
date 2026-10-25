@@ -39,6 +39,8 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.viewinterop.AndroidView
@@ -218,7 +220,22 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
         } else {
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.fillMaxSize().pointerInput(activeTab) {
+                    var horizontalDrag = 0f
+                    detectHorizontalDragGestures(
+                        onHorizontalDrag = { _, dragAmount -> horizontalDrag += dragAmount },
+                        onDragEnd = {
+                            val currentIndex = nativeStoreTabs.indexOfFirst { it.id == activeTab }
+                            if (horizontalDrag > 60f && currentIndex < nativeStoreTabs.lastIndex) {
+                                activeTab = nativeStoreTabs[currentIndex + 1].id
+                            } else if (horizontalDrag < -60f && currentIndex > 0) {
+                                activeTab = nativeStoreTabs[currentIndex - 1].id
+                            }
+                            horizontalDrag = 0f
+                        },
+                        onDragCancel = { horizontalDrag = 0f }
+                    )
+                },
                 contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 24.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
