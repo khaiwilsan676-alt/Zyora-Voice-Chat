@@ -229,7 +229,21 @@ fun SvipVideoPlayer(videoUrl: String) {
         }
     }
 
+    // 🔥 FIX: Yeh infinite loop Compose ko force karega har 33ms par video ka frame redraw karne ke liye.
+    // Iske bina Compose GraphicsLayer video ke frames ko refresh nahi karta tha aur black square dikhata tha.
+    val infiniteTransition = rememberInfiniteTransition(label = "video_refresh_loop")
+    val invalidateTrigger by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(33, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "redraw_trigger"
+    )
+
     DisposableEffect(Unit) {
+        exoPlayer.play() // FIX: Explicitly play the video
         onDispose {
             exoPlayer.release()
         }
@@ -293,7 +307,11 @@ fun SvipVideoPlayer(videoUrl: String) {
                 }
             }
             .graphicsLayer {
-                // Ye 0.99f alpha black screen bug ko fix karega Compose mein (force offscreen render)
+                // 🔥 FIX: `invalidateTrigger` ko read karne se har frame Compose redraw hoga!
+                // Ye line sabse imp hai video black screen issue hatane ke liye.
+                val forceRedraw = invalidateTrigger 
+                
+                // Ye 0.99f alpha offscreen render force karega
                 alpha = 0.99f 
                 // ColorFilter apply kar diya jo sirf Green color ko nikal dega
                 colorFilter = ColorFilter.colorMatrix(greenScreenMatrix)
