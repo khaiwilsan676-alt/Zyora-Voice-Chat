@@ -35,6 +35,9 @@ import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.GoogleAuthProvider
+import kotlinx.coroutines.tasks.await
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -352,10 +355,10 @@ private fun AuthField(
 
 private suspend fun googleSupabaseSignIn(context: android.content.Context): JSONObject {
     val credentialManager = CredentialManager.create(context)
-    // This is the Web OAuth client configured in Supabase's Google provider.
+    // This must be the Web OAuth client ID registered in the same Firebase project.
     val serverClientId = "164837688319-uu6uhd20mner48etd4ci6aeu3nuvt8gp.apps.googleusercontent.com"
 
-    // Keep the existing Google account-picker UX.
+    // Keep the existing account-picker UI and fallback unchanged.
     val credential = try {
         val googleOption = GetGoogleIdOption.Builder()
             .setServerClientId(serverClientId)
@@ -369,8 +372,9 @@ private suspend fun googleSupabaseSignIn(context: android.content.Context): JSON
         val fallbackRequest = GetCredentialRequest.Builder().addCredentialOption(signInOption).build()
         credentialManager.getCredential(context, fallbackRequest).credential
     }
+
     if (credential !is CustomCredential || credential.type != GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
-        throw IllegalStateException("Google did not return a valid sign-in credential.")
+        throw IllegalStateException("Google did not return a valid sign-in credential. Please select your Google account again.")
     }
     val googleCredential = try {
         GoogleIdTokenCredential.createFrom(credential.data)
@@ -378,46 +382,38 @@ private suspend fun googleSupabaseSignIn(context: android.content.Context): JSON
         throw IllegalStateException("Could not read the Google sign-in response. Please try again.")
     }
 
-    // Authenticate the Google ID token with Firebase, so Google and Account login
-    // share the same Firebase UID/session. The account-picker UI above is unchanged.
-    val encodedToken = java.net.URLEncoder.encode(googleCredential.idToken, "UTF-8")
-    val postBody = "id_token=$encodedToken&providerId=google.com"
-    val connection = (URL("https://identitytoolkit.googleapis.com/v1/accounts:signInWithIdp?key=$HURRY_FIREBASE_API_KEY").openConnection() as HttpURLConnection).apply {
-        requestMethod = "POST"
-        connectTimeout = 15000
-        readTimeout = 20000
-        doOutput = true
-        setRequestProperty("Content-Type", "application/json")
-        setRequestProperty("Accept", "application/json")
-    }
-    val body = JSONObject()
-        .put("postBody", postBody)
-        .put("requestUri", "http://localhost")
-        .put("returnIdpCredential", true)
-        .put("returnSecureToken", true)
-    connection.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
-    val code = connection.responseCode
-    val stream = if (code in 200..299) connection.inputStream else connection.errorStream
-    val response = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
-    connection.disconnect()
-    val result = runCatching { JSONObject(response) }.getOrElse {
-        throw IllegalStateException("Firebase Google sign-in returned an invalid response.")
-    }
-    if (code !in 200..299) {
-        val firebaseCode = result.optJSONObject("error")?.optString("message").orEmpty()
-        throw IllegalStateException(when (firebaseCode) {
-            "OPERATION_NOT_ALLOWED" -> "Google sign-in is not enabled in Firebase Authentication."
-            "INVALID_IDP_RESPONSE", "INVALID_ID_TOKEN" -> "Google sign-in token was rejected. Check the Google OAuth client configured in Firebase."
-            "API_KEY_INVALID" -> "Firebase API key is invalid for this app."
-            else -> firebaseCode.ifBlank { "Firebase Google sign-in failed. Please try again." }
+    // Use the Firebase Android SDK to exchange the Google token. This avoids the
+    // fragile manual Identity Toolkit REST exchange that can fail with reauth errors.
+    val firebaseCredential = GoogleAuthProvider.getCredential(googleCredential.idToken, null)
+    val authResult = try {
+        FirebaseAuth.getInstance().signInWithCredential(firebaseCredential).await()
+    } catch (t: Throwable) {
+        val message = t.message.orEmpty()
+        throw IllegalStateException(when {
+            message.contains("ERROR_ACCOUNT_EXISTS_WITH_DIFFERENT_CREDENTIAL", ignoreCase = true) ->
+                "This email is already linked to another sign-in method. Use the existing login method."
+            message.contains("ERROR_INVALID_CREDENTIAL", ignoreCase = true) ||
+                message.contains("ERROR_INVALID_USER_TOKEN", ignoreCase = true) ->
+                "Google sign-in token was rejected. Check the Google OAuth configuration in Firebase."
+            message.contains("ERROR_OPERATION_NOT_ALLOWED", ignoreCase = true) ->
+                "Google sign-in is not enabled in Firebase Authentication."
+            else -> message.ifBlank { "Firebase Google sign-in failed. Please try again." }
         })
     }
-    if (result.optString("localId").isBlank() || result.optString("idToken").isBlank()) {
-        throw IllegalStateException("Firebase did not return a valid Google user session.")
-    }
-    return result
-}
 
+    val firebaseUser = authResult.user
+        ?: throw IllegalStateException("Firebase did not return a Google user session.")
+    val firebaseToken = firebaseUser.getIdToken(true).await().token
+        ?: throw IllegalStateException("Firebase could not create an authentication token.")
+
+    // Keep the same response fields consumed by the existing profile-sync code.
+    return JSONObject()
+        .put("localId", firebaseUser.uid)
+        .put("email", firebaseUser.email ?: googleCredential.id)
+        .put("displayName", firebaseUser.displayName.orEmpty())
+        .put("photoUrl", firebaseUser.photoUrl?.toString().orEmpty())
+        .put("idToken", firebaseToken)
+}
 private fun firebaseEmailAuth(email: String, password: String, create: Boolean): JSONObject {
     val action = if (create) "accounts:signUp" else "accounts:signInWithPassword"
     val url = URL("https://identitytoolkit.googleapis.com/v1/$action?key=$HURRY_FIREBASE_API_KEY")
