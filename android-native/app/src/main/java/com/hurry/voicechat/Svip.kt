@@ -57,9 +57,9 @@ fun SvipPage(onBack: () -> Unit = {}) {
                 .align(Alignment.TopCenter)
                 .zIndex(30f)
         ) {
-            // Background Image
+            // Background Image (Updated as requested)
             AsyncImage(
-                model = "$baseUrl/file_00000000bd448211892548a9f0469619.png",
+                model = "$baseUrl/file_0000000099d88211a80bf7a8cf7aee62.png",
                 contentDescription = null,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
@@ -254,7 +254,7 @@ fun SvipVideoPlayer(videoUrl: String) {
         },
         modifier = Modifier
             .offset(y = 40.dp) 
-            .fillMaxWidth(0.6f) 
+            .fillMaxWidth(0.7f) // Yahan size thora increase kar diya hai (0.6f se 0.7f)
             .aspectRatio(if (videoAspectRatio > 0f) videoAspectRatio else 1f) // Asli aspect ratio, koi black crop nahi!
             .graphicsLayer {
                 alpha = 0.99f 
