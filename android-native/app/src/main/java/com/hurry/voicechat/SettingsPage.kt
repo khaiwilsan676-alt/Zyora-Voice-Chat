@@ -68,20 +68,20 @@ fun SettingsPage(
                     letterSpacing = (-0.4).sp
                 )
                 Text(
-                    "Zyora is a real-time group voice chat application for people from different places to connect. You can find new friends who share the same interests, chat with them, and enjoy the fun of the party!",
+                    "Welcome to Zyora — a place to connect, make friends, and share good moments. Join lively voice rooms, meet people with similar interests, chat together, express yourself, and enjoy a welcoming social community wherever you are.",
                     fontSize = 15.sp, lineHeight = 25.sp, color = Color(0xFF333333), letterSpacing = 0.2.sp
                 )
                 Spacer(Modifier.height(24.dp))
-                Text("We have the following functions:", fontSize = 15.sp, lineHeight = 25.sp, color = Color(0xFF333333))
+                Text("Discover what you can enjoy on Zyora:", fontSize = 15.sp, lineHeight = 25.sp, color = Color(0xFF333333))
                 Spacer(Modifier.height(12.dp))
-                Text("• Free", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF333333))
-                Text("You can have free, high-quality and stable voice chat through the Internet.", fontSize = 15.sp, lineHeight = 25.sp, color = Color(0xFF333333))
+                Text("• Voice Chat", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF333333))
+                Text("Join voice rooms, talk with friends in real time, and enjoy conversations with people from different places.", fontSize = 15.sp, lineHeight = 25.sp, color = Color(0xFF333333))
                 Spacer(Modifier.height(16.dp))
-                Text("• Online party", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF333333))
-                Text("Join different online parties and topic rooms, including birthday parties, wedding parties, games, and more.", fontSize = 15.sp, lineHeight = 25.sp, color = Color(0xFF333333))
+                Text("• Rooms & Community", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF333333))
+                Text("Explore rooms for different interests, join group conversations, and be part of shared moments and online parties.", fontSize = 15.sp, lineHeight = 25.sp, color = Color(0xFF333333))
                 Spacer(Modifier.height(16.dp))
-                Text("• Gorgeous gifts", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF333333))
-                Text("While enjoying chats with friends, you can send them gifts with special effects and have more fun together.", fontSize = 15.sp, lineHeight = 25.sp, color = Color(0xFF333333))
+                Text("• Gifts & Expression", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF333333))
+                Text("Send virtual gifts, celebrate your friends, and make your time together more memorable.", fontSize = 15.sp, lineHeight = 25.sp, color = Color(0xFF333333))
             }
         }
         return
