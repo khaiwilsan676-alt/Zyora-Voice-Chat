@@ -1,4 +1,4 @@
-package com.hurry.voicechat
+Package com.hurry.voicechat
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -54,11 +54,10 @@ fun DailyCheckInModal(
         )
     ) {
         // Modal ko center se thoda niche (0.15f bias) align kiya hai 
-        // Background thoda halka dark kiya hai bss (Black drop removed)
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.4f)) // Yahan dark effect thoda kam kiya hai
+                .background(Color.Black.copy(alpha = 0.2f)) // <-- Bas ekdam halka sa dark black kiya hai
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
@@ -187,7 +186,7 @@ fun DailyCheckInModal(
                         contentScale = ContentScale.Fit, 
                         modifier = Modifier
                             .fillMaxWidth() 
-                            .scale(1.15f) 
+                            .scale(1.05f) // <-- Banner ka scale decrease (1.05f)
                             .align(Alignment.TopCenter)
                             .offset(y = (-45).dp)
                             .zIndex(2f)
@@ -244,13 +243,16 @@ private fun DayCard(day: Int, reward: String, image: String, currentDay: Int, mo
                 modifier = Modifier.size(38.dp),
                 contentScale = ContentScale.Fit
             )
+            // Ye Spacer intentionally rakha hai taki layout ka space utna hi rahe aur image bilkul na hile
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = reward,
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color(0xFF544B00),
-                maxLines = 1
+                maxLines = 1,
+                // Yahan Modifier.offset(y = (-8).dp) lagaya hai jisse Text upar image ki taraf chala gaya bina image ki position hilaye
+                modifier = Modifier.offset(y = (-8).dp)
             )
         }
         
@@ -272,7 +274,7 @@ private fun SpecialDayCard(day: Int, currentDay: Int, modifier: Modifier = Modif
 
     Box(
         modifier = modifier
-            .height(80.dp) 
+            .height(80.dp) // <--- Height wapas pehle wali 80.dp kar di hai (card ka size normal)
             .clip(RoundedCornerShape(6.dp)) 
             .background(Color(0xFFF3F3F3))
             .border(2.dp, borderColor, RoundedCornerShape(6.dp)),
@@ -280,7 +282,9 @@ private fun SpecialDayCard(day: Int, currentDay: Int, modifier: Modifier = Modif
     ) {
         DayBadge(day = day)
         
-        Box(modifier = Modifier.padding(top = 18.dp)) {
+        Box(
+            modifier = Modifier.padding(top = 18.dp)
+        ) {
             content()
         }
         
@@ -303,7 +307,7 @@ private fun Day7Card(currentDay: Int) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(85.dp) 
+            .height(76.dp) // <--- DAY 7 KI HEIGHT KAM KAR DI (85 se 76 kar di)
             .clip(RoundedCornerShape(8.dp)) 
             .background(Color(0xFFFFF9EB))
             .border(2.dp, borderColor, RoundedCornerShape(8.dp)),
@@ -333,7 +337,12 @@ private fun Day7Card(currentDay: Int) {
             }
         }
 
-        Box(modifier = Modifier.padding(top = 18.dp, start = 16.dp)) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 18.dp, start = 12.dp, end = 12.dp), // <--- Padding de di taki content adjust ho
+            contentAlignment = Alignment.Center
+        ) {
             renderDay7Special()
         }
 
@@ -350,30 +359,41 @@ private fun Day7Card(currentDay: Int) {
     }
 }
 
-// ----------------- Internal Render Functions -----------------
+// ----------------- Internal Render Functions (FIXED 5, 6 & 7) -----------------
 
 @Composable
 private fun renderDay5Special() {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-        RewardItemIcon("file_00000000b2d481fd8cd233482dbeb9ef.png", "+10,000", 34.dp)
-        RewardItemIcon("IMG_20260903_141944.png", "×1 Day", 42.dp)
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(16.dp), 
+        verticalAlignment = Alignment.Bottom 
+    ) {
+        RewardItemIcon("file_00000000b2d481fd8cd233482dbeb9ef.png", "+10,000", 36.dp)
+        RewardItemIcon("IMG_20260903_141944.png", "×1 Day", 44.dp)
     }
 }
 
 @Composable
 private fun renderDay6Special() {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-        RewardItemIcon("file_00000000b2d481fd8cd233482dbeb9ef.png", "+10,000", 34.dp)
-        RewardItemIcon("IMG-20260903-WA0076.jpg", "×2 Days", 34.dp)
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(16.dp), 
+        verticalAlignment = Alignment.Bottom 
+    ) {
+        RewardItemIcon("file_00000000b2d481fd8cd233482dbeb9ef.png", "+10,000", 36.dp)
+        RewardItemIcon("IMG-20260903-WA0076.jpg", "×2 Days", 36.dp)
     }
 }
 
 @Composable
 private fun renderDay7Special() {
-    Row(horizontalArrangement = Arrangement.spacedBy(20.dp), verticalAlignment = Alignment.CenterVertically) {
-        RewardItemIcon("file_00000000b2d481fd8cd233482dbeb9ef.png", "+15,000", 42.dp)
-        RewardItemIcon("file_0000000044388211996656afc9ce9c03.png", "×3 days", 48.dp)
-        RewardItemIcon("IMG-20260903-WA0077.jpg", "×3 days", 48.dp)
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(30.dp, Alignment.CenterHorizontally), // <--- Images ko thoda dur kiya taki corners ki taraf dikhe (20 se 30 kiya)
+        verticalAlignment = Alignment.Bottom // <--- TEENO TEXT EKDUM SEEDHI LINE (STRAIGHT ROW) MEIN RAHENGE
+    ) {
+        // Size approx 1% bada kar diya hai (42->44, 48->50)
+        RewardItemIcon("file_00000000b2d481fd8cd233482dbeb9ef.png", "+15,000", 44.dp)
+        RewardItemIcon("file_0000000044388211996656afc9ce9c03.png", "×3 days", 50.dp)
+        RewardItemIcon("IMG-20260903-WA0077.jpg", "×3 days", 50.dp)
     }
 }
 
