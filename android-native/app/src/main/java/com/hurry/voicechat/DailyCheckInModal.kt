@@ -1,6 +1,5 @@
 package com.hurry.voicechat
 
-import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -17,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -54,10 +54,11 @@ fun DailyCheckInModal(
         )
     ) {
         // Modal ko center se thoda niche (0.15f bias) align kiya hai 
+        // Background thoda halka dark kiya hai bss (Black drop removed)
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.6f))
+                .background(Color.Black.copy(alpha = 0.4f)) // Yahan dark effect thoda kam kiya hai
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
@@ -83,15 +84,15 @@ fun DailyCheckInModal(
                         modifier = Modifier
                             .padding(top = 50.dp) // Banner ke overlap ke liye space
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(32.dp))
+                            // MAIN CARD CORNER CURVE 12.dp HAI
+                            .clip(RoundedCornerShape(12.dp))
                             .background(Color.White)
-                            .border(6.dp, Color(0xFFFFE57C), RoundedCornerShape(32.dp)) // SVG wala golden border
+                            .border(6.dp, Color(0xFFFFE57C), RoundedCornerShape(12.dp)) 
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null,
                                 onClick = {} // Card par click se dismiss na ho
                             )
-                            // HIGHT DECREASE: Top aur bottom padding kam ki hai main card ki
                             .padding(start = 20.dp, end = 20.dp, top = 48.dp, bottom = 16.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
@@ -100,9 +101,9 @@ fun DailyCheckInModal(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp)) // Corner kam kiye
+                                .clip(RoundedCornerShape(8.dp)) 
                                 .background(Color(0xFFFFF3C9))
-                                .padding(vertical = 8.dp), // Height kam ki
+                                .padding(vertical = 8.dp), 
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
@@ -113,14 +114,13 @@ fun DailyCheckInModal(
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(12.dp)) // Spacing decrease ki
+                        Spacer(modifier = Modifier.height(12.dp)) 
 
                         // Row 1: Days 1 to 4
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            // Nayi coins image yahan laga di
                             DayCard(day = 1, reward = "+5000", image = "file_00000000b2d481fd8cd233482dbeb9ef.png", currentDay = currentDay, modifier = Modifier.weight(1f))
                             DayCard(day = 2, reward = "+5000", image = "file_00000000b2d481fd8cd233482dbeb9ef.png", currentDay = currentDay, modifier = Modifier.weight(1f))
                             DayCard(day = 3, reward = "×2 Days", image = "file_00000000d808821186c1b7b612eea3fc.png", currentDay = currentDay, modifier = Modifier.weight(1f))
@@ -147,63 +147,56 @@ fun DailyCheckInModal(
                         // Row 3: Day 7 (Big Reward)
                         Day7Card(currentDay = currentDay)
 
-                        Spacer(modifier = Modifier.height(16.dp)) // Spacing decrease ki
+                        Spacer(modifier = Modifier.height(16.dp)) 
 
-                        // Sign-in Button (SVG wala Gold Gradient)
+                        // Sign-in Button (3D hta diya, Solid color, Curve kam)
                         val isButtonDisabled = claimedToday || currentDay > 7
-                        val buttonBrush = if (isButtonDisabled) {
-                            Brush.verticalGradient(listOf(Color(0xFF9CA3AF), Color(0xFF6B7280)))
+                        val buttonColor = if (isButtonDisabled) {
+                            Color(0xFF9CA3AF) // Solid Gray jab disable/claimed ho
                         } else {
-                            Brush.verticalGradient(
-                                listOf(
-                                    Color(0xFFFFF080),
-                                    Color(0xFFFFD633),
-                                    Color(0xFFFFBB00),
-                                    Color(0xFFE99A00)
-                                )
-                            )
+                            Color(0xFFFFD633) // Solid Yellow 
                         }
 
                         Button(
                             onClick = onSignIn,
                             enabled = !isButtonDisabled,
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = Color.Transparent, 
-                                disabledContainerColor = Color.Transparent
+                                containerColor = buttonColor, 
+                                disabledContainerColor = buttonColor
                             ),
                             contentPadding = PaddingValues(),
-                            shape = RoundedCornerShape(50.dp),
-                            // BUTTON SIZE DECREASE: Width 0.85f ki aur height 46.dp kardi
+                            shape = RoundedCornerShape(12.dp), // Curve thoda kam kar diya
                             modifier = Modifier
                                 .fillMaxWidth(0.85f)
                                 .height(46.dp)
-                                .background(buttonBrush, RoundedCornerShape(50.dp))
                         ) {
                             Text(
-                                text = if (claimedToday) "Claimed Today" else if (currentDay > 7) "All Rewards Claimed!" else "Sign in",
-                                color = Color.White,
+                                // Text update kar diya
+                                text = if (claimedToday) "Signed In today" else if (currentDay > 7) "All Rewards Claimed!" else "Sign in",
+                                color = if (isButtonDisabled) Color.White else Color.Black, // Text color adjust kar diya logic ke hisab se
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.ExtraBold
                             )
                         }
                     }
 
-                    // 2. BANNER IMAGE - TOP BANNER KO AUR OUPER KAR DIYA HAI (-35.dp offset ke sath)
+                    // 2. BANNER IMAGE
                     AsyncImage(
                         model = "file_000000004b6c8211855003bf899492fd.png".fullUrl,
                         contentDescription = "Top Banner",
-                        contentScale = ContentScale.FillWidth,
+                        contentScale = ContentScale.Fit, 
                         modifier = Modifier
-                            .fillMaxWidth(0.9f)
+                            .fillMaxWidth() 
+                            .scale(1.15f) 
                             .align(Alignment.TopCenter)
-                            .offset(y = (-35).dp) // <--- BANNER OUPER KAR DIYA YAHAN SE!
+                            .offset(y = (-45).dp)
                             .zIndex(2f)
                     )
                 }
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // 3. Tere Purane Code Wala CLOSE (X) BUTTON - Card se bahar, bottom me!
+                // 3. CLOSE (X) BUTTON
                 Box(
                     modifier = Modifier
                         .size(48.dp)
@@ -233,23 +226,22 @@ private fun DayCard(day: Int, reward: String, image: String, currentDay: Int, mo
     Box(
         modifier = modifier
             .aspectRatio(0.85f)
-            .clip(RoundedCornerShape(6.dp)) // CORNERS KAM KIYE
+            .clip(RoundedCornerShape(6.dp)) 
             .background(Color(0xFFF3F3F3))
             .border(2.dp, borderColor, RoundedCornerShape(6.dp)),
         contentAlignment = Alignment.Center
     ) {
-        // YE BADGE AB TOP LEFT CHIPKA RAHEGA
         DayBadge(day = day)
         
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
-            modifier = Modifier.padding(top = 12.dp)
+            modifier = Modifier.padding(top = 18.dp) 
         ) {
             AsyncImage(
                 model = image.fullUrl,
                 contentDescription = null,
-                modifier = Modifier.size(32.dp),
+                modifier = Modifier.size(38.dp),
                 contentScale = ContentScale.Fit
             )
             Spacer(modifier = Modifier.height(4.dp))
@@ -262,8 +254,14 @@ private fun DayCard(day: Int, reward: String, image: String, currentDay: Int, mo
             )
         }
         
+        // Yahan card ke upar blackish overlay aur center blue tick wala logic add kiya
         if (day < currentDay) {
-            CompletedCheckmark()
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .background(Color.Black.copy(alpha = 0.35f)) // Card ke upar transparent black/10 effect
+            )
+            CenterCompletedCheckmark()
         }
     }
 }
@@ -274,21 +272,26 @@ private fun SpecialDayCard(day: Int, currentDay: Int, modifier: Modifier = Modif
 
     Box(
         modifier = modifier
-            .height(80.dp) // HEIGHT KAM KI
-            .clip(RoundedCornerShape(6.dp)) // CORNERS KAM KIYE
+            .height(80.dp) 
+            .clip(RoundedCornerShape(6.dp)) 
             .background(Color(0xFFF3F3F3))
             .border(2.dp, borderColor, RoundedCornerShape(6.dp)),
         contentAlignment = Alignment.Center
     ) {
-        // YE BADGE AB TOP LEFT CHIPKA RAHEGA
         DayBadge(day = day)
         
-        Box(modifier = Modifier.padding(top = 12.dp)) {
+        Box(modifier = Modifier.padding(top = 18.dp)) {
             content()
         }
         
+        // Yahan card ke upar blackish overlay aur center blue tick wala logic add kiya
         if (day < currentDay) {
-            CompletedCheckmark()
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .background(Color.Black.copy(alpha = 0.35f))
+            )
+            CenterCompletedCheckmark()
         }
     }
 }
@@ -300,19 +303,18 @@ private fun Day7Card(currentDay: Int) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(85.dp) // HEIGHT KAM KI
-            .clip(RoundedCornerShape(8.dp)) // CORNERS KAM KIYE
+            .height(85.dp) 
+            .clip(RoundedCornerShape(8.dp)) 
             .background(Color(0xFFFFF9EB))
             .border(2.dp, borderColor, RoundedCornerShape(8.dp)),
         contentAlignment = Alignment.Center
     ) {
-        // SVG Day 7 Badge Top-Left Corner 
         Box(
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .clip(RoundedCornerShape(topStart = 8.dp, bottomEnd = 8.dp))
                 .background(Brush.horizontalGradient(listOf(Color(0xFFFF5038), Color(0xFFFFB62B))))
-                .padding(horizontal = 8.dp, vertical = 2.dp) // PATLI PATTI KAR DI HEIGHT KAM KARKE
+                .padding(horizontal = 8.dp, vertical = 2.dp) 
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
@@ -331,12 +333,19 @@ private fun Day7Card(currentDay: Int) {
             }
         }
 
-        Box(modifier = Modifier.padding(top = 12.dp, start = 16.dp)) {
+        Box(modifier = Modifier.padding(top = 18.dp, start = 16.dp)) {
             renderDay7Special()
         }
 
+        // Yahan card ke upar blackish overlay aur center blue tick wala logic add kiya
         if (7 < currentDay) {
-            CompletedCheckmark()
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Color.Black.copy(alpha = 0.35f))
+            )
+            CenterCompletedCheckmark()
         }
     }
 }
@@ -346,28 +355,25 @@ private fun Day7Card(currentDay: Int) {
 @Composable
 private fun renderDay5Special() {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-        // Nayi coins image yahan laga di
-        RewardItemIcon("file_00000000b2d481fd8cd233482dbeb9ef.png", "+10,000", 28.dp)
-        RewardItemIcon("IMG_20260903_141944.png", "×1 Day", 36.dp)
+        RewardItemIcon("file_00000000b2d481fd8cd233482dbeb9ef.png", "+10,000", 34.dp)
+        RewardItemIcon("IMG_20260903_141944.png", "×1 Day", 42.dp)
     }
 }
 
 @Composable
 private fun renderDay6Special() {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-        // Nayi coins image yahan laga di
-        RewardItemIcon("file_00000000b2d481fd8cd233482dbeb9ef.png", "+10,000", 28.dp)
-        RewardItemIcon("IMG-20260903-WA0076.jpg", "×2 Days", 28.dp)
+        RewardItemIcon("file_00000000b2d481fd8cd233482dbeb9ef.png", "+10,000", 34.dp)
+        RewardItemIcon("IMG-20260903-WA0076.jpg", "×2 Days", 34.dp)
     }
 }
 
 @Composable
 private fun renderDay7Special() {
     Row(horizontalArrangement = Arrangement.spacedBy(20.dp), verticalAlignment = Alignment.CenterVertically) {
-        // Nayi coins image yahan laga di
-        RewardItemIcon("file_00000000b2d481fd8cd233482dbeb9ef.png", "+15,000", 36.dp)
-        RewardItemIcon("file_0000000044388211996656afc9ce9c03.png", "×3 days", 42.dp)
-        RewardItemIcon("IMG-20260903-WA0077.jpg", "×3 days", 42.dp)
+        RewardItemIcon("file_00000000b2d481fd8cd233482dbeb9ef.png", "+15,000", 42.dp)
+        RewardItemIcon("file_0000000044388211996656afc9ce9c03.png", "×3 days", 48.dp)
+        RewardItemIcon("IMG-20260903-WA0077.jpg", "×3 days", 48.dp)
     }
 }
 
@@ -392,13 +398,12 @@ private fun RewardItemIcon(image: String, text: String, size: androidx.compose.u
 
 // ----------------- Reusable UI Bits -----------------
 
-// YELLOW BADGE JINKI HEIGHT/WIDTH KAM KI HAI AUR CORNERS MODIFY KIYE HAIN
 @Composable
 private fun BoxScope.DayBadge(day: Int) {
     Box(
         modifier = Modifier
-            .align(Alignment.TopStart) // EKDAM TOP LEFT CHIPKA DIYA
-            .size(width = 24.dp, height = 18.dp) // HIGHT AUR WIDE DECREASE KAR DI BSS
+            .align(Alignment.TopStart) 
+            .size(width = 24.dp, height = 18.dp) 
             .clip(RoundedCornerShape(topStart = 6.dp, bottomEnd = 8.dp))
             .background(Color(0xFFFFE000)),
         contentAlignment = Alignment.Center
@@ -412,42 +417,30 @@ private fun BoxScope.DayBadge(day: Int) {
     }
 }
 
+// Ye naya Center Tick logic hai
 @Composable
-private fun BoxScope.CompletedCheckmark() {
+private fun BoxScope.CenterCompletedCheckmark() {
     Box(
         modifier = Modifier
-            .align(Alignment.TopEnd)
-            .padding(4.dp)
-            .size(16.dp)
+            .align(Alignment.Center) // Ekdam center mein
+            .size(24.dp)
             .clip(CircleShape)
-            .background(Color(0xFF22C55E)),
+            .background(Color(0xFF3B82F6)), // Blue circle color
         contentAlignment = Alignment.Center
     ) {
         Icon(
             imageVector = Icons.Default.Check,
             contentDescription = "Claimed",
-            tint = Color.White,
-            modifier = Modifier.size(10.dp)
+            tint = Color.White, // White Tick
+            modifier = Modifier.size(16.dp)
         )
     }
 }
 
-@Composable
-private fun getBorderColor(day: Int, currentDay: Int): Color {
+fun getBorderColor(day: Int, currentDay: Int): Color {
     return when {
-        day < currentDay -> Color(0xFF4ADE80)
-        day == currentDay -> {
-            val infiniteTransition = rememberInfiniteTransition()
-            val colorAlpha by infiniteTransition.animateFloat(
-                initialValue = 1f,
-                targetValue = 0.3f,
-                animationSpec = infiniteRepeatable(
-                    animation = tween(800, easing = FastOutSlowInEasing),
-                    repeatMode = RepeatMode.Reverse
-                )
-            )
-            Color(0xFF3B82F6).copy(alpha = colorAlpha)
-        }
+        day < currentDay -> Color(0xFF4ADE80) 
+        day == currentDay -> Color(0xFFFFD633) 
         else -> Color.Transparent
     }
 }
