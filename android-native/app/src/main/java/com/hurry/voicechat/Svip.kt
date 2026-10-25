@@ -1,7 +1,6 @@
 package com.hurry.voicechat
 
 import android.view.TextureView
-import android.view.ViewGroup
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -14,25 +13,19 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.zIndex
-import androidx.media3.common.MediaItem
-import androidx.media3.common.Player
-import androidx.media3.exoplayer.ExoPlayer
 import coil3.compose.AsyncImage
 
 @Composable
@@ -174,7 +167,7 @@ fun SvipPage(onBack: () -> Unit = {}) {
             Text(
                 text = "SVIP COMING SOON",
                 color = Color.White,
-                fontSize = 24.sp,
+                fontSize = 22.sp,
                 fontWeight = FontWeight.Black,
                 letterSpacing = 2.sp,
                 modifier = Modifier.align(Alignment.Center)
@@ -187,7 +180,7 @@ fun SvipPage(onBack: () -> Unit = {}) {
             contentDescription = null,
             modifier = Modifier
                 .fillMaxWidth()
-                .zIndex(50f) // Subse upar taaki overlapping perfect ho
+                .zIndex(50f) 
                 .layout { measurable, constraints ->
                     val placeable = measurable.measure(constraints)
                     layout(placeable.width, placeable.height) {
@@ -201,120 +194,72 @@ fun SvipPage(onBack: () -> Unit = {}) {
     }
 }
 
-// ExoPlayer Implementation for AutoPlay Muted Video with Green Screen Removal
+// Fixed Video Player: No Black Boxes, No Green Screen!
 @Composable
 fun SvipVideoPlayer(videoUrl: String) {
-    val context = LocalContext.current
-    
-    // Video ka real ratio track karne ke liye
     var videoAspectRatio by remember { mutableFloatStateOf(1f) }
 
-    val exoPlayer = remember {
-        ExoPlayer.Builder(context).build().apply {
-            val mediaItem = MediaItem.fromUri(videoUrl)
-            setMediaItem(mediaItem)
-            repeatMode = Player.REPEAT_MODE_ALL
-            playWhenReady = true
-            volume = 0f // Muted
-            
-            // Yahan hum video ka asli ratio nikal rahe hain taaki stretch na ho
-            addListener(object : Player.Listener {
-                override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
-                    if (videoSize.width > 0 && videoSize.height > 0) {
-                        videoAspectRatio = videoSize.width.toFloat() / videoSize.height.toFloat()
-                    }
-                }
-            })
-            prepare()
-        }
-    }
-
-    // 🔥 FIX: Yeh infinite loop Compose ko force karega har 33ms par video ka frame redraw karne ke liye.
-    // Iske bina Compose GraphicsLayer video ke frames ko refresh nahi karta tha aur black square dikhata tha.
-    val infiniteTransition = rememberInfiniteTransition(label = "video_refresh_loop")
-    val invalidateTrigger by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(33, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "redraw_trigger"
-    )
-
-    DisposableEffect(Unit) {
-        exoPlayer.play() // FIX: Explicitly play the video
-        onDispose {
-            exoPlayer.release()
-        }
-    }
-
-    // CHROMA KEY MAGIC MATRIX: Yeh sirf aur sirf Green color ko transparent (alpha 0) karega!
-    val greenScreenMatrix = remember {
+    // 🔥 MAGIC MATRIX: Yeh Faltu Black Box aur Green Screen dono ko ukhaad fekega!
+    val magicMatrix = remember {
         ColorMatrix(floatArrayOf(
-            1f,   0f,    0f,   0f,  0f,    // Red 
-            0f,   1f,    0f,   0f,  0f,    // Green 
-            0f,   0f,    1f,   0f,  0f,    // Blue 
-            2.5f, -3.5f, 2.5f, 0f,  255f   // Alpha 
+            1f,    0f,    0f,   0f,  0f,    // Red 
+            0f,    1f,    0f,   0f,  0f,    // Green 
+            0f,    0f,    1f,   0f,  0f,    // Blue 
+            2.0f, -1.5f,  2.0f, 0f,  0f     // Alpha: Sirf Original colors bachenge, Black/Green Transparent ho jayenge!
         ))
     }
 
     AndroidView(
-        factory = {
-            TextureView(context).apply {
-                isOpaque = false // Transparent background zaroori hai
-                layoutParams = ViewGroup.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.MATCH_PARENT
-                )
-                exoPlayer.setVideoTextureView(this)
+        factory = { ctx ->
+            android.view.TextureView(ctx).apply {
+                isOpaque = false // Transparent background 
+                surfaceTextureListener = object : android.view.TextureView.SurfaceTextureListener {
+                    var mediaPlayer: android.media.MediaPlayer? = null
+
+                    override fun onSurfaceTextureAvailable(surface: android.graphics.SurfaceTexture, width: Int, height: Int) {
+                        mediaPlayer = android.media.MediaPlayer().apply {
+                            try {
+                                setDataSource(videoUrl)
+                                setSurface(android.view.Surface(surface))
+                                
+                                setOnVideoSizeChangedListener { _, w, h ->
+                                    if (w > 0 && h > 0) {
+                                        videoAspectRatio = w.toFloat() / h.toFloat()
+                                    }
+                                }
+
+                                setOnPreparedListener { mp ->
+                                    mp.isLooping = true 
+                                    mp.setVolume(0f, 0f) 
+                                    start()
+                                }
+                                prepareAsync()
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                            }
+                        }
+                    }
+
+                    override fun onSurfaceTextureSizeChanged(surface: android.graphics.SurfaceTexture, width: Int, height: Int) {}
+                    
+                    override fun onSurfaceTextureDestroyed(surface: android.graphics.SurfaceTexture): Boolean {
+                        mediaPlayer?.release()
+                        mediaPlayer = null
+                        return true
+                    }
+                    
+                    override fun onSurfaceTextureUpdated(surface: android.graphics.SurfaceTexture) {}
+                }
             }
         },
         modifier = Modifier
-            .offset(y = 40.dp) // <-- EK DAM THORA SA NICHE KIYA BSS
-            .fillMaxWidth(0.6f) // <-- Yahan maine 0.6f kar diya taaki video 10% aur choti ho jaye
-            .aspectRatio(1f) // Video ekdam SQUARE box me rahegi
-            .clip(RectangleShape) // Square se bahar jane wala hissa cut ho jayega
-            .layout { measurable, constraints ->
-                // === GUARANTEED CROP FIX === 
-                val boxWidth = constraints.maxWidth
-                val boxHeight = constraints.maxHeight
-
-                val videoWidth: Int
-                val videoHeight: Int
-
-                if (videoAspectRatio > 1f) {
-                    // Horizontal video
-                    videoHeight = boxHeight
-                    videoWidth = (boxHeight * videoAspectRatio).toInt()
-                } else {
-                    // Vertical ya Square video
-                    videoWidth = boxWidth
-                    videoHeight = (boxWidth / videoAspectRatio).toInt()
-                }
-
-                // Asli ratio mein draw karo
-                val placeable = measurable.measure(
-                    androidx.compose.ui.unit.Constraints.fixed(videoWidth, videoHeight)
-                )
-
-                // Center mein fit kar do bina dabaye
-                layout(boxWidth, boxHeight) {
-                    placeable.placeRelative(
-                        x = (boxWidth - videoWidth) / 2,
-                        y = (boxHeight - videoHeight) / 2
-                    )
-                }
-            }
+            .offset(y = 40.dp) 
+            .fillMaxWidth(0.6f) 
+            .aspectRatio(if (videoAspectRatio > 0f) videoAspectRatio else 1f) // Asli aspect ratio, koi black crop nahi!
             .graphicsLayer {
-                // 🔥 FIX: `invalidateTrigger` ko read karne se har frame Compose redraw hoga!
-                // Ye line sabse imp hai video black screen issue hatane ke liye.
-                val forceRedraw = invalidateTrigger 
-                
-                // Ye 0.99f alpha offscreen render force karega
                 alpha = 0.99f 
-                // ColorFilter apply kar diya jo sirf Green color ko nikal dega
-                colorFilter = ColorFilter.colorMatrix(greenScreenMatrix)
+                // Naya filter laga diya jo black aur green gayab karega
+                colorFilter = ColorFilter.colorMatrix(magicMatrix)
             }
     )
 }
