@@ -57,7 +57,7 @@ fun DailyCheckInModal(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.2f)) // <-- Bas ekdam halka sa dark black kiya hai
+                .background(Color.Black.copy(alpha = 0.2f)) // <-- Background ekdam halka dark (0.2f) kiya, koi bhari drop nahi
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
@@ -179,16 +179,16 @@ fun DailyCheckInModal(
                         }
                     }
 
-                    // 2. BANNER IMAGE
+                    // 2. BANNER IMAGE (Halka sa 1% right shift karne ke liye x = 2.dp kiya hai)
                     AsyncImage(
                         model = "file_000000004b6c8211855003bf899492fd.png".fullUrl,
                         contentDescription = "Top Banner",
                         contentScale = ContentScale.Fit, 
                         modifier = Modifier
                             .fillMaxWidth() 
-                            .scale(1.05f) // <-- Banner ka scale decrease (1.05f)
+                            .scale(1.05f) 
                             .align(Alignment.TopCenter)
-                            .offset(y = (-45).dp)
+                            .offset(x = 2.dp, y = (-45).dp) // <-- Yahan x = 2.dp se banner halka sa right shift ho gaya hai
                             .zIndex(2f)
                     )
                 }
@@ -243,7 +243,6 @@ private fun DayCard(day: Int, reward: String, image: String, currentDay: Int, mo
                 modifier = Modifier.size(38.dp),
                 contentScale = ContentScale.Fit
             )
-            // Ye Spacer intentionally rakha hai taki layout ka space utna hi rahe aur image bilkul na hile
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = reward,
@@ -251,17 +250,15 @@ private fun DayCard(day: Int, reward: String, image: String, currentDay: Int, mo
                 fontWeight = FontWeight.Bold,
                 color = Color(0xFF544B00),
                 maxLines = 1,
-                // Yahan Modifier.offset(y = (-8).dp) lagaya hai jisse Text upar image ki taraf chala gaya bina image ki position hilaye
                 modifier = Modifier.offset(y = (-8).dp)
             )
         }
         
-        // Yahan card ke upar blackish overlay aur center blue tick wala logic add kiya
         if (day < currentDay) {
             Box(
                 modifier = Modifier
                     .matchParentSize()
-                    .background(Color.Black.copy(alpha = 0.35f)) // Card ke upar transparent black/10 effect
+                    .background(Color.Black.copy(alpha = 0.35f))
             )
             CenterCompletedCheckmark()
         }
@@ -274,7 +271,7 @@ private fun SpecialDayCard(day: Int, currentDay: Int, modifier: Modifier = Modif
 
     Box(
         modifier = modifier
-            .height(80.dp) // <--- Height wapas pehle wali 80.dp kar di hai (card ka size normal)
+            .height(80.dp) 
             .clip(RoundedCornerShape(6.dp)) 
             .background(Color(0xFFF3F3F3))
             .border(2.dp, borderColor, RoundedCornerShape(6.dp)),
@@ -288,7 +285,6 @@ private fun SpecialDayCard(day: Int, currentDay: Int, modifier: Modifier = Modif
             content()
         }
         
-        // Yahan card ke upar blackish overlay aur center blue tick wala logic add kiya
         if (day < currentDay) {
             Box(
                 modifier = Modifier
@@ -307,7 +303,7 @@ private fun Day7Card(currentDay: Int) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(76.dp) // <--- DAY 7 KI HEIGHT KAM KAR DI (85 se 76 kar di)
+            .height(85.dp) 
             .clip(RoundedCornerShape(8.dp)) 
             .background(Color(0xFFFFF9EB))
             .border(2.dp, borderColor, RoundedCornerShape(8.dp)),
@@ -316,22 +312,24 @@ private fun Day7Card(currentDay: Int) {
         Box(
             modifier = Modifier
                 .align(Alignment.TopStart)
+                .height(18.dp) 
                 .clip(RoundedCornerShape(topStart = 8.dp, bottomEnd = 8.dp))
                 .background(Brush.horizontalGradient(listOf(Color(0xFFFF5038), Color(0xFFFFB62B))))
-                .padding(horizontal = 8.dp, vertical = 2.dp) 
+                .padding(horizontal = 8.dp), 
+            contentAlignment = Alignment.Center 
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = "7",
                     color = Color.White,
-                    fontSize = 14.sp,
+                    fontSize = 12.sp,
                     fontWeight = FontWeight.ExtraBold
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
                     text = "Big Reward",
                     color = Color.White,
-                    fontSize = 10.sp,
+                    fontSize = 9.sp,
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -340,13 +338,12 @@ private fun Day7Card(currentDay: Int) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 18.dp, start = 12.dp, end = 12.dp), // <--- Padding de di taki content adjust ho
+                .padding(top = 18.dp, start = 12.dp, end = 12.dp),
             contentAlignment = Alignment.Center
         ) {
             renderDay7Special()
         }
 
-        // Yahan card ke upar blackish overlay aur center blue tick wala logic add kiya
         if (7 < currentDay) {
             Box(
                 modifier = Modifier
@@ -359,13 +356,13 @@ private fun Day7Card(currentDay: Int) {
     }
 }
 
-// ----------------- Internal Render Functions (FIXED 5, 6 & 7) -----------------
+// ----------------- Internal Render Functions -----------------
 
 @Composable
 private fun renderDay5Special() {
     Row(
         horizontalArrangement = Arrangement.spacedBy(16.dp), 
-        verticalAlignment = Alignment.Bottom 
+        verticalAlignment = Alignment.CenterVertically 
     ) {
         RewardItemIcon("file_00000000b2d481fd8cd233482dbeb9ef.png", "+10,000", 36.dp)
         RewardItemIcon("IMG_20260903_141944.png", "×1 Day", 44.dp)
@@ -376,7 +373,7 @@ private fun renderDay5Special() {
 private fun renderDay6Special() {
     Row(
         horizontalArrangement = Arrangement.spacedBy(16.dp), 
-        verticalAlignment = Alignment.Bottom 
+        verticalAlignment = Alignment.CenterVertically 
     ) {
         RewardItemIcon("file_00000000b2d481fd8cd233482dbeb9ef.png", "+10,000", 36.dp)
         RewardItemIcon("IMG-20260903-WA0076.jpg", "×2 Days", 36.dp)
@@ -387,10 +384,9 @@ private fun renderDay6Special() {
 private fun renderDay7Special() {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(30.dp, Alignment.CenterHorizontally), // <--- Images ko thoda dur kiya taki corners ki taraf dikhe (20 se 30 kiya)
-        verticalAlignment = Alignment.Bottom // <--- TEENO TEXT EKDUM SEEDHI LINE (STRAIGHT ROW) MEIN RAHENGE
+        horizontalArrangement = Arrangement.spacedBy(30.dp, Alignment.CenterHorizontally), 
+        verticalAlignment = Alignment.CenterVertically 
     ) {
-        // Size approx 1% bada kar diya hai (42->44, 48->50)
         RewardItemIcon("file_00000000b2d481fd8cd233482dbeb9ef.png", "+15,000", 44.dp)
         RewardItemIcon("file_0000000044388211996656afc9ce9c03.png", "×3 days", 50.dp)
         RewardItemIcon("IMG-20260903-WA0077.jpg", "×3 days", 50.dp)
@@ -399,7 +395,10 @@ private fun renderDay7Special() {
 
 @Composable
 private fun RewardItemIcon(image: String, text: String, size: androidx.compose.ui.unit.Dp) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
         AsyncImage(
             model = image.fullUrl,
             contentDescription = null,
@@ -411,7 +410,7 @@ private fun RewardItemIcon(image: String, text: String, size: androidx.compose.u
             fontSize = 9.sp,
             fontWeight = FontWeight.Bold,
             color = Color(0xFF544B00), 
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Start
         )
     }
 }
@@ -437,21 +436,20 @@ private fun BoxScope.DayBadge(day: Int) {
     }
 }
 
-// Ye naya Center Tick logic hai
 @Composable
 private fun BoxScope.CenterCompletedCheckmark() {
     Box(
         modifier = Modifier
-            .align(Alignment.Center) // Ekdam center mein
+            .align(Alignment.Center) 
             .size(24.dp)
             .clip(CircleShape)
-            .background(Color(0xFF3B82F6)), // Blue circle color
+            .background(Color(0xFF3B82F6)), 
         contentAlignment = Alignment.Center
     ) {
         Icon(
             imageVector = Icons.Default.Check,
             contentDescription = "Claimed",
-            tint = Color.White, // White Tick
+            tint = Color.White, 
             modifier = Modifier.size(16.dp)
         )
     }
