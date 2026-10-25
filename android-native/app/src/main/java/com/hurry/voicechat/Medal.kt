@@ -17,7 +17,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.*
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -30,13 +29,8 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import coil3.compose.AsyncImage
-import android.graphics.Bitmap
-import android.media.MediaMetadataRetriever
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 private const val RAW_URL = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/"
 private val String.fullUrl: String get() = if (this.startsWith("http")) this else RAW_URL + this.removePrefix("/")
@@ -44,14 +38,15 @@ private val String.fullUrl: String get() = if (this.startsWith("http")) this els
 data class MedalItem(
     val id: String,
     val name: String,
-    val video: String,
+    val video: String, // Thumbnail image for Grid
+    val previewVideo: String, // MP4 Video for Dialog Preview
     val stars: Int,
-    val category: String,
-    val variant: String = "black",
+    val category: String, // 'achievement' | 'gift' | 'activity' | 'dummy'
+    val variant: String = "black", // 'black' | 'green'
     val cardVideoSize: Int,
-    val cardVideoTop: Float,
+    val cardVideoTop: Float, // percentage as float 0.0 to 1.0
     val sheetVideoSize: Int,
-    val sheetVideoTop: Float,
+    val sheetVideoTop: Float, // percentage as float
     val tierGroup: String? = null,
     val giftText: String
 )
@@ -62,90 +57,6 @@ val TIER_TAB_IMAGES = listOf(
     "/IMG_20260924_132051.png"
 )
 
-// ============================================
-//  🎬 VIDEO PLAYER — Preview page ke liye
-// ============================================
-@Composable
-fun VideoPlayer(
-    url: String,
-    modifier: Modifier = Modifier,
-    autoPlay: Boolean = true,
-    loop: Boolean = true
-) {
-    val context = LocalContext.current
-    val exoPlayer = remember(url) {
-        ExoPlayer.Builder(context).build().apply {
-            setMediaItem(MediaItem.fromUri(url))
-            repeatMode = if (loop) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
-            volume = 0f
-            playWhenReady = autoPlay
-            prepare()
-        }
-    }
-    DisposableEffect(exoPlayer) { onDispose { exoPlayer.release() } }
-
-    AndroidView(
-        factory = { ctx ->
-            PlayerView(ctx).apply {
-                player = exoPlayer
-                useController = false
-                resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
-                setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)
-            }
-        },
-        modifier = modifier
-    )
-}
-
-// ============================================
-//  🖼️ VIDEO THUMBNAIL — Card me static image dikhane ke liye
-// ============================================
-@Composable
-fun VideoThumbnail(
-    videoUrl: String,
-    modifier: Modifier = Modifier,
-    colorFilter: ColorFilter? = null
-) {
-    var bitmap by remember(videoUrl) { mutableStateOf<Bitmap?>(null) }
-    var loading by remember(videoUrl) { mutableStateOf(true) }
-
-    LaunchedEffect(videoUrl) {
-        bitmap = withContext(Dispatchers.IO) {
-            runCatching {
-                val retriever = MediaMetadataRetriever()
-                try {
-                    retriever.setDataSource(videoUrl, HashMap<String, String>())
-                    retriever.getFrameAtTime(0, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
-                } finally {
-                    retriever.release()
-                }
-            }.getOrNull()
-        }
-        loading = false
-    }
-
-    Box(modifier = modifier, contentAlignment = Alignment.Center) {
-        if (bitmap != null) {
-            Image(
-                bitmap = bitmap!!.asImageBitmap(),
-                contentDescription = null,
-                modifier = Modifier.fillMaxSize(),
-                colorFilter = colorFilter,
-                contentScale = ContentScale.Fit
-            )
-        } else if (loading) {
-            CircularProgressIndicator(
-                color = Color(0xFFFACC15),
-                strokeWidth = 2.dp,
-                modifier = Modifier.size(20.dp)
-            )
-        }
-    }
-}
-
-// ============================================
-//  🏆 MAIN SCREEN
-// ============================================
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MedalScreen(onBack: () -> Unit) {
@@ -174,7 +85,7 @@ fun MedalScreen(onBack: () -> Unit) {
             .fillMaxSize()
             .background(Color(0xFF02050E))
     ) {
-        // Top Gradient Header Image
+        // 1. Top Gradient Mask Image
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -197,6 +108,7 @@ fun MedalScreen(onBack: () -> Unit) {
             )
         }
 
+        // 2. Main Content
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -213,46 +125,84 @@ fun MedalScreen(onBack: () -> Unit) {
                 IconButton(onClick = onBack) {
                     Icon(Icons.Default.ArrowBack, "Back", tint = Color.White)
                 }
-                Text("Medal", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    text = "Medal",
+                    color = Color.White,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold
+                )
                 IconButton(onClick = { showRules = true }) {
                     Icon(Icons.Default.HelpOutline, "Rules", tint = Color.White.copy(alpha = 0.8f))
                 }
             }
 
-            // I Wear section
+            // The Medal I Wear Section
             Column(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 12.dp)) {
                     Box(modifier = Modifier.width(40.dp).height(1.dp).background(Color(0xFFA89BBF).copy(alpha = 0.6f)))
-                    Text("The Medal I Wear", color = Color(0xFFF3F4F6), fontSize = 15.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(horizontal = 8.dp))
+                    Text(
+                        text = "The Medal I Wear",
+                        color = Color(0xFFF3F4F6),
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.padding(horizontal = 8.dp)
+                    )
                     Box(modifier = Modifier.width(40.dp).height(1.dp).background(Color(0xFFA89BBF).copy(alpha = 0.6f)))
                 }
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    repeat(5) { MedalSlot { showUnequipped = true } }
+
+                // 10 Slots Grid
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    repeat(5) {
+                        MedalSlot { showUnequipped = true }
+                    }
                 }
                 Spacer(modifier = Modifier.height(6.dp))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    repeat(5) { MedalSlot { showUnequipped = true } }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    repeat(5) {
+                        MedalSlot { showUnequipped = true }
+                    }
                 }
-                Row(modifier = Modifier.padding(top = 24.dp, bottom = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+
+                Row(
+                    modifier = Modifier.padding(top = 24.dp, bottom = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text("Obtained Medal(s): ", color = Color(0xFFE5E7EB), fontSize = 15.sp)
                     Text("3", color = Color(0xFFFACC15), fontSize = 15.sp, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Check>", color = Color(0xFFFACC15), fontSize = 15.sp, modifier = Modifier.clickable { showObtained = true })
+                    Text(
+                        text = "Check>",
+                        color = Color(0xFFFACC15),
+                        fontSize = 15.sp,
+                        modifier = Modifier.clickable { showObtained = true }
+                    )
                 }
             }
 
             // Tabs
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 listOf("achievement" to "Achievements", "activity" to "Activities", "gift" to "Gift").forEach { (key, label) ->
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.weight(1f).clickable { activeTab = key }
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable { activeTab = key }
                     ) {
                         Text(
                             text = label,
@@ -267,7 +217,7 @@ fun MedalScreen(onBack: () -> Unit) {
                 }
             }
 
-            // 🖼️ GRID — CARD ME IMAGE DIKHEGA
+            // Medal Grid
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
                 contentPadding = PaddingValues(16.dp),
@@ -290,12 +240,11 @@ fun MedalScreen(onBack: () -> Unit) {
                             },
                         contentAlignment = Alignment.Center
                     ) {
-                        // ✅ CARD ME VIDEO KA FIRST FRAME = IMAGE (Colorless)
-                        VideoThumbnail(
-                            videoUrl = medal.video.fullUrl,
-                            colorFilter = ColorFilter.colorMatrix(
-                                ColorMatrix().apply { setToSaturation(0f) }
-                            ),
+                        // Colorless Image display in Grid
+                        AsyncImage(
+                            model = medal.video.fullUrl,
+                            contentDescription = null,
+                            colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) }),
                             modifier = Modifier.size(medal.cardVideoSize.dp).align(Alignment.Center)
                         )
                         Text(
@@ -310,16 +259,18 @@ fun MedalScreen(onBack: () -> Unit) {
             }
         }
 
-        // ============================================
-        //  PREVIEW OVERLAY — YAHAN VIDEO CHALEGA
-        // ============================================
+        // Full Screen Overlay (Medal Detail) with Video Player
         if (selectedMedal != null && displayMedal != null) {
             Dialog(
                 onDismissRequest = { selectedMedal = null },
                 properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
             ) {
-                Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
-                    // Header
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black)
+                ) {
+                    // Top Header Area
                     Box(modifier = Modifier.fillMaxWidth().fillMaxHeight(0.3f)) {
                         AsyncImage(
                             model = "IMG_20260924_132006.png".fullUrl,
@@ -328,7 +279,10 @@ fun MedalScreen(onBack: () -> Unit) {
                             modifier = Modifier.fillMaxSize()
                         )
                         Row(
-                            modifier = Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.statusBars).padding(8.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .windowInsetsPadding(WindowInsets.statusBars)
+                                .padding(8.dp),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             IconButton(onClick = { selectedMedal = null }) {
@@ -339,11 +293,9 @@ fun MedalScreen(onBack: () -> Unit) {
                             }
                         }
 
-                        // 🎬 VIDEO PLAYER — Preview page me autoplay
-                        VideoPlayer(
-                            url = displayMedal.video.fullUrl,
-                            autoPlay = true,
-                            loop = true,
+                        // VIDEO PLAYER FOR PREVIEW
+                        MedalVideoPlayer(
+                            videoUrl = displayMedal.previewVideo.fullUrl,
                             modifier = Modifier
                                 .size(displayMedal.sheetVideoSize.dp)
                                 .align(Alignment.Center)
@@ -351,7 +303,7 @@ fun MedalScreen(onBack: () -> Unit) {
                         )
                     }
 
-                    // Bottom info
+                    // Bottom Content Area
                     Column(
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
@@ -366,14 +318,16 @@ fun MedalScreen(onBack: () -> Unit) {
                             contentDescription = "frame",
                             modifier = Modifier.size(256.dp)
                         )
+
                         Spacer(modifier = Modifier.height(16.dp))
 
+                        // Stars
                         Row(horizontalArrangement = Arrangement.Center) {
                             repeat(displayMedal.stars) {
                                 Text("★", color = Color(0xFFEAB308), fontSize = 16.sp)
                             }
                         }
-
+                        
                         Text(
                             text = displayMedal.name,
                             color = Color.White,
@@ -395,6 +349,7 @@ fun MedalScreen(onBack: () -> Unit) {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
                                 tierMedals.indices.forEach { i ->
                                     if (i > 0) Text(" > ", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp, modifier = Modifier.padding(horizontal = 8.dp))
+                                    // 3 Tabs loop
                                     AsyncImage(
                                         model = TIER_TAB_IMAGES.getOrNull(i)?.fullUrl ?: TIER_TAB_IMAGES.last().fullUrl,
                                         contentDescription = null,
@@ -453,9 +408,38 @@ fun MedalScreen(onBack: () -> Unit) {
     }
 }
 
-// ============================================
-//  Helpers
-// ============================================
+// VIDEO PLAYER COMPONENT
+@Composable
+fun MedalVideoPlayer(videoUrl: String, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val exoPlayer = remember {
+        ExoPlayer.Builder(context).build().apply {
+            setMediaItem(MediaItem.fromUri(videoUrl))
+            repeatMode = Player.REPEAT_MODE_ONE // Loop
+            playWhenReady = true
+            prepare()
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            exoPlayer.release()
+        }
+    }
+
+    AndroidView(
+        factory = {
+            PlayerView(context).apply {
+                player = exoPlayer
+                useController = false
+                setBackgroundColor(android.graphics.Color.TRANSPARENT)
+            }
+        },
+        modifier = modifier
+    )
+}
+
+// HELPER UI COMPONENTS
 @Composable
 fun MedalSlot(onClick: () -> Unit) {
     Box(
@@ -525,11 +509,16 @@ fun RulesBottomSheet(onDismiss: () -> Unit) {
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
     ) {
         Column(modifier = Modifier.fillMaxWidth().fillMaxHeight(0.5f)) {
-            Box(modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp), contentAlignment = Alignment.Center) {
+            Box(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+                contentAlignment = Alignment.Center
+            ) {
                 Text(text = "Rules", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Medium)
             }
+            
             Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp)) {
                 Text("*Rules*", color = Color(0xFFFACC15), fontSize = 16.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 12.dp))
+                
                 RuleSection("1. Important Information:", "(a) Before participating, please carefully review the event rules...\n(b) Your participation confirms that you have read...")
                 RuleSection("2. What are Medals?", "(a) Medals are special rewards...\n(b) Medals are divided by achievement...")
                 RuleSection("3. How to earn medals?", "=>. Each medal type has its own unique earning criteria...")
@@ -537,6 +526,7 @@ fun RulesBottomSheet(onDismiss: () -> Unit) {
                 RuleSection("5. Medal Benefits Expiration:", "(a) Medals generally have no expiration date...\n(b) Some medals are time-limited...\n(c) You can display a maximum of 10 medals at a time.\n(d) These will appear in your info card...\n(e) To check your medal status...")
                 RuleSection("6. Improving Medal Levels", "(=>) Your medal level is determined by your current task...")
                 RuleSection("7. Additional Notes:", "(a) We strictly prohibit any form of abuse...\n(b) We are constantly working to improve...\n(c) Medal rewards cannot be exchanged...")
+
                 Text(
                     text = "Regards, Zyora team",
                     color = Color.White,
@@ -558,37 +548,35 @@ fun RuleSection(title: String, desc: String) {
     }
 }
 
-// ============================================
-//  📦 DATA (videos)
-// ============================================
+// REAL DATA MAPPED WITH NEW PREVIEW VIDEO MP4s
 fun getMedalsData(): List<MedalItem> = listOf(
     // Rich
-    MedalItem("1", "Rich", "/VID_20260924_124439.mp4", 5, "achievement", "green", 500, 0.5f, 700, 0.85f, "rich", "0/5000000000000 Coins Of gifts Send"),
-    MedalItem("2", "Rich", "/1000200509-background.mp4", 4, "achievement", "black", 500, 0.5f, 700, 0.85f, "rich", "0/400000000000 Coins Of gifts Send"),
-    MedalItem("3", "Rich", "/1000200510-background.mp4", 5, "achievement", "black", 500, 0.5f, 700, 0.85f, "rich", "0/30000000000 Coins Of gifts Send"),
+    MedalItem("rich_1", "Rich I", "/IMG_20261023_110513.png", "/VID_20260924_124439.mp4", 1, "achievement", "black", 120, 0.5f, 200, 0.5f, "rich", "Send gifts to earn"),
+    MedalItem("rich_2", "Rich II", "/IMG_20261023_110533.png", "/1000200509-background.mp4", 2, "achievement", "black", 120, 0.5f, 200, 0.5f, "rich", "Send gifts to earn"),
+    MedalItem("rich_3", "Rich III", "/IMG_20261023_110559.png", "/1000200510-background.mp4", 3, "achievement", "black", 120, 0.5f, 200, 0.5f, "rich", "Send gifts to earn"),
 
-    // Super Gamer
-    MedalItem("new-1", "Super Gamer", "/1000201032-background.mp4", 4, "achievement", "black", 400, 0.5f, 660, 0.85f, "supergamer", "0/1000000000000 Coins You won from game"),
-    MedalItem("new-1-b", "Super Gamer 2", "/1000201032-background.mp4", 4, "achievement", "black", 400, 0.5f, 660, 0.85f, "supergamer", "0/2000000000000 Coins You won from game"),
-    MedalItem("new-1-c", "Super Gamer 3", "/1000201032-background.mp4", 4, "achievement", "black", 400, 0.5f, 660, 0.85f, "supergamer", "0/3000000000000 Coins You won from game"),
+    // Room
+    MedalItem("room_1", "Room Top I", "/IMG_20261023_110628.png", "/1000200514-background.mp4", 1, "achievement", "black", 120, 0.5f, 200, 0.5f, "room", "Room achievements"),
+    MedalItem("room_2", "Room Top II", "/IMG_20261023_110644.png", "/1000200515-background.mp4", 2, "achievement", "black", 120, 0.5f, 200, 0.5f, "room", "Room achievements"),
+    MedalItem("room_3", "Room Top III", "/IMG_20261023_110705.png", "/1000200516-background.mp4", 3, "achievement", "black", 120, 0.5f, 200, 0.5f, "room", "Room achievements"),
 
     // Millionaire
-    MedalItem("new-2", "Millionaire", "/1000200518-background.mp4", 4, "achievement", "black", 500, 0.78f, 700, 1.05f, "millionaire", "0/1000000 Online Recharge"),
-    MedalItem("new-3", "Millionaire", "/1000200521-background.mp4", 4, "achievement", "black", 500, 0.78f, 700, 1.02f, "millionaire", "0/50000000 Online Recharge"),
-    MedalItem("new-4", "Millionaire", "/1000200522-background.mp4", 4, "achievement", "black", 440, 0.78f, 700, 1.02f, "millionaire", "0/100000000 Online Recharge"),
+    MedalItem("mill_1", "Millionaire I", "/IMG_20261023_110734.png", "/1000200518-background.mp4", 1, "achievement", "black", 120, 0.5f, 200, 0.5f, "millionaire", "Recharge to earn"),
+    MedalItem("mill_2", "Millionaire II", "/IMG_20261023_110756.png", "/1000200521-background.mp4", 2, "achievement", "black", 120, 0.5f, 200, 0.5f, "millionaire", "Recharge to earn"),
+    MedalItem("mill_3", "Millionaire III", "/IMG_20261023_110825.png", "/1000200522-background.mp4", 3, "achievement", "black", 120, 0.5f, 200, 0.5f, "millionaire", "Recharge to earn"),
 
-    // Room Top
-    MedalItem("new-5", "Room Top 1", "/1000200514-background.mp4", 4, "achievement", "black", 300, 0.5f, 500, 0.85f, "roomtop", "Event Based"),
-    MedalItem("new-6", "Room Top 2", "/1000200515-background.mp4", 4, "achievement", "black", 300, 0.5f, 500, 0.85f, "roomtop", "Event Based"),
-    MedalItem("new-7", "Room Top 3", "/1000200516-background.mp4", 4, "achievement", "black", 300, 0.55f, 500, 0.85f, "roomtop", "Event Based"),
-
-    // Medal 11-13
-    MedalItem("new-8", "Medal 13", "/1000200511-background.mp4", 4, "achievement", "black", 400, 0.8f, 700, 1.15f, "medal111213", "0/50000 Coins Of gifts Send"),
-    MedalItem("new-9", "Medal 12", "/1000200512-background.mp4", 4, "achievement", "black", 400, 0.8f, 700, 1.15f, "medal111213", "0/50000 Coins Of gifts Send"),
-    MedalItem("new-10", "Medal 11", "/1000200513-background.mp4", 4, "achievement", "black", 400, 0.8f, 700, 1.15f, "medal111213", "0/50000 Coins Of gifts Send"),
-
-    // VIP
-    MedalItem("4", "VIP2", "/1000200505-background.mp4", 4, "achievement", "black", 500, 0.5f, 700, 0.85f, "vip", "0/50000 Coins Of gifts Send"),
-    MedalItem("5", "VIP1", "/1000200506-background.mp4", 4, "achievement", "black", 500, 0.5f, 700, 0.85f, "vip", "0/50000 Coins Of gifts Send"),
-    MedalItem("6", "Pure Love", "/1000200507-background.mp4", 4, "achievement", "black", 500, 0.5f, 700, 0.85f, "vip", "0/50000 Coins Of gifts Send")
+    // Super Gamer
+    MedalItem("gamer_1", "Super Gamer 1", "/IMG_20261023_110852.png", "/1000201032-background.mp4", 1, "achievement", "black", 120, 0.5f, 200, 0.5f, "gamer", "Play games to earn"),
+    MedalItem("gamer_2", "Super Gamer 2", "/IMG_20261023_110852.png", "/1000201032-background.mp4", 2, "achievement", "black", 120, 0.5f, 200, 0.5f, "gamer", "Play games to earn"),
+    MedalItem("gamer_3", "Super Gamer 3", "/IMG_20261023_110852.png", "/1000201032-background.mp4", 3, "achievement", "black", 120, 0.5f, 200, 0.5f, "gamer", "Play games to earn"),
+    
+    // VIP & Pure Love (Activity/Gifts)
+    MedalItem("vip_1", "VIP 1", "/IMG_20261023_110912.png", "/1000200506-background.mp4", 1, "activity", "black", 120, 0.5f, 200, 0.5f, "vip", "VIP Event"),
+    MedalItem("vip_2", "VIP 2", "/IMG_20261023_110930.png", "/1000200505-background.mp4", 2, "activity", "black", 120, 0.5f, 200, 0.5f, "vip", "VIP Event"),
+    MedalItem("love_1", "Pure Love", "/IMG_20261023_111000.png", "/1000200507-background.mp4", 1, "gift", "black", 120, 0.5f, 200, 0.5f, "love", "Gift rewards"),
+    
+    // Medals 11, 12, 13
+    MedalItem("medal_11", "Medal 11", "/IMG_20261023_111027.png", "/1000200513-background.mp4", 1, "activity", "black", 120, 0.5f, 200, 0.5f, "medals_x", "Special event rewards"),
+    MedalItem("medal_12", "Medal 12", "/IMG_20261023_111053.png", "/1000200512-background.mp4", 2, "activity", "black", 120, 0.5f, 200, 0.5f, "medals_x", "Special event rewards"),
+    MedalItem("medal_13", "Medal 13", "/IMG_20261023_111115.png", "/1000200511-background.mp4", 3, "activity", "black", 120, 0.5f, 200, 0.5f, "medals_x", "Special event rewards")
 )
