@@ -355,7 +355,6 @@ private fun LevelUpgradeDialog(onDismiss: () -> Unit) {
 fun Level(onBack: () -> Unit = {}) {
     val context = LocalContext.current
     val configuration = LocalConfiguration.current
-    val screenHeight = configuration.screenHeightDp
 
     val userPrefs = remember { context.getSharedPreferences("hurry_user", Context.MODE_PRIVATE) }
     val storedName = userPrefs.getString("name", "")?.trim().orEmpty()
@@ -382,9 +381,9 @@ fun Level(onBack: () -> Unit = {}) {
     val pagerState = rememberPagerState { profileBgImages.size }
     val themePagerState = rememberPagerState { themeBgImages.size }
 
-    val topBannerSpace = (screenHeight * 0.07).dp
-    val vh3 = (screenHeight * 0.03).dp
-    val newSectionTopPadding = (48.dp - vh3).coerceAtLeast(8.dp)
+    // DYNAMIC SPACING UPDATED YAHAN
+    val topBannerSpace = 4.dp
+    val newSectionTopPadding = 15.dp
 
     LaunchedEffect(pagerState) {
         while (true) {
@@ -428,16 +427,15 @@ fun Level(onBack: () -> Unit = {}) {
 
                 Spacer(Modifier.height(topBannerSpace))
 
-                // YE RAHA TERA PERFECT TOP BANNER - No calculation, No offset, Original height without ANY cut!
                 Box(Modifier.fillMaxWidth()) {
                     Image(
                         painter = profilePainter,
                         contentDescription = "Top Card Frame",
-                        modifier = Modifier.fillMaxWidth().wrapContentHeight(), // Natural original height legi image khud
-                        contentScale = ContentScale.FillWidth // Bina crop huye width aur height match hogi
+                        modifier = Modifier.fillMaxWidth().wrapContentHeight(), 
+                        contentScale = ContentScale.FillWidth 
                     )
                     Row(
-                        modifier = Modifier.matchParentSize().padding(horizontal = 32.dp), // Data center me fit ho jayega image ke
+                        modifier = Modifier.matchParentSize().padding(horizontal = 32.dp), 
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Box(Modifier.size(48.dp).clip(CircleShape).background(Color(0xFF626A75)), contentAlignment = Alignment.Center) {
@@ -958,7 +956,7 @@ fun Level(onBack: () -> Unit = {}) {
                 }
 
                 // ==============================================
-                // NEW: CUSTOMIZED THEME SECTION
+                // NEW: CUSTOMIZED THEME SECTION (LAMBAA KIYA HUA)
                 // ==============================================
                 item {
                     SectionHeading("Customized Theme")
@@ -974,18 +972,19 @@ fun Level(onBack: () -> Unit = {}) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(200.dp)
+                            .wrapContentHeight() // <-- Image ki height lega ab
+                            .defaultMinSize(minHeight = 350.dp) // <-- Jab tak image load na ho screen choti na ho jaye
                             .clip(RoundedCornerShape(8.dp))
                     ) {
                         HorizontalPager(
                             state = themePagerState,
-                            modifier = Modifier.fillMaxSize()
+                            modifier = Modifier.fillMaxWidth().wrapContentHeight() // <-- Isko bhi wrap height de diya
                         ) { page ->
                             AsyncImage(
                                 model = levelAsset(themeBgImages[page]),
                                 contentDescription = null,
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Fit 
+                                modifier = Modifier.fillMaxWidth().wrapContentHeight(), // <-- Full width + Auto height
+                                contentScale = ContentScale.FillWidth // <-- Pura width cover karega, height image k hisab se khud calculate hogi
                             )
                         }
 
