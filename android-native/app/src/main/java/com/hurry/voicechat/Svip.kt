@@ -57,7 +57,7 @@ fun SvipPage(onBack: () -> Unit = {}) {
                 .align(Alignment.TopCenter)
                 .zIndex(30f)
         ) {
-            // Background Image (Updated as requested)
+            // Background Image
             AsyncImage(
                 model = "$baseUrl/file_0000000099d88211a80bf7a8cf7aee62.png",
                 contentDescription = null,
@@ -231,8 +231,22 @@ fun SvipVideoPlayer(videoUrl: String) {
                                 setOnPreparedListener { mp ->
                                     mp.isLooping = true 
                                     mp.setVolume(0f, 0f) 
-                                    start()
+                                    mp.start()
                                 }
+                                
+                                // 🔥 Yaha loop fix kiya hai - agar video atak jaye toh manually force restart karega
+                                setOnCompletionListener { mp ->
+                                    mp.seekTo(0)
+                                    mp.start()
+                                }
+                                
+                                // 🔥 Error handling - agar minor glitch aaye toh player crash ya freeze nahi hoga
+                                setOnErrorListener { mp, _, _ ->
+                                    mp.seekTo(0)
+                                    mp.start()
+                                    true
+                                }
+
                                 prepareAsync()
                             } catch (e: Exception) {
                                 e.printStackTrace()
@@ -254,8 +268,8 @@ fun SvipVideoPlayer(videoUrl: String) {
         },
         modifier = Modifier
             .offset(y = 40.dp) 
-            .fillMaxWidth(0.7f) // Yahan size thora increase kar diya hai (0.6f se 0.7f)
-            .aspectRatio(if (videoAspectRatio > 0f) videoAspectRatio else 1f) // Asli aspect ratio, koi black crop nahi!
+            .fillMaxWidth(0.7f) 
+            .aspectRatio(if (videoAspectRatio > 0f) videoAspectRatio else 1f) 
             .graphicsLayer {
                 alpha = 0.99f 
                 // Naya filter laga diya jo black aur green gayab karega
