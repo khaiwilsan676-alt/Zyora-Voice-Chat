@@ -23,7 +23,7 @@ android {
     val firebaseApiKey = providers.gradleProperty("FIREBASE_API_KEY")
         .orElse(providers.environmentVariable("FIREBASE_API_KEY"))
         .orElse(providers.environmentVariable("NEXT_PUBLIC_FIREBASE_API_KEY"))
-        .orElse("AIzaSyBNTxdeuqc3F7R4eyjmwdQqQ2YWv9-9yv4")
+        .orElse("AIzaSyCnTCkTKXHjsWBQmgSqfiJtR5kjZgb5aUY")
         .get()
         .replace("\\", "\\\\")
         .replace("\"", "\\\"")
