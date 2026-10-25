@@ -353,7 +353,7 @@ private fun AuthField(
 private suspend fun googleSupabaseSignIn(context: android.content.Context): JSONObject {
     val credentialManager = CredentialManager.create(context)
     // This is the Web OAuth client configured in Supabase's Google provider.
-    val serverClientId = "254931403969-idrk7j3oettprc4m9dqpl7e7tlh50ctf.apps.googleusercontent.com"
+    val serverClientId = "164837688319-uu6uhd20mner48etd4ci6aeu3nuvt8gp.apps.googleusercontent.com"
 
     // Keep the existing Google account-picker UX.
     val credential = try {
