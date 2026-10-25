@@ -68,11 +68,11 @@ private data class NativeLevelFrameItem(
     val imageFile: String
 )
 
-// Naya Vehicle Data Class
 private data class NativeLevelVehicleItem(
     val levelText: String,
     val imageFile: String,
-    val videoFile: String
+    val videoFile: String,
+    val overlayImage: String
 )
 
 private val levelTiers = listOf(
@@ -108,18 +108,22 @@ private val framesList = listOf(
     NativeLevelFrameItem("Lv.100", "IMG_20261025_140657.png")
 )
 
-// Nayi Vehicles List
 private val vehiclesList = listOf(
-    NativeLevelVehicleItem("Lv.25", "IMG_20261025_124343.png", "alioss_16_2025080802181154988~2.mp4"), // 75 wali 25 m daal di
-    NativeLevelVehicleItem("Lv.45", "IMG_20261025_124403.png", "alioss_17_2025110614082840769~2.mp4"), // 90 wali 45 m daal di
-    NativeLevelVehicleItem("Lv.60", "IMG_20261025_124423.png", "alioss_17_2025111717234047534~2.mp4"), // 25 wali 60 m daal di
-    NativeLevelVehicleItem("Lv.75", "IMG_20261025_124548.png", "alioss_17_2025110916541444937~2.mp4"), // 45 wali 75 m daal di
-    NativeLevelVehicleItem("Lv.90", "IMG_20261025_124608.png", "alioss_17_2025103016391722282~2.mp4")  // 60 wali 90 m daal di
+    NativeLevelVehicleItem("Lv.25", "IMG_20261025_124343.png", "alioss_16_2025080802181154988~2.mp4", "IMG_20261025_162952.png"),
+    NativeLevelVehicleItem("Lv.45", "IMG_20261025_124403.png", "alioss_17_2025110614082840769~2.mp4", "IMG_20261025_163014.png"),
+    NativeLevelVehicleItem("Lv.60", "IMG_20261025_124423.png", "alioss_17_2025111717234047534~2.mp4", "IMG_20261025_163038.png"),
+    NativeLevelVehicleItem("Lv.75", "IMG_20261025_124548.png", "alioss_17_2025110916541444937~2.mp4", "IMG_20261025_163058.png"),
+    NativeLevelVehicleItem("Lv.90", "IMG_20261025_124608.png", "alioss_17_2025103016391722282~2.mp4", "IMG_20261025_163130.png")
 )
 
 private val profileBgImages = listOf(
     "file_00000000edf082119f3c51da31cca16b.png",
     "file_00000000acd48211ba29883fe47a0215.png"
+)
+
+private val themeBgImages = listOf(
+    "file_00000000d88082118c713ffd53d326e9.png",
+    "1792930023475.png"
 )
 
 @Composable
@@ -170,9 +174,11 @@ private fun SectionHeading(title: String) {
     }
 }
 
-// BSS YE WALA COMPONENT MODIFIED HAI BLACK REMOVE KARNE KE LIYE
 @Composable
-private fun FullScreenVideoDialog(videoUrl: String, isMedal: Boolean, onDismiss: () -> Unit) {
+private fun FullScreenVideoDialog(videoUrl: String, isMedal: Boolean, overlayImageUrl: String?, onDismiss: () -> Unit) {
+    var videoAspectRatio by remember { mutableStateOf(9f / 16f) }
+    val configuration = LocalConfiguration.current
+
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(
@@ -187,16 +193,14 @@ private fun FullScreenVideoDialog(videoUrl: String, isMedal: Boolean, onDismiss:
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                // Yahan halka sa black dark background add kiya gaya hai sirf Medal ke liye
                 .background(if (isMedal) Color.Black.copy(alpha = 0.6f) else Color.Transparent)
                 .clickable { onDismiss() }, 
             contentAlignment = Alignment.Center
         ) {
             AndroidView(
                 factory = { ctx ->
-                    // VideoView ki jagah TextureView jisme transparent video perfectly blend hogi
                     android.view.TextureView(ctx).apply {
-                        isOpaque = false // Transparent background ke liye jaruri
+                        isOpaque = false 
                         surfaceTextureListener = object : android.view.TextureView.SurfaceTextureListener {
                             var mediaPlayer: android.media.MediaPlayer? = null
 
@@ -205,6 +209,13 @@ private fun FullScreenVideoDialog(videoUrl: String, isMedal: Boolean, onDismiss:
                                     try {
                                         setDataSource(videoUrl)
                                         setSurface(android.view.Surface(surface))
+                                        
+                                        setOnVideoSizeChangedListener { _, w, h ->
+                                            if (w > 0 && h > 0) {
+                                                videoAspectRatio = w.toFloat() / h.toFloat()
+                                            }
+                                        }
+
                                         setOnPreparedListener { mp ->
                                             mp.isLooping = false
                                             start()
@@ -232,16 +243,16 @@ private fun FullScreenVideoDialog(videoUrl: String, isMedal: Boolean, onDismiss:
                     }
                 },
                 modifier = Modifier
-                    .fillMaxSize()
+                    .fillMaxWidth() 
+                    .aspectRatio(videoAspectRatio) 
                     .graphicsLayer {
                         alpha = 0.99f 
                         if (isMedal) {
-                            // Jaduwi filter jo Video se purely Black color nikal ke transparent kar dega
                             val removeBlackMatrix = ColorMatrix(floatArrayOf(
-                                1f, 0f, 0f, 0f, 0f,  // R
-                                0f, 1f, 0f, 0f, 0f,  // G
-                                0f, 0f, 1f, 0f, 0f,  // B
-                                1.2f, 1.2f, 1.2f, 0f, 0f // Alpha channel ko RGB brightness se map karna
+                                1f, 0f, 0f, 0f, 0f,  
+                                0f, 1f, 0f, 0f, 0f,  
+                                0f, 0f, 1f, 0f, 0f,  
+                                1.2f, 1.2f, 1.2f, 0f, 0f 
                             ))
                             colorFilter = ColorFilter.colorMatrix(removeBlackMatrix)
                         }
@@ -249,24 +260,31 @@ private fun FullScreenVideoDialog(videoUrl: String, isMedal: Boolean, onDismiss:
                     .drawWithContent {
                         drawContent()
                         if (!isMedal) {
-                            // ENTRY VIDEO KE LIYE PERFECT 10% MIXING/FADE EFFECT
-                            // Top s 10% blend
                             drawRect(
                                 brush = Brush.verticalGradient(
-                                    0.0f to Color(0xFF04060A), // Same as app background color
-                                    0.1f to Color.Transparent
-                                )
-                            )
-                            // Bottom s 10% blend
-                            drawRect(
-                                brush = Brush.verticalGradient(
-                                    0.9f to Color.Transparent,
-                                    1.0f to Color(0xFF04060A) // Same as app background color
-                                )
+                                    0.0f to Color.Transparent, 
+                                    0.1f to Color.Black,       
+                                    0.9f to Color.Black,       
+                                    1.0f to Color.Transparent  
+                                ),
+                                blendMode = BlendMode.DstIn 
                             )
                         }
                     }
             )
+
+            if (overlayImageUrl != null) {
+                AsyncImage(
+                    model = overlayImageUrl,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = (configuration.screenHeightDp * 0.10f).dp)
+                        .fillMaxWidth(0.9f)
+                        .wrapContentHeight(),
+                    contentScale = ContentScale.FillWidth
+                )
+            }
         }
     }
 }
@@ -275,53 +293,43 @@ private fun FullScreenVideoDialog(videoUrl: String, isMedal: Boolean, onDismiss:
 private fun LevelUpgradeDialog(onDismiss: () -> Unit) {
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Surface(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).widthIn(max = 340.dp),
-            shape = RoundedCornerShape(24.dp),
-            color = Color.White,
-            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5E7EB)),
-            shadowElevation = 20.dp
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp).widthIn(max = 300.dp),
+            shape = RoundedCornerShape(12.dp),
+            color = Color.Black,
+            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF333333)),
+            shadowElevation = 10.dp
         ) {
             Column(Modifier.fillMaxWidth()) {
                 Row(
-                    Modifier.fillMaxWidth().padding(top = 20.dp, bottom = 8.dp),
+                    Modifier.fillMaxWidth().padding(top = 20.dp, bottom = 12.dp),
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("◆", color = Color(0xFFF59E0B), fontSize = 18.sp)
-                    Text("  How to upgrade  ", color = Color(0xFF111827), fontSize = 18.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.3.sp)
-                    Text("◆", color = Color(0xFFF59E0B), fontSize = 18.sp)
+                    Text("How to upgrade", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.3.sp)
                 }
                 Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp)) {
                     val methods = listOf(
-                        Triple("Send Gifts", "1 coins=1 EXP", 0),
-                        Triple("Join rooms", "2000 EXP/Day", 1),
-                        Triple("Share Rooms", "2000 EXP/Day", 2),
-                        Triple("Take the mic and unmute in your ov", "1 min = 500 exp, 10000 exp/day", 3),
-                        Triple("Take the mic and unmute in others'", "1 min = 500 exp, 20000 exp/day", 4)
+                        Pair("Send Gifts", "1 coins = 1 EXP"),
+                        Pair("Join rooms", "2000 EXP/Day"),
+                        Pair("Share Rooms", "2000 EXP/Day"),
+                        Pair("Take the mic and unmute in your ov", "1 min = 500 exp, 10000 exp/day"),
+                        Pair("Take the mic and unmute in others'", "1 min = 500 exp, 20000 exp/day")
                     )
                     methods.forEachIndexed { index, item ->
-                        Row(Modifier.fillMaxWidth().padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
-                                when (item.third) {
-                                    0 -> Icon(Icons.Default.CardGiftcard, null, tint = Color(0xFF3B82F6), modifier = Modifier.size(40.dp))
-                                    1 -> Icon(Icons.Default.Home, null, tint = Color(0xFF3B82F6), modifier = Modifier.size(40.dp))
-                                    2 -> Icon(Icons.Default.Share, null, tint = Color(0xFF3B82F6), modifier = Modifier.size(40.dp))
-                                    else -> Icon(Icons.Default.Mic, null, tint = Color(0xFF3B82F6), modifier = Modifier.size(40.dp))
-                                }
-                            }
-                            Spacer(Modifier.width(16.dp))
+                        Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
-                                Text(item.first, color = Color(0xFF111827), fontSize = 15.sp, fontWeight = FontWeight.SemiBold, lineHeight = 17.sp, maxLines = 1, overflow = TextOverflow.Clip)
-                                Text(item.second, color = Color(0xFF6B7280), fontSize = 13.sp, lineHeight = 16.sp)
+                                Text(item.first, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, lineHeight = 17.sp, maxLines = 1, overflow = TextOverflow.Clip)
+                                Spacer(Modifier.height(4.dp))
+                                Text(item.second, color = Color.LightGray, fontSize = 13.sp, lineHeight = 16.sp)
                             }
                         }
-                        if (index != methods.lastIndex) HorizontalDivider(color = Color(0xFFF3F4F6))
+                        if (index != methods.lastIndex) HorizontalDivider(color = Color(0xFF333333))
                     }
                 }
-                Box(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 0.dp, bottom = 16.dp)) {
+                Box(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 16.dp)) {
                     Button(
                         onClick = onDismiss,
-                        modifier = Modifier.fillMaxWidth().height(52.dp),
+                        modifier = Modifier.fillMaxWidth().height(48.dp),
                         shape = RoundedCornerShape(50),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB)),
                         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp)
@@ -363,14 +371,14 @@ fun Level(onBack: () -> Unit = {}) {
     var showAllLevels by remember { mutableStateOf(false) }
     var showAllRewards by remember { mutableStateOf(false) }
     
-    // Naye View More states
     var showAllFrames by remember { mutableStateOf(false) }
     var showAllMedals by remember { mutableStateOf(false) }
     var showAllVehicles by remember { mutableStateOf(false) }
     
-    var selectedVideoData by remember { mutableStateOf<Pair<String, Boolean>?>(null) }
+    var selectedVideoData by remember { mutableStateOf<Triple<String, Boolean, String?>?>(null) }
 
     val pagerState = rememberPagerState { profileBgImages.size }
+    val themePagerState = rememberPagerState { themeBgImages.size }
 
     val topBannerSpace = (screenHeight * 0.07).dp
     val vh3 = (screenHeight * 0.03).dp
@@ -382,6 +390,16 @@ fun Level(onBack: () -> Unit = {}) {
             if (profileBgImages.isNotEmpty()) {
                 val nextPage = (pagerState.currentPage + 1) % profileBgImages.size
                 pagerState.animateScrollToPage(nextPage)
+            }
+        }
+    }
+    
+    LaunchedEffect(themePagerState) {
+        while (true) {
+            delay(5000)
+            if (themeBgImages.isNotEmpty()) {
+                val nextPage = (themePagerState.currentPage + 1) % themeBgImages.size
+                themePagerState.animateScrollToPage(nextPage)
             }
         }
     }
@@ -518,9 +536,7 @@ fun Level(onBack: () -> Unit = {}) {
                     }
                 }
 
-                item {
-                    Spacer(Modifier.height(24.dp))
-                }
+                item { Spacer(Modifier.height(24.dp)) }
 
                 // ==============================================
                 // 2. REWARDS SECTION
@@ -576,9 +592,7 @@ fun Level(onBack: () -> Unit = {}) {
                                 )
                             }
                         }
-                        repeat(3 - rowItems.size) {
-                            Spacer(Modifier.weight(1f))
-                        }
+                        repeat(3 - rowItems.size) { Spacer(Modifier.weight(1f)) }
                     }
                     Spacer(Modifier.height(10.dp))
                 }
@@ -600,9 +614,7 @@ fun Level(onBack: () -> Unit = {}) {
                     }
                 }
 
-                item {
-                    Spacer(Modifier.height(24.dp))
-                }
+                item { Spacer(Modifier.height(24.dp)) }
 
                 // ==============================================
                 // NEW FRAME SECTION
@@ -648,7 +660,7 @@ fun Level(onBack: () -> Unit = {}) {
                                 AsyncImage(
                                     model = levelAsset(frame.imageFile),
                                     contentDescription = null,
-                                    modifier = Modifier.size(110.dp).align(Alignment.Center) 
+                                    modifier = Modifier.size(110.dp).align(Alignment.Center).offset(y = (-15).dp) 
                                 )
                                 
                                 val starCount = (frame.levelText.replace(Regex("[^0-9]"), "").toIntOrNull() ?: 0) % 3 + 3
@@ -667,9 +679,7 @@ fun Level(onBack: () -> Unit = {}) {
                                 }
                             }
                         }
-                        repeat(2 - rowItems.size) {
-                            Spacer(Modifier.weight(1f))
-                        }
+                        repeat(2 - rowItems.size) { Spacer(Modifier.weight(1f)) }
                     }
                     Spacer(Modifier.height(10.dp))
                 }
@@ -691,9 +701,7 @@ fun Level(onBack: () -> Unit = {}) {
                     }
                 }
 
-                item {
-                    Spacer(Modifier.height(24.dp))
-                }
+                item { Spacer(Modifier.height(24.dp)) }
 
                 // ==============================================
                 // 3. MEDAL SECTION 
@@ -719,7 +727,7 @@ fun Level(onBack: () -> Unit = {}) {
                                     .background(Color.White.copy(alpha = 0.1f), RoundedCornerShape(8.dp))
                                     .clip(RoundedCornerShape(8.dp))
                                     .clickable { 
-                                        selectedVideoData = levelAsset(medal.videoFile) to true 
+                                        selectedVideoData = Triple(levelAsset(medal.videoFile), true, null)
                                     }
                             ) {
                                 Box(
@@ -761,9 +769,7 @@ fun Level(onBack: () -> Unit = {}) {
                                 }
                             }
                         }
-                        repeat(2 - rowItems.size) {
-                            Spacer(Modifier.weight(1f))
-                        }
+                        repeat(2 - rowItems.size) { Spacer(Modifier.weight(1f)) }
                     }
                     Spacer(Modifier.height(10.dp))
                 }
@@ -785,9 +791,7 @@ fun Level(onBack: () -> Unit = {}) {
                     }
                 }
 
-                item {
-                    Spacer(Modifier.height(24.dp))
-                }
+                item { Spacer(Modifier.height(24.dp)) }
 
                 // ==============================================
                 // VEHICLE/ENTRY SECTION
@@ -813,7 +817,7 @@ fun Level(onBack: () -> Unit = {}) {
                                     .background(Color.White.copy(alpha = 0.1f), RoundedCornerShape(8.dp))
                                     .clip(RoundedCornerShape(8.dp)) 
                                     .clickable { 
-                                        selectedVideoData = levelAsset(vehicle.videoFile) to false 
+                                        selectedVideoData = Triple(levelAsset(vehicle.videoFile), false, levelAsset(vehicle.overlayImage))
                                     }
                             ) {
                                 Box(
@@ -836,7 +840,7 @@ fun Level(onBack: () -> Unit = {}) {
                                 AsyncImage(
                                     model = levelAsset(vehicle.imageFile),
                                     contentDescription = null,
-                                    modifier = Modifier.size(110.dp).align(Alignment.Center) 
+                                    modifier = Modifier.size(110.dp).align(Alignment.Center).offset(y = (-15).dp) 
                                 )
 
                                 val starCount = (vehicle.levelText.replace(Regex("[^0-9]"), "").toIntOrNull() ?: 0) % 3 + 3
@@ -855,9 +859,7 @@ fun Level(onBack: () -> Unit = {}) {
                                 }
                             }
                         }
-                        repeat(2 - rowItems.size) {
-                            Spacer(Modifier.weight(1f))
-                        }
+                        repeat(2 - rowItems.size) { Spacer(Modifier.weight(1f)) }
                     }
                     Spacer(Modifier.height(10.dp))
                 }
@@ -879,16 +881,20 @@ fun Level(onBack: () -> Unit = {}) {
                     }
                 }
 
-                item {
-                    Spacer(Modifier.height(24.dp))
-                }
+                item { Spacer(Modifier.height(24.dp)) }
 
                 // ==============================================
                 // 5. CUSTOMIZE PROFILE BACKGROUND SECTION 
                 // ==============================================
                 item {
-                    SectionHeading("Customize Profile Background") 
-                    Spacer(Modifier.height(8.dp))
+                    SectionHeading("Customize Profile Background")
+                    
+                    Text(
+                        text = "Customized Your Profile Background Upload Image",
+                        color = Color.LightGray,
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(top = 4.dp, bottom = 8.dp)
+                    )
 
                     Box(
                         modifier = Modifier
@@ -912,7 +918,7 @@ fun Level(onBack: () -> Unit = {}) {
                             modifier = Modifier
                                 .align(Alignment.TopStart)
                                 .background(
-                                    color = Color.Black.copy(alpha = 0.4f), 
+                                    color = Color.Black.copy(alpha = 0.3f), 
                                     shape = RoundedCornerShape(bottomEnd = 8.dp)
                                 )
                                 .padding(horizontal = 12.dp, vertical = 6.dp)
@@ -943,6 +949,95 @@ fun Level(onBack: () -> Unit = {}) {
                             }
                         }
                     }
+                    Spacer(Modifier.height(24.dp)) 
+                }
+
+                // ==============================================
+                // NEW: CUSTOMIZED THEME SECTION
+                // ==============================================
+                item {
+                    SectionHeading("Customized Theme")
+                    
+                    Text(
+                        text = "Customized your Room Theme upload image",
+                        color = Color.LightGray,
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(top = 4.dp, bottom = 8.dp)
+                    )
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(260.dp)
+                            .background(Color.White.copy(alpha = 0.05f), RoundedCornerShape(8.dp))
+                            .clip(RoundedCornerShape(8.dp))
+                    ) {
+                        Column(modifier = Modifier.fillMaxSize()) {
+                            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                                HorizontalPager(
+                                    state = themePagerState,
+                                    modifier = Modifier.fillMaxSize()
+                                ) { page ->
+                                    AsyncImage(
+                                        model = levelAsset(themeBgImages[page]),
+                                        contentDescription = null,
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentScale = ContentScale.Crop 
+                                    )
+                                }
+
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.TopStart)
+                                        .background(
+                                            color = Color.Black.copy(alpha = 0.3f), 
+                                            shape = RoundedCornerShape(bottomEnd = 8.dp)
+                                        )
+                                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                                ) {
+                                    Text(
+                                        text = "Lv.30",
+                                        color = Color.White,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(Color.White.copy(alpha = 0.1f)) 
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column {
+                                    StarRow(starCount = 3) 
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = "Lv.30 Customized Theme",
+                                        color = Color.LightGray,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                
+                                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    repeat(themeBgImages.size) { index ->
+                                        Box(
+                                            modifier = Modifier
+                                                .size(6.dp)
+                                                .clip(CircleShape)
+                                                .background(
+                                                    if (themePagerState.currentPage == index) Color.White else Color.Black
+                                                )
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
                     Spacer(Modifier.height(16.dp))
                 }
             }
@@ -951,8 +1046,8 @@ fun Level(onBack: () -> Unit = {}) {
 
     if (showUpgrade) LevelUpgradeDialog { showUpgrade = false }
 
-    selectedVideoData?.let { (videoUrl, isMedal) ->
-        FullScreenVideoDialog(videoUrl = videoUrl, isMedal = isMedal) {
+    selectedVideoData?.let { (videoUrl, isMedal, overlayImg) ->
+        FullScreenVideoDialog(videoUrl = videoUrl, isMedal = isMedal, overlayImageUrl = overlayImg) {
             selectedVideoData = null
         }
     }
