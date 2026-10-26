@@ -388,17 +388,28 @@ private suspend fun googleSupabaseSignIn(context: android.content.Context): JSON
     val authResult = try {
         FirebaseAuth.getInstance().signInWithCredential(firebaseCredential).await()
     } catch (t: Throwable) {
+        val authError = t as? com.google.firebase.auth.FirebaseAuthException
+        val code = authError?.errorCode.orEmpty()
         val message = t.message.orEmpty()
-        throw IllegalStateException(when {
-            message.contains("ERROR_ACCOUNT_EXISTS_WITH_DIFFERENT_CREDENTIAL", ignoreCase = true) ->
+        android.util.Log.e("ZyoraAuth", "Firebase Google sign-in failed; code=$code", t)
+        val userMessage = when {
+            code == "ERROR_ACCOUNT_EXISTS_WITH_DIFFERENT_CREDENTIAL" ||
+                message.contains("ERROR_ACCOUNT_EXISTS_WITH_DIFFERENT_CREDENTIAL", ignoreCase = true) ->
                 "This email is already linked to another sign-in method. Use the existing login method."
-            message.contains("ERROR_INVALID_CREDENTIAL", ignoreCase = true) ||
+            code == "ERROR_INVALID_CREDENTIAL" || code == "ERROR_INVALID_IDP_RESPONSE" ||
+                code == "ERROR_INVALID_USER_TOKEN" ||
+                message.contains("ERROR_INVALID_CREDENTIAL", ignoreCase = true) ||
                 message.contains("ERROR_INVALID_USER_TOKEN", ignoreCase = true) ->
-                "Google sign-in token was rejected. Check the Google OAuth configuration in Firebase."
-            message.contains("ERROR_OPERATION_NOT_ALLOWED", ignoreCase = true) ->
+                "Google sign-in credential was rejected by Firebase. Verify the native APK SHA-1/SHA-256 and Google OAuth client configuration."
+            code == "ERROR_OPERATION_NOT_ALLOWED" ||
+                message.contains("ERROR_OPERATION_NOT_ALLOWED", ignoreCase = true) ->
                 "Google sign-in is not enabled in Firebase Authentication."
-            else -> message.ifBlank { "Firebase Google sign-in failed. Please try again." }
-        })
+            code == "ERROR_NETWORK_REQUEST_FAILED" ->
+                "Network error while contacting Firebase. Check your internet connection and try again."
+            else -> "Firebase Google sign-in failed" + (if (code.isNotBlank()) " ($code)" else "") + ": " +
+                message.ifBlank { "Please try again." }
+        }
+        throw IllegalStateException(userMessage, t)
     }
 
     val firebaseUser = authResult.user
