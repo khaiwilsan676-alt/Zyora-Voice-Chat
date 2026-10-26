@@ -190,14 +190,11 @@ fun RoomPage(
     var announcement by remember{mutableStateOf("")}
     var roomAdminIds by remember(roomId) { mutableStateOf<List<String>>(emptyList()) }
     var roomAdminUsers by remember(roomId) { mutableStateOf<List<RoomInfoFollower>>(emptyList()) }
-    // Keep the selected mic mode stable across room re-entry and settings opens.
     var roomMicMode by remember(roomId) { mutableIntStateOf(appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).getInt("micMode_$roomId", 10)) }
     var roomTheme by remember(roomId) { mutableStateOf(appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).getString("theme_$roomId", "forest-night") ?: "forest-night") }
     
-    // Match the established Mine > Wallet key so Lucky Bag debits the same MongoDB wallet.
     val canonicalWalletUserId = accountId.ifBlank { currentUser.uid.ifBlank { currentUser.id } }
 
-    // Lucky Bag States
     var showFloatingLuckyBag by remember { mutableStateOf(false) }
     var showLuckyBagCenterReveal by remember { mutableStateOf(false) }
     var showLuckyBagClaimedCard by remember { mutableStateOf(false) }
@@ -208,8 +205,6 @@ fun RoomPage(
     var luckyBagClaimError by remember { mutableStateOf<String?>(null) }
     var luckyBagClaimAmount by remember { mutableLongStateOf(0L) }
 
-    // A user who enters from the global GO banner may have missed the live socket event.
-    // Restore the latest active bag for this room from the server.
     LaunchedEffect(roomId, accountId) {
         withContext(Dispatchers.IO) {
             runCatching {
@@ -346,7 +341,6 @@ fun RoomPage(
     var showFruitParty by remember{mutableStateOf(false)}
     var showSeatSheet by remember{mutableStateOf(false)}
 
-    // MUSIC STATE
     var miniMusicTrack by remember { mutableStateOf<NativeMusicTrack?>(null) }
     var musicControllerMinimized by remember { mutableStateOf(false) }
     var isMusicPlaying by remember { mutableStateOf(false) }
@@ -637,7 +631,6 @@ fun RoomPage(
         JitsiRoomAudio(roomId=roomId,userName=currentUser.name,canSpeak=seats.any { it.number <= roomMicMode && it.occupied && it.accountId == accountId && !it.muted },onSpeakingChanged={localVoiceSpeaking=it})
         AsyncImage(model=when(roomTheme) { "mood-light" -> "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/1784533036732~2.jpg"; "custom" -> appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).getString("customTheme_$roomId", null) ?: "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/1784875884052~2.jpg"; else -> "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/1784875884052~2.jpg" },contentDescription="Room theme background",modifier=Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
 
-        // TOP ROW: Trophy + Music Pill
         Row(modifier = Modifier.align(Alignment.TopStart).padding(top = 84.dp, start = 4.dp),verticalAlignment = Alignment.CenterVertically,horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             Row(modifier = Modifier.height(22.dp).background(Brush.horizontalGradient(listOf(Color(0xE6242B35),Color(0x99242B35),Color.Transparent))).clickable { showInfo = true }.padding(start = 12.dp, end = 12.dp),verticalAlignment = Alignment.CenterVertically) {
                 TransparentGreenImage(url = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/1788258883971~2.jpg",modifier = Modifier.size(16.dp))
@@ -716,19 +709,21 @@ fun RoomPage(
                 }
             }
             
-            Column(Modifier.fillMaxWidth().padding(horizontal=10.dp).padding(top=44.dp, bottom=8.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+            val topPadding = if (roomMicMode == 5) 36.dp else 44.dp
+            Column(Modifier.fillMaxWidth().padding(horizontal=10.dp).padding(top=topPadding, bottom=8.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
                 if (roomMicMode == 5) {
-                    // Five-mic layout: one centered mic in row one, four mics in row two.
+                    val micSize = 65.dp
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-                        seats.take(1).forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, isSpeaking = seat.speaking || (seat.accountId == accountId && localVoiceSpeaking)) { selectedSeat = seat.number; showSeatSheet = true } }
+                        seats.take(1).forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, isSpeaking = seat.speaking || (seat.accountId == accountId && localVoiceSpeaking), seatSize = micSize) { selectedSeat = seat.number; showSeatSheet = true } }
                     }
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        seats.drop(1).take(4).forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, isSpeaking = seat.speaking || (seat.accountId == accountId && localVoiceSpeaking)) { selectedSeat = seat.number; showSeatSheet = true } }
+                        seats.drop(1).take(4).forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, isSpeaking = seat.speaking || (seat.accountId == accountId && localVoiceSpeaking), seatSize = micSize) { selectedSeat = seat.number; showSeatSheet = true } }
                     }
                 } else {
+                    val micSize = 61.dp
                     seats.take(roomMicMode.coerceIn(5, 15)).chunked(5).forEach { rowSeats ->
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            rowSeats.forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, isSpeaking = seat.speaking || (seat.accountId == accountId && localVoiceSpeaking)) { selectedSeat = seat.number; showSeatSheet = true } }
+                            rowSeats.forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, isSpeaking = seat.speaking || (seat.accountId == accountId && localVoiceSpeaking), seatSize = micSize) { selectedSeat = seat.number; showSeatSheet = true } }
                         }
                     }
                 }
@@ -830,8 +825,6 @@ fun RoomPage(
         LaunchedEffect(Unit) { while (true) { kotlinx.coroutines.delay(3000); if (!sideBannerPager.isScrollInProgress) sideBannerPager.animateScrollToPage((sideBannerPager.currentPage + 1) % sideBannerImages.size) } }
 
         Column(modifier=Modifier.align(Alignment.BottomEnd).padding(end=10.dp, bottom=68.dp).heightIn(max=380.dp).verticalScroll(rememberScrollState()),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(2.dp)) {
-            
-            // ---> LUCKY BAG FLOATING ICON <---
             if (showFloatingLuckyBag) {
                 AsyncImage(
                     model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261021_170707.png",
@@ -880,7 +873,6 @@ fun RoomPage(
             }
         }
 
-        // ==================== MUSIC CONTROLLER CARD ====================
         if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.isMusicPageOpen && MusicPlaybackState.wasPlayedOnMusicPage && MusicPlaybackState.musicPageBackPressed) {
             val track = miniMusicTrack!!
             Box(
@@ -1198,7 +1190,6 @@ fun RoomPage(
             )
         }
         
-        // ==================== CENTER LUCKY BAG OVERLAY ====================
         if (showLuckyBagCenterReveal) {
             Box(
                 Modifier
@@ -1241,7 +1232,7 @@ fun RoomPage(
                     
                     Box(
                         modifier = Modifier
-                             .offset(y = 4.dp) // slightly higher
+                             .offset(y = 4.dp)
                             .width(190.dp)
                             .height(72.dp)
                             .clip(RoundedCornerShape(50))
@@ -1305,11 +1296,9 @@ fun RoomPage(
             }
         }
         
-        // ==================== CLAIMED CARD NATIVE OVERLAY ====================
         if (showLuckyBagClaimedCard) {
             Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=0.6f)).clickable { showLuckyBagClaimedCard=false }, contentAlignment = Alignment.Center) {
                 Box(Modifier.fillMaxWidth(0.85f).aspectRatio(0.59f).clickable(enabled=false){}) {
-                    // Packet Red Background
                     Box(Modifier.fillMaxSize().padding(top = 40.dp).clip(RoundedCornerShape(topStart=32.dp, topEnd=32.dp, bottomStart=18.dp, bottomEnd=18.dp)).background(Brush.linearGradient(listOf(Color(0xFFFF6449), Color(0xFFFF263F), Color(0xFFE90037)))))
                     
                     Column(
@@ -1329,10 +1318,8 @@ fun RoomPage(
                         )
                     }
 
-                    // Cream Card Layout
                     Box(Modifier.align(Alignment.TopCenter).fillMaxWidth(0.9f).fillMaxHeight(0.72f).clip(RoundedCornerShape(24.dp)).background(Brush.verticalGradient(listOf(Color(0xFFFFF7E5), Color(0xFFFFF0D4))))) {
                         Column(Modifier.align(Alignment.BottomCenter).padding(bottom = 66.dp).fillMaxWidth()) {
-                            // Divider Line
                             Box(Modifier.fillMaxWidth().height(2.dp).padding(horizontal = 24.dp).background(Color(0xFFF5EBD8)))
                             Row(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 18.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                                 Text("Received ${luckyBagClaimAmount} Coins", color = Color(0xFFD29A72), fontSize = 14.sp, fontWeight = FontWeight.Bold)
@@ -1344,12 +1331,10 @@ fun RoomPage(
                         }
                     }
 
-                    // Bottom Canvas for the curved packet flap and lower red pocket
                     Canvas(Modifier.align(Alignment.BottomCenter).fillMaxWidth().fillMaxHeight(0.35f)) {
                         val w = size.width
                         val h = size.height
                         
-                        // Curved gold packet divider
                         val goldBrush = Brush.verticalGradient(listOf(Color(0xFFFFF8C9), Color(0xFFFFD76D), Color(0xFFFFAD36), Color(0xFFFFF0A9)))
                         val goldPath = Path().apply {
                             moveTo(0f, h * 0.15f)
@@ -1360,7 +1345,6 @@ fun RoomPage(
                         }
                         drawPath(goldPath, goldBrush)
                         
-                        // Lower red packet section
                         val redBrush = Brush.verticalGradient(listOf(Color(0xFFFF6449), Color(0xFFE90037)))
                         val redPath = Path().apply {
                             moveTo(0f, h * 0.26f)
@@ -1372,9 +1356,7 @@ fun RoomPage(
                         drawPath(redPath, redBrush)
                     }
 
-                    // Big Golden Confirm Button
                     Box(Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp).fillMaxWidth(0.85f).height(62.dp).clip(RoundedCornerShape(50)).background(Color(0xFFFF304D)).border(3.dp, Color(0xFFFFDC73), RoundedCornerShape(50)).padding(5.dp).clip(RoundedCornerShape(50)).background(Brush.verticalGradient(listOf(Color(0xFFFFF2B9), Color(0xFFFFD28A), Color(0xFFFFAC45), Color(0xFFFFE8A0)))).border(3.dp, Color(0xFFFFF0AD), RoundedCornerShape(50)).clickable {
-                        // Confirm button click - close the card
                         showLuckyBagClaimedCard = false
                     }, contentAlignment = Alignment.Center) {
                         Text("Confirm", color = Color(0xFF9A4F1C), fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
@@ -1415,9 +1397,7 @@ private fun formatMusicTime(seconds: Float): String {
     }
 }
 
-@Composable private fun NativeSeat(seat:NativeRoomSeat,ownerId:String,isSpeaking:Boolean=seat.speaking,onClick:()->Unit){
-    // Only animate the speaking seat. Running an infinite animation on all 15
-    // seats keeps the whole room redrawing even when nobody is talking.
+@Composable private fun NativeSeat(seat:NativeRoomSeat,ownerId:String,isSpeaking:Boolean=seat.speaking,seatSize:Dp=62.dp,onClick:()->Unit){
     val waveProgress = if (isSpeaking) {
         val voicePulse = rememberInfiniteTransition(label = "voice-wave")
         voicePulse.animateFloat(
@@ -1443,8 +1423,8 @@ private fun formatMusicTime(seconds: Float): String {
         }
     }
 
-    Column(horizontalAlignment=Alignment.CenterHorizontally,modifier=Modifier.width(62.dp).clickable(onClick=onClick)){
-        Box(Modifier.size(62.dp),contentAlignment=Alignment.Center){ 
+    Column(horizontalAlignment=Alignment.CenterHorizontally,modifier=Modifier.width(seatSize).clickable(onClick=onClick)){
+        Box(Modifier.size(seatSize),contentAlignment=Alignment.Center){ 
             Canvas(Modifier.fillMaxSize()) {
                 val blue = !seat.locked
                 val ringBrush = Brush.linearGradient(colors = if(blue) listOf(Color(0xFFD9F7FF),Color(0xFF91E1FF),Color(0xFF4DBFEF),Color(0xFF299DD6),Color(0xFF167DB9)) else listOf(Color(0xFFF3F4F6),Color(0xFFD1D5DB),Color(0xFF9CA3AF),Color(0xFF6B7280),Color(0xFF4B5563)),start=Offset(size.width*100f/512f,size.height*55f/512f),end=Offset(size.width*420f/512f,size.height*460f/512f))
