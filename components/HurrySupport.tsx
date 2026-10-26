@@ -474,6 +474,41 @@ export default function HurrySupport({ onBack }: HurrySupportProps) {
       };
     }
 
+    // ZYORA HELP FAQ: account, rooms, wallet, gifts, safety and profile
+    if (msg.includes("login") || msg.includes("log in") || msg.includes("sign in") || msg.includes("account") || msg.includes("otp") || msg.includes("verification") || msg.includes("password")) {
+      return { text: "🔐 Zyora Account & Login Help\\n\\n• Login screen par available sign-in method use karein.\\n• OTP ya Google sign-in fail ho to internet check karke app restart karein aur dobara try karein.\\n• Apna password, OTP ya verification code kisi ke saath share na karein.\\n• Problem continue ho to Help & Feedback me screenshot aur exact error bhejein.", isBot: true };
+    }
+    if (msg.includes("wallet") || msg.includes("balance") || msg.includes("coin missing") || msg.includes("coins missing") || msg.includes("coin reset") || msg.includes("insufficient")) {
+      return { text: "💎 Zyora Wallet Help\\n\\n• Mine/Profile se Wallet kholkar current balance check karein.\\n• Gift, Lucky Bag ya recharge ke baad balance galat lage to transaction screenshot, time aur account ID note karein.\\n• App restart karke dobara check karein; issue rahe to Help & Feedback me report karein.\\n• Daisy aapka wallet manually credit nahi kar sakti; OTP/password kisi ko na dein.", isBot: true };
+    }
+    if (msg.includes("gift") || msg.includes("send gift") || msg.includes("diamond") || msg.includes("lucky bag") || msg.includes("lucky")) {
+      return { text: "🎁 Gifts & Lucky Bag\\n\\n• Room me Gift option kholkar available gift select karein.\\n• Send karne se pehle coin cost aur recipient check karein.\\n• Lucky Bag ke displayed cost aur rules check karke balance confirm karein.\\n• Issue ho to room, time, amount aur screenshot ke saath Help & Feedback me report karein.", isBot: true };
+    }
+    if (msg.includes("level") || msg.includes("experience") || msg.includes("exp") || msg.includes("cover photo")) {
+      return { text: "⭐ Zyora Levels & Rewards\\n\\n• Profile me current level aur progress check karein.\\n• Profile items ya cover options ki requirements item par check karein.\\n• Reward unlock na ho to profile refresh karke screenshot ke saath Help & Feedback me report karein.", isBot: true };
+    }
+    if (msg.includes("check in") || msg.includes("check-in") || msg.includes("daily reward") || msg.includes("daily check")) {
+      return { text: "📅 Daily Check-in\\n\\n• Mine/Profile me Daily Check-in option kholein.\\n• Screen par diye gaye button se aaj ka available reward claim karein.\\n• Reward na mile to date/time aur screenshot ke saath Help & Feedback me report karein. Reward details app me dikhayi gayi information ke hisaab se hoti hain.", isBot: true };
+    }
+    if (msg.includes("seat") || msg.includes("microphone") || msg.includes("mic") || msg.includes("mute") || msg.includes("speak") || msg.includes("audio") || msg.includes("headphone") || msg.includes("bluetooth")) {
+      return { text: "🎙️ Room Seats & Voice Help\\n\\n• Room me available seat par tap karein; bolne ke liye mic permission aur unmuted mic zaroori ho sakta hai.\\n• Phone Settings me Zyora ki Microphone permission allow karein.\\n• Bluetooth/headphones connect karke audio output check karein.\\n• Awaaz na aaye to mute status, Bluetooth device aur internet check karein; issue rahe to screenshot/video ke saath report karein.", isBot: true };
+    }
+    if (msg.includes("follow") || msg.includes("follower") || msg.includes("following") || msg.includes("friend")) {
+      return { text: "👥 Friends & Follow\\n\\n• User ki Public Profile kholkar available Follow/Unfollow option use karein.\\n• User ID verify karein taaki sahi profile follow ho.\\n• List update na ho to refresh karein; issue rahe to Help & Feedback me report karein.", isBot: true };
+    }
+    if (msg.includes("delete account") || msg.includes("deactivate") || msg.includes("privacy") || msg.includes("personal data")) {
+      return { text: "🛡️ Privacy & Account Deletion\\n\\n• Mine/Profile ke Settings section me Privacy Policy aur Delete Account options check karein.\\n• Delete karne se pehle confirmation screen dhyan se padhein; deletion permanent ho sakta hai.\\n• Password ya OTP public chat me share na karein. Option na mile to Help & Feedback se contact karein.", isBot: true };
+    }
+    if (msg.includes("avatar") || msg.includes("dp") || msg.includes("public profile") || msg.includes("edit name")) {
+      return { text: "👤 Zyora Public Profile Help\\n\\n• Apni profile kholkar Public Profile par jayein.\\n• Edit/Pencil option available ho to Name, profile photo, Bio aur Age update karein.\\n• Changes save/confirm karna na bhoolein. Kisi aur ka profile edit nahi kiya ja sakta.", isBot: true };
+    }
+    if (msg.includes("crash") || msg.includes("not working") || msg.includes("bug") || msg.includes("error") || msg.includes("problem")) {
+      return { text: "🛠️ Zyora Troubleshooting\\n\\n1. Internet connection check karein.\\n2. App close karke dobara open karein.\\n3. App update available ho to update karein.\\n4. Error ka screenshot aur exact steps note karein.\\n5. Help & Feedback me report karein. OTP/password kabhi share na karein.", isBot: true };
+    }
+    if (msg.includes("block") || msg.includes("harass") || msg.includes("fake account") || msg.includes("safety")) {
+      return { text: "🛡️ Safety & Reporting\\n\\n• Harassment, impersonation ya abusive behaviour ke liye Report/Help & Feedback use karein.\\n• Screenshot/video, user ID aur incident time provide karein.\\n• Personal information, OTP ya password share na karein.", isBot: true };
+    }
+
     // FALLBACK FOR YES / NO QUESTIONS
     if (isYesNoQuestion) {
       return {
@@ -609,8 +644,8 @@ export default function HurrySupport({ onBack }: HurrySupportProps) {
       </div>
 
       {/* INPUT BAR */}
-      <div className="bg-white border-t border-gray-200 shadow-lg">
-        <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2 m-3 shadow-inner">
+      <div className="bg-white">
+        <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2 m-3">
           <input
             type="text"
             value={message}
