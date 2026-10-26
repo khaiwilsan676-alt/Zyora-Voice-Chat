@@ -412,8 +412,3 @@ private fun SettingsNavigationRow(title: String, onClick: () -> Unit) {
 private fun SettingsDividerLine() {
     Box(Modifier.fillMaxWidth().height(1.dp).background(SettingsDivider))
 }
-
-// Dummy nativeText function in case you need it to compile directly without errors
-fun nativeText(code: String, key: String): String? {
-    return null
-}
