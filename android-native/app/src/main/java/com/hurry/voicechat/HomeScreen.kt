@@ -148,6 +148,7 @@ private fun countryMatches(roomCountry: String, selected: String): Boolean {
 // ═══════════════════════════════════════════════════════
 // HOME SCREEN
 // ═══════════════════════════════════════════════════════
+@kotlin.OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreen(
     onRoom: (HurryRoom) -> Unit,
@@ -167,7 +168,7 @@ fun HomeScreen(
     val dao = remember {
         runCatching { HurryDatabase.get(context).roomDao() }.getOrNull()
     }
-    val roomSyncPrefs = remember { context.getSharedPreferences("native_room_sync", Context.MODE_PRIVATE) }
+    val roomSyncPrefs = remember { context.getSharedPreferences("native_room_sync", Context.MODEPRIVATE) }
 
     var rooms by remember { mutableStateOf(NativeRoomMemoryCache.rooms) }
     var selectedCountry by remember { mutableStateOf("all") }
@@ -341,133 +342,138 @@ fun HomeScreen(
 
         // ═══════════ SCROLLABLE AREA ═══════════
         Box(Modifier.fillMaxSize()) {
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.fillMaxSize().offset(y = (-8).dp),
-                contentPadding = PaddingValues(bottom = 80.dp)
+            // Yaha par bas overscroll disable kiya hai, design/logic kuch nahi chheda hai.
+            androidx.compose.runtime.CompositionLocalProvider(
+                androidx.compose.foundation.LocalOverscrollConfiguration provides null
             ) {
-                item {
-                    Column(
-                        Modifier
-                            .fillMaxWidth()
-                            .background(Color(0xFFF5F5F5))
-                            .padding(top = 0.dp, start = 12.dp, end = 12.dp, bottom = 4.dp)
-                    ) {
-                        Box(
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxSize().offset(y = (-8).dp),
+                    contentPadding = PaddingValues(bottom = 80.dp)
+                ) {
+                    item {
+                        Column(
                             Modifier
                                 .fillMaxWidth()
-                                .height((13.5f * LocalConfiguration.current.screenHeightDp / 100f).dp)
-                                .clip(RoundedCornerShape(6.dp))
+                                .background(Color(0xFFF5F5F5))
+                                .padding(top = 0.dp, start = 12.dp, end = 12.dp, bottom = 4.dp)
                         ) {
-                            HorizontalPager(
-                                state = pager,
-                                modifier = Modifier.fillMaxSize(),
-                                userScrollEnabled = true,
-                                pageSpacing = 0.dp
-                            ) { page ->
-                                AsyncImage(
-                                    model = banners[page],
-                                    contentDescription = null,
-                                    // 🔴 1ST BANNER = INVITE FRIENDS, 2ND = ROOM SUPPORT
-                                    modifier = Modifier.fillMaxSize().clickable(
-                                        indication = null, 
-                                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-                                    ) { 
-                                        if (page == 0) onInviteFriends() 
-                                        else if (page == 1) onRoomSupport() 
-                                        else onInviteFriends()
-                                    },
-                                    contentScale = ContentScale.Crop
-                                )
-                            }
-                            Row(
+                            Box(
                                 Modifier
-                                    .align(Alignment.BottomCenter)
-                                    .padding(bottom = 5.dp),
-                                horizontalArrangement = Arrangement.Center
+                                    .fillMaxWidth()
+                                    .height((13.5f * LocalConfiguration.current.screenHeightDp / 100f).dp)
+                                    .clip(RoundedCornerShape(6.dp))
                             ) {
-                                repeat(banners.size) { i ->
-                                    Box(
-                                        Modifier
-                                            .padding(horizontal = 1.5.dp)
-                                            .size(5.dp)
-                                            .clip(RoundedCornerShape(50))
-                                            .background(
-                                                if (i == pager.currentPage) Color.White
-                                                else Color.White.copy(alpha = 0.75f)
-                                            )
+                                HorizontalPager(
+                                    state = pager,
+                                    modifier = Modifier.fillMaxSize(),
+                                    userScrollEnabled = true,
+                                    pageSpacing = 0.dp
+                                ) { page ->
+                                    AsyncImage(
+                                        model = banners[page],
+                                        contentDescription = null,
+                                        // 🔴 1ST BANNER = INVITE FRIENDS, 2ND = ROOM SUPPORT
+                                        modifier = Modifier.fillMaxSize().clickable(
+                                            indication = null, 
+                                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+                                        ) { 
+                                            if (page == 0) onInviteFriends() 
+                                            else if (page == 1) onRoomSupport() 
+                                            else onInviteFriends()
+                                        },
+                                        contentScale = ContentScale.Crop
                                     )
+                                }
+                                Row(
+                                    Modifier
+                                        .align(Alignment.BottomCenter)
+                                        .padding(bottom = 5.dp),
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    repeat(banners.size) { i ->
+                                        Box(
+                                            Modifier
+                                                .padding(horizontal = 1.5.dp)
+                                                .size(5.dp)
+                                                .clip(RoundedCornerShape(50))
+                                                .background(
+                                                    if (i == pager.currentPage) Color.White
+                                                    else Color.White.copy(alpha = 0.75f)
+                                                )
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
-                }
 
-                item {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 12.dp)
-                            .graphicsLayer { translationY = -4.dp.toPx() },
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        HurryCategoryCard("Honour", HONOUR_BG, Modifier.weight(1f)) { onLeaderboard("honour") }
-                        HurryCategoryCard("Charm",  CHARM_BG,  Modifier.weight(1f)) { onLeaderboard("charm") }
-                        HurryCategoryCard("Room",   ROOM_BG,   Modifier.weight(1f)) { onLeaderboard("room") }
-                    }
-                }
-
-                item {
-                    Box(
-                        Modifier
-                            .fillMaxWidth()
-                            .background(Color(0xFFF5F5F5))
-                    ) {
-                        CountryPillRow(
-                            selected = selectedCountry,
-                            onSelect = { selectedCountry = it },
-                            languageCode = languageCode
-                        )
-                    }
-                }
-
-                if (rooms == null) {
                     item {
-                        Box(
-                            Modifier.fillMaxWidth().height(180.dp),
-                            contentAlignment = Alignment.Center
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp)
+                                .graphicsLayer { translationY = -4.dp.toPx() },
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            CircularProgressIndicator(color = Color(0xFF2563EB), strokeWidth = 2.dp)
+                            HurryCategoryCard("Honour", HONOUR_BG, Modifier.weight(1f)) { onLeaderboard("honour") }
+                            HurryCategoryCard("Charm",  CHARM_BG,  Modifier.weight(1f)) { onLeaderboard("charm") }
+                            HurryCategoryCard("Room",   ROOM_BG,   Modifier.weight(1f)) { onLeaderboard("room") }
                         }
                     }
-                } else if (filteredRooms.isEmpty()) {
+
                     item {
                         Box(
-                            Modifier.fillMaxWidth().height(120.dp),
-                            contentAlignment = Alignment.Center
+                            Modifier
+                                .fillMaxWidth()
+                                .background(Color(0xFFF5F5F5))
                         ) {
-                            Text(
-                                "No rooms in this country",
-                                fontSize = 14.sp,
-                                color = Color(0xFF6B7280)
+                            CountryPillRow(
+                                selected = selectedCountry,
+                                onSelect = { selectedCountry = it },
+                                languageCode = languageCode
                             )
                         }
                     }
-                } else {
-                    items(
-                        items = roomRows,
-                        key = { row -> row.first().id }
-                    ) { row ->
-                        Row(
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(start = 12.dp, end = 12.dp, bottom = 8.dp),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            row.forEach { room ->
-                                RoomListCard(room, onRoom, Modifier.weight(1f))
+
+                    if (rooms == null) {
+                        item {
+                            Box(
+                                Modifier.fillMaxWidth().height(180.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(color = Color(0xFF2563EB), strokeWidth = 2.dp)
                             }
-                            if (row.size == 1) Spacer(Modifier.weight(1f))
+                        }
+                    } else if (filteredRooms.isEmpty()) {
+                        item {
+                            Box(
+                                Modifier.fillMaxWidth().height(120.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    "No rooms in this country",
+                                    fontSize = 14.sp,
+                                    color = Color(0xFF6B7280)
+                                )
+                            }
+                        }
+                    } else {
+                        items(
+                            items = roomRows,
+                            key = { row -> row.first().id }
+                        ) { row ->
+                            Row(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(start = 12.dp, end = 12.dp, bottom = 8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                row.forEach { room ->
+                                    RoomListCard(room, onRoom, Modifier.weight(1f))
+                                }
+                                if (row.size == 1) Spacer(Modifier.weight(1f))
+                            }
                         }
                     }
                 }
