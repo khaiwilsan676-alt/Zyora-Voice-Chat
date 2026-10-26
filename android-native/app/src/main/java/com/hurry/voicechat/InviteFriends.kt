@@ -262,18 +262,18 @@ fun InviteFriends(onBack: (() -> Unit)? = null, onClose: (() -> Unit)? = null) {
                 Box(Modifier.fillMaxWidth().wrapContentHeight()) {
                     InviteArt("1788102034828~2.jpg", Modifier.fillMaxWidth().wrapContentHeight(), key = InviteKey.GREEN)
 
-                    // Number of Invitation — bottom: 14vh (left: 85px)
+                    // Number of Invitation — previous horizontal position; bottom: 10vh
                     Column(
-                        Modifier.align(Alignment.BottomStart).padding(start = screenWidth * 0.01f, bottom = vh * 10f),
+                        Modifier.align(Alignment.BottomStart).padding(start = 85.dp, bottom = vh * 10f),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text("0", color = inviteYellow, fontSize = 24.sp, fontWeight = FontWeight.Bold)
                         Text("Number\nInvitation", color = inviteYellow, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, lineHeight = 12.sp, textAlign = TextAlign.Center)
                     }
 
-                    // Total Coins Rewards — bottom: 15vh (right: 80px)
+                    // Total Coins Rewards — previous horizontal position; bottom: 10vh
                     Column(
-                        Modifier.align(Alignment.BottomEnd).padding(end = screenWidth * 0.01f, bottom = vh * 10f),
+                        Modifier.align(Alignment.BottomEnd).padding(end = 80.dp, bottom = vh * 10f),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         InviteArt("file_00000000e56882119c217d508b6733dc.png", Modifier.size(40.dp), key = InviteKey.WHITE)
@@ -281,9 +281,9 @@ fun InviteFriends(onBack: (() -> Unit)? = null, onClose: (() -> Unit)? = null) {
                         Text("Total Coins\nRewards", color = inviteYellow, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, lineHeight = 12.sp, textAlign = TextAlign.Center)
                     }
 
-                    // Claim block — bottom: 35vh (center)
+                    // Claim block — bottom: 28vh (center)
                     Column(
-                        Modifier.align(Alignment.BottomCenter).padding(bottom = vh * 31f),
+                        Modifier.align(Alignment.BottomCenter).padding(bottom = vh * 28f),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         InviteArt("file_00000000e56882119c217d508b6733dc.png", Modifier.size(50.dp), key = InviteKey.WHITE)
