@@ -189,7 +189,7 @@ fun SettingsPage(
                         Spacer(modifier = Modifier.height(16.dp))
                         
                         Text(
-                            text = "Are you sure you want to\ndelete this account (Shubh ID: 563021252)?",
+                            text = "Are you sure you want to\ndelete this account (" + (settingsContext.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE).getString("name", "User") ?: "User") + " ID: " + (settingsContext.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE).getString("accountId", null)?.takeIf { it.isNotBlank() } ?: settingsContext.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE).getString("uid", "").orEmpty()) + ")?",
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.Black,
