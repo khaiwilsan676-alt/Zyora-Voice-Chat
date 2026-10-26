@@ -110,16 +110,43 @@ fun SettingsPage(
         }
     }
 
-    // Privacy Policy Page Logic
+    // Privacy Policy: keep the same policy text as the login page.
     if (showPrivacyPolicy) {
-        Column(Modifier.fillMaxSize().background(Color.White)) {
-            SettingsSubHeader(nativeText(languageCode, "privacy_policy") ?: "Privacy Policy") { showPrivacyPolicy = false }
-            Box(
-                Modifier.fillMaxWidth().weight(1f).padding(horizontal = 24.dp),
-                contentAlignment = Alignment.Center
+        Column(
+            Modifier.fillMaxSize().background(Color.White)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 22.dp),
+            horizontalAlignment = Alignment.Start
+        ) {
+            Row(
+                Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 18.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Privacy Policy Content", fontSize = 17.sp, fontWeight = FontWeight.Medium, color = Color(0xFF9CA3AF))
+                Text(
+                    "‹",
+                    color = Color(0xFF374151),
+                    fontSize = 32.sp,
+                    modifier = Modifier.clickable { showPrivacyPolicy = false }
+                )
+                Text(
+                    "Privacy Policy",
+                    color = Color(0xFF111827),
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(start = 12.dp)
+                )
             }
+            Text("Privacy Policy", color = Color(0xFF111827), fontSize = 25.sp, fontWeight = FontWeight.Bold)
+            Text("Last updated: October 14, 2026", color = Color(0xFF6B7280), fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp, bottom = 22.dp))
+            SettingsPrivacySection("1. About Zyora", "Zyora is a social voice-chat application where people can create profiles, join voice rooms, meet others, chat, and enjoy social features together.")
+            SettingsPrivacySection("2. Information We Collect", "When you use Zyora, we may handle the details you choose to share, such as your profile name, photo, account details, messages, and activity in the app. Microphone access is used when you participate in live voice rooms. We only describe information that is needed to provide and support the app’s features.")
+            SettingsPrivacySection("3. How We Use Information", "Your information helps you access your account, maintain your profile, connect with other users, participate in rooms and chats, improve your experience, and help keep Zyora safe. Zyora does not sell your personal information.")
+            SettingsPrivacySection("4. Your Account and Data", "Your account information and content associated with your account are retained to help keep your Zyora experience consistent over time, including when you return to the app. Deleting the app from your phone does not automatically delete information associated with your account. If you want to request access, correction, or deletion of your account information, contact Zyora Support. Some information may need to be retained where required for safety, security, or legal reasons.")
+            SettingsPrivacySection("5. App Permissions", "Zyora may request internet access to provide online features and microphone access when you use live voice chat. You can manage app permissions through your device settings.")
+            SettingsPrivacySection("6. Keeping Your Information Safe", "We take reasonable steps to protect accounts and information and to support a safer community. Keep your sign-in details private and be careful about sharing sensitive information in public rooms. No online service can promise absolute security.")
+            SettingsPrivacySection("7. Sharing Information", "We do not sell your personal information. Information may be used when necessary to provide Zyora’s features, protect users and the service, respond to support requests, or meet applicable legal obligations.")
+            SettingsPrivacySection("8. Policy Updates and Contact", "We may update this policy as Zyora evolves. If you have questions or a privacy-related request, reach out to the Zyora team through the support option in the app.")
+            Spacer(Modifier.height(30.dp))
         }
         return
     }
@@ -317,6 +344,15 @@ fun SettingsPage(
                 color = LogoutRed 
             )
         }
+    }
+}
+
+@Composable
+private fun SettingsPrivacySection(title: String, body: String) {
+    Column(Modifier.fillMaxWidth().padding(bottom = 18.dp)) {
+        Text(title, color = Color(0xFF111827), fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+        Spacer(Modifier.height(6.dp))
+        Text(body, color = Color(0xFF374151), fontSize = 14.sp, lineHeight = 22.sp)
     }
 }
 
