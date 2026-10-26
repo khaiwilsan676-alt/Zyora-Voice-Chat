@@ -1193,8 +1193,16 @@ fun RoomPage(
                 },
                 onFollow = { onFollowToggle(profileSeat.accountId, true) },
                 onMessage = {
-                    selectedOfficialChat = Triple(profileSeat.accountId, profileSeat.userName.ifBlank { "User" }, profileSeat.userImage)
-                    selectedSeat = 0
+                    val receiverId = profileSeat.accountId.trim()
+                    if (receiverId.isNotBlank() && receiverId != accountId) {
+                        showSeatSheet = false
+                        selectedSeat = 0
+                        selectedOfficialChat = Triple(
+                            receiverId,
+                            profileSeat.userName.ifBlank { "User" },
+                            profileSeat.userImage
+                        )
+                    }
                 },
                 onMute = {
                     val idx = seats.indexOfFirst { it.number == selectedSeat }
