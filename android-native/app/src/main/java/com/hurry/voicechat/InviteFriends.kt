@@ -122,6 +122,7 @@ fun InviteFriends(onBack: (() -> Unit)? = null, onClose: (() -> Unit)? = null) {
     val context = LocalContext.current
     val configuration = LocalConfiguration.current
     val screenHeight = configuration.screenHeightDp.dp
+    val screenWidth = configuration.screenWidthDp.dp
     val vh = screenHeight / 100f
     val userPrefs = remember { context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE) }
     val code = userPrefs.getString("uid", null)?.takeIf { it.isNotBlank() } ?: "WELCOME123"
@@ -263,7 +264,7 @@ fun InviteFriends(onBack: (() -> Unit)? = null, onClose: (() -> Unit)? = null) {
 
                     // Number of Invitation — bottom: 14vh (left: 85px)
                     Column(
-                        Modifier.align(Alignment.BottomStart).padding(start = 85.dp, bottom = vh * 14f),
+                        Modifier.align(Alignment.BottomStart).padding(start = screenWidth * 0.01f, bottom = vh * 10f),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text("0", color = inviteYellow, fontSize = 24.sp, fontWeight = FontWeight.Bold)
@@ -272,7 +273,7 @@ fun InviteFriends(onBack: (() -> Unit)? = null, onClose: (() -> Unit)? = null) {
 
                     // Total Coins Rewards — bottom: 15vh (right: 80px)
                     Column(
-                        Modifier.align(Alignment.BottomEnd).padding(end = 80.dp, bottom = vh * 15f),
+                        Modifier.align(Alignment.BottomEnd).padding(end = screenWidth * 0.01f, bottom = vh * 10f),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         InviteArt("file_00000000e56882119c217d508b6733dc.png", Modifier.size(40.dp), key = InviteKey.WHITE)
