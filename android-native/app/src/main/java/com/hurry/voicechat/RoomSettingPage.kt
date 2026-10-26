@@ -26,8 +26,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -59,7 +57,6 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil3.compose.AsyncImage
 import io.socket.client.IO
-import io.socket.client.Socket
 import io.socket.emitter.Emitter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -308,7 +305,8 @@ fun RoomSettingPage(
             Row(
                 Modifier.fillMaxWidth().background(Color.White)
                     .statusBarsPadding()
-                    .padding(start = 8.dp, end = 8.dp, top = 24.dp, bottom = 12.dp),
+                    // Top padding reduced to 16.dp for 2% smaller top safe area
+                    .padding(start = 8.dp, end = 8.dp, top = 16.dp, bottom = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(
@@ -486,8 +484,9 @@ fun RoomSettingPage(
             }
         }
         "lock" -> CenteredModal(scrimAlpha = 0.3f, onDismiss = { sheet = "" }) {
+            // FIX: Removed strict static width and horizontal squishing padding so 4 boxes fit equally
             Box(
-                Modifier.width(320.dp).padding(horizontal = 16.dp)
+                Modifier.fillMaxWidth().padding(horizontal = 24.dp) 
                     .clip(RoundedCornerShape(16.dp)).background(Color.White).padding(24.dp)
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -531,7 +530,8 @@ fun RoomSettingPage(
             onPick = { id -> state = state.copy(theme = id); sheet = "" },
             onUploadCustom = { pendingPicker = "theme"; picker.launch("image/*") }
         )
-        "mic" -> BottomSheetModal(scrimAlpha = 0.3f, heightFraction = 0.85f, onDismiss = { sheet = "" }) {
+        // FIX: mic modal heightFraction set exactly to 0.40f (40vh)
+        "mic" -> BottomSheetModal(scrimAlpha = 0.3f, heightFraction = 0.40f, onDismiss = { sheet = "" }) {
             Column(Modifier.fillMaxSize()) {
                 Row(
                     Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
@@ -835,9 +835,6 @@ private fun RoundedInput(
     counter: String = "",
     modifier: Modifier = Modifier
 ) {
-    // Matches: <div class="relative bg-gray-100 rounded-full">
-    //            <input class="px-5 py-4 pr-16 rounded-full text-base" />
-    //            <div class="absolute right-5 top-1/2 -translate-y-1/2 text-xs">0/30</div>
     Box(modifier.fillMaxWidth().clip(CircleShape).background(gray100)) {
         BasicTextField(
             value = value,
