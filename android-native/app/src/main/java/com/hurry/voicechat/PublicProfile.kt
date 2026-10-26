@@ -321,7 +321,7 @@ fun PublicProfileScreen(
                             }
                         }
                     } else {
-                        Box(modifier = Modifier.fillMaxWidth().height(110.dp).clip(RoundedCornerShape(16.dp)).background(Color(0xFFF3F4F6)))
+                        AsyncImage(model = profileAsset("/IMG_20260726_225835.jpg"), contentDescription = "Album", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxWidth().height(112.dp).clip(RoundedCornerShape(16.dp)))
                     }
 
                     // Use the same section artwork as the real app.
