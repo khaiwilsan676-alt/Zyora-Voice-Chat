@@ -103,12 +103,12 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
                                     },
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Icon(
-                                        imageVector = androidx.compose.material.icons.Icons.Default.ContentCopy,
-                                        contentDescription = "Copy ID",
-                                        tint = Color(0xFF6B7280),
-                                        modifier = Modifier.size(14.dp)
-                                    )
+                                    androidx.compose.foundation.Canvas(Modifier.size(14.dp)) {
+                                        val stroke = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.4.dp.toPx())
+                                        val ink = Color(0xFF6B7280)
+                                        drawRoundRect(ink, topLeft = androidx.compose.ui.geometry.Offset(size.width * 0.30f, size.height * 0.08f), size = androidx.compose.ui.geometry.Size(size.width * 0.58f, size.height * 0.66f), cornerRadius = androidx.compose.ui.geometry.CornerRadius(1.5.dp.toPx()), style = stroke)
+                                        drawRoundRect(ink, topLeft = androidx.compose.ui.geometry.Offset(size.width * 0.10f, size.height * 0.28f), size = androidx.compose.ui.geometry.Size(size.width * 0.58f, size.height * 0.66f), cornerRadius = androidx.compose.ui.geometry.CornerRadius(1.5.dp.toPx()), style = stroke)
+                                    }
                                 }
                             }
                             if (phone.isNotBlank()) Text(phone, fontSize = 12.sp, color = Color(0xFF4B5563))
