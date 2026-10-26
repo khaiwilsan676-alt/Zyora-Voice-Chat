@@ -50,8 +50,9 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
     val name = prefs.getString("name", "")?.takeIf { it.isNotBlank() && it.lowercase() !in listOf("guest","user","null","undefined") }
         ?: email.substringBefore("@").takeIf { it.isNotBlank() }
         ?: "Zyora User"
-    val photo = prefs.getString("photo", null)?.takeIf { it.isNotBlank() }
-        ?: prefs.getString("image", "") ?: ""
+    val photo = listOf("photo", "image", "avatar", "photoUrl", "picture", "userPhoto")
+        .asSequence().mapNotNull { key -> prefs.getString(key, null)?.takeIf { it.isNotBlank() } }
+        .firstOrNull().orEmpty()
     val savedAccount = prefs.getString("accountNumber", null)?.takeIf { it.isNotBlank() }
         ?: prefs.getString("accountId", "") ?: ""
     val account = savedAccount.ifBlank { nativeMeAccountNumber(uid) }
@@ -102,40 +103,12 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
                                     },
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    androidx.compose.foundation.Canvas(Modifier.size(16.dp)) {
-                                        val strokeW = 1.5.dp.toPx()
-                                        val w = size.width
-                                        val h = size.height
-                                        val backPath = androidx.compose.ui.graphics.Path().apply {
-                                            moveTo(w * 0.3f, h * 0.3f)
-                                            lineTo(w * 0.3f, h * 0.15f)
-                                            quadraticBezierTo(w * 0.3f, 0f, w * 0.45f, 0f)
-                                            lineTo(w * 0.85f, 0f)
-                                            quadraticBezierTo(w, 0f, w, h * 0.15f)
-                                            lineTo(w, h * 0.55f)
-                                            quadraticBezierTo(w, h * 0.7f, w * 0.85f, h * 0.7f)
-                                            lineTo(w * 0.7f, h * 0.7f)
-                                        }
-                                        drawPath(
-                                            path = backPath,
-                                            color = Color(0xFF4B5563),
-                                            style = androidx.compose.ui.graphics.drawscope.Stroke(
-                                                width = strokeW,
-                                                cap = androidx.compose.ui.graphics.StrokeCap.Round,
-                                                join = androidx.compose.ui.graphics.StrokeJoin.Round
-                                            )
-                                        )
-                                        drawRoundRect(
-                                            color = Color(0xFF4B5563),
-                                            topLeft = androidx.compose.ui.geometry.Offset(0f, h * 0.3f),
-                                            size = androidx.compose.ui.geometry.Size(w * 0.7f, h * 0.7f),
-                                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(w * 0.15f, h * 0.15f),
-                                            style = androidx.compose.ui.graphics.drawscope.Stroke(
-                                                width = strokeW,
-                                                join = androidx.compose.ui.graphics.StrokeJoin.Round
-                                            )
-                                        )
-                                    }
+                                    Icon(
+                                        imageVector = androidx.compose.material.icons.Icons.Default.ContentCopy,
+                                        contentDescription = "Copy ID",
+                                        tint = Color(0xFF6B7280),
+                                        modifier = Modifier.size(14.dp)
+                                    )
                                 }
                             }
                             if (phone.isNotBlank()) Text(phone, fontSize = 12.sp, color = Color(0xFF4B5563))
