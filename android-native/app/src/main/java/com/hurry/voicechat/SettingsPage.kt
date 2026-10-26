@@ -39,6 +39,7 @@ fun SettingsPage(
     onLogout: () -> Unit = {},
     languageCode: String = "en"
 ) {
+    val settingsContext = LocalContext.current
     var showAbout by remember { mutableStateOf(false) }
     var showPrivacyPolicy by remember { mutableStateOf(false) }
     var showDeleteAccount by remember { mutableStateOf(false) }
