@@ -340,6 +340,7 @@ fun RoomPage(
     var showWildParty by remember{mutableStateOf(false)}
     var showFruitParty by remember{mutableStateOf(false)}
     var showSeatSheet by remember{mutableStateOf(false)}
+    var selectedChatProfile by remember { mutableStateOf<NativeRoomMessage?>(null) }
 
     var miniMusicTrack by remember { mutableStateOf<NativeMusicTrack?>(null) }
     var musicControllerMinimized by remember { mutableStateOf(false) }
@@ -767,7 +768,7 @@ fun RoomPage(
                 items(messages,key={it.id}){message ->
                     if(message.type=="join") {
                         Column(Modifier.padding(vertical=2.dp).wrapContentWidth().clip(RoundedCornerShape(8.dp)).background(Color.Black.copy(alpha=.30f)).padding(horizontal=12.dp,vertical=4.dp),horizontalAlignment=Alignment.Start,verticalArrangement=Arrangement.spacedBy(2.dp)){
-                            Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                            Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp), modifier=Modifier.clickable { selectedChatProfile = message }){
                                 FallbackAsyncImage(model=message.senderImage,contentDescription=message.sender,modifier=Modifier.size(24.dp).clip(CircleShape),contentScale=ContentScale.Crop)
                                 Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){
                                     Text(message.sender,color=Color.White.copy(alpha=.95f),fontSize=12.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold)
@@ -778,9 +779,9 @@ fun RoomPage(
                                     }
                                 }
                             }
-                            Text("Enter the Room",color=Color.White,fontSize=12.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Medium, modifier=Modifier.padding(start=2.dp))
+                            Text("Enter the Room",color=Color.White,fontSize=12.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Medium, modifier=Modifier.padding(start=2.dp).clickable { selectedChatProfile = message })
                         }
-                    } else NativeMessage(message)
+                    } else NativeMessage(message, onAvatarClick = { selectedChatProfile = message })
                 }
             }
             
@@ -1122,6 +1123,59 @@ fun RoomPage(
                 Handler(Looper.getMainLooper()).postDelayed({ if(seats.getOrNull(seatIndex)?.gifTimestamp==timestamp) seats[seatIndex]=seats[seatIndex].copy(gifSrc="",gifTimestamp=0L) },5000)
             }
         })
+        selectedChatProfile?.let { profileMessage ->
+            val profileId = profileMessage.senderAccountId
+            RoomProfile(
+                user = RoomUser(
+                    id = profileId, uid = profileId, accountId = profileId,
+                    name = profileMessage.sender.ifBlank { "User" }, image = profileMessage.senderImage,
+                    isInSeat = seats.any { it.occupied && it.accountId == profileId },
+                    isMuted = seats.firstOrNull { it.occupied && it.accountId == profileId }?.muted ?: false,
+                    isLocked = seats.firstOrNull { it.occupied && it.accountId == profileId }?.locked ?: false
+                ),
+                isCurrentUser = profileId == accountId,
+                isRoomOwner = profileId == roomOwner.accountId.ifBlank { roomOwner.id },
+                onClose = { selectedChatProfile = null },
+                onCopyId = { if (profileId.isNotBlank()) clipboard.setText(AnnotatedString(profileId)) },
+                onMention = { name -> input = "@$name "; showChat = true; selectedChatProfile = null },
+                onFollow = { if (profileId.isNotBlank()) onFollowToggle(profileId, true) },
+                onMessage = {
+                    if (profileId.isNotBlank() && profileId != accountId) {
+                        selectedOfficialChat = Triple(profileId, profileMessage.sender, profileMessage.senderImage)
+                        selectedChatProfile = null
+                    }
+                },
+                onLeaveSeat = {
+                    val index = seats.indexOfFirst { it.occupied && it.accountId == profileId }
+                    if (index >= 0) {
+                        val seatNumber = seats[index].number
+                        seats[index] = NativeRoomSeat(number = seatNumber)
+                        roomSocketRef.value?.emit("room_seat_action", JSONObject().put("roomId", roomId).put("userId", accountId).put("action", "leave").put("seatNumber", seatNumber))
+                    }
+                    selectedChatProfile = null
+                },
+                onMute = {
+                    val index = seats.indexOfFirst { it.occupied && it.accountId == profileId }
+                    if (index >= 0 && (accountId == roomOwner.accountId || accountId == roomOwner.id || accountId == roomId)) {
+                        val nextMuted = !seats[index].muted
+                        seats[index] = seats[index].copy(muted = nextMuted)
+                        roomSocketRef.value?.emit("room_seat_action", JSONObject().put("roomId", roomId).put("userId", accountId).put("action", "mute").put("seatNumber", seats[index].number).put("isMuted", nextMuted))
+                    }
+                },
+                onLock = {
+                    val index = seats.indexOfFirst { it.occupied && it.accountId == profileId }
+                    if (index >= 0 && (accountId == roomOwner.accountId || accountId == roomOwner.id || accountId == roomId)) {
+                        val nextLocked = !seats[index].locked
+                        seats[index] = seats[index].copy(locked = nextLocked)
+                        roomSocketRef.value?.emit("room_seat_action", JSONObject().put("roomId", roomId).put("userId", accountId).put("action", "lock").put("seatNumber", seats[index].number).put("isLocked", nextLocked))
+                    }
+                },
+                onKickOut = {
+                    roomSocketRef.value?.emit("room_seat_action", JSONObject().put("roomId", roomId).put("userId", accountId).put("action", "kick").put("targetUserId", profileId))
+                    selectedChatProfile = null
+                }
+            )
+        }
         if(showSeatSheet && selectedSeat>0) {
             val seatIndex = seats.indexOfFirst { it.number == selectedSeat }
             val seat = seats.getOrNull(seatIndex)
@@ -1537,9 +1591,9 @@ private fun formatMusicTime(seconds: Float): String {
     }
 }
 
-@Composable private fun NativeMessage(m:NativeRoomMessage){
+@Composable private fun NativeMessage(m:NativeRoomMessage, onAvatarClick: () -> Unit = {}){
     Row(Modifier.fillMaxWidth().padding(vertical=2.dp),verticalAlignment=Alignment.Top,horizontalArrangement=Arrangement.Start){
-        FallbackAsyncImage(model=m.senderImage,contentDescription=m.sender,modifier=Modifier.padding(top=2.dp).size(28.dp).clip(CircleShape).border(1.dp, Color.White.copy(alpha=.1f), CircleShape),contentScale=ContentScale.Crop)
+        FallbackAsyncImage(model=m.senderImage,contentDescription=m.sender,modifier=Modifier.padding(top=2.dp).size(28.dp).clip(CircleShape).border(1.dp, Color.White.copy(alpha=.1f), CircleShape).clickable(onClick = onAvatarClick),contentScale=ContentScale.Crop)
         Column(Modifier.padding(start=8.dp).fillMaxWidth(.75f),verticalArrangement=Arrangement.spacedBy(2.dp)){
             Text(m.sender,color=Color.White.copy(alpha=.9f),fontSize=12.sp,lineHeight=13.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold,maxLines=1,overflow=TextOverflow.Ellipsis)
             Box(Modifier.align(Alignment.Start).clip(RoundedCornerShape(topStart=2.dp,topEnd=12.dp,bottomStart=12.dp,bottomEnd=12.dp)).background(Color.Black.copy(alpha=.40f)).border(0.5.dp,Color.White.copy(alpha=.15f),RoundedCornerShape(topStart=2.dp,topEnd=12.dp,bottomStart=12.dp,bottomEnd=12.dp)).padding(horizontal=10.dp,vertical=8.dp)){
