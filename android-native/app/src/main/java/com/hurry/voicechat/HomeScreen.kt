@@ -279,7 +279,19 @@ fun HomeScreen(
     val roomRows = remember(filteredRooms) { filteredRooms.chunked(2) }
 
     Column(
-        Modifier.fillMaxSize().background(Color(0xFFF5F5F5))
+        Modifier.fillMaxSize()
+            .background(Color(0xFFF5F5F5))
+            .then(
+                Modifier.drawWithContent {
+                    drawContent()
+                    val edgeHeight = 1.dp.toPx()
+                    drawRect(
+                        color = Color.White,
+                        topLeft = Offset(0f, size.height - edgeHeight),
+                        size = Size(size.width, edgeHeight)
+                    )
+                }
+            )
     ) {
         // ═══════════ FIXED TOP HEADER (does not scroll) ═══════════
         Column(
