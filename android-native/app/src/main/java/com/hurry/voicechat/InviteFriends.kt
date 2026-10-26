@@ -264,7 +264,7 @@ fun InviteFriends(onBack: (() -> Unit)? = null, onClose: (() -> Unit)? = null) {
 
                     // Number of Invitation — previous horizontal position; bottom: 10vh
                     Column(
-                        Modifier.align(Alignment.BottomStart).padding(start = 85.dp, bottom = vh * 10f),
+                        Modifier.align(Alignment.BottomStart).padding(start = 86.dp, bottom = vh * 10f),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text("0", color = inviteYellow, fontSize = 24.sp, fontWeight = FontWeight.Bold)
@@ -273,7 +273,7 @@ fun InviteFriends(onBack: (() -> Unit)? = null, onClose: (() -> Unit)? = null) {
 
                     // Total Coins Rewards — previous horizontal position; bottom: 10vh
                     Column(
-                        Modifier.align(Alignment.BottomEnd).padding(end = 80.dp, bottom = vh * 10f),
+                        Modifier.align(Alignment.BottomEnd).padding(end = 81.dp, bottom = vh * 10f),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         InviteArt("file_00000000e56882119c217d508b6733dc.png", Modifier.size(40.dp), key = InviteKey.WHITE)
