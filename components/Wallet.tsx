@@ -1169,7 +1169,6 @@ export default function Wallet({ onBack, initialTab = 'wallet' }: WalletProps) {
         </div>
       </div>
       
-    </div>
     {agentChatOpen && coinSeller && currentChatUser && (
       <div className="fixed inset-0 z-[100] bg-white">
         <ChatScreen
@@ -1183,5 +1182,6 @@ export default function Wallet({ onBack, initialTab = 'wallet' }: WalletProps) {
         />
       </div>
     )}
+    </div>
   )
 }
