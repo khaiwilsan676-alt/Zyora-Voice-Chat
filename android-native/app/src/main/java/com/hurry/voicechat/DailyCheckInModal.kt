@@ -267,8 +267,8 @@ private fun SpecialDayCard(day: Int, currentDay: Int, modifier: Modifier = Modif
         DayBadge(day = day)
         
         Box(
-            // Top padding sirf thodi si kam ki hai (18->12) taaki image thodi upar shift ho aur text dikhe
-            modifier = Modifier.padding(top = 12.dp)
+            // Top padding aur kam kar di (6.dp) taaki image upar shift ho aur text bilkul cut na ho
+            modifier = Modifier.padding(top = 6.dp)
         ) {
             content()
         }
@@ -326,7 +326,6 @@ private fun Day7Card(currentDay: Int) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                // Top padding (18->12) ki hai bas jisse space mil jaye aur text cut na ho
                 .padding(top = 12.dp, start = 12.dp, end = 12.dp),
             contentAlignment = Alignment.Center
         ) {
@@ -376,13 +375,13 @@ private fun renderDay7Special() {
         horizontalArrangement = Arrangement.spacedBy(30.dp, Alignment.CenterHorizontally), 
         verticalAlignment = Alignment.CenterVertically 
     ) {
-        RewardItemIcon("file_00000000b2d481fd8cd233482dbeb9ef.png", "+15,000", 44.dp)
+        // Yaha par +15,000 se +30,000 kar diya gaya hai
+        RewardItemIcon("file_00000000b2d481fd8cd233482dbeb9ef.png", "+30,000", 44.dp)
         RewardItemIcon("file_0000000044388211996656afc9ce9c03.png", "×3 days", 50.dp)
         RewardItemIcon("IMG-20260903-WA0077.jpg", "×3 days", 50.dp)
     }
 }
 
-// Ye structure ekdam original rakha hai
 @Composable
 private fun RewardItemIcon(image: String, text: String, size: androidx.compose.ui.unit.Dp) {
     Column(
