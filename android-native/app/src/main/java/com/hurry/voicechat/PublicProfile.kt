@@ -86,10 +86,18 @@ fun PublicProfileScreen(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
+    // YAHAN FIX KIYA HAI - public folder add kar diya base URL mein
     val profileAsset: (String) -> String = { path ->
         if (path.isBlank()) ""
         else if (path.startsWith("http://") || path.startsWith("https://") || path.startsWith("data:")) path
-        else "https://zyora-voice-chat.vercel.app/" + path.trimStart('/')
+        else {
+            val cleanPath = path.trimStart('/')
+            if (cleanPath.startsWith("public/")) {
+                "https://zyora-voice-chat.vercel.app/$cleanPath"
+            } else {
+                "https://zyora-voice-chat.vercel.app/public/$cleanPath"
+            }
+        }
     }
 
     // State Variables
@@ -202,7 +210,7 @@ fun PublicProfileScreen(
                         }
                     }
 
-                    // Avatar Overlap (Offset 0 and No border - Fixed)
+                    // Floating Avatar
                     Box(
                         modifier = Modifier
                             .align(Alignment.BottomStart)
@@ -240,7 +248,6 @@ fun PublicProfileScreen(
                     ) {
                         Text(userName, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.Black, modifier = Modifier.align(Alignment.CenterVertically))
                         
-                        // Yahan FIX Kiya Hai Gender Aur Age Tag
                         val genderStr = userGender.trim()
                         val ageStr = if (userAge > 0) userAge.toString() else ""
                         val tagText = "$genderStr $ageStr".trim()
@@ -258,7 +265,7 @@ fun PublicProfileScreen(
                             }
                         }
 
-                        // Badges (Fixed size so Coil can load them correctly)
+                        // Badges with proper sizing
                         if (targetUser?.officialHeadTag == true) AsyncImage(model = profileAsset("/file_00000000f81081f59d4f126bff14a8fc.png"), contentDescription = "Official Head", contentScale = ContentScale.Fit, modifier = Modifier.height(24.dp).widthIn(max = 66.dp).align(Alignment.CenterVertically))
                         if (targetUser?.officialTag == true) AsyncImage(model = profileAsset("/IMG_20261026_205516.png"), contentDescription = "Official", contentScale = ContentScale.Fit, modifier = Modifier.height(24.dp).widthIn(max = 66.dp).align(Alignment.CenterVertically))
                         if (targetUser?.adminTag == true) AsyncImage(model = profileAsset("/file_00000000fc0c81f5ac4a79c1f7415756.png"), contentDescription = "Admin", contentScale = ContentScale.Fit, modifier = Modifier.height(24.dp).widthIn(max = 66.dp).align(Alignment.CenterVertically))
@@ -836,7 +843,6 @@ fun PublicProfile(
             country = user.country,
             flag = user.flag,
             
-            // YAHAN PE DATA BHEJNA MISSING THA ISILIYE TAGS NAHI DIKH RAHE THE! (ADDED NOW)
             bio = user.bio,
             coverPhoto = user.coverPhoto,
             officialHeadTag = user.officialHeadTag,
