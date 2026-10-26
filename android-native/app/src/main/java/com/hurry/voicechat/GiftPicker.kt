@@ -189,15 +189,16 @@ fun GiftPicker(
         when {
             selectedTargets.isNotEmpty() -> selectedTargets
             roomUsers.isNotEmpty() -> roomUsers.map { it.accountId }
-            else -> seats.filter { it.isOccupied && it.user != null }.map { it.user!!.accountId }
+            else -> seats.filter { it.occupied && it.accountId.isNotBlank() }.map { it.accountId }
         }
     }
     val recipientCount = recipientIds.size
     val recipientUsers = recipientIds.mapNotNull { id ->
-        roomUsers.find { it.accountId == id }
-            ?: seats.find { it.user?.accountId == id }?.user?.let {
-                GiftPickerRoomUser(it.accountId, it.name, it.image)
-            }
+        roomUsers.find { it.accountId == id }?.let {
+            GiftPickerRoomUser(it.accountId, it.name, it.image)
+        } ?: seats.find { it.accountId == id }?.let {
+            GiftPickerRoomUser(it.accountId, it.userName, it.userImage)
+        }
     }
     val firstRecipient = recipientUsers.firstOrNull()
     val totalSendCost = totalCost.toLong() * max(1, recipientCount)
@@ -363,8 +364,8 @@ fun GiftPicker(
                                 RecipientButton(
                                     isActive = recipientMode == RecipientMode.MIC,
                                     onClick = {
-                                        selectedTargets = seats.filter { it.isOccupied && it.user != null }
-                                            .map { it.user!!.accountId }
+                                        selectedTargets = seats.filter { it.occupied && it.accountId.isNotBlank() }
+                                            .map { it.accountId }
                                         recipientMode = RecipientMode.MIC
                                     },
                                     iconType = RecipientIconType.MIC,
@@ -387,13 +388,13 @@ fun GiftPicker(
                                 .padding(top = 4.dp, bottom = 8.dp),
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
-                            items(seats.filter { it.isOccupied && it.user != null },
-                                key = { it.user!!.accountId }) { seat ->
-                                val uid = seat.user!!.accountId
+                            items(seats.filter { it.occupied && it.accountId.isNotBlank() },
+                                key = { it.accountId }) { seat ->
+                                val uid = seat.accountId
                                 val selected = selectedTargets.contains(uid)
                                 AsyncImage(
-                                    model = seat.user!!.image,
-                                    contentDescription = seat.user!!.name,
+                                    model = seat.userImage,
+                                    contentDescription = seat.userName,
                                     contentScale = ContentScale.Crop,
                                     modifier = Modifier
                                         .size(44.dp)
