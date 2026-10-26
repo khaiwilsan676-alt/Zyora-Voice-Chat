@@ -25,7 +25,7 @@ import java.util.Calendar
 private data class NativeRoomTaskRow(val title:String,val reward:String,val icon:String)
 
 @Composable fun Roomtask(onBack:()->Unit={}){
-    val raw="https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/"
+    val raw="https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/"
     var rules by remember{mutableStateOf(false)}
     var hour by remember{mutableIntStateOf(0)}
     var minute by remember{mutableIntStateOf(0)}
@@ -71,15 +71,15 @@ private data class NativeRoomTaskRow(val title:String,val reward:String,val icon
         AsyncImage(model=raw+"file_00000000cb748211bf0120855b80f449.png",contentDescription=null,modifier=Modifier.fillMaxWidth().height(300.dp),contentScale=ContentScale.Crop,alignment=Alignment.TopCenter)
         Column(Modifier.fillMaxSize()){
             Row(Modifier.fillMaxWidth().padding(top=24.dp,start=4.dp,end=6.dp),verticalAlignment=Alignment.CenterVertically){
-                IconButton(onClick=onBack){Icon(Icons.Default.ArrowBack,null,tint=Color(0xFFFFD700))}
+                IconButton(onClick=onBack, modifier=Modifier.size(36.dp).background(Color.Black.copy(alpha=0.50f), androidx.compose.foundation.shape.CircleShape)){ androidx.compose.foundation.Canvas(Modifier.size(24.dp)){ val gold=Color(0xFFFFD700); drawCircle(gold.copy(alpha=0.0f), style=androidx.compose.ui.graphics.drawscope.Stroke(width=1.5.dp.toPx())); drawLine(gold, androidx.compose.ui.geometry.Offset(size.width*0.68f,size.height*0.5f), androidx.compose.ui.geometry.Offset(size.width*0.30f,size.height*0.5f), strokeWidth=2.dp.toPx(), cap=androidx.compose.ui.graphics.StrokeCap.Round); drawLine(gold, androidx.compose.ui.geometry.Offset(size.width*0.30f,size.height*0.5f), androidx.compose.ui.geometry.Offset(size.width*0.48f,size.height*0.32f), strokeWidth=2.dp.toPx(), cap=androidx.compose.ui.graphics.StrokeCap.Round); drawLine(gold, androidx.compose.ui.geometry.Offset(size.width*0.30f,size.height*0.5f), androidx.compose.ui.geometry.Offset(size.width*0.48f,size.height*0.68f), strokeWidth=2.dp.toPx(), cap=androidx.compose.ui.graphics.StrokeCap.Round) } }
                 Spacer(Modifier.weight(1f))
-                IconButton(onClick={rules=true}){Icon(Icons.Default.HelpOutline,null,tint=Color(0xFFFFD700))}
+                IconButton(onClick={rules=true}, modifier=Modifier.size(36.dp).background(Color.Black.copy(alpha=0.50f), androidx.compose.foundation.shape.CircleShape)){ androidx.compose.foundation.Canvas(Modifier.size(24.dp)){ val gold=Color(0xFFFFD700); drawCircle(gold, style=androidx.compose.ui.graphics.drawscope.Stroke(width=1.5.dp.toPx())); drawContext.canvas.nativeCanvas.apply { val p=android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply { color=android.graphics.Color.rgb(255,215,0); textSize=size.height*0.72f; textAlign=android.graphics.Paint.Align.CENTER; typeface=android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT,android.graphics.Typeface.BOLD) }; drawText("?",size.width/2f,size.height*0.73f,p) } } }
             }
             Column(Modifier.fillMaxSize().padding(horizontal=8.dp),horizontalAlignment=Alignment.CenterHorizontally){
                 AsyncImage(model=raw+"file_00000000f2908208a7b6a2b73c3bbf36.png",contentDescription="Room task rewards",modifier=Modifier.fillMaxWidth().height(138.dp),contentScale=ContentScale.Fit)
                 Text("0",color=Color(0xFFFFD700),fontSize=24.sp)
                 Button(onClick={},shape=RoundedCornerShape(20.dp),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFFE0A92A)),contentPadding=PaddingValues(horizontal=26.dp,vertical=3.dp)){Text("Collect",color=Color(0xFF4A1F00),fontSize=11.sp)}
-                Text("*If anyone sends gifts in the room, the room owner can get 5% coins worth the gift value.",color=Color.White,fontSize=11.sp,modifier=Modifier.padding(vertical=8.dp))
+                Text("*If anyone sends gifts in the room, the room owner can get 5%coins worth the gift value.",color=Color.White,fontSize=11.sp,modifier=Modifier.padding(vertical=8.dp))
                 AsyncImage(model=raw+"file_00000000680881faa3dfdb17cce60858.png",contentDescription="Room Task",modifier=Modifier.fillMaxWidth().height(45.dp),contentScale=ContentScale.FillBounds)
                 Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(3.dp),modifier=Modifier.padding(vertical=5.dp)){
                     Text("Countdown",color=Color(0xFFF5B8B8),fontSize=10.sp)
@@ -88,7 +88,7 @@ private data class NativeRoomTaskRow(val title:String,val reward:String,val icon
                         Text(pair.second,color=Color(0xFFF5B8B8),fontSize=10.sp)
                     }
                 }
-                LazyColumn(Modifier.fillMaxWidth().weight(1f),contentPadding=PaddingValues(bottom=24.dp),verticalArrangement=Arrangement.spacedBy((-38).dp)){
+                LazyColumn(Modifier.fillMaxWidth().weight(1f),contentPadding=PaddingValues(bottom=24.dp),verticalArrangement=Arrangement.spacedBy((-60).dp)){
                     items(tasks){task->
                         Box(Modifier.fillMaxWidth().height(175.dp)){
                             AsyncImage(model=raw+"file_000000004fd0821198ed4e26d5008b16.png",contentDescription="Task background",modifier=Modifier.fillMaxSize(),contentScale=ContentScale.FillBounds)
@@ -96,8 +96,8 @@ private data class NativeRoomTaskRow(val title:String,val reward:String,val icon
                                 AsyncImage(model=raw+task.icon,contentDescription=task.title,modifier=Modifier.size(if(task.title.contains("mic",true)||task.title.contains("gift",true)||task.title.contains("user",true))60.dp else 46.dp),contentScale=ContentScale.Fit)
                                 Text(task.title,color=Color.White,fontSize=12.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Bold,modifier=Modifier.weight(1f).padding(start=2.dp))
                                 Column(horizontalAlignment=Alignment.CenterHorizontally){
-                                    Row(verticalAlignment=Alignment.CenterVertically){AsyncImage(model=raw+"file_00000000e56882119c217d508b6733dc.png",contentDescription="Coins",modifier=Modifier.size(21.dp));Text(task.reward,color=Color(0xFFFFD700),fontSize=12.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.ExtraBold)}
-                                    Button(onClick={},modifier=Modifier.width(85.dp).height(28.dp),contentPadding=PaddingValues(0.dp),shape=RoundedCornerShape(18.dp),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFFE0A92A))){Text("CLAIM",color=Color(0xFF4A1F00),fontSize=10.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Black)}
+                                    Row(verticalAlignment=Alignment.CenterVertically){AsyncImage(model=raw+"file_00000000e56882119c217d508b6733dc.png",contentDescription="Coins",modifier=Modifier.size(24.dp));Text(task.reward,color=Color(0xFFFFD700),fontSize=12.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.ExtraBold)}
+                                    Button(onClick={},modifier=Modifier.width(85.dp).height(28.dp),contentPadding=PaddingValues(0.dp),shape=RoundedCornerShape(18.dp),border=androidx.compose.foundation.BorderStroke(2.dp,Color(0xFFF5E6A8)),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFFE0A92A))){Text("CLAIM",color=Color(0xFF4A1F00),fontSize=10.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Black)}
                                 }
                             }
                         }
