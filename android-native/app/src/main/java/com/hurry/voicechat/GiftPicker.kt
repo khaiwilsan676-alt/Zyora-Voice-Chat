@@ -765,6 +765,7 @@ private fun RecipientButton(
     onClick: () -> Unit,
     iconType: RecipientIconType,
 ) {
+    val iconColor = if (isActive) Blue500 else Color(0xFF9CA3AF)
     Box(
         Modifier
             .size(38.dp)
@@ -774,22 +775,63 @@ private fun RecipientButton(
             .clickable { onClick() },
         contentAlignment = Alignment.Center,
     ) {
-        if (iconType == RecipientIconType.MIC) {
-            Icon(
-                imageVector = Icons.Filled.KeyboardArrowUp,
-                contentDescription = "All Mic",
-                tint = if (isActive) Blue500 else Color(0xFF9CA3AF),
-                modifier = Modifier.size(18.dp),
-            )
-        } else {
-            Icon(
-                imageVector = Icons.Filled.KeyboardArrowRight,
-                contentDescription = "All room",
-                tint = if (isActive) Blue500 else Color(0xFF9CA3AF),
-                modifier = Modifier.size(20.dp),
-            )
+        Canvas(
+            Modifier.size(if (iconType == RecipientIconType.MIC) 18.dp else 20.dp)
+        ) {
+            val iconPath = androidx.compose.ui.graphics.Path()
+            if (iconType == RecipientIconType.MIC) {
+                // Exact solid microphone silhouette used by the reference GiftPicker.tsx.
+                val sx = size.width / 24f
+                val sy = size.height / 24f
+                iconPath.moveTo(12f * sx, 14f * sy)
+                iconPath.cubicTo(13.66f * sx, 14f * sy, 15f * sx, 12.66f * sy, 15f * sx, 11f * sy)
+                iconPath.lineTo(15f * sx, 5f * sy)
+                iconPath.cubicTo(15f * sx, 3.34f * sy, 13.66f * sx, 2f * sy, 12f * sx, 2f * sy)
+                iconPath.cubicTo(10.34f * sx, 2f * sy, 9f * sx, 3.34f * sy, 9f * sx, 5f * sy)
+                iconPath.lineTo(9f * sx, 11f * sy)
+                iconPath.cubicTo(9f * sx, 12.66f * sy, 10.34f * sx, 14f * sy, 12f * sx, 14f * sy)
+                iconPath.close()
+                iconPath.moveTo(17.91f * sx, 11f * sy)
+                iconPath.cubicTo(17.42f * sx, 11f * sy, 17.01f * sx, 11.39f * sy, 17.01f * sx, 11.88f * sy)
+                iconPath.cubicTo(17.01f * sx, 14.64f * sy, 14.77f * sx, 16.88f * sy, 12.01f * sx, 16.88f * sy)
+                iconPath.cubicTo(9.25f * sx, 16.88f * sy, 7.01f * sx, 14.64f * sy, 7.01f * sx, 11.88f * sy)
+                iconPath.cubicTo(7.01f * sx, 11.39f * sy, 6.6f * sx, 11f * sy, 6.11f * sx, 11f * sy)
+                iconPath.cubicTo(5.62f * sx, 11f * sy, 5.21f * sx, 11.39f * sy, 5.21f * sx, 11.88f * sy)
+                iconPath.cubicTo(5.21f * sx, 15.54f * sy, 8.06f * sx, 18.54f * sy, 11.61f * sx, 18.96f * sy)
+                iconPath.lineTo(11.61f * sx, 21.88f * sy)
+                iconPath.lineTo(13.41f * sx, 21.88f * sy)
+                iconPath.lineTo(13.41f * sx, 18.96f * sy)
+                iconPath.cubicTo(16.96f * sx, 18.54f * sy, 19.81f * sx, 15.54f * sy, 19.81f * sx, 11.88f * sy)
+                iconPath.cubicTo(19.81f * sx, 11.39f * sy, 19.4f * sx, 11f * sy, 18.91f * sx, 11f * sy)
+                iconPath.close()
+            } else {
+                // Exact solid house/hound silhouette used by the reference GiftPicker.tsx.
+                val sx = size.width / 512f
+                val sy = size.height / 512f
+                iconPath.moveTo(80f * sx, 235f * sy)
+                iconPath.lineTo(222f * sx, 105f * sy)
+                iconPath.quadraticTo(256f * sx, 75f * sy, 290f * sx, 105f * sy)
+                iconPath.lineTo(432f * sx, 235f * sy)
+                iconPath.quadraticTo(445f * sx, 247f * sy, 432f * sx, 260f * sy)
+                iconPath.lineTo(405f * sx, 290f * sy)
+                iconPath.lineTo(405f * sx, 405f * sy)
+                iconPath.quadraticTo(405f * sx, 425f * sy, 385f * sx, 425f * sy)
+                iconPath.lineTo(127f * sx, 425f * sy)
+                iconPath.quadraticTo(107f * sx, 425f * sy, 107f * sx, 405f * sy)
+                iconPath.lineTo(107f * sx, 290f * sy)
+                iconPath.lineTo(80f * sx, 260f * sy)
+                iconPath.quadraticTo(67f * sx, 247f * sy, 80f * sx, 235f * sy)
+                iconPath.close()
+                iconPath.moveTo(210f * sx, 425f * sy)
+                iconPath.lineTo(210f * sx, 300f * sy)
+                iconPath.quadraticTo(210f * sx, 280f * sy, 230f * sx, 280f * sy)
+                iconPath.lineTo(282f * sx, 280f * sy)
+                iconPath.quadraticTo(302f * sx, 280f * sy, 302f * sx, 300f * sy)
+                iconPath.lineTo(302f * sx, 425f * sy)
+                iconPath.close()
+            }
+            drawPath(path = iconPath, color = iconColor)
         }
-        // "All" badge
         Surface(
             color = if (isActive) Blue500 else Color(0xFF9CA3AF),
             shape = RoundedCornerShape(50),
