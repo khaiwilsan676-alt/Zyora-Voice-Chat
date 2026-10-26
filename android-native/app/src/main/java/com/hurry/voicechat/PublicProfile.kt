@@ -393,54 +393,114 @@ fun PublicProfileScreen(
 
     // --- OVERLAYS & BOTTOM SHEETS ---
 
-    // Edit Profile Sheet
+    // Edit Profile Sheet — match the web Public Profile sheet geometry and rows.
     if (!isOtherUser && showEditSheet) {
         ModalBottomSheet(
             onDismissRequest = { showEditSheet = false },
             containerColor = Color.White,
-            shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
+            scrimColor = Color.Black.copy(alpha = 0.5f),
+            shape = RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp),
+            dragHandle = null
         ) {
-            Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp).padding(bottom = 32.dp)) {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = { showEditSheet = false }) { Icon(Icons.Default.ArrowBack, null) }
-                    Text("Edit Information", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                    Spacer(modifier = Modifier.width(48.dp))
-                }
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                // Avatar Edit
-                EditRowItem("Avatar", { /* Trigger Image Picker */ }) {
-                    Box(modifier = Modifier.size(56.dp).clip(CircleShape).background(Color.Gray))
-                }
-                
-                // Nickname Edit
-                EditRowItem("Nickname", { showNameScreen = true }) {
-                    Text(userName, color = Color.Gray, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Icon(Icons.Default.KeyboardArrowRight, null, tint = Color.Gray)
-                }
-                
-                // Age Edit
-                EditRowItem("Age", { showAgeScreen = true }) {
-                    Text(userAge.toString(), color = Color.Gray)
-                    Icon(Icons.Default.KeyboardArrowRight, null, tint = Color.Gray)
-                }
-                
-                // Bio Edit
-                EditRowItem("Bio", { showBioScreen = true }) {
-                    Text(userBio.ifBlank { "Add bio..." }, color = Color.Gray, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 120.dp))
-                    Icon(Icons.Default.KeyboardArrowRight, null, tint = Color.Gray)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight(0.70f)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = { showEditSheet = false }, modifier = Modifier.size(24.dp)) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color(0xFF374151))
+                    }
+                    Text("Edit Information", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF111827))
+                    Spacer(modifier = Modifier.width(24.dp))
                 }
 
-                // Background (Covers)
-                Spacer(modifier = Modifier.height(16.dp))
-                Text("Background (${coverPhotos.size}/4)", fontWeight = FontWeight.Medium, fontSize = 14.sp)
-                Row(modifier = Modifier.padding(top = 8.dp).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Box(modifier = Modifier.size(64.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xFFF3F4F6)).clickable { /* pick image */ }, contentAlignment = Alignment.Center) {
-                        Text("+", fontSize = 24.sp, color = Color.Gray)
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .padding(horizontal = 20.dp, vertical = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(24.dp)
+                ) {
+                    // Avatar
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Avatar", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Color(0xFF374151))
+                        Box(
+                            modifier = Modifier.size(56.dp).clip(CircleShape).background(Color(0xFFE5E7EB)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (userPhoto.isNotBlank()) {
+                                AsyncImage(model = userPhoto, contentDescription = "Avatar", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                            } else {
+                                Text(avatarLetter, fontSize = 20.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                            }
+                        }
                     }
-                    coverPhotos.forEach { photo ->
-                        AsyncImage(model = photo, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.size(64.dp).clip(RoundedCornerShape(8.dp)))
+
+                    // Nickname
+                    EditRowItem("Nickname", { showNameScreen = true }) {
+                        Text(userName.ifBlank { "Enter name" }, color = Color(0xFF6B7280), fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Icon(Icons.Default.ChevronRight, null, tint = Color(0xFF9CA3AF), modifier = Modifier.size(16.dp))
+                    }
+
+                    // Age
+                    EditRowItem("Age", { showAgeScreen = true }) {
+                        Text(userAge.toString(), color = Color(0xFF6B7280), fontSize = 14.sp)
+                        Icon(Icons.Default.ChevronRight, null, tint = Color(0xFF9CA3AF), modifier = Modifier.size(16.dp))
+                    }
+
+                    // Background images (maximum four, plus tile first)
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text("Background (${coverPhotos.size}/4)", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Color(0xFF374151))
+                        Row(
+                            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            if (coverPhotos.size < 4) {
+                                Box(
+                                    modifier = Modifier.size(64.dp).clip(RoundedCornerShape(12.dp)).background(Color(0xFFF3F4F6)),
+                                    contentAlignment = Alignment.Center
+                                ) { Text("+", fontSize = 30.sp, color = Color(0xFFD1D5DB), fontWeight = FontWeight.Light) }
+                            }
+                            coverPhotos.take(4).forEach { photo ->
+                                AsyncImage(model = photo, contentDescription = "Background", contentScale = ContentScale.Crop, modifier = Modifier.size(64.dp).clip(RoundedCornerShape(6.dp)))
+                            }
+                        }
+                    }
+
+                    // Bio
+                    EditRowItem("Bio", { showBioScreen = true }) {
+                        Text(userBio.ifBlank { "Add bio..." }, color = Color(0xFF6B7280), fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 180.dp))
+                        Icon(Icons.Default.ChevronRight, null, tint = Color(0xFF9CA3AF), modifier = Modifier.size(16.dp))
+                    }
+
+                    // Album photos — max four, one horizontal row.
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text("Album Photos (${albumImages.size}/4)", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Color(0xFF374151))
+                        Row(
+                            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            if (albumImages.size < 4) {
+                                Box(
+                                    modifier = Modifier.size(64.dp).clip(RoundedCornerShape(12.dp)).background(Color(0xFFF3F4F6)),
+                                    contentAlignment = Alignment.Center
+                                ) { Text("+", fontSize = 30.sp, color = Color(0xFFD1D5DB), fontWeight = FontWeight.Light) }
+                            }
+                            albumImages.take(4).forEachIndexed { index, image ->
+                                Box(modifier = Modifier.size(64.dp).clip(RoundedCornerShape(6.dp)).clickable { fullImageIndex = index }) {
+                                    AsyncImage(model = image, contentDescription = "Album photo", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                                }
+                            }
+                        }
                     }
                 }
             }
