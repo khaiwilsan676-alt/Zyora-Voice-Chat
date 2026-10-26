@@ -119,13 +119,13 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
 
                 Spacer(Modifier.height(18.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                    Stat("0", nativeText(languageCode, "friends"))
+                    Stat("0", nativeText(languageCode, "friends"), onClick = { onOpen("Friends") })
                     DividerV()
-                    Stat("1", nativeText(languageCode, "followers"))
+                    Stat("1", "Fans", onClick = { onOpen("Fans") })
                     DividerV()
-                    Stat("0", nativeText(languageCode, "following"))
+                    Stat("0", nativeText(languageCode, "following"), onClick = { onOpen("Following") })
                     DividerV()
-                    Stat("1", nativeText(languageCode, "visitors"))
+                    Stat("1", nativeText(languageCode, "visitors"), onClick = { onOpen("Visitors") })
                 }
             }
         }
@@ -193,8 +193,11 @@ private fun nativeMeAccountNumber(uid: String): String {
     return (10000000L + kotlin.math.abs(uid.hashCode().toLong()) % 90000000L).toString()
 }
 
-@Composable private fun Stat(value: String, label: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+@Composable private fun Stat(value: String, label: String, onClick: () -> Unit) {
+    Column(
+        modifier = Modifier.clip(RoundedCornerShape(4.dp)).clickable(onClick = onClick).padding(horizontal = 5.dp, vertical = 2.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
         Text(value, fontSize = 20.sp, fontWeight = FontWeight.Normal, color = Color(0xFF111827))
         Text(label, fontSize = 11.sp, color = Color(0xFF4B5563))
     }
