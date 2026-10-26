@@ -37,6 +37,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.launch
+import org.json.JSONArray
 import kotlin.math.abs
 
 // --- DATA CLASSES ---
@@ -85,10 +86,21 @@ fun PublicProfileScreen(
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+    val profilePrefs = remember { context.getSharedPreferences("zyora_profile", Context.MODE_PRIVATE) }
+    val profileKey = (targetUser?.uid ?: targetUser?.id ?: targetUser?.accountId ?: targetUser?.displayAccountNumber).orEmpty().ifBlank { "current" }
 
-    // State Variables
+    // Profile fields restore per account so name, age and album survive reopening the profile.
     var coverPhotos by remember(targetUser?.coverPhoto) { mutableStateOf(targetUser?.coverPhoto?.takeIf { it.isNotBlank() }?.let { listOf(it) } ?: emptyList()) }
-    var albumImages by remember { mutableStateOf(listOf<String>()) }
+    var albumImages by remember(profileKey) {
+        mutableStateOf(runCatching {
+            val stored = profilePrefs.getString("album_$profileKey", "[]") ?: "[]"
+            val array = JSONArray(stored)
+            (0 until array.length()).map { array.optString(it) }.filter { it.isNotBlank() }.take(4)
+        }.getOrDefault(emptyList()))
+    }
+    LaunchedEffect(profileKey, albumImages) {
+        profilePrefs.edit().putString("album_$profileKey", JSONArray(albumImages).toString()).apply()
+    }
     var ownedFrames by remember { mutableStateOf(listOf<String>()) } // Dummy for UI
     var receivedGifts by remember { mutableStateOf(listOf<String>()) } // Dummy for UI
 
@@ -104,9 +116,13 @@ fun PublicProfileScreen(
     var isFollowing by remember { mutableStateOf(false) }
 
     // User Data State (Mocked for UI)
-    var userName by remember(targetUser?.uid, targetUser?.id, targetUser?.name) { mutableStateOf(targetUser?.name?.takeIf { it.isNotBlank() } ?: "") }
+    var userName by remember(profileKey, targetUser?.name) {
+        mutableStateOf(profilePrefs.getString("name_$profileKey", null)?.takeIf { it.isNotBlank() } ?: targetUser?.name?.takeIf { it.isNotBlank() } ?: "")
+    }
     var userBio by remember { mutableStateOf(targetUser?.bio ?: "") }
-    var userAge by remember(targetUser?.uid, targetUser?.id, targetUser?.age) { mutableStateOf(targetUser?.age?.takeIf { it > 0 } ?: 0) }
+    var userAge by remember(profileKey, targetUser?.age) {
+        mutableIntStateOf(profilePrefs.getInt("age_$profileKey", targetUser?.age?.takeIf { it > 0 } ?: 0))
+    }
     var userGender by remember(targetUser?.uid, targetUser?.id, targetUser?.gender) { mutableStateOf(targetUser?.gender?.takeIf { it.isNotBlank() && it !in listOf("♂", "♀") } ?: "") }
     val displayAccNum = targetUser?.displayAccountNumber?.takeIf { it.isNotBlank() } ?: targetUser?.accountId?.takeIf { it.isNotBlank() } ?: "—"
     val userPhoto = targetUser?.photo?.takeIf { it.isNotBlank() } ?: targetUser?.image?.takeIf { it.isNotBlank() } ?: ""
@@ -693,7 +709,7 @@ fun PublicProfileScreen(
 
                 // Bottom per Wahi Same Save Button
                 Button(
-                    onClick = { userName = tempName; showNameScreen = false },
+                    onClick = { userName = tempName; profilePrefs.edit().putString("name_$profileKey", tempName).apply(); showNameScreen = false },
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).height(50.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1DC4E9)),
                     shape = RoundedCornerShape(12.dp)
