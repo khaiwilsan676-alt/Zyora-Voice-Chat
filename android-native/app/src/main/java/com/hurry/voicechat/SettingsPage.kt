@@ -1,30 +1,37 @@
 package com.hurry.voicechat
 
 import android.content.Context
-
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.window.Dialog
 
 private val SettingsInk = Color(0xFF0F172A)
 private val SettingsBody = Color(0xFF1E293B)
 private val SettingsMuted = Color(0xFF94A3B8)
 private val SettingsDivider = Color(0xFFF1F5F9)
+private val PageBackgroundGrey = Color(0xFFF5F5F5) 
+private val LogoutRed = Color(0xFFE53935)
+private val DeleteOrangeIcon = Color(0xFFF05133)
+private val GradientBlue = Color(0xFF0055FF) 
 
 @Composable
 fun SettingsPage(
@@ -32,25 +39,187 @@ fun SettingsPage(
     onLogout: () -> Unit = {},
     languageCode: String = "en"
 ) {
-    val settingsContext = LocalContext.current
-    val settingsPrefs = remember { settingsContext.getSharedPreferences("zyora_settings", Context.MODE_PRIVATE) }
-    var notificationsEnabled by remember { mutableStateOf(settingsPrefs.getBoolean("appNotifications", true)) }
-    var showBlocklist by remember { mutableStateOf(false) }
     var showAbout by remember { mutableStateOf(false) }
+    var showPrivacyPolicy by remember { mutableStateOf(false) }
+    var showDeleteAccount by remember { mutableStateOf(false) }
+    var showDeleteConfirmDialog by remember { mutableStateOf(false) }
 
-    if (showBlocklist) {
+    // Dialog logic - Center Popup
+    if (showDeleteConfirmDialog) {
+        Dialog(onDismissRequest = { showDeleteConfirmDialog = false }) {
+            Card(
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "Account Delete",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "Are you sure? Do you want to delete your account Permanent",
+                        fontSize = 15.sp,
+                        color = Color(0xFF4B5563),
+                        textAlign = TextAlign.Center,
+                        lineHeight = 22.sp
+                    )
+                    Spacer(modifier = Modifier.height(24.dp))
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        // Cancel Button (Grey)
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(44.dp)
+                                .background(Color(0xFFE5E7EB), RoundedCornerShape(8.dp))
+                                .clickable { showDeleteConfirmDialog = false },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("Cancel", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = Color(0xFF4B5563))
+                        }
+                        
+                        // Confirm Button (Red)
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(44.dp)
+                                .background(LogoutRed, RoundedCornerShape(8.dp))
+                                .clickable { 
+                                    showDeleteConfirmDialog = false
+                                    // Add logic for account deletion here
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("Confirm", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = Color.White)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Privacy Policy Page Logic
+    if (showPrivacyPolicy) {
         Column(Modifier.fillMaxSize().background(Color.White)) {
-            SettingsSubHeader(nativeText(languageCode, "blocklist")) { showBlocklist = false }
+            SettingsSubHeader(nativeText(languageCode, "privacy_policy") ?: "Privacy Policy") { showPrivacyPolicy = false }
             Box(
                 Modifier.fillMaxWidth().weight(1f).padding(horizontal = 24.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Text("No data", fontSize = 17.sp, fontWeight = FontWeight.Medium, color = Color(0xFF9CA3AF), letterSpacing = 0.3.sp)
+                Text("Privacy Policy Content", fontSize = 17.sp, fontWeight = FontWeight.Medium, color = Color(0xFF9CA3AF))
             }
         }
         return
     }
 
+    // Delete Account Page Logic (New UI)
+    if (showDeleteAccount) {
+        Box(
+            Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        0.0f to GradientBlue,
+                        0.3f to PageBackgroundGrey, // 30% solid blue mix into grey
+                        1.0f to PageBackgroundGrey
+                    )
+                )
+        ) {
+            Column(Modifier.fillMaxSize()) {
+                SettingsSubHeader(nativeText(languageCode, "delete_account") ?: "Delete Account") { showDeleteAccount = false }
+                
+                // White Info Card
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 20.dp)
+                        .background(Color.White, RoundedCornerShape(16.dp))
+                        .padding(24.dp)
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        // Warning Icon
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .background(DeleteOrangeIcon, CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("!", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        }
+                        
+                        Spacer(modifier = Modifier.height(16.dp))
+                        
+                        Text(
+                            text = "Are you sure you want to\ndelete this account (Shubh ID: 563021252)?",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Black,
+                            textAlign = TextAlign.Center,
+                            lineHeight = 26.sp
+                        )
+                        
+                        Spacer(modifier = Modifier.height(24.dp))
+                        
+                        // List items
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            DeleteAccountListItem("1. All account-related information, including friends, followers, and chat records, will be permanently deleted.")
+                            DeleteAccountListItem("2. Your rank, account balance, and all personal data will be cleared.")
+                            DeleteAccountListItem("3. Once deleted, the account cannot be recovered, and you will no longer be able to log in.")
+                            DeleteAccountListItem("4. The account deletion process takes 7 days, during which you can request recovery.")
+                        }
+                    }
+                }
+            }
+            
+            // Bottom Action Buttons
+            Row(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 24.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Cancel Button
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(50.dp)
+                        .background(Color.White, RoundedCornerShape(8.dp))
+                        .clickable { showDeleteAccount = false },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("Cancel", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = Color(0xFF6B7280))
+                }
+                
+                // Delete Button (Opens Dialog)
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(50.dp)
+                        .background(LogoutRed, RoundedCornerShape(8.dp))
+                        .clickable { showDeleteConfirmDialog = true },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("Delete", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = Color.White)
+                }
+            }
+        }
+        return
+    }
+
+    // About Page Logic
     if (showAbout) {
         Column(Modifier.fillMaxSize().background(Color.White)) {
             SettingsSubHeader(nativeText(languageCode, "about")) { showAbout = false }
@@ -87,63 +256,81 @@ fun SettingsPage(
         return
     }
 
-    Column(Modifier.fillMaxSize().background(Color.White)) {
-        Row(
-            Modifier.fillMaxWidth().statusBarsPadding()
-                .padding(start = 12.dp, end = 12.dp, top = 16.dp, bottom = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                Modifier.size(40.dp).clickable { onBack() }.padding(8.dp),
-                contentAlignment = Alignment.Center
+    // Main Settings Page
+    Column(Modifier.fillMaxSize().background(PageBackgroundGrey)) { 
+        
+        // Top Section: Header + Options ek hi White patti mein
+        Column(Modifier.fillMaxWidth().background(Color.White)) {
+            // Header
+            Row(
+                Modifier.fillMaxWidth().statusBarsPadding()
+                    .padding(start = 12.dp, end = 12.dp, top = 16.dp, bottom = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                androidx.compose.foundation.Canvas(Modifier.size(24.dp)) {
-                    val stroke = 2.4.dp.toPx()
-                    drawLine(SettingsInk, androidx.compose.ui.geometry.Offset(size.width * 0.86f, size.height / 2), androidx.compose.ui.geometry.Offset(size.width * 0.16f, size.height / 2), strokeWidth = stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round)
-                    drawLine(SettingsInk, androidx.compose.ui.geometry.Offset(size.width * 0.16f, size.height / 2), androidx.compose.ui.geometry.Offset(size.width * 0.45f, size.height * 0.20f), strokeWidth = stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round)
-                    drawLine(SettingsInk, androidx.compose.ui.geometry.Offset(size.width * 0.16f, size.height / 2), androidx.compose.ui.geometry.Offset(size.width * 0.45f, size.height * 0.80f), strokeWidth = stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+                Box(
+                    Modifier.size(40.dp).clickable { onBack() }.padding(8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    androidx.compose.foundation.Canvas(Modifier.size(24.dp)) {
+                        val stroke = 2.4.dp.toPx()
+                        drawLine(SettingsInk, androidx.compose.ui.geometry.Offset(size.width * 0.86f, size.height / 2), androidx.compose.ui.geometry.Offset(size.width * 0.16f, size.height / 2), strokeWidth = stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+                        drawLine(SettingsInk, androidx.compose.ui.geometry.Offset(size.width * 0.16f, size.height / 2), androidx.compose.ui.geometry.Offset(size.width * 0.45f, size.height * 0.20f), strokeWidth = stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+                        drawLine(SettingsInk, androidx.compose.ui.geometry.Offset(size.width * 0.16f, size.height / 2), androidx.compose.ui.geometry.Offset(size.width * 0.45f, size.height * 0.80f), strokeWidth = stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+                    }
                 }
+                Text(
+                    text = nativeText(languageCode, "settings") ?: "Setting",
+                    modifier = Modifier.weight(1f),
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = SettingsInk,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(Modifier.width(40.dp))
             }
-            Text(
-                nativeText(languageCode, "settings"),
-                modifier = Modifier.weight(1f),
-                fontSize = 18.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = SettingsInk,
-                textAlign = TextAlign.Center
-            )
-            Spacer(Modifier.width(40.dp))
+
+            SettingsDividerLine()
+            
+            // Options
+            SettingsNavigationRow(nativeText(languageCode, "privacy_policy") ?: "Privacy Policy") { showPrivacyPolicy = true }
+            SettingsDividerLine()
+            SettingsNavigationRow(nativeText(languageCode, "about") ?: "About") { showAbout = true }
+            SettingsDividerLine()
+            SettingsNavigationRow(nativeText(languageCode, "delete_account") ?: "Delete Account") { showDeleteAccount = true }
         }
 
         Spacer(Modifier.height(16.dp))
-        Column(Modifier.fillMaxWidth().background(Color.White)) {
-            Row(
-                Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(nativeText(languageCode, "notifications"), Modifier.weight(1f), fontSize = 16.sp, color = SettingsBody)
-                SettingsToggle(checked = notificationsEnabled) {
-                    notificationsEnabled = it
-                    settingsPrefs.edit().putBoolean("appNotifications", it).apply()
-                }
-            }
-            SettingsDividerLine()
-            SettingsNavigationRow(nativeText(languageCode, "blocklist")) { showBlocklist = true }
-            SettingsDividerLine()
-            SettingsNavigationRow(nativeText(languageCode, "about")) { showAbout = true }
-        }
 
-        Spacer(Modifier.height(40.dp))
+        // Logout Section: Alag white patti red text ke sath
         Box(
-            Modifier.fillMaxWidth().padding(horizontal = 24.dp)
-                .height(50.dp).border(1.dp, Color(0xFFCBD5E1), CircleShape)
-                .background(Color.White, CircleShape)
-                .clickable { onLogout() },
+            Modifier
+                .fillMaxWidth()
+                .background(Color.White)
+                .clickable { onLogout() }
+                .padding(vertical = 18.dp), 
             contentAlignment = Alignment.Center
         ) {
-            Text(nativeText(languageCode, "logout"), fontSize = 16.sp, fontWeight = FontWeight.Medium, color = Color(0xFF334155))
+            Text(
+                text = nativeText(languageCode, "logout") ?: "Log Out", 
+                fontSize = 16.sp, 
+                fontWeight = FontWeight.Medium, 
+                color = LogoutRed 
+            )
         }
     }
+}
+
+// Helper composable for the list items in the delete account screen
+@Composable
+private fun DeleteAccountListItem(text: String) {
+    Text(
+        text = text,
+        fontSize = 14.sp,
+        color = Color(0xFF4B5563),
+        lineHeight = 20.sp,
+        textAlign = TextAlign.Start,
+        modifier = Modifier.fillMaxWidth()
+    )
 }
 
 @Composable
@@ -172,7 +359,7 @@ private fun SettingsSubHeader(title: String, onBack: () -> Unit) {
 private fun SettingsNavigationRow(title: String, onClick: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().clickable { onClick() }
-            .padding(horizontal = 20.dp, vertical = 16.dp),
+            .padding(horizontal = 20.dp, vertical = 18.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(title, Modifier.weight(1f), fontSize = 16.sp, color = SettingsBody)
@@ -189,15 +376,7 @@ private fun SettingsDividerLine() {
     Box(Modifier.fillMaxWidth().height(1.dp).background(SettingsDivider))
 }
 
-@Composable
-private fun SettingsToggle(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
-    Box(
-        Modifier.width(48.dp).height(28.dp)
-            .background(if (checked) Color(0xFF22D3EE) else Color(0xFFCBD5E1), RoundedCornerShape(50))
-            .clickable { onCheckedChange(!checked) }
-            .padding(3.dp),
-        contentAlignment = if (checked) Alignment.CenterEnd else Alignment.CenterStart
-    ) {
-        Box(Modifier.size(22.dp).background(Color.White, CircleShape))
-    }
+// Dummy nativeText function in case you need it to compile directly without errors
+fun nativeText(code: String, key: String): String? {
+    return null
 }
