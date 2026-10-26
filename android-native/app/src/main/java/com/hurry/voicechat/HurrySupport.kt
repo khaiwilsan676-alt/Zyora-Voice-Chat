@@ -37,7 +37,7 @@ import kotlinx.coroutines.delay
 
 private const val DAISY_IMAGE = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/1785612362650~2.jpg"
 private val SupportBlue = Color(0xFF3B82F6)
-private val SupportBg = Color(0xFFF8FAFC)
+private val SupportBg = Color(0xFFF0F2F5)
 private data class SupportMessage(val text: String, val isBot: Boolean, val image: String? = null)
 
 @Composable
@@ -120,7 +120,7 @@ fun HurrySupport(onBack: () -> Unit) {
         Row(
             Modifier.fillMaxWidth()
                 // Top blue color ko grey ke sath strictly mix kiya gaya hai
-                .background(Brush.horizontalGradient(listOf(Color(0xFF3B82F6), Color.Gray)))
+                .background(Brush.verticalGradient(listOf(Color(0xFF3B82F6), Color(0xFFF0F2F5))))
                 .statusBarsPadding()
                 // start padding ko 16.dp se 4.dp kiya hai jisse back icon corner me jaye
                 .padding(start = 4.dp, end = 16.dp, top = 12.dp, bottom = 12.dp),
