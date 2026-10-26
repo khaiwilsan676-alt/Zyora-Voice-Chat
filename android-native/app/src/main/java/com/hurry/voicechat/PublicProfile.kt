@@ -104,10 +104,10 @@ fun PublicProfileScreen(
     var isFollowing by remember { mutableStateOf(false) }
 
     // User Data State (Mocked for UI)
-    var userName by remember { mutableStateOf(targetUser?.name?.takeIf { it.isNotBlank() } ?: "User") }
+    var userName by remember(targetUser?.uid, targetUser?.id, targetUser?.name) { mutableStateOf(targetUser?.name?.takeIf { it.isNotBlank() } ?: "") }
     var userBio by remember { mutableStateOf(targetUser?.bio ?: "") }
-    var userAge by remember { mutableStateOf(targetUser?.age ?: 0) }
-    var userGender by remember { mutableStateOf(targetUser?.gender ?: "") }
+    var userAge by remember(targetUser?.uid, targetUser?.id, targetUser?.age) { mutableStateOf(targetUser?.age?.takeIf { it > 0 } ?: 0) }
+    var userGender by remember(targetUser?.uid, targetUser?.id, targetUser?.gender) { mutableStateOf(targetUser?.gender?.takeIf { it.isNotBlank() && it !in listOf("♂", "♀") } ?: "") }
     val displayAccNum = targetUser?.displayAccountNumber?.takeIf { it.isNotBlank() } ?: targetUser?.accountId?.takeIf { it.isNotBlank() } ?: "—"
     val userPhoto = targetUser?.photo?.takeIf { it.isNotBlank() } ?: targetUser?.image?.takeIf { it.isNotBlank() } ?: ""
     val followers = targetUser?.followers ?: 0
