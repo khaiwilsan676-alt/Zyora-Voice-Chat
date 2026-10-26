@@ -86,17 +86,15 @@ fun PublicProfileScreen(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
-    // YAHAN FIX KIYA HAI - public folder add kar diya base URL mein
+    // Vercel serves files inside the public/ directory from the URL root.
+    // Using /public/<filename> returns 404, which made every profile badge,
+    // gender-related asset, medal, and frame appear missing in the native app.
     val profileAsset: (String) -> String = { path ->
         if (path.isBlank()) ""
         else if (path.startsWith("http://") || path.startsWith("https://") || path.startsWith("data:")) path
         else {
-            val cleanPath = path.trimStart('/')
-            if (cleanPath.startsWith("public/")) {
-                "https://zyora-voice-chat.vercel.app/$cleanPath"
-            } else {
-                "https://zyora-voice-chat.vercel.app/public/$cleanPath"
-            }
+            val cleanPath = path.trimStart('/').removePrefix("public/")
+            "https://zyora-voice-chat.vercel.app/$cleanPath"
         }
     }
 
