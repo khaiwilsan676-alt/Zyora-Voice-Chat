@@ -238,8 +238,9 @@ fun PublicProfileScreen(
                         .padding(horizontal = 16.dp, vertical = 16.dp)
                         .padding(top = 4.dp)
                 ) {
-                    // Name & Badges using FlowRow
+                    // Name & Badges using FlowRow (max 3 tags per row as requested)
                     FlowRow(
+                        maxItemsInEachRow = 3,
                         verticalArrangement = Arrangement.Center,
                         horizontalArrangement = Arrangement.spacedBy(4.dp), 
                         modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp)
@@ -263,21 +264,21 @@ fun PublicProfileScreen(
                             }
                         }
 
-                        // Badges size set to 30.dp (Last 2 removed previously)
-                        AsyncImage(model = profileAsset("/file_00000000f81081f59d4f126bff14a8fc.png"), contentDescription = "Official Head", contentScale = ContentScale.Fit, modifier = Modifier.height(30.dp).widthIn(max = 80.dp).align(Alignment.CenterVertically))
-                        AsyncImage(model = profileAsset("/IMG_20261026_205516.png"), contentDescription = "Official", contentScale = ContentScale.Fit, modifier = Modifier.height(30.dp).widthIn(max = 80.dp).align(Alignment.CenterVertically))
-                        AsyncImage(model = profileAsset("/file_00000000fc0c81f5ac4a79c1f7415756.png"), contentDescription = "Admin", contentScale = ContentScale.Fit, modifier = Modifier.height(30.dp).widthIn(max = 80.dp).align(Alignment.CenterVertically))
-                        AsyncImage(model = profileAsset("/IMG_20261026_205203.png"), contentDescription = "Service / CS", contentScale = ContentScale.Fit, modifier = Modifier.height(30.dp).widthIn(max = 80.dp).align(Alignment.CenterVertically))
-                        AsyncImage(model = profileAsset("/IMG_20261026_205346.png"), contentDescription = "Coin Seller", contentScale = ContentScale.Fit, modifier = Modifier.height(30.dp).widthIn(max = 80.dp).align(Alignment.CenterVertically))
+                        // Badges with requested sizes (30.dp for Official Head, 27.dp for others)
+                        AsyncImage(model = profileAsset("/file_0000000096ec8211a137f37ef1cf1cd0.png"), contentDescription = "Official Head", contentScale = ContentScale.Fit, modifier = Modifier.height(30.dp).widthIn(max = 80.dp).align(Alignment.CenterVertically))
+                        AsyncImage(model = profileAsset("/IMG_20261026_205516.png"), contentDescription = "Official", contentScale = ContentScale.Fit, modifier = Modifier.height(27.dp).widthIn(max = 80.dp).align(Alignment.CenterVertically))
+                        AsyncImage(model = profileAsset("/file_00000000fc0c81f5ac4a79c1f7415756.png"), contentDescription = "Admin", contentScale = ContentScale.Fit, modifier = Modifier.height(27.dp).widthIn(max = 80.dp).align(Alignment.CenterVertically))
+                        AsyncImage(model = profileAsset("/IMG_20261026_205203.png"), contentDescription = "Service / CS", contentScale = ContentScale.Fit, modifier = Modifier.height(27.dp).widthIn(max = 80.dp).align(Alignment.CenterVertically))
+                        AsyncImage(model = profileAsset("/IMG_20261026_205346.png"), contentDescription = "Coin Seller", contentScale = ContentScale.Fit, modifier = Modifier.height(27.dp).widthIn(max = 80.dp).align(Alignment.CenterVertically))
                     }
 
-                    // ID & Followers
+                    // ID & Followers (ID image height updated to 25.dp)
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
                         AsyncImage(
                             model = profileAsset("/file_0000000063b481fa89d3c7729265058b.png"),
                             contentDescription = "Purple ID Badge",
                             contentScale = ContentScale.Fit,
-                            modifier = Modifier.height(20.dp).widthIn(min = 22.dp, max = 28.dp).padding(end = 4.dp)
+                            modifier = Modifier.height(25.dp).widthIn(min = 22.dp, max = 28.dp).padding(end = 4.dp)
                         )
                         Text(displayAccNum, fontSize = 12.sp, color = Color.Gray)
 
