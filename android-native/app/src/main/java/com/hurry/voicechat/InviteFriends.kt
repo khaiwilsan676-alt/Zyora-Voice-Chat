@@ -282,7 +282,7 @@ fun InviteFriends(onBack: (() -> Unit)? = null, onClose: (() -> Unit)? = null) {
 
                     // Claim block — bottom: 35vh (center)
                     Column(
-                        Modifier.align(Alignment.BottomCenter).padding(bottom = vh * 35f),
+                        Modifier.align(Alignment.BottomCenter).padding(bottom = vh * 31f),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         InviteArt("file_00000000e56882119c217d508b6733dc.png", Modifier.size(50.dp), key = InviteKey.WHITE)
