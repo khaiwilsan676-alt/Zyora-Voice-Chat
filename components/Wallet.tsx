@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { apiUrl } from "../src/lib/api"
+import ChatScreen from "./ChatScreen"
 
 // ==========================================
 // Shared Wallet DB (Same as GiftPicker / WildParty / Store / SellerCenter)
@@ -431,6 +433,19 @@ function DetailsPage({
         </div>
       </div>
     </div>
+    {agentChatOpen && coinSeller && currentChatUser && (
+      <div className="fixed inset-0 z-[100] bg-white">
+        <ChatScreen
+          currentUser={currentChatUser}
+          targetUser={{
+            uid: String(coinSeller.uid || coinSeller.id || coinSeller.appLongId || ''),
+            name: String(coinSeller.name || coinSeller.displayName || coinSeller.userName || 'User'),
+            photo: String(coinSeller.image || coinSeller.photo || coinSeller.photoURL || coinSeller.avatar || ''),
+          }}
+          onClose={() => setAgentChatOpen(false)}
+        />
+      </div>
+    )}
   )
 }
 
@@ -482,6 +497,9 @@ export default function Wallet({ onBack, initialTab = 'wallet' }: WalletProps) {
 
   const [walletBalance, setWalletBalance] = useState<number | null>(null)
   const [diamondBalance, setDiamondBalance] = useState<number | null>(null)
+  const [coinSeller, setCoinSeller] = useState<any | null>(null)
+  const [agentChatOpen, setAgentChatOpen] = useState(false)
+  const [currentChatUser, setCurrentChatUser] = useState<{ uid: string; name: string; photo: string } | null>(null)
 
   // Sheet States
   const [showPaymentSheet, setShowPaymentSheet] = useState(false)
@@ -512,6 +530,36 @@ export default function Wallet({ onBack, initialTab = 'wallet' }: WalletProps) {
       isMounted = false
       clearInterval(intervalId)
     }
+  }, [])
+
+  // Load the real Coin Seller account from the registered users database.
+  useEffect(() => {
+    let cancelled = false
+    const loadCoinSeller = async () => {
+      try {
+        const response = await fetch(apiUrl('/api/users'), { cache: 'no-store' })
+        if (!response.ok) return
+        const payload = await response.json()
+        const users = Array.isArray(payload?.users) ? payload.users : []
+        const seller = users.find((u: any) =>
+          u?.coinSellerTag === true ||
+          u?.coinSeller === true ||
+          u?.coinsellerTag === true ||
+          u?.sellerTag === true ||
+          (Array.isArray(u?.tags) && u.tags.some((tag: any) => /coin.?seller/i.test(String(tag?.name || tag?.label || tag))))
+        )
+        if (!cancelled) setCoinSeller(seller || null)
+      } catch (error) {
+        console.error('Failed to load Zyora Coin Seller:', error)
+        if (!cancelled) setCoinSeller(null)
+      }
+    }
+    const uid = localStorage.getItem('userUID') || localStorage.getItem('userPhone') || localStorage.getItem('userId') || ''
+    const name = localStorage.getItem('userName') || ''
+    const photo = localStorage.getItem('userPhoto') || ''
+    if (uid) setCurrentChatUser({ uid, name, photo })
+    void loadCoinSeller()
+    return () => { cancelled = true }
   }, [])
 
   // Reset activeTab if initialTab changes
@@ -799,79 +847,61 @@ export default function Wallet({ onBack, initialTab = 'wallet' }: WalletProps) {
           </div>
         )}
 
-        {/* Agent Specific Content */}
+        {/* Agent Specific Content — real Coin Seller profile from MongoDB */}
         {activeTab === 'agent' && (
           <div className="flex flex-col mt-5">
-            <div className="w-full bg-transparent p-2 flex items-center justify-between border-0 shadow-none">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-200 border-2 border-white flex items-center justify-center flex-shrink-0 text-gray-500 shadow-sm">
-                  <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
-                    <circle cx="18" cy="12" r="6" fill="currentColor"/>
-                    <path d="M18 20C11.3726 20 6 25.3726 6 32H30C30 25.3726 24.6274 20 18 20Z" fill="currentColor"/>
-                  </svg>
+            {coinSeller ? (
+              <div className="w-full bg-transparent p-2 flex items-center justify-between border-0 shadow-none">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center flex-shrink-0 text-gray-600 font-bold">
+                    {coinSeller.image || coinSeller.photo || coinSeller.photoURL || coinSeller.avatar ? (
+                      <img
+                        src={(() => {
+                          const photo = String(coinSeller.image || coinSeller.photo || coinSeller.photoURL || coinSeller.avatar)
+                          return photo.startsWith('http://') || photo.startsWith('https://') || photo.startsWith('data:') ? photo : 'https://zyora-voice-chat.vercel.app/' + photo.replace(/^\/+/, '')
+                        })()}
+                        alt={coinSeller.name || coinSeller.displayName || coinSeller.userName || 'Coin Seller'}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span>{String(coinSeller.name || coinSeller.displayName || coinSeller.userName || 'U').trim().charAt(0).toUpperCase()}</span>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex flex-col">
+                    <span className="truncate text-gray-900 font-bold text-[17px]">
+                      {coinSeller.name || coinSeller.displayName || coinSeller.userName || 'User'}
+                    </span>
+                    <span className="text-gray-500 text-xs">
+                      ID:{coinSeller.accountId || coinSeller.accountNumber || coinSeller.displayUserNumber || coinSeller['Account Number'] || ''}
+                    </span>
+                  </div>
                 </div>
-                <span className="text-gray-900 font-bold text-[17px]">
-                  Agent Anmol
-                </span>
-              </div>
-              
-              {/* Chat icon — blue circle with white circular chat icon */}
-              <button
-                className="flex-shrink-0 w-11 h-11 rounded-full flex items-center justify-center active:scale-90 transition-transform"
-              >
-                <svg
-                  width="32"
-                  height="32"
-                  viewBox="0 0 48 48"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
+                <button
+                  onClick={() => {
+                    const targetUid = String(coinSeller.uid || coinSeller.id || coinSeller.appLongId || '')
+                    const currentUid = currentChatUser?.uid || ''
+                    if (!targetUid || !currentUid || targetUid === currentUid) return
+                    setAgentChatOpen(true)
+                  }}
+                  disabled={!currentChatUser?.uid || String(coinSeller.uid || coinSeller.id || coinSeller.appLongId || '') === currentChatUser?.uid}
+                  aria-label="Chat with Coin Seller"
+                  className="flex-shrink-0 w-11 h-11 rounded-full flex items-center justify-center active:scale-90 transition-transform disabled:opacity-40"
                 >
-                  {/* Blue outer circle */}
-                  <circle
-                    cx="24"
-                    cy="24"
-                    r="23"
-                    fill="#0044FF"
-                  />
-
-                  {/* White circular chat bubble */}
-                  <circle
-                    cx="24"
-                    cy="24"
-                    r="14"
-                    fill="white"
-                  />
-
-                  {/* Small chat-tail */}
-                  <path
-                    d="M14 32L13 38L19 34"
-                    fill="white"
-                  />
-
-                  {/* Three blue dots */}
-                  <circle
-                    cx="18"
-                    cy="24"
-                    r="2"
-                    fill="#0044FF"
-                  />
-
-                  <circle
-                    cx="24"
-                    cy="24"
-                    r="2"
-                    fill="#0044FF"
-                  />
-
-                  <circle
-                    cx="30"
-                    cy="24"
-                    r="2"
-                    fill="#0044FF"
-                  />
-                </svg>
-              </button>
-            </div>
+                  <svg width="32" height="32" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="24" cy="24" r="23" fill="#0044FF" />
+                    <circle cx="24" cy="24" r="14" fill="white" />
+                    <path d="M14 32L13 38L19 34" fill="white" />
+                    <circle cx="18" cy="24" r="2" fill="#0044FF" />
+                    <circle cx="24" cy="24" r="2" fill="#0044FF" />
+                    <circle cx="30" cy="24" r="2" fill="#0044FF" />
+                  </svg>
+                </button>
+              </div>
+            ) : (
+              <div className="px-2 py-4 text-sm text-gray-500">
+                No Coin Seller account is currently available.
+              </div>
+            )}
           </div>
         )}
 
