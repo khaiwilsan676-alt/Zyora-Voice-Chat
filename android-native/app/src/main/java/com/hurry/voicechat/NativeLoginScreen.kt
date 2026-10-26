@@ -502,16 +502,30 @@ private fun syncHurryUser(user: JSONObject, context: android.content.Context) {
     }
     val deviceId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID).orEmpty()
 
-    val banConnection = (URL("$HURRY_API_BASE/api/check-ban").openConnection() as HttpURLConnection).apply {
-        requestMethod = "POST"; connectTimeout = 8000; readTimeout = 8000; doOutput = true
-        setRequestProperty("Content-Type", "application/json")
-    }
-    banConnection.outputStream.use { it.write(JSONObject().put("accountId", accountId).put("deviceId", deviceId).toString().toByteArray(Charsets.UTF_8)) }
-    val banCode = banConnection.responseCode
-    val banStream = if (banCode in 200..299) banConnection.inputStream else banConnection.errorStream
-    val banJson = runCatching { JSONObject(banStream.bufferedReader().use { it.readText() }) }.getOrDefault(JSONObject())
-    banConnection.disconnect()
-    if (banJson.optBoolean("banned")) throw IllegalStateException("This account or device is blocked from signing in.")
+    // A temporary backend outage must not turn a valid Firebase/Google login into
+    // an authentication failure. Explicit ban responses still block the account.
+    val isBanned = runCatching {
+        val banConnection = (URL("$HURRY_API_BASE/api/check-ban").openConnection() as HttpURLConnection).apply {
+            requestMethod = "POST"; connectTimeout = 8000; readTimeout = 8000; doOutput = true
+            setRequestProperty("Content-Type", "application/json")
+        }
+        try {
+            banConnection.outputStream.use {
+                it.write(JSONObject().put("accountId", accountId).put("deviceId", deviceId).toString().toByteArray(Charsets.UTF_8))
+            }
+            val banCode = banConnection.responseCode
+            val banStream = if (banCode in 200..299) banConnection.inputStream else banConnection.errorStream
+            val banJson = runCatching {
+                JSONObject(banStream?.bufferedReader()?.use { it.readText() }.orEmpty())
+            }.getOrDefault(JSONObject())
+            banJson.optBoolean("banned")
+        } finally {
+            banConnection.disconnect()
+        }
+    }.onFailure {
+        android.util.Log.w("ZyoraAuth", "Ban check unavailable; allowing Firebase login and continuing profile sync", it)
+    }.getOrDefault(false)
+    if (isBanned) throw IllegalStateException("This account or device is blocked from signing in.")
 
     val profile = JSONObject()
         .put("id", uid).put("uid", uid).put("appLongId", uid)
