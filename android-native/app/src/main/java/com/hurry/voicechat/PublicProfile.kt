@@ -383,7 +383,7 @@ fun PublicProfileScreen(
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1DC4E9)),
                     shape = RoundedCornerShape(16.dp)
                 ) {
-                    Icon(Icons.Default.ChatBubble, null, tint = Color.White) // Filled chat icon like the real app
+                    RealProfileChatIcon()
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Chat", fontSize = 16.sp, fontWeight = FontWeight.Medium)
                 }
@@ -531,6 +531,28 @@ fun PublicProfileScreen(
 }
 
 // --- HELPER COMPOSABLES ---
+
+@Composable
+private fun RealProfileChatIcon() {
+    Canvas(modifier = Modifier.size(24.dp)) {
+        val w = size.width
+        val h = size.height
+        val bubble = Path().apply {
+            // Filled MessageCircle silhouette used by the web Public Profile.
+            moveTo(w * 0.5f, h * 0.08f)
+            cubicTo(w * 0.25f, h * 0.08f, w * 0.07f, h * 0.27f, w * 0.07f, h * 0.51f)
+            cubicTo(w * 0.07f, h * 0.75f, w * 0.25f, h * 0.93f, w * 0.5f, h * 0.93f)
+            cubicTo(w * 0.59f, h * 0.93f, w * 0.68f, h * 0.90f, w * 0.75f, h * 0.85f)
+            lineTo(w * 0.93f, h * 0.94f)
+            lineTo(w * 0.89f, h * 0.75f)
+            cubicTo(w * 0.96f, h * 0.67f, w * 0.98f, h * 0.59f, w * 0.98f, h * 0.5f)
+            cubicTo(w * 0.98f, h * 0.26f, w * 0.77f, h * 0.08f, w * 0.5f, h * 0.08f)
+            close()
+        }
+        drawPath(path = bubble, color = Color.White)
+    }
+}
+
 
 @Composable
 fun SectionHeader(title: String, subtitle: String = "") {
