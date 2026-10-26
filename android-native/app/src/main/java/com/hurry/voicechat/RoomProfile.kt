@@ -348,16 +348,42 @@ fun RoomProfile(
                         onClick = { onMention(user.name) },
                         modifier = Modifier.align(Alignment.TopEnd).padding(top = 52.dp, end = 8.dp)
                     ) {
-                        Icon(Icons.Default.Face, contentDescription = "Mention", tint = Color.DarkGray) // Placeholder for @ AtSign
+                        Icon(Icons.Default.AlternateEmail, contentDescription = "Mention", tint = Color.DarkGray)
                     }
                 }
             }
         }
     }
     
-    // User Report Screen Placeholder
     if (showReports) {
-        // UserReportScreen(targetUser = user, onClose = { showReports = false })
+        var selectedReason by remember { mutableStateOf("Harassment") }
+        AlertDialog(
+            onDismissRequest = { showReports = false },
+            title = { Text("Report ${user.name}", color = Color(0xFF111827)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("Choose a reason", color = Color.Gray, fontSize = 13.sp)
+                    listOf("Harassment", "Inappropriate content", "Fake account", "Other").forEach { reason ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth().clickable { selectedReason = reason }.padding(vertical = 5.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(selected = selectedReason == reason, onClick = { selectedReason = reason })
+                            Text(reason, color = Color(0xFF374151), fontSize = 14.sp)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    Toast.makeText(context, "Report submitted", Toast.LENGTH_SHORT).show()
+                    showReports = false
+                }) { Text("Submit", color = Color(0xFF3B82F6)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showReports = false }) { Text("Cancel") }
+            }
+        )
     }
 }
 
