@@ -93,6 +93,7 @@ fun PublicProfileScreen(
     var showAgeScreen by remember { mutableStateOf(false) }
     var showBioScreen by remember { mutableStateOf(false) }
     var showActionSheet by remember { mutableStateOf(false) }
+    var showUserReport by remember { mutableStateOf(false) }
     var showChat by remember { mutableStateOf(false) }
 
     var fullImageIndex by remember { mutableStateOf<Int?>(null) }
@@ -767,10 +768,8 @@ fun PublicProfile(
     onMessage: () -> Unit = {},
     currentUserId: String = ""
 ) {
-    val targetIdentity = user.uid?.takeIf { it.isNotBlank() }
-        ?: user.id?.takeIf { it.isNotBlank() }
-        ?: user.accountId?.takeIf { it.isNotBlank() }
-    val viewingOwnProfile = currentUserId.isNotBlank() && targetIdentity == currentUserId
+    val targetIdentities = listOfNotNull(user.uid, user.id, user.accountId).filter { it.isNotBlank() }
+    val viewingOwnProfile = currentUserId.isNotBlank() && targetIdentities.any { it == currentUserId }
 
     PublicProfileScreen(
         onBack = onBack,
