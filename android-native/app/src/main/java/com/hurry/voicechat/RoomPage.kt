@@ -714,7 +714,7 @@ fun RoomPage(
                 if (roomMicMode == 5) {
                     val micSize = 65.dp
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-                        seats.take(1).forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, isSpeaking = seat.speaking || (seat.accountId == accountId && localVoiceSpeaking), seatSize = micSize) { selectedSeat = seat.number; showSeatSheet = true } }
+                        seats.take(1).forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, isSpeaking = seat.speaking || (seat.accountId == accountId && localVoiceSpeaking), seatSize = micSize) { selectedSeat = seat.number; showSeatSheet = !seat.occupied } }
                     }
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         seats.drop(1).take(4).forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, isSpeaking = seat.speaking || (seat.accountId == accountId && localVoiceSpeaking), seatSize = micSize) { selectedSeat = seat.number; showSeatSheet = true } }
@@ -1161,7 +1161,68 @@ fun RoomPage(
                 onInvite={clipboard.setText(AnnotatedString("Join room $roomName — seat $selectedSeat (ID: $roomId)"));showSeatSheet=false;selectedSeat=0}
             )
         }
-        if(selectedSeat>0 && seats.firstOrNull{it.number==selectedSeat}?.occupied==true && !showSeatSheet) MemberSheet(seats.first{it.number==selectedSeat}){selectedSeat=0}
+        if(selectedSeat>0 && seats.firstOrNull{it.number==selectedSeat}?.occupied==true && !showSeatSheet) {
+            val profileSeat = seats.first { it.number == selectedSeat }
+            RoomProfile(
+                user = RoomUser(
+                    id = profileSeat.accountId,
+                    uid = profileSeat.accountId,
+                    accountId = profileSeat.accountId,
+                    name = profileSeat.userName.ifBlank { "User" },
+                    image = profileSeat.userImage,
+                    isInSeat = true,
+                    isMuted = profileSeat.muted,
+                    isLocked = profileSeat.locked
+                ),
+                isCurrentUser = profileSeat.accountId == accountId,
+                isRoomOwner = profileSeat.accountId == roomOwner.accountId.ifBlank { roomOwner.id },
+                onClose = { selectedSeat = 0 },
+                onCopyId = {
+                    clipboard.setText(AnnotatedString(profileSeat.accountId))
+                    copiedId = profileSeat.accountId
+                },
+                onLeaveSeat = {
+                    seats[seats.indexOfFirst { it.number == selectedSeat }.takeIf { it >= 0 } ?: 0] =
+                        NativeRoomSeat(number = selectedSeat)
+                    roomSocketRef.value?.emit(
+                        "room_seat_action",
+                        JSONObject().put("roomId", roomId).put("userId", profileSeat.accountId)
+                            .put("action", "leave").put("seatNumber", selectedSeat)
+                    )
+                    selectedSeat = 0
+                },
+                onFollow = { onFollowToggle(profileSeat.accountId, true) },
+                onMessage = {
+                    selectedOfficialChat = Triple(profileSeat.accountId, profileSeat.userName.ifBlank { "User" }, profileSeat.userImage)
+                    selectedSeat = 0
+                },
+                onMute = {
+                    val idx = seats.indexOfFirst { it.number == selectedSeat }
+                    if (idx >= 0) {
+                        val nextMuted = !seats[idx].muted
+                        seats[idx] = seats[idx].copy(muted = nextMuted)
+                        roomSocketRef.value?.emit("room_seat_action", JSONObject().put("roomId", roomId)
+                            .put("userId", accountId).put("action", "mute").put("seatNumber", selectedSeat).put("isMuted", nextMuted))
+                    }
+                },
+                onLock = {
+                    val idx = seats.indexOfFirst { it.number == selectedSeat }
+                    if (idx >= 0 && (accountId == roomOwner.accountId || accountId == roomOwner.id || accountId == roomId)) {
+                        val nextLocked = !seats[idx].locked
+                        seats[idx] = seats[idx].copy(locked = nextLocked)
+                        roomSocketRef.value?.emit("room_seat_action", JSONObject().put("roomId", roomId)
+                            .put("userId", accountId).put("action", "lock").put("seatNumber", selectedSeat).put("isLocked", nextLocked))
+                    }
+                },
+                onKickOut = {
+                    roomSocketRef.value?.emit("room_seat_action", JSONObject().put("roomId", roomId)
+                        .put("userId", accountId).put("action", "kick").put("targetUserId", profileSeat.accountId).put("seatNumber", selectedSeat))
+                    val idx = seats.indexOfFirst { it.number == selectedSeat }
+                    if (idx >= 0) seats[idx] = NativeRoomSeat(number = selectedSeat)
+                    selectedSeat = 0
+                }
+            )
+        }
         if(showMessageSheet) {
             val screenHeight = LocalConfiguration.current.screenHeightDp
             val sheetShape = RoundedCornerShape(topStart = 15.dp, topEnd = 15.dp)
