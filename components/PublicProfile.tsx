@@ -104,8 +104,6 @@ export interface TargetUser {
   coinSellerTag?: boolean
   coinSeller?: boolean
   sellerTag?: boolean
-  coinSeller?: boolean
-  sellerTag?: boolean
   vipTag?: boolean
   premiumTag?: boolean
 }
