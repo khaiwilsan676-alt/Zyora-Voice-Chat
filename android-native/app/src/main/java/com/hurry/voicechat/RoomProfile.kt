@@ -49,7 +49,16 @@ data class RoomUser(
     val isOnline: Boolean = true,
     val isInSeat: Boolean = false,
     val isMuted: Boolean = false,
-    val isLocked: Boolean = false
+    val isLocked: Boolean = false,
+    // Public-profile assets and badges; defaults preserve existing room-profile callers.
+    val coverPhoto: String? = null,
+    val officialHeadTag: Boolean? = null,
+    val officialTag: Boolean? = null,
+    val adminTag: Boolean? = null,
+    val serviceTag: Boolean? = null,
+    val coinSellerTag: Boolean? = null,
+    val vipTag: Boolean? = null,
+    val premiumTag: Boolean? = null
 )
 
 fun generateStableId(input: String): String {
