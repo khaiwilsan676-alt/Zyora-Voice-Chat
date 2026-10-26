@@ -45,6 +45,12 @@ jobs:
         with:
           gradle-version: '8.13'
 
+      - name: Verify native Google sign-in signing certificate
+        working-directory: android-native
+        run: |
+          gradle :app:signingReport --no-daemon
+          echo "The SHA-1/SHA-256 above must match the Android app fingerprints registered in Firebase."
+
       - name: Build native debug APK
         working-directory: android-native
         env:
