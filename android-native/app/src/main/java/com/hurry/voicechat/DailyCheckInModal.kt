@@ -53,11 +53,10 @@ fun DailyCheckInModal(
             dismissOnClickOutside = true
         )
     ) {
-        // Modal ko center se thoda niche (0.15f bias) align kiya hai 
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.2f)) // <-- Background ekdam halka dark (0.2f) kiya, koi bhari drop nahi
+                .background(Color.Black.copy(alpha = 0.2f)) 
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
@@ -66,7 +65,6 @@ fun DailyCheckInModal(
             contentAlignment = BiasAlignment(0f, 0.15f) 
         ) {
             
-            // Ye Column card aur tere bottom wale close button ko stack karega
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -74,29 +72,25 @@ fun DailyCheckInModal(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 
-                // Box jo Banner aur Card ko overlap karwane ke liye hai
                 Box(
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    // 1. Naya SVGA Style Outer Card
                     Column(
                         modifier = Modifier
-                            .padding(top = 50.dp) // Banner ke overlap ke liye space
+                            .padding(top = 50.dp) 
                             .fillMaxWidth()
-                            // MAIN CARD CORNER CURVE 12.dp HAI
                             .clip(RoundedCornerShape(12.dp))
                             .background(Color.White)
                             .border(6.dp, Color(0xFFFFE57C), RoundedCornerShape(12.dp)) 
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null,
-                                onClick = {} // Card par click se dismiss na ho
+                                onClick = {} 
                             )
                             .padding(start = 20.dp, end = 20.dp, top = 48.dp, bottom = 16.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         
-                        // Subtitle (Sign in for 7 days for rich rewards)
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -115,20 +109,18 @@ fun DailyCheckInModal(
 
                         Spacer(modifier = Modifier.height(12.dp)) 
 
-                        // Row 1: Days 1 to 4
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            DayCard(day = 1, reward = "+5000", image = "file_00000000b2d481fd8cd233482dbeb9ef.png", currentDay = currentDay, modifier = Modifier.weight(1f))
-                            DayCard(day = 2, reward = "+5000", image = "file_00000000b2d481fd8cd233482dbeb9ef.png", currentDay = currentDay, modifier = Modifier.weight(1f))
+                            DayCard(day = 1, reward = "+10,000", image = "file_00000000b2d481fd8cd233482dbeb9ef.png", currentDay = currentDay, modifier = Modifier.weight(1f))
+                            DayCard(day = 2, reward = "+10,000", image = "file_00000000b2d481fd8cd233482dbeb9ef.png", currentDay = currentDay, modifier = Modifier.weight(1f))
                             DayCard(day = 3, reward = "×2 Days", image = "file_00000000d808821186c1b7b612eea3fc.png", currentDay = currentDay, modifier = Modifier.weight(1f))
-                            DayCard(day = 4, reward = "+10,000", image = "file_00000000b2d481fd8cd233482dbeb9ef.png", currentDay = currentDay, modifier = Modifier.weight(1f))
+                            DayCard(day = 4, reward = "+15,000", image = "file_00000000b2d481fd8cd233482dbeb9ef.png", currentDay = currentDay, modifier = Modifier.weight(1f))
                         }
 
                         Spacer(modifier = Modifier.height(8.dp))
 
-                        // Row 2: Days 5 to 6
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -143,17 +135,15 @@ fun DailyCheckInModal(
 
                         Spacer(modifier = Modifier.height(8.dp))
 
-                        // Row 3: Day 7 (Big Reward)
                         Day7Card(currentDay = currentDay)
 
                         Spacer(modifier = Modifier.height(16.dp)) 
 
-                        // Sign-in Button (3D hta diya, Solid color, Curve kam)
                         val isButtonDisabled = claimedToday || currentDay > 7
                         val buttonColor = if (isButtonDisabled) {
-                            Color(0xFF9CA3AF) // Solid Gray jab disable/claimed ho
+                            Color(0xFF9CA3AF) 
                         } else {
-                            Color(0xFFFFD633) // Solid Yellow 
+                            Color(0xFFFFD633) 
                         }
 
                         Button(
@@ -164,22 +154,20 @@ fun DailyCheckInModal(
                                 disabledContainerColor = buttonColor
                             ),
                             contentPadding = PaddingValues(),
-                            shape = RoundedCornerShape(12.dp), // Curve thoda kam kar diya
+                            shape = RoundedCornerShape(12.dp),
                             modifier = Modifier
                                 .fillMaxWidth(0.85f)
                                 .height(46.dp)
                         ) {
                             Text(
-                                // Text update kar diya
                                 text = if (claimedToday) "Signed In today" else if (currentDay > 7) "All Rewards Claimed!" else "Sign in",
-                                color = if (isButtonDisabled) Color.White else Color.Black, // Text color adjust kar diya logic ke hisab se
+                                color = if (isButtonDisabled) Color.White else Color.Black, 
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.ExtraBold
                             )
                         }
                     }
 
-                    // 2. BANNER IMAGE (Halka sa 1% right shift karne ke liye x = 2.dp kiya hai)
                     AsyncImage(
                         model = "file_000000004b6c8211855003bf899492fd.png".fullUrl,
                         contentDescription = "Top Banner",
@@ -188,14 +176,13 @@ fun DailyCheckInModal(
                             .fillMaxWidth() 
                             .scale(1.05f) 
                             .align(Alignment.TopCenter)
-                            .offset(x = 2.dp, y = (-45).dp) // <-- Yahan x = 2.dp se banner halka sa right shift ho gaya hai
+                            .offset(x = 2.dp, y = (-45).dp) 
                             .zIndex(2f)
                     )
                 }
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // 3. CLOSE (X) BUTTON
                 Box(
                     modifier = Modifier
                         .size(48.dp)
@@ -280,7 +267,8 @@ private fun SpecialDayCard(day: Int, currentDay: Int, modifier: Modifier = Modif
         DayBadge(day = day)
         
         Box(
-            modifier = Modifier.padding(top = 18.dp)
+            // Top padding sirf thodi si kam ki hai (18->12) taaki image thodi upar shift ho aur text dikhe
+            modifier = Modifier.padding(top = 12.dp)
         ) {
             content()
         }
@@ -338,7 +326,8 @@ private fun Day7Card(currentDay: Int) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 18.dp, start = 12.dp, end = 12.dp),
+                // Top padding (18->12) ki hai bas jisse space mil jaye aur text cut na ho
+                .padding(top = 12.dp, start = 12.dp, end = 12.dp),
             contentAlignment = Alignment.Center
         ) {
             renderDay7Special()
@@ -364,8 +353,8 @@ private fun renderDay5Special() {
         horizontalArrangement = Arrangement.spacedBy(16.dp), 
         verticalAlignment = Alignment.CenterVertically 
     ) {
-        RewardItemIcon("file_00000000b2d481fd8cd233482dbeb9ef.png", "+10,000", 36.dp)
-        RewardItemIcon("IMG_20260903_141944.png", "×1 Day", 44.dp)
+        RewardItemIcon("file_00000000b2d481fd8cd233482dbeb9ef.png", "+20,000", 36.dp)
+        RewardItemIcon("IMG_20260903_141944.png", "×2Days", 44.dp)
     }
 }
 
@@ -375,8 +364,8 @@ private fun renderDay6Special() {
         horizontalArrangement = Arrangement.spacedBy(16.dp), 
         verticalAlignment = Alignment.CenterVertically 
     ) {
-        RewardItemIcon("file_00000000b2d481fd8cd233482dbeb9ef.png", "+10,000", 36.dp)
-        RewardItemIcon("IMG-20260903-WA0076.jpg", "×2 Days", 36.dp)
+        RewardItemIcon("file_00000000b2d481fd8cd233482dbeb9ef.png", "+20,000", 36.dp)
+        RewardItemIcon("IMG-20260903-WA0076.jpg", "×2Days", 36.dp)
     }
 }
 
@@ -393,9 +382,7 @@ private fun renderDay7Special() {
     }
 }
 
-// Yahan maine sabse bada change kiya hai tere instruction ke hisaab se:
-// Row hata kar Column kar diya hai.
-// Texts sab card 1,2,3,4 jese exact ek hi seedhi line me (bottom align) aaye iske liye ek 50.dp ka Box lagaya.
+// Ye structure ekdam original rakha hai
 @Composable
 private fun RewardItemIcon(image: String, text: String, size: androidx.compose.ui.unit.Dp) {
     Column(
@@ -403,8 +390,8 @@ private fun RewardItemIcon(image: String, text: String, size: androidx.compose.u
         verticalArrangement = Arrangement.Center
     ) {
         Box(
-            modifier = Modifier.height(50.dp), // Fix height ensure karega ki saare texts "ek hi line m" aaye
-            contentAlignment = Alignment.BottomCenter // Images ek hi baseline pe rest karengi
+            modifier = Modifier.height(50.dp), 
+            contentAlignment = Alignment.BottomCenter 
         ) {
             AsyncImage(
                 model = image.fullUrl,
@@ -416,12 +403,12 @@ private fun RewardItemIcon(image: String, text: String, size: androidx.compose.u
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = text,
-            fontSize = 10.sp, // Jaisey 1,2,3,4 mein tha waisa hi kiya
+            fontSize = 10.sp, 
             fontWeight = FontWeight.Bold,
             color = Color(0xFF544B00), 
             textAlign = TextAlign.Center,
             maxLines = 1,
-            modifier = Modifier.offset(y = (-8).dp) // Exactly 1,2,3,4 jaisa offset
+            modifier = Modifier.offset(y = (-8).dp) 
         )
     }
 }
