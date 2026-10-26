@@ -220,15 +220,22 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
         } else {
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
-                modifier = Modifier.fillMaxSize().pointerInput(activeTab) {
+                modifier = Modifier.fillMaxSize().animateContentSize(
+                    animationSpec = androidx.compose.animation.core.tween(
+                        durationMillis = 260,
+                        easing = androidx.compose.animation.core.FastOutSlowInEasing
+                    )
+                ).pointerInput(activeTab) {
                     var horizontalDrag = 0f
                     detectHorizontalDragGestures(
                         onHorizontalDrag = { _, dragAmount -> horizontalDrag += dragAmount },
                         onDragEnd = {
                             val currentIndex = nativeStoreTabs.indexOfFirst { it.id == activeTab }
-                            if (horizontalDrag > 60f && currentIndex < nativeStoreTabs.lastIndex) {
+                            // Finger moves right-to-left (negative drag) -> next Store tab.
+                            // Finger moves left-to-right (positive drag) -> previous Store tab.
+                            if (horizontalDrag < -45f && currentIndex < nativeStoreTabs.lastIndex) {
                                 activeTab = nativeStoreTabs[currentIndex + 1].id
-                            } else if (horizontalDrag < -60f && currentIndex > 0) {
+                            } else if (horizontalDrag > 45f && currentIndex > 0) {
                                 activeTab = nativeStoreTabs[currentIndex - 1].id
                             }
                             horizontalDrag = 0f
