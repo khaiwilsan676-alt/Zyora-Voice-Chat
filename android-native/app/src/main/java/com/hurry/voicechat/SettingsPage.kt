@@ -2,7 +2,6 @@ package com.hurry.voicechat
 
 import android.content.Context
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -15,7 +14,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -31,6 +29,7 @@ private val SettingsDivider = Color(0xFFF1F5F9)
 private val PageBackgroundGrey = Color(0xFFF5F5F5) 
 private val LogoutRed = Color(0xFFE53935)
 private val DeleteOrangeIcon = Color(0xFFF05133)
+// GradientBlue is kept just in case you need it later, but removed from Delete Account UI
 private val GradientBlue = Color(0xFF0055FF) 
 
 @Composable
@@ -111,7 +110,7 @@ fun SettingsPage(
         }
     }
 
-    // Privacy Policy: keep the same policy text as the login page.
+    // Privacy Policy
     if (showPrivacyPolicy) {
         Column(
             Modifier.fillMaxSize().background(Color.White)
@@ -120,15 +119,18 @@ fun SettingsPage(
             horizontalAlignment = Alignment.Start
         ) {
             Row(
-                Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 18.dp),
+                Modifier.fillMaxWidth().statusBarsPadding().padding(top = 12.dp, bottom = 18.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    "‹",
-                    color = Color(0xFF374151),
-                    fontSize = 32.sp,
-                    modifier = Modifier.clickable { showPrivacyPolicy = false }
-                )
+                // Fixed Left Arrow & Safe Area
+                Box(Modifier.size(32.dp).clickable { showPrivacyPolicy = false }, contentAlignment = Alignment.Center) {
+                    androidx.compose.foundation.Canvas(Modifier.size(24.dp)) {
+                        val stroke = 2.4.dp.toPx()
+                        drawLine(SettingsInk, androidx.compose.ui.geometry.Offset(size.width * 0.86f, size.height / 2), androidx.compose.ui.geometry.Offset(size.width * 0.16f, size.height / 2), strokeWidth = stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+                        drawLine(SettingsInk, androidx.compose.ui.geometry.Offset(size.width * 0.16f, size.height / 2), androidx.compose.ui.geometry.Offset(size.width * 0.45f, size.height * 0.20f), strokeWidth = stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+                        drawLine(SettingsInk, androidx.compose.ui.geometry.Offset(size.width * 0.16f, size.height / 2), androidx.compose.ui.geometry.Offset(size.width * 0.45f, size.height * 0.80f), strokeWidth = stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+                    }
+                }
                 Text(
                     "Privacy Policy",
                     color = Color(0xFF111827),
@@ -152,21 +154,16 @@ fun SettingsPage(
         return
     }
 
-    // Delete Account Page Logic (New UI)
+    // Delete Account Page Logic
     if (showDeleteAccount) {
         Box(
             Modifier
                 .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        0.0f to GradientBlue,
-                        0.3f to PageBackgroundGrey, // 30% solid blue mix into grey
-                        1.0f to PageBackgroundGrey
-                    )
-                )
+                // Pura grey karr diya, blue gradient hata diya
+                .background(PageBackgroundGrey)
         ) {
             Column(Modifier.fillMaxSize()) {
-                SettingsSubHeader(nativeText(languageCode, "delete_account") ?: "Delete Account") { showDeleteAccount = false }
+                SettingsSubHeader("Delete Account") { showDeleteAccount = false }
                 
                 // White Info Card
                 Box(
@@ -250,7 +247,7 @@ fun SettingsPage(
     // About Page Logic
     if (showAbout) {
         Column(Modifier.fillMaxSize().background(Color.White)) {
-            SettingsSubHeader(nativeText(languageCode, "about")) { showAbout = false }
+            SettingsSubHeader("About Us") { showAbout = false }
             Column(
                 Modifier.fillMaxSize().verticalScroll(rememberScrollState())
                     .padding(horizontal = 24.dp, vertical = 32.dp)
@@ -287,7 +284,7 @@ fun SettingsPage(
     // Main Settings Page
     Column(Modifier.fillMaxSize().background(PageBackgroundGrey)) { 
         
-        // Top Section: Header + Options ek hi White patti mein
+        // Top Section
         Column(Modifier.fillMaxWidth().background(Color.White)) {
             // Header
             Row(
@@ -307,7 +304,7 @@ fun SettingsPage(
                     }
                 }
                 Text(
-                    text = nativeText(languageCode, "settings") ?: "Setting",
+                    text = "Setting",
                     modifier = Modifier.weight(1f),
                     fontSize = 18.sp,
                     fontWeight = FontWeight.SemiBold,
@@ -319,17 +316,17 @@ fun SettingsPage(
 
             SettingsDividerLine()
             
-            // Options
-            SettingsNavigationRow(nativeText(languageCode, "privacy_policy") ?: "Privacy Policy") { showPrivacyPolicy = true }
+            // Options - Underscores removed, direct string used
+            SettingsNavigationRow("Privacy Policy") { showPrivacyPolicy = true }
             SettingsDividerLine()
-            SettingsNavigationRow(nativeText(languageCode, "about") ?: "About") { showAbout = true }
+            SettingsNavigationRow("About Us") { showAbout = true }
             SettingsDividerLine()
-            SettingsNavigationRow(nativeText(languageCode, "delete_account") ?: "Delete Account") { showDeleteAccount = true }
+            SettingsNavigationRow("Delete Account") { showDeleteAccount = true }
         }
 
         Spacer(Modifier.height(16.dp))
 
-        // Logout Section: Alag white patti red text ke sath
+        // Logout Section
         Box(
             Modifier
                 .fillMaxWidth()
@@ -339,7 +336,7 @@ fun SettingsPage(
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = nativeText(languageCode, "logout") ?: "Log Out", 
+                text = "Log Out", 
                 fontSize = 16.sp, 
                 fontWeight = FontWeight.Medium, 
                 color = LogoutRed 
@@ -357,7 +354,6 @@ private fun SettingsPrivacySection(title: String, body: String) {
     }
 }
 
-// Helper composable for the list items in the delete account screen
 @Composable
 private fun DeleteAccountListItem(text: String) {
     Text(
