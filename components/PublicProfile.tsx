@@ -99,6 +99,9 @@ export interface TargetUser {
   flag?: string
   officialTag?: boolean
   adminTag?: boolean
+  coinSellerTag?: boolean
+  coinSeller?: boolean
+  sellerTag?: boolean
   vipTag?: boolean
   premiumTag?: boolean
 }
@@ -1877,6 +1880,9 @@ export default function PublicProfile({
           )}
           {user.officialTag && (
             <GreenColorRemovalShader imageSrc="/1788021468845~2.jpg" className="h-9 w-auto object-contain" />
+          )}
+          {(user.coinSellerTag === true || user.coinSeller === true || user.sellerTag === true) && (
+            <img src="/IMG_20261026_205346.png" alt="Coin Seller" className="h-7 w-auto object-contain" />
           )}
           {user.vipTag && <img src="/1785469775751.png" alt="VIP" className="h-7 w-auto object-contain" />}
           {user.premiumTag && <img src="/1785469365805.png" alt="Premium" className="h-7 w-auto object-contain" />}
