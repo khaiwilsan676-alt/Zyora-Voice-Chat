@@ -1655,6 +1655,8 @@ export default function PublicProfile({
     return { uid, name, photo }
   }
 
+  const isCoinSeller = user.coinSellerTag === true || user.coinSeller === true || user.sellerTag === true;
+
   const finalDisplayName = isValidName(user.name)
     ? user.name
     : (user.displayAccountNumber ? user.displayAccountNumber : 'User');
@@ -1890,7 +1892,7 @@ export default function PublicProfile({
 
         <div className="flex items-center gap-1 text-xs mt-0.5 font-medium">
           <div className="flex items-center gap-1">
-            {isSpecialAccount ? (
+            {isSpecialAccount && !isCoinSeller ? (
               <>
                 <span
                   className="relative font-bold rounded text-white -ml-2.5"
