@@ -1059,7 +1059,3 @@ fun LuckyComboButton(
     }
 }
 
-// Helper
-private fun Modifier.alpha(value: Float) = this.then(
-    androidx.compose.ui.draw.alpha(value)
-)
