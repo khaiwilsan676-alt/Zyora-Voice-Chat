@@ -1655,7 +1655,6 @@ export default function PublicProfile({
     return { uid, name, photo }
   }
 
-  const isCoinSeller = user.coinSellerTag === true || user.coinSeller === true || user.sellerTag === true;
 
   const finalDisplayName = isValidName(user.name)
     ? user.name
@@ -1884,7 +1883,6 @@ export default function PublicProfile({
             <GreenColorRemovalShader imageSrc="/1788021468845~2.jpg" className="h-9 w-auto object-contain" />
           )}
           {(user.coinSellerTag === true || user.coinSeller === true || user.sellerTag === true) && (
-            <img src="/IMG_20261026_205346.png" alt="Coin Seller" className="h-7 w-auto object-contain" />
           )}
           {user.vipTag && <img src="/1785469775751.png" alt="VIP" className="h-7 w-auto object-contain" />}
           {user.premiumTag && <img src="/1785469365805.png" alt="Premium" className="h-7 w-auto object-contain" />}
@@ -1892,7 +1890,7 @@ export default function PublicProfile({
 
         <div className="flex items-center gap-1 text-xs mt-0.5 font-medium">
           <div className="flex items-center gap-1">
-            {isSpecialAccount && !isCoinSeller ? (
+            {isSpecialAccount ? (
               <>
                 <span
                   className="relative font-bold rounded text-white -ml-2.5"
