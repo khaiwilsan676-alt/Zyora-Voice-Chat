@@ -203,6 +203,30 @@ fun RoomSettingPage(
     var saveError by remember { mutableStateOf("") }
     val members = remember { mutableStateListOf<NativeSettingMember>() }
 
+    // 🔥 COMMON SAVE FUNCTION 🔥 
+    // Ye function ab Confirm dabane pe ya modal close hone pe directly chalega, aur server par save kar dega!
+    val performSave = { newState: RoomSettingsDataNative ->
+        scope.launch {
+            saving = true
+            saveError = ""
+            val ready = newState.copy(
+                roomName = newState.roomName.trim().ifBlank { "Room" },
+                admin = admins // Ensure current admins are always included
+            )
+            runCatching {
+                saveRoomSettingsRemote(roomOwnerId, currentUserId, ready)
+                context.getSharedPreferences("room_settings", Context.MODE_PRIVATE).edit()
+                    .putInt("micMode_$roomOwnerId", ready.micMode)
+                    .putString("theme_$roomOwnerId", ready.theme)
+                    .apply()
+            }.onSuccess {
+                state = ready
+                onSave(ready)
+            }.onFailure { saveError = it.message ?: "Network error. Try again." }
+            saving = false
+        }
+    }
+
     LaunchedEffect(adminSearch, sheet) {
         val q = adminSearch.trim()
         if (sheet != "admin" || q.isBlank()) return@LaunchedEffect
@@ -254,11 +278,12 @@ fun RoomSettingPage(
         if (uri != null) scope.launch {
             runCatching { cropImageToDataUrl(context, uri) }
                 .onSuccess { dataUrl ->
-                    if (pendingPicker == "photo") state = state.copy(roomDp = dataUrl)
-                    else {
+                    if (pendingPicker == "photo") {
+                        performSave(state.copy(roomDp = dataUrl)) // Auto Save!
+                    } else {
                         customTheme = dataUrl
-                        state = state.copy(theme = "custom")
-                        sheet = "theme"
+                        performSave(state.copy(theme = "custom")) // Auto Save!
+                        sheet = ""
                     }
                 }
                 .onFailure { saveError = it.message ?: "Could not load image" }
@@ -305,7 +330,6 @@ fun RoomSettingPage(
             Row(
                 Modifier.fillMaxWidth().background(Color.White)
                     .statusBarsPadding()
-                    // Top padding reduced to 16.dp for 2% smaller top safe area
                     .padding(start = 8.dp, end = 8.dp, top = 16.dp, bottom = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -313,37 +337,15 @@ fun RoomSettingPage(
                     Modifier.size(40.dp).clip(CircleShape).clickable(onClick = onBack),
                     contentAlignment = Alignment.Center
                 ) { Icon(Icons.Default.ArrowBack, "Back", tint = gray800, modifier = Modifier.size(24.dp)) }
+                
                 Text(
                     "Room Setting",
                     Modifier.weight(1f),
                     fontSize = 18.sp, fontWeight = FontWeight.Bold, color = gray800, textAlign = TextAlign.Center
                 )
-                TextButton(
-                    enabled = !saving,
-                    onClick = {
-                        scope.launch {
-                            saving = true; saveError = ""
-                            val ready = state.copy(roomName = state.roomName.trim().ifBlank { "Room" }, admin = admins)
-                            runCatching {
-                                saveRoomSettingsRemote(roomOwnerId, currentUserId, ready)
-                                context.getSharedPreferences("room_settings", Context.MODE_PRIVATE).edit()
-                                    .putInt("micMode_$roomOwnerId", ready.micMode)
-                                    .putString("theme_$roomOwnerId", ready.theme)
-                                    .apply()
-                            }.onSuccess {
-                                state = ready; onSave(ready); onBack()
-                            }.onFailure { saveError = it.message ?: "Network error. Try again." }
-                            saving = false
-                        }
-                    },
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp)
-                ) {
-                    Text(
-                        if (saving) "Saving..." else "Save",
-                        fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
-                        color = if (saving) gray400 else blue500
-                    )
-                }
+                
+                // Spacer daala taaki Text perfectly center me rahe! "Save" button hata diya hai!
+                Spacer(Modifier.size(40.dp))
             }
 
             // ═══════════ BODY ═══════════
@@ -390,7 +392,8 @@ fun RoomSettingPage(
                 SettingRow("Lock Room", if (state.isLocked) "Locked" else "", red = state.isLocked) {
                     password = if (state.isLocked) state.roomPassword else ""; sheet = "lock"
                 }
-                // Mic Mode — special layout (label static, value is button)
+                
+                // Mic Mode
                 Box(Modifier.fillMaxWidth().padding(bottom = 20.dp)) {
                     Row(
                         Modifier.fillMaxWidth().padding(horizontal = 4.dp),
@@ -417,7 +420,7 @@ fun RoomSettingPage(
                 }
 
                 if (saveError.isNotBlank()) {
-                    Text(saveError, color = red500, fontSize = 12.sp, modifier = Modifier.padding(vertical = 8.dp))
+                    Text(saveError, color = red500, fontSize = 12.sp, modifier = Modifier.padding(vertical = 8.dp), textAlign = TextAlign.Center)
                 }
             }
         }
@@ -440,8 +443,7 @@ fun RoomSettingPage(
                     modifier = Modifier.padding(horizontal = 12.dp)
                 )
                 Spacer(Modifier.height(20.dp))
-                PillButton("Save") { state = state.copy(roomName = draft.trim().ifBlank { "Room" }); sheet = "" }
-                    .let { }  // structural sugar
+                PillButton("Confirm") { performSave(state.copy(roomName = draft.trim().ifBlank { "Room" })); sheet = "" }
             }
         }
         "announcement" -> CenteredModal(scrimAlpha = 0.5f, onDismiss = { sheet = "" }) {
@@ -480,11 +482,10 @@ fun RoomSettingPage(
                     )
                 }
                 Spacer(Modifier.height(12.dp))
-                PillButton("Save") { state = state.copy(announcement = draft); sheet = "" }
+                PillButton("Confirm") { performSave(state.copy(announcement = draft)); sheet = "" }
             }
         }
         "lock" -> CenteredModal(scrimAlpha = 0.3f, onDismiss = { sheet = "" }) {
-            // FIX: Removed strict static width and horizontal squishing padding so 4 boxes fit equally
             Box(
                 Modifier.fillMaxWidth().padding(horizontal = 24.dp) 
                     .clip(RoundedCornerShape(16.dp)).background(Color.White).padding(24.dp)
@@ -499,7 +500,8 @@ fun RoomSettingPage(
                             "Unlock Room",
                             color = red500,
                             onClick = {
-                                state = state.copy(isLocked = false, roomPassword = ""); password = ""; sheet = ""
+                                performSave(state.copy(isLocked = false, roomPassword = ""))
+                                password = ""; sheet = ""
                             }
                         )
                     } else {
@@ -508,7 +510,8 @@ fun RoomSettingPage(
                             enabled = password.length == 4,
                             onClick = {
                                 if (password.length == 4) {
-                                    state = state.copy(isLocked = true, roomPassword = password); sheet = ""
+                                    performSave(state.copy(isLocked = true, roomPassword = password))
+                                    sheet = ""
                                 }
                             }
                         )
@@ -527,10 +530,10 @@ fun RoomSettingPage(
             items = themeItems,
             hasCustom = customTheme.isNotBlank(),
             onBack = { sheet = "" },
-            onPick = { id -> state = state.copy(theme = id); sheet = "" },
+            onPick = { id -> performSave(state.copy(theme = id)); sheet = "" },
             onUploadCustom = { pendingPicker = "theme"; picker.launch("image/*") }
         )
-        // FIX: mic modal heightFraction set exactly to 0.40f (40vh)
+        
         "mic" -> BottomSheetModal(scrimAlpha = 0.3f, heightFraction = 0.40f, onDismiss = { sheet = "" }) {
             Column(Modifier.fillMaxSize()) {
                 Row(
@@ -558,18 +561,17 @@ fun RoomSettingPage(
                     ) {
                         listOf(5, 10, 15).forEach { mode ->
                             val asset = when (mode) {
-                                5 -> RAW_SETTINGS + "IMG_20261009_172932~2.jpg"
-                                10 -> RAW_SETTINGS + "IMG_20261009_173133~2.jpg"
-                                else -> RAW_SETTINGS + "IMG_20261009_172551.jpg"
+                                5 -> RAW_SETTINGS + "Screenshot_2026-10-26-13-33-28-361_com.hawa.app.jpg"
+                                10 -> RAW_SETTINGS + "Screenshot_2026-10-26-13-33-19-325_com.hawa.app.jpg"
+                                else -> RAW_SETTINGS + "Screenshot_2026-10-26-13-33-08-252_com.hawa.app.jpg"
                             }
                             val selected = tempMicMode == mode
                             Column(
                                 Modifier.weight(1f)
                                     .clip(RoundedCornerShape(12.dp))
                                     .then(
-                                        if (selected) Modifier
-                                            .border(2.dp, blue500, RoundedCornerShape(12.dp))
-                                            .background(Color(0xFFEFF6FF)) else Modifier
+                                        // Sirf Blue border lagai hai, color nikal diya!
+                                        if (selected) Modifier.border(2.dp, blue500, RoundedCornerShape(12.dp)) else Modifier
                                     )
                                     .clickable { tempMicMode = mode }
                                     .padding(6.dp),
@@ -577,7 +579,7 @@ fun RoomSettingPage(
                             ) {
                                 AsyncImage(
                                     model = asset, contentDescription = "Mic $mode",
-                                    modifier = Modifier.fillMaxWidth().aspectRatio(0.75f),
+                                    modifier = Modifier.fillMaxWidth().wrapContentHeight(),
                                     contentScale = ContentScale.Fit
                                 )
                                 Text(
@@ -602,18 +604,25 @@ fun RoomSettingPage(
                         .padding(horizontal = 16.dp, vertical = 12.dp)
                         .navigationBarsPadding()
                 ) {
-                    PillButton("Confirm", onClick = { state = state.copy(micMode = tempMicMode); sheet = "" })
+                    PillButton("Confirm", onClick = { performSave(state.copy(micMode = tempMicMode)); sheet = "" })
                 }
             }
         }
-        "admin" -> BottomSheetModal(scrimAlpha = 0.35f, heightFraction = 0.5f, dark = false, onDismiss = { sheet = "" }) {
+        // Admin pe bahar click karne ya back lene par auto-save ho jayega!
+        "admin" -> BottomSheetModal(scrimAlpha = 0.35f, heightFraction = 0.5f, dark = false, onDismiss = { 
+            performSave(state.copy(admin = admins))
+            sheet = "" 
+        }) {
             Column(Modifier.fillMaxSize().navigationBarsPadding().background(Color.White)) {
                 Row(
                     Modifier.fillMaxWidth().padding(start = 12.dp, end = 16.dp, top = 8.dp, bottom = 6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
-                        Modifier.size(38.dp).clip(CircleShape).clickable { sheet = "" },
+                        Modifier.size(38.dp).clip(CircleShape).clickable { 
+                            performSave(state.copy(admin = admins))
+                            sheet = "" 
+                        },
                         contentAlignment = Alignment.Center
                     ) { Icon(Icons.Default.ArrowBack, "Back", tint = gray800, modifier = Modifier.size(22.dp)) }
                     Text(
@@ -696,9 +705,6 @@ fun RoomSettingPage(
                 Modifier.fillMaxWidth().padding(horizontal = 12.dp).widthIn(max = 320.dp)
                     .clip(RoundedCornerShape(16.dp))
                     .background(Color(0xFFFFFDF3))
-                    .drawBehind {
-                        // simple vertical gradient approximation
-                    }
                     .border(1.dp, yellowBorder, RoundedCornerShape(16.dp))
             ) {
                 Column {
@@ -783,7 +789,6 @@ private fun SettingRow(
     red: Boolean = false,
     onClick: () -> Unit
 ) {
-    // NO DIVIDER — only spacing
     Box(Modifier.fillMaxWidth().padding(bottom = 20.dp)) {
         Row(
             Modifier.fillMaxWidth()
@@ -1135,20 +1140,4 @@ private fun Modifier.dashedBorder(color: Color, width: Dp, cornerRadius: Dp): Mo
             pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 8f), 0f)
         )
     )
-}
-
-// Small import alias for TextButton used as custom text button
-@Composable
-private fun TextButton(
-    enabled: Boolean,
-    onClick: () -> Unit,
-    contentPadding: PaddingValues,
-    content: @Composable () -> Unit
-) {
-    Box(
-        Modifier.clip(RoundedCornerShape(8.dp))
-            .clickable(enabled = enabled, onClick = onClick)
-            .padding(contentPadding),
-        contentAlignment = Alignment.Center
-    ) { content() }
 }
