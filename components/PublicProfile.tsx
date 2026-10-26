@@ -97,9 +97,13 @@ export interface TargetUser {
   country?: string
   countryCode?: string
   flag?: string
+  officialHeadTag?: boolean
   officialTag?: boolean
   adminTag?: boolean
+  serviceTag?: boolean
   coinSellerTag?: boolean
+  coinSeller?: boolean
+  sellerTag?: boolean
   coinSeller?: boolean
   sellerTag?: boolean
   vipTag?: boolean
@@ -1154,8 +1158,11 @@ export default function PublicProfile({
         countryCode: user.countryCode,
         albumImages: albumImages,
         coverPhotos: coverPhotos,
+        officialHeadTag: user.officialHeadTag,
         officialTag: user.officialTag,
         adminTag: user.adminTag,
+        serviceTag: user.serviceTag,
+        coinSellerTag: user.coinSellerTag,
         vipTag: user.vipTag,
         premiumTag: user.premiumTag,
       };
@@ -1181,8 +1188,11 @@ export default function PublicProfile({
         let age = targetUser.age ? (typeof targetUser.age === 'number' ? targetUser.age : parseInt(String(targetUser.age))) : 22
         let followers = targetUser.followers || 0
         let album: string[] = []
+        let officialHeadTag = Boolean(targetUser.officialHeadTag)
         let officialTag = Boolean(targetUser.officialTag)
         let adminTag = Boolean(targetUser.adminTag)
+        let serviceTag = Boolean(targetUser.serviceTag)
+        let coinSellerTag = Boolean(targetUser.coinSellerTag ?? targetUser.coinSeller ?? targetUser.sellerTag)
         let vipTag = Boolean(targetUser.vipTag)
         let premiumTag = Boolean(targetUser.premiumTag)
 
@@ -1191,7 +1201,7 @@ export default function PublicProfile({
           photo, coverPhoto,
           gender: (gender === 'female' || gender === '♀' ? '♀' : '♂') as '♂' | '♀',
           age, followers, bio, location: country, flag: '🇮🇳', countryCode,
-          officialTag, adminTag, vipTag, premiumTag,
+          officialHeadTag, officialTag, adminTag, serviceTag, coinSellerTag, vipTag, premiumTag,
         })
 
         if (targetUid && targetUid !== 'N/A') {
@@ -1209,8 +1219,11 @@ export default function PublicProfile({
               location: cachedProfile.location || country,
               flag: cachedProfile.flag || '🇮🇳',
               countryCode: cachedProfile.countryCode || countryCode,
+              officialHeadTag: cachedProfile.officialHeadTag || officialHeadTag,
               officialTag: cachedProfile.officialTag || officialTag,
               adminTag: cachedProfile.adminTag || adminTag,
+              serviceTag: cachedProfile.serviceTag || serviceTag,
+              coinSellerTag: cachedProfile.coinSellerTag || coinSellerTag,
               vipTag: cachedProfile.vipTag || vipTag,
               premiumTag: cachedProfile.premiumTag || premiumTag,
             });
@@ -1242,8 +1255,11 @@ export default function PublicProfile({
                 gender = data.gender || data.Gender || gender;
                 age = data.age || data.Age ? parseInt(String(data.age || data.Age)) : age;
                 followers = data.followers !== undefined ? data.followers : followers;
+                officialHeadTag = Boolean(data.officialHeadTag ?? officialHeadTag);
                 officialTag = Boolean(data.officialTag ?? officialTag);
                 adminTag = Boolean(data.adminTag ?? adminTag);
+                serviceTag = Boolean(data.serviceTag ?? data.csTag ?? serviceTag);
+                coinSellerTag = Boolean(data.coinSellerTag ?? data.coinSeller ?? data.sellerTag ?? coinSellerTag);
                 vipTag = Boolean(data.vipTag ?? vipTag);
                 premiumTag = Boolean(data.premiumTag ?? premiumTag);
 
@@ -1270,7 +1286,7 @@ export default function PublicProfile({
                   flag: matchedCountry.flag,
                   countryCode: matchedCountry.code,
                   albumImages: album, coverPhotos: coverArr,
-                  officialTag, adminTag, vipTag, premiumTag,
+                  officialHeadTag, officialTag, adminTag, serviceTag, coinSellerTag, vipTag, premiumTag,
                 };
                 setUser(profileData);
                 setAlbumImages(album);
@@ -1876,6 +1892,9 @@ export default function PublicProfile({
             {user.gender} {user.age}
           </span>
 
+          {user.officialHeadTag && (
+            <img src="/file_00000000f81081f59d4f126bff14a8fc.png" alt="Official Head" className="h-9 w-auto object-contain" />
+          )}
           {user.adminTag && (
             <GreenColorRemovalShader imageSrc="/1788021461820~2.jpg" className="h-9 w-auto object-contain" />
           )}
@@ -1883,6 +1902,10 @@ export default function PublicProfile({
             <GreenColorRemovalShader imageSrc="/1788021468845~2.jpg" className="h-9 w-auto object-contain" />
           )}
           {(user.coinSellerTag === true || user.coinSeller === true || user.sellerTag === true) && (
+            <img src="/IMG_20261026_205346.png" alt="Coin Seller" className="h-7 w-auto object-contain" />
+          )}
+          {user.serviceTag && (
+            <img src="/IMG_20261026_205203.png" alt="CS" className="h-9 w-auto object-contain" />
           )}
           {user.vipTag && <img src="/1785469775751.png" alt="VIP" className="h-7 w-auto object-contain" />}
           {user.premiumTag && <img src="/1785469365805.png" alt="Premium" className="h-7 w-auto object-contain" />}
