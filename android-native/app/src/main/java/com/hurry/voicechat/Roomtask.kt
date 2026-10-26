@@ -80,7 +80,10 @@ private data class NativeRoomTaskRow(val title:String,val reward:String,val icon
                 Text("0",color=Color(0xFFFFD700),fontSize=24.sp)
                 Button(onClick={},shape=RoundedCornerShape(20.dp),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFFE0A92A)),contentPadding=PaddingValues(horizontal=26.dp,vertical=3.dp)){Text("Collect",color=Color(0xFF4A1F00),fontSize=11.sp)}
                 Text("*If anyone sends gifts in the room, the room owner can get 5%coins worth the gift value.",color=Color.White,fontSize=11.sp,modifier=Modifier.padding(vertical=8.dp))
-                AsyncImage(model=raw+"file_00000000680881faa3dfdb17cce60858.png",contentDescription="Room Task",modifier=Modifier.fillMaxWidth().height(45.dp),contentScale=ContentScale.FillBounds)
+                Box(Modifier.fillMaxWidth().height(45.dp),contentAlignment=Alignment.Center){
+                    AsyncImage(model=raw+"file_00000000680881faa3dfdb17cce60858.png",contentDescription="Room Task frame",modifier=Modifier.fillMaxSize(),contentScale=ContentScale.FillBounds)
+                    Text("ROOM TASK",color=Color.White,fontSize=16.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Black,letterSpacing=1.2.sp)
+                }
                 Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(3.dp),modifier=Modifier.padding(vertical=5.dp)){
                     Text("Countdown",color=Color(0xFFF5B8B8),fontSize=10.sp)
                     listOf(hour to "Hour",minute to "Minute",second to "Second").forEach{pair->
@@ -88,7 +91,10 @@ private data class NativeRoomTaskRow(val title:String,val reward:String,val icon
                         Text(pair.second,color=Color(0xFFF5B8B8),fontSize=10.sp)
                     }
                 }
-                LazyColumn(Modifier.fillMaxWidth().weight(1f),contentPadding=PaddingValues(bottom=24.dp),verticalArrangement=Arrangement.spacedBy((-60).dp)){
+                Box(Modifier.fillMaxWidth().weight(1f)) {
+                AsyncImage(model=raw+"IMG_20260903_105647.png",contentDescription=null,modifier=Modifier.align(Alignment.CenterStart).width(34.dp).fillMaxHeight(),contentScale=ContentScale.FillBounds)
+                AsyncImage(model=raw+"IMG_20260903_105705.png",contentDescription=null,modifier=Modifier.align(Alignment.CenterEnd).width(34.dp).fillMaxHeight(),contentScale=ContentScale.FillBounds)
+                LazyColumn(Modifier.fillMaxSize().padding(horizontal=10.dp),contentPadding=PaddingValues(bottom=24.dp),verticalArrangement=Arrangement.spacedBy((-60).dp)){
                     items(tasks){task->
                         Box(Modifier.fillMaxWidth().height(175.dp)){
                             AsyncImage(model=raw+"file_000000004fd0821198ed4e26d5008b16.png",contentDescription="Task background",modifier=Modifier.fillMaxSize(),contentScale=ContentScale.FillBounds)
@@ -102,6 +108,7 @@ private data class NativeRoomTaskRow(val title:String,val reward:String,val icon
                             }
                         }
                     }
+                }
                 }
             }
         }
