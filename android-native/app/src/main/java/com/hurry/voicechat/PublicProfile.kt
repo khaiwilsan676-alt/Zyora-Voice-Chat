@@ -393,6 +393,124 @@ fun PublicProfileScreen(
 
     // --- OVERLAYS & BOTTOM SHEETS ---
 
+    // The danger icon belongs only to another user's profile.
+    if (isOtherUser && showActionSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showActionSheet = false },
+            containerColor = Color.Black,
+            contentColor = Color.White,
+            scrimColor = Color.Black.copy(alpha = 0.28f),
+            shape = RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp),
+            dragHandle = null
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 24.dp)
+            ) {
+                Text(
+                    "Report",
+                    modifier = Modifier.fillMaxWidth().clickable {
+                        showActionSheet = false
+                        showUserReport = true
+                    }.padding(vertical = 16.dp),
+                    color = Color.White,
+                    fontSize = 18.sp,
+                    textAlign = TextAlign.Center,
+                    fontWeight = FontWeight.Medium
+                )
+                Text(
+                    "Block",
+                    modifier = Modifier.fillMaxWidth().clickable {
+                        showActionSheet = false
+                        Toast.makeText(context, "Block user", Toast.LENGTH_SHORT).show()
+                    }.padding(vertical = 16.dp),
+                    color = Color.White,
+                    fontSize = 18.sp,
+                    textAlign = TextAlign.Center,
+                    fontWeight = FontWeight.Medium
+                )
+                Spacer(Modifier.height(8.dp))
+                Button(
+                    onClick = { showActionSheet = false },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B82F6)),
+                    shape = RoundedCornerShape(12.dp)
+                ) { Text("Cancel", color = Color.White) }
+            }
+        }
+    }
+
+    // Report opens as an opaque full-screen page, with no profile controls visible behind it.
+    if (isOtherUser && showUserReport) {
+        Dialog(
+            onDismissRequest = { showUserReport = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            var reportCategory by remember { mutableStateOf("") }
+            var reportDescription by remember { mutableStateOf("") }
+            var reportSubmitted by remember { mutableStateOf(false) }
+            Column(
+                modifier = Modifier.fillMaxSize().background(Color.White).windowInsetsPadding(WindowInsets.statusBars).padding(16.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = { showUserReport = false }) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color(0xFF374151))
+                    }
+                    Spacer(Modifier.weight(1f))
+                    Text("Report", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF111827))
+                    Spacer(Modifier.weight(1f))
+                    Spacer(Modifier.width(48.dp))
+                }
+                if (reportSubmitted) {
+                    Column(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text("Thank You!", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color(0xFF111827))
+                        Text("Your report has been submitted successfully.", color = Color(0xFF6B7280), textAlign = TextAlign.Center, modifier = Modifier.padding(top = 8.dp))
+                        Button(onClick = { showUserReport = false }, modifier = Modifier.fillMaxWidth().padding(top = 24.dp)) { Text("OK") }
+                    }
+                } else {
+                    Text("Select a reason", fontSize = 14.sp, color = Color(0xFF374151), modifier = Modifier.padding(top = 20.dp, bottom = 12.dp))
+                    val reportCategories = listOf("Violence", "Abusing", "Illegal", "Other's")
+                    reportCategories.chunked(2).forEach { rowCategories ->
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            rowCategories.forEach { category ->
+                                FilterChip(
+                                    selected = reportCategory == category,
+                                    onClick = { reportCategory = category },
+                                    label = { Text(category) },
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        }
+                    }
+                    OutlinedTextField(
+                        value = reportDescription,
+                        onValueChange = { reportDescription = it },
+                        modifier = Modifier.fillMaxWidth().padding(top = 16.dp).height(140.dp),
+                        label = { Text("Description") }
+                    )
+                    Spacer(Modifier.weight(1f))
+                    Button(
+                        onClick = {
+                            if (reportCategory.isNotBlank()) {
+                                reportSubmitted = true
+                            } else {
+                                Toast.makeText(context, "Select a reason", Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1DC4E9))
+                    ) { Text("Submit", color = Color.White) }
+                }
+            }
+        }
+    }
+
     // Edit Profile Sheet — match the web Public Profile sheet geometry and rows.
     if (!isOtherUser && showEditSheet) {
         ModalBottomSheet(
@@ -649,9 +767,14 @@ fun PublicProfile(
     onMessage: () -> Unit = {},
     currentUserId: String = ""
 ) {
+    val targetIdentity = user.uid?.takeIf { it.isNotBlank() }
+        ?: user.id?.takeIf { it.isNotBlank() }
+        ?: user.accountId?.takeIf { it.isNotBlank() }
+    val viewingOwnProfile = currentUserId.isNotBlank() && targetIdentity == currentUserId
+
     PublicProfileScreen(
         onBack = onBack,
-        isOtherUser = true,
+        isOtherUser = !viewingOwnProfile,
         targetUser = TargetUser(
             id = user.id,
             uid = user.uid,
