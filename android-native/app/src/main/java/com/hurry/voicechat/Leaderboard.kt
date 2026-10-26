@@ -186,7 +186,6 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                 Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp).height(62.dp)
                     .clip(RoundedCornerShape(14.dp))
                     .background(Color(0xFF2A1714))
-                    .border(1.dp, Color(0x66D4AF37), RoundedCornerShape(14.dp))
                     .padding(horizontal = 14.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
