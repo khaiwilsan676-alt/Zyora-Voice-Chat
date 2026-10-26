@@ -433,19 +433,6 @@ function DetailsPage({
         </div>
       </div>
     </div>
-    {agentChatOpen && coinSeller && currentChatUser && (
-      <div className="fixed inset-0 z-[100] bg-white">
-        <ChatScreen
-          currentUser={currentChatUser}
-          targetUser={{
-            uid: String(coinSeller.uid || coinSeller.id || coinSeller.appLongId || ''),
-            name: String(coinSeller.name || coinSeller.displayName || coinSeller.userName || 'User'),
-            photo: String(coinSeller.image || coinSeller.photo || coinSeller.photoURL || coinSeller.avatar || ''),
-          }}
-          onClose={() => setAgentChatOpen(false)}
-        />
-      </div>
-    )}
   )
 }
 
@@ -1183,5 +1170,18 @@ export default function Wallet({ onBack, initialTab = 'wallet' }: WalletProps) {
       </div>
       
     </div>
+    {agentChatOpen && coinSeller && currentChatUser && (
+      <div className="fixed inset-0 z-[100] bg-white">
+        <ChatScreen
+          currentUser={currentChatUser}
+          targetUser={{
+            uid: String(coinSeller.uid || coinSeller.id || coinSeller.appLongId || ''),
+            name: String(coinSeller.name || coinSeller.displayName || coinSeller.userName || 'User'),
+            photo: String(coinSeller.image || coinSeller.photo || coinSeller.photoURL || coinSeller.avatar || ''),
+          }}
+          onClose={() => setAgentChatOpen(false)}
+        />
+      </div>
+    )}
   )
 }
