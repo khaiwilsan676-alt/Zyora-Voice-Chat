@@ -100,12 +100,12 @@ fun PublicProfileScreen(
     var isFollowing by remember { mutableStateOf(false) }
 
     // User Data State (Mocked for UI)
-    var userName by remember { mutableStateOf(targetUser?.name ?: "Zyora User") }
+    var userName by remember { mutableStateOf(targetUser?.name?.takeIf { it.isNotBlank() } ?: "User") }
     var userBio by remember { mutableStateOf(targetUser?.bio ?: "") }
-    var userAge by remember { mutableStateOf(targetUser?.age ?: 22) }
-    var userGender by remember { mutableStateOf(targetUser?.gender ?: "♂") }
-    val displayAccNum = targetUser?.displayAccountNumber ?: "100379620"
-    val userPhoto = targetUser?.photo ?: ""
+    var userAge by remember { mutableStateOf(targetUser?.age ?: 0) }
+    var userGender by remember { mutableStateOf(targetUser?.gender ?: "") }
+    val displayAccNum = targetUser?.displayAccountNumber?.takeIf { it.isNotBlank() } ?: targetUser?.accountId?.takeIf { it.isNotBlank() } ?: "—"
+    val userPhoto = targetUser?.photo?.takeIf { it.isNotBlank() } ?: targetUser?.image?.takeIf { it.isNotBlank() } ?: ""
     val followers = targetUser?.followers ?: 0
     val flag = targetUser?.flag ?: "🇮🇳"
     val location = targetUser?.location ?: "India"
@@ -233,13 +233,15 @@ fun PublicProfileScreen(
                     // Name & Badges
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(userName, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.Black)
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(Color(0xFF3B82F6))
-                                .padding(horizontal = 8.dp, vertical = 2.dp)
-                        ) {
-                            Text("$userGender $userAge", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        if (userAge > 0 || userGender.isNotBlank()) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(Color(0xFF3B82F6))
+                                    .padding(horizontal = 8.dp, vertical = 2.dp)
+                            ) {
+                                Text(listOf(userGender, userAge.takeIf { it > 0 }?.toString()).filterNotNull().filter { it.isNotBlank() }.joinToString(" "), color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            }
                         }
                         if (targetUser?.adminTag == true) AsyncImage(model = profileAsset("/1788021461820~2.jpg"), contentDescription = "Admin", contentScale = ContentScale.Fit, modifier = Modifier.height(30.dp).widthIn(max = 66.dp))
                         if (targetUser?.officialTag == true) AsyncImage(model = profileAsset("/1788021468845~2.jpg"), contentDescription = "Official", contentScale = ContentScale.Fit, modifier = Modifier.height(30.dp).widthIn(max = 66.dp))
