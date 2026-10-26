@@ -86,8 +86,16 @@ fun PublicProfileScreen(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
+    val profileAsset: (String) -> String = { path ->
+        if (path.isBlank()) ""
+        else if (path.startsWith("http://") || path.startsWith("https://") || path.startsWith("data:")) path
+        else "https://zyora-voice-chat.vercel.app/" + path.trimStart('/')
+    }
+
     // State Variables
-    var coverPhotos by remember(targetUser?.coverPhoto) { mutableStateOf(targetUser?.coverPhoto?.takeIf { it.isNotBlank() }?.let { listOf(it) } ?: emptyList()) }
+    var coverPhotos by remember(targetUser?.coverPhoto) { 
+        mutableStateOf(targetUser?.coverPhoto?.takeIf { it.isNotBlank() }?.let { listOf(profileAsset(it)) } ?: emptyList()) 
+    }
     var albumImages by remember { mutableStateOf(listOf<String>()) }
     var ownedFrames by remember { mutableStateOf(listOf<String>()) } // Dummy for UI
     var receivedGifts by remember { mutableStateOf(listOf<String>()) } // Dummy for UI
@@ -103,26 +111,22 @@ fun PublicProfileScreen(
     var fullImageIndex by remember { mutableStateOf<Int?>(null) }
     var isFollowing by remember { mutableStateOf(false) }
 
-    // User Data State (Mocked for UI)
+    // User Data State
     var userName by remember { mutableStateOf(targetUser?.name?.takeIf { it.isNotBlank() } ?: "User") }
     var userBio by remember { mutableStateOf(targetUser?.bio ?: "") }
     var userAge by remember { mutableStateOf(targetUser?.age ?: 0) }
     var userGender by remember { mutableStateOf(targetUser?.gender ?: "") }
     val displayAccNum = targetUser?.displayAccountNumber?.takeIf { it.isNotBlank() } ?: targetUser?.accountId?.takeIf { it.isNotBlank() } ?: "—"
-    val userPhoto = targetUser?.photo?.takeIf { it.isNotBlank() } ?: targetUser?.image?.takeIf { it.isNotBlank() } ?: ""
+    
+    val userPhotoRaw = targetUser?.photo?.takeIf { it.isNotBlank() } ?: targetUser?.image?.takeIf { it.isNotBlank() } ?: ""
+    val userPhoto = profileAsset(userPhotoRaw)
+    
     val followers = targetUser?.followers ?: 0
     val flag = targetUser?.flag ?: "🇮🇳"
     val location = targetUser?.location ?: "India"
-    val profileAsset: (String) -> String = { path ->
-        if (path.startsWith("http://") || path.startsWith("https://") || path.startsWith("data:")) path
-        else "https://zyora-voice-chat.vercel.app/" + path.trimStart('/')
-    }
-
-    // Red ID image placeholder for future use
-    val redIdImage = "/file_00000000d48482079f899c0619563ac1.png"
 
     val avatarLetter = userName.take(1).uppercase()
-
+    
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -193,21 +197,20 @@ fun PublicProfileScreen(
                             }
                         } else {
                             IconButton(onClick = { showEditSheet = true }) {
-                                // Outline icon
                                 Icon(Icons.Outlined.Edit, "Edit", tint = Color.White)
                             }
                         }
                     }
 
-                    // Floating Avatar Overlap (Isme offset 0 kar diya aur border hata diya)
+                    // Avatar Overlap (Offset 0 and No border - Fixed)
                     Box(
                         modifier = Modifier
                             .align(Alignment.BottomStart)
                             .padding(start = 24.dp)
-                            .offset(y = 0.dp) // Yahan pe offset ko 0 kiya gaya hai 
+                            .offset(y = 0.dp) 
                             .size(96.dp)
                             .clip(CircleShape)
-                            .background(Color(0xFF374151)), // Yahan se border hata diya gaya hai
+                            .background(Color(0xFF374151)),
                         contentAlignment = Alignment.Center
                     ) {
                         if (userPhoto.isNotBlank()) {
@@ -229,29 +232,33 @@ fun PublicProfileScreen(
                         .padding(horizontal = 16.dp, vertical = 16.dp)
                         .padding(top = 18.dp)
                 ) {
-                    // Name & Badges using FlowRow to handle overflow and wrap to 2nd row
+                    // Name & Badges using FlowRow
                     FlowRow(
                         verticalArrangement = Arrangement.Center,
-                        horizontalArrangement = Arrangement.spacedBy(2.dp), 
+                        horizontalArrangement = Arrangement.spacedBy(4.dp), 
                         modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp)
                     ) {
                         Text(userName, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.Black, modifier = Modifier.align(Alignment.CenterVertically))
                         
-                        Spacer(modifier = Modifier.width(4.dp))
-                        
-                        if (userAge > 0 || userGender.isNotBlank()) {
+                        // Yahan FIX Kiya Hai Gender Aur Age Tag
+                        val genderStr = userGender.trim()
+                        val ageStr = if (userAge > 0) userAge.toString() else ""
+                        val tagText = "$genderStr $ageStr".trim()
+
+                        if (tagText.isNotEmpty()) {
+                            val isFemale = genderStr.equals("female", ignoreCase = true)
                             Box(
                                 modifier = Modifier
                                     .align(Alignment.CenterVertically)
                                     .clip(RoundedCornerShape(8.dp))
-                                    .background(Color(0xFF3B82F6))
-                                    .padding(horizontal = 6.dp, vertical = 1.dp)
+                                    .background(if (isFemale) Color(0xFFFF5874) else Color(0xFF3B82F6))
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
                             ) {
-                                Text(listOf(userGender, userAge.takeIf { it > 0 }?.toString()).filterNotNull().filter { it.isNotBlank() }.joinToString(" "), color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                Text(text = tagText, color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                             }
                         }
 
-                        // Badges
+                        // Badges (Fixed size so Coil can load them correctly)
                         if (targetUser?.officialHeadTag == true) AsyncImage(model = profileAsset("/file_00000000f81081f59d4f126bff14a8fc.png"), contentDescription = "Official Head", contentScale = ContentScale.Fit, modifier = Modifier.height(24.dp).widthIn(max = 66.dp).align(Alignment.CenterVertically))
                         if (targetUser?.officialTag == true) AsyncImage(model = profileAsset("/IMG_20261026_205516.png"), contentDescription = "Official", contentScale = ContentScale.Fit, modifier = Modifier.height(24.dp).widthIn(max = 66.dp).align(Alignment.CenterVertically))
                         if (targetUser?.adminTag == true) AsyncImage(model = profileAsset("/file_00000000fc0c81f5ac4a79c1f7415756.png"), contentDescription = "Admin", contentScale = ContentScale.Fit, modifier = Modifier.height(24.dp).widthIn(max = 66.dp).align(Alignment.CenterVertically))
@@ -338,7 +345,7 @@ fun PublicProfileScreen(
                         LazyVerticalGrid(columns = GridCells.Fixed(4), modifier = Modifier.height(80.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             items(albumImages.size) { idx ->
                                 AsyncImage(
-                                    model = albumImages[idx],
+                                    model = profileAsset(albumImages[idx]),
                                     contentDescription = null,
                                     contentScale = ContentScale.Crop,
                                     modifier = Modifier.aspectRatio(1f).clip(RoundedCornerShape(12.dp)).background(Color.LightGray).clickable { fullImageIndex = idx }
@@ -633,7 +640,7 @@ fun PublicProfileScreen(
                             }
                             albumImages.take(4).forEachIndexed { index, image ->
                                 Box(modifier = Modifier.size(64.dp).clip(RoundedCornerShape(6.dp)).clickable { fullImageIndex = index }) {
-                                    AsyncImage(model = image, contentDescription = "Album photo", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                                    AsyncImage(model = profileAsset(image), contentDescription = "Album photo", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
                                 }
                             }
                         }
@@ -643,12 +650,11 @@ fun PublicProfileScreen(
         }
     }
 
-    // YAHAN PE TERA NICKNAME SCREEN BOTTOM SHEET BAN GAYA HAI
     if (showNameScreen) {
         ModalBottomSheet(
             onDismissRequest = { showNameScreen = false },
             containerColor = Color.White,
-            shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp), // Ekdam 12.dp Corner
+            shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp),
             dragHandle = null
         ) {
             var tempName by remember { mutableStateOf(userName) }
@@ -657,7 +663,6 @@ fun PublicProfileScreen(
                     .fillMaxWidth()
                     .padding(bottom = 32.dp)
             ) {
-                // Header: Back Icon aur Name
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -670,7 +675,6 @@ fun PublicProfileScreen(
                     Spacer(modifier = Modifier.width(24.dp))
                 }
                 
-                // Grey Input Bar (Bina Border Ke)
                 TextField(
                     value = tempName,
                     onValueChange = { tempName = it },
@@ -679,9 +683,9 @@ fun PublicProfileScreen(
                         .padding(horizontal = 16.dp, vertical = 8.dp)
                         .clip(RoundedCornerShape(12.dp)),
                     colors = TextFieldDefaults.colors(
-                        focusedContainerColor = Color(0xFFF3F4F6), // Grey Color
+                        focusedContainerColor = Color(0xFFF3F4F6),
                         unfocusedContainerColor = Color(0xFFF3F4F6),
-                        focusedIndicatorColor = Color.Transparent, // No Border
+                        focusedIndicatorColor = Color.Transparent,
                         unfocusedIndicatorColor = Color.Transparent,
                         disabledIndicatorColor = Color.Transparent
                     ),
@@ -690,7 +694,6 @@ fun PublicProfileScreen(
                 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Bottom per Wahi Same Save Button
                 Button(
                     onClick = { userName = tempName; showNameScreen = false },
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).height(50.dp),
@@ -744,7 +747,7 @@ fun PublicProfileScreen(
                 }
 
                 AsyncImage(
-                    model = albumImages[fullImageIndex!!],
+                    model = profileAsset(albumImages[fullImageIndex!!]),
                     contentDescription = null,
                     modifier = Modifier
                         .fillMaxSize()
@@ -778,7 +781,6 @@ private fun RealProfileChatIcon() {
     }
 }
 
-
 @Composable
 fun SectionHeader(title: String, subtitle: String = "") {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -806,7 +808,6 @@ fun EditRowItem(title: String, onClick: () -> Unit, content: @Composable () -> U
     }
 }
 
-
 @Composable
 fun PublicProfile(
     user: RoomProfileUser, 
@@ -833,7 +834,18 @@ fun PublicProfile(
             followers = user.followers,
             location = user.country,
             country = user.country,
-            flag = user.flag
+            flag = user.flag,
+            
+            // YAHAN PE DATA BHEJNA MISSING THA ISILIYE TAGS NAHI DIKH RAHE THE! (ADDED NOW)
+            bio = user.bio,
+            coverPhoto = user.coverPhoto,
+            officialHeadTag = user.officialHeadTag,
+            officialTag = user.officialTag,
+            adminTag = user.adminTag,
+            serviceTag = user.serviceTag,
+            coinSellerTag = user.coinSellerTag,
+            vipTag = user.vipTag,
+            premiumTag = user.premiumTag
         )
     )
 }
