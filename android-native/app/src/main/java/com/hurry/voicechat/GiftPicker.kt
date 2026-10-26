@@ -347,7 +347,7 @@ fun GiftPicker(
                 BoxWithConstraints(
                     Modifier
                         .fillMaxWidth()
-                        .fillMaxHeight(0.5f)
+                        .fillMaxHeight(0.46f)
                         .background(Color(0xEB000000)) // rgba(0,0,0,0.92)
                         .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp)) // ⬅️ 6.dp curved
                         .border(
@@ -843,14 +843,14 @@ private fun RecipientButton(
             shape = RoundedCornerShape(50),
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .offset(x = 4.dp, y = 4.dp),
+                .offset(x = 0.dp, y = 0.dp),
         ) {
             Text(
                 text = "All",
                 color = Color.White,
                 fontSize = 9.sp,
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(horizontal = 4.dp),
+                modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp),
             )
         }
     }
