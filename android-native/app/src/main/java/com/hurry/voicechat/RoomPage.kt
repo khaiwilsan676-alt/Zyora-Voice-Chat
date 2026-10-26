@@ -1,4 +1,4 @@
-package com.hurry.voicechat
+Package com.hurry.voicechat
 
 import android.content.Intent
 import androidx.activity.compose.BackHandler
@@ -191,7 +191,7 @@ fun RoomPage(
     var roomAdminIds by remember(roomId) { mutableStateOf<List<String>>(emptyList()) }
     var roomAdminUsers by remember(roomId) { mutableStateOf<List<RoomInfoFollower>>(emptyList()) }
     // Keep the selected mic mode stable across room re-entry and settings opens.
-    var roomMicMode by remember(roomId) { mutableIntStateOf(appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).getInt("micMode_$roomId", 5)) }
+    var roomMicMode by remember(roomId) { mutableIntStateOf(appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).getInt("micMode_$roomId", 10)) }
     var roomTheme by remember(roomId) { mutableStateOf(appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).getString("theme_$roomId", "forest-night") ?: "forest-night") }
     
     // Match the established Mine > Wallet key so Lucky Bag debits the same MongoDB wallet.
@@ -290,7 +290,7 @@ fun RoomPage(
                         val name = saved.optString("name", saved.optString("roomName", "")).takeUnless { it == "null" }.orEmpty()
                         val image = saved.optString("dp", saved.optString("image", saved.optString("roomDp", ""))).takeUnless { it == "null" }.orEmpty()
                         val message = saved.optString("message", saved.optString("announcement", "")).takeUnless { it == "null" }.orEmpty()
-                        val savedMicMode = saved.optInt("micMode", roomMicMode).let { if (it in listOf(5, 9, 13)) it else roomMicMode }
+                        val savedMicMode = saved.optInt("micMode", roomMicMode).let { if (it in listOf(5, 10, 15)) it else roomMicMode }
                         val savedTheme = saved.optString("theme", roomTheme).takeUnless { it.isBlank() || it == "null" } ?: roomTheme
                         val savedAdminsJson = saved.optJSONArray("admin") ?: JSONArray()
                         val savedAdmins = (0 until savedAdminsJson.length()).mapNotNull { i -> savedAdminsJson.optString(i).takeIf { it.isNotBlank() && it != "null" } }.distinct()
@@ -717,24 +717,18 @@ fun RoomPage(
             }
             
             Column(Modifier.fillMaxWidth().padding(horizontal=10.dp).padding(top=44.dp, bottom=8.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
-                // Layout Update: 1st row has 1 seat (centered), remaining seats are divided into rows of 4
-                val activeSeats = seats.take(roomMicMode.coerceIn(5, 13))
-                
-                // First Row
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-                    activeSeats.take(1).forEach { seat -> 
-                        NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, isSpeaking = seat.speaking || (seat.accountId == accountId && localVoiceSpeaking)) { 
-                            selectedSeat = seat.number; showSeatSheet = true 
-                        } 
+                if (roomMicMode == 5) {
+                    // Five-mic layout: one centered mic in row one, four mics in row two.
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                        seats.take(1).forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, isSpeaking = seat.speaking || (seat.accountId == accountId && localVoiceSpeaking)) { selectedSeat = seat.number; showSeatSheet = true } }
                     }
-                }
-                // Remaining Rows (4 mics per row)
-                activeSeats.drop(1).chunked(4).forEach { rowSeats ->
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        rowSeats.forEach { seat -> 
-                            NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, isSpeaking = seat.speaking || (seat.accountId == accountId && localVoiceSpeaking)) { 
-                                selectedSeat = seat.number; showSeatSheet = true 
-                            } 
+                        seats.drop(1).take(4).forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, isSpeaking = seat.speaking || (seat.accountId == accountId && localVoiceSpeaking)) { selectedSeat = seat.number; showSeatSheet = true } }
+                    }
+                } else {
+                    seats.take(roomMicMode.coerceIn(5, 15)).chunked(5).forEach { rowSeats ->
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            rowSeats.forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, isSpeaking = seat.speaking || (seat.accountId == accountId && localVoiceSpeaking)) { selectedSeat = seat.number; showSeatSheet = true } }
                         }
                     }
                 }
@@ -1449,8 +1443,8 @@ private fun formatMusicTime(seconds: Float): String {
         }
     }
 
-    Column(horizontalAlignment=Alignment.CenterHorizontally,modifier=Modifier.width(66.dp).clickable(onClick=onClick)){
-        Box(Modifier.size(66.dp),contentAlignment=Alignment.Center){ 
+    Column(horizontalAlignment=Alignment.CenterHorizontally,modifier=Modifier.width(62.dp).clickable(onClick=onClick)){
+        Box(Modifier.size(62.dp),contentAlignment=Alignment.Center){ 
             Canvas(Modifier.fillMaxSize()) {
                 val blue = !seat.locked
                 val ringBrush = Brush.linearGradient(colors = if(blue) listOf(Color(0xFFD9F7FF),Color(0xFF91E1FF),Color(0xFF4DBFEF),Color(0xFF299DD6),Color(0xFF167DB9)) else listOf(Color(0xFFF3F4F6),Color(0xFFD1D5DB),Color(0xFF9CA3AF),Color(0xFF6B7280),Color(0xFF4B5563)),start=Offset(size.width*100f/512f,size.height*55f/512f),end=Offset(size.width*420f/512f,size.height*460f/512f))
