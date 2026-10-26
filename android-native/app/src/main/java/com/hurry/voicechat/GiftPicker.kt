@@ -90,32 +90,32 @@ enum class RecipientMode { MIC, ROOM, SINGLE }
 // GIFTS
 // ============================================================
 private val hotGifts = listOf(
-    Gift(1, "Teddy", 70000, "/IMG_20260922_142150.jpg",
+    GiftPickerGift(1, "Teddy", 70000, "/IMG_20260922_142150.jpg",
         video = "/VID_20260921_011932.mp4", videoStyle = "fade"),
-    Gift(2, "Autumn's Embrace", 54900, "/IMG_20260922_182259.png",
+    GiftPickerGift(2, "Autumn's Embrace", 54900, "/IMG_20260922_182259.png",
         video = "/gemini_generated_video_89e836bd~2.mp4", videoStyle = "pure", noMask = true),
-    Gift(3, "Arab King", 500000, "/image_d9df9625~2.jpg",
+    GiftPickerGift(3, "Arab King", 500000, "/image_d9df9625~2.jpg",
         video = "/gemini_generated_video_17e19680~2.mp4", videoStyle = "fade", sideFade = true),
 )
 
 private val luckyGifts = listOf(
-    Gift(101, "Tiara", 3000, "/IMG_20260927_213855.png", noMask = true),
-    Gift(102, "Lucky Clover", 1499, "/IMG_20260927_213917.png", noMask = true),
-    Gift(103, "Hi", 999, "/IMG_20260927_213946.png", noMask = true),
-    Gift(104, "Rose", 3999, "/IMG_20260927_214121.png", noMask = true),
-    Gift(105, "Kiss", 1600, "/IMG_20260927_214139.png", noMask = true),
-    Gift(106, "Balloon", 4000, "/IMG_20260927_214220.png", noMask = true),
-    Gift(107, "Dragon", 7000, "/IMG_20260927_221521.png", noMask = true),
-    Gift(108, "Nine Hands", 10999, "/IMG_20260927_221544.png", noMask = true),
-    Gift(109, "Coffin", 8999, "/IMG_20260927_221559.png", noMask = true),
-    Gift(110, "Sword", 9999, "/IMG_20260927_221615.png", noMask = true),
-    Gift(111, "Love lock", 5000, "/IMG_20260927_221637.png", noMask = true),
-    Gift(112, "Lantern", 6999, "/IMG_20260927_221654.png", noMask = true),
-    Gift(113, "Ring", 5999, "/IMG_20260927_221707.png", noMask = true),
-    Gift(114, "Dancing Girl", 12000, "/IMG_20260927_221722.png", noMask = true),
-    Gift(115, "Whale", 7899, "/IMG_20260927_221742.png", noMask = true),
-    Gift(116, "Star", 9800, "/file_0000000066f482118f772ed6fab4ad1f.png", noMask = true),
-    Gift(117, "Fire Bird", 13000, "/file_00000000fe088211b7be0110e2d3f878.png", noMask = true),
+    GiftPickerGift(101, "Tiara", 3000, "/IMG_20260927_213855.png", noMask = true),
+    GiftPickerGift(102, "Lucky Clover", 1499, "/IMG_20260927_213917.png", noMask = true),
+    GiftPickerGift(103, "Hi", 999, "/IMG_20260927_213946.png", noMask = true),
+    GiftPickerGift(104, "Rose", 3999, "/IMG_20260927_214121.png", noMask = true),
+    GiftPickerGift(105, "Kiss", 1600, "/IMG_20260927_214139.png", noMask = true),
+    GiftPickerGift(106, "Balloon", 4000, "/IMG_20260927_214220.png", noMask = true),
+    GiftPickerGift(107, "Dragon", 7000, "/IMG_20260927_221521.png", noMask = true),
+    GiftPickerGift(108, "Nine Hands", 10999, "/IMG_20260927_221544.png", noMask = true),
+    GiftPickerGift(109, "Coffin", 8999, "/IMG_20260927_221559.png", noMask = true),
+    GiftPickerGift(110, "Sword", 9999, "/IMG_20260927_221615.png", noMask = true),
+    GiftPickerGift(111, "Love lock", 5000, "/IMG_20260927_221637.png", noMask = true),
+    GiftPickerGift(112, "Lantern", 6999, "/IMG_20260927_221654.png", noMask = true),
+    GiftPickerGift(113, "Ring", 5999, "/IMG_20260927_221707.png", noMask = true),
+    GiftPickerGift(114, "Dancing Girl", 12000, "/IMG_20260927_221722.png", noMask = true),
+    GiftPickerGift(115, "Whale", 7899, "/IMG_20260927_221742.png", noMask = true),
+    GiftPickerGift(116, "Star", 9800, "/file_0000000066f482118f772ed6fab4ad1f.png", noMask = true),
+    GiftPickerGift(117, "Fire Bird", 13000, "/file_00000000fe088211b7be0110e2d3f878.png", noMask = true),
 )
 
 private val tabs = listOf("Hot", "Lucky", "Luxury", "Event")
@@ -142,13 +142,13 @@ fun rollLuckyWin(): Int {
 fun GiftPicker(
     open: Boolean = true,
     onClose: () -> Unit = {},
-    seats: List<Seat> = emptyList(),
+    seats: List<NativeRoomSeat> = emptyList(),
     onSend: (Int) -> Unit = {},
     roomId: String = "",
     currentUserAccountId: String = "",
     currentUserName: String = "User",
     currentUserImage: String = "/default-avatar.png",
-    roomUsers: List<RoomUser> = emptyList(),
+    roomUsers: List<ActiveUserNative> = emptyList(),
     walletBalance: Long = 0L,
     onDebitWallet: suspend (Long) -> Long? = { null },
     onCreditDiamonds: suspend (Int) -> Unit = {},
@@ -196,7 +196,7 @@ fun GiftPicker(
     val recipientUsers = recipientIds.mapNotNull { id ->
         roomUsers.find { it.accountId == id }
             ?: seats.find { it.user?.accountId == id }?.user?.let {
-                RoomUser(it.accountId, it.name, it.image)
+                GiftPickerRoomUser(it.accountId, it.name, it.image)
             }
     }
     val firstRecipient = recipientUsers.firstOrNull()
@@ -442,7 +442,7 @@ fun GiftPicker(
                             }
                         }
 
-                        // ── Gift grid (swipeable) ──
+                        // ── GiftPickerGift grid (swipeable) ──
                         var dragX by remember { mutableStateOf(0f) }
                         val density = LocalDensity.current
                         val threshold = with(density) { 60.dp.toPx() }
@@ -657,7 +657,7 @@ fun GiftPicker(
 // ============================================================
 @Composable
 private fun GiftCard(
-    gift: Gift,
+    gift: GiftPickerGift,
     isSelected: Boolean,
     activeTab: String,
     onClick: () -> Unit,
