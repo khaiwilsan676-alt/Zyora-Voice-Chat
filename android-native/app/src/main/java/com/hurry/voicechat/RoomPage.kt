@@ -746,8 +746,8 @@ fun RoomPage(
                     item {
                         Column(Modifier.fillMaxWidth().padding(start=4.dp, top=8.dp, end=82.dp, bottom=2.dp)) {
                             Column(Modifier.fillMaxWidth(.92f).clip(RoundedCornerShape(8.dp)).background(Color.Black.copy(alpha=.30f)).padding(horizontal=14.dp,vertical=12.dp)) {
-                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) { SystemBellIcon(modifier = Modifier.size(44.dp)); Text("System", color = Color.Gray, fontSize = 12.sp) }
-                                Spacer(Modifier.height(4.dp))
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) { SystemBellIcon(modifier = Modifier.size(50.dp)); Text("System", color = Color.Gray, fontSize = 12.sp) }
+                                Spacer(Modifier.height(1.dp))
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(clearedBy, color = Color(0xFFE2C67D), fontSize = 13.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
                                     Text(" Cleared Chat messages", color = Color.White, fontSize = 13.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
