@@ -83,7 +83,7 @@ fun PublicProfileScreen(
     val coroutineScope = rememberCoroutineScope()
 
     // State Variables
-    var coverPhotos by remember { mutableStateOf(listOf<String>()) }
+    var coverPhotos by remember(targetUser?.coverPhoto) { mutableStateOf(targetUser?.coverPhoto?.takeIf { it.isNotBlank() }?.let { listOf(it) } ?: emptyList()) }
     var albumImages by remember { mutableStateOf(listOf<String>()) }
     var ownedFrames by remember { mutableStateOf(listOf<String>()) } // Dummy for UI
     var receivedGifts by remember { mutableStateOf(listOf<String>()) } // Dummy for UI
@@ -108,6 +108,10 @@ fun PublicProfileScreen(
     val followers = targetUser?.followers ?: 0
     val flag = targetUser?.flag ?: "🇮🇳"
     val location = targetUser?.location ?: "India"
+    val profileAsset: (String) -> String = { path ->
+        if (path.startsWith("http://") || path.startsWith("https://") || path.startsWith("data:")) path
+        else "https://zyora-voice-chat.vercel.app/" + path.trimStart('/')
+    }
 
     val avatarLetter = userName.take(1).uppercase()
 
@@ -204,8 +208,13 @@ fun PublicProfileScreen(
                             Text(avatarLetter, color = Color.White, fontSize = 40.sp, fontWeight = FontWeight.Bold)
                         }
                         
-                        // Placeholder for WhiteColorRemovalShader (Frame overlap)
-                        // AsyncImage(model = "frame_url_here", modifier = Modifier.fillMaxSize().scale(1.5f))
+                        // Same profile-frame artwork used by the real app.
+                        AsyncImage(
+                            model = profileAsset("/1786867564769.png"),
+                            contentDescription = "Profile frame",
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier.fillMaxSize()
+                        )
                     }
                 }
             }
@@ -231,6 +240,10 @@ fun PublicProfileScreen(
                         ) {
                             Text("$userGender $userAge", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         }
+                        if (targetUser?.adminTag == true) AsyncImage(model = profileAsset("/1788021461820~2.jpg"), contentDescription = "Admin", contentScale = ContentScale.Fit, modifier = Modifier.height(30.dp).widthIn(max = 66.dp))
+                        if (targetUser?.officialTag == true) AsyncImage(model = profileAsset("/1788021468845~2.jpg"), contentDescription = "Official", contentScale = ContentScale.Fit, modifier = Modifier.height(30.dp).widthIn(max = 66.dp))
+                        if (targetUser?.vipTag == true) AsyncImage(model = profileAsset("/1785469775751.png"), contentDescription = "VIP", contentScale = ContentScale.Fit, modifier = Modifier.height(26.dp).widthIn(max = 60.dp))
+                        if (targetUser?.premiumTag == true) AsyncImage(model = profileAsset("/1785469365805.png"), contentDescription = "Premium", contentScale = ContentScale.Fit, modifier = Modifier.height(26.dp).widthIn(max = 60.dp))
                     }
 
                     // ID & Followers
@@ -248,6 +261,14 @@ fun PublicProfileScreen(
                         }
                         Text(" | ", color = Color.LightGray)
                         Text("$followers Fans", fontSize = 12.sp, color = Color.Gray)
+                    }
+
+                    Row(modifier = Modifier.padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Box(contentAlignment = Alignment.Center, modifier = Modifier.height(24.dp).width(48.dp)) {
+                            AsyncImage(model = profileAsset("/IMG_20260917_220530.png"), contentDescription = "Level", contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
+                            Text("Lv.1", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 8.dp))
+                        }
+                        AsyncImage(model = profileAsset("/1785486414756.png"), contentDescription = "Profile badge", contentScale = ContentScale.Fit, modifier = Modifier.height(24.dp).widthIn(max = 52.dp))
                     }
 
                     // Location & Bio
@@ -303,18 +324,34 @@ fun PublicProfileScreen(
                         Box(modifier = Modifier.fillMaxWidth().height(110.dp).clip(RoundedCornerShape(16.dp)).background(Color(0xFFF3F4F6)))
                     }
 
-                    // Single Image Sections
+                    // Use the same section artwork as the real app.
                     SectionHeader("Vehicle")
-                    Box(modifier = Modifier.fillMaxWidth().height(110.dp).clip(RoundedCornerShape(16.dp)).background(Color(0xFFF3F4F6)))
+                    AsyncImage(model = profileAsset("/1785091443553.png"), contentDescription = "Vehicle", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxWidth().height(112.dp).clip(RoundedCornerShape(16.dp)))
 
                     SectionHeader("Medal")
-                    Box(modifier = Modifier.fillMaxWidth().height(110.dp).clip(RoundedCornerShape(16.dp)).background(Color(0xFFF3F4F6)))
-                    
+                    AsyncImage(model = profileAsset("/1785091431545.png"), contentDescription = "Medal", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxWidth().height(112.dp).clip(RoundedCornerShape(16.dp)))
+
                     SectionHeader("Frame")
-                    Box(modifier = Modifier.fillMaxWidth().height(110.dp).clip(RoundedCornerShape(16.dp)).background(Color(0xFFF3F4F6)))
-                    
+                    if (ownedFrames.isNotEmpty()) {
+                        LazyVerticalGrid(columns = GridCells.Fixed(4), modifier = Modifier.height(88.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(ownedFrames.size) { idx ->
+                                AsyncImage(model = profileAsset(ownedFrames[idx]), contentDescription = "Frame", contentScale = ContentScale.Fit, modifier = Modifier.fillMaxWidth().aspectRatio(1f))
+                            }
+                        }
+                    } else {
+                        AsyncImage(model = profileAsset("/1785091457562.png"), contentDescription = "Frame", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxWidth().height(112.dp).clip(RoundedCornerShape(16.dp)))
+                    }
+
                     SectionHeader("Gift")
-                    Box(modifier = Modifier.fillMaxWidth().height(110.dp).clip(RoundedCornerShape(16.dp)).background(Color(0xFFF3F4F6)))
+                    if (receivedGifts.isNotEmpty()) {
+                        LazyVerticalGrid(columns = GridCells.Fixed(4), modifier = Modifier.height(88.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(receivedGifts.size) { idx ->
+                                AsyncImage(model = profileAsset(receivedGifts[idx]), contentDescription = "Gift", contentScale = ContentScale.Fit, modifier = Modifier.fillMaxWidth().aspectRatio(1f))
+                            }
+                        }
+                    } else {
+                        AsyncImage(model = profileAsset("/1785091520912.png"), contentDescription = "Gift", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxWidth().height(112.dp).clip(RoundedCornerShape(16.dp)))
+                    }
                 }
             }
         }
@@ -346,7 +383,7 @@ fun PublicProfileScreen(
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1DC4E9)),
                     shape = RoundedCornerShape(16.dp)
                 ) {
-                    Icon(Icons.Default.MailOutline, null, tint = Color.White) // Chat icon
+                    Icon(Icons.Default.ChatBubble, null, tint = Color.White) // Filled chat icon like the real app
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Chat", fontSize = 16.sp, fontWeight = FontWeight.Medium)
                 }
