@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -57,8 +58,11 @@ data class TargetUser(
     val country: String? = null,
     val countryCode: String? = null,
     val flag: String? = null,
+    val officialHeadTag: Boolean? = null,
     val officialTag: Boolean? = null,
     val adminTag: Boolean? = null,
+    val serviceTag: Boolean? = null,
+    val coinSellerTag: Boolean? = null,
     val vipTag: Boolean? = null,
     val premiumTag: Boolean? = null
 )
@@ -71,7 +75,7 @@ val SPECIAL_ACCOUNTS = mapOf("HUSxSvQnabgU029dWYt1TUV04hd2" to "100002")
 
 // --- MAIN SCREEN ---
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun PublicProfileScreen(
     onBack: () -> Unit,
@@ -113,6 +117,9 @@ fun PublicProfileScreen(
         if (path.startsWith("http://") || path.startsWith("https://") || path.startsWith("data:")) path
         else "https://zyora-voice-chat.vercel.app/" + path.trimStart('/')
     }
+
+    // Red ID image placeholder for future use
+    val redIdImage = "/file_00000000d48482079f899c0619563ac1.png"
 
     val avatarLetter = userName.take(1).uppercase()
 
@@ -186,7 +193,8 @@ fun PublicProfileScreen(
                             }
                         } else {
                             IconButton(onClick = { showEditSheet = true }) {
-                                Icon(Icons.Default.Edit, "Edit", tint = Color.White)
+                                // Outline icon
+                                Icon(Icons.Outlined.Edit, "Edit", tint = Color.White)
                             }
                         }
                     }
@@ -196,7 +204,7 @@ fun PublicProfileScreen(
                         modifier = Modifier
                             .align(Alignment.BottomStart)
                             .padding(start = 24.dp)
-                            .offset(y = 48.dp) // Shifts avatar downwards to overlap
+                            .offset(y = 10.dp)
                             .size(96.dp)
                             .clip(CircleShape)
                             .background(Color(0xFF374151)) // gray-700
@@ -208,14 +216,6 @@ fun PublicProfileScreen(
                         } else {
                             Text(avatarLetter, color = Color.White, fontSize = 40.sp, fontWeight = FontWeight.Bold)
                         }
-                        
-                        // Same profile-frame artwork used by the real app.
-                        AsyncImage(
-                            model = profileAsset("/1786867564769.png"),
-                            contentDescription = "Profile frame",
-                            contentScale = ContentScale.Fit,
-                            modifier = Modifier.fillMaxSize()
-                        )
                     }
                 }
             }
@@ -225,33 +225,57 @@ fun PublicProfileScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
+                        .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
                         .background(Color.White)
-                        .padding(horizontal = 20.dp, vertical = 16.dp)
-                        .padding(top = 24.dp) // Space for overlapping avatar
+                        .padding(horizontal = 16.dp, vertical = 16.dp)
+                        .padding(top = 18.dp)
                 ) {
-                    // Name & Badges
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(userName, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                    // Name & Badges using FlowRow to handle overflow and wrap to 2nd row
+                    FlowRow(
+                        verticalArrangement = Arrangement.Center,
+                        horizontalArrangement = Arrangement.spacedBy(2.dp), 
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp)
+                    ) {
+                        Text(userName, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.Black, modifier = Modifier.align(Alignment.CenterVertically))
+                        
+                        Spacer(modifier = Modifier.width(4.dp))
+                        
                         if (userAge > 0 || userGender.isNotBlank()) {
                             Box(
                                 modifier = Modifier
-                                    .clip(RoundedCornerShape(12.dp))
+                                    .align(Alignment.CenterVertically)
+                                    .clip(RoundedCornerShape(8.dp))
                                     .background(Color(0xFF3B82F6))
-                                    .padding(horizontal = 8.dp, vertical = 2.dp)
+                                    .padding(horizontal = 6.dp, vertical = 1.dp)
                             ) {
-                                Text(listOf(userGender, userAge.takeIf { it > 0 }?.toString()).filterNotNull().filter { it.isNotBlank() }.joinToString(" "), color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Text(listOf(userGender, userAge.takeIf { it > 0 }?.toString()).filterNotNull().filter { it.isNotBlank() }.joinToString(" "), color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                             }
                         }
-                        if (targetUser?.adminTag == true) AsyncImage(model = profileAsset("/1788021461820~2.jpg"), contentDescription = "Admin", contentScale = ContentScale.Fit, modifier = Modifier.height(30.dp).widthIn(max = 66.dp))
-                        if (targetUser?.officialTag == true) AsyncImage(model = profileAsset("/1788021468845~2.jpg"), contentDescription = "Official", contentScale = ContentScale.Fit, modifier = Modifier.height(30.dp).widthIn(max = 66.dp))
-                        if (targetUser?.vipTag == true) AsyncImage(model = profileAsset("/1785469775751.png"), contentDescription = "VIP", contentScale = ContentScale.Fit, modifier = Modifier.height(26.dp).widthIn(max = 60.dp))
-                        if (targetUser?.premiumTag == true) AsyncImage(model = profileAsset("/1785469365805.png"), contentDescription = "Premium", contentScale = ContentScale.Fit, modifier = Modifier.height(26.dp).widthIn(max = 60.dp))
+
+                        // Badges
+                        if (targetUser?.officialHeadTag == true) AsyncImage(model = profileAsset("/file_00000000f81081f59d4f126bff14a8fc.png"), contentDescription = "Official Head", contentScale = ContentScale.Fit, modifier = Modifier.height(24.dp).widthIn(max = 66.dp).align(Alignment.CenterVertically))
+                        if (targetUser?.officialTag == true) AsyncImage(model = profileAsset("/IMG_20261026_205516.png"), contentDescription = "Official", contentScale = ContentScale.Fit, modifier = Modifier.height(24.dp).widthIn(max = 66.dp).align(Alignment.CenterVertically))
+                        if (targetUser?.adminTag == true) AsyncImage(model = profileAsset("/file_00000000fc0c81f5ac4a79c1f7415756.png"), contentDescription = "Admin", contentScale = ContentScale.Fit, modifier = Modifier.height(24.dp).widthIn(max = 66.dp).align(Alignment.CenterVertically))
+                        if (targetUser?.serviceTag == true) AsyncImage(model = profileAsset("/IMG_20261026_205203.png"), contentDescription = "Service", contentScale = ContentScale.Fit, modifier = Modifier.height(24.dp).widthIn(max = 66.dp).align(Alignment.CenterVertically))
+                        if (targetUser?.coinSellerTag == true) AsyncImage(model = profileAsset("/IMG_20261026_205346.png"), contentDescription = "Coinseller", contentScale = ContentScale.Fit, modifier = Modifier.height(24.dp).widthIn(max = 66.dp).align(Alignment.CenterVertically))
+                        if (targetUser?.vipTag == true) AsyncImage(model = profileAsset("/1785469775751.png"), contentDescription = "VIP", contentScale = ContentScale.Fit, modifier = Modifier.height(24.dp).widthIn(max = 60.dp).align(Alignment.CenterVertically))
+                        if (targetUser?.premiumTag == true) AsyncImage(model = profileAsset("/1785469365805.png"), contentDescription = "Premium", contentScale = ContentScale.Fit, modifier = Modifier.height(24.dp).widthIn(max = 60.dp).align(Alignment.CenterVertically))
                     }
 
                     // ID & Followers
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
-                        Text("ID:$displayAccNum", fontSize = 12.sp, color = Color.Gray)
+                        if (targetUser?.officialHeadTag == true) {
+                            AsyncImage(
+                                model = profileAsset("/file_0000000063b481fa89d3c7729265058b.png"), // Purple ID Image
+                                contentDescription = "ID Badge",
+                                contentScale = ContentScale.Fit,
+                                modifier = Modifier.height(16.dp).padding(end = 4.dp)
+                            )
+                            Text(displayAccNum, fontSize = 12.sp, color = Color.Gray)
+                        } else {
+                            Text("ID:$displayAccNum", fontSize = 12.sp, color = Color.Gray)
+                        }
+
                         IconButton(
                             onClick = {
                                 val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
@@ -276,14 +300,14 @@ fun PublicProfileScreen(
 
                     // Location & Bio
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 12.dp)) {
-                        Icon(Icons.Default.LocationOn, "Location", tint = Color.Gray, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Outlined.LocationOn, "Location", tint = Color.Gray, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
                         Text("$flag $location", fontSize = 14.sp, color = Color.DarkGray)
                     }
 
                     Row(modifier = Modifier.padding(top = 8.dp), verticalAlignment = Alignment.Top) {
                         if (!isOtherUser) {
-                            Icon(Icons.Default.Edit, "Edit Bio", tint = Color.Gray, modifier = Modifier.size(16.dp).clickable { showEditSheet = true })
+                            Icon(Icons.Outlined.Edit, "Edit Bio", tint = Color.Gray, modifier = Modifier.size(16.dp).clickable { showEditSheet = true })
                             Spacer(modifier = Modifier.width(8.dp))
                         }
                         Text(
@@ -298,11 +322,10 @@ fun PublicProfileScreen(
                     Box(
                         modifier = Modifier
                             .padding(top = 24.dp)
-                            .border(BorderStroke(1.dp, Color(0xFFE5E7EB)), shape = RectangleShape)
-                            .padding(bottom = 8.dp)
+                            .padding(bottom = 8.dp) 
                     ) {
                         Text("Profile", color = Color(0xFF3B82F6), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                        Box(modifier = Modifier.align(Alignment.BottomCenter).offset(y = 9.dp).width(16.dp).height(4.dp).clip(CircleShape).background(Color(0xFF3B82F6)))
+                        Box(modifier = Modifier.align(Alignment.BottomCenter).offset(y = 10.dp).width(16.dp).height(4.dp).clip(CircleShape).background(Color(0xFF3B82F6)))
                     }
                 }
             }
@@ -327,7 +350,6 @@ fun PublicProfileScreen(
                         AsyncImage(model = profileAsset("/IMG_20260726_225835.jpg"), contentDescription = "Album", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxWidth().height(112.dp).clip(RoundedCornerShape(16.dp)))
                     }
 
-                    // Use the same section artwork as the real app.
                     SectionHeader("Vehicle")
                     AsyncImage(model = profileAsset("/1785091443553.png"), contentDescription = "Vehicle", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxWidth().height(112.dp).clip(RoundedCornerShape(16.dp)))
 
@@ -396,7 +418,6 @@ fun PublicProfileScreen(
 
     // --- OVERLAYS & BOTTOM SHEETS ---
 
-    // The danger icon belongs only to another user's profile.
     if (isOtherUser && showActionSheet) {
         ModalBottomSheet(
             onDismissRequest = { showActionSheet = false },
@@ -442,7 +463,6 @@ fun PublicProfileScreen(
         }
     }
 
-    // Report opens as an opaque full-screen page, with no profile controls visible behind it.
     if (isOtherUser && showUserReport) {
         Dialog(
             onDismissRequest = { showUserReport = false },
@@ -514,19 +534,21 @@ fun PublicProfileScreen(
         }
     }
 
-    // Edit Profile Sheet — match the web Public Profile sheet geometry and rows.
     if (!isOtherUser && showEditSheet) {
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        
         ModalBottomSheet(
             onDismissRequest = { showEditSheet = false },
+            sheetState = sheetState,
             containerColor = Color.White,
             scrimColor = Color.Black.copy(alpha = 0.5f),
-            shape = RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp),
+            shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp),
             dragHandle = null
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .fillMaxHeight(0.70f)
+                    .fillMaxHeight(0.60f) 
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 16.dp),
@@ -545,9 +567,8 @@ fun PublicProfileScreen(
                         .fillMaxWidth()
                         .weight(1f)
                         .padding(horizontal = 20.dp, vertical = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(24.dp)
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // Avatar
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -566,19 +587,16 @@ fun PublicProfileScreen(
                         }
                     }
 
-                    // Nickname
                     EditRowItem("Nickname", { showNameScreen = true }) {
                         Text(userName.ifBlank { "Enter name" }, color = Color(0xFF6B7280), fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Icon(Icons.Default.ChevronRight, null, tint = Color(0xFF9CA3AF), modifier = Modifier.size(16.dp))
                     }
 
-                    // Age
                     EditRowItem("Age", { showAgeScreen = true }) {
                         Text(userAge.toString(), color = Color(0xFF6B7280), fontSize = 14.sp)
                         Icon(Icons.Default.ChevronRight, null, tint = Color(0xFF9CA3AF), modifier = Modifier.size(16.dp))
                     }
 
-                    // Background images (maximum four, plus tile first)
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text("Background (${coverPhotos.size}/4)", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Color(0xFF374151))
                         Row(
@@ -597,13 +615,11 @@ fun PublicProfileScreen(
                         }
                     }
 
-                    // Bio
                     EditRowItem("Bio", { showBioScreen = true }) {
                         Text(userBio.ifBlank { "Add bio..." }, color = Color(0xFF6B7280), fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 180.dp))
                         Icon(Icons.Default.ChevronRight, null, tint = Color(0xFF9CA3AF), modifier = Modifier.size(16.dp))
                     }
 
-                    // Album photos — max four, one horizontal row.
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text("Album Photos (${albumImages.size}/4)", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Color(0xFF374151))
                         Row(
@@ -628,32 +644,64 @@ fun PublicProfileScreen(
         }
     }
 
-    // Name Edit Screen (Dialog for full screen illusion)
+    // YAHAN PE TERA NICKNAME SCREEN BOTTOM SHEET BAN GAYA HAI
     if (showNameScreen) {
-        Dialog(onDismissRequest = { showNameScreen = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        ModalBottomSheet(
+            onDismissRequest = { showNameScreen = false },
+            containerColor = Color.White,
+            shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp), // Ekdam 12.dp Corner
+            dragHandle = null
+        ) {
             var tempName by remember { mutableStateOf(userName) }
-            Column(modifier = Modifier.fillMaxSize().background(Color.White).windowInsetsPadding(WindowInsets.statusBars)) {
-                Row(modifier = Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                    IconButton(onClick = { showNameScreen = false }) { Icon(Icons.Default.ArrowBack, null) }
-                    Text("Nickname", fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.CenterVertically))
-                    Spacer(modifier = Modifier.width(48.dp))
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 32.dp)
+            ) {
+                // Header: Back Icon aur Name
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = { showNameScreen = false }, modifier = Modifier.size(24.dp)) { 
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color(0xFF374151)) 
+                    }
+                    Text("Nickname", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF111827))
+                    Spacer(modifier = Modifier.width(24.dp))
                 }
-                OutlinedTextField(
+                
+                // Grey Input Bar (Bina Border Ke)
+                TextField(
                     value = tempName,
                     onValueChange = { tempName = it },
-                    modifier = Modifier.fillMaxWidth().padding(16.dp),
-                    shape = RoundedCornerShape(12.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                        .clip(RoundedCornerShape(12.dp)),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color(0xFFF3F4F6), // Grey Color
+                        unfocusedContainerColor = Color(0xFFF3F4F6),
+                        focusedIndicatorColor = Color.Transparent, // No Border
+                        unfocusedIndicatorColor = Color.Transparent,
+                        disabledIndicatorColor = Color.Transparent
+                    ),
+                    singleLine = true
                 )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Bottom per Wahi Same Save Button
                 Button(
                     onClick = { userName = tempName; showNameScreen = false },
-                    modifier = Modifier.fillMaxWidth().padding(16.dp).height(50.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1DC4E9))
-                ) { Text("Save", fontSize = 16.sp) }
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).height(50.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1DC4E9)),
+                    shape = RoundedCornerShape(12.dp)
+                ) { Text("Save", fontSize = 16.sp, color = Color.White) }
             }
         }
     }
 
-    // Age / Birthday Wheel Picker Bottom Sheet
     if (showAgeScreen) {
         ModalBottomSheet(onDismissRequest = { showAgeScreen = false }, containerColor = Color.White) {
             Column(modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp)) {
@@ -663,7 +711,6 @@ fun PublicProfileScreen(
                     Text("Confirm", color = Color(0xFF1DC4E9), fontWeight = FontWeight.Bold, modifier = Modifier.clickable { showAgeScreen = false })
                 }
                 
-                // Simple Wheel Picker placeholder layout
                 Row(modifier = Modifier.fillMaxWidth().height(200.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
                     Text("DD", fontSize = 24.sp, color = Color.Gray)
                     Text("MM", fontSize = 24.sp, color = Color.Gray)
@@ -673,7 +720,6 @@ fun PublicProfileScreen(
         }
     }
 
-    // Full Image Viewer
     if (fullImageIndex != null) {
         Dialog(onDismissRequest = { fullImageIndex = null }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
             var scale by remember { mutableFloatStateOf(1f) }
@@ -719,7 +765,6 @@ private fun RealProfileChatIcon() {
         val w = size.width
         val h = size.height
         val bubble = Path().apply {
-            // Filled MessageCircle silhouette used by the web Public Profile.
             moveTo(w * 0.5f, h * 0.08f)
             cubicTo(w * 0.25f, h * 0.08f, w * 0.07f, h * 0.27f, w * 0.07f, h * 0.51f)
             cubicTo(w * 0.07f, h * 0.75f, w * 0.25f, h * 0.93f, w * 0.5f, h * 0.93f)
@@ -751,7 +796,7 @@ fun EditRowItem(title: String, onClick: () -> Unit, content: @Composable () -> U
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(vertical = 12.dp),
+            .padding(vertical = 8.dp), 
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -765,7 +810,7 @@ fun EditRowItem(title: String, onClick: () -> Unit, content: @Composable () -> U
 
 @Composable
 fun PublicProfile(
-    user: RoomProfileUser,
+    user: RoomProfileUser, 
     onBack: () -> Unit,
     onMessage: () -> Unit = {},
     currentUserId: String = ""
