@@ -213,7 +213,7 @@ fun PublicProfileScreen(
                         modifier = Modifier
                             .align(Alignment.BottomStart)
                             .padding(start = 24.dp)
-                            .offset(y = 0.dp) 
+                            .offset(y = (-16).dp) 
                             .size(96.dp)
                             .clip(CircleShape)
                             .background(Color(0xFF374151)),
@@ -236,7 +236,7 @@ fun PublicProfileScreen(
                         .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
                         .background(Color.White)
                         .padding(horizontal = 16.dp, vertical = 16.dp)
-                        .padding(top = 18.dp)
+                        .padding(top = 4.dp)
                 ) {
                     // Name & Badges using FlowRow
                     FlowRow(
@@ -263,27 +263,23 @@ fun PublicProfileScreen(
                             }
                         }
 
-                        // Badges with proper sizing
-                        // Always render every available role badge image; visibility no longer depends on missing role flags.
-                        AsyncImage(model = profileAsset("/file_00000000f81081f59d4f126bff14a8fc.png"), contentDescription = "Official Head", contentScale = ContentScale.Fit, modifier = Modifier.height(24.dp).widthIn(max = 66.dp).align(Alignment.CenterVertically))
-                        AsyncImage(model = profileAsset("/IMG_20261026_205516.png"), contentDescription = "Official", contentScale = ContentScale.Fit, modifier = Modifier.height(24.dp).widthIn(max = 66.dp).align(Alignment.CenterVertically))
-                        AsyncImage(model = profileAsset("/file_00000000fc0c81f5ac4a79c1f7415756.png"), contentDescription = "Admin", contentScale = ContentScale.Fit, modifier = Modifier.height(24.dp).widthIn(max = 66.dp).align(Alignment.CenterVertically))
-                        AsyncImage(model = profileAsset("/IMG_20261026_205203.png"), contentDescription = "Service / CS", contentScale = ContentScale.Fit, modifier = Modifier.height(24.dp).widthIn(max = 66.dp).align(Alignment.CenterVertically))
-                        AsyncImage(model = profileAsset("/IMG_20261026_205346.png"), contentDescription = "Coin Seller", contentScale = ContentScale.Fit, modifier = Modifier.height(24.dp).widthIn(max = 66.dp).align(Alignment.CenterVertically))
-                        AsyncImage(model = profileAsset("/1785469775751.png"), contentDescription = "VIP", contentScale = ContentScale.Fit, modifier = Modifier.height(24.dp).widthIn(max = 60.dp).align(Alignment.CenterVertically))
-                        AsyncImage(model = profileAsset("/1785469365805.png"), contentDescription = "Premium", contentScale = ContentScale.Fit, modifier = Modifier.height(24.dp).widthIn(max = 60.dp).align(Alignment.CenterVertically))
+                        // Badges size set to 30.dp (Last 2 removed previously)
+                        AsyncImage(model = profileAsset("/file_00000000f81081f59d4f126bff14a8fc.png"), contentDescription = "Official Head", contentScale = ContentScale.Fit, modifier = Modifier.height(30.dp).widthIn(max = 80.dp).align(Alignment.CenterVertically))
+                        AsyncImage(model = profileAsset("/IMG_20261026_205516.png"), contentDescription = "Official", contentScale = ContentScale.Fit, modifier = Modifier.height(30.dp).widthIn(max = 80.dp).align(Alignment.CenterVertically))
+                        AsyncImage(model = profileAsset("/file_00000000fc0c81f5ac4a79c1f7415756.png"), contentDescription = "Admin", contentScale = ContentScale.Fit, modifier = Modifier.height(30.dp).widthIn(max = 80.dp).align(Alignment.CenterVertically))
+                        AsyncImage(model = profileAsset("/IMG_20261026_205203.png"), contentDescription = "Service / CS", contentScale = ContentScale.Fit, modifier = Modifier.height(30.dp).widthIn(max = 80.dp).align(Alignment.CenterVertically))
+                        AsyncImage(model = profileAsset("/IMG_20261026_205346.png"), contentDescription = "Coin Seller", contentScale = ContentScale.Fit, modifier = Modifier.height(30.dp).widthIn(max = 80.dp).align(Alignment.CenterVertically))
                     }
 
                     // ID & Followers
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
-                        // Purple ID badge is always shown, never replaced with a red variant or hidden by role flags.
                         AsyncImage(
                             model = profileAsset("/file_0000000063b481fa89d3c7729265058b.png"),
                             contentDescription = "Purple ID Badge",
                             contentScale = ContentScale.Fit,
-                            modifier = Modifier.height(16.dp).widthIn(min = 18.dp, max = 24.dp).padding(end = 4.dp)
+                            modifier = Modifier.height(20.dp).widthIn(min = 22.dp, max = 28.dp).padding(end = 4.dp)
                         )
-                        Text("ID:$displayAccNum", fontSize = 12.sp, color = Color.Gray)
+                        Text(displayAccNum, fontSize = 12.sp, color = Color.Gray)
 
                         IconButton(
                             onClick = {
