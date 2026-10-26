@@ -118,6 +118,12 @@ private val luckyGifts = listOf(
     GiftPickerGift(117, "Fire Bird", 13000, "/file_00000000fe088211b7be0110e2d3f878.png", noMask = true),
 )
 
+// Resolve web-app public assets to absolute URLs so Coil can load gift artwork in native Android.
+private fun giftAssetUrl(path: String): String {
+    if (path.startsWith("https://") || path.startsWith("http://") || path.startsWith("file:") || path.startsWith("content:")) return path
+    return "https://zyora-voice-chat.vercel.app/" + path.trimStart('/')
+}
+
 private val tabs = listOf("Hot", "Lucky", "Luxury", "Event")
 private val multipliers = listOf("1×", "10×", "299×", "599×", "999×")
 
@@ -499,7 +505,7 @@ fun GiftPicker(
                                 modifier = Modifier.clickable { isWalletOpen = true },
                             ) {
                                 AsyncImage(
-                                    model = "/file_00000000e56882119c217d508b6733dc.png",
+                                    model = giftAssetUrl("/file_00000000e56882119c217d508b6733dc.png"),
                                     contentDescription = "Coins",
                                     contentScale = ContentScale.Crop,
                                     modifier = Modifier
@@ -680,7 +686,7 @@ private fun GiftCard(
         // Lucky badge
         if (activeTab == "Lucky") {
             AsyncImage(
-                model = "/IMG_20260928_172454.png",
+                model = giftAssetUrl("/IMG_20260928_172454.png"),
                 contentDescription = null,
                 modifier = Modifier
                     .align(Alignment.TopStart)
@@ -690,7 +696,7 @@ private fun GiftCard(
         // Hot badge (only Arab King)
         if (activeTab == "Hot" && gift.id == 3) {
             AsyncImage(
-                model = "/IMG_20260928_172516.png",
+                model = giftAssetUrl("/IMG_20260928_172516.png"),
                 contentDescription = null,
                 modifier = Modifier
                     .align(Alignment.TopStart)
@@ -711,7 +717,7 @@ private fun GiftCard(
                     ),
             ) {
                 AsyncImage(
-                    model = gift.image,
+                    model = giftAssetUrl(gift.image),
                     contentDescription = gift.name,
                     contentScale = if (gift.noMask) ContentScale.Fit else ContentScale.Crop,
                     modifier = Modifier.fillMaxSize(),
