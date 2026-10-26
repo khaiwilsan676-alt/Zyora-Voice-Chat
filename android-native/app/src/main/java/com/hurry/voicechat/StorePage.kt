@@ -232,11 +232,11 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
                         onHorizontalDrag = { _, dragAmount -> horizontalDrag += dragAmount },
                         onDragEnd = {
                             val currentIndex = nativeStoreTabs.indexOfFirst { it.id == activeTab }
-                            // Finger moves right-to-left (negative drag) -> next Store tab.
-                            // Finger moves left-to-right (positive drag) -> previous Store tab.
-                            if (horizontalDrag < -45f && currentIndex < nativeStoreTabs.lastIndex) {
+                            // Finger moves left-to-right (positive drag) -> next Store tab.
+                            // Finger moves right-to-left (negative drag) -> previous Store tab.
+                            if (horizontalDrag > 45f && currentIndex < nativeStoreTabs.lastIndex) {
                                 activeTab = nativeStoreTabs[currentIndex + 1].id
-                            } else if (horizontalDrag > 45f && currentIndex > 0) {
+                            } else if (horizontalDrag < -45f && currentIndex > 0) {
                                 activeTab = nativeStoreTabs[currentIndex - 1].id
                             }
                             horizontalDrag = 0f
