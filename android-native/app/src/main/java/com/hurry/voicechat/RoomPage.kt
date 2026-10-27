@@ -770,20 +770,16 @@ fun RoomPage(
                 items(messages,key={it.id}){message ->
                     if(message.type=="join") {
                         Column(Modifier.padding(vertical=2.dp).wrapContentWidth().clip(RoundedCornerShape(8.dp)).background(Color.Black.copy(alpha=.30f)).padding(horizontal=12.dp,vertical=4.dp),horizontalAlignment=Alignment.Start,verticalArrangement=Arrangement.spacedBy(2.dp)){
-                            Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp), modifier=Modifier.clickable { selectedChatProfile = message }){
+                            Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp), modifier=Modifier.clickable { selectedChatProfile = message }){
                                 FallbackAsyncImage(model=message.senderImage,contentDescription=message.sender,modifier=Modifier.size(24.dp).clip(CircleShape),contentScale=ContentScale.Crop)
-                                Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){
-                                    Text(message.sender,color=Color.White.copy(alpha=.95f),fontSize=12.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold)
-                                    val isRoomOwnerMessage = message.senderAccountId == roomOwner.accountId.ifBlank { roomOwner.id }
-                                    if (!isRoomOwnerMessage) {
-                                        AsyncImage(model = "https://zyora-voice-chat.vercel.app/1785486414756.png", contentDescription = "ID badge", contentScale = ContentScale.Fit, modifier = Modifier.size(18.dp))
-                                    } else {
-                                        Box(Modifier.size(14.dp).clip(CircleShape).background(Color(0xFF3B82F6)),contentAlignment=Alignment.Center) {
-                                            androidx.compose.material3.Icon(imageVector=Icons.Filled.Home,contentDescription="Owner",modifier=Modifier.size(9.dp),tint=Color.White)
-                                        }
-                                        AsyncImage(model = "https://zyora-voice-chat.vercel.app/1785486414756.png", contentDescription = "ID badge", contentScale = ContentScale.Fit, modifier = Modifier.size(18.dp))
+                                Text(message.sender,color=Color.White.copy(alpha=.95f),fontSize=12.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold)
+                                val isRoomOwnerMessage = message.senderAccountId == roomOwner.accountId.ifBlank { roomOwner.id }
+                                if (isRoomOwnerMessage) {
+                                    Box(Modifier.size(14.dp).clip(CircleShape).background(Color(0xFF3B82F6)),contentAlignment=Alignment.Center) {
+                                        androidx.compose.material3.Icon(imageVector=Icons.Filled.Home,contentDescription="Owner",modifier=Modifier.size(9.dp),tint=Color.White)
                                     }
                                 }
+                                AsyncImage(model = "https://zyora-voice-chat.vercel.app/1785486414756.png", contentDescription = "ID badge", contentScale = ContentScale.Fit, modifier = Modifier.size(18.dp))
                             }
                             Text("Enter the Room",color=Color.White,fontSize=12.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Medium, modifier=Modifier.padding(start=2.dp).clickable { selectedChatProfile = message })
                         }
