@@ -795,7 +795,7 @@ fun RoomPage(
                                     }
                                 }
                                 Box(modifier = Modifier.size(30.dp), contentAlignment = Alignment.Center) {
-                                    AsyncImage(model = "https://zyora-voice-chat.vercel.app/IMG_20260917_220530.png", contentDescription = "Level Lv.1 - Lv.10", contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
+                                    AsyncImage(model = "https://zyora-voice-chat.vercel.app/IMG_20261028_004355.png", contentDescription = "Level Lv.1 - Lv.10", contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
                                     Text("Lv.1", color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.TopEnd).padding(end = 1.dp, top = 1.dp))
                                 }
                                 AsyncImage(model = "https://zyora-voice-chat.vercel.app/file_0000000063b481fa89d3c7729265058b.png", contentDescription = "Purple ID Badge", contentScale = ContentScale.Fit, modifier = Modifier.size(18.dp))
