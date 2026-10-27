@@ -193,9 +193,21 @@ fun NativeChatScreen(
         else -> null
     }
     val cacheKey = "official_chat_cache_${officialIdForCache ?: name}"
-    val messages = remember(name) {
+    val indexDb = remember { NativeIndexDatabase(context) }
+    val localConversationKey = "chat_${currentUserId}_${receiverId.ifBlank { officialIdForCache ?: name }}"
+    val messages = remember(name, receiverId, currentUserId) {
         mutableStateListOf<Pair<Boolean, String>>().apply {
-            if (officialIdForCache != null) {
+            val dbCache = indexDb.loadChat(localConversationKey)
+            val restored = runCatching {
+                val array = org.json.JSONArray(dbCache ?: "[]")
+                (0 until array.length()).mapNotNull { index ->
+                    val entry = array.optJSONObject(index) ?: return@mapNotNull null
+                    val value = entry.optString("text")
+                    if (value.isNotBlank()) (entry.optBoolean("mine") to value) else null
+                }
+            }.getOrDefault(emptyList())
+            if (restored.isNotEmpty()) addAll(restored)
+            else if (officialIdForCache != null) {
                 val cached = prefs.getString(cacheKey, "[]") ?: "[]"
                 runCatching {
                     val array = org.json.JSONArray(cached)
@@ -207,6 +219,13 @@ fun NativeChatScreen(
                 }
             }
         }
+    }
+    LaunchedEffect(messages.size, localConversationKey) {
+        val array = org.json.JSONArray()
+        messages.forEach { (mine, value) ->
+            array.put(JSONObject().put("mine", mine).put("text", value))
+        }
+        indexDb.saveChat(localConversationKey, array.toString())
     }
 
     // Persist each official message locally; cached history renders immediately on reopen.
