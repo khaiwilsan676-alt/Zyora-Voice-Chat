@@ -2335,25 +2335,21 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("send_official_message", async (data = {}) => {
+  // Official messages are never persisted on the server. Socket.IO only relays them live;
+  // each native client stores received messages in its own local index.db.
+  socket.on("send_official_message", (data = {}) => {
     const rawSenderId = String(data.senderId || "");
-    // Strictly restrict official sender IDs to hurry_team_official and hurry_system_official
     if (rawSenderId !== "hurry_team_official" && rawSenderId !== "hurry_system_official") {
       console.warn("Unauthorized or invalid official sender ID:", rawSenderId);
       return;
     }
 
     const isTeam = rawSenderId === "hurry_team_official";
-    const senderName = isTeam ? "Zyora Team" : "Zyora System";
-    const senderPhoto = isTeam ? "/logo.png" : "/file_00000000a66881f8aa9e15d2fe2b9a0c.png";
-
-    const messageId = String(data.id || `official_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`);
-
     const payload = {
-      id: messageId,
+      id: String(data.id || `official_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`),
       senderId: rawSenderId,
-      senderName,
-      senderPhoto,
+      senderName: isTeam ? "Zyora Team" : "Zyora System",
+      senderPhoto: isTeam ? "/logo.png" : "/file_00000000a66881f8aa9e15d2fe2b9a0c.png",
       text: String(data.text || ""),
       type: data.type || (data.imageUrl ? "image" : "message"),
       imageUrl: data.imageUrl || undefined,
@@ -2361,42 +2357,13 @@ io.on("connection", (socket) => {
       isOfficialBroadcast: true,
     };
 
-    try {
-      if (db) {
-        await db.collection("officialMessages").updateOne(
-          { id: messageId },
-          { $set: payload },
-          { upsert: true }
-        );
-      }
-    } catch (error) {
-      console.error("Official message save failed:", error.message);
-    }
-
-    // Broadcast to ALL connected clients in real time
+    // Live-only relay; deliberately no MongoDB/Redis write.
     io.emit("official_broadcast_message", payload);
   });
 
-  socket.on("official_message_history_request", async (request = {}) => {
-    try {
-      if (db) {
-        const sinceTimestamp = Math.max(0, Number(request?.sinceTimestamp) || 0);
-        const filter = sinceTimestamp > 0 ? { timestamp: { $gt: sinceTimestamp } } : {};
-        const messages = await db
-          .collection("officialMessages")
-          .find(filter)
-          .sort({ timestamp: 1 })
-          .limit(500)
-          .toArray();
-
-        socket.emit("official_message_history_response", { messages });
-      } else {
-        socket.emit("official_message_history_response", { messages: [] });
-      }
-    } catch (error) {
-      console.error("Official message history fetch failed:", error.message);
-      socket.emit("official_message_history_response", { messages: [] });
-    }
+  socket.on("official_message_history_request", () => {
+    // History is device-local (index.db), so the server does not return database history.
+    socket.emit("official_message_history_response", { messages: [] });
   });
 
   socket.on("disconnect", () => {
