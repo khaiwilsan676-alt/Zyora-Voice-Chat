@@ -281,8 +281,8 @@ fun RoomProfile(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Box(contentAlignment = Alignment.Center) {
-                            AsyncImage(model = "IMG_20260917_220530.png".fullUrl(), contentDescription = "Level", modifier = Modifier.height(32.dp))
-                            Text("Lv.1", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 16.dp, top = 4.dp))
+                            AsyncImage(model = "IMG_20260911_230430.png".fullUrl(), contentDescription = "Level", modifier = Modifier.height(32.dp))
+                            Text("1", color = Color(0xFFF5DDA0), fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.Center))
                         }
                         Spacer(modifier = Modifier.width(2.dp))
                         AsyncImage(model = "1785486414756.png".fullUrl(), contentDescription = null, modifier = Modifier.height(24.dp))
