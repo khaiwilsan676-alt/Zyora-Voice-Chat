@@ -83,7 +83,13 @@ fun ActiveUsers(
      Row(Modifier.fillMaxWidth().padding(horizontal=4.dp),verticalAlignment=Alignment.CenterVertically){
       AsyncImage(model=user.image.ifBlank{"/default-avatar.png"},contentDescription=user.name,modifier=Modifier.size(32.dp).clip(CircleShape).clickable{onOpenProfile(user)},contentScale=ContentScale.Crop)
       Column(Modifier.weight(1f).padding(start=8.dp)){
-       Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)) {\n        Text(user.name,fontSize=12.sp,fontWeight=FontWeight.SemiBold,color=Color.White,maxLines=1)\n        Box(Modifier.size(30.dp),contentAlignment=Alignment.Center) {\n         AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20260917_220530.png",contentDescription="Level Lv.1 - Lv.10",modifier=Modifier.fillMaxSize(),contentScale=ContentScale.Fit)\n         Text("Lv.1",color=Color.White,fontSize=8.sp,fontWeight=FontWeight.Bold)\n        }\n       }
+       Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)) {
+        Text(user.name,fontSize=12.sp,fontWeight=FontWeight.SemiBold,color=Color.White,maxLines=1)
+        Box(Modifier.size(30.dp),contentAlignment=Alignment.Center) {
+         AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20260917_220530.png",contentDescription="Level Lv.1 - Lv.10",modifier=Modifier.fillMaxSize(),contentScale=ContentScale.Fit)
+         Text("Lv.1",color=Color.White,fontSize=8.sp,fontWeight=FontWeight.Bold)
+        }
+       }
        Text("ID: ${user.accountId}",fontSize=10.sp,color=Color.White.copy(alpha=.60f),maxLines=1)
       }
      }
