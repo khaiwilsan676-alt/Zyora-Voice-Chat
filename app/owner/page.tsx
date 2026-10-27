@@ -142,6 +142,54 @@ const saveSupportChatToIndexedDB = async (chatData: any) => {
   }
 };
 
+const loadAllOfficialMessagesFromIndexedDB = async (): Promise<any[]> => {
+  if (typeof window === 'undefined') return [];
+  return new Promise((resolve) => {
+    try {
+      const request = indexedDB.open("ZyoraOfficialMessagesDB", 1);
+      request.onerror = () => resolve([]);
+      request.onupgradeneeded = (e: any) => {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains("officialMessages")) {
+          db.createObjectStore("officialMessages", { keyPath: "id" });
+        }
+      };
+      request.onsuccess = () => {
+        const db = request.result;
+        if (!db.objectStoreNames.contains("officialMessages")) {
+          db.close();
+          resolve([]);
+          return;
+        }
+        const getAllReq = db.transaction(["officialMessages"], "readonly").objectStore("officialMessages").getAll();
+        getAllReq.onsuccess = () => { db.close(); resolve(getAllReq.result || []); };
+        getAllReq.onerror = () => { db.close(); resolve([]); };
+      };
+    } catch { resolve([]); }
+  });
+};
+
+const saveOfficialMessageToIndexedDB = async (message: any) => {
+  if (typeof window === 'undefined' || !message?.id) return;
+  try {
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open("ZyoraOfficialMessagesDB", 1);
+      request.onerror = () => reject(request.error);
+      request.onupgradeneeded = (e: any) => {
+        const database = e.target.result;
+        if (!database.objectStoreNames.contains("officialMessages")) {
+          database.createObjectStore("officialMessages", { keyPath: "id" });
+        }
+      };
+      request.onsuccess = () => resolve(request.result);
+    });
+    db.transaction(["officialMessages"], "readwrite").objectStore("officialMessages").put(message);
+    db.close();
+  } catch (err) {
+    console.error("Error saving official message locally:", err);
+  }
+};
+
 // ==============================================================
 // TYPES & DATA
 // ==============================================================
@@ -532,6 +580,11 @@ export default function StaffPanel() {
       if (isMounted && localChats.length > 0) {
         setSupportChats(localChats.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0)));
       }
+
+      const localOfficialMessages = await loadAllOfficialMessagesFromIndexedDB();
+      if (isMounted && localOfficialMessages.length > 0) {
+        setOfficialHistory(localOfficialMessages.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0)));
+      }
     };
 
     initData();
@@ -604,14 +657,27 @@ export default function StaffPanel() {
 
       const handleOfficialHistoryResponse = (data: any) => {
         if (!isMounted || !Array.isArray(data?.messages)) return;
-        setOfficialHistory(data.messages.sort((a: any, b: any) => (b.timestamp || 0) - (a.timestamp || 0)));
+        setOfficialHistory(prev => {
+          const map = new Map<string, any>();
+          prev.forEach((item: any) => map.set(item.id, item));
+          data.messages.forEach((item: any) => {
+            if (item?.id) {
+              map.set(item.id, { ...map.get(item.id), ...item });
+              void saveOfficialMessageToIndexedDB(item);
+            }
+          });
+          return Array.from(map.values()).sort((a: any, b: any) => (b.timestamp || 0) - (a.timestamp || 0));
+        });
       };
 
       const handleOfficialBroadcast = (data: any) => {
         if (!isMounted || !data?.id) return;
+        void saveOfficialMessageToIndexedDB(data);
         setOfficialHistory(prev => {
-          if (prev.some(m => m.id === data.id)) return prev;
-          return [data, ...prev].sort((a: any, b: any) => (b.timestamp || 0) - (a.timestamp || 0));
+          const map = new Map<string, any>();
+          prev.forEach((item: any) => map.set(item.id, item));
+          map.set(data.id, { ...map.get(data.id), ...data });
+          return Array.from(map.values()).sort((a: any, b: any) => (b.timestamp || 0) - (a.timestamp || 0));
         });
       };
 
