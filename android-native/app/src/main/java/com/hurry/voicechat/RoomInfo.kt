@@ -47,6 +47,32 @@ fun RoomInfo(
 ) {
     if (!isOpen) return
     var tab by remember { mutableStateOf(0) }
+    var ownerDisplayName by remember(roomOwner.id, roomOwner.uid, roomOwner.accountId, roomOwner.name) {
+        mutableStateOf(roomOwner.name.ifBlank { "User" })
+    }
+    var ownerDisplayImage by remember(roomOwner.id, roomOwner.uid, roomOwner.accountId, roomOwner.image) {
+        mutableStateOf(roomOwner.image)
+    }
+
+    LaunchedEffect(roomOwner.id, roomOwner.uid, roomOwner.accountId) {
+        val profile = ProfilePersistence.load(
+            TargetUser(
+                id = roomOwner.id.ifBlank { null },
+                uid = roomOwner.uid.ifBlank { null },
+                accountId = roomOwner.accountId.ifBlank { null },
+                name = roomOwner.name,
+                photo = roomOwner.image,
+                image = roomOwner.image
+            )
+        ) ?: return@LaunchedEffect
+        profile.optString("name").takeIf { it.isNotBlank() && it != "null" }?.let {
+            ownerDisplayName = it
+        }
+        sequenceOf("image", "photo", "photoURL", "avatar", "picture")
+            .map { profile.optString(it, "") }
+            .firstOrNull { it.isNotBlank() && it != "null" }
+            ?.let { ownerDisplayImage = it }
+    }
 
     Box(Modifier.fillMaxSize(), contentAlignment=Alignment.BottomCenter) {
         Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=.30f)).clickable(onClick=onClose))
@@ -170,19 +196,19 @@ private fun MemberRow(
             modifier = Modifier.size(38.dp).clip(CircleShape),
             contentScale = ContentScale.Crop
         )
+        Text(name.ifBlank { "User" }, Modifier.weight(1f).padding(start = 11.dp),
+            fontSize = 13.sp, fontWeight = FontWeight.Medium, color = Color.White, maxLines = 1)
         if (role == "Owner") {
             Box(
-                Modifier.padding(start = 11.dp, end = 5.dp).size(14.dp).clip(CircleShape).background(Color(0xFF3B82F6)),
+                Modifier.padding(start = 8.dp).size(24.dp).clip(CircleShape).background(Color(0xFF3B82F6)),
                 contentAlignment = Alignment.Center
             ) {
                 androidx.compose.material3.Icon(
                     androidx.compose.material.icons.Icons.Default.Home,
-                    contentDescription = "Owner", tint = Color.White, modifier = Modifier.size(9.dp)
+                    contentDescription = "Owner", tint = Color.White, modifier = Modifier.size(14.dp)
                 )
             }
         }
-        Text(name.ifBlank { "User" }, Modifier.weight(1f).padding(start = if (role == "Owner") 0.dp else 11.dp),
-            fontSize = 13.sp, fontWeight = FontWeight.Medium, color = Color.White, maxLines = 1)
         if (role.isNotBlank() && role != "Owner") {
             Row(
                 Modifier.clip(RoundedCornerShape(5.dp)).background(roleColor).padding(horizontal = 7.dp, vertical = 4.dp),
