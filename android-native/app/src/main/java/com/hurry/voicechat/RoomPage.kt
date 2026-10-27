@@ -779,6 +779,10 @@ fun RoomPage(
                                         androidx.compose.material3.Icon(imageVector=Icons.Filled.Home,contentDescription="Owner",modifier=Modifier.size(9.dp),tint=Color.White)
                                     }
                                 }
+                                Box(modifier = Modifier.size(30.dp), contentAlignment = Alignment.Center) {
+                                    AsyncImage(model = "https://zyora-voice-chat.vercel.app/IMG_20260917_220530.png", contentDescription = "Level Lv.1 - Lv.10", contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
+                                    Text("Lv.1", color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.TopEnd).padding(end = 1.dp, top = 1.dp))
+                                }
                                 AsyncImage(model = "https://zyora-voice-chat.vercel.app/1785486414756.png", contentDescription = "Purple ID Badge", contentScale = ContentScale.Fit, modifier = Modifier.size(18.dp))
                             }
                             Text("Enter the Room",color=Color.White,fontSize=12.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Medium, modifier=Modifier.padding(start=2.dp).clickable { selectedChatProfile = message })
