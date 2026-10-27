@@ -683,7 +683,11 @@ fun PublicProfileScreen(
                                 Box(
                                     modifier = Modifier.requiredSize(64.dp).clip(RoundedCornerShape(12.dp)).background(Color(0xFFF3F4F6)),
                                     contentAlignment = Alignment.Center
-                                ) { Text("+", fontSize = 30.sp, color = Color(0xFFD1D5DB), fontWeight = FontWeight.Light) }
+                                ) {
+                                    Box(Modifier.fillMaxSize().clickable { backgroundPicker.launch("image/*") }, contentAlignment = Alignment.Center) {
+                                        Text("+", fontSize = 30.sp, color = Color(0xFFD1D5DB), fontWeight = FontWeight.Light)
+                                    }
+                                }
                             }
                             coverPhotos.take(4).forEach { photo ->
                                 AsyncImage(model = photo, contentDescription = "Background", contentScale = ContentScale.Crop, modifier = Modifier.requiredSize(64.dp).clip(RoundedCornerShape(6.dp)))
@@ -706,7 +710,11 @@ fun PublicProfileScreen(
                                 Box(
                                     modifier = Modifier.requiredSize(64.dp).clip(RoundedCornerShape(12.dp)).background(Color(0xFFF3F4F6)),
                                     contentAlignment = Alignment.Center
-                                ) { Text("+", fontSize = 30.sp, color = Color(0xFFD1D5DB), fontWeight = FontWeight.Light) }
+                                ) {
+                                    Box(Modifier.fillMaxSize().clickable { albumPicker.launch("image/*") }, contentAlignment = Alignment.Center) {
+                                        Text("+", fontSize = 30.sp, color = Color(0xFFD1D5DB), fontWeight = FontWeight.Light)
+                                    }
+                                }
                             }
                             albumImages.take(4).forEachIndexed { index, image ->
                                 Box(modifier = Modifier.requiredSize(64.dp).clip(RoundedCornerShape(6.dp)).clickable { fullImageIndex = index }) {
