@@ -1626,8 +1626,8 @@ private fun formatMusicTime(seconds: Float): String {
             if (adminTag || serviceTag || coinSellerTag) {
                 Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(3.dp)){
                     if(adminTag) AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261027_114117.png",contentDescription="Admin",contentScale=ContentScale.Fit,modifier=Modifier.height(20.dp).widthIn(max=56.dp))
-                    if(serviceTag) AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261027_114117.png",contentDescription="Service",contentScale=ContentScale.Fit,modifier=Modifier.height(20.dp).widthIn(max=56.dp))
-                    if(coinSellerTag) AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261027_114117.png",contentDescription="Coin Seller",contentScale=ContentScale.Fit,modifier=Modifier.height(20.dp).widthIn(max=56.dp))
+                    if(serviceTag) AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261027_102207.png",contentDescription="Service / CS",contentScale=ContentScale.Fit,modifier=Modifier.height(20.dp).widthIn(max=56.dp))
+                    if(coinSellerTag) AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261027_105359.png",contentDescription="Coin Seller",contentScale=ContentScale.Fit,modifier=Modifier.height(20.dp).widthIn(max=56.dp))
                 }
             }
             Box(Modifier.align(Alignment.Start).clip(RoundedCornerShape(topStart=2.dp,topEnd=12.dp,bottomStart=12.dp,bottomEnd=12.dp)).background(Color.Black.copy(alpha=.40f)).border(0.5.dp,Color.White.copy(alpha=.15f),RoundedCornerShape(topStart=2.dp,topEnd=12.dp,bottomStart=12.dp,bottomEnd=12.dp)).padding(horizontal=10.dp,vertical=8.dp)){
