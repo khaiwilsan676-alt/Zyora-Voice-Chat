@@ -258,8 +258,6 @@ fun RoomProfile(
                             if (adminTag) AsyncImage(model = "IMG_20261027_114117.png".fullUrl(), contentDescription = "Admin", contentScale = ContentScale.Fit, modifier = Modifier.height(22.dp).widthIn(max = 60.dp))
                             if (serviceTag) AsyncImage(model = "IMG_20261027_102207.png".fullUrl(), contentDescription = "Service / CS", contentScale = ContentScale.Fit, modifier = Modifier.height(22.dp).widthIn(max = 60.dp))
                             if (coinSellerTag) AsyncImage(model = "IMG_20261027_105359.png".fullUrl(), contentDescription = "Coin Seller", contentScale = ContentScale.Fit, modifier = Modifier.height(22.dp).widthIn(max = 60.dp))
-                            if (vipTag) AsyncImage(model = "1785469775751.png".fullUrl(), contentDescription = "VIP", contentScale = ContentScale.Fit, modifier = Modifier.height(24.dp))
-                            if (premiumTag) AsyncImage(model = "1785469365805.png".fullUrl(), contentDescription = "Premium", contentScale = ContentScale.Fit, modifier = Modifier.height(24.dp))
                         }
                     }
 
