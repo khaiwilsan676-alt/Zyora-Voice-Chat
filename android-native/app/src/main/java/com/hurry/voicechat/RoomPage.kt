@@ -1598,17 +1598,44 @@ private fun formatMusicTime(seconds: Float): String {
 }
 
 @Composable private fun NativeMessage(m:NativeRoomMessage, onAvatarClick: () -> Unit = {}){
+    val context = LocalContext.current
+    val profileTags = remember(m.senderAccountId) {
+        if (m.senderAccountId.isBlank()) null else NativeIndexDatabase(context).loadProfile(m.senderAccountId)
+    }
+    val officialHeadTag = profileTags?.optBoolean("officialHeadTag", false) == true
+    val officialTag = profileTags?.optBoolean("officialTag", false) == true
+    val adminTag = profileTags?.optBoolean("adminTag", false) == true
+    val serviceTag = profileTags?.optBoolean("serviceTag", false) == true
+    val coinSellerTag = profileTags?.optBoolean("coinSellerTag", false) == true
     Row(Modifier.fillMaxWidth().padding(vertical=2.dp),verticalAlignment=Alignment.Top,horizontalArrangement=Arrangement.Start){
         FallbackAsyncImage(model=m.senderImage,contentDescription=m.sender,modifier=Modifier.padding(top=2.dp).size(28.dp).clip(CircleShape).border(1.dp, Color.White.copy(alpha=.1f), CircleShape).clickable(onClick = onAvatarClick),contentScale=ContentScale.Crop)
         Column(Modifier.padding(start=8.dp).fillMaxWidth(.75f),verticalArrangement=Arrangement.spacedBy(2.dp)){
-            Text(m.sender,color=Color.White.copy(alpha=.9f),fontSize=12.sp,lineHeight=13.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold,maxLines=1,overflow=TextOverflow.Ellipsis)
+            Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(3.dp)){
+                Text(m.sender,color=Color.White.copy(alpha=.9f),fontSize=12.sp,lineHeight=13.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold,maxLines=1,overflow=TextOverflow.Ellipsis)
+                Box(modifier=Modifier.size(30.dp),contentAlignment=Alignment.Center){
+                    AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20260917_220530.png",contentDescription="Level Lv.1 - Lv.10",contentScale=ContentScale.Fit,modifier=Modifier.fillMaxSize())
+                    Text("Lv.1",color=Color.White,fontSize=8.sp,fontWeight=FontWeight.Bold,modifier=Modifier.align(Alignment.Center).padding(start=5.dp,top=1.dp))
+                }
+            }
+            if (officialHeadTag || officialTag) {
+                Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(3.dp)){
+                    if(officialHeadTag) AsyncImage(model="https://zyora-voice-chat.vercel.app/file_00000000ef2c82118b2266596d0e992d.png",contentDescription="Official Head",contentScale=ContentScale.Fit,modifier=Modifier.height(25.dp).widthIn(max=68.dp))
+                    if(officialTag) AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261027_102250.png",contentDescription="Official",contentScale=ContentScale.Fit,modifier=Modifier.height(22.dp).widthIn(max=60.dp))
+                }
+            }
+            if (adminTag || serviceTag || coinSellerTag) {
+                Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(3.dp)){
+                    if(adminTag) AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261027_114117.png",contentDescription="Admin",contentScale=ContentScale.Fit,modifier=Modifier.height(20.dp).widthIn(max=56.dp))
+                    if(serviceTag) AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261027_114117.png",contentDescription="Service",contentScale=ContentScale.Fit,modifier=Modifier.height(20.dp).widthIn(max=56.dp))
+                    if(coinSellerTag) AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261027_114117.png",contentDescription="Coin Seller",contentScale=ContentScale.Fit,modifier=Modifier.height(20.dp).widthIn(max=56.dp))
+                }
+            }
             Box(Modifier.align(Alignment.Start).clip(RoundedCornerShape(topStart=2.dp,topEnd=12.dp,bottomStart=12.dp,bottomEnd=12.dp)).background(Color.Black.copy(alpha=.40f)).border(0.5.dp,Color.White.copy(alpha=.15f),RoundedCornerShape(topStart=2.dp,topEnd=12.dp,bottomStart=12.dp,bottomEnd=12.dp)).padding(horizontal=10.dp,vertical=8.dp)){
                 Text(m.text,color=Color.White,fontSize=13.sp,lineHeight=18.sp,softWrap=true)
             }
         }
     }
 }
-
 @Composable private fun RoomExitMenu(onKeep:()->Unit,onExit:()->Unit,onDismiss:()->Unit){
     val raw="https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/"
     Box(Modifier.fillMaxSize().background(Color.Transparent).clickable{onDismiss()},contentAlignment=Alignment.TopCenter){
