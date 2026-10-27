@@ -2079,8 +2079,7 @@ io.on("connection", (socket) => {
       "private_message",
       normalizedMessage
     );
-    // Separate monitor event updates the existing Owner private-message console live.
-    // The Owner console already reads the same collection through /api/privateMessages.
+    // Live-only event updates the Owner panel private-message monitor.
     io.emit("private_message_monitor", normalizedMessage);
 
     if (receiverAccountId && receiverAccountId !== receiverId) {
@@ -2099,93 +2098,36 @@ io.on("connection", (socket) => {
     });
   });
 
-  socket.on("private_message_clear", async (data = {}) => {
+  socket.on("private_message_clear", (data = {}) => {
     const userId = String(data.userId || "");
     const otherUserId = String(data.otherUserId || "");
+    if (!userId || !otherUserId || !socketOwnsIdentity(socket, userId)) return;
 
-    if (!userId || !otherUserId || !db) return;
-    if (!socketOwnsIdentity(socket, userId)) return;
-
-    try {
-      await db.collection("privateMessages").deleteMany({
-        $or: [
-          { senderId: userId, receiverId: otherUserId },
-          { senderId: otherUserId, receiverId: userId },
-        ],
-      });
-
-      io.to(`user:${userId}`).emit("private_message_cleared", {
-        chatId: data.chatId || "",
-      });
-
-      io.to(`user:${otherUserId}`).emit("private_message_cleared", {
-        chatId: data.chatId || "",
-      });
-    } catch (error) {
-      console.error("Private message clear failed:", error.message);
-    }
+    // Local-only chat clearing: notify both clients; never touch MongoDB.
+    io.to(`user:${userId}`).emit("private_message_cleared", { chatId: data.chatId || "" });
+    io.to(`user:${otherUserId}`).emit("private_message_cleared", { chatId: data.chatId || "" });
   });
 
-  socket.on("private_message_delete", async (data = {}) => {
+  socket.on("private_message_delete", (data = {}) => {
     const userId = String(data.userId || "");
     const otherUserId = String(data.otherUserId || "");
     const messageId = String(data.messageId || "");
+    if (!userId || !otherUserId || !messageId || !socketOwnsIdentity(socket, userId)) return;
 
-    if (!userId || !otherUserId || !messageId || !db) return;
-    if (!socketOwnsIdentity(socket, userId)) return;
-
-    try {
-      await db.collection("privateMessages").deleteOne({
-        id: messageId,
-        $or: [
-          { senderId: userId, receiverId: otherUserId },
-          { senderId: otherUserId, receiverId: userId },
-        ],
-      });
-
-      io.to(`user:${userId}`).emit("private_message_deleted", {
-        chatId: data.chatId || "",
-        messageId,
-      });
-
-      io.to(`user:${otherUserId}`).emit("private_message_deleted", {
-        chatId: data.chatId || "",
-        messageId,
-      });
-    } catch (error) {
-      console.error("Private message delete failed:", error.message);
-    }
+    const payload = { chatId: data.chatId || "", messageId };
+    io.to(`user:${userId}`).emit("private_message_deleted", payload);
+    io.to(`user:${otherUserId}`).emit("private_message_deleted", payload);
   });
 
-  socket.on("private_message_delete_many", async (data = {}) => {
+  socket.on("private_message_delete_many", (data = {}) => {
     const userId = String(data.userId || "");
     const otherUserId = String(data.otherUserId || "");
-    const messageIds = Array.isArray(data.messageIds)
-      ? data.messageIds.map(String).filter(Boolean)
-      : [];
+    const messageIds = Array.isArray(data.messageIds) ? data.messageIds.map(String).filter(Boolean) : [];
+    if (!userId || !otherUserId || !messageIds.length || !socketOwnsIdentity(socket, userId)) return;
 
-    if (!userId || !otherUserId || !messageIds.length || !db) return;
-    if (!socketOwnsIdentity(socket, userId)) return;
-
-    try {
-      await db.collection("privateMessages").deleteMany({
-        id: { $in: messageIds },
-        $or: [
-          { senderId: userId, receiverId: otherUserId },
-          { senderId: otherUserId, receiverId: userId },
-        ],
-      });
-
-      const payload = {
-        chatId: data.chatId || "",
-        messageIds,
-      };
-
-      io.to(`user:${userId}`).emit("private_messages_deleted", payload);
-      io.to(`user:${otherUserId}`).emit("private_messages_deleted", payload);
-    } catch (error) {
-      console.error("Private messages delete failed:", error.message);
-    }
+    const payload = { chatId: data.chatId || "", messageIds };
+    io.to(`user:${userId}`).emit("private_messages_deleted", payload);
+    io.to(`user:${otherUserId}`).emit("private_messages_deleted", payload);
   });
 
   socket.on("ai_support_message", async (data = {}) => {
