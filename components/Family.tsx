@@ -36,18 +36,18 @@ const RewardItem = ({ title }: { title: string }) => (
 );
 
 // BLACK BACKGROUND VIDEO REWARD ITEM (PAUSED FRAME SHOWN, VIDEO ONLY OUTSIDE)
-const VideoRewardItem = ({ 
-  title, 
-  videoSrc, 
-  onClick, 
-  scaleClass = "scale-150", 
-  blendScreen = true 
-}: { 
-  title: string, 
-  videoSrc: string, 
-  onClick: () => void, 
-  scaleClass?: string, 
-  blendScreen?: boolean 
+const VideoRewardItem = ({
+  title,
+  videoSrc,
+  onClick,
+  scaleClass = "scale-150",
+  blendScreen = true
+}: {
+  title: string,
+  videoSrc: string,
+  onClick: () => void,
+  scaleClass?: string,
+  blendScreen?: boolean
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -62,20 +62,20 @@ const VideoRewardItem = ({
   return (
     <div className="flex flex-col items-center w-[28%] cursor-pointer active:scale-95 transition-transform" onClick={onClick}>
       <div className="w-full aspect-square bg-gradient-to-b from-[#8C3A19] to-[#5C1A06] rounded-xl flex items-center justify-center p-1 shadow-inner border-2 border-[#FFD700] shadow-[0_0_12px_rgba(255,215,0,0.4)] overflow-hidden relative">
-        <video 
+        <video
           ref={videoRef}
-          src={videoSrc} 
+          src={videoSrc}
           preload="auto"
           loop
           playsInline
           muted
           disablePictureInPicture
           disableRemotePlayback
-          className={`w-full h-full object-cover pointer-events-none ${scaleClass}`} 
-          style={{ 
-            mixBlendMode: blendScreen ? 'screen' : 'normal', 
-            filter: 'url(#remove-black)' 
-          }} 
+          className={`w-full h-full object-cover pointer-events-none ${scaleClass}`}
+          style={{
+            mixBlendMode: blendScreen ? 'screen' : 'normal',
+            filter: 'url(#remove-black)'
+          }}
         />
       </div>
       <div className="flex gap-[1px] mt-1.5">
@@ -105,19 +105,19 @@ const GreenVideoRewardItem = ({ title, videoSrc, onClick }: { title: string, vid
   return (
     <div className="flex flex-col items-center w-[28%] cursor-pointer active:scale-95 transition-transform" onClick={onClick}>
       <div className="w-full aspect-square bg-gradient-to-b from-[#8C3A19] to-[#5C1A06] rounded-xl flex items-center justify-center p-1 shadow-inner border-2 border-[#FFD700] shadow-[0_0_12px_rgba(255,215,0,0.4)] overflow-hidden relative">
-        <video 
+        <video
           ref={videoRef}
-          src={videoSrc} 
+          src={videoSrc}
           preload="auto"
           loop
           playsInline
           muted
           disablePictureInPicture
           disableRemotePlayback
-          className="w-full h-full object-cover scale-150 pointer-events-none" 
-          style={{ 
-            filter: 'url(#remove-green)' 
-          }} 
+          className="w-full h-full object-cover scale-150 pointer-events-none"
+          style={{
+            filter: 'url(#remove-green)'
+          }}
         />
       </div>
       <div className="flex gap-[1px] mt-1.5">
@@ -136,10 +136,10 @@ const GreenVideoRewardItem = ({ title, videoSrc, onClick }: { title: string, vid
 const VehicleRewardItem = ({ title, imageSrc, onClick }: { title: string, imageSrc: string, onClick: () => void }) => (
   <div className="flex flex-col items-center w-[28%] cursor-pointer active:scale-95 transition-transform" onClick={onClick}>
     <div className="w-full aspect-square bg-gradient-to-b from-[#8C3A19] to-[#5C1A06] rounded-xl flex items-center justify-center p-1.5 shadow-inner border-2 border-[#FFD700] shadow-[0_0_12px_rgba(255,215,0,0.4)] overflow-hidden relative">
-      <img 
-        src={imageSrc} 
-        alt={title} 
-        className="w-full h-full object-cover scale-110 pointer-events-none" 
+      <img
+        src={imageSrc}
+        alt={title}
+        className="w-full h-full object-cover scale-110 pointer-events-none"
         style={{
           maskImage: 'radial-gradient(circle at center, rgba(0,0,0,1) 45%, rgba(0,0,0,0) 90%)',
           WebkitMaskImage: 'radial-gradient(circle at center, rgba(0,0,0,1) 45%, rgba(0,0,0,0) 90%)'
@@ -178,16 +178,16 @@ const TallRewardItem = ({ title, imageSrc }: { title: string, imageSrc: string }
 const MixedImageRewardItem = ({ title, imageSrc, onClick }: { title: string, imageSrc: string, onClick: () => void }) => (
   <div className="flex flex-col items-center w-[28%] cursor-pointer active:scale-95 transition-transform" onClick={onClick}>
     <div className="w-full aspect-square bg-gradient-to-b from-[#8C3A19] to-[#5C1A06] rounded-xl flex items-center justify-center p-1.5 shadow-inner border-2 border-[#FFD700] shadow-[0_0_12px_rgba(255,215,0,0.4)] overflow-hidden relative">
-      <img 
-        src={imageSrc} 
-        alt={title} 
-        className="w-full h-full object-cover scale-110 pointer-events-none" 
-        style={{ 
+      <img
+        src={imageSrc}
+        alt={title}
+        className="w-full h-full object-cover scale-110 pointer-events-none"
+        style={{
           mixBlendMode: 'screen',
           filter: 'url(#remove-black)',
           maskImage: 'radial-gradient(circle at center, rgba(0,0,0,1) 45%, rgba(0,0,0,0) 90%)',
           WebkitMaskImage: 'radial-gradient(circle at center, rgba(0,0,0,1) 45%, rgba(0,0,0,0) 90%)'
-        }} 
+        }}
       />
     </div>
     <div className="flex gap-[1px] mt-1.5">
@@ -203,20 +203,20 @@ const MixedImageRewardItem = ({ title, imageSrc, onClick }: { title: string, ima
 
 // QUESTION MARK ICON (Custom SVG - "?" symbol) — now accepts explicit color prop
 const QuestionMarkIcon = ({ size = 28, className = "", color = "currentColor" }: { size?: number, className?: string, color?: string }) => (
-  <svg 
-    width={size} 
-    height={size} 
-    viewBox="0 0 24 24" 
-    fill="none" 
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
     className={className}
     xmlns="http://www.w3.org/2000/svg"
   >
     <circle cx="12" cy="12" r="11" stroke={color} strokeWidth="2" fill="none" />
-    <path 
-      d="M9.5 9.5C9.5 8.12 10.62 7 12 7C13.38 7 14.5 8.12 14.5 9.5C14.5 10.88 13.38 12 12 12V13.5" 
-      stroke={color} 
-      strokeWidth="2" 
-      strokeLinecap="round" 
+    <path
+      d="M9.5 9.5C9.5 8.12 10.62 7 12 7C13.38 7 14.5 8.12 14.5 9.5C14.5 10.88 13.38 12 12 12V13.5"
+      stroke={color}
+      strokeWidth="2"
+      strokeLinecap="round"
       strokeLinejoin="round"
       fill="none"
     />
@@ -226,11 +226,11 @@ const QuestionMarkIcon = ({ size = 28, className = "", color = "currentColor" }:
 
 // ⭐ REUSABLE FAMILY RULES SHEET COMPONENT (DARK THEME MATCHING APP BACKGROUND)
 const FamilyRulesSheet = ({ onClose }: { onClose: () => void }) => (
-  <div 
+  <div
     className="fixed inset-0 bg-black/60 z-[100] flex items-end"
     onClick={onClose}
   >
-    <div 
+    <div
       className="w-full max-h-[80vh] rounded-t-3xl p-6 flex flex-col shadow-2xl overflow-y-auto relative bg-gradient-to-b from-[#3B0C06] to-[#1a0d06] border-t-2 border-[#FFD700] shadow-[0_0_30px_rgba(255,215,0,0.25)]"
       onClick={(e) => e.stopPropagation()}
     >
@@ -272,7 +272,7 @@ export default function Family({ onBack }: FamilyProps) {
   const [applyModeState, setApplyModeState] = useState<'free' | 'admin'>('free')
 
   const [activeRow, setActiveRow] = useState<'left' | 'mid' | 'right' | null>('left')
-  
+
   // Modal states for videos
   const [activeVideoModal, setActiveVideoModal] = useState<{src: string, type: 'black' | 'green' | 'vehicle' | 'black-noblend' | 'mixed', label?: string} | null>(null)
 
@@ -291,7 +291,7 @@ export default function Family({ onBack }: FamilyProps) {
     if (savedMembers) {
       setMembers(JSON.parse(savedMembers))
     }
-    
+
     const savedCode = localStorage.getItem('familyCode')
     if (savedCode) {
       setFamilyCode(savedCode)
@@ -301,7 +301,7 @@ export default function Family({ onBack }: FamilyProps) {
     const savedFamilyAnnouncement = localStorage.getItem('familyAnnouncement')
     const savedFamilyImage = localStorage.getItem('familyImage')
     const savedApplyMode = localStorage.getItem('applyMode')
-    
+
     if (savedFamilyName) setFamilyName(savedFamilyName)
     if (savedFamilyAnnouncement) setFamilyAnnouncement(savedFamilyAnnouncement)
     if (savedFamilyImage) setFamilyImage(savedFamilyImage)
@@ -316,9 +316,9 @@ export default function Family({ onBack }: FamilyProps) {
         now.getDate() + daysUntilSunday
       )
       endOfWeek.setHours(23, 59, 59, 999)
-      
+
       const diff = endOfWeek.getTime() - now.getTime()
-      
+
       setTimeLeft({
         days: Math.floor(diff / (1000 * 60 * 60 * 24)),
         hours: Math.floor((diff / (1000 * 60 * 60)) % 24),
@@ -351,12 +351,12 @@ export default function Family({ onBack }: FamilyProps) {
       alert("You need 10,000,000 coins to create a family.")
       return
     }
-    
+
     localStorage.setItem('familyName', familyName)
     localStorage.setItem('familyAnnouncement', familyAnnouncement)
     if (familyImage) localStorage.setItem('familyImage', familyImage)
     localStorage.setItem('applyMode', applyModeState)
-    
+
     const newBalance = userCoins - 10000000
     setUserCoins(newBalance)
     alert("Family created successfully!")
@@ -369,7 +369,7 @@ export default function Family({ onBack }: FamilyProps) {
   if (currentView === 'topRankings') {
     return (
       <div className="min-h-screen bg-[#2A1610] flex flex-col relative overflow-y-auto overflow-x-hidden font-sans text-white pb-6">
-        
+
         <style dangerouslySetInnerHTML={{__html: `
           video::-webkit-media-controls { display: none !important; }
           video::-webkit-media-controls-enclosure { display: none !important; }
@@ -395,7 +395,7 @@ export default function Family({ onBack }: FamilyProps) {
           </filter>
         </svg>
 
-        <div 
+        <div
           className="absolute top-0 left-0 w-full h-[50vh] z-0"
           style={{
             backgroundImage: "url('/IMG_20260901_160704.png')",
@@ -419,7 +419,7 @@ export default function Family({ onBack }: FamilyProps) {
           >
             <ArrowLeft size={28} color="#FFFFFF" className="drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]" />
           </button>
-          
+
           {/* ⭐ QUESTION MARK BUTTON — WHITE (forced color) */}
           <button
             type="button"
@@ -433,25 +433,25 @@ export default function Family({ onBack }: FamilyProps) {
 
         <div className="flex flex-col w-full mt-2 relative z-20">
           <div className="flex justify-center w-full relative z-20 -mt-16">
-            <img 
-              src="/IMG_20260901_161023.png" 
-              alt="Middle Rank" 
-              className="w-68 h-68 object-contain drop-shadow-2xl" 
+            <img
+              src="/IMG_20260901_161023.png"
+              alt="Middle Rank"
+              className="w-68 h-68 object-contain drop-shadow-2xl"
               style={{ filter: 'url(#remove-green)' }}
             />
           </div>
           <div className="absolute top-27 w-full flex justify-between z-10 px-0">
-            <img 
-              src="/1788258909655~2.jpg" 
-              alt="Left Rank" 
+            <img
+              src="/1788258909655~2.jpg"
+              alt="Left Rank"
               className="w-40 h-40 object-contain -ml-4 drop-shadow-xl"
-              style={{ filter: 'url(#remove-green)' }} 
+              style={{ filter: 'url(#remove-green)' }}
             />
-            <img 
-              src="/1788258915366~2.jpg" 
-              alt="Right Rank" 
+            <img
+              src="/1788258915366~2.jpg"
+              alt="Right Rank"
               className="w-40 h-40 object-contain -mr-4 drop-shadow-xl"
-              style={{ filter: 'url(#remove-green)' }} 
+              style={{ filter: 'url(#remove-green)' }}
             />
           </div>
         </div>
@@ -459,25 +459,25 @@ export default function Family({ onBack }: FamilyProps) {
         <div className="w-full h-[13vh]"></div>
 
         <div className="flex flex-row items-end justify-center gap-2 w-full px-4 relative z-20 mb-2">
-          <img 
-            src="/IMG_20260901_230303.jpg" 
-            alt="Left New" 
+          <img
+            src="/IMG_20260901_230303.jpg"
+            alt="Left New"
             onClick={() => { setActiveRow('left'); setCurrentView('main'); }}
-            className="w-[35%] max-w-[110px] h-auto object-contain drop-shadow-xl cursor-pointer transition-all duration-300" 
+            className="w-[35%] max-w-[110px] h-auto object-contain drop-shadow-xl cursor-pointer transition-all duration-300"
             style={{ filter: activeRow === 'left' ? 'url(#remove-green)' : 'url(#remove-green) grayscale(100%)' }}
           />
-          <img 
-            src="/IMG_20260901_230319.jpg" 
-            alt="Middle New" 
-            onClick={() => { setActiveRow('mid'); setCurrentView('main'); }} 
-            className="w-[35%] max-w-[130px] h-auto object-contain drop-shadow-2xl z-10 cursor-pointer transition-all duration-300" 
+          <img
+            src="/IMG_20260901_230319.jpg"
+            alt="Middle New"
+            onClick={() => { setActiveRow('mid'); setCurrentView('main'); }}
+            className="w-[35%] max-w-[130px] h-auto object-contain drop-shadow-2xl z-10 cursor-pointer transition-all duration-300"
             style={{ filter: activeRow === 'mid' ? 'url(#remove-green)' : 'url(#remove-green) grayscale(100%)' }}
           />
-          <img 
-            src="/IMG_20260901_230330.jpg" 
-            alt="Right New" 
-            onClick={() => setActiveRow('right')} 
-            className="w-[35%] max-w-[110px] h-auto object-contain drop-shadow-xl cursor-pointer transition-all duration-300 hover:scale-105" 
+          <img
+            src="/IMG_20260901_230330.jpg"
+            alt="Right New"
+            onClick={() => setActiveRow('right')}
+            className="w-[35%] max-w-[110px] h-auto object-contain drop-shadow-xl cursor-pointer transition-all duration-300 hover:scale-105"
             style={{ filter: activeRow === 'right' ? 'url(#remove-green)' : 'url(#remove-green) grayscale(100%)' }}
           />
         </div>
@@ -492,10 +492,10 @@ export default function Family({ onBack }: FamilyProps) {
             <div className="flex justify-evenly w-full px-2">
               <VideoRewardItem title="Medal *7 days" videoSrc="/1000196572-background (1).mp4" onClick={() => setActiveVideoModal({src: '/1000196572-background (1).mp4', type: 'black'})} />
               <RewardItem title="Top1 Tag *7 days" />
-              <VehicleRewardItem 
-                title="Vehicle *7 days" 
-                imageSrc="/IMG_20260918_141104.jpg" 
-                onClick={() => setActiveVideoModal({src: '/gemini_generated_video_e407ad86~2.mp4', type: 'vehicle'})} 
+              <VehicleRewardItem
+                title="Vehicle *7 days"
+                imageSrc="/IMG_20260918_141104.jpg"
+                onClick={() => setActiveVideoModal({src: '/gemini_generated_video_e407ad86~2.mp4', type: 'vehicle'})}
               />
             </div>
             <div className="flex justify-center gap-8 w-full px-2">
@@ -519,10 +519,10 @@ export default function Family({ onBack }: FamilyProps) {
             <div className="flex justify-evenly w-full px-2">
               <VideoRewardItem title="Medal *7 days" videoSrc="/1000196573-background (1).mp4" onClick={() => setActiveVideoModal({src: '/1000196573-background (1).mp4', type: 'black'})} />
               <RewardItem title="Top2 Tag *7 days" />
-              <VehicleRewardItem 
-                title="Vehicle *7 days" 
-                imageSrc="/IMG_20260919_010054.jpg" 
-                onClick={() => setActiveVideoModal({src: '/VID_20260919_010017.mp4', type: 'vehicle'})} 
+              <VehicleRewardItem
+                title="Vehicle *7 days"
+                imageSrc="/IMG_20260919_010054.jpg"
+                onClick={() => setActiveVideoModal({src: '/VID_20260919_010017.mp4', type: 'vehicle'})}
               />
             </div>
             <div className="flex justify-center gap-8 w-full px-2">
@@ -546,10 +546,10 @@ export default function Family({ onBack }: FamilyProps) {
             <div className="flex justify-evenly w-full px-2">
               <VideoRewardItem title="Medal *7 days" videoSrc="/1000196574-background (1).mp4" blendScreen={false} onClick={() => setActiveVideoModal({src: '/1000196574-background (1).mp4', type: 'black-noblend'})} />
               <RewardItem title="Top3 Tag *7 days" />
-              <MixedImageRewardItem 
-                title="Vehicle *7 days" 
-                imageSrc="/IMG_20260919_222412.jpg" 
-                onClick={() => setActiveVideoModal({src: '/VID_20260919_222502.mp4', type: 'mixed'})} 
+              <MixedImageRewardItem
+                title="Vehicle *7 days"
+                imageSrc="/IMG_20260919_222412.jpg"
+                onClick={() => setActiveVideoModal({src: '/VID_20260919_222502.mp4', type: 'mixed'})}
               />
             </div>
             <div className="flex justify-center gap-8 w-full px-2">
@@ -574,10 +574,10 @@ export default function Family({ onBack }: FamilyProps) {
               <RewardItem title="Medal *3 days" />
               {/* ⭐ Top 4-10 Frames */}
               <GreenVideoRewardItem title="Frames *3 days" videoSrc="/gemini_generated_video_0d259062.mp4" onClick={() => setActiveVideoModal({src: '/gemini_generated_video_0d259062.mp4', type: 'green', label: 'TOP4-10 Family'})} />
-              <MixedImageRewardItem 
-                title="Vehicle *3 days" 
-                imageSrc="/IMG_20260919_222041.jpg" 
-                onClick={() => setActiveVideoModal({src: '/VID_20260919_222549.mp4', type: 'mixed'})} 
+              <MixedImageRewardItem
+                title="Vehicle *3 days"
+                imageSrc="/IMG_20260919_222041.jpg"
+                onClick={() => setActiveVideoModal({src: '/VID_20260919_222549.mp4', type: 'mixed'})}
               />
             </div>
           </div>
@@ -585,49 +585,49 @@ export default function Family({ onBack }: FamilyProps) {
 
         {/* UNIFIED CENTER VIDEO MODAL */}
         {activeVideoModal && (
-          <div 
+          <div
             className={`fixed inset-0 w-full h-full z-50 flex cursor-pointer transition-all duration-200 ${
-              activeVideoModal.label 
-                ? 'bg-black/60' 
+              activeVideoModal.label
+                ? 'bg-black/60'
                 : 'bg-transparent'
             }`}
             onClick={() => setActiveVideoModal(null)}
           >
             {activeVideoModal.type === 'vehicle' ? (
               <div className="relative w-full h-full flex items-end justify-center pointer-events-none pb-8">
-                <video 
-                  src={activeVideoModal.src} 
-                  autoPlay 
-                  loop 
+                <video
+                  src={activeVideoModal.src}
+                  autoPlay
+                  loop
                   playsInline
                   muted
                   disablePictureInPicture
                   disableRemotePlayback
-                  className="w-full h-auto max-h-[85vh] object-cover" 
+                  className="w-full h-auto max-h-[85vh] object-cover"
                   style={{
                     maskImage: 'linear-gradient(to bottom, transparent 0%, rgba(0,0,0,1) 15%, rgba(0,0,0,1) 70%, transparent 85%)',
                     WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, rgba(0,0,0,1) 15%, rgba(0,0,0,1) 70%, transparent 85%)'
-                  }} 
+                  }}
                 />
               </div>
             ) : activeVideoModal.type === 'mixed' ? (
               <div className="relative w-full h-full flex items-end justify-center pointer-events-none pb-8">
-                <video 
-                  src={activeVideoModal.src} 
-                  autoPlay 
-                  loop 
+                <video
+                  src={activeVideoModal.src}
+                  autoPlay
+                  loop
                   playsInline
                   muted
                   disablePictureInPicture
                   disableRemotePlayback
-                  className="w-full h-auto max-h-[70vh] object-cover" 
+                  className="w-full h-auto max-h-[70vh] object-cover"
                   style={{
                     mixBlendMode: 'screen',
                     backgroundColor: 'transparent',
                     filter: 'url(#remove-black)',
                     maskImage: 'linear-gradient(to bottom, transparent 0%, rgba(0,0,0,1) 15%, rgba(0,0,0,1) 70%, transparent 85%)',
                     WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, rgba(0,0,0,1) 15%, rgba(0,0,0,1) 70%, transparent 85%)'
-                  }} 
+                  }}
                 />
               </div>
             ) : (
@@ -648,29 +648,29 @@ export default function Family({ onBack }: FamilyProps) {
                     </div>
                   </div>
                 )}
-                
+
                 {/* ⭐ ALL VIDEOS (Frames/Medals) — Perfect Size */}
-                <video 
-                  src={activeVideoModal.src} 
-                  autoPlay 
+                <video
+                  src={activeVideoModal.src}
+                  autoPlay
                   loop
                   playsInline
                   muted
                   disablePictureInPicture
                   disableRemotePlayback
                   className="object-contain drop-shadow-2xl z-10 w-[90vw] max-w-[420px] aspect-square"
-                  style={activeVideoModal.type === 'black' ? { 
-                    mixBlendMode: 'screen', 
+                  style={activeVideoModal.type === 'black' ? {
+                    mixBlendMode: 'screen',
                     backgroundColor: 'transparent',
-                    filter: 'url(#remove-black)' 
+                    filter: 'url(#remove-black)'
                   } : activeVideoModal.type === 'black-noblend' ? {
                     mixBlendMode: 'normal',
                     backgroundColor: 'transparent',
-                    filter: 'url(#remove-black)' 
+                    filter: 'url(#remove-black)'
                   } : {
                     backgroundColor: 'transparent',
-                    filter: 'url(#remove-green)' 
-                  }} 
+                    filter: 'url(#remove-green)'
+                  }}
                 />
 
                 {/* ⭐ 5 stars — frame ke BAHAR niche se perfectly chipka hua */}
@@ -699,7 +699,7 @@ export default function Family({ onBack }: FamilyProps) {
   // ==========================================
   if (currentView === 'create') {
     return (
-      <div 
+      <div
         className="h-[100dvh] flex flex-col font-sans text-[#1a1a1a] relative overflow-hidden"
         style={{
           background: 'linear-gradient(180deg, #FFFDE7 0%, #FFF9C4 30%, #FFFFFF 100%)'
@@ -733,15 +733,15 @@ export default function Family({ onBack }: FamilyProps) {
 
         <div className="flex-1 w-full overflow-hidden pb-24">
           <div className="flex flex-col items-center mt-1">
-            <input 
-              type="file" 
-              accept="image/*" 
-              ref={fileInputRef} 
-              onChange={handleImageUpload} 
-              className="hidden" 
+            <input
+              type="file"
+              accept="image/*"
+              ref={fileInputRef}
+              onChange={handleImageUpload}
+              className="hidden"
             />
-            <div 
-              onClick={() => fileInputRef.current?.click()} 
+            <div
+              onClick={() => fileInputRef.current?.click()}
               className="w-24 h-24 border-2 border-[#d4af37] rounded-xl flex items-center justify-center cursor-pointer bg-white/60 overflow-hidden relative shadow-sm"
             >
               {familyImage ? (
@@ -752,28 +752,28 @@ export default function Family({ onBack }: FamilyProps) {
             </div>
             <p className="mt-2 text-sm font-bold text-gray-500">Upload Image</p>
           </div>
-          
+
           <div className="px-5 mt-2">
             <label className="block text-[15px] font-bold text-[#333] mb-2">Family name</label>
-            <input 
-              type="text" 
+            <input
+              type="text"
               value={familyName}
               onChange={(e) => setFamilyName(e.target.value)}
-              className="w-full bg-[#F2F2F2] border-none rounded-xl p-4 text-black outline-none font-medium placeholder-gray-400" 
-              placeholder="Enter your family name" 
+              className="w-full bg-[#F2F2F2] border-none rounded-xl p-4 text-black outline-none font-medium placeholder-gray-400"
+              placeholder="Enter your family name"
             />
           </div>
-          
+
           <div className="px-5 mt-2">
             <label className="block text-[15px] font-bold text-[#333] mb-2">Family Announcement</label>
-            <textarea 
+            <textarea
               value={familyAnnouncement}
               onChange={(e) => setFamilyAnnouncement(e.target.value)}
-              className="w-full bg-[#F2F2F2] border-none rounded-xl p-4 text-black outline-none font-medium placeholder-gray-400 resize-none h-28" 
-              placeholder="Enter your family announcement" 
+              className="w-full bg-[#F2F2F2] border-none rounded-xl p-4 text-black outline-none font-medium placeholder-gray-400 resize-none h-28"
+              placeholder="Enter your family announcement"
             />
           </div>
-          
+
           <div className="px-5 mt-2">
             <h2 className="text-[15px] font-bold text-[#333] mb-2">Setting</h2>
             <div onClick={() => setShowApplyMode(true)} className="flex items-center justify-between bg-[#F2F2F2] p-4 rounded-xl cursor-pointer">
@@ -796,15 +796,15 @@ export default function Family({ onBack }: FamilyProps) {
         </div>
 
         {/* Fixed Bottom Button Area */}
-        <div 
+        <div
           className="fixed bottom-0 left-0 w-full flex flex-col items-center justify-end z-50 px-4 pointer-events-none"
-          style={{ 
+          style={{
             paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 20px)',
             background: 'linear-gradient(to top, rgba(255, 253, 231, 1) 40%, rgba(255, 253, 231, 0) 100%)'
           }}
         >
-          <button 
-            onClick={handleCreate} 
+          <button
+            onClick={handleCreate}
             className="pointer-events-auto hover:scale-105 active:scale-95 transition-transform cursor-pointer drop-shadow-xl h-[52px] flex items-center justify-center bg-[#FFD700] rounded-full px-8 min-w-[280px] w-auto"
           >
             <span className="text-[#1a1a1a] font-bold text-base tracking-wide whitespace-nowrap">
@@ -814,11 +814,11 @@ export default function Family({ onBack }: FamilyProps) {
         </div>
 
         {showApplyMode && (
-          <div 
+          <div
             className="fixed inset-0 bg-black/50 z-50 flex items-end"
             onClick={() => setShowApplyMode(false)}
           >
-            <div 
+            <div
               className="bg-white w-full h-[22vh] rounded-t-3xl p-6 flex flex-col shadow-2xl relative"
               onClick={(e) => e.stopPropagation()}
             >
@@ -877,22 +877,22 @@ export default function Family({ onBack }: FamilyProps) {
       <div className="relative z-20 flex flex-col w-full">
         <div className="flex flex-row items-center justify-between w-full px-2 relative z-30" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 16px)' }}>
           {/* ⭐ BACK BUTTON — WHITE (forced color) */}
-          <button 
-            type="button" 
-            onClick={onBack} 
+          <button
+            type="button"
+            onClick={onBack}
             style={{ color: '#FFFFFF' }}
-            className="p-2 cursor-pointer relative z-30 flex items-center justify-start active:scale-95 transition-transform" 
+            className="p-2 cursor-pointer relative z-30 flex items-center justify-start active:scale-95 transition-transform"
             aria-label="Go back"
           >
             <ArrowLeft size={28} color="#FFFFFF" className="drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]" />
           </button>
-          
+
           {/* ⭐ QUESTION MARK BUTTON — WHITE (forced color) */}
-          <button 
-            type="button" 
-            onClick={() => setShowRulesSheet(true)} 
+          <button
+            type="button"
+            onClick={() => setShowRulesSheet(true)}
             style={{ color: '#FFFFFF' }}
-            className="p-2 cursor-pointer relative z-30 flex items-center justify-end active:scale-95 transition-transform" 
+            className="p-2 cursor-pointer relative z-30 flex items-center justify-end active:scale-95 transition-transform"
             aria-label="Details"
           >
             <QuestionMarkIcon size={28} color="#FFFFFF" className="drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]" />
@@ -912,25 +912,25 @@ export default function Family({ onBack }: FamilyProps) {
         <div className="w-full h-[13vh]"></div>
 
         <div className="flex flex-row items-end justify-center gap-2 w-full px-4 relative z-20">
-          <img 
-            src="/IMG_20260901_230303.jpg" 
-            alt="Left New" 
+          <img
+            src="/IMG_20260901_230303.jpg"
+            alt="Left New"
             onClick={() => setActiveRow('left')}
-            className="w-[35%] max-w-[110px] h-auto object-contain drop-shadow-xl cursor-pointer transition-all duration-300" 
+            className="w-[35%] max-w-[110px] h-auto object-contain drop-shadow-xl cursor-pointer transition-all duration-300"
             style={{ filter: activeRow === 'left' ? 'url(#remove-green)' : 'url(#remove-green) grayscale(100%)' }}
           />
-          <img 
-            src="/IMG_20260901_230319.jpg" 
-            alt="Middle New" 
+          <img
+            src="/IMG_20260901_230319.jpg"
+            alt="Middle New"
             onClick={() => setActiveRow('mid')}
-            className="w-[35%] max-w-[130px] h-auto object-contain drop-shadow-2xl z-10 cursor-pointer transition-all duration-300" 
+            className="w-[35%] max-w-[130px] h-auto object-contain drop-shadow-2xl z-10 cursor-pointer transition-all duration-300"
             style={{ filter: activeRow === 'mid' ? 'url(#remove-green)' : 'url(#remove-green) grayscale(100%)' }}
           />
-          <img 
-            src="/IMG_20260901_230330.jpg" 
-            alt="Right New" 
+          <img
+            src="/IMG_20260901_230330.jpg"
+            alt="Right New"
             onClick={() => { setActiveRow('right'); setCurrentView('topRankings'); }}
-            className="w-[35%] max-w-[110px] h-auto object-contain drop-shadow-xl cursor-pointer transition-all duration-300 hover:scale-105" 
+            className="w-[35%] max-w-[110px] h-auto object-contain drop-shadow-xl cursor-pointer transition-all duration-300 hover:scale-105"
             style={{ filter: activeRow === 'right' ? 'url(#remove-green)' : 'url(#remove-green) grayscale(100%)' }}
           />
         </div>
@@ -966,23 +966,23 @@ export default function Family({ onBack }: FamilyProps) {
         })}
       </div>
 
-      {/* Edge to edge bottom bar with overlap create button */}
-      <div className="fixed -bottom-6 left-0 w-full z-40 pointer-events-none">
+      {/* Edge to edge bottom bar with overlap create button — CREATED AT VERY BOTTOM */}
+      <div className="fixed bottom-0 left-0 w-full z-40 pointer-events-none">
         <div className="relative w-full">
-          <img 
-            src="/file_000000009d1081f59878648feb821b5e.png" 
-            alt="Bottom Background" 
-            className="w-full h-auto block pointer-events-auto" 
+          <img
+            src="/file_000000009d1081f59878648feb821b5e.png"
+            alt="Bottom Background"
+            className="w-full h-auto block pointer-events-auto"
           />
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <button 
+          <div className="absolute inset-0 flex items-end justify-center pointer-events-none pb-[4px]">
+            <button
               onClick={() => setCurrentView('create')}
               className="cursor-pointer active:scale-95 transition-transform w-[50%] max-w-[200px] pointer-events-auto"
             >
-              <img 
-                src="/file_0000000056508230808da89fb794a97f.png" 
-                alt="Create Family" 
-                className="w-full h-auto object-contain drop-shadow-xl" 
+              <img
+                src="/file_0000000056508230808da89fb794a97f.png"
+                alt="Create Family"
+                className="w-full h-auto object-contain drop-shadow-xl"
               />
             </button>
           </div>
