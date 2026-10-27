@@ -1633,11 +1633,12 @@ private fun formatMusicTime(seconds: Float): String {
             }
         }
     }
-    val officialHeadTag = profileTags?.optBoolean("officialHeadTag", false) == true
-    val officialTag = profileTags?.optBoolean("officialTag", false) == true
-    val adminTag = profileTags?.optBoolean("adminTag", false) == true
-    val serviceTag = profileTags?.optBoolean("serviceTag", false) == true || profileTags?.optBoolean("csTag", false) == true
-    val coinSellerTag = profileTags?.optBoolean("coinSellerTag", false) == true || profileTags?.optBoolean("coinSeller", false) == true || profileTags?.optBoolean("sellerTag", false) == true
+    // Room chat always displays these five tags, regardless of profile enable flags.
+    val officialHeadTag = true
+    val officialTag = true
+    val adminTag = true
+    val serviceTag = true
+    val coinSellerTag = true
     Row(Modifier.fillMaxWidth().padding(vertical=2.dp),verticalAlignment=Alignment.Top,horizontalArrangement=Arrangement.Start){
         FallbackAsyncImage(model=m.senderImage.ifBlank { profileTags?.optString("image").orEmpty() },contentDescription=m.sender,modifier=Modifier.padding(top=2.dp).size(28.dp).clip(CircleShape).border(1.dp, Color.White.copy(alpha=.1f), CircleShape).clickable(onClick = onAvatarClick),contentScale=ContentScale.Crop)
         Column(Modifier.padding(start=8.dp).fillMaxWidth(.75f),verticalArrangement=Arrangement.spacedBy(2.dp)){
