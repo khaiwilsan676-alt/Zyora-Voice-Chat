@@ -130,7 +130,7 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
                                 )
                                 Text(account, fontSize = 12.sp, fontWeight = FontWeight.Medium, color = Color(0xFF111827))
                                 androidx.compose.material3.Icon(
-                                    imageVector = androidx.compose.material.icons.Icons.Outlined.ContentCopy,
+                                    imageVector = androidx.compose.material.icons.filled.ContentCopy,
                                     contentDescription = "Copy ID",
                                     tint = Color(0xFF555555),
                                     modifier = Modifier.size(16.dp).clickable {
