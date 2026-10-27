@@ -507,11 +507,9 @@ private fun KeptRoomBubble(room: HurryRoom, onOpen: () -> Unit, onExit: () -> Un
                 Text("×", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold)
             }
         }
-        AsyncImage(
-            model = if (room.image.isBlank()) "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/default-avatar.png" else room.image,
-            contentDescription = "Kept room. Tap to reopen or drag to exit",
-            modifier = Modifier.align(Alignment.BottomEnd)
-                .padding(end = 18.dp, bottom = 88.dp)
+        Box(
+            Modifier.align(Alignment.BottomEnd)
+                .padding(end = 12.dp, bottom = 111.dp)
                 .offset { IntOffset(drag.x.roundToInt(), drag.y.roundToInt()) }
                 .size(56.dp).clip(RoundedCornerShape(50))
                 .background(Color.White)
@@ -531,9 +529,31 @@ private fun KeptRoomBubble(room: HurryRoom, onOpen: () -> Unit, onExit: () -> Un
                             drag += amount
                         }
                     )
-                },
-            contentScale = ContentScale.Crop
-        )
+                }
+        ) {
+            AsyncImage(
+                model = if (room.image.isBlank()) "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/default-avatar.png" else room.image,
+                contentDescription = "Kept room. Tap to reopen or drag to exit",
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+            val wave = androidx.compose.animation.core.rememberInfiniteTransition(label = "kept_room_wave")
+            val wave1 by wave.animateFloat(initialValue = 0.25f, targetValue = 1f, animationSpec = androidx.compose.animation.core.infiniteRepeatable(animation = androidx.compose.animation.core.tween(380, easing = androidx.compose.animation.core.LinearEasing), repeatMode = androidx.compose.animation.core.RepeatMode.Reverse), label = "kept_wave_1")
+            val wave2 by wave.animateFloat(initialValue = 0.9f, targetValue = 0.2f, animationSpec = androidx.compose.animation.core.infiniteRepeatable(animation = androidx.compose.animation.core.tween(470, easing = androidx.compose.animation.core.LinearEasing), repeatMode = androidx.compose.animation.core.RepeatMode.Reverse), label = "kept_wave_2")
+            val wave3 by wave.animateFloat(initialValue = 0.35f, targetValue = 1f, animationSpec = androidx.compose.animation.core.infiniteRepeatable(animation = androidx.compose.animation.core.tween(330, easing = androidx.compose.animation.core.LinearEasing), repeatMode = androidx.compose.animation.core.RepeatMode.Reverse), label = "kept_wave_3")
+            Row(
+                Modifier.align(Alignment.Center).height(22.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(3.dp)
+            ) {
+                listOf(wave1, wave2, wave3).forEach { level ->
+                    Box(
+                        Modifier.width(3.dp).height((5f + level * 15f).dp)
+                            .clip(RoundedCornerShape(3.dp)).background(Color.White)
+                    )
+                }
+            }
+        }
     }
 }
 
