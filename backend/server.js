@@ -1013,24 +1013,10 @@ app.put("/api/users", async (req, res) => {
   }
 });
 
-app.get("/api/privateMessages", async (req, res) => {
-  try {
-    if (!db) {
-      return res.status(503).json({ error: "MongoDB is not connected" });
-    }
-
-    const messages = await db
-      .collection("privateMessages")
-      .find({})
-      .sort({ timestamp: -1 })
-      .limit(1000)
-      .toArray();
-
-    return res.json({ messages });
-  } catch (error) {
-    console.error("GET /api/privateMessages error:", error);
-    return res.status(500).json({ error: "Failed to fetch private messages" });
-  }
+app.get("/api/privateMessages", (_req, res) => {
+  // Private chat history is not stored on the server; Owner panel uses its browser-local IndexedDB
+  // plus the Socket.IO private_message_monitor event for live messages.
+  return res.json({ messages: [] });
 });
 
 
