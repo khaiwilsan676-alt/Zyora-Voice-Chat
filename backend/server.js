@@ -2173,40 +2173,14 @@ io.on("connection", (socket) => {
       timestamp: Number(data.timestamp || Date.now()),
     };
 
-    try {
-      if (db) {
-        await db.collection("userReports").updateOne(
-          { id: reportId },
-          { $set: payload },
-          { upsert: true }
-        );
-      }
-    } catch (error) {
-      console.error("User report save failed:", error.message);
-    }
-
-    // Broadcast user report real-time update
+    // Live-only relay. Reports are kept in the submitting device's local database
+    // and the Owner panel's browser IndexedDB; never write report content to MongoDB.
     io.emit("user_report", payload);
   });
 
-  socket.on("user_report_history_request", async () => {
-    try {
-      if (db) {
-        const reports = await db
-          .collection("userReports")
-          .find({})
-          .sort({ timestamp: -1 })
-          .limit(200)
-          .toArray();
-
-        socket.emit("user_report_history_response", { reports });
-      } else {
-        socket.emit("user_report_history_response", { reports: [] });
-      }
-    } catch (error) {
-      console.error("User report history fetch failed:", error.message);
-      socket.emit("user_report_history_response", { reports: [] });
-    }
+  socket.on("user_report_history_request", () => {
+    // No server-side report history and no MongoDB read.
+    socket.emit("user_report_history_response", { reports: [] });
   });
 
   socket.on("user_feedback", async (data = {}) => {
@@ -2227,40 +2201,14 @@ io.on("connection", (socket) => {
       status: String(data.status || "pending")
     };
 
-    try {
-      if (db) {
-        await db.collection("userFeedbacks").updateOne(
-          { id: feedbackId },
-          { $set: payload },
-          { upsert: true }
-        );
-      }
-    } catch (error) {
-      console.error("User feedback save failed:", error.message);
-    }
-
-    // Broadcast user feedback real-time update to all listeners (including owner panel)
+    // Live-only relay. Feedback is stored locally by clients/Owner IndexedDB;
+    // never write feedback content to MongoDB.
     io.emit("user_feedback", payload);
   });
 
-  socket.on("user_feedback_history_request", async () => {
-    try {
-      if (db) {
-        const feedbacks = await db
-          .collection("userFeedbacks")
-          .find({})
-          .sort({ timestamp: -1 })
-          .limit(200)
-          .toArray();
-
-        socket.emit("user_feedback_history_response", { feedbacks });
-      } else {
-        socket.emit("user_feedback_history_response", { feedbacks: [] });
-      }
-    } catch (error) {
-      console.error("User feedback history fetch failed:", error.message);
-      socket.emit("user_feedback_history_response", { feedbacks: [] });
-    }
+  socket.on("user_feedback_history_request", () => {
+    // No server-side feedback history and no MongoDB read.
+    socket.emit("user_feedback_history_response", { feedbacks: [] });
   });
 
   // Official messages are never persisted on the server. Socket.IO only relays them live;
