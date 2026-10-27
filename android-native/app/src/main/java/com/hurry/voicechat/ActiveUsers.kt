@@ -12,6 +12,10 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
+import org.json.JSONObject
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -36,6 +40,18 @@ fun ActiveUsers(
  onCopyUserId:(String)->Unit
 ){
  if(!isOpen)return
+ val context = LocalContext.current
+ val database = remember(context) { NativeIndexDatabase(context) }
+ LaunchedEffect(roomUsers, currentUser) {
+  (listOf(currentUser) + roomUsers).forEach { user ->
+   if (user.accountId.isNotBlank()) {
+    val cached = database.loadProfile(user.accountId) ?: JSONObject()
+    if (user.name.isNotBlank()) cached.put("name", user.name)
+    if (user.image.isNotBlank()) cached.put("image", user.image)
+    database.saveProfile(user.accountId, cached)
+   }
+  }
+ }
  Box(Modifier.fillMaxSize(),contentAlignment=Alignment.BottomCenter){
   Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=.30f)).clickable(onClick=onClose))
   Column(
@@ -67,7 +83,7 @@ fun ActiveUsers(
      Row(Modifier.fillMaxWidth().padding(horizontal=4.dp),verticalAlignment=Alignment.CenterVertically){
       AsyncImage(model=user.image.ifBlank{"/default-avatar.png"},contentDescription=user.name,modifier=Modifier.size(32.dp).clip(CircleShape).clickable{onOpenProfile(user)},contentScale=ContentScale.Crop)
       Column(Modifier.weight(1f).padding(start=8.dp)){
-       Text(user.name,fontSize=12.sp,fontWeight=FontWeight.SemiBold,color=Color.White,maxLines=1)
+       Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)) {\n        Text(user.name,fontSize=12.sp,fontWeight=FontWeight.SemiBold,color=Color.White,maxLines=1)\n        Box(Modifier.size(30.dp),contentAlignment=Alignment.Center) {\n         AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20260917_220530.png",contentDescription="Level Lv.1 - Lv.10",modifier=Modifier.fillMaxSize(),contentScale=ContentScale.Fit)\n         Text("Lv.1",color=Color.White,fontSize=8.sp,fontWeight=FontWeight.Bold)\n        }\n       }
        Text("ID: ${user.accountId}",fontSize=10.sp,color=Color.White.copy(alpha=.60f),maxLines=1)
       }
      }
