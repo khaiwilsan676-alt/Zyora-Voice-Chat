@@ -214,13 +214,13 @@ fun RoomProfile(
                         Spacer(modifier = Modifier.width(8.dp))
                         Box(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(12.dp))
+                                .clip(CircleShape)
                                 .background(genderColor)
-                                .padding(horizontal = 8.dp, vertical = 2.dp)
+                                .padding(horizontal = 5.dp, vertical = 2.dp)
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                                CustomGenderIcon(isFemale = displayGender.equals("female", true) || displayGender.equals("f", true) || displayGender == "♀", modifier = Modifier.size(10.dp))
-                                Text(displayAge.toString(), color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                CustomGenderIcon(isFemale = displayGender.equals("female", true) || displayGender.equals("f", true) || displayGender == "♀", modifier = Modifier.size(8.dp))
+                                Text(displayAge.toString(), color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -367,8 +367,8 @@ fun RoomProfile(
                         .size(88.dp) // Total 22 units equivalent (88dp)
                 ) {
                     AsyncImage(
-                        model = user.image.ifBlank { "default-avatar.png".fullUrl() },
-                        contentDescription = user.name,
+                        model = displayImage.ifBlank { "default-avatar.png".fullUrl() },
+                        contentDescription = displayName,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier
                             .fillMaxSize()
