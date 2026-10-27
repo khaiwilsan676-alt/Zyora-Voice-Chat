@@ -142,6 +142,46 @@ const saveSupportChatToIndexedDB = async (chatData: any) => {
   }
 };
 
+const loadAllPrivateMessagesFromIndexedDB = async (): Promise<any[]> => {
+  if (typeof window === 'undefined') return [];
+  return new Promise((resolve) => {
+    try {
+      const request = indexedDB.open("ZyoraPrivateMessagesDB", 1);
+      request.onerror = () => resolve([]);
+      request.onupgradeneeded = (event: any) => {
+        const db = event.target.result;
+        if (!db.objectStoreNames.contains("privateMessages")) db.createObjectStore("privateMessages", { keyPath: "id" });
+      };
+      request.onsuccess = () => {
+        const db = request.result;
+        if (!db.objectStoreNames.contains("privateMessages")) { db.close(); resolve([]); return; }
+        const read = db.transaction(["privateMessages"], "readonly").objectStore("privateMessages").getAll();
+        read.onsuccess = () => { db.close(); resolve(read.result || []); };
+        read.onerror = () => { db.close(); resolve([]); };
+      };
+    } catch { resolve([]); }
+  });
+};
+
+const savePrivateMessageToIndexedDB = async (message: any) => {
+  if (typeof window === 'undefined' || !message?.id) return;
+  try {
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open("ZyoraPrivateMessagesDB", 1);
+      request.onerror = () => reject(request.error);
+      request.onupgradeneeded = (event: any) => {
+        const database = event.target.result;
+        if (!database.objectStoreNames.contains("privateMessages")) database.createObjectStore("privateMessages", { keyPath: "id" });
+      };
+      request.onsuccess = () => resolve(request.result);
+    });
+    db.transaction(["privateMessages"], "readwrite").objectStore("privateMessages").put(message);
+    db.close();
+  } catch (error) {
+    console.error("Error saving private message locally:", error);
+  }
+};
+
 const loadAllOfficialMessagesFromIndexedDB = async (): Promise<any[]> => {
   if (typeof window === 'undefined') return [];
   return new Promise((resolve) => {
@@ -710,45 +750,26 @@ export default function StaffPanel() {
 
   useEffect(() => {
     let isMounted = true;
-
-    const fetchPrivateMessages = async () => {
-      try {
-        setLoadingPrivateMessages(true);
-        const res = await fetch(apiUrl('/api/privateMessages'));
-        if (res.ok) {
-          const data = await res.json();
-          if (isMounted) {
-            setPrivateMessages(data.messages || []);
-          }
-        }
-      } catch (err) {
-        console.error('Failed to fetch private messages:', err);
-      } finally {
-        if (isMounted) {
-          setLoadingPrivateMessages(false);
-        }
+    loadAllPrivateMessagesFromIndexedDB().then((messages) => {
+      if (isMounted) {
+        setPrivateMessages(messages.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0)));
+        setLoadingPrivateMessages(false);
       }
-    };
-
-    fetchPrivateMessages();
-    const intervalId = setInterval(fetchPrivateMessages, 10000);
-
-    return () => {
-      isMounted = false;
-      clearInterval(intervalId);
-    };
+    });
+    return () => { isMounted = false; };
   }, []);
 
   // Keep the Owner panel's private-chat monitor live as messages arrive over Socket.IO.
   useEffect(() => {
     const handleLivePrivateMessage = (message: any) => {
       if (!message?.id || !message?.senderId || !message?.receiverId) return;
+      void savePrivateMessageToIndexedDB(message);
       setPrivateMessages(prev => {
         const index = prev.findIndex(item => item.id === message.id);
         if (index >= 0) {
           const next = [...prev];
           next[index] = { ...next[index], ...message };
-          return next;
+          return next.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
         }
         return [message, ...prev].slice(0, 1000);
       });
