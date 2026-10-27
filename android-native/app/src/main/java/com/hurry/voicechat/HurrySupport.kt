@@ -20,6 +20,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.DisposableEffect
+import io.socket.client.IO
+import io.socket.client.Socket
+import org.json.JSONArray
+import org.json.JSONObject
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,13 +41,34 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.delay
 
+private const val DAISY_SUPPORT_SOCKET_URL = "https://zyora-voice-chat.onrender.com"
 private const val DAISY_IMAGE = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/1785612362650~2.jpg"
 private val SupportBlue = Color(0xFF3B82F6)
 private val SupportBg = Color(0xFFF0F2F5)
-private data class SupportMessage(val text: String, val isBot: Boolean, val image: String? = null)
+private data class SupportMessage(val text: String, val isBot: Boolean, val image: String? = null, val timestamp: Long = System.currentTimeMillis())
 
 @Composable
 fun HurrySupport(onBack: () -> Unit) {
+    val context = LocalContext.current
+    val authPrefs = remember { context.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE) }
+    val supportUserId = remember { authPrefs.getString("uid", "").orEmpty().ifBlank { authPrefs.getString("accountId", "").orEmpty() } }
+    val supportUserName = remember { authPrefs.getString("name", "User").orEmpty().ifBlank { "User" } }
+    val supportUserPhoto = remember { authPrefs.getString("image", "").orEmpty() }
+    val supportUserAccountId = remember { authPrefs.getString("accountId", "").orEmpty().ifBlank { supportUserId } }
+    var supportSocket by remember { mutableStateOf<Socket?>(null) }
+    DisposableEffect(supportUserId) {
+        var socket: Socket? = null
+        runCatching {
+            socket = IO.socket(DAISY_SUPPORT_SOCKET_URL)
+            socket?.connect()
+            supportSocket = socket
+        }
+        onDispose {
+            supportSocket = null
+            socket?.disconnect()
+            socket?.close()
+        }
+    }
     var draft by remember { mutableStateOf("") }
     var typing by remember { mutableStateOf(false) }
     val messages = remember {
@@ -126,6 +153,7 @@ fun HurrySupport(onBack: () -> Unit) {
         draft = ""
         keyboard?.hide()
         typing = true
+        syncDaisyChat(messages.toList(), supportSocket, supportUserId, supportUserName, supportUserPhoto, supportUserAccountId)
     }
 
     LaunchedEffect(messages.size, typing) {
@@ -133,6 +161,7 @@ fun HurrySupport(onBack: () -> Unit) {
             delay(1000)
             val last = messages.lastOrNull { !it.isBot }?.text.orEmpty()
             messages.add(answer(last))
+            syncDaisyChat(messages.toList(), supportSocket, supportUserId, supportUserName, supportUserPhoto, supportUserAccountId)
             typing = false
         }
     }
@@ -229,4 +258,40 @@ fun HurrySupport(onBack: () -> Unit) {
             }
         }
     }
+}
+
+
+private fun syncDaisyChat(
+    messages: List<SupportMessage>,
+    socket: Socket?,
+    userId: String,
+    userName: String,
+    userPhoto: String,
+    userAccountId: String
+) {
+    if (userId.isBlank() || messages.isEmpty()) return
+    val messageArray = JSONArray()
+    messages.forEach { message ->
+        messageArray.put(JSONObject()
+            .put("text", message.text)
+            .put("image", message.image ?: JSONObject.NULL)
+            .put("isBot", message.isBot)
+            .put("timestamp", message.timestamp))
+    }
+    val last = messages.last()
+    val lastMessage = JSONObject()
+        .put("text", last.text)
+        .put("image", last.image ?: JSONObject.NULL)
+        .put("isBot", last.isBot)
+        .put("timestamp", last.timestamp)
+    val payload = JSONObject()
+        .put("userId", userId)
+        .put("userName", userName)
+        .put("userEmail", "")
+        .put("userPhoto", userPhoto)
+        .put("userAccountId", userAccountId)
+        .put("messages", messageArray)
+        .put("lastMessage", lastMessage)
+        .put("timestamp", System.currentTimeMillis())
+    runCatching { socket?.emit("ai_support_message", payload) }
 }
