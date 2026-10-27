@@ -111,13 +111,16 @@ fun RoomProfile(
     val coroutineScope = rememberCoroutineScope()
 
     // Tag States
-    var adminTag by remember { mutableStateOf(false) }
-    var officialTag by remember { mutableStateOf(false) }
-    var vipTag by remember { mutableStateOf(false) }
-    var premiumTag by remember { mutableStateOf(false) }
+    var adminTag by remember(user.adminTag) { mutableStateOf(user.adminTag == true) }
+    var officialTag by remember(user.officialTag) { mutableStateOf(user.officialTag == true) }
+    var officialHeadTag by remember(user.officialHeadTag) { mutableStateOf(user.officialHeadTag == true) }
+    var serviceTag by remember(user.serviceTag) { mutableStateOf(user.serviceTag == true) }
+    var coinSellerTag by remember(user.coinSellerTag) { mutableStateOf(user.coinSellerTag == true) }
+    var vipTag by remember(user.vipTag) { mutableStateOf(user.vipTag == true) }
+    var premiumTag by remember(user.premiumTag) { mutableStateOf(user.premiumTag == true) }
     var showReports by remember { mutableStateOf(false) }
 
-    val hasAnyTag = adminTag || officialTag || vipTag || premiumTag
+    val hasAnyTag = officialHeadTag || officialTag || adminTag || serviceTag || coinSellerTag || vipTag || premiumTag
     val accountId = generateStableId(user.accountId ?: user.id ?: user.uid ?: "User")
     
     val genderColor = if (user.gender.equals("female", true) || user.gender.equals("f", true) || user.gender == "♀") {
@@ -192,17 +195,20 @@ fun RoomProfile(
                         }
                     }
 
-                    // Row 2: Badges / Tags
+                    // Row 2: Public Profile tags (keep each badge's established size)
                     if (hasAnyTag) {
                         Row(
                             modifier = Modifier.padding(top = 6.dp),
                             horizontalArrangement = Arrangement.Center,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            if (adminTag) GreenColorRemovalShader(imageSrc = "1788021461820~2.jpg".fullUrl(), modifier = Modifier.height(32.dp))
-                            if (officialTag) GreenColorRemovalShader(imageSrc = "1788021468845~2.jpg".fullUrl(), modifier = Modifier.height(32.dp))
-                            if (vipTag) AsyncImage(model = "1785469775751.png".fullUrl(), contentDescription = "VIP", modifier = Modifier.height(24.dp))
-                            if (premiumTag) AsyncImage(model = "1785469365805.png".fullUrl(), contentDescription = "Premium", modifier = Modifier.height(24.dp))
+                            if (officialHeadTag) AsyncImage(model = "file_00000000ef2c82118b2266596d0e992d.png".fullUrl(), contentDescription = "Official Head", contentScale = ContentScale.Fit, modifier = Modifier.height(31.dp).widthIn(max = 80.dp))
+                            if (officialTag) AsyncImage(model = "IMG_20261027_102250.png".fullUrl(), contentDescription = "Official", contentScale = ContentScale.Fit, modifier = Modifier.height(22.dp).widthIn(max = 60.dp))
+                            if (adminTag) AsyncImage(model = "IMG_20261027_114117.png".fullUrl(), contentDescription = "Admin", contentScale = ContentScale.Fit, modifier = Modifier.height(22.dp).widthIn(max = 60.dp))
+                            if (serviceTag) AsyncImage(model = "IMG_20261027_102207.png".fullUrl(), contentDescription = "Service / CS", contentScale = ContentScale.Fit, modifier = Modifier.height(22.dp).widthIn(max = 60.dp))
+                            if (coinSellerTag) AsyncImage(model = "IMG_20261027_105359.png".fullUrl(), contentDescription = "Coin Seller", contentScale = ContentScale.Fit, modifier = Modifier.height(22.dp).widthIn(max = 60.dp))
+                            if (vipTag) AsyncImage(model = "1785469775751.png".fullUrl(), contentDescription = "VIP", contentScale = ContentScale.Fit, modifier = Modifier.height(24.dp))
+                            if (premiumTag) AsyncImage(model = "1785469365805.png".fullUrl(), contentDescription = "Premium", contentScale = ContentScale.Fit, modifier = Modifier.height(24.dp))
                         }
                     }
 
@@ -226,7 +232,12 @@ fun RoomProfile(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center
                     ) {
-                        Text("ID:", color = Color.Gray, fontSize = 14.sp)
+                        AsyncImage(
+                            model = "file_0000000063b481fa89d3c7729265058b.png".fullUrl(),
+                            contentDescription = "Purple ID Badge",
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier.height(30.dp).widthIn(min = 22.dp, max = 35.dp).padding(end = 4.dp)
+                        )
                         Text(accountId, color = Color.DarkGray, fontSize = 14.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(start = 4.dp))
                         if (accountId != "N/A" && accountId != "User") {
                             IconButton(
