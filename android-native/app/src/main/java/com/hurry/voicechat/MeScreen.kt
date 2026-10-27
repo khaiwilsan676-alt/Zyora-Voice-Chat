@@ -26,7 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 
-private const val RAW_ME = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/"
+private const val RAW_ME = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/"
 
 private data class MeMenu(val label: String, val asset: String)
 
@@ -128,7 +128,7 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
                                     AsyncImage(
                                         model = RAW_ME + "1785137282040.png",
                                         contentDescription = "User ID",
-                                        modifier = Modifier.height(30.dp).widthIn(min = 60.dp),
+                                        modifier = Modifier.width(90.dp).height(30.dp),
                                         contentScale = ContentScale.FillBounds
                                     )
                                     Text(
@@ -136,7 +136,7 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
                                         fontSize = 10.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = Color.White,
-                                        modifier = Modifier.padding(start = 14.dp, end = 4.dp)
+                                        modifier = Modifier.padding(start = 32.dp, end = 5.dp)
                                     )
                                 }
                                 Box(
