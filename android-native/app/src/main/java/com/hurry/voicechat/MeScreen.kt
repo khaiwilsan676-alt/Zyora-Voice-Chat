@@ -47,16 +47,36 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
     val prefs = remember { context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE) }
     val uid = prefs.getString("uid", "") ?: ""
     val email = prefs.getString("email", "") ?: ""
-    val name = prefs.getString("name", "")?.takeIf { it.isNotBlank() && it.lowercase() !in listOf("guest","user","null","undefined") }
-        ?: email.substringBefore("@").takeIf { it.isNotBlank() }
-        ?: "Zyora User"
-    val photo = listOf("photo", "image", "avatar", "photoUrl", "picture", "userPhoto")
-        .asSequence().mapNotNull { key -> prefs.getString(key, null)?.takeIf { it.isNotBlank() } }
-        .firstOrNull().orEmpty()
+    var name by remember(uid, email) {
+        mutableStateOf(
+            prefs.getString("name", "")?.takeIf { it.isNotBlank() && it.lowercase() !in listOf("guest","user","null","undefined") }
+                ?: email.substringBefore("@").takeIf { it.isNotBlank() }
+                ?: "Zyora User"
+        )
+    }
+    var photo by remember(uid) {
+        mutableStateOf(
+            listOf("photo", "image", "avatar", "photoUrl", "picture", "userPhoto")
+                .asSequence().mapNotNull { key -> prefs.getString(key, null)?.takeIf { it.isNotBlank() } }
+                .firstOrNull().orEmpty()
+        )
+    }
     val savedAccount = prefs.getString("accountNumber", null)?.takeIf { it.isNotBlank() }
         ?: prefs.getString("accountId", "") ?: ""
     val account = savedAccount.ifBlank { nativeMeAccountNumber(uid) }
     val phone = prefs.getString("phone", "") ?: ""
+
+    LaunchedEffect(uid, account) {
+        if (uid.isBlank()) return@LaunchedEffect
+        val profile = ProfilePersistence.load(
+            TargetUser(id = uid, uid = uid, accountId = account, displayAccountNumber = account)
+        ) ?: return@LaunchedEffect
+        profile.optString("name").takeIf { it.isNotBlank() && it != "null" && it.lowercase() !in listOf("guest", "user", "undefined") }?.let { name = it }
+        sequenceOf("image", "photo", "photoURL", "avatar", "picture")
+            .map { profile.optString(it, "") }
+            .firstOrNull { it.isNotBlank() && it != "null" }
+            ?.let { photo = it }
+    }
 
     val topItems = listOf(
         MeMenu("Invite Friends", "IMG_20260915_225333.png"),
