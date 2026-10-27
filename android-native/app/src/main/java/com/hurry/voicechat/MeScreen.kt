@@ -115,45 +115,25 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
                             Text(name, fontSize = 24.sp, fontWeight = FontWeight.Normal, color = Color(0xFF111827))
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                horizontalArrangement = Arrangement.spacedBy(5.dp)
                             ) {
-                                Box(
-                                    modifier = Modifier.height(30.dp).clickable {
+                                AsyncImage(
+                                    model = RAW_ME + "1785486414756.png",
+                                    contentDescription = "Purple ID",
+                                    modifier = Modifier.height(22.dp).widthIn(max = 52.dp),
+                                    contentScale = ContentScale.Fit
+                                )
+                                Text(account, fontSize = 12.sp, fontWeight = FontWeight.Medium, color = Color(0xFF111827))
+                                androidx.compose.material3.Icon(
+                                    imageVector = androidx.compose.material.icons.Icons.Outlined.ContentCopy,
+                                    contentDescription = "Copy ID",
+                                    tint = Color(0xFF555555),
+                                    modifier = Modifier.size(16.dp).clickable {
                                         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                                         clipboard.setPrimaryClip(ClipData.newPlainText("ID", account))
                                         Toast.makeText(context, "Copied", Toast.LENGTH_SHORT).show()
-                                    },
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    AsyncImage(
-                                        model = RAW_ME + "1785137282040.png",
-                                        contentDescription = "User ID",
-                                        modifier = Modifier.width(90.dp).height(30.dp),
-                                        contentScale = ContentScale.FillBounds
-                                    )
-                                    Text(
-                                        account,
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color.White,
-                                        modifier = Modifier.padding(start = 32.dp, end = 5.dp)
-                                    )
-                                }
-                                Box(
-                                    modifier = Modifier.size(24.dp).clickable {
-                                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                        clipboard.setPrimaryClip(ClipData.newPlainText("ID", account))
-                                        Toast.makeText(context, "Copied", Toast.LENGTH_SHORT).show()
-                                    },
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    androidx.compose.foundation.Canvas(Modifier.size(14.dp)) {
-                                        val stroke = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.4.dp.toPx())
-                                        val ink = Color(0xFF6B7280)
-                                        drawRoundRect(ink, topLeft = androidx.compose.ui.geometry.Offset(size.width * 0.30f, size.height * 0.08f), size = androidx.compose.ui.geometry.Size(size.width * 0.58f, size.height * 0.66f), cornerRadius = androidx.compose.ui.geometry.CornerRadius(1.5.dp.toPx()), style = stroke)
-                                        drawRoundRect(ink, topLeft = androidx.compose.ui.geometry.Offset(size.width * 0.10f, size.height * 0.28f), size = androidx.compose.ui.geometry.Size(size.width * 0.58f, size.height * 0.66f), cornerRadius = androidx.compose.ui.geometry.CornerRadius(1.5.dp.toPx()), style = stroke)
                                     }
-                                }
+                                )
                             }
                             if (phone.isNotBlank()) Text(phone, fontSize = 12.sp, color = Color(0xFF4B5563))
                         }
