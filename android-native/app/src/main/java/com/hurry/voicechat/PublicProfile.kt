@@ -7,8 +7,10 @@ import android.widget.Toast
 import androidx.compose.animation.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.*
+import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.grid.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -25,6 +27,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontStyle
@@ -87,8 +90,6 @@ fun PublicProfileScreen(
     val coroutineScope = rememberCoroutineScope()
 
     // Vercel serves files inside the public/ directory from the URL root.
-    // Using /public/<filename> returns 404, which made every profile badge,
-    // gender-related asset, medal, and frame appear missing in the native app.
     val profileAsset: (String) -> String = { path ->
         if (path.isBlank()) ""
         else if (path.startsWith("http://") || path.startsWith("https://") || path.startsWith("data:")) path
@@ -121,10 +122,14 @@ fun PublicProfileScreen(
     var userName by remember { mutableStateOf(targetUser?.name?.takeIf { it.isNotBlank() } ?: "User") }
     var userBio by remember { mutableStateOf(targetUser?.bio ?: "") }
     var userAge by remember { mutableStateOf(targetUser?.age ?: 0) }
-    var userGender by remember { mutableStateOf(targetUser?.gender ?: "") }
+    
+    // Default Male if not provided
+    var userGender by remember { mutableStateOf(targetUser?.gender?.takeIf { it.isNotBlank() } ?: "Male") }
+    
     val displayAccNum = targetUser?.displayAccountNumber?.takeIf { it.isNotBlank() } ?: targetUser?.accountId?.takeIf { it.isNotBlank() } ?: "—"
     
-    val userPhotoRaw = targetUser?.photo?.takeIf { it.isNotBlank() } ?: targetUser?.image?.takeIf { it.isNotBlank() } ?: ""
+    val defaultAvatar = "/file_000000009aac81faa8564416680aba4e.png"
+    val userPhotoRaw = targetUser?.photo?.takeIf { it.isNotBlank() } ?: targetUser?.image?.takeIf { it.isNotBlank() } ?: defaultAvatar
     val userPhoto = profileAsset(userPhotoRaw)
     
     val followers = targetUser?.followers ?: 0
@@ -199,7 +204,8 @@ fun PublicProfileScreen(
                         }
                         if (isOtherUser) {
                             IconButton(onClick = { showActionSheet = true }) {
-                                Icon(Icons.Default.Warning, "Report", tint = Color.White)
+                                // Yaha sirf outlined warning icon diya hai
+                                Icon(Icons.Outlined.Warning, "Report", tint = Color.White)
                             }
                         } else {
                             IconButton(onClick = { showEditSheet = true }) {
@@ -238,7 +244,7 @@ fun PublicProfileScreen(
                         .padding(horizontal = 16.dp, vertical = 16.dp)
                         .padding(top = 4.dp)
                 ) {
-                    // Name & Badges using FlowRow (max 3 tags per row as requested)
+                    // Name & Badges using FlowRow
                     FlowRow(
                         maxItemsInEachRow = 3,
                         verticalArrangement = Arrangement.Center,
@@ -247,38 +253,41 @@ fun PublicProfileScreen(
                     ) {
                         Text(userName, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.Black, modifier = Modifier.align(Alignment.CenterVertically))
                         
-                        val genderStr = userGender.trim()
-                        val ageStr = if (userAge > 0) userAge.toString() else ""
-                        val tagText = "$genderStr $ageStr".trim()
-
-                        if (tagText.isNotEmpty()) {
-                            val isFemale = genderStr.equals("female", ignoreCase = true)
-                            Box(
-                                modifier = Modifier
-                                    .align(Alignment.CenterVertically)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(if (isFemale) Color(0xFFFF5874) else Color(0xFF3B82F6))
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                        val genderStr = userGender.trim().ifEmpty { "Male" }
+                        val isFemale = genderStr.equals("female", ignoreCase = true)
+                        
+                        // CUSTOM DESIGN ICON BOX
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.CenterVertically)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(if (isFemale) Color(0xFFFF5874) else Color(0xFF3B82F6))
+                                .padding(horizontal = 6.dp, vertical = 3.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
-                                Text(text = tagText, color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                CustomGenderIcon(isFemale = isFemale, modifier = Modifier.size(10.dp))
+                                Text(text = userAge.toString(), color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                             }
                         }
 
-                        // Badges with requested sizes (30.dp for Official Head, 27.dp for others)
-                        AsyncImage(model = profileAsset("/file_0000000096ec8211a137f37ef1cf1cd0.png"), contentDescription = "Official Head", contentScale = ContentScale.Fit, modifier = Modifier.height(30.dp).widthIn(max = 80.dp).align(Alignment.CenterVertically))
-                        AsyncImage(model = profileAsset("/IMG_20261026_205516.png"), contentDescription = "Official", contentScale = ContentScale.Fit, modifier = Modifier.height(27.dp).widthIn(max = 80.dp).align(Alignment.CenterVertically))
-                        AsyncImage(model = profileAsset("/file_00000000fc0c81f5ac4a79c1f7415756.png"), contentDescription = "Admin", contentScale = ContentScale.Fit, modifier = Modifier.height(27.dp).widthIn(max = 80.dp).align(Alignment.CenterVertically))
-                        AsyncImage(model = profileAsset("/IMG_20261026_205203.png"), contentDescription = "Service / CS", contentScale = ContentScale.Fit, modifier = Modifier.height(27.dp).widthIn(max = 80.dp).align(Alignment.CenterVertically))
-                        AsyncImage(model = profileAsset("/IMG_20261026_205346.png"), contentDescription = "Coin Seller", contentScale = ContentScale.Fit, modifier = Modifier.height(27.dp).widthIn(max = 80.dp).align(Alignment.CenterVertically))
+                        // Badges with paths
+                        AsyncImage(model = profileAsset("/file_00000000ef2c82118b2266596d0e992d.png"), contentDescription = "Official Head", contentScale = ContentScale.Fit, modifier = Modifier.height(30.dp).widthIn(max = 80.dp).align(Alignment.CenterVertically))
+                        AsyncImage(model = profileAsset("/IMG_20261027_102250.png"), contentDescription = "Official", contentScale = ContentScale.Fit, modifier = Modifier.height(27.dp).widthIn(max = 80.dp).align(Alignment.CenterVertically))
+                        AsyncImage(model = profileAsset("/IMG_20261027_114117.png"), contentDescription = "Admin", contentScale = ContentScale.Fit, modifier = Modifier.height(27.dp).widthIn(max = 80.dp).align(Alignment.CenterVertically))
+                        AsyncImage(model = profileAsset("/IMG_20261027_102207.png"), contentDescription = "Service / CS", contentScale = ContentScale.Fit, modifier = Modifier.height(27.dp).widthIn(max = 80.dp).align(Alignment.CenterVertically))
+                        AsyncImage(model = profileAsset("/IMG_20261027_105359.png"), contentDescription = "Coin Seller", contentScale = ContentScale.Fit, modifier = Modifier.height(27.dp).widthIn(max = 80.dp).align(Alignment.CenterVertically))
                     }
 
-                    // ID & Followers (ID image height updated to 25.dp)
+                    // ID & Followers
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
                         AsyncImage(
                             model = profileAsset("/file_0000000063b481fa89d3c7729265058b.png"),
                             contentDescription = "Purple ID Badge",
                             contentScale = ContentScale.Fit,
-                            modifier = Modifier.height(25.dp).widthIn(min = 22.dp, max = 28.dp).padding(end = 4.dp)
+                            modifier = Modifier.height(30.dp).widthIn(min = 22.dp, max = 35.dp).padding(end = 4.dp)
                         )
                         Text(displayAccNum, fontSize = 12.sp, color = Color.Gray)
 
@@ -338,50 +347,73 @@ fun PublicProfileScreen(
 
             // 3. Grids Section (Albums, Vehicles, Medals, Frames, Gifts)
             item {
-                Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    // Albums
-                    SectionHeader("Albums", "${albumImages.size}/4")
-                    if (albumImages.isNotEmpty()) {
-                        LazyVerticalGrid(columns = GridCells.Fixed(4), modifier = Modifier.height(80.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            items(albumImages.size) { idx ->
-                                AsyncImage(
-                                    model = profileAsset(albumImages[idx]),
-                                    contentDescription = null,
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier.aspectRatio(1f).clip(RoundedCornerShape(12.dp)).background(Color.LightGray).clickable { fullImageIndex = idx }
-                                )
+                Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
+                    
+                    // Albums - Yaha spacer kam kar diya (8.dp) taaki image title ke paas ho
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        SectionHeader("Albums", "${albumImages.size}/4")
+                        if (albumImages.isNotEmpty()) {
+                            LazyVerticalGrid(columns = GridCells.Fixed(4), modifier = Modifier.height(80.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                items(albumImages.size) { idx ->
+                                    AsyncImage(
+                                        model = profileAsset(albumImages[idx]),
+                                        contentDescription = null,
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier.aspectRatio(1f).clip(RoundedCornerShape(12.dp)).background(Color.LightGray).clickable { fullImageIndex = idx }
+                                    )
+                                }
                             }
+                        } else {
+                            AsyncImage(model = profileAsset("/IMG_20260726_225835.jpg"), contentDescription = "Album", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxWidth().height(112.dp).clip(RoundedCornerShape(16.dp)))
                         }
-                    } else {
-                        AsyncImage(model = profileAsset("/IMG_20260726_225835.jpg"), contentDescription = "Album", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxWidth().height(112.dp).clip(RoundedCornerShape(16.dp)))
+                    }
+                    
+                    Spacer(modifier = Modifier.height(20.dp)) // Alag section ke beech ka gap
+
+                    // Vehicle
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        SectionHeader("Vehicle")
+                        AsyncImage(model = profileAsset("/1785091443553.png"), contentDescription = "Vehicle", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxWidth().height(112.dp).clip(RoundedCornerShape(16.dp)))
                     }
 
-                    SectionHeader("Vehicle")
-                    AsyncImage(model = profileAsset("/1785091443553.png"), contentDescription = "Vehicle", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxWidth().height(112.dp).clip(RoundedCornerShape(16.dp)))
+                    Spacer(modifier = Modifier.height(20.dp))
 
-                    SectionHeader("Medal")
-                    AsyncImage(model = profileAsset("/1785091431545.png"), contentDescription = "Medal", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxWidth().height(112.dp).clip(RoundedCornerShape(16.dp)))
-
-                    SectionHeader("Frame")
-                    if (ownedFrames.isNotEmpty()) {
-                        LazyVerticalGrid(columns = GridCells.Fixed(4), modifier = Modifier.height(88.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            items(ownedFrames.size) { idx ->
-                                AsyncImage(model = profileAsset(ownedFrames[idx]), contentDescription = "Frame", contentScale = ContentScale.Fit, modifier = Modifier.fillMaxWidth().aspectRatio(1f))
-                            }
-                        }
-                    } else {
-                        AsyncImage(model = profileAsset("/1785091457562.png"), contentDescription = "Frame", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxWidth().height(112.dp).clip(RoundedCornerShape(16.dp)))
+                    // Medal
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        SectionHeader("Medal")
+                        AsyncImage(model = profileAsset("/1785091431545.png"), contentDescription = "Medal", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxWidth().height(112.dp).clip(RoundedCornerShape(16.dp)))
                     }
 
-                    SectionHeader("Gift")
-                    if (receivedGifts.isNotEmpty()) {
-                        LazyVerticalGrid(columns = GridCells.Fixed(4), modifier = Modifier.height(88.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            items(receivedGifts.size) { idx ->
-                                AsyncImage(model = profileAsset(receivedGifts[idx]), contentDescription = "Gift", contentScale = ContentScale.Fit, modifier = Modifier.fillMaxWidth().aspectRatio(1f))
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    // Frame
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        SectionHeader("Frame")
+                        if (ownedFrames.isNotEmpty()) {
+                            LazyVerticalGrid(columns = GridCells.Fixed(4), modifier = Modifier.height(88.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                items(ownedFrames.size) { idx ->
+                                    AsyncImage(model = profileAsset(ownedFrames[idx]), contentDescription = "Frame", contentScale = ContentScale.Fit, modifier = Modifier.fillMaxWidth().aspectRatio(1f))
+                                }
                             }
+                        } else {
+                            AsyncImage(model = profileAsset("/1785091457562.png"), contentDescription = "Frame", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxWidth().height(112.dp).clip(RoundedCornerShape(16.dp)))
                         }
-                    } else {
-                        AsyncImage(model = profileAsset("/1785091520912.png"), contentDescription = "Gift", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxWidth().height(112.dp).clip(RoundedCornerShape(16.dp)))
+                    }
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    // Gift
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        SectionHeader("Gift")
+                        if (receivedGifts.isNotEmpty()) {
+                            LazyVerticalGrid(columns = GridCells.Fixed(4), modifier = Modifier.height(88.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                items(receivedGifts.size) { idx ->
+                                    AsyncImage(model = profileAsset(receivedGifts[idx]), contentDescription = "Gift", contentScale = ContentScale.Fit, modifier = Modifier.fillMaxWidth().aspectRatio(1f))
+                                }
+                            }
+                        } else {
+                            AsyncImage(model = profileAsset("/1785091520912.png"), contentDescription = "Gift", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxWidth().height(112.dp).clip(RoundedCornerShape(16.dp)))
+                        }
                     }
                 }
             }
@@ -402,11 +434,19 @@ fun PublicProfileScreen(
                     onClick = { isFollowing = !isFollowing },
                     modifier = Modifier.weight(1f).height(48.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF5874)),
-                    shape = RoundedCornerShape(16.dp)
+                    shape = RoundedCornerShape(16.dp),
+                    contentPadding = PaddingValues(horizontal = 8.dp) // Ensures text does not wrap
                 ) {
-                    Icon(Icons.Default.Favorite, null, tint = Color.White)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(if (isFollowing) "Following" else "Follow", fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                    Icon(Icons.Default.Favorite, null, tint = Color.White, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(4.dp)) // Spacer chhota kiya
+                    Text(
+                        text = if (isFollowing) "Following" else "Follow", 
+                        fontSize = 16.sp, 
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 1, // Ek hi line mein rahega
+                        softWrap = false, // Niche nahi jayega
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
                 Button(
                     onClick = { showChat = true },
@@ -430,7 +470,7 @@ fun PublicProfileScreen(
             containerColor = Color.Black,
             contentColor = Color.White,
             scrimColor = Color.Black.copy(alpha = 0.28f),
-            shape = RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp),
+            shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp), // CHANGED TO 12.dp
             dragHandle = null
         ) {
             Column(
@@ -443,25 +483,28 @@ fun PublicProfileScreen(
                         showUserReport = true
                     }.padding(vertical = 16.dp),
                     color = Color.White,
-                    fontSize = 18.sp,
+                    fontSize = 16.sp, // TEXT SIZE REDUCED
                     textAlign = TextAlign.Center,
                     fontWeight = FontWeight.Medium
                 )
                 Text(
-                    "Block",
+                    "Block/Unblock", // TEXT CHANGED
                     modifier = Modifier.fillMaxWidth().clickable {
                         showActionSheet = false
                         Toast.makeText(context, "Block user", Toast.LENGTH_SHORT).show()
                     }.padding(vertical = 16.dp),
                     color = Color.White,
-                    fontSize = 18.sp,
+                    fontSize = 16.sp, // TEXT SIZE REDUCED
                     textAlign = TextAlign.Center,
                     fontWeight = FontWeight.Medium
                 )
                 Spacer(Modifier.height(8.dp))
                 Button(
                     onClick = { showActionSheet = false },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .width(250.dp) // BUTTON WIDE KAM KIYA
+                        .height(52.dp) // HEIGHT BADHA DI
+                        .align(Alignment.CenterHorizontally), // CENTER MEIN LAANE KE LIYE
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B82F6)),
                     shape = RoundedCornerShape(12.dp)
                 ) { Text("Cancel", color = Color.White) }
@@ -611,12 +654,12 @@ fun PublicProfileScreen(
                         ) {
                             if (coverPhotos.size < 4) {
                                 Box(
-                                    modifier = Modifier.size(64.dp).clip(RoundedCornerShape(12.dp)).background(Color(0xFFF3F4F6)),
+                                    modifier = Modifier.requiredSize(64.dp).clip(RoundedCornerShape(12.dp)).background(Color(0xFFF3F4F6)),
                                     contentAlignment = Alignment.Center
                                 ) { Text("+", fontSize = 30.sp, color = Color(0xFFD1D5DB), fontWeight = FontWeight.Light) }
                             }
                             coverPhotos.take(4).forEach { photo ->
-                                AsyncImage(model = photo, contentDescription = "Background", contentScale = ContentScale.Crop, modifier = Modifier.size(64.dp).clip(RoundedCornerShape(6.dp)))
+                                AsyncImage(model = photo, contentDescription = "Background", contentScale = ContentScale.Crop, modifier = Modifier.requiredSize(64.dp).clip(RoundedCornerShape(6.dp)))
                             }
                         }
                     }
@@ -634,12 +677,12 @@ fun PublicProfileScreen(
                         ) {
                             if (albumImages.size < 4) {
                                 Box(
-                                    modifier = Modifier.size(64.dp).clip(RoundedCornerShape(12.dp)).background(Color(0xFFF3F4F6)),
+                                    modifier = Modifier.requiredSize(64.dp).clip(RoundedCornerShape(12.dp)).background(Color(0xFFF3F4F6)),
                                     contentAlignment = Alignment.Center
                                 ) { Text("+", fontSize = 30.sp, color = Color(0xFFD1D5DB), fontWeight = FontWeight.Light) }
                             }
                             albumImages.take(4).forEachIndexed { index, image ->
-                                Box(modifier = Modifier.size(64.dp).clip(RoundedCornerShape(6.dp)).clickable { fullImageIndex = index }) {
+                                Box(modifier = Modifier.requiredSize(64.dp).clip(RoundedCornerShape(6.dp)).clickable { fullImageIndex = index }) {
                                     AsyncImage(model = profileAsset(image), contentDescription = "Album photo", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
                                 }
                             }
@@ -704,19 +747,124 @@ fun PublicProfileScreen(
         }
     }
 
-    if (showAgeScreen) {
-        ModalBottomSheet(onDismissRequest = { showAgeScreen = false }, containerColor = Color.White) {
-            Column(modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp)) {
-                Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("Cancel", color = Color.Gray, modifier = Modifier.clickable { showAgeScreen = false })
-                    Text("Birthday", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                    Text("Confirm", color = Color(0xFF1DC4E9), fontWeight = FontWeight.Bold, modifier = Modifier.clickable { showAgeScreen = false })
+    if (showBioScreen) {
+        ModalBottomSheet(
+            onDismissRequest = { showBioScreen = false },
+            containerColor = Color.White,
+            shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp),
+            dragHandle = null
+        ) {
+            var tempBio by remember { mutableStateOf(userBio) }
+            
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 32.dp)
+            ) {
+                Box(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("Bio", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF111827))
                 }
                 
-                Row(modifier = Modifier.fillMaxWidth().height(200.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-                    Text("DD", fontSize = 24.sp, color = Color.Gray)
-                    Text("MM", fontSize = 24.sp, color = Color.Gray)
-                    Text("YYYY", fontSize = 24.sp, color = Color.Gray)
+                TextField(
+                    value = tempBio,
+                    onValueChange = { tempBio = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .height(150.dp),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color(0xFFF3F4F6),
+                        unfocusedContainerColor = Color(0xFFF3F4F6),
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        disabledIndicatorColor = Color.Transparent
+                    ),
+                    placeholder = { Text("Write your bio here...", color = Color.Gray) },
+                    shape = RoundedCornerShape(8.dp)
+                )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                Button(
+                    onClick = { userBio = tempBio; showBioScreen = false },
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).height(50.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1DC4E9)),
+                    shape = RoundedCornerShape(12.dp)
+                ) { Text("Confirm", fontSize = 16.sp, color = Color.White) }
+            }
+        }
+    }
+
+    if (showAgeScreen) {
+        ModalBottomSheet(
+            onDismissRequest = { showAgeScreen = false }, 
+            containerColor = Color.White,
+            shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp),
+            dragHandle = null
+        ) {
+            var selectedDay by remember { mutableStateOf(1) }
+            var selectedMonth by remember { mutableStateOf(1) }
+            var selectedYear by remember { mutableStateOf(2000) }
+
+            val days = remember { (1..31).map { it.toString().padStart(2, '0') } }
+            val months = remember { (1..12).map { it.toString().padStart(2, '0') } }
+            val years = remember { (1900..2026).map { it.toString() } }
+
+            Column(modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp), 
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Cancel", color = Color.Gray, modifier = Modifier.clickable { showAgeScreen = false })
+                    Text("Birthday", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                    Text(
+                        "Confirm", 
+                        color = Color(0xFF1DC4E9), 
+                        fontWeight = FontWeight.Bold, 
+                        modifier = Modifier.clickable { 
+                            showAgeScreen = false 
+                        }
+                    )
+                }
+                
+                Box(
+                    modifier = Modifier.fillMaxWidth().height(200.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(40.dp)
+                            .background(Color(0xFFF3F4F6))
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(), 
+                        horizontalArrangement = Arrangement.SpaceEvenly, 
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        WheelPicker(
+                            items = days,
+                            modifier = Modifier.weight(1f),
+                            startIndex = days.indexOf("01"),
+                            onItemSelected = { _, item -> selectedDay = item.toInt() }
+                        )
+                        WheelPicker(
+                            items = months,
+                            modifier = Modifier.weight(1f),
+                            startIndex = months.indexOf("01"),
+                            onItemSelected = { _, item -> selectedMonth = item.toInt() }
+                        )
+                        WheelPicker(
+                            items = years,
+                            modifier = Modifier.weight(1f),
+                            startIndex = years.indexOf("2000"),
+                            onItemSelected = { _, item -> selectedYear = item.toInt() }
+                        )
+                    }
                 }
             }
         }
@@ -761,6 +909,91 @@ fun PublicProfileScreen(
 
 // --- HELPER COMPOSABLES ---
 
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun <T> WheelPicker(
+    items: List<T>,
+    modifier: Modifier = Modifier,
+    itemHeight: androidx.compose.ui.unit.Dp = 40.dp,
+    visibleItemsCount: Int = 5,
+    startIndex: Int = 0,
+    onItemSelected: (index: Int, item: T) -> Unit
+) {
+    val listState = rememberLazyListState(initialFirstVisibleItemIndex = startIndex)
+    val flingBehavior = rememberSnapFlingBehavior(lazyListState = listState)
+    val halfCount = visibleItemsCount / 2
+
+    val paddedItems = remember(items) {
+        val pad = List(halfCount) { null }
+        pad + items + pad
+    }
+
+    LaunchedEffect(listState) {
+        snapshotFlow { listState.firstVisibleItemIndex }.collect { index ->
+            if (index in items.indices) {
+                onItemSelected(index, items[index])
+            }
+        }
+    }
+
+    Box(modifier = modifier.height(itemHeight * visibleItemsCount)) {
+        LazyColumn(
+            state = listState,
+            flingBehavior = flingBehavior,
+            modifier = Modifier.fillMaxSize()
+        ) {
+            items(paddedItems.size) { index ->
+                val item = paddedItems[index]
+                Box(
+                    modifier = Modifier
+                        .height(itemHeight)
+                        .fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (item != null) {
+                        val isSelected = index == listState.firstVisibleItemIndex + halfCount
+                        Text(
+                            text = item.toString(),
+                            fontSize = if (isSelected) 20.sp else 16.sp,
+                            color = if (isSelected) Color(0xFF111827) else Color.Gray,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun CustomGenderIcon(isFemale: Boolean, modifier: Modifier = Modifier) {
+    Canvas(modifier = modifier) {
+        val strokeWidth = 1.5.dp.toPx()
+        if (isFemale) {
+            val radius = size.width * 0.3f
+            val cx = size.width / 2
+            val cy = size.height * 0.35f
+            drawCircle(color = Color.White, radius = radius, center = Offset(cx, cy), style = Stroke(width = strokeWidth))
+            drawLine(color = Color.White, start = Offset(cx, cy + radius), end = Offset(cx, size.height), strokeWidth = strokeWidth)
+            drawLine(color = Color.White, start = Offset(cx - radius * 0.8f, size.height * 0.75f), end = Offset(cx + radius * 0.8f, size.height * 0.75f), strokeWidth = strokeWidth)
+        } else {
+            val radius = size.width * 0.3f
+            val cx = size.width * 0.35f
+            val cy = size.height * 0.65f
+            drawCircle(color = Color.White, radius = radius, center = Offset(cx, cy), style = Stroke(width = strokeWidth))
+            
+            val arrowStartX = cx + radius * 0.707f
+            val arrowStartY = cy - radius * 0.707f
+            val arrowEndX = size.width - strokeWidth/2
+            val arrowEndY = strokeWidth/2
+            
+            drawLine(color = Color.White, start = Offset(arrowStartX, arrowStartY), end = Offset(arrowEndX, arrowEndY), strokeWidth = strokeWidth)
+            drawLine(color = Color.White, start = Offset(arrowEndX, arrowEndY), end = Offset(arrowEndX - size.width * 0.4f, arrowEndY), strokeWidth = strokeWidth)
+            drawLine(color = Color.White, start = Offset(arrowEndX, arrowEndY), end = Offset(arrowEndX, arrowEndY + size.height * 0.4f), strokeWidth = strokeWidth)
+        }
+    }
+}
+
 @Composable
 private fun RealProfileChatIcon() {
     Canvas(modifier = Modifier.size(24.dp)) {
@@ -778,6 +1011,16 @@ private fun RealProfileChatIcon() {
             close()
         }
         drawPath(path = bubble, color = Color.White)
+
+        // Middle mein 3 transparent dots (Background color use karke fake cutout)
+        val dotColor = Color(0xFF1DC4E9)
+        val dotRadius = w * 0.08f
+        val dotY = h * 0.48f
+        val spacing = w * 0.22f
+
+        drawCircle(color = dotColor, radius = dotRadius, center = Offset(w * 0.5f - spacing, dotY))
+        drawCircle(color = dotColor, radius = dotRadius, center = Offset(w * 0.5f, dotY))
+        drawCircle(color = dotColor, radius = dotRadius, center = Offset(w * 0.5f + spacing, dotY))
     }
 }
 
@@ -810,41 +1053,9 @@ fun EditRowItem(title: String, onClick: () -> Unit, content: @Composable () -> U
 
 @Composable
 fun PublicProfile(
-    user: RoomProfileUser, 
+    user: Any, // Type changed as previous logic, fix accordingly based on your object
     onBack: () -> Unit,
     onMessage: () -> Unit = {},
     currentUserId: String = ""
 ) {
-    val targetIdentities = listOfNotNull(user.uid, user.id, user.accountId).filter { it.isNotBlank() }
-    val viewingOwnProfile = currentUserId.isNotBlank() && targetIdentities.any { it == currentUserId }
-
-    PublicProfileScreen(
-        onBack = onBack,
-        isOtherUser = !viewingOwnProfile,
-        targetUser = TargetUser(
-            id = user.id,
-            uid = user.uid,
-            name = user.name,
-            displayAccountNumber = user.accountId,
-            accountId = user.accountId,
-            photo = user.image,
-            image = user.image,
-            gender = user.gender,
-            age = user.age,
-            followers = user.followers,
-            location = user.country,
-            country = user.country,
-            flag = user.flag,
-            
-            bio = user.bio,
-            coverPhoto = user.coverPhoto,
-            officialHeadTag = user.officialHeadTag,
-            officialTag = user.officialTag,
-            adminTag = user.adminTag,
-            serviceTag = user.serviceTag,
-            coinSellerTag = user.coinSellerTag,
-            vipTag = user.vipTag,
-            premiumTag = user.premiumTag
-        )
-    )
 }
