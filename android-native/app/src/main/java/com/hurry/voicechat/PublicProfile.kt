@@ -90,6 +90,8 @@ fun PublicProfileScreen(
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+    val profileCacheKey = targetUser?.uid?.takeIf { it.isNotBlank() } ?: targetUser?.id?.takeIf { it.isNotBlank() } ?: targetUser?.accountId.orEmpty()
+    val cachedProfile = remember(profileCacheKey) { NativeIndexDatabase(context).loadProfile(profileCacheKey) }
 
     // Vercel serves files inside the public/ directory from the URL root.
     val profileAsset: (String) -> String = { path ->
@@ -106,7 +108,9 @@ fun PublicProfileScreen(
         mutableStateOf(targetUser?.coverPhoto?.takeIf { it.isNotBlank() }?.let { listOf(profileAsset(it)) } ?: emptyList()) 
     }
     var albumImages by remember(targetUser?.uid, targetUser?.id) { mutableStateOf(listOf<String>()) }
-    var selectedAvatarUri by remember(targetUser?.photo, targetUser?.image) { mutableStateOf<String?>(null) }
+    var selectedAvatarUri by remember(targetUser?.photo, targetUser?.image, cachedProfile) {
+        mutableStateOf<String?>(sequenceOf("image", "photo", "photoURL", "avatar", "picture").map { cachedProfile?.optString(it, "").orEmpty() }.firstOrNull { it.isNotBlank() && it != "null" } ?: targetUser?.photo?.takeIf { it.isNotBlank() } ?: targetUser?.image?.takeIf { it.isNotBlank() })
+    }
     var ownedFrames by remember { mutableStateOf(listOf<String>()) } // Dummy for UI
     var receivedGifts by remember { mutableStateOf(listOf<String>()) } // Dummy for UI
 
@@ -122,7 +126,7 @@ fun PublicProfileScreen(
     var isFollowing by remember { mutableStateOf(false) }
 
     // User Data State
-    var userName by remember { mutableStateOf(targetUser?.name?.takeIf { it.isNotBlank() } ?: "User") }
+    var userName by remember(profileCacheKey, cachedProfile) { mutableStateOf(cachedProfile?.optString("name")?.takeIf { it.isNotBlank() && it != "null" } ?: targetUser?.name?.takeIf { it.isNotBlank() } ?: "User") }
     var userBio by remember { mutableStateOf(targetUser?.bio ?: "") }
     var userAge by remember { mutableStateOf(targetUser?.age ?: 0) }
     
@@ -151,12 +155,13 @@ fun PublicProfileScreen(
 
     LaunchedEffect(targetUser?.uid, targetUser?.id, targetUser?.accountId) {
         val saved = ProfilePersistence.load(targetUser) ?: return@LaunchedEffect
-        saved.optString("name").takeIf { it.isNotBlank() && it != "null" }?.let { userName = it }
+        if (profileCacheKey.isNotBlank()) NativeIndexDatabase(context).saveProfile(profileCacheKey, saved)
+        saved.optString("name").takeIf { it.isNotBlank() && it != "null" && it != userName }?.let { userName = it }
         saved.optString("bio").takeIf { it != "null" }?.let { userBio = it }
         if (saved.has("age")) userAge = saved.optInt("age", userAge)
         val savedAvatar = sequenceOf("image", "photo", "photoURL", "avatar").map { saved.optString(it, "") }
             .firstOrNull { it.isNotBlank() && it != "null" }
-        if (!savedAvatar.isNullOrBlank()) selectedAvatarUri = savedAvatar
+        if (!savedAvatar.isNullOrBlank() && savedAvatar != selectedAvatarUri) selectedAvatarUri = savedAvatar
         val albums = ProfilePersistence.stringList(saved.optString("albumImages", ""))
         if (albums.isNotEmpty()) albumImages = albums
         val covers = ProfilePersistence.stringList(saved.optString("coverPhotos", ""))
