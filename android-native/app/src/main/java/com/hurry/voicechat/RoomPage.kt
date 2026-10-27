@@ -779,7 +779,7 @@ fun RoomPage(
                                         androidx.compose.material3.Icon(imageVector=Icons.Filled.Home,contentDescription="Owner",modifier=Modifier.size(9.dp),tint=Color.White)
                                     }
                                 }
-                                AsyncImage(model = "https://zyora-voice-chat.vercel.app/file_0000000063b481fa89d3c7729265058b.png", contentDescription = "Purple ID Badge", contentScale = ContentScale.Fit, modifier = Modifier.size(18.dp))
+                                AsyncImage(model = "https://zyora-voice-chat.vercel.app/1785486414756.png", contentDescription = "Purple ID Badge", contentScale = ContentScale.Fit, modifier = Modifier.size(18.dp))
                             }
                             Text("Enter the Room",color=Color.White,fontSize=12.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Medium, modifier=Modifier.padding(start=2.dp).clickable { selectedChatProfile = message })
                         }
