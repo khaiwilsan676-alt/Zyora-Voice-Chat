@@ -2087,18 +2087,8 @@ io.on("connection", (socket) => {
       timestamp: Number(message.timestamp || Date.now()),
     };
 
-    try {
-      if (db) {
-        await db.collection("privateMessages").updateOne(
-          { id: normalizedMessage.id },
-          { $set: normalizedMessage },
-          { upsert: true }
-        );
-      }
-    } catch (error) {
-      console.error("Private message save failed:", error.message);
-    }
-
+    // Relay only; message history is persisted locally on each native client in index.db.
+    // Do not save private chat contents in MongoDB.
     io.to(`user:${receiverId}`).emit(
       "private_message",
       normalizedMessage
@@ -2115,51 +2105,12 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("private_message_history_request", async (data = {}) => {
-    const userId = String(data.userId || "");
-    const otherUserId = String(data.otherUserId || "");
-
-    if (!userId || !otherUserId || !socketOwnsIdentity(socket, userId)) {
-      socket.emit("private_message_history", {
-        chatId: data.chatId || "",
-        messages: [],
-      });
-      return;
-    }
-
-    try {
-      if (!db) {
-        socket.emit("private_message_history", {
-          chatId: data.chatId || "",
-          messages: [],
-        });
-        return;
-      }
-
-      const messages = await db
-        .collection("privateMessages")
-        .find({
-          $or: [
-            { senderId: userId, receiverId: otherUserId },
-            { senderId: otherUserId, receiverId: userId },
-          ],
-        })
-        .sort({ timestamp: 1 })
-        .limit(500)
-        .toArray();
-
-      socket.emit("private_message_history", {
-        chatId: data.chatId || "",
-        messages,
-      });
-    } catch (error) {
-      console.error("Private message history failed:", error.message);
-
-      socket.emit("private_message_history", {
-        chatId: data.chatId || "",
-        messages: [],
-      });
-    }
+  socket.on("private_message_history_request", (data = {}) => {
+    // No MongoDB history: clients use their local index.db cache.
+    socket.emit("private_message_history", {
+      chatId: data.chatId || "",
+      messages: [],
+    });
   });
 
   socket.on("private_message_clear", async (data = {}) => {
@@ -2266,40 +2217,14 @@ io.on("connection", (socket) => {
       timestamp: Number(data.timestamp || Date.now()),
     };
 
-    try {
-      if (db) {
-        await db.collection("aiSupportChats").updateOne(
-          { userId },
-          { $set: payload },
-          { upsert: true }
-        );
-      }
-    } catch (error) {
-      console.error("AI support message save failed:", error.message);
-    }
-
-    // Broadcast AI support chat real-time update to all listeners (including owner panel)
+    // Real-time only: chat history belongs to the clients' local index.db / Owner IndexedDB.
+    // Do not persist Daisy support messages in MongoDB.
     io.emit("ai_support_message", payload);
   });
 
   socket.on("ai_support_history_request", async () => {
-    try {
-      if (db) {
-        const chats = await db
-          .collection("aiSupportChats")
-          .find({})
-          .sort({ timestamp: -1 })
-          .limit(200)
-          .toArray();
-
-        socket.emit("ai_support_history_response", { chats });
-      } else {
-        socket.emit("ai_support_history_response", { chats: [] });
-      }
-    } catch (error) {
-      console.error("AI support history fetch failed:", error.message);
-      socket.emit("ai_support_history_response", { chats: [] });
-    }
+    // No server-side chat history; the Owner panel restores its own browser IndexedDB cache.
+    socket.emit("ai_support_history_response", { chats: [] });
   });
 
 
