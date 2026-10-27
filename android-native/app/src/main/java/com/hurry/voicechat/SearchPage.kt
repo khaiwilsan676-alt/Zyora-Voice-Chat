@@ -37,7 +37,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
 
-private data class SearchUserNative(val id:String,val accountId:String,val name:String,val country:String,val image:String,val bio:String)
+private data class SearchUserNative(val id:String,val accountId:String,val name:String,val country:String,val image:String,val bio:String,val isRoom:Boolean=false,val locked:Boolean=false)
 
 // 3 Blue Tracks aur Number ka Custom Component
 @Composable
@@ -89,7 +89,7 @@ fun RoomTrackAnimation() {
 }
 
 @Composable
-fun SearchPage(onBack:()->Unit={},onOpenProfile:(RoomProfileUser)->Unit={}) {
+fun SearchPage(onBack:()->Unit={},onOpenProfile:(RoomProfileUser)->Unit={},onOpenRoom:(HurryRoom)->Unit={}) {
  var query by remember { mutableStateOf("") }
  var tab by remember { mutableStateOf("User") }
  var results by remember { mutableStateOf<List<SearchUserNative>>(emptyList()) }
@@ -99,7 +99,8 @@ fun SearchPage(onBack:()->Unit={},onOpenProfile:(RoomProfileUser)->Unit={}) {
  var requestId by remember { mutableIntStateOf(0) }
  suspend fun performSearch(qInput:String, requestToken:Int) {
   val q=qInput.trim(); if(q.isBlank()) { results=emptyList(); hasSearched=false; searching=false; return }
-  searchCache[q]?.let { cached ->
+  val cacheKey = "$tab:$q"
+  searchCache[cacheKey]?.let { cached ->
    if (requestToken == requestId) { results=cached; hasSearched=true; searching=false }
    return
   }
@@ -107,7 +108,8 @@ fun SearchPage(onBack:()->Unit={},onOpenProfile:(RoomProfileUser)->Unit={}) {
   val fetched=withContext(Dispatchers.IO) {
    runCatching {
     val encoded=URLEncoder.encode(q,"UTF-8")
-    val conn=URL("https://zyora-voice-chat.onrender.com/api/users?search=$encoded&accountId=$encoded&q=$encoded").openConnection() as HttpURLConnection
+    val endpoint = if (tab == "Room") "https://zyora-voice-chat.onrender.com/api/rooms" else "https://zyora-voice-chat.onrender.com/api/users?search=$encoded&accountId=$encoded&q=$encoded"
+    val conn=URL(endpoint).openConnection() as HttpURLConnection
     conn.connectTimeout=3500; conn.readTimeout=3500
     try {
      val status=conn.responseCode
@@ -119,10 +121,8 @@ fun SearchPage(onBack:()->Unit={},onOpenProfile:(RoomProfileUser)->Unit={}) {
      val arr=if(root.startsWith("[")) JSONArray(root) else {
       val o=JSONObject(root)
       val data=o.optJSONObject("data")
-      o.optJSONArray("users")
-       ?: o.optJSONArray("results")
-       ?: data?.optJSONArray("users")
-       ?: JSONArray().apply {
+      if (tab == "Room") o.optJSONArray("rooms") ?: o.optJSONArray("results") ?: JSONArray()
+      else o.optJSONArray("users") ?: o.optJSONArray("results") ?: data?.optJSONArray("users") ?: JSONArray().apply {
         (o.optJSONObject("user") ?: data?.optJSONObject("user"))?.let{put(it)}
        }
      }
@@ -138,6 +138,15 @@ fun SearchPage(onBack:()->Unit={},onOpenProfile:(RoomProfileUser)->Unit={}) {
        .ifBlank{u.optString("displayUserNumber").takeUnless{it=="null"}.orEmpty()}
        .ifBlank{u.optString("Account Number").takeUnless{it=="null"}.orEmpty()}
        .ifBlank{id}
+      if (tab == "Room") {
+       val roomId = u.optString("accountId").takeUnless{it=="null"}.orEmpty().ifBlank{u.optString("roomId").ifBlank{id}}
+       val roomName = u.optString("name").takeUnless{it=="null"}.orEmpty().ifBlank{u.optString("roomName").ifBlank{"Room"}}
+       val roomImage = u.optString("dp").takeUnless{it=="null"}.orEmpty().ifBlank{u.optString("image").ifBlank{u.optString("roomDp").ifBlank{u.optString("Room dp","")}}}
+       if (roomId.isBlank() || !seen.add(roomId)) continue
+       if (!roomId.contains(q, true) && !roomName.contains(q, true)) continue
+       list.add(SearchUserNative(roomId,roomId,roomName,u.optString("country","🇮🇳"),roomImage,"",true,u.optBoolean("isLocked",false)))
+       continue
+      }
       if(acc.isBlank() || !seen.add(acc)) continue
       list.add(SearchUserNative(id.ifBlank{acc},acc,
        u.optString("name").takeUnless{it=="null"}.orEmpty().ifBlank{u.optString("displayName").ifBlank{u.optString("userName","User")}},
@@ -150,7 +159,7 @@ fun SearchPage(onBack:()->Unit={},onOpenProfile:(RoomProfileUser)->Unit={}) {
    }.getOrDefault(emptyList())
   }
   if (requestToken == requestId) {
-   searchCache[q] = fetched
+   searchCache[cacheKey] = fetched
    results = fetched
    searching = false
   }
@@ -159,7 +168,7 @@ fun SearchPage(onBack:()->Unit={},onOpenProfile:(RoomProfileUser)->Unit={}) {
   val token = ++requestId
   val q = query.trim()
   if (q.isBlank()) { results=emptyList(); hasSearched=false; searching=false; return@LaunchedEffect }
-  searchCache[q]?.let { results=it; hasSearched=true; searching=false; return@LaunchedEffect }
+  searchCache["$tab:$q"]?.let { results=it; hasSearched=true; searching=false; return@LaunchedEffect }
   delay(180)
   performSearch(q, token)
  }
@@ -216,38 +225,28 @@ fun SearchPage(onBack:()->Unit={},onOpenProfile:(RoomProfileUser)->Unit={}) {
         verticalArrangement=Arrangement.spacedBy(8.dp),
         contentPadding = PaddingValues(top = 16.dp, bottom = 20.dp)
     ) { items(results,key={it.accountId}) { u ->
-     // Bina card ke layout - seedha row
      Row(
-        Modifier
-            .fillMaxWidth()
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null
-            ) {
-                onOpenProfile(RoomProfileUser(id=u.id,uid=u.id,accountId=u.accountId,name=u.name,image=u.image,country=u.country,flag="",bio=u.bio))
+        Modifier.fillMaxWidth()
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
+                if (tab == "Room") onOpenRoom(HurryRoom(id=u.id,name=u.name,image=u.image,country=u.country,accountId=u.accountId,locked=u.locked))
+                else onOpenProfile(RoomProfileUser(id=u.id,uid=u.id,accountId=u.accountId,name=u.name,image=u.image,country=u.country,flag="",bio=u.bio))
             }
             .padding(vertical = 8.dp),
         verticalAlignment=Alignment.CenterVertically
      ) {
-      // Left Side: Avatar
-      AsyncImage(model=u.image.ifBlank{"https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/default-avatar.png"},contentDescription=u.name,modifier=Modifier.size(48.dp).clip(CircleShape).background(Color(0xFFE5E7EB)),contentScale=ContentScale.Crop)
-      
+      AsyncImage(model=u.image.ifBlank{"https://zyora-voice-chat.vercel.app/default-avatar.png"},contentDescription=u.name,modifier=Modifier.size(48.dp).clip(if(tab=="Room") RoundedCornerShape(4.dp) else CircleShape).background(Color(0xFFE5E7EB)),contentScale=ContentScale.Crop)
       Spacer(Modifier.width(12.dp))
-      
-      // Left Side: Avatar ke sath Name
-      Text(
-          text = u.name,
-          fontSize=15.sp,
-          fontWeight=FontWeight.SemiBold,
-          color=Color(0xFF111827),
-          maxLines=1,
-          overflow=TextOverflow.Ellipsis,
-          modifier = Modifier.weight(1f)
-      )
-
-      // Right side: Agar room hai toh Animated Track aayega
-      if(tab=="Room") {
-          RoomTrackAnimation()
+      if (tab == "Room") {
+          Text(text=u.name,fontSize=15.sp,fontWeight=FontWeight.SemiBold,color=Color(0xFF111827),maxLines=1,overflow=TextOverflow.Ellipsis,modifier=Modifier.weight(1f))
+      } else {
+          Column(Modifier.weight(1f),verticalArrangement=Arrangement.Center) {
+              Row(verticalAlignment=Alignment.CenterVertically) {
+                  Text(text=u.name,fontSize=15.sp,fontWeight=FontWeight.SemiBold,color=Color(0xFF111827),maxLines=1,overflow=TextOverflow.Ellipsis)
+                  Spacer(Modifier.width(5.dp))
+                  AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20260917_220530.png",contentDescription="Lv.1",modifier=Modifier.height(18.dp).width(31.dp),contentScale=ContentScale.Fit)
+              }
+              Text(text=countryFlag(u.country),fontSize=12.sp,modifier=Modifier.padding(top=2.dp))
+          }
       }
      }
     } }
