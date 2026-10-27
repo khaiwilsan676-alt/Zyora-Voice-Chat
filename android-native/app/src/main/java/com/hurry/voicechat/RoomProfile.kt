@@ -244,10 +244,10 @@ fun RoomProfile(
                                 onClick = {
                                     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                                     clipboard.setPrimaryClip(ClipData.newPlainText("ID", accountId))
-                                    Toast.makeText(context, "Copied!", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, "ID Copied!", Toast.LENGTH_SHORT).show()
                                     onCopyId()
                                 },
-                                modifier = Modifier.size(24.dp).padding(start = 4.dp)
+                                modifier = Modifier.size(24.dp)
                             ) {
                                 Icon(Icons.Default.ContentCopy, contentDescription = "Copy", tint = Color.Gray, modifier = Modifier.size(14.dp))
                             }
