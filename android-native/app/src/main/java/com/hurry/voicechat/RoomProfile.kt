@@ -109,8 +109,9 @@ fun RoomProfile(
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
-    val profileCacheKey = user.uid?.takeIf { it.isNotBlank() } ?: user.id?.takeIf { it.isNotBlank() } ?: user.accountId.orEmpty()
-    val cachedProfile = remember(profileCacheKey) { NativeIndexDatabase(context).loadProfile(profileCacheKey) }
+    val profileCacheKeys = listOfNotNull(user.uid, user.id, user.accountId).filter { it.isNotBlank() }.distinct()
+    val profileCacheKey = profileCacheKeys.firstOrNull().orEmpty()
+    val cachedProfile = remember(profileCacheKeys) { val db = NativeIndexDatabase(context); profileCacheKeys.firstNotNullOfOrNull { db.loadProfile(it) } }
 
     var displayName by remember(user.uid, user.id, user.accountId, user.name, cachedProfile) { mutableStateOf(cachedProfile?.optString("name")?.takeIf { it.isNotBlank() && it != "null" } ?: user.name.ifBlank { "User" }) }
     var displayImage by remember(user.uid, user.id, user.accountId, user.image, cachedProfile) { mutableStateOf(sequenceOf("image", "photo", "photoURL", "avatar", "picture").map { cachedProfile?.optString(it, "").orEmpty() }.firstOrNull { it.isNotBlank() && it != "null" } ?: user.image) }
@@ -130,7 +131,8 @@ fun RoomProfile(
                 age = user.age
             )
         ) ?: return@LaunchedEffect
-        if (profileCacheKey.isNotBlank()) NativeIndexDatabase(context).saveProfile(profileCacheKey, profile)
+        val profileDb = NativeIndexDatabase(context)
+        profileCacheKeys.forEach { profileDb.saveProfile(it, profile) }
         profile.optString("name").takeIf { it.isNotBlank() && it != "null" && it != displayName }?.let { displayName = it }
         sequenceOf("image", "photo", "photoURL", "avatar", "picture")
             .map { profile.optString(it, "") }
@@ -142,9 +144,9 @@ fun RoomProfile(
     }
 
     // Tag States
-    var adminTag by remember(user.adminTag) { mutableStateOf(user.adminTag == true) }
-    var officialTag by remember(user.officialTag) { mutableStateOf(user.officialTag == true) }
-    var officialHeadTag by remember(user.officialHeadTag) { mutableStateOf(user.officialHeadTag == true) }
+    var adminTag by remember(user.adminTag, cachedProfile) { mutableStateOf(user.adminTag == true || cachedProfile?.optBoolean("adminTag", false) == true) }
+    var officialTag by remember(user.officialTag, cachedProfile) { mutableStateOf(user.officialTag == true || cachedProfile?.optBoolean("officialTag", false) == true) }
+    var officialHeadTag by remember(user.officialHeadTag, cachedProfile) { mutableStateOf(user.officialHeadTag == true || cachedProfile?.optBoolean("officialHeadTag", false) == true) }
     var serviceTag by remember(user.serviceTag) { mutableStateOf(user.serviceTag == true) }
     var coinSellerTag by remember(user.coinSellerTag) { mutableStateOf(user.coinSellerTag == true) }
     var vipTag by remember(user.vipTag) { mutableStateOf(user.vipTag == true) }
@@ -380,13 +382,6 @@ fun RoomProfile(
                             .background(Color.LightGray)
                     )
                     
-                    // White Color Removal Shader Overlay Placeholder
-                    WhiteColorRemovalShader(
-                        imageSrc = "1786867564769.png".fullUrl(),
-                        modifier = Modifier
-                            .size(132.dp) // 150% of 88dp
-                            .align(Alignment.Center)
-                    )
                 }
 
                 // Corner Action Icons (Top Left & Top Right above white sheet)
