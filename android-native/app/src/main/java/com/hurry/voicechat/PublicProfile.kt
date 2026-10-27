@@ -185,6 +185,14 @@ fun PublicProfileScreen(
                 ) {
                     if (coverPhotos.isNotEmpty()) {
                         val pagerState = rememberPagerState(pageCount = { coverPhotos.size })
+                        LaunchedEffect(pagerState, coverPhotos.size) {
+                            if (coverPhotos.size > 1) {
+                                while (true) {
+                                    kotlinx.coroutines.delay(5_000)
+                                    pagerState.animateScrollToPage((pagerState.currentPage + 1) % coverPhotos.size)
+                                }
+                            }
+                        }
                         HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
                             AsyncImage(
                                 model = coverPhotos[page],
@@ -192,24 +200,6 @@ fun PublicProfileScreen(
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier.fillMaxSize()
                             )
-                        }
-                        // Pager Indicator
-                        Row(
-                            modifier = Modifier
-                                .align(Alignment.BottomCenter)
-                                .padding(bottom = 32.dp),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            repeat(coverPhotos.size) { iteration ->
-                                val color = if (pagerState.currentPage == iteration) Color.White else Color.White.copy(alpha = 0.5f)
-                                val width = if (pagerState.currentPage == iteration) 16.dp else 6.dp
-                                Box(
-                                    modifier = Modifier
-                                        .size(width = width, height = 6.dp)
-                                        .clip(CircleShape)
-                                        .background(color)
-                                )
-                            }
                         }
                     } else if (userPhoto.isNotBlank()) {
                         AsyncImage(model = userPhoto, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
