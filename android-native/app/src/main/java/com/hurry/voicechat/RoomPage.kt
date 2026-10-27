@@ -533,9 +533,20 @@ fun RoomPage(
             if (payload != null && payload.optString("roomId") == roomId) {
                 val id=payload.optString("id", "${payload.optString("senderId","user")}-${payload.optLong("createdAt",System.currentTimeMillis())}")
                 val type=payload.optString("type","message")
-                val sender=payload.optString("senderName","Unknown")
-                val image=payload.optString("senderAvatar",payload.optString("senderImage",""))
-                val message=NativeRoomMessage(id,payload.optString("text",""),sender,image,payload.optString("senderAccountId",payload.optString("senderId","")),payload.optLong("createdAt",System.currentTimeMillis()),type)
+                val senderId = payload.optString("senderAccountId",payload.optString("senderId",""))
+                val profileDb = NativeIndexDatabase(appContext)
+                val cachedSender = profileDb.loadProfile(senderId)
+                val remoteSender = payload.optString("senderName","").takeUnless { it == "null" }.orEmpty()
+                val remoteImage = payload.optString("senderAvatar",payload.optString("senderImage","")).takeUnless { it == "null" }.orEmpty()
+                val sender = remoteSender.ifBlank { cachedSender?.optString("name").orEmpty().ifBlank { "Unknown" } }
+                val image = remoteImage.ifBlank { cachedSender?.optString("image").orEmpty().ifBlank { cachedSender?.optString("photoURL").orEmpty() } }
+                if (senderId.isNotBlank() && (remoteSender.isNotBlank() || remoteImage.isNotBlank())) {
+                    val updatedProfile = cachedSender ?: JSONObject()
+                    if (remoteSender.isNotBlank()) updatedProfile.put("name", remoteSender)
+                    if (remoteImage.isNotBlank()) updatedProfile.put("image", remoteImage)
+                    profileDb.saveProfile(senderId, updatedProfile)
+                }
+                val message=NativeRoomMessage(id,payload.optString("text",""),sender,image,senderId,payload.optLong("createdAt",System.currentTimeMillis()),type)
                 mainHandler.post {
                     if(messages.none{it.id==message.id}) messages.add(message)
                     if(type=="join" && entryToasts.none{it.id==id}) {
@@ -587,6 +598,10 @@ fun RoomPage(
         }
         var joinMessageSent = false
         val connectListener = Emitter.Listener {
+            val currentProfile = NativeIndexDatabase(appContext).loadProfile(accountId) ?: JSONObject()
+            if (currentUser.name.isNotBlank()) currentProfile.put("name", currentUser.name)
+            if (currentUser.image.isNotBlank()) currentProfile.put("image", currentUser.image)
+            if (accountId.isNotBlank()) NativeIndexDatabase(appContext).saveProfile(accountId, currentProfile)
             val joinPayload = JSONObject().put("roomId",roomId).put("userId",currentUser.uid.ifBlank{currentUser.id.ifBlank{accountId}}).put("accountId",accountId).put("roomOwnerId",roomOwner.uid.ifBlank{roomOwner.id.ifBlank{roomOwner.accountId.ifBlank{roomId}}}).put("name",currentUser.name).put("dp",currentUser.image)
             roomSocket.emit("room_join",joinPayload)
             if (!joinMessageSent && accountId != "guest") {
