@@ -274,7 +274,7 @@ fun PublicProfileScreen(
 
                     // Floating Avatar
                     Box(contentAlignment = Alignment.Center, modifier = Modifier.height(24.dp).width(48.dp)) {
-                        AsyncImage(model = profileAsset("/IMG_20260911_230430.png"), contentDescription = "Level", contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
+                        AsyncImage(model = profileAsset("/IMG_20261028_004355.png"), contentDescription = "Level", contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
                         Text("1", color = Color(0xFFF5DDA0), fontSize = 9.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
                     }
                 }
