@@ -105,7 +105,7 @@ fun PublicProfileScreen(
     var coverPhotos by remember(targetUser?.coverPhoto) { 
         mutableStateOf(targetUser?.coverPhoto?.takeIf { it.isNotBlank() }?.let { listOf(profileAsset(it)) } ?: emptyList()) 
     }
-    var albumImages by remember { mutableStateOf(listOf<String>()) }
+    var albumImages by remember(targetUser?.uid, targetUser?.id) { mutableStateOf(listOf<String>()) }
     var selectedAvatarUri by remember(targetUser?.photo, targetUser?.image) { mutableStateOf<String?>(null) }
     var ownedFrames by remember { mutableStateOf(listOf<String>()) } // Dummy for UI
     var receivedGifts by remember { mutableStateOf(listOf<String>()) } // Dummy for UI
@@ -136,13 +136,13 @@ fun PublicProfileScreen(
     val userPhoto = profileAsset(userPhotoRaw)
 
     val avatarPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        uri?.let { selectedAvatarUri = it.toString() }
+        uri?.let { picked -> val saved = ProfilePersistence.imageDataUri(context, picked) ?: picked.toString(); selectedAvatarUri = saved; if (!isOtherUser) coroutineScope.launch { ProfilePersistence.save(targetUser, mapOf("image" to saved, "photo" to saved)) } }
     }
     val albumPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        uri?.let { if (albumImages.size < 4) albumImages = albumImages + it.toString() }
+        uri?.let { picked -> if (albumImages.size < 4) { val saved = ProfilePersistence.imageDataUri(context, picked) ?: picked.toString(); albumImages = albumImages + saved; if (!isOtherUser) coroutineScope.launch { ProfilePersistence.save(targetUser, mapOf("albumImages" to org.json.JSONArray(albumImages).toString())) } } }
     }
     val backgroundPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        uri?.let { if (coverPhotos.size < 4) coverPhotos = coverPhotos + it.toString() }
+        uri?.let { picked -> if (coverPhotos.size < 4) { val saved = ProfilePersistence.imageDataUri(context, picked) ?: picked.toString(); coverPhotos = coverPhotos + saved; if (!isOtherUser) coroutineScope.launch { ProfilePersistence.save(targetUser, mapOf("coverPhotos" to org.json.JSONArray(coverPhotos).toString(), "coverPhoto" to saved)) } } }
     }
     
     val followers = targetUser?.followers ?: 0
@@ -788,7 +788,7 @@ fun PublicProfileScreen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Button(
-                    onClick = { userName = tempName; showNameScreen = false },
+                    onClick = { userName = tempName; showNameScreen = false; if (!isOtherUser) coroutineScope.launch { ProfilePersistence.save(targetUser, mapOf("name" to tempName, "displayName" to tempName, "userName" to tempName)) } },
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).height(50.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1DC4E9)),
                     shape = RoundedCornerShape(12.dp)
@@ -839,7 +839,7 @@ fun PublicProfileScreen(
                 Spacer(modifier = Modifier.height(16.dp))
                 
                 Button(
-                    onClick = { userBio = tempBio; showBioScreen = false },
+                    onClick = { userBio = tempBio; showBioScreen = false; if (!isOtherUser) coroutineScope.launch { ProfilePersistence.save(targetUser, mapOf("bio" to tempBio)) } },
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).height(50.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1DC4E9)),
                     shape = RoundedCornerShape(12.dp)
@@ -878,6 +878,7 @@ fun PublicProfileScreen(
                         modifier = Modifier.clickable {
                             val today = java.time.LocalDate.now()
                             userAge = (today.year - selectedYear - if (today.monthValue < selectedMonth || (today.monthValue == selectedMonth && today.dayOfMonth < selectedDay)) 1 else 0).coerceIn(0, 120)
+                            if (!isOtherUser) coroutineScope.launch { ProfilePersistence.save(targetUser, mapOf("age" to userAge.toString())) }
                             showAgeScreen = false
                         }
                     )
