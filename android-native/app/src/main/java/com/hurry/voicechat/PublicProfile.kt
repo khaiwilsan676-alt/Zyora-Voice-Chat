@@ -273,33 +273,9 @@ fun PublicProfileScreen(
                     }
 
                     // Floating Avatar
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.BottomStart)
-                            .padding(start = 24.dp)
-                            .offset(y = (-16).dp)
-                            .size(96.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFF374151)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (userPhoto.isNotBlank()) {
-                            AsyncImage(model = userPhoto, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-                        } else {
-                            Text(avatarLetter, color = Color.White, fontSize = 40.sp, fontWeight = FontWeight.Bold)
-                        }
-                        Box(
-                            modifier = Modifier.align(Alignment.TopEnd).size(30.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            AsyncImage(
-                                model = profileAsset("/IMG_20260911_230430.png"),
-                                contentDescription = "Level 1",
-                                contentScale = ContentScale.Fit,
-                                modifier = Modifier.fillMaxSize()
-                            )
-                            Text("1", color = Color(0xFFF5DDA0), fontSize = 12.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
-                        }
+                    Box(contentAlignment = Alignment.Center, modifier = Modifier.height(24.dp).width(48.dp)) {
+                        AsyncImage(model = profileAsset("/IMG_20260911_230430.png"), contentDescription = "Level", contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
+                        Text("1", color = Color(0xFFF5DDA0), fontSize = 9.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
                     }
                 }
             }
