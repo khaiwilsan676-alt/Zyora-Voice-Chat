@@ -115,32 +115,45 @@ fun RoomProfile(
 
     var displayName by remember(user.uid, user.id, user.accountId, user.name, cachedProfile) { mutableStateOf(cachedProfile?.optString("name")?.takeIf { it.isNotBlank() && it != "null" } ?: user.name.ifBlank { "User" }) }
     var displayImage by remember(user.uid, user.id, user.accountId, user.image, cachedProfile) { mutableStateOf(sequenceOf("image", "photo", "photoURL", "avatar", "picture").map { cachedProfile?.optString(it, "").orEmpty() }.firstOrNull { it.isNotBlank() && it != "null" } ?: user.image) }
-    var displayGender by remember(user.uid, user.id, user.accountId, user.gender) { mutableStateOf(user.gender) }
-    var displayAge by remember(user.uid, user.id, user.accountId, user.age) { mutableIntStateOf(user.age) }
+    var displayGender by remember(user.uid, user.id, user.accountId, user.gender, cachedProfile) { mutableStateOf(cachedProfile?.optString("gender")?.takeIf { it.isNotBlank() && it != "null" } ?: user.gender) }
+    var displayAge by remember(user.uid, user.id, user.accountId, user.age, cachedProfile) { mutableIntStateOf(if (cachedProfile?.has("age") == true) cachedProfile.optInt("age", user.age) else user.age) }
+    var displayBio by remember(user.uid, user.id, user.accountId, user.bio, cachedProfile) { mutableStateOf(cachedProfile?.optString("bio")?.takeIf { it != "null" } ?: user.bio) }
 
-    LaunchedEffect(user.uid, user.id, user.accountId) {
-        val profile = ProfilePersistence.load(
-            TargetUser(
-                id = user.id,
-                uid = user.uid,
-                accountId = user.accountId,
-                name = user.name,
-                photo = user.image,
-                image = user.image,
-                gender = user.gender,
-                age = user.age
-            )
-        ) ?: return@LaunchedEffect
+    LaunchedEffect(user.uid, user.id, user.accountId, profileCacheKeys) {
         val profileDb = NativeIndexDatabase(context)
-        profileCacheKeys.forEach { profileDb.saveProfile(it, profile) }
-        profile.optString("name").takeIf { it.isNotBlank() && it != "null" && it != displayName }?.let { displayName = it }
-        sequenceOf("image", "photo", "photoURL", "avatar", "picture")
-            .map { profile.optString(it, "") }
-            .firstOrNull { it.isNotBlank() && it != "null" }
-            ?.takeIf { it != displayImage }
-            ?.let { displayImage = it }
-        profile.optString("gender").takeIf { it.isNotBlank() && it != "null" }?.let { displayGender = it }
-        if (profile.has("age")) displayAge = profile.optInt("age", displayAge)
+        val cached = profileCacheKeys.firstNotNullOfOrNull { profileDb.loadProfile(it) }
+        val remote = ProfilePersistence.load(TargetUser(
+            id = user.id, uid = user.uid, accountId = user.accountId,
+            name = user.name, photo = user.image, image = user.image,
+            gender = user.gender, age = user.age, bio = user.bio
+        ))
+        if (cached == null && remote == null) return@LaunchedEffect
+
+        // Cache all non-name/DP fields once. Always refresh only name and avatar from MongoDB.
+        val merged = org.json.JSONObject(cached?.toString() ?: "{}")
+        if (cached == null && remote != null) {
+            val keys = remote.keys()
+            while (keys.hasNext()) {
+                val key = keys.next()
+                if (key !in setOf("name", "displayName", "userName", "image", "photo", "photoURL", "avatar", "picture")) merged.put(key, remote.opt(key))
+            }
+        }
+        remote?.let { latest ->
+            sequenceOf("name", "displayName", "userName", "image", "photo", "photoURL", "avatar", "picture").forEach { key ->
+                val value = latest.optString(key, "")
+                if (value.isNotBlank() && value != "null") merged.put(key, value)
+            }
+        }
+        profileCacheKeys.forEach { profileDb.saveProfile(it, merged) }
+        remote?.optString("name")?.takeIf { it.isNotBlank() && it != "null" }?.let { displayName = it }
+        remote?.let { latest ->
+            sequenceOf("image", "photo", "photoURL", "avatar", "picture").map { latest.optString(it, "") }
+                .firstOrNull { it.isNotBlank() && it != "null" }?.takeIf { it != displayImage }?.let { displayImage = it }
+        }
+        val stableDetails = cached ?: remote
+        stableDetails?.optString("gender")?.takeIf { it.isNotBlank() && it != "null" }?.let { displayGender = it }
+        if (stableDetails?.has("age") == true) displayAge = stableDetails.optInt("age", displayAge)
+        stableDetails?.optString("bio")?.takeIf { it != "null" }?.let { displayBio = it }
     }
 
     // Tag States
