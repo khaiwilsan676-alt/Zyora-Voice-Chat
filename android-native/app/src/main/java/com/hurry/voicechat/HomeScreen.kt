@@ -641,17 +641,15 @@ private fun RoomListCard(
             )
             
             var liveCount by remember(room.id) { mutableIntStateOf((1000..4999).random()) }
-            var bar1 by remember(room.id) { mutableStateOf(4.dp) }
-            var bar2 by remember(room.id) { mutableStateOf(9.dp) }
-            var bar3 by remember(room.id) { mutableStateOf(6.dp) }
-            
+            val barTransition = androidx.compose.animation.core.rememberInfiniteTransition(label = "room_card_equalizer")
+            val bar1 by barTransition.animateFloat(initialValue = 0.25f, targetValue = 1f, animationSpec = androidx.compose.animation.core.infiniteRepeatable(animation = androidx.compose.animation.core.tween(360, easing = androidx.compose.animation.core.LinearEasing), repeatMode = androidx.compose.animation.core.RepeatMode.Reverse), label = "room_bar_1")
+            val bar2 by barTransition.animateFloat(initialValue = 1f, targetValue = 0.2f, animationSpec = androidx.compose.animation.core.infiniteRepeatable(animation = androidx.compose.animation.core.tween(470, easing = androidx.compose.animation.core.LinearEasing), repeatMode = androidx.compose.animation.core.RepeatMode.Reverse), label = "room_bar_2")
+            val bar3 by barTransition.animateFloat(initialValue = 0.35f, targetValue = 1f, animationSpec = androidx.compose.animation.core.infiniteRepeatable(animation = androidx.compose.animation.core.tween(330, easing = androidx.compose.animation.core.LinearEasing), repeatMode = androidx.compose.animation.core.RepeatMode.Reverse), label = "room_bar_3")
+
             LaunchedEffect(room.id) {
                 while (true) {
                     kotlinx.coroutines.delay((500L..1200L).random())
                     liveCount = (liveCount + (-3..5).random()).coerceAtLeast(1000)
-                    bar1 = (3..10).random().dp
-                    bar2 = (4..12).random().dp
-                    bar3 = (3..10).random().dp
                 }
             }
             
@@ -673,13 +671,9 @@ private fun RoomListCard(
                     horizontalArrangement = Arrangement.spacedBy(2.dp),
                     verticalAlignment = Alignment.Bottom
                 ) {
-                    listOf(bar1, bar2, bar3).forEach { barHeight ->
-                        val animatedHeight by androidx.compose.animation.core.animateDpAsState(
-                            targetValue = barHeight,
-                            label = "equalizer_animation"
-                        )
+                    listOf(bar1, bar2, bar3).forEach { level ->
                         Box(
-                            Modifier.width(2.dp).height(animatedHeight)
+                            Modifier.width(2.dp).height((3f + level * 9f).dp)
                                 .clip(RoundedCornerShape(2.dp))
                                 .background(Color.White)
                         )
