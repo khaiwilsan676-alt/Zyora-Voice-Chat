@@ -288,9 +288,11 @@ fun NativeChatScreen(
                 val value = msg.optString("text")
                 if (value.isNotBlank()) loaded.add((msg.optString("senderId") == currentUserId) to value)
             }
-            mainHandler.post {
-                messages.clear()
-                messages.addAll(loaded)
+            if (loaded.isNotEmpty()) {
+                mainHandler.post {
+                    messages.clear()
+                    messages.addAll(loaded)
+                }
             }
         }
         chatSocket.on("private_message", incoming)
