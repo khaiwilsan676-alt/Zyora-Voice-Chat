@@ -118,7 +118,7 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
                                 horizontalArrangement = Arrangement.spacedBy(5.dp)
                             ) {
                                 AsyncImage(
-                                    model = RAW_ME + "1785486414756.png",
+                                    model = RAW_ME + "file_0000000063b481fa89d3c7729265058b.png",
                                     contentDescription = "Purple ID",
                                     modifier = Modifier.height(22.dp).widthIn(max = 52.dp),
                                     contentScale = ContentScale.Fit
