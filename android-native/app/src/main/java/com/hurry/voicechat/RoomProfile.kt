@@ -109,9 +109,11 @@ fun RoomProfile(
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+    val profileCacheKey = user.uid?.takeIf { it.isNotBlank() } ?: user.id?.takeIf { it.isNotBlank() } ?: user.accountId.orEmpty()
+    val cachedProfile = remember(profileCacheKey) { NativeIndexDatabase(context).loadProfile(profileCacheKey) }
 
-    var displayName by remember(user.uid, user.id, user.accountId, user.name) { mutableStateOf(user.name.ifBlank { "User" }) }
-    var displayImage by remember(user.uid, user.id, user.accountId, user.image) { mutableStateOf(user.image) }
+    var displayName by remember(user.uid, user.id, user.accountId, user.name, cachedProfile) { mutableStateOf(cachedProfile?.optString("name")?.takeIf { it.isNotBlank() && it != "null" } ?: user.name.ifBlank { "User" }) }
+    var displayImage by remember(user.uid, user.id, user.accountId, user.image, cachedProfile) { mutableStateOf(sequenceOf("image", "photo", "photoURL", "avatar", "picture").map { cachedProfile?.optString(it, "").orEmpty() }.firstOrNull { it.isNotBlank() && it != "null" } ?: user.image) }
     var displayGender by remember(user.uid, user.id, user.accountId, user.gender) { mutableStateOf(user.gender) }
     var displayAge by remember(user.uid, user.id, user.accountId, user.age) { mutableIntStateOf(user.age) }
 
@@ -128,10 +130,12 @@ fun RoomProfile(
                 age = user.age
             )
         ) ?: return@LaunchedEffect
-        profile.optString("name").takeIf { it.isNotBlank() && it != "null" }?.let { displayName = it }
+        if (profileCacheKey.isNotBlank()) NativeIndexDatabase(context).saveProfile(profileCacheKey, profile)
+        profile.optString("name").takeIf { it.isNotBlank() && it != "null" && it != displayName }?.let { displayName = it }
         sequenceOf("image", "photo", "photoURL", "avatar", "picture")
             .map { profile.optString(it, "") }
             .firstOrNull { it.isNotBlank() && it != "null" }
+            ?.takeIf { it != displayImage }
             ?.let { displayImage = it }
         profile.optString("gender").takeIf { it.isNotBlank() && it != "null" }?.let { displayGender = it }
         if (profile.has("age")) displayAge = profile.optInt("age", displayAge)
