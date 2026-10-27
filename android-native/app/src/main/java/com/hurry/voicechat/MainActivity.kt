@@ -264,20 +264,8 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
     var tab by remember { mutableStateOf(HurryTab.HOME) }
     var homeMine by remember { mutableStateOf(false) }
     var keptRoom by remember {
-        mutableStateOf(
-            runCatching {
-                authPrefs.getString("kept_room_data", null)?.let { raw ->
-                    val saved = JSONObject(raw)
-                    HurryRoom(
-                        id = saved.optString("id"),
-                        name = saved.optString("name", "Room"),
-                        image = saved.optString("image"),
-                        country = saved.optString("country", "🇮🇳"),
-                        accountId = saved.optString("accountId", saved.optString("id"))
-                    )
-                }
-            }.getOrNull()
-        )
+        authPrefs.edit().remove("kept_room_data").apply()
+        mutableStateOf<HurryRoom?>(null)
     }
     var openedRoom by remember { mutableStateOf<HurryRoom?>(null) }
     var openedChat by remember { mutableStateOf<Triple<String, String, String>?>(null) }
@@ -342,16 +330,8 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                             accountId = active?.accountId?.ifBlank { active.id } ?: roomId
                         )
                         keptRoom = miniRoom
-                        authPrefs.edit().putString(
-                            "kept_room_data",
-                            JSONObject()
-                                .put("id", miniRoom.id)
-                                .put("name", miniRoom.name)
-                                .put("image", miniRoom.image)
-                                .put("country", miniRoom.country)
-                                .put("accountId", miniRoom.accountId)
-                                .toString()
-                        ).apply()
+                        // Keep is session-only: the mini-room bubble must not survive app close.
+                        authPrefs.edit().remove("kept_room_data").apply()
                         openedRoom = null
                     }
                 )
@@ -467,7 +447,18 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                     }
                 }
             }
-            if (openedRoom == null && tab == HurryTab.HOME && keptRoom != null) {
+            if (
+                openedRoom == null &&
+                openedChat == null &&
+                openedMePage == null &&
+                openedPublicProfile == null &&
+                openedLeaderboard == null &&
+                !openedInvite &&
+                !openedSearch &&
+                !openedRoomSupport &&
+                tab in setOf(HurryTab.HOME, HurryTab.MESSAGE, HurryTab.ME) &&
+                keptRoom != null
+            ) {
                 KeptRoomBubble(
                     room = keptRoom!!,
                     onOpen = { openedRoom = keptRoom },
@@ -499,13 +490,48 @@ private fun KeptRoomBubble(room: HurryRoom, onOpen: () -> Unit, onExit: () -> Un
     var dragging by remember { mutableStateOf(false) }
     Box(Modifier.fillMaxSize()) {
         if (dragging) {
+            val exitWave = androidx.compose.animation.core.rememberInfiniteTransition(label = "keep_exit_wave")
+            val pulse by exitWave.animateFloat(
+                initialValue = 0.72f,
+                targetValue = 1f,
+                animationSpec = androidx.compose.animation.core.infiniteRepeatable(
+                    animation = androidx.compose.animation.core.tween(620, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                    repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
+                ),
+                label = "keep_exit_pulse"
+            )
             Box(
-                Modifier.align(Alignment.BottomEnd).padding(end = 18.dp, bottom = 18.dp)
-                    .size(58.dp).clip(RoundedCornerShape(50))
-                    .background(Color(0xFFE53935)),
+                Modifier.align(Alignment.BottomEnd)
+                    .size(58.dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(Color(0x33F44336)),
                 contentAlignment = Alignment.Center
             ) {
-                Text("×", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold)
+                androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
+                    val arcSize = androidx.compose.ui.geometry.Size(size.width * pulse, size.height * pulse)
+                    val inset = (size.width - arcSize.width) / 2f
+                    drawArc(
+                        color = Color(0x99F44336),
+                        startAngle = 42f,
+                        sweepAngle = 276f,
+                        useCenter = false,
+                        topLeft = Offset(inset, inset),
+                        size = arcSize,
+                        style = androidx.compose.ui.graphics.drawscope.Stroke(
+                            width = 4.dp.toPx(),
+                            cap = androidx.compose.ui.graphics.StrokeCap.Round
+                        )
+                    )
+                    drawArc(
+                        color = Color(0x55F44336),
+                        startAngle = 42f,
+                        sweepAngle = 276f,
+                        useCenter = false,
+                        topLeft = Offset(5.dp.toPx(), 5.dp.toPx()),
+                        size = androidx.compose.ui.geometry.Size(size.width - 10.dp.toPx(), size.height - 10.dp.toPx()),
+                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.dp.toPx())
+                    )
+                }
             }
         }
         Box(
