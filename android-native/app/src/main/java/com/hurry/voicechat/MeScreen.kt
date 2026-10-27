@@ -47,16 +47,19 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
     val prefs = remember { context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE) }
     val uid = prefs.getString("uid", "") ?: ""
     val email = prefs.getString("email", "") ?: ""
-    var name by remember(uid, email) {
+    val cachedProfile = remember(uid) { NativeIndexDatabase(context).loadProfile(uid) }
+    var name by remember(uid, email, cachedProfile) {
         mutableStateOf(
-            prefs.getString("name", "")?.takeIf { it.isNotBlank() && it.lowercase() !in listOf("guest","user","null","undefined") }
+            cachedProfile?.optString("name")?.takeIf { it.isNotBlank() && it != "null" && it.lowercase() !in listOf("guest","user","null","undefined") }
+                ?: prefs.getString("name", "")?.takeIf { it.isNotBlank() && it.lowercase() !in listOf("guest","user","null","undefined") }
                 ?: email.substringBefore("@").takeIf { it.isNotBlank() }
                 ?: "Zyora User"
         )
     }
-    var photo by remember(uid) {
+    var photo by remember(uid, cachedProfile) {
         mutableStateOf(
-            listOf("photo", "image", "avatar", "photoUrl", "picture", "userPhoto")
+            sequenceOf("image", "photo", "photoURL", "avatar", "picture").map { cachedProfile?.optString(it, "").orEmpty() }.firstOrNull { it.isNotBlank() && it != "null" }
+                ?: listOf("photo", "image", "avatar", "photoUrl", "picture", "userPhoto")
                 .asSequence().mapNotNull { key -> prefs.getString(key, null)?.takeIf { it.isNotBlank() } }
                 .firstOrNull().orEmpty()
         )
@@ -71,10 +74,12 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
         val profile = ProfilePersistence.load(
             TargetUser(id = uid, uid = uid, accountId = account, displayAccountNumber = account)
         ) ?: return@LaunchedEffect
-        profile.optString("name").takeIf { it.isNotBlank() && it != "null" && it.lowercase() !in listOf("guest", "user", "undefined") }?.let { name = it }
+        NativeIndexDatabase(context).saveProfile(uid, profile)
+        profile.optString("name").takeIf { it.isNotBlank() && it != "null" && it.lowercase() !in listOf("guest", "user", "undefined") && it != name }?.let { name = it }
         sequenceOf("image", "photo", "photoURL", "avatar", "picture")
             .map { profile.optString(it, "") }
             .firstOrNull { it.isNotBlank() && it != "null" }
+            ?.takeIf { it != photo }
             ?.let { photo = it }
     }
 
