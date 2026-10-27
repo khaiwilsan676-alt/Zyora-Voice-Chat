@@ -155,8 +155,7 @@ fun PublicProfileScreen(
 
     LaunchedEffect(targetUser?.uid, targetUser?.id, targetUser?.accountId) {
         val saved = ProfilePersistence.load(targetUser) ?: return@LaunchedEffect
-        val profileDb = NativeIndexDatabase(context)
-        listOfNotNull(targetUser?.uid, targetUser?.id, targetUser?.accountId).filter { it.isNotBlank() }.distinct().forEach { profileDb.saveProfile(it, saved) }
+        if (profileCacheKey.isNotBlank()) NativeIndexDatabase(context).saveProfile(profileCacheKey, saved)
         saved.optString("name").takeIf { it.isNotBlank() && it != "null" && it != userName }?.let { userName = it }
         saved.optString("bio").takeIf { it != "null" }?.let { userBio = it }
         if (saved.has("age")) userAge = saved.optInt("age", userAge)
