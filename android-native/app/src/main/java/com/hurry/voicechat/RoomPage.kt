@@ -745,14 +745,14 @@ fun RoomPage(
                 } else if (clearedBy.isNotBlank()) {
                     item {
                         Column(Modifier.fillMaxWidth().padding(start=4.dp, top=8.dp, end=82.dp, bottom=2.dp)) {
-                            Column(Modifier.fillMaxWidth(.82f).clip(RoundedCornerShape(12.dp)).background(Color.Black.copy(alpha=.30f)).padding(horizontal=4.dp, vertical=2.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                                    SystemBellIcon(modifier = Modifier.size(60.dp))
-                                    Text("System", color = Color.Gray, fontSize = 12.sp)
-                                }
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(clearedBy, color = Color(0xFFE2C67D), fontSize = 13.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
-                                    Text(" Cleared Chat messages", color = Color.White, fontSize = 13.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
+                            Row(Modifier.fillMaxWidth(.82f).height(50.dp).clip(RoundedCornerShape(12.dp)).background(Color.Black.copy(alpha=.30f)).padding(start = 2.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                                SystemBellIcon(modifier = Modifier.size(44.dp))
+                                Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                                    Text("System", color = Color.Gray, fontSize = 12.sp, lineHeight = 13.sp)
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(clearedBy, color = Color(0xFFE2C67D), fontSize = 11.sp, lineHeight = 12.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
+                                        Text(" Cleared Chat messages", color = Color.White, fontSize = 11.sp, lineHeight = 12.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
+                                    }
                                 }
                             }
                         }
