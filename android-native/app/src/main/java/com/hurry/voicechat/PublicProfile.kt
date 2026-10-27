@@ -1053,9 +1053,44 @@ fun EditRowItem(title: String, onClick: () -> Unit, content: @Composable () -> U
 
 @Composable
 fun PublicProfile(
-    user: Any, // Type changed as previous logic, fix accordingly based on your object
+    user: RoomProfileUser,
     onBack: () -> Unit,
     onMessage: () -> Unit = {},
     currentUserId: String = ""
 ) {
+    // The previous empty wrapper caused the public-profile route to render nothing.
+    // Convert the room/user model into the screen model and render the actual UI.
+    val target = remember(user) {
+        TargetUser(
+            id = user.id,
+            uid = user.uid,
+            name = user.name,
+            displayAccountNumber = user.accountId?.takeIf { it.isNotBlank() } ?: user.id,
+            accountId = user.accountId,
+            photo = user.image,
+            coverPhoto = user.coverPhoto,
+            gender = user.gender,
+            age = user.age,
+            followers = user.followers,
+            bio = user.bio,
+            location = user.country,
+            country = user.country,
+            flag = user.flag,
+            officialHeadTag = user.officialHeadTag,
+            officialTag = user.officialTag,
+            adminTag = user.adminTag,
+            serviceTag = user.serviceTag,
+            coinSellerTag = user.coinSellerTag,
+            vipTag = user.vipTag,
+            premiumTag = user.premiumTag
+        )
+    }
+    PublicProfileScreen(
+        onBack = onBack,
+        isOtherUser = !(
+            !currentUserId.isBlank() &&
+            (user.uid == currentUserId || user.id == currentUserId || user.accountId == currentUserId)
+        ),
+        targetUser = target
+    )
 }
