@@ -1614,19 +1614,35 @@ private fun formatMusicTime(seconds: Float): String {
 
 @Composable private fun NativeMessage(m:NativeRoomMessage, onAvatarClick: () -> Unit = {}){
     val context = LocalContext.current
-    val profileTags = remember(m.senderAccountId) {
-        if (m.senderAccountId.isBlank()) null else NativeIndexDatabase(context).loadProfile(m.senderAccountId)
+    val profileDb = remember(context) { NativeIndexDatabase(context) }
+    var profileTags by remember(m.senderAccountId) { mutableStateOf(profileDb.loadProfile(m.senderAccountId)) }
+    LaunchedEffect(m.senderAccountId) {
+        if (m.senderAccountId.isNotBlank()) {
+            val remote = ProfilePersistence.load(
+                TargetUser(uid = m.senderAccountId, id = m.senderAccountId, accountId = m.senderAccountId, name = m.sender, image = m.senderImage)
+            )
+            if (remote != null) {
+                val merged = profileDb.loadProfile(m.senderAccountId) ?: JSONObject()
+                listOf("officialHeadTag", "officialTag", "adminTag", "serviceTag", "coinSellerTag", "coinSeller", "sellerTag", "csTag").forEach { key ->
+                    if (remote.has(key)) merged.put(key, remote.opt(key))
+                }
+                if (m.sender.isNotBlank()) merged.put("name", m.sender)
+                if (m.senderImage.isNotBlank()) merged.put("image", m.senderImage)
+                profileDb.saveProfile(m.senderAccountId, merged)
+                profileTags = merged
+            }
+        }
     }
     val officialHeadTag = profileTags?.optBoolean("officialHeadTag", false) == true
     val officialTag = profileTags?.optBoolean("officialTag", false) == true
     val adminTag = profileTags?.optBoolean("adminTag", false) == true
-    val serviceTag = profileTags?.optBoolean("serviceTag", false) == true
-    val coinSellerTag = profileTags?.optBoolean("coinSellerTag", false) == true
+    val serviceTag = profileTags?.optBoolean("serviceTag", false) == true || profileTags?.optBoolean("csTag", false) == true
+    val coinSellerTag = profileTags?.optBoolean("coinSellerTag", false) == true || profileTags?.optBoolean("coinSeller", false) == true || profileTags?.optBoolean("sellerTag", false) == true
     Row(Modifier.fillMaxWidth().padding(vertical=2.dp),verticalAlignment=Alignment.Top,horizontalArrangement=Arrangement.Start){
-        FallbackAsyncImage(model=m.senderImage,contentDescription=m.sender,modifier=Modifier.padding(top=2.dp).size(28.dp).clip(CircleShape).border(1.dp, Color.White.copy(alpha=.1f), CircleShape).clickable(onClick = onAvatarClick),contentScale=ContentScale.Crop)
+        FallbackAsyncImage(model=m.senderImage.ifBlank { profileTags?.optString("image").orEmpty() },contentDescription=m.sender,modifier=Modifier.padding(top=2.dp).size(28.dp).clip(CircleShape).border(1.dp, Color.White.copy(alpha=.1f), CircleShape).clickable(onClick = onAvatarClick),contentScale=ContentScale.Crop)
         Column(Modifier.padding(start=8.dp).fillMaxWidth(.75f),verticalArrangement=Arrangement.spacedBy(2.dp)){
             Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(3.dp)){
-                Text(m.sender,color=Color.White.copy(alpha=.9f),fontSize=12.sp,lineHeight=13.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold,maxLines=1,overflow=TextOverflow.Ellipsis)
+                Text(m.sender.ifBlank { profileTags?.optString("name").orEmpty() },color=Color.White.copy(alpha=.9f),fontSize=12.sp,lineHeight=13.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold,maxLines=1,overflow=TextOverflow.Ellipsis)
                 Box(modifier=Modifier.size(30.dp),contentAlignment=Alignment.Center){
                     AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20260917_220530.png",contentDescription="Level Lv.1 - Lv.10",contentScale=ContentScale.Fit,modifier=Modifier.fillMaxSize())
                     Text("Lv.1",color=Color.White,fontSize=8.sp,fontWeight=FontWeight.Bold,modifier=Modifier.align(Alignment.Center).padding(start=5.dp,top=1.dp))
