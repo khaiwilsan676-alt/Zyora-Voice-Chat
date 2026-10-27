@@ -746,8 +746,8 @@ fun RoomPage(
                     item {
                         Column(Modifier.fillMaxWidth().padding(start=0.dp, top=8.dp, end=82.dp, bottom=2.dp)) {
                             Column(Modifier.fillMaxWidth(.82f).clip(RoundedCornerShape(12.dp)).background(Color.Black.copy(alpha=.30f)).padding(start=0.dp, end=4.dp, top=3.dp, bottom=5.dp), verticalArrangement=Arrangement.spacedBy(2.dp)) {
-                                Row(verticalAlignment=Alignment.CenterVertically, horizontalArrangement=Arrangement.spacedBy(3.dp)) {
-                                    SystemBellIcon(modifier=Modifier.size(55.dp))
+                                Row(verticalAlignment=Alignment.CenterVertically, horizontalArrangement=Arrangement.spacedBy(0.dp)) {
+                                    SystemBellIcon(modifier=Modifier.size(64.dp))
                                     Text("System", color=Color.Gray, fontSize=15.sp, lineHeight=17.sp, fontWeight=FontWeight.SemiBold)
                                 }
                                 Row(verticalAlignment=Alignment.CenterVertically, horizontalArrangement=Arrangement.spacedBy(3.dp)) {
