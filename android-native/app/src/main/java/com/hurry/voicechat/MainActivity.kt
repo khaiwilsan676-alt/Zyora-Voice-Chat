@@ -302,7 +302,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
             } else if (openedRoomSupport) {
                 RoomSupport(onBack = { openedRoomSupport = false })
             } else if (openedSearch) {
-                SearchPage(onBack={openedSearch=false},onOpenProfile={openedPublicProfile=it;openedSearch=false})
+                SearchPage(onBack={openedSearch=false},onOpenProfile={openedPublicProfile=it;openedSearch=false},onOpenRoom={openedRoom=it;openedSearch=false})
             } else if (openedRoom != null) {
                 RoomPage(
                     roomOwner = RoomPageOwner(
