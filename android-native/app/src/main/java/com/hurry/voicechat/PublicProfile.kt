@@ -857,11 +857,13 @@ fun PublicProfileScreen(
                     Text("Cancel", color = Color.Gray, modifier = Modifier.clickable { showAgeScreen = false })
                     Text("Birthday", fontWeight = FontWeight.Bold, fontSize = 18.sp)
                     Text(
-                        "Confirm", 
-                        color = Color(0xFF1DC4E9), 
-                        fontWeight = FontWeight.Bold, 
-                        modifier = Modifier.clickable { 
-                            showAgeScreen = false 
+                        "Confirm",
+                        color = Color(0xFF1DC4E9),
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.clickable {
+                            val today = java.time.LocalDate.now()
+                            userAge = (today.year - selectedYear - if (today.monthValue < selectedMonth || (today.monthValue == selectedMonth && today.dayOfMonth < selectedDay)) 1 else 0).coerceIn(0, 120)
+                            showAgeScreen = false
                         }
                     )
                 }
