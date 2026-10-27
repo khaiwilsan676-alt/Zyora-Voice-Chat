@@ -3,6 +3,8 @@ package com.hurry.voicechat
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import android.widget.Toast
 import androidx.compose.animation.*
 import androidx.compose.foundation.*
@@ -92,7 +94,7 @@ fun PublicProfileScreen(
     // Vercel serves files inside the public/ directory from the URL root.
     val profileAsset: (String) -> String = { path ->
         if (path.isBlank()) ""
-        else if (path.startsWith("http://") || path.startsWith("https://") || path.startsWith("data:")) path
+        else if (path.startsWith("http://") || path.startsWith("https://") || path.startsWith("data:") || path.startsWith("content:") || path.startsWith("file:")) path
         else {
             val cleanPath = path.trimStart('/').removePrefix("public/")
             "https://zyora-voice-chat.vercel.app/$cleanPath"
@@ -104,6 +106,7 @@ fun PublicProfileScreen(
         mutableStateOf(targetUser?.coverPhoto?.takeIf { it.isNotBlank() }?.let { listOf(profileAsset(it)) } ?: emptyList()) 
     }
     var albumImages by remember { mutableStateOf(listOf<String>()) }
+    var selectedAvatarUri by remember(targetUser?.photo, targetUser?.image) { mutableStateOf<String?>(null) }
     var ownedFrames by remember { mutableStateOf(listOf<String>()) } // Dummy for UI
     var receivedGifts by remember { mutableStateOf(listOf<String>()) } // Dummy for UI
 
@@ -129,8 +132,18 @@ fun PublicProfileScreen(
     val displayAccNum = targetUser?.displayAccountNumber?.takeIf { it.isNotBlank() } ?: targetUser?.accountId?.takeIf { it.isNotBlank() } ?: "—"
     
     val defaultAvatar = "/file_000000009aac81faa8564416680aba4e.png"
-    val userPhotoRaw = targetUser?.photo?.takeIf { it.isNotBlank() } ?: targetUser?.image?.takeIf { it.isNotBlank() } ?: defaultAvatar
+    val userPhotoRaw = selectedAvatarUri ?: targetUser?.photo?.takeIf { it.isNotBlank() } ?: targetUser?.image?.takeIf { it.isNotBlank() } ?: defaultAvatar
     val userPhoto = profileAsset(userPhotoRaw)
+
+    val avatarPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        uri?.let { selectedAvatarUri = it.toString() }
+    }
+    val albumPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        uri?.let { if (albumImages.size < 4) albumImages = albumImages + it.toString() }
+    }
+    val backgroundPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        uri?.let { if (coverPhotos.size < 4) coverPhotos = coverPhotos + it.toString() }
+    }
     
     val followers = targetUser?.followers ?: 0
     val flag = targetUser?.flag ?: "🇮🇳"
@@ -611,7 +624,7 @@ fun PublicProfileScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .fillMaxHeight(0.60f) 
+                    .fillMaxHeight(0.66f) 
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 16.dp),
@@ -639,7 +652,7 @@ fun PublicProfileScreen(
                     ) {
                         Text("Avatar", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Color(0xFF374151))
                         Box(
-                            modifier = Modifier.size(56.dp).clip(CircleShape).background(Color(0xFFE5E7EB)),
+                            modifier = Modifier.size(56.dp).clip(CircleShape).background(Color(0xFFE5E7EB)).clickable { avatarPicker.launch("image/*") },
                             contentAlignment = Alignment.Center
                         ) {
                             if (userPhoto.isNotBlank()) {
