@@ -71,10 +71,24 @@ fun HurrySupport(onBack: () -> Unit) {
     }
     var draft by remember { mutableStateOf("") }
     var typing by remember { mutableStateOf(false) }
-    val messages = remember {
-        mutableStateListOf(
-            SupportMessage("Welcome to Zyora Support\n\nI am Daisy, your Official Customer Support Assistant.\n\nHow can I help you today? Aap Zyora App se juda koi bhi sawal pooch sakte hain!", true)
-        )
+    val localChatDb = remember { NativeIndexDatabase(context) }
+    val messages = remember(supportUserId) {
+        mutableStateListOf<SupportMessage>().apply {
+            val cached = localChatDb.loadChat("daisy_support_$supportUserId")
+            val restored = runCatching {
+                val array = JSONArray(cached ?: "[]")
+                (0 until array.length()).mapNotNull { index ->
+                    val item = array.optJSONObject(index) ?: return@mapNotNull null
+                    SupportMessage(item.optString("text"), item.optBoolean("isBot"), item.optString("image").takeIf { it.isNotBlank() && it != "null" }, item.optLong("timestamp"))
+                }
+            }.getOrDefault(emptyList())
+            if (restored.isNotEmpty()) addAll(restored) else add(SupportMessage("Welcome to Zyora Support\n\nI am Daisy, your Official Customer Support Assistant.\n\nHow can I help you today? Aap Zyora App se juda koi bhi sawal pooch sakte hain!", true))
+        }
+    }
+    LaunchedEffect(messages.size, supportUserId) {
+        val array = JSONArray()
+        messages.forEach { item -> array.put(JSONObject().put("text", item.text).put("image", item.image ?: JSONObject.NULL).put("isBot", item.isBot).put("timestamp", item.timestamp)) }
+        localChatDb.saveChat("daisy_support_$supportUserId", array.toString())
     }
     val keyboard = LocalSoftwareKeyboardController.current
 
