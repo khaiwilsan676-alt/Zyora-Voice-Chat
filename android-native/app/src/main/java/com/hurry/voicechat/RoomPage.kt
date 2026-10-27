@@ -774,10 +774,14 @@ fun RoomPage(
                                 FallbackAsyncImage(model=message.senderImage,contentDescription=message.sender,modifier=Modifier.size(24.dp).clip(CircleShape),contentScale=ContentScale.Crop)
                                 Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){
                                     Text(message.sender,color=Color.White.copy(alpha=.95f),fontSize=12.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold)
-                                    if (message.senderAccountId == roomOwner.accountId.ifBlank { roomOwner.id }) {
+                                    val isRoomOwnerMessage = message.senderAccountId == roomOwner.accountId.ifBlank { roomOwner.id }
+                                    if (!isRoomOwnerMessage) {
+                                        AsyncImage(model = "https://zyora-voice-chat.vercel.app/1785486414756.png", contentDescription = "ID badge", contentScale = ContentScale.Fit, modifier = Modifier.size(18.dp))
+                                    } else {
                                         Box(Modifier.size(14.dp).clip(CircleShape).background(Color(0xFF3B82F6)),contentAlignment=Alignment.Center) {
                                             androidx.compose.material3.Icon(imageVector=Icons.Filled.Home,contentDescription="Owner",modifier=Modifier.size(9.dp),tint=Color.White)
                                         }
+                                        AsyncImage(model = "https://zyora-voice-chat.vercel.app/1785486414756.png", contentDescription = "ID badge", contentScale = ContentScale.Fit, modifier = Modifier.size(18.dp))
                                     }
                                 }
                             }
