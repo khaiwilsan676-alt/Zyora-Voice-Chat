@@ -110,6 +110,33 @@ fun RoomProfile(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
+    var displayName by remember(user.uid, user.id, user.accountId, user.name) { mutableStateOf(user.name.ifBlank { "User" }) }
+    var displayImage by remember(user.uid, user.id, user.accountId, user.image) { mutableStateOf(user.image) }
+    var displayGender by remember(user.uid, user.id, user.accountId, user.gender) { mutableStateOf(user.gender) }
+    var displayAge by remember(user.uid, user.id, user.accountId, user.age) { mutableIntStateOf(user.age) }
+
+    LaunchedEffect(user.uid, user.id, user.accountId) {
+        val profile = ProfilePersistence.load(
+            TargetUser(
+                id = user.id,
+                uid = user.uid,
+                accountId = user.accountId,
+                name = user.name,
+                photo = user.image,
+                image = user.image,
+                gender = user.gender,
+                age = user.age
+            )
+        ) ?: return@LaunchedEffect
+        profile.optString("name").takeIf { it.isNotBlank() && it != "null" }?.let { displayName = it }
+        sequenceOf("image", "photo", "photoURL", "avatar", "picture")
+            .map { profile.optString(it, "") }
+            .firstOrNull { it.isNotBlank() && it != "null" }
+            ?.let { displayImage = it }
+        profile.optString("gender").takeIf { it.isNotBlank() && it != "null" }?.let { displayGender = it }
+        if (profile.has("age")) displayAge = profile.optInt("age", displayAge)
+    }
+
     // Tag States
     var adminTag by remember(user.adminTag) { mutableStateOf(user.adminTag == true) }
     var officialTag by remember(user.officialTag) { mutableStateOf(user.officialTag == true) }
@@ -123,7 +150,7 @@ fun RoomProfile(
     val hasAnyTag = officialHeadTag || officialTag || adminTag || serviceTag || coinSellerTag || vipTag || premiumTag
     val accountId = generateStableId(user.accountId ?: user.id ?: user.uid ?: "User")
     
-    val genderColor = if (user.gender.equals("female", true) || user.gender.equals("f", true) || user.gender == "♀") {
+    val genderColor = if (displayGender.equals("female", true) || displayGender.equals("f", true) || displayGender == "♀") {
         Color(0xFFEC4899) // pink-500
     } else {
         Color(0xFF3B82F6) // blue-500
@@ -179,7 +206,7 @@ fun RoomProfile(
                     // Row 1: Name + Gender Tag
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
                         Text(
-                            text = user.name.ifBlank { "User" },
+                            text = displayName.ifBlank { "User" },
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFF111827)
@@ -191,7 +218,10 @@ fun RoomProfile(
                                 .background(genderColor)
                                 .padding(horizontal = 8.dp, vertical = 2.dp)
                         ) {
-                            Text("${user.gender} ${user.age}", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                                CustomGenderIcon(isFemale = displayGender.equals("female", true) || displayGender.equals("f", true) || displayGender == "♀", modifier = Modifier.size(10.dp))
+                                Text(displayAge.toString(), color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            }
                         }
                     }
 
