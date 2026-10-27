@@ -2,6 +2,45 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Plus, X } from 'lucide-react';
 import { socket } from '../src/lib/socket';
 
+const REPORTS_DB_NAME = 'ZyoraReportsDB';
+const REPORTS_STORE = 'userReports';
+
+const openReportsDB = (): Promise<IDBDatabase> => new Promise((resolve, reject) => {
+  const request = indexedDB.open(REPORTS_DB_NAME, 1);
+  request.onerror = () => reject(request.error);
+  request.onupgradeneeded = () => {
+    const db = request.result;
+    if (!db.objectStoreNames.contains(REPORTS_STORE)) db.createObjectStore(REPORTS_STORE, { keyPath: 'id' });
+  };
+  request.onsuccess = () => resolve(request.result);
+});
+
+const loadLocalReports = async (): Promise<any[]> => {
+  try {
+    const db = await openReportsDB();
+    const items = await new Promise<any[]>((resolve, reject) => {
+      const request = db.transaction([REPORTS_STORE], 'readonly').objectStore(REPORTS_STORE).getAll();
+      request.onsuccess = () => resolve(request.result || []);
+      request.onerror = () => reject(request.error);
+    });
+    db.close();
+    return items;
+  } catch {
+    return [];
+  }
+};
+
+const saveLocalReport = async (report: any) => {
+  if (!report?.id || typeof indexedDB === 'undefined') return;
+  try {
+    const db = await openReportsDB();
+    db.transaction([REPORTS_STORE], 'readwrite').objectStore(REPORTS_STORE).put(report);
+    db.close();
+  } catch (error) {
+    console.error('Local report save failed:', error);
+  }
+};
+
 export default function Reports() {
   const [reports, setReports] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -14,15 +53,28 @@ export default function Reports() {
       socket.connect();
     }
 
+    void loadLocalReports().then((localReports) => {
+      if (!isMounted) return;
+      setReports(localReports.sort((a: any, b: any) => (b.timestamp || 0) - (a.timestamp || 0)));
+    });
+
+    // Request is live-only; the server deliberately returns no MongoDB history.
     socket.emit('user_report_history_request');
 
     const handleHistoryResponse = (data: any) => {
-      if (!isMounted || !Array.isArray(data?.reports)) return;
-      setReports(data.reports.sort((a: any, b: any) => (b.timestamp || 0) - (a.timestamp || 0)));
+      if (!isMounted || !Array.isArray(data?.reports) || data.reports.length === 0) return;
+      data.reports.forEach((report: any) => void saveLocalReport(report));
+      setReports((prev) => {
+        const map = new Map<string, any>();
+        prev.forEach((item) => map.set(item.id, item));
+        data.reports.forEach((item: any) => map.set(item.id, item));
+        return Array.from(map.values()).sort((a: any, b: any) => (b.timestamp || 0) - (a.timestamp || 0));
+      });
     };
 
     const handleNewReport = (data: any) => {
       if (!isMounted || !data?.id) return;
+      void saveLocalReport(data);
       setReports((prev) => {
         if (prev.some((m) => m.id === data.id)) return prev;
         return [data, ...prev].sort((a: any, b: any) => (b.timestamp || 0) - (a.timestamp || 0));
