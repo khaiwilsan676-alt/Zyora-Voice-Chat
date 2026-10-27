@@ -149,6 +149,21 @@ fun PublicProfileScreen(
     val flag = targetUser?.flag ?: "🇮🇳"
     val location = targetUser?.location ?: "India"
 
+    LaunchedEffect(targetUser?.uid, targetUser?.id, targetUser?.accountId) {
+        val saved = ProfilePersistence.load(targetUser) ?: return@LaunchedEffect
+        saved.optString("name").takeIf { it.isNotBlank() && it != "null" }?.let { userName = it }
+        saved.optString("bio").takeIf { it != "null" }?.let { userBio = it }
+        if (saved.has("age")) userAge = saved.optInt("age", userAge)
+        val savedAvatar = sequenceOf("image", "photo", "photoURL", "avatar").map { saved.optString(it, "") }
+            .firstOrNull { it.isNotBlank() && it != "null" }
+        if (!savedAvatar.isNullOrBlank()) selectedAvatarUri = savedAvatar
+        val albums = ProfilePersistence.stringList(saved.optString("albumImages", ""))
+        if (albums.isNotEmpty()) albumImages = albums
+        val covers = ProfilePersistence.stringList(saved.optString("coverPhotos", ""))
+        if (covers.isNotEmpty()) coverPhotos = covers
+        else saved.optString("coverPhoto").takeIf { it.isNotBlank() && it != "null" }?.let { coverPhotos = listOf(it) }
+    }
+
     val avatarLetter = userName.take(1).uppercase()
     
     Box(
