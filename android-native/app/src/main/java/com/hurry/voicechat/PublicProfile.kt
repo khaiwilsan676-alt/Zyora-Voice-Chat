@@ -204,7 +204,6 @@ fun PublicProfileScreen(
                         }
                         if (isOtherUser) {
                             IconButton(onClick = { showActionSheet = true }) {
-                                // Yaha sirf outlined warning icon diya hai
                                 Icon(Icons.Outlined.Warning, "Report", tint = Color.White)
                             }
                         } else {
@@ -244,41 +243,56 @@ fun PublicProfileScreen(
                         .padding(horizontal = 16.dp, vertical = 16.dp)
                         .padding(top = 4.dp)
                 ) {
-                    // Name & Badges using FlowRow
-                    FlowRow(
-                        maxItemsInEachRow = 3,
-                        verticalArrangement = Arrangement.Center,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp), 
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp)
+                    val genderStr = userGender.trim().ifEmpty { "Male" }
+                    val isFemale = genderStr.equals("female", ignoreCase = true)
+                    
+                    // Name format logic: Max 8 characters
+                    val displayName = if (userName.length > 8) userName.take(8) + "..." else userName
+
+                    // Custom Layout for Name, Gender and Tags (Row 1 & Row 2)
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        Text(userName, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.Black, modifier = Modifier.align(Alignment.CenterVertically))
-                        
-                        val genderStr = userGender.trim().ifEmpty { "Male" }
-                        val isFemale = genderStr.equals("female", ignoreCase = true)
-                        
-                        // CUSTOM DESIGN ICON BOX
-                        Box(
-                            modifier = Modifier
-                                .align(Alignment.CenterVertically)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(if (isFemale) Color(0xFFFF5874) else Color(0xFF3B82F6))
-                                .padding(horizontal = 6.dp, vertical = 3.dp)
+                        // ROW 1: Name, Gender Tag, Official Head (bada), Official (chhota)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            Text(displayName, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                            
+                            // GENDER BOX (Fully Rounded & Smaller)
+                            Box(
+                                modifier = Modifier
+                                    .clip(CircleShape) // Fully round kar diya
+                                    .background(if (isFemale) Color(0xFFFF5874) else Color(0xFF3B82F6))
+                                    .padding(horizontal = 5.dp, vertical = 2.dp) // Thoda chhota kar diya
                             ) {
-                                CustomGenderIcon(isFemale = isFemale, modifier = Modifier.size(10.dp))
-                                Text(text = userAge.toString(), color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                ) {
+                                    CustomGenderIcon(isFemale = isFemale, modifier = Modifier.size(8.dp)) // Icon chhota
+                                    Text(text = userAge.toString(), color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold) // Text chhota
+                                }
                             }
+
+                            // TAG 1: Official Head (Size utna hi rakha hai - 30.dp)
+                            AsyncImage(model = profileAsset("/file_00000000ef2c82118b2266596d0e992d.png"), contentDescription = "Official Head", contentScale = ContentScale.Fit, modifier = Modifier.height(31.dp).widthIn(max = 80.dp))
+                            
+                            // TAG 2: Official (Size chhota kar diya - 22.dp)
+                            AsyncImage(model = profileAsset("/IMG_20261027_102250.png"), contentDescription = "Official", contentScale = ContentScale.Fit, modifier = Modifier.height(22.dp).widthIn(max = 60.dp))
                         }
 
-                        // Badges with paths
-                        AsyncImage(model = profileAsset("/file_00000000ef2c82118b2266596d0e992d.png"), contentDescription = "Official Head", contentScale = ContentScale.Fit, modifier = Modifier.height(30.dp).widthIn(max = 80.dp).align(Alignment.CenterVertically))
-                        AsyncImage(model = profileAsset("/IMG_20261027_102250.png"), contentDescription = "Official", contentScale = ContentScale.Fit, modifier = Modifier.height(27.dp).widthIn(max = 80.dp).align(Alignment.CenterVertically))
-                        AsyncImage(model = profileAsset("/IMG_20261027_114117.png"), contentDescription = "Admin", contentScale = ContentScale.Fit, modifier = Modifier.height(27.dp).widthIn(max = 80.dp).align(Alignment.CenterVertically))
-                        AsyncImage(model = profileAsset("/IMG_20261027_102207.png"), contentDescription = "Service / CS", contentScale = ContentScale.Fit, modifier = Modifier.height(27.dp).widthIn(max = 80.dp).align(Alignment.CenterVertically))
-                        AsyncImage(model = profileAsset("/IMG_20261027_105359.png"), contentDescription = "Coin Seller", contentScale = ContentScale.Fit, modifier = Modifier.height(27.dp).widthIn(max = 80.dp).align(Alignment.CenterVertically))
+                        // ROW 2: Baaki 3 Tags (Size chhota kar diya - 22.dp)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            AsyncImage(model = profileAsset("/IMG_20261027_114117.png"), contentDescription = "Admin", contentScale = ContentScale.Fit, modifier = Modifier.height(22.dp).widthIn(max = 60.dp))
+                            AsyncImage(model = profileAsset("/IMG_20261027_102207.png"), contentDescription = "Service / CS", contentScale = ContentScale.Fit, modifier = Modifier.height(22.dp).widthIn(max = 60.dp))
+                            AsyncImage(model = profileAsset("/IMG_20261027_105359.png"), contentDescription = "Coin Seller", contentScale = ContentScale.Fit, modifier = Modifier.height(22.dp).widthIn(max = 60.dp))
+                        }
                     }
 
                     // ID & Followers
@@ -349,7 +363,7 @@ fun PublicProfileScreen(
             item {
                 Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
                     
-                    // Albums - Yaha spacer kam kar diya (8.dp) taaki image title ke paas ho
+                    // Albums
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         SectionHeader("Albums", "${albumImages.size}/4")
                         if (albumImages.isNotEmpty()) {
@@ -368,7 +382,7 @@ fun PublicProfileScreen(
                         }
                     }
                     
-                    Spacer(modifier = Modifier.height(20.dp)) // Alag section ke beech ka gap
+                    Spacer(modifier = Modifier.height(20.dp)) 
 
                     // Vehicle
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -435,16 +449,16 @@ fun PublicProfileScreen(
                     modifier = Modifier.weight(1f).height(48.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF5874)),
                     shape = RoundedCornerShape(16.dp),
-                    contentPadding = PaddingValues(horizontal = 8.dp) // Ensures text does not wrap
+                    contentPadding = PaddingValues(horizontal = 8.dp) 
                 ) {
                     Icon(Icons.Default.Favorite, null, tint = Color.White, modifier = Modifier.size(20.dp))
-                    Spacer(modifier = Modifier.width(4.dp)) // Spacer chhota kiya
+                    Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = if (isFollowing) "Following" else "Follow", 
                         fontSize = 16.sp, 
                         fontWeight = FontWeight.Medium,
-                        maxLines = 1, // Ek hi line mein rahega
-                        softWrap = false, // Niche nahi jayega
+                        maxLines = 1, 
+                        softWrap = false, 
                         overflow = TextOverflow.Ellipsis
                     )
                 }
@@ -470,7 +484,7 @@ fun PublicProfileScreen(
             containerColor = Color.Black,
             contentColor = Color.White,
             scrimColor = Color.Black.copy(alpha = 0.28f),
-            shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp), // CHANGED TO 12.dp
+            shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp),
             dragHandle = null
         ) {
             Column(
@@ -483,18 +497,18 @@ fun PublicProfileScreen(
                         showUserReport = true
                     }.padding(vertical = 16.dp),
                     color = Color.White,
-                    fontSize = 16.sp, // TEXT SIZE REDUCED
+                    fontSize = 16.sp,
                     textAlign = TextAlign.Center,
                     fontWeight = FontWeight.Medium
                 )
                 Text(
-                    "Block/Unblock", // TEXT CHANGED
+                    "Block",
                     modifier = Modifier.fillMaxWidth().clickable {
                         showActionSheet = false
                         Toast.makeText(context, "Block user", Toast.LENGTH_SHORT).show()
                     }.padding(vertical = 16.dp),
                     color = Color.White,
-                    fontSize = 16.sp, // TEXT SIZE REDUCED
+                    fontSize = 16.sp,
                     textAlign = TextAlign.Center,
                     fontWeight = FontWeight.Medium
                 )
@@ -502,9 +516,9 @@ fun PublicProfileScreen(
                 Button(
                     onClick = { showActionSheet = false },
                     modifier = Modifier
-                        .width(250.dp) // BUTTON WIDE KAM KIYA
-                        .height(52.dp) // HEIGHT BADHA DI
-                        .align(Alignment.CenterHorizontally), // CENTER MEIN LAANE KE LIYE
+                        .width(280.dp)
+                        .height(55.dp)
+                        .align(Alignment.CenterHorizontally),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B82F6)),
                     shape = RoundedCornerShape(12.dp)
                 ) { Text("Cancel", color = Color.White) }
