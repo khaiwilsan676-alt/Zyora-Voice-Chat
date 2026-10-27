@@ -199,6 +199,7 @@ private fun MemberRow(
         Text(name.ifBlank { "User" }, Modifier.weight(1f).padding(start = 11.dp),
             fontSize = 13.sp, fontWeight = FontWeight.Medium, color = Color.White, maxLines = 1)
         if (role == "Owner") {
+            Spacer(Modifier.weight(1f))
             Box(
                 Modifier.padding(start = 8.dp).size(24.dp).clip(CircleShape).background(Color(0xFF3B82F6)),
                 contentAlignment = Alignment.Center
