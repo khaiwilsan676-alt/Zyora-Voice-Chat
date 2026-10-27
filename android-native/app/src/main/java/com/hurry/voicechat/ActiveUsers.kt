@@ -52,8 +52,8 @@ fun ActiveUsers(
     item(key="__current_user__"){
      Row(Modifier.fillMaxWidth().padding(horizontal=4.dp),verticalAlignment=Alignment.CenterVertically){
       AsyncImage(model=currentUser.image.ifBlank{"/default-avatar.png"},contentDescription=currentUser.name,modifier=Modifier.size(32.dp).clip(CircleShape).clickable{onOpenProfile(currentUser)},contentScale=ContentScale.Crop)
-      Row(Modifier.weight(1f).padding(start=8.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(6.dp)){
-       Text(currentUser.name.ifBlank{"Owner"},fontSize=12.sp,fontWeight=FontWeight.SemiBold,color=Color.White,maxLines=1)
+      Text(currentUser.name.ifBlank{"Owner"},modifier=Modifier.weight(1f).padding(start=8.dp),fontSize=12.sp,fontWeight=FontWeight.SemiBold,color=Color.White,maxLines=1)
+      Box(Modifier.size(24.dp).clip(CircleShape).background(Color(0xFF3B82F6)),contentAlignment=Alignment.Center){
        androidx.compose.material3.Icon(
         imageVector=Icons.Filled.Home,
         contentDescription="Room owner",
