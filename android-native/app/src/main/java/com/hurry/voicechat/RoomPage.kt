@@ -1616,12 +1616,8 @@ private fun formatMusicTime(seconds: Float): String {
                     AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20260917_220530.png",contentDescription="Level Lv.1 - Lv.10",contentScale=ContentScale.Fit,modifier=Modifier.fillMaxSize())
                     Text("Lv.1",color=Color.White,fontSize=8.sp,fontWeight=FontWeight.Bold,modifier=Modifier.align(Alignment.Center).padding(start=5.dp,top=1.dp))
                 }
-            }
-            if (officialHeadTag || officialTag) {
-                Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(3.dp)){
-                    if(officialHeadTag) AsyncImage(model="https://zyora-voice-chat.vercel.app/file_00000000ef2c82118b2266596d0e992d.png",contentDescription="Official Head",contentScale=ContentScale.Fit,modifier=Modifier.height(25.dp).widthIn(max=68.dp))
-                    if(officialTag) AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261027_102250.png",contentDescription="Official",contentScale=ContentScale.Fit,modifier=Modifier.height(22.dp).widthIn(max=60.dp))
-                }
+                if(officialHeadTag) AsyncImage(model="https://zyora-voice-chat.vercel.app/file_00000000ef2c82118b2266596d0e992d.png",contentDescription="Official Head",contentScale=ContentScale.Fit,modifier=Modifier.height(25.dp).widthIn(max=68.dp))
+                if(officialTag) AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261027_102250.png",contentDescription="Official",contentScale=ContentScale.Fit,modifier=Modifier.height(22.dp).widthIn(max=60.dp))
             }
             if (adminTag || serviceTag || coinSellerTag) {
                 Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(3.dp)){
