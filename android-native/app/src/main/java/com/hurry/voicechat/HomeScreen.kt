@@ -130,7 +130,7 @@ private val countryPills = listOf(
     CountryPill("🇹🇷", "Turkey",       "Turkey")
 )
 
-private fun countryFlag(country: String): String {
+fun countryFlag(country: String): String {
     val value = country.trim()
     return when {
         value.contains("india", ignoreCase = true) || value.contains("🇮🇳") -> "🇮🇳"
