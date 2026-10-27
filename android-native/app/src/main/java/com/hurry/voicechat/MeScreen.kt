@@ -13,6 +13,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -130,7 +132,7 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
                                 )
                                 Text(account, fontSize = 12.sp, fontWeight = FontWeight.Medium, color = Color(0xFF111827))
                                 androidx.compose.material3.Icon(
-                                    imageVector = androidx.compose.material.icons.filled.ContentCopy,
+                                    imageVector = Icons.Filled.ContentCopy,
                                     contentDescription = "Copy ID",
                                     tint = Color(0xFF555555),
                                     modifier = Modifier.size(16.dp).clickable {
