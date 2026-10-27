@@ -538,7 +538,7 @@ private fun KeptRoomBubble(room: HurryRoom, onOpen: () -> Unit, onExit: () -> Un
         }
         Box(
             Modifier.align(Alignment.BottomEnd)
-                .padding(end = 12.dp, bottom = 111.dp)
+                .padding(end = 12.dp, bottom = 176.dp)
                 .offset { IntOffset(drag.x.roundToInt(), drag.y.roundToInt()) }
                 .size(56.dp).clip(RoundedCornerShape(50))
                 .background(Color.White)
