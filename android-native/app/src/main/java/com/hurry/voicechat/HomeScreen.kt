@@ -1,5 +1,7 @@
 package com.hurry.voicechat
 
+import androidx.compose.animation.core.animateFloat
+
 import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
