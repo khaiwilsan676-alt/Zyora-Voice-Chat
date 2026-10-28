@@ -125,7 +125,7 @@ private val nativeStoreItems = listOf(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun StorePage(onBack: () -> Unit = {}, initialView: String = "store") {
+fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: String = "") {
     var currentView by remember { mutableStateOf(if (initialView.equals("bag", true)) "bag" else "store") }
     var activeTab by remember { mutableStateOf("Vehicle") }
     var selectedItem by remember { mutableStateOf<NativeStoreItem?>(null) }
