@@ -275,6 +275,10 @@ fun PublicProfileScreen(
                         userId = targetUser?.accountId?.takeIf { it.isNotBlank() } ?: targetUser?.uid?.takeIf { it.isNotBlank() } ?: targetUser?.id.orEmpty(),
                         modifier = Modifier.align(Alignment.BottomStart).padding(start = 16.dp).offset(y = (-16).dp).size(86.dp)
                     )
+                    NativeAvatarFrameOverlay(
+                        userId = targetUser?.accountId?.takeIf { it.isNotBlank() } ?: targetUser?.uid?.takeIf { it.isNotBlank() } ?: targetUser?.id.orEmpty(),
+                        modifier = Modifier.align(Alignment.BottomStart).padding(start = 16.dp).offset(y = (-16).dp).size(86.dp)
+                    )
 
                     // Top Bar
                     Row(
