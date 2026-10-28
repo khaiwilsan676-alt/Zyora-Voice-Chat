@@ -617,7 +617,12 @@ fun RoomPage(
                         }.getOrDefault("")
                         if (vehicleVideo.isNotBlank()) mainHandler.post {
                             val index = entryToasts.indexOfFirst { it.id == id }
-                            if (index >= 0) entryToasts[index] = entryToasts[index].copy(vehicleVideo = vehicleVideo)
+                            if (index >= 0) {
+                                entryToasts[index] = entryToasts[index].copy(vehicleVideo = vehicleVideo)
+                            } else {
+                                entryToasts.add(NativeEntryToast(id, sender, image, vehicleVideo))
+                                mainHandler.postDelayed({ entryToasts.removeAll { it.id == id } }, 4000)
+                            }
                         }
                     }
                 }
@@ -707,7 +712,12 @@ fun RoomPage(
                     }.getOrDefault("")
                     if (vehicleVideo.isNotBlank()) mainHandler.post {
                         val index = entryToasts.indexOfFirst { it.id == joinId }
-                        if (index >= 0) entryToasts[index] = entryToasts[index].copy(vehicleVideo = vehicleVideo)
+                        if (index >= 0) {
+                            entryToasts[index] = entryToasts[index].copy(vehicleVideo = vehicleVideo)
+                        } else {
+                            entryToasts.add(NativeEntryToast(joinId, joinName, joinImage, vehicleVideo))
+                            mainHandler.postDelayed({ entryToasts.removeAll { it.id == joinId } }, 4000)
+                        }
                     }
                 }
                 roomSocket.emit("room_message",joinMessage)
