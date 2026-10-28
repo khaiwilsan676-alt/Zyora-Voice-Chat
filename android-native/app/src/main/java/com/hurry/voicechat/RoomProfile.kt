@@ -409,6 +409,10 @@ fun RoomProfile(
                             .clip(CircleShape)
                             .background(Color.LightGray)
                     )
+                    NativeAvatarFrameOverlay(
+                        userId = user.accountId.ifBlank { user.uid.ifBlank { user.id } },
+                        modifier = Modifier.fillMaxSize()
+                    )
                     
                 }
 
