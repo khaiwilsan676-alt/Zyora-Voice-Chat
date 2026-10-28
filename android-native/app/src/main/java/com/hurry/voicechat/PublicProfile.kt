@@ -585,15 +585,14 @@ fun PublicProfileScreen(
                             val savedUri = uriToCrop
                             if (savedUri != null) {
                                 selectedAvatarUri = savedUri
-                                if (!isOtherUser) coroutineScope.launch { 
+                                if (!isOtherUser) {
                                     val fields = mapOf("image" to savedUri, "photo" to savedUri)
-                                    ProfilePersistence.save(targetUser, fields)
-                                    if (profileCacheKey.isNotBlank()) { 
-                                        val db = NativeIndexDatabase(context)
-                                        val cached = db.loadProfile(profileCacheKey) ?: org.json.JSONObject()
-                                        fields.forEach { (key, value) -> if (value.isBlank() || value == "[]") cached.remove(key) else cached.put(key, value) }
-                                        listOf(targetUser?.uid, targetUser?.id, targetUser?.accountId, targetUser?.displayAccountNumber, profileCacheKey).filter { !it.isNullOrBlank() }.distinct().forEach { db.saveProfile(it!!, cached) } 
-                                    } 
+                                    // Save the new DP to index.db immediately so the app uses it
+                                    // on the next open, while MongoDB is updated in the background.
+                                    ProfilePersistence.updateCache(context, profileCacheKeys, fields)
+                                    coroutineScope.launch {
+                                        ProfilePersistence.save(targetUser, fields)
+                                    }
                                 }
                             }
                             uriToCrop = null
