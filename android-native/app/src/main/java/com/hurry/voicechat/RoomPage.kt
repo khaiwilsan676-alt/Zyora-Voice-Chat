@@ -69,6 +69,9 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.basicMarquee
 import coil3.compose.AsyncImage
 
+// Room Admin Tag image kept in code for future use
+const val ROOM_ADMIN_TAG = "https://zyora-voice-chat.vercel.app/IMG_20261027_235628.png"
+
 // Optimized Shader-like CPU logic to prevent room hanging
 @Composable
 fun TransparentGreenImage(url: String, modifier: Modifier = Modifier) {
@@ -788,21 +791,21 @@ fun RoomPage(
                             Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp), modifier=Modifier.clickable { selectedChatProfile = message }){
                                 FallbackAsyncImage(model=message.senderImage,contentDescription=message.sender,modifier=Modifier.size(24.dp).clip(CircleShape),contentScale=ContentScale.Crop)
                                 Text(message.sender,color=Color.White.copy(alpha=.95f),fontSize=12.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold)
+                                
                                 val isRoomOwnerMessage = message.senderAccountId == roomOwner.accountId.ifBlank { roomOwner.id }
                                 if (isRoomOwnerMessage) {
-                                    Box(Modifier.size(14.dp).clip(CircleShape).background(Color(0xFF3B82F6)),contentAlignment=Alignment.Center) {
-                                        androidx.compose.material3.Icon(imageVector=Icons.Filled.Home,contentDescription="Owner",modifier=Modifier.size(9.dp),tint=Color.White)
-                                    }
+                                    AsyncImage(model = "https://zyora-voice-chat.vercel.app/IMG_20261027_235537.png", contentDescription = "Owner", contentScale = ContentScale.Fit, modifier = Modifier.height(16.dp))
                                 }
+                                
                                 Box(modifier = Modifier.height(18.dp).width(36.dp), contentAlignment = Alignment.CenterEnd) {
                                     AsyncImage(model = "https://zyora-voice-chat.vercel.app/IMG_20261028_004355.png", contentDescription = "Level", contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
-                                    Text("Lv.1", color = Color.White, fontSize = 7.sp, fontWeight = FontWeight.Normal, modifier = Modifier.padding(end = 4.dp))
+                                    Text("Lv.1", color = Color.White, fontSize = 7.sp, fontWeight = FontWeight.Normal, modifier = Modifier.padding(end = 2.dp))
                                 }
                                 AsyncImage(model = "https://zyora-voice-chat.vercel.app/file_0000000063b481fa89d3c7729265058b.png", contentDescription = "Purple ID Badge", contentScale = ContentScale.Fit, modifier = Modifier.size(18.dp))
                             }
                             Text("Enter the Room",color=Color.White,fontSize=12.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Medium, modifier=Modifier.padding(start=2.dp).clickable { selectedChatProfile = message })
                         }
-                    } else NativeMessage(message, onAvatarClick = { selectedChatProfile = message })
+                    } else NativeMessage(message, roomOwnerId = roomOwner.accountId.ifBlank { roomOwner.id }, onAvatarClick = { selectedChatProfile = message })
                 }
             }
             
@@ -1600,9 +1603,7 @@ private fun formatMusicTime(seconds: Float): String {
         
         if (seat.occupied && seat.accountId == ownerId) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
-                Box(Modifier.size(14.dp).clip(CircleShape).background(Color(0xFF3B82F6)), contentAlignment = Alignment.Center) {
-                    androidx.compose.material3.Icon(imageVector = Icons.Filled.Home, contentDescription = "Owner", tint = Color.White, modifier = Modifier.size(9.dp))
-                }
+                AsyncImage(model = "https://zyora-voice-chat.vercel.app/IMG_20261027_235537.png", contentDescription = "Owner", contentScale = ContentScale.Fit, modifier = Modifier.height(14.dp))
                 Spacer(Modifier.width(4.dp))
                 Text(seat.userName, color = Color.White.copy(.9f), fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
             }
@@ -1612,7 +1613,7 @@ private fun formatMusicTime(seconds: Float): String {
     }
 }
 
-@Composable private fun NativeMessage(m:NativeRoomMessage, onAvatarClick: () -> Unit = {}){
+@Composable private fun NativeMessage(m:NativeRoomMessage, roomOwnerId: String, onAvatarClick: () -> Unit = {}){
     val context = LocalContext.current
     val profileDb = remember(context) { NativeIndexDatabase(context) }
     var profileTags by remember(m.senderAccountId) { mutableStateOf(profileDb.loadProfile(m.senderAccountId)) }
@@ -1641,17 +1642,24 @@ private fun formatMusicTime(seconds: Float): String {
     val hostTag = true
     val coinSellerTag = true
     
+    val isRoomOwnerMessage = m.senderAccountId == roomOwnerId
+    
     Row(Modifier.fillMaxWidth().padding(vertical=2.dp),verticalAlignment=Alignment.Top,horizontalArrangement=Arrangement.Start){
         FallbackAsyncImage(model=m.senderImage.ifBlank { profileTags?.optString("image").orEmpty() },contentDescription=m.sender,modifier=Modifier.padding(top=2.dp).size(28.dp).clip(CircleShape).border(1.dp, Color.White.copy(alpha=.1f), CircleShape).clickable(onClick = onAvatarClick),contentScale=ContentScale.Crop)
         Column(Modifier.padding(start=8.dp).fillMaxWidth(.75f),verticalArrangement=Arrangement.spacedBy(2.dp)){
             Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(3.dp)){
                 Text(m.sender.ifBlank { profileTags?.optString("name").orEmpty() },color=Color.White.copy(alpha=.9f),fontSize=12.sp,lineHeight=13.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold,maxLines=1,overflow=TextOverflow.Ellipsis)
+                
+                if (isRoomOwnerMessage) {
+                    AsyncImage(model = "https://zyora-voice-chat.vercel.app/IMG_20261027_235537.png", contentDescription = "Owner", contentScale = ContentScale.Fit, modifier = Modifier.height(16.dp))
+                }
+
                 Box(modifier = Modifier.height(18.dp).width(36.dp), contentAlignment = Alignment.CenterEnd) {
                     AsyncImage(model = "https://zyora-voice-chat.vercel.app/IMG_20261028_004355.png", contentDescription = "Level", contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
-                    Text("Lv.1", color = Color.White, fontSize = 7.sp, fontWeight = FontWeight.Normal, modifier = Modifier.padding(end = 4.dp))
+                    Text("Lv.1", color = Color.White, fontSize = 7.sp, fontWeight = FontWeight.Normal, modifier = Modifier.padding(end = 2.dp))
                 }
                 if(officialHeadTag) AsyncImage(model="https://zyora-voice-chat.vercel.app/file_000000005c388246a5d95dba880d7eb9.png",contentDescription="Official Head",contentScale=ContentScale.Fit,modifier=Modifier.height(20.dp).widthIn(max=68.dp))
-                if(officialTag) AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261027_102250.png",contentDescription="Official",contentScale=ContentScale.Fit,modifier=Modifier.height(19.dp).widthIn(max=60.dp))
+                if(officialTag) AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261027_102250.png",contentDescription="Official",contentScale=ContentScale.Fit,modifier=Modifier.height(18.dp).widthIn(max=60.dp))
             }
             if (adminTag || serviceTag || hostTag || coinSellerTag) {
                 Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(3.dp)){
