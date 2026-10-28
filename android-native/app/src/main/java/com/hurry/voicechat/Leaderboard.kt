@@ -1,4 +1,5 @@
 package com.hurry.voicechat
+
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -23,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -32,6 +34,7 @@ import java.util.concurrent.ConcurrentHashMap
 private object LeaderboardChromaCache {
     val images = ConcurrentHashMap<String, ImageBitmap>()
 }
+
 @Composable
 private fun LeaderboardChromaImage(url: String, contentDescription: String?, modifier: Modifier, contentScale: ContentScale = ContentScale.Fit) {
     var bitmap by remember(url) { mutableStateOf(LeaderboardChromaCache.images[url]) }
@@ -65,23 +68,30 @@ private fun LeaderboardChromaImage(url: String, contentDescription: String?, mod
 
 @Composable
 fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
-    var tab by remember { mutableStateOf(initialTab) }; var period by remember { mutableStateOf("daily") }; var showRules by remember { mutableStateOf(false) }
+    var tab by remember { mutableStateOf(initialTab) }
+    var period by remember { mutableStateOf("daily") }
+    var showRules by remember { mutableStateOf(false) }
+    
     val tabs=listOf("honour" to "Honour","charm" to "Charm","room" to "Room")
     val periods=listOf("daily" to "Daily","weekly" to "Weekly","monthly" to "Monthly")
     val raw = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/"
+    
     val topImage = when (tab) {
         "charm" -> "file_0000000086f481fa8653fc12d2577596.png"
         "room" -> "file_00000000619c822f8a1577f69e039527.png"
         else -> "file_00000000b83c81fa93d3e53e046c1b81.png"
     }
+    
     val context = LocalContext.current
     val authPrefs = remember { context.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE) }
     val ownName = authPrefs.getString("name", authPrefs.getString("displayName", "You")).orEmpty().ifBlank { "You" }
     val ownAvatar = authPrefs.getString("avatar", authPrefs.getString("image", "/default-avatar.png")).orEmpty().let { if (it.startsWith("http")) it else raw + it.removePrefix("/") }
+    
     val screenHeight = LocalConfiguration.current.screenHeightDp.dp
     val screenWidthDp = LocalConfiguration.current.screenWidthDp
     val podiumTopWidth = (screenWidthDp * 0.44f).coerceAtMost(180f).dp
     val podiumSideWidth = (screenWidthDp * 0.40f).coerceAtMost(160f).dp
+
     Box(Modifier.fillMaxSize().background(Color(0xFF1A0204))) {
         Box(Modifier.fillMaxWidth().height(screenHeight * 0.60f).align(Alignment.TopCenter)) {
             AsyncImage(
@@ -182,6 +192,9 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                     Text("${i+4}",color=Color.White,fontSize=18.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Bold,modifier=Modifier.align(Alignment.CenterStart).padding(start=40.dp))
                 }}
             }
+            
+            // Bottom user row: Yahan apna brown card (Color 0xFF2A1714) wapas laga diya hai
+            // Jiske upar direct avatar, naam aur +100 dikhega.
             Row(
                 Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp).height(62.dp)
                     .clip(RoundedCornerShape(14.dp))
@@ -199,24 +212,39 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                 Text(ownName, color=Color.White, fontSize=14.sp, fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold, modifier=Modifier.weight(1f), maxLines=1)
                 Text("+100", color=Color(0xFFE7B865), fontSize=17.sp, fontWeight=androidx.compose.ui.text.font.FontWeight.Bold)
             }
+
             if (showRules) {
                 androidx.compose.ui.window.Dialog(
                     onDismissRequest = { showRules = false },
                     properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
                 ) {
                     Box(Modifier.fillMaxSize().background(Color(0x99000000)).clickable { showRules = false },contentAlignment=Alignment.BottomCenter) {
-                        Column(Modifier.fillMaxWidth().fillMaxHeight(0.82f).clip(RoundedCornerShape(topStart=16.dp,topEnd=16.dp)).background(Color(0xFF1A0204)).clickable { }.padding(20.dp)) {
-                            Text("Rules",color=Color(0xFFE7B865),fontSize=20.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Bold,modifier=Modifier.align(Alignment.CenterHorizontally))
-                            Spacer(Modifier.height(20.dp))
-                            Column(Modifier.weight(1f).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(14.dp)) {
-                                Text("Contribution Leaderboard: ranking is determined by Coins spent in the room.",color=Color.White)
-                                Text("Charm Leaderboard: ranking is determined by Coins received.",color=Color.White)
-                                Text("Room Leaderboard: ranking is determined by Coins spent in the room.",color=Color.White)
-                                Divider(color=Color(0x4DD4AF37))
-                                Text("Data Periods",color=Color(0xFFE7B865),fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold)
-                                Text("Daily: finalized every day at 5:30+GMT. Weekly: every Monday at 5:30+GMT. Monthly: on the first day of each month at 5:30+GMT.",color=Color.White)
-                                Text("Users who violate platform rules are ineligible. The platform reserves the right to make the final decision.",color=Color.White)
-                                Text("Regards, Zyora Team",color=Color(0xFFE7B865),modifier=Modifier.align(Alignment.End))
+                        Column(
+                            Modifier.fillMaxWidth()
+                                .fillMaxHeight(0.60f)
+                                .clip(RoundedCornerShape(topStart=16.dp,topEnd=16.dp))
+                                .background(Color(0xFF1A0204))
+                                .clickable { }
+                                .padding(20.dp)
+                        ) {
+                            Text("Rules",color=Color(0xFFE7B865),fontSize=18.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Bold,modifier=Modifier.align(Alignment.CenterHorizontally))
+                            Spacer(Modifier.height(16.dp))
+                            
+                            Column(Modifier.weight(1f).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                                Text("Contribution Leaderboard: Your ranking on this leaderboard is determined by the total number of Coins you have spent in the room. The higher the amount spent, the higher your position on the leaderboard.",color=Color.White, fontSize = 12.sp)
+                                Text("Charm Leaderboard: Your ranking on this leaderboard is determined by the total number of Coins you Receive. The higher the amount spent, the higher your position on the leaderboard.",color=Color.White, fontSize = 12.sp)
+                                Text("Room Leaderboard: Your ranking on this leaderboard is determined by the total number of Coins you have spent in the room. The higher the amount spent, the higher your position on the leaderboard.",color=Color.White, fontSize = 12.sp)
+                                
+                                Spacer(Modifier.height(4.dp))
+                                Text("Data Periods",color=Color(0xFFE7B865),fontSize = 14.sp, fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold)
+                                Text("1. Daily leaderboard data is finalized every day at (5:30+GMT).\n2. Weekly leaderboard data is finalized every Monday at (5:30+GMT).\n3. Monthly leaderboard data is finalized on the first day of every month at (5:30+GMT).",color=Color.White, fontSize = 12.sp)
+                                
+                                Spacer(Modifier.height(4.dp))
+                                Text("Note: Users who violate platform rules are ineligible to participate in the rankings.",color=Color.White, fontSize = 12.sp)
+                                Text("The platform reserves the right to make the final decision.",color=Color.White, fontSize = 12.sp)
+                                
+                                Spacer(Modifier.height(12.dp))
+                                Text("Regard Zyora team",color=Color(0xFFE7B865), fontSize = 12.sp, modifier=Modifier.fillMaxWidth(), textAlign = TextAlign.End)
                             }
                         }
                     }
