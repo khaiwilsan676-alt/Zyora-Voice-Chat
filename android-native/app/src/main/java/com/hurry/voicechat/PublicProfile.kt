@@ -150,10 +150,10 @@ fun PublicProfileScreen(
         }
     }
     val albumPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        uri?.let { picked -> if (albumImages.size < 4) { val saved = ProfilePersistence.imageDataUri(context, picked) ?: picked.toString(); albumImages = albumImages + saved; if (!isOtherUser) coroutineScope.launch { val fields = mapOf("albumImages" to org.json.JSONArray(albumImages).toString()); ProfilePersistence.save(targetUser, fields); if (profileCacheKey.isNotBlank()) { val db = NativeIndexDatabase(context); val cached = db.loadProfile(profileCacheKey) ?: org.json.JSONObject(); fields.forEach { (key, value) -> if (value.isBlank() || value == "[]") cached.remove(key) else cached.put(key, value) }; db.saveProfile(profileCacheKey, cached) } } } }
+        uri?.let { picked -> if (albumImages.size < 4) { val saved = ProfilePersistence.imageDataUri(context, picked) ?: picked.toString(); albumImages = albumImages + saved; if (!isOtherUser) coroutineScope.launch { val fields = mapOf("albumImages" to org.json.JSONArray(albumImages).toString()); ProfilePersistence.save(targetUser, fields); if (profileCacheKey.isNotBlank()) { val db = NativeIndexDatabase(context); val cached = db.loadProfile(profileCacheKey) ?: org.json.JSONObject(); fields.forEach { (key, value) -> if (value.isBlank() || value == "[]") cached.remove(key) else cached.put(key, value) }; listOf(targetUser?.uid, targetUser?.id, targetUser?.accountId, targetUser?.displayAccountNumber, profileCacheKey).filter { !it.isNullOrBlank() }.distinct().forEach { db.saveProfile(it!!, cached) } } } } }
     }
     val backgroundPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        uri?.let { picked -> if (coverPhotos.size < 4) { val saved = ProfilePersistence.imageDataUri(context, picked) ?: picked.toString(); coverPhotos = coverPhotos + saved; if (!isOtherUser) coroutineScope.launch { val fields = mapOf("coverPhotos" to org.json.JSONArray(coverPhotos).toString(), "coverPhoto" to saved); ProfilePersistence.save(targetUser, fields); if (profileCacheKey.isNotBlank()) { val db = NativeIndexDatabase(context); val cached = db.loadProfile(profileCacheKey) ?: org.json.JSONObject(); fields.forEach { (key, value) -> if (value.isBlank() || value == "[]") cached.remove(key) else cached.put(key, value) }; db.saveProfile(profileCacheKey, cached) } } } }
+        uri?.let { picked -> if (coverPhotos.size < 4) { val saved = ProfilePersistence.imageDataUri(context, picked) ?: picked.toString(); coverPhotos = coverPhotos + saved; if (!isOtherUser) coroutineScope.launch { val fields = mapOf("coverPhotos" to org.json.JSONArray(coverPhotos).toString(), "coverPhoto" to saved); ProfilePersistence.save(targetUser, fields); if (profileCacheKey.isNotBlank()) { val db = NativeIndexDatabase(context); val cached = db.loadProfile(profileCacheKey) ?: org.json.JSONObject(); fields.forEach { (key, value) -> if (value.isBlank() || value == "[]") cached.remove(key) else cached.put(key, value) }; listOf(targetUser?.uid, targetUser?.id, targetUser?.accountId, targetUser?.displayAccountNumber, profileCacheKey).filter { !it.isNullOrBlank() }.distinct().forEach { db.saveProfile(it!!, cached) } } } } }
     }
     
     val followers = targetUser?.followers ?: 0
@@ -183,7 +183,7 @@ fun PublicProfileScreen(
             }
         }
 
-        if (profileCacheKey.isNotBlank()) cache.saveProfile(profileCacheKey, merged)
+        if (profileCacheKey.isNotBlank()) listOf(targetUser?.uid, targetUser?.id, targetUser?.accountId, targetUser?.displayAccountNumber, profileCacheKey).filter { !it.isNullOrBlank() }.distinct().forEach { cache.saveProfile(it!!, merged) }
 
         merged.optString("name").takeIf { it.isNotBlank() && it != "null" }?.let { userName = it }
         
@@ -588,7 +588,7 @@ fun PublicProfileScreen(
                                         val db = NativeIndexDatabase(context)
                                         val cached = db.loadProfile(profileCacheKey) ?: org.json.JSONObject()
                                         fields.forEach { (key, value) -> if (value.isBlank() || value == "[]") cached.remove(key) else cached.put(key, value) }
-                                        db.saveProfile(profileCacheKey, cached) 
+                                        listOf(targetUser?.uid, targetUser?.id, targetUser?.accountId, targetUser?.displayAccountNumber, profileCacheKey).filter { !it.isNullOrBlank() }.distinct().forEach { db.saveProfile(it!!, cached) } 
                                     } 
                                 }
                             }
@@ -856,7 +856,7 @@ fun PublicProfileScreen(
                                                         val db = NativeIndexDatabase(context)
                                                         val cached = db.loadProfile(profileCacheKey) ?: org.json.JSONObject()
                                                         fields.forEach { (key, value) -> if (value.isBlank() || value == "[]") cached.remove(key) else cached.put(key, value) }
-                                                        db.saveProfile(profileCacheKey, cached) 
+                                                        listOf(targetUser?.uid, targetUser?.id, targetUser?.accountId, targetUser?.displayAccountNumber, profileCacheKey).filter { !it.isNullOrBlank() }.distinct().forEach { db.saveProfile(it!!, cached) } 
                                                     } 
                                                 }
                                             },
@@ -917,7 +917,7 @@ fun PublicProfileScreen(
                                                         val db = NativeIndexDatabase(context)
                                                         val cached = db.loadProfile(profileCacheKey) ?: org.json.JSONObject()
                                                         fields.forEach { (key, value) -> if (value.isBlank() || value == "[]") cached.remove(key) else cached.put(key, value) }
-                                                        db.saveProfile(profileCacheKey, cached) 
+                                                        listOf(targetUser?.uid, targetUser?.id, targetUser?.accountId, targetUser?.displayAccountNumber, profileCacheKey).filter { !it.isNullOrBlank() }.distinct().forEach { db.saveProfile(it!!, cached) } 
                                                     } 
                                                 }
                                             },
@@ -979,7 +979,7 @@ fun PublicProfileScreen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Button(
-                    onClick = { userName = tempName; showNameScreen = false; if (!isOtherUser) coroutineScope.launch { val fields = mapOf("name" to tempName, "displayName" to tempName, "userName" to tempName); ProfilePersistence.save(targetUser, fields); if (profileCacheKey.isNotBlank()) { val db = NativeIndexDatabase(context); val cached = db.loadProfile(profileCacheKey) ?: org.json.JSONObject(); fields.forEach { (key, value) -> if (value.isBlank() || value == "[]") cached.remove(key) else cached.put(key, value) }; db.saveProfile(profileCacheKey, cached) } } },
+                    onClick = { userName = tempName; showNameScreen = false; if (!isOtherUser) coroutineScope.launch { val fields = mapOf("name" to tempName, "displayName" to tempName, "userName" to tempName); ProfilePersistence.save(targetUser, fields); if (profileCacheKey.isNotBlank()) { val db = NativeIndexDatabase(context); val cached = db.loadProfile(profileCacheKey) ?: org.json.JSONObject(); fields.forEach { (key, value) -> if (value.isBlank() || value == "[]") cached.remove(key) else cached.put(key, value) }; listOf(targetUser?.uid, targetUser?.id, targetUser?.accountId, targetUser?.displayAccountNumber, profileCacheKey).filter { !it.isNullOrBlank() }.distinct().forEach { db.saveProfile(it!!, cached) } } } },
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).height(50.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1DC4E9)),
                     shape = RoundedCornerShape(12.dp)
@@ -1030,7 +1030,7 @@ fun PublicProfileScreen(
                 Spacer(modifier = Modifier.height(16.dp))
                 
                 Button(
-                    onClick = { userBio = tempBio; showBioScreen = false; if (!isOtherUser) coroutineScope.launch { val fields = mapOf("bio" to tempBio); ProfilePersistence.save(targetUser, fields); if (profileCacheKey.isNotBlank()) { val db = NativeIndexDatabase(context); val cached = db.loadProfile(profileCacheKey) ?: org.json.JSONObject(); fields.forEach { (key, value) -> if (value.isBlank() || value == "[]") cached.remove(key) else cached.put(key, value) }; db.saveProfile(profileCacheKey, cached) } } },
+                    onClick = { userBio = tempBio; showBioScreen = false; if (!isOtherUser) coroutineScope.launch { val fields = mapOf("bio" to tempBio); ProfilePersistence.save(targetUser, fields); if (profileCacheKey.isNotBlank()) { val db = NativeIndexDatabase(context); val cached = db.loadProfile(profileCacheKey) ?: org.json.JSONObject(); fields.forEach { (key, value) -> if (value.isBlank() || value == "[]") cached.remove(key) else cached.put(key, value) }; listOf(targetUser?.uid, targetUser?.id, targetUser?.accountId, targetUser?.displayAccountNumber, profileCacheKey).filter { !it.isNullOrBlank() }.distinct().forEach { db.saveProfile(it!!, cached) } } } },
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).height(50.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1DC4E9)),
                     shape = RoundedCornerShape(12.dp)
@@ -1069,7 +1069,7 @@ fun PublicProfileScreen(
                         modifier = Modifier.clickable {
                             val today = java.time.LocalDate.now()
                             userAge = (today.year - selectedYear - if (today.monthValue < selectedMonth || (today.monthValue == selectedMonth && today.dayOfMonth < selectedDay)) 1 else 0).coerceIn(0, 120)
-                            if (!isOtherUser) coroutineScope.launch { val fields = mapOf("age" to userAge.toString()); ProfilePersistence.save(targetUser, fields); if (profileCacheKey.isNotBlank()) { val db = NativeIndexDatabase(context); val cached = db.loadProfile(profileCacheKey) ?: org.json.JSONObject(); fields.forEach { (key, value) -> if (value.isBlank() || value == "[]") cached.remove(key) else cached.put(key, value) }; db.saveProfile(profileCacheKey, cached) } }
+                            if (!isOtherUser) coroutineScope.launch { val fields = mapOf("age" to userAge.toString()); ProfilePersistence.save(targetUser, fields); if (profileCacheKey.isNotBlank()) { val db = NativeIndexDatabase(context); val cached = db.loadProfile(profileCacheKey) ?: org.json.JSONObject(); fields.forEach { (key, value) -> if (value.isBlank() || value == "[]") cached.remove(key) else cached.put(key, value) }; listOf(targetUser?.uid, targetUser?.id, targetUser?.accountId, targetUser?.displayAccountNumber, profileCacheKey).filter { !it.isNullOrBlank() }.distinct().forEach { db.saveProfile(it!!, cached) } } }
                             showAgeScreen = false
                         }
                     )
