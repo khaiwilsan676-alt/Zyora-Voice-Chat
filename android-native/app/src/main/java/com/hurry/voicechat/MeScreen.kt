@@ -110,12 +110,18 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
             ) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
                     Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
-                        if (photo.isNotBlank()) {
-                            AsyncImage(photo, null, Modifier.size(80.dp).clip(CircleShape), contentScale = ContentScale.Crop)
-                        } else {
-                            Box(Modifier.size(80.dp).clip(CircleShape).background(Color(0xFF666666)), contentAlignment = Alignment.Center) {
-                                Text(name.take(1).uppercase(), color = Color.White, fontSize = 34.sp, fontWeight = FontWeight.Normal)
+                        Box(Modifier.size(80.dp), contentAlignment = Alignment.Center) {
+                            if (photo.isNotBlank()) {
+                                AsyncImage(photo, null, Modifier.fillMaxSize().clip(CircleShape), contentScale = ContentScale.Crop)
+                            } else {
+                                Box(Modifier.fillMaxSize().clip(CircleShape).background(Color(0xFF666666)), contentAlignment = Alignment.Center) {
+                                    Text(name.take(1).uppercase(), color = Color.White, fontSize = 34.sp, fontWeight = FontWeight.Normal)
+                                }
                             }
+                            NativeAvatarFrameOverlay(
+                                userId = prefs.getString("accountId", uid).orEmpty().ifBlank { uid },
+                                modifier = Modifier.fillMaxSize()
+                            )
                         }
                         Spacer(Modifier.width(16.dp))
                         Column {
