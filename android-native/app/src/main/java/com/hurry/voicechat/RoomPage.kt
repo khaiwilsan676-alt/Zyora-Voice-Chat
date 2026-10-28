@@ -171,7 +171,7 @@ data class RoomPageOwner(val id:String="",val uid:String="",val accountId:String
 data class RoomPageCurrentUser(val id:String="",val uid:String="",val accountId:String="",val name:String="User",val image:String="")
 data class NativeRoomSeat(val number:Int,val occupied:Boolean=false,val locked:Boolean=false,val muted:Boolean=false,val speaking:Boolean=false,val userName:String="",val userImage:String="",val accountId:String="",val gifSrc:String="",val gifTimestamp:Long=0L)
 data class NativeRoomMessage(val id:String,val text:String,val sender:String,val senderImage:String,val senderAccountId:String="",val timestamp:Long=System.currentTimeMillis(),val type:String="message")
-data class NativeEntryToast(val id:String,val name:String,val image:String)
+data class NativeEntryToast(val id:String,val name:String,val image:String,val vehicleVideo:String="")
 
 @Composable
 fun RoomPage(
@@ -593,6 +593,34 @@ fun RoomPage(
                         mainHandler.postDelayed({entryToasts.removeAll{it.id==id}},4000)
                     }
                 }
+                if (type == "join" && senderId.isNotBlank()) {
+                    kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
+                        val vehicleVideo = runCatching {
+                            val encodedUser = java.net.URLEncoder.encode(senderId, "UTF-8")
+                            val conn = (java.net.URL("https://zyora-voice-chat.onrender.com/api/store/inventory/$encodedUser").openConnection() as java.net.HttpURLConnection).apply {
+                                connectTimeout = 8000
+                                readTimeout = 8000
+                            }
+                            try {
+                                if (conn.responseCode !in 200..299) ""
+                                else {
+                                    val inventory = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
+                                    val items = inventory.optJSONArray("items") ?: JSONArray()
+                                    (0 until items.length()).map { items.getJSONObject(it) }
+                                        .firstOrNull {
+                                            it.optString("tab") == "Vehicle" &&
+                                            it.optBoolean("equipped") &&
+                                            it.optLong("expiresAt") > System.currentTimeMillis()
+                                        }?.optString("video", "").orEmpty()
+                                }
+                            } finally { conn.disconnect() }
+                        }.getOrDefault("")
+                        if (vehicleVideo.isNotBlank()) mainHandler.post {
+                            val index = entryToasts.indexOfFirst { it.id == id }
+                            if (index >= 0) entryToasts[index] = entryToasts[index].copy(vehicleVideo = vehicleVideo)
+                        }
+                    }
+                }
             }
         }
         val clearedListener = Emitter.Listener { args ->
@@ -655,6 +683,32 @@ fun RoomPage(
                 mainHandler.post {
                     if (messages.none { it.id == joinId }) messages.add(nativeJoin)
                     if (entryToasts.none { it.id == joinId }) { entryToasts.add(NativeEntryToast(joinId,joinName,joinImage)); mainHandler.postDelayed({ entryToasts.removeAll { it.id == joinId } },4000) }
+                }
+                kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
+                    val vehicleVideo = runCatching {
+                        val encodedUser = java.net.URLEncoder.encode(accountId, "UTF-8")
+                        val conn = (java.net.URL("https://zyora-voice-chat.onrender.com/api/store/inventory/$encodedUser").openConnection() as java.net.HttpURLConnection).apply {
+                            connectTimeout = 8000
+                            readTimeout = 8000
+                        }
+                        try {
+                            if (conn.responseCode !in 200..299) ""
+                            else {
+                                val inventory = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
+                                val items = inventory.optJSONArray("items") ?: JSONArray()
+                                (0 until items.length()).map { items.getJSONObject(it) }
+                                    .firstOrNull {
+                                        it.optString("tab") == "Vehicle" &&
+                                        it.optBoolean("equipped") &&
+                                        it.optLong("expiresAt") > System.currentTimeMillis()
+                                    }?.optString("video", "").orEmpty()
+                            }
+                        } finally { conn.disconnect() }
+                    }.getOrDefault("")
+                    if (vehicleVideo.isNotBlank()) mainHandler.post {
+                        val index = entryToasts.indexOfFirst { it.id == joinId }
+                        if (index >= 0) entryToasts[index] = entryToasts[index].copy(vehicleVideo = vehicleVideo)
+                    }
                 }
                 roomSocket.emit("room_message",joinMessage)
             }
@@ -929,6 +983,33 @@ fun RoomPage(
                             FallbackAsyncImage(model=toast.image,contentDescription=toast.name,modifier=Modifier.size(24.dp).clip(CircleShape),contentScale=ContentScale.Crop)
                             Text(toast.name,color=Color.White,fontSize=13.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold,maxLines=1,modifier=Modifier.widthIn(max=95.dp))
                             Text("Enter the Room",color=Color.White,fontSize=12.sp,maxLines=1)
+                            if (toast.vehicleVideo.isNotBlank()) {
+                                val vehicleUrl = if (toast.vehicleVideo.startsWith("http", true)) toast.vehicleVideo else "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/" + toast.vehicleVideo
+                                val vehicleItemId = when {
+                                    toast.vehicleVideo.contains("VID_20260905_095157_269_bsl.mp4", true) -> "v1"
+                                    toast.vehicleVideo.contains("Screenrecorder-2026-10-23-16-01-27-317~2.mp4", true) -> "v10"
+                                    toast.vehicleVideo.contains("alioss_19_2025090317293759938~2.mp4", true) -> "v2"
+                                    toast.vehicleVideo.contains("alioss_19_2025120517555513292~2.mp4", true) -> "v3"
+                                    toast.vehicleVideo.contains("alioss_19_2025121720314422497~2.mp4", true) -> "v4"
+                                    toast.vehicleVideo.contains("alioss_19_2026021110563339968~2.mp4", true) -> "v5"
+                                    toast.vehicleVideo.contains("alioss_16_2025092202374953873~2.mp4", true) -> "v6"
+                                    toast.vehicleVideo.contains("alioss_16_2025080802251364763~2.mp4", true) -> "v7"
+                                    toast.vehicleVideo.contains("alioss_16_2025092202291646319~2.mp4", true) -> "v8"
+                                    toast.vehicleVideo.contains("alioss_17_2025041211424496804~2.mp4", true) -> "v9"
+                                    else -> ""
+                                }
+                                val isV1 = vehicleItemId == "v1"
+                                val bottomFade = if (vehicleItemId in setOf("v2", "v4", "v6")) 0.15f else 0.1f
+                                StoreVideoPreview(
+                                    url = vehicleUrl,
+                                    modifier = Modifier.width(72.dp).height(48.dp),
+                                    pause = false,
+                                    topFade = 0.1f,
+                                    bottomFade = bottomFade,
+                                    removeGreenScreen = isV1,
+                                    mute = false
+                                )
+                            }
                         }
                     }
                 }
