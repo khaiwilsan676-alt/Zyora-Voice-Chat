@@ -366,7 +366,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                                 Spacer(Modifier.width(4.dp))
                                 // Text color updated for dark theme & Added Duration next to price
                                 Text("%,d".format(item.price), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1)
-                                Text(" / ${item.duration}", color = Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                                Text(" / " + if (isBag) expiryById[item.id]?.let { expiry -> val sec = ((expiry - clockNow).coerceAtLeast(0L) / 1000L); "${sec / 86400}d ${(sec % 86400) / 3600}h ${(sec % 3600) / 60}m" } ?: item.duration else item.duration, color = Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Medium)
                             }
                             Row(
                                 Modifier.fillMaxWidth().height(30.dp)
@@ -386,17 +386,59 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                                         .background(StoreBlue)
                                         .clickable {
                                             if (owned) {
-                                                if (equipped) equippedIds.remove(item.id) else {
+                                                val nextEquipped = !equipped
+                                                if (nextEquipped) {
                                                     equippedIds.removeAll { id -> nativeStoreItems.find { it.id == id }?.tab == item.tab }
                                                     equippedIds.add(item.id)
+                                                } else equippedIds.remove(item.id)
+                                                if (userId.isNotBlank()) storeScope.launch {
+                                                    withContext(Dispatchers.IO) { runCatching {
+                                                        val c = (URL("https://zyora-voice-chat.onrender.com/api/store/equip").openConnection() as HttpURLConnection).apply {
+                                                            requestMethod="POST"; doOutput=true; connectTimeout=10000; readTimeout=10000
+                                                            setRequestProperty("Content-Type", "application/json")
+                                                        }
+                                                        val body = JSONObject().put("userId", userId).put("itemId", item.id).put("equipped", nextEquipped).toString()
+                                                        c.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
+                                                        val code = c.responseCode
+                                                        val stream = if (code in 200..299) c.inputStream else c.errorStream
+                                                        val json = JSONObject(stream.bufferedReader().use { it.readText() }); c.disconnect()
+                                                        if (code !in 200..299) throw IllegalStateException(json.optString("error", "Could not use item"))
+                                                    } }.onFailure { purchaseMessage = it.message ?: "Could not use item" }
                                                 }
-                                            } else {
-                                                selectedItem = item
-                                            }
+                                            } else if (!purchaseBusy && userId.isNotBlank()) {
+                                                purchaseBusy = true
+                                                storeScope.launch {
+                                                    val result = withContext(Dispatchers.IO) {
+                                                        runCatching {
+                                                            val c = (URL("https://zyora-voice-chat.onrender.com/api/store/purchase").openConnection() as HttpURLConnection).apply {
+                                                                requestMethod="POST"; doOutput=true; connectTimeout=10000; readTimeout=10000
+                                                                setRequestProperty("Content-Type", "application/json")
+                                                            }
+                                                            val body = JSONObject().put("userId", userId).put("itemId", item.id)
+                                                                .put("name", item.name).put("tab", item.tab).put("image", item.image)
+                                                                .put("video", item.video ?: "").put("duration", item.duration).put("price", item.price).toString()
+                                                            c.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
+                                                            val code = c.responseCode
+                                                            val stream = if (code in 200..299) c.inputStream else c.errorStream
+                                                            val json = JSONObject(stream.bufferedReader().use { it.readText() }); c.disconnect()
+                                                            if (code !in 200..299 || !json.optBoolean("success")) throw IllegalStateException(json.optString("error", "Purchase failed"))
+                                                            json
+                                                        }
+                                                    }
+                                                    result.onSuccess { json ->
+                                                        balance = json.optInt("balance", balance)
+                                                        val bought = json.optJSONObject("item")
+                                                        ownedIds.add(item.id)
+                                                        if (bought != null) expiryById[item.id] = bought.optLong("expiresAt")
+                                                        purchaseMessage = "Purchase successful"
+                                                    }.onFailure { purchaseMessage = it.message ?: "Purchase failed" }
+                                                    purchaseBusy = false
+                                                }
+                                            } else if (userId.isBlank()) purchaseMessage = "Please sign in to buy"
                                         },
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Text(if (owned) if (equipped) "Equipped" else "Equip" else "Buy", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    Text(if (owned) if (equipped) "Using" else "Use" else if (purchaseBusy) "..." else "Buy", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                                 }
                             }
                         }
@@ -422,6 +464,13 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                     }
                 }
             }
+        }
+    }
+
+    purchaseMessage?.let { message ->
+        LaunchedEffect(message) { delay(2500); if (purchaseMessage == message) purchaseMessage = null }
+        Box(Modifier.fillMaxWidth().padding(12.dp), contentAlignment = Alignment.BottomCenter) {
+            Text(message, color = Color.White, modifier = Modifier.background(Color(0xFF242424), RoundedCornerShape(8.dp)).padding(horizontal=14.dp, vertical=9.dp))
         }
     }
 
