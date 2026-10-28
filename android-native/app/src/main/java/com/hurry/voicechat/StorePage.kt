@@ -177,6 +177,13 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
     val storeScope = rememberCoroutineScope()
     var clockNow by remember { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(Unit) { while (true) { delay(1000); clockNow = System.currentTimeMillis() } }
+    LaunchedEffect(clockNow) {
+        expiryById.filterValues { it <= clockNow }.keys.toList().forEach { expiredId ->
+            ownedIds.remove(expiredId)
+            equippedIds.remove(expiredId)
+            expiryById.remove(expiredId)
+        }
+    }
     LaunchedEffect(userId) {
         if (userId.isBlank()) return@LaunchedEffect
         withContext(Dispatchers.IO) {
