@@ -712,7 +712,7 @@ app.get("/api/users", async (req, res) => {
     if (q) {
       // Numeric ID search takes the indexed exact-match path first.
       // The UI only accepts numeric IDs, so avoid expensive regex scans when possible.
-      const numericQ = /^\\d+$/.test(q) ? Number(q) : null;
+      const numericQ = /^\d+$/.test(q) ? Number(q) : null;
       if (numericQ !== null) {
         const exactConditions = [
           { accountId: q }, { accountNumber: q }, { "Account Number": q },
