@@ -187,6 +187,17 @@ fun RoomPage(
     val accountId=currentUser.accountId.ifBlank{currentUser.uid.ifBlank{currentUser.id.ifBlank{"guest"}}}
     val clipboard = LocalClipboardManager.current
     val appContext = LocalContext.current
+    val currentProfileKeys = listOf(currentUser.uid, currentUser.id, currentUser.accountId, accountId).filter { it.isNotBlank() }.distinct()
+    val cachedCurrentProfile = remember(currentProfileKeys) {
+        val profileDb = NativeIndexDatabase(appContext)
+        currentProfileKeys.firstNotNullOfOrNull { profileDb.loadProfile(it) }
+    }
+    val roomDisplayName = cachedCurrentProfile?.let { profile ->
+        sequenceOf("name", "displayName", "userName").map { profile.optString(it, "") }.firstOrNull { it.isNotBlank() && it != "null" }
+    } ?: currentUser.name.ifBlank { "User" }
+    val roomDisplayImage = cachedCurrentProfile?.let { profile ->
+        sequenceOf("image", "photo", "photoURL", "avatar", "picture").map { profile.optString(it, "") }.firstOrNull { it.isNotBlank() && it != "null" }
+    } ?: currentUser.image
     var copiedId by remember { mutableStateOf("") }
     var roomName by remember{mutableStateOf(roomOwner.name.ifBlank{"Room"})}
     var roomImage by remember{mutableStateOf(roomOwner.image)}
@@ -514,7 +525,7 @@ fun RoomPage(
     val seats=remember{mutableStateListOf<NativeRoomSeat>().apply{for(i in 1..15)add(NativeRoomSeat(i))}}
     val backendRoomUsers=remember{mutableStateListOf<ActiveUserNative>()}
 
-    DisposableEffect(roomId,accountId,currentUser.name,currentUser.image,roomOwner.id,roomOwner.accountId) {
+    DisposableEffect(roomId,accountId,roomDisplayName,roomDisplayImage,roomOwner.id,roomOwner.accountId) {
         val roomSocket = IO.socket("https://zyora-voice-chat.onrender.com")
         roomSocketRef.value=roomSocket
         val mainHandler = Handler(Looper.getMainLooper())
@@ -601,18 +612,19 @@ fun RoomPage(
         }
         var joinMessageSent = false
         val connectListener = Emitter.Listener {
-            val currentProfile = NativeIndexDatabase(appContext).loadProfile(accountId) ?: JSONObject()
-            if (currentUser.name.isNotBlank()) currentProfile.put("name", currentUser.name)
-            if (currentUser.image.isNotBlank()) currentProfile.put("image", currentUser.image)
-            if (accountId.isNotBlank()) NativeIndexDatabase(appContext).saveProfile(accountId, currentProfile)
-            val joinPayload = JSONObject().put("roomId",roomId).put("userId",currentUser.uid.ifBlank{currentUser.id.ifBlank{accountId}}).put("accountId",accountId).put("roomOwnerId",roomOwner.uid.ifBlank{roomOwner.id.ifBlank{roomOwner.accountId.ifBlank{roomId}}}).put("name",currentUser.name).put("dp",currentUser.image)
+            val profileDb = NativeIndexDatabase(appContext)
+            val currentProfile = currentProfileKeys.firstNotNullOfOrNull { profileDb.loadProfile(it) } ?: JSONObject()
+            if (!currentProfile.has("name") && roomDisplayName.isNotBlank()) currentProfile.put("name", roomDisplayName)
+            if (!currentProfile.has("image") && roomDisplayImage.isNotBlank()) currentProfile.put("image", roomDisplayImage)
+            currentProfileKeys.forEach { profileDb.saveProfile(it, currentProfile) }
+            val joinPayload = JSONObject().put("roomId",roomId).put("userId",currentUser.uid.ifBlank{currentUser.id.ifBlank{accountId}}).put("accountId",accountId).put("roomOwnerId",roomOwner.uid.ifBlank{roomOwner.id.ifBlank{roomOwner.accountId.ifBlank{roomId}}}).put("name",roomDisplayName).put("dp",roomDisplayImage)
             roomSocket.emit("room_join",joinPayload)
             if (!joinMessageSent && accountId != "guest") {
                 joinMessageSent = true
                 val joinCreatedAt = System.currentTimeMillis()
                 val joinId = "$accountId-$joinCreatedAt"
-                val joinName = currentUser.name.ifBlank { "User" }
-                val joinImage = currentUser.image.ifBlank { "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/default-avatar.png" }
+                val joinName = roomDisplayName.ifBlank { "User" }
+                val joinImage = roomDisplayImage.ifBlank { "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/default-avatar.png" }
                 val joinMessage = JSONObject().put("id",joinId).put("roomId",roomId).put("senderId",accountId).put("senderAccountId",accountId).put("senderName",joinName).put("senderAvatar",joinImage).put("text","Enter the Room").put("type","join").put("createdAt",joinCreatedAt)
                 val nativeJoin = NativeRoomMessage(joinId,"Enter the Room",joinName,joinImage,accountId,joinCreatedAt,"join")
                 mainHandler.post {
@@ -647,7 +659,7 @@ fun RoomPage(
     }
 
     Box(Modifier.fillMaxSize().background(Color.Black)){
-        JitsiRoomAudio(roomId=roomId,userName=currentUser.name,canSpeak=seats.any { it.number <= roomMicMode && it.occupied && it.accountId == accountId && !it.muted },onSpeakingChanged={localVoiceSpeaking=it})
+        JitsiRoomAudio(roomId=roomId,userName=roomDisplayName,canSpeak=seats.any { it.number <= roomMicMode && it.occupied && it.accountId == accountId && !it.muted },onSpeakingChanged={localVoiceSpeaking=it})
         AsyncImage(model=when(roomTheme) { "mood-light" -> "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/1784533036732~2.jpg"; "custom" -> appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).getString("customTheme_$roomId", null) ?: "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/1784875884052~2.jpg"; else -> "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/1784875884052~2.jpg" },contentDescription="Room theme background",modifier=Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
 
         Row(modifier = Modifier.align(Alignment.TopStart).padding(top = 84.dp, start = 4.dp),verticalAlignment = Alignment.CenterVertically,horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -699,8 +711,8 @@ fun RoomPage(
                                                     .put("roomName", roomName)
                                                     .put("roomImage", roomImage)
                                                     .put("roomCountry", roomOwner.country)
-                                                    .put("followerName", currentUser.name)
-                                                    .put("followerImage", currentUser.image)
+                                                    .put("followerName", roomDisplayName)
+                                                    .put("followerImage", roomDisplayImage)
                                                 conn.outputStream.use { it.write(payload.toString().toByteArray(Charsets.UTF_8)) }
                                             }
                                             conn.responseCode
@@ -813,7 +825,7 @@ fun RoomPage(
                 Row(Modifier.fillMaxWidth().background(Color.White).padding(horizontal=10.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
                     IconButton(onClick={showEmoji=!showEmoji},modifier=Modifier.size(38.dp)){Image(painterResource(R.drawable.ic_hurry_chat_image),contentDescription="Attach image",modifier=Modifier.size(26.dp))}
                     androidx.compose.foundation.text.BasicTextField(value=input,onValueChange={input=it},modifier=Modifier.weight(1f).focusRequester(chatFocusRequester).padding(vertical=10.dp),singleLine=true,textStyle=androidx.compose.ui.text.TextStyle(color=Color.Black,fontSize=15.sp),cursorBrush=SolidColor(Color.Blue),decorationBox={innerTextField -> Box { if(input.isEmpty()) Text("Type a message...",color=Color.Gray,fontSize=15.sp); innerTextField() }})
-                    IconButton(onClick={if(input.isNotBlank()){messages.add(NativeRoomMessage(System.currentTimeMillis().toString(),input,currentUser.name,currentUser.image,accountId));input=""}},modifier=Modifier.size(38.dp)){Icon(Icons.Default.Send,null,tint=Color(0xFF3B82F6),modifier=Modifier.size(26.dp))}
+                    IconButton(onClick={if(input.isNotBlank()){messages.add(NativeRoomMessage(System.currentTimeMillis().toString(),input,roomDisplayName,roomDisplayImage,accountId));input=""}},modifier=Modifier.size(38.dp)){Icon(Icons.Default.Send,null,tint=Color(0xFF3B82F6),modifier=Modifier.size(26.dp))}
                 }
             } else {
                 Row(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal=8.dp, vertical=6.dp).height(44.dp),verticalAlignment=Alignment.CenterVertically){
@@ -1041,7 +1053,7 @@ fun RoomPage(
             onClearChat={
                 messages.clear()
                 showOfficialAnnouncement = false
-                val clearerName = currentUser.name.ifBlank { "User" }
+                val clearerName = roomDisplayName.ifBlank { "User" }
                 clearedBy = clearerName
                 roomSocketRef.value?.emit("room_chat_clear",JSONObject().put("roomId",roomId).put("userId",accountId).put("userName",clearerName).put("timestamp",System.currentTimeMillis()))
                 showMenu=false
@@ -1096,8 +1108,8 @@ fun RoomPage(
                 showMenu = false
             },
             luckyBagSenderId = canonicalWalletUserId,
-            luckyBagSenderName = currentUser.name.ifBlank { "User" },
-            luckyBagSenderImage = currentUser.image,
+            luckyBagSenderName = roomDisplayName.ifBlank { "User" },
+            luckyBagSenderImage = roomDisplayImage,
             luckyBagRoomId = roomId,
             luckyBagRoomName = roomName,
             onLuckyBagSent={ name, image, amount, recipients, bagId ->
@@ -1113,7 +1125,7 @@ fun RoomPage(
         val roomFollowers = seats.filter { it.occupied && it.accountId.isNotBlank() && it.accountId != roomOwner.accountId && it.accountId != roomOwner.id }.map { RoomInfoFollower(it.accountId,it.userName,it.userImage) }
         if(showStore) StorePage(onBack={showStore=false}, initialView=storeInitialView)
         if(showInfo) RoomInfo(isOpen=true,onClose={showInfo=false},isRoomOwner=accountId==roomOwner.accountId.ifBlank{roomOwner.id},roomOwner=RoomInfoOwner(id=roomOwner.id,uid=roomOwner.uid,accountId=roomOwner.accountId.ifBlank{roomOwner.id},name=roomOwner.name,image=roomOwner.image),roomData=RoomInfoData(roomName,roomImage,announcement,roomId),roomFollowers=roomFollowers,roomAdmins=roomAdminUsers,onOpenProfile={ follower -> seats.firstOrNull{it.accountId==follower.accountId}?.let{selectedSeat=it.number};showInfo=false },onCopyId={ id -> clipboard.setText(AnnotatedString(id));copiedId=id },copied=copiedId==roomId)
-        if(showActiveUsers) ActiveUsers(isOpen=true,onClose={showActiveUsers=false},roomUsers=activeRoomUsers,currentUser=ActiveUserNative(accountId,currentUser.name,currentUser.image),roomOwnerId=roomOwner.accountId.ifBlank{roomOwner.id},onOpenProfile={ user -> seats.firstOrNull{it.accountId==user.accountId}?.let{selectedSeat=it.number};showActiveUsers=false },onCopyUserId={ id -> clipboard.setText(AnnotatedString(id));copiedId=id })
+        if(showActiveUsers) ActiveUsers(isOpen=true,onClose={showActiveUsers=false},roomUsers=activeRoomUsers,currentUser=ActiveUserNative(accountId,roomDisplayName,roomDisplayImage),roomOwnerId=roomOwner.accountId.ifBlank{roomOwner.id},onOpenProfile={ user -> seats.firstOrNull{it.accountId==user.accountId}?.let{selectedSeat=it.number};showActiveUsers=false },onCopyUserId={ id -> clipboard.setText(AnnotatedString(id));copiedId=id })
         if(showSettings) RoomSettingPage(initial = RoomSettingsDataNative(roomName=roomName,roomDp=roomImage,announcement=announcement,micMode=roomMicMode,theme=roomTheme,isLocked=locked,admin=roomAdminIds),roomOwnerId=roomId,currentUserId=accountId,onBack={showSettings=false},onSave={saved->
             roomName=saved.roomName;roomImage=saved.roomDp;announcement=saved.announcement;roomMicMode=saved.micMode;roomTheme=saved.theme;roomAdminIds=saved.admin;locked=saved.isLocked;showSettings=false
             appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).edit().putInt("micMode_$roomId", saved.micMode).putString("theme_$roomId", saved.theme).apply()
@@ -1131,7 +1143,7 @@ fun RoomPage(
                 }
             }
         })
-        if(showGift) GiftPicker(open=true,onClose={showGift=false},seats=seats.toList(),roomId=roomId,currentUserAccountId=accountId,currentUserName=currentUser.name,currentUserImage=currentUser.image,roomUsers=activeRoomUsers)
+        if(showGift) GiftPicker(open=true,onClose={showGift=false},seats=seats.toList(),roomId=roomId,currentUserAccountId=accountId,currentUserName=roomDisplayName,currentUserImage=roomDisplayImage,roomUsers=activeRoomUsers)
         if(showGames) GamesSheet(onClose={showGames=false},onWildParty={showGames=false;showWildParty=true},onFruitParty={showGames=false;showFruitParty=true})
         if(showRoomTask) Roomtask(onBack={showRoomTask=false})
         if(showWildParty) Wildparty(onClose={showWildParty=false},onMinimize={showWildParty=false})
@@ -1142,7 +1154,7 @@ fun RoomPage(
                 val timestamp=System.currentTimeMillis()
                 val selected=seats[seatIndex]
                 seats[seatIndex]=selected.copy(gifSrc=sticker.src,gifTimestamp=timestamp)
-                roomSocketRef.value?.emit("room_seat_action",JSONObject().put("roomId",roomId).put("userId",accountId).put("action","emoji").put("seatNumber",selected.number).put("user",JSONObject().put("name",currentUser.name.ifBlank{"User"}).put("image",currentUser.image.ifBlank{"https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/default-avatar.png"}).put("accountId",accountId)).put("src",sticker.src).put("timestamp",timestamp))
+                roomSocketRef.value?.emit("room_seat_action",JSONObject().put("roomId",roomId).put("userId",accountId).put("action","emoji").put("seatNumber",selected.number).put("user",JSONObject().put("name",roomDisplayName.ifBlank{"User"}).put("image",roomDisplayImage.ifBlank{"https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/default-avatar.png"}).put("accountId",accountId)).put("src",sticker.src).put("timestamp",timestamp))
                 
                 Handler(Looper.getMainLooper()).postDelayed({ if(seats.getOrNull(seatIndex)?.gifTimestamp==timestamp) seats[seatIndex]=seats[seatIndex].copy(gifSrc="",gifTimestamp=0L) },5000)
             }
@@ -1211,8 +1223,8 @@ fun RoomPage(
                 onDismiss={showSeatSheet=false;selectedSeat=0},
                 onTake={
                     if(!seat.occupied && !seat.locked) {
-                        val user = JSONObject().put("name",currentUser.name.ifBlank{"User"}).put("image",currentUser.image.ifBlank{"https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/default-avatar.png"}).put("accountId",accountId)
-                        if(seatIndex>=0) seats[seatIndex]=seat.copy(occupied=true,userName=currentUser.name.ifBlank{"User"},userImage=currentUser.image.ifBlank { "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/default-avatar.png" },accountId=accountId,muted=false,locked=false)
+                        val user = JSONObject().put("name",roomDisplayName.ifBlank{"User"}).put("image",roomDisplayImage.ifBlank{"https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/default-avatar.png"}).put("accountId",accountId)
+                        if(seatIndex>=0) seats[seatIndex]=seat.copy(occupied=true,userName=roomDisplayName.ifBlank{"User"},userImage=roomDisplayImage.ifBlank { "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/default-avatar.png" },accountId=accountId,muted=false,locked=false)
                         roomSocketRef.value?.emit("room_seat_action",JSONObject().put("roomId",roomId).put("userId",accountId).put("action","take").put("seatNumber",seat.number).put("user",user))
                         showSeatSheet=false;selectedSeat=0
                     }
