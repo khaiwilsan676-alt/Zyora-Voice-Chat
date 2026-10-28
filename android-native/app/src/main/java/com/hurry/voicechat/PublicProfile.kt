@@ -167,7 +167,7 @@ fun PublicProfileScreen(
     LaunchedEffect(targetUser?.uid, targetUser?.id, targetUser?.accountId, profileCacheKey) {
         val cache = NativeIndexDatabase(context)
         val cached = profileCacheKeys.firstNotNullOfOrNull { cache.loadProfile(it) }
-        val remote = if (cached == null) ProfilePersistence.load(targetUser) else null
+        val remote = ProfilePersistence.load(targetUser)
         if (remote == null && cached == null) return@LaunchedEffect
 
         val merged = org.json.JSONObject(cached?.toString() ?: "{}")
