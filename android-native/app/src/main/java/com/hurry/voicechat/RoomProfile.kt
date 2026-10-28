@@ -166,10 +166,10 @@ fun RoomProfile(
     var premiumTag by remember(user.premiumTag) { mutableStateOf(user.premiumTag == true) }
     var showReports by remember { mutableStateOf(false) }
 
+    // Tag values share the same cached profile payload. Never make a second MongoDB
+    // request here; the profile-loading effect above owns the one-time remote fallback.
     LaunchedEffect(user.uid, user.id, user.accountId, cachedProfile) {
-        val profile = (if (cachedProfile == null) ProfilePersistence.load(
-            TargetUser(id = user.id, uid = user.uid, accountId = user.accountId, name = user.name, photo = user.image, image = user.image)
-        ) else null) ?: cachedProfile ?: return@LaunchedEffect
+        val profile = cachedProfile ?: return@LaunchedEffect
         if (profile.has("officialHeadTag")) officialHeadTag = profile.optBoolean("officialHeadTag")
         if (profile.has("officialTag")) officialTag = profile.optBoolean("officialTag")
         if (profile.has("adminTag")) adminTag = profile.optBoolean("adminTag")
