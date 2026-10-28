@@ -945,6 +945,17 @@ app.put("/api/users", async (req, res) => {
     }
 
     const data = req.body || {};
+    const requestedRemoveFields = Array.isArray(data.removeFields)
+      ? data.removeFields.map((field) => String(field || "").trim()).filter(Boolean)
+      : [];
+    const removableProfileFields = new Set([
+      "image", "photo", "photoURL", "avatar", "picture",
+      "coverPhotos", "coverPhoto", "albumImages", "bio", "age", "gender"
+    ]);
+    const removeFields = [...new Set(requestedRemoveFields)].filter((field) => removableProfileFields.has(field));
+    const profileData = { ...data };
+    delete profileData.removeFields;
+    removeFields.forEach((field) => delete profileData[field]);
 
     const uid = String(
       data.uid ||
@@ -970,7 +981,7 @@ app.put("/api/users", async (req, res) => {
     const users = db.collection("users");
 
     const userData = {
-      ...data,
+      ...profileData,
       id: String(data.id || uid),
       uid,
       appLongId: String(data.appLongId || uid),
@@ -984,20 +995,17 @@ app.put("/api/users", async (req, res) => {
       userData.lastDeviceId = data.deviceId;
     }
 
+    const updateDocument = {
+      $set: userData,
+      $setOnInsert: { createdAt: Date.now() },
+    };
+    if (removeFields.length) {
+      updateDocument.$unset = Object.fromEntries(removeFields.map((field) => [field, ""]));
+    }
+
     await users.updateOne(
-      {
-        $or: [
-          { uid },
-          { id: uid },
-          { appLongId: uid },
-        ],
-      },
-      {
-        $set: userData,
-        $setOnInsert: {
-          createdAt: Date.now(),
-        },
-      },
+      { $or: [{ uid }, { id: uid }, { appLongId: uid }] },
+      updateDocument,
       { upsert: true }
     );
 
