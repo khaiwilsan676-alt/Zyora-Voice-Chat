@@ -58,6 +58,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import coil3.compose.AsyncImage
 import java.net.URL
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import org.json.JSONArray
+import org.json.JSONObject
+import java.net.URLEncoder
+import java.net.HttpURLConnection
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -132,9 +138,42 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
     var tryItem by remember { mutableStateOf<NativeStoreItem?>(null) }
     var sendItem by remember { mutableStateOf<NativeStoreItem?>(null) }
     var searchQuery by remember { mutableStateOf("") }
-    var balance by remember { mutableIntStateOf(82927) }
-    val ownedIds = remember { mutableStateListOf("i1") }
+    var balance by remember { mutableIntStateOf(0) }
+    val ownedIds = remember { mutableStateListOf<String>() }
     val equippedIds = remember { mutableStateListOf<String>() }
+    val expiryById = remember { mutableStateMapOf<String, Long>() }
+    var purchaseBusy by remember { mutableStateOf(false) }
+    var purchaseMessage by remember { mutableStateOf<String?>(null) }
+    val storeScope = rememberCoroutineScope()
+    var clockNow by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(Unit) { while (true) { delay(1000); clockNow = System.currentTimeMillis() } }
+    LaunchedEffect(userId) {
+        if (userId.isBlank()) return@LaunchedEffect
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val encoded = URLEncoder.encode(userId, "UTF-8")
+                val c = (URL("https://zyora-voice-chat.onrender.com/api/store/inventory/$encoded").openConnection() as HttpURLConnection).apply { connectTimeout=10000; readTimeout=10000 }
+                val code = c.responseCode
+                val stream = if (code in 200..299) c.inputStream else c.errorStream
+                val json = JSONObject(stream.bufferedReader().use { it.readText() }); c.disconnect()
+                if (code !in 200..299) throw IllegalStateException(json.optString("error", "Wallet unavailable"))
+                val owned = mutableListOf<String>(); val equipped = mutableListOf<String>(); val expiries = mutableMapOf<String,Long>()
+                val arr = json.optJSONArray("items") ?: JSONArray()
+                for (i in 0 until arr.length()) {
+                    val item = arr.getJSONObject(i); val id = item.optString("itemId"); val expiry = item.optLong("expiresAt")
+                    if (id.isNotBlank() && expiry > System.currentTimeMillis()) {
+                        owned.add(id); expiries[id]=expiry
+                        if (item.optBoolean("equipped")) equipped.add(id)
+                    }
+                }
+                Triple(json.optInt("balance",0), owned, Pair(equipped,expiries))
+            }.onSuccess { result ->
+                balance=result.first; ownedIds.clear(); ownedIds.addAll(result.second)
+                equippedIds.clear(); equippedIds.addAll(result.third.first)
+                expiryById.clear(); expiryById.putAll(result.third.second)
+            }.onFailure { purchaseMessage = it.message ?: "Wallet unavailable" }
+        }
+    }
     val isBag = currentView == "bag"
     val visibleItems = nativeStoreItems.filter { it.tab == activeTab && (!isBag || ownedIds.contains(it.id)) }
 
