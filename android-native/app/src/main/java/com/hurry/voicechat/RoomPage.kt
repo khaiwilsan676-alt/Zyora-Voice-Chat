@@ -1602,10 +1602,10 @@ private fun formatMusicTime(seconds: Float): String {
                 val bottomHighlight=Path().apply { moveTo(size.width*207f/512f,size.height*452f/512f); cubicTo(size.width*258f/512f,size.height*466f/512f,size.width*316f/512f,size.height*456f/512f,size.width*361f/512f,size.height*428f/512f); cubicTo(size.width*378f/512f,size.height*417f/512f,size.width*392f/512f,size.height*404f/512f,size.width*404f/512f,size.height*388f/512f) }
                 drawPath(bottomHighlight,shine,style=Stroke(width=size.minDimension*7f/512f,cap=StrokeCap.Round))
             }
-            Box(Modifier.fillMaxSize(.91f).clip(CircleShape),contentAlignment=Alignment.Center){
+            Box(Modifier.fillMaxSize(.91f),contentAlignment=Alignment.Center){
                 if(seat.locked) AsyncImage(model=raw+"file_0000000015a48211b000ee447a786f7c.png",contentDescription="Locked seat",modifier=Modifier.fillMaxSize(.62f),contentScale=ContentScale.Fit)
                 else if(seat.occupied) {
-                    FallbackAsyncImage(model=seat.userImage,contentDescription=seat.userName,modifier=Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
+                    FallbackAsyncImage(model=seat.userImage,contentDescription=seat.userName,modifier=Modifier.fillMaxSize().clip(CircleShape),contentScale=ContentScale.Crop)
                     NativeAvatarFrameOverlay(userId=seat.accountId,modifier=Modifier.fillMaxSize())
                 } else AsyncImage(model=raw+"file_000000003e7482309b7f6e7f2a922160.png",contentDescription="Empty seat",modifier=Modifier.fillMaxSize(.65f),contentScale=ContentScale.Fit)
             }
