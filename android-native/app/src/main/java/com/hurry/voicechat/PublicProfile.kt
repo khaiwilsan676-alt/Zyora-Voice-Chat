@@ -175,7 +175,7 @@ fun PublicProfileScreen(
         // Sync all necessary fields from remote to override cache, especially if user deleted them
         remote?.let { latest ->
             // Normalize server aliases so a fresh install restores the same profile name and DP.
-            val remoteName = sequenceOf("name", "displayName", "userName", "nickname").map { latest.optString(it, "").trim() }.firstOrNull { it.isNotBlank() && it != "null" }
+            val remoteName = sequenceOf("name", "displayName", "userName", "nickname").map { latest.optString(it, "").trim() }.firstOrNull { it.isNotBlank() && it != "null" && !it.equals("User", ignoreCase = true) }
             val remoteAvatar = sequenceOf("image", "photo", "photoURL", "avatar", "picture", "profileImage", "avatarUrl").map { latest.optString(it, "").trim() }.firstOrNull { it.isNotBlank() && it != "null" && !it.endsWith("/default-avatar.png") }
             if (!remoteName.isNullOrBlank()) {
                 merged.put("name", remoteName)
