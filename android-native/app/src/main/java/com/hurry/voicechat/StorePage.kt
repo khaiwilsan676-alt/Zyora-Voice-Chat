@@ -562,18 +562,70 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                 Row(Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 22.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Button(onClick = { sendItem = item; selectedItem = null }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E3A8A), contentColor = Color(0xFF60A5FA))) { Text("Send", fontWeight = FontWeight.Bold) }
                     Button(onClick = {
-                        if (ownedIds.contains(item.id)) {
-                            if (equippedIds.contains(item.id)) equippedIds.remove(item.id) else {
-                                equippedIds.removeAll { id -> nativeStoreItems.find { it.id == id }?.tab == item.tab }
-                                equippedIds.add(item.id)
+                        if (userId.isBlank()) {
+                            purchaseMessage = "Please sign in to buy or use items"
+                        } else if (!purchaseBusy && ownedIds.contains(item.id)) {
+                            val nextEquipped = !equippedIds.contains(item.id)
+                            purchaseBusy = true
+                            storeScope.launch {
+                                val result = withContext(Dispatchers.IO) {
+                                    runCatching {
+                                        val c = (URL("https://zyora-voice-chat.onrender.com/api/store/equip").openConnection() as HttpURLConnection).apply {
+                                            requestMethod = "POST"; doOutput = true; connectTimeout = 10000; readTimeout = 10000
+                                            setRequestProperty("Content-Type", "application/json")
+                                        }
+                                        val body = JSONObject().put("userId", userId).put("itemId", item.id).put("equipped", nextEquipped).toString()
+                                        c.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
+                                        val code = c.responseCode
+                                        val stream = if (code in 200..299) c.inputStream else c.errorStream
+                                        val json = JSONObject(stream.bufferedReader().use { it.readText() })
+                                        c.disconnect()
+                                        if (code !in 200..299 || !json.optBoolean("success")) throw IllegalStateException(json.optString("error", "Could not use item"))
+                                    }
+                                }
+                                result.onSuccess {
+                                    if (nextEquipped) {
+                                        equippedIds.removeAll { id -> nativeStoreItems.find { it.id == id }?.tab == item.tab }
+                                        equippedIds.add(item.id)
+                                    } else equippedIds.remove(item.id)
+                                    selectedItem = null
+                                }.onFailure { purchaseMessage = it.message ?: "Could not use item" }
+                                purchaseBusy = false
                             }
-                        } else if (balance >= item.price) {
-                            balance -= item.price
-                            ownedIds.add(item.id)
+                        } else if (!purchaseBusy) {
+                            purchaseBusy = true
+                            storeScope.launch {
+                                val result = withContext(Dispatchers.IO) {
+                                    runCatching {
+                                        val c = (URL("https://zyora-voice-chat.onrender.com/api/store/purchase").openConnection() as HttpURLConnection).apply {
+                                            requestMethod = "POST"; doOutput = true; connectTimeout = 10000; readTimeout = 10000
+                                            setRequestProperty("Content-Type", "application/json")
+                                        }
+                                        val body = JSONObject().put("userId", userId).put("itemId", item.id)
+                                            .put("name", item.name).put("tab", item.tab).put("image", item.image)
+                                            .put("video", item.video ?: "").put("duration", item.duration).put("price", item.price).toString()
+                                        c.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
+                                        val code = c.responseCode
+                                        val stream = if (code in 200..299) c.inputStream else c.errorStream
+                                        val json = JSONObject(stream.bufferedReader().use { it.readText() })
+                                        c.disconnect()
+                                        if (code !in 200..299 || !json.optBoolean("success")) throw IllegalStateException(json.optString("error", "Purchase failed"))
+                                        json
+                                    }
+                                }
+                                result.onSuccess { json ->
+                                    balance = json.optInt("balance", balance)
+                                    val bought = json.optJSONObject("item")
+                                    if (item.id !in ownedIds) ownedIds.add(item.id)
+                                    if (bought != null) expiryById[item.id] = bought.optLong("expiresAt")
+                                    purchaseMessage = "Purchase successful"
+                                    selectedItem = null
+                                }.onFailure { purchaseMessage = it.message ?: "Purchase failed" }
+                                purchaseBusy = false
+                            }
                         }
-                        selectedItem = null
-                    }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = StoreCyan, contentColor = Color.White)) {
-                        Text(if (ownedIds.contains(item.id)) if (equippedIds.contains(item.id)) "Using" else "Use" else "Buy", fontWeight = FontWeight.Bold)
+                    }, enabled = !purchaseBusy, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = StoreCyan, contentColor = Color.White)) {
+                        Text(if (purchaseBusy) "..." else if (ownedIds.contains(item.id)) if (equippedIds.contains(item.id)) "Using" else "Use" else "Buy", fontWeight = FontWeight.Bold)
                     }
                 }
             }
