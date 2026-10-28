@@ -1640,9 +1640,10 @@ private fun formatMusicTime(seconds: Float): String {
                 listOf("officialHeadTag", "officialTag", "adminTag", "serviceTag", "coinSellerTag", "coinSeller", "sellerTag", "csTag").forEach { key ->
                     if (remote.has(key)) merged.put(key, remote.opt(key))
                 }
-                if (m.sender.isNotBlank()) merged.put("name", m.sender)
-                if (m.senderImage.isNotBlank() && !merged.has("image")) merged.put("image", m.senderImage)
-                if (m.sender.isNotBlank() && !merged.has("name")) merged.put("name", m.sender)
+                val remoteName = sequenceOf("name", "displayName", "userName").map { remote.optString(it, "") }.firstOrNull { it.isNotBlank() && it != "null" } ?: m.sender
+                val remoteImage = sequenceOf("image", "photo", "photoURL", "avatar", "picture").map { remote.optString(it, "") }.firstOrNull { it.isNotBlank() && it != "null" } ?: m.senderImage
+                if (remoteName.isNotBlank()) merged.put("name", remoteName)
+                if (remoteImage.isNotBlank()) merged.put("image", remoteImage)
                 profileDb.saveProfile(m.senderAccountId, merged)
                 profileTags = merged
             }
@@ -1659,10 +1660,12 @@ private fun formatMusicTime(seconds: Float): String {
     val isRoomOwnerMessage = m.senderAccountId == roomOwnerId
     
     Row(Modifier.fillMaxWidth().padding(vertical=2.dp),verticalAlignment=Alignment.Top,horizontalArrangement=Arrangement.Start){
-        FallbackAsyncImage(model=m.senderImage.ifBlank { profileTags?.optString("image").orEmpty() },contentDescription=m.sender,modifier=Modifier.padding(top=2.dp).size(28.dp).clip(CircleShape).border(1.dp, Color.White.copy(alpha=.1f), CircleShape).clickable(onClick = onAvatarClick),contentScale=ContentScale.Crop)
+        val cachedName = profileTags?.let { profile -> sequenceOf("name", "displayName", "userName").map { profile.optString(it, "") }.firstOrNull { it.isNotBlank() && it != "null" } }.orEmpty()
+        val cachedImage = profileTags?.let { profile -> sequenceOf("image", "photo", "photoURL", "avatar", "picture").map { profile.optString(it, "") }.firstOrNull { it.isNotBlank() && it != "null" } }.orEmpty()
+        FallbackAsyncImage(model=cachedImage.ifBlank { m.senderImage },contentDescription=cachedName.ifBlank { m.sender },modifier=Modifier.padding(top=2.dp).size(28.dp).clip(CircleShape).border(1.dp, Color.White.copy(alpha=.1f), CircleShape).clickable(onClick = onAvatarClick),contentScale=ContentScale.Crop)
         Column(Modifier.padding(start=8.dp).fillMaxWidth(.75f),verticalArrangement=Arrangement.spacedBy(2.dp)){
             Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(3.dp)){
-                Text(m.sender.ifBlank { profileTags?.optString("name").orEmpty() },color=Color.White.copy(alpha=.9f),fontSize=12.sp,lineHeight=13.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold,maxLines=1,overflow=TextOverflow.Ellipsis)
+                Text(cachedName.ifBlank { m.sender },color=Color.White.copy(alpha=.9f),fontSize=12.sp,lineHeight=13.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold,maxLines=1,overflow=TextOverflow.Ellipsis)
                 
                 if (isRoomOwnerMessage) {
                     AsyncImage(model = "https://zyora-voice-chat.vercel.app/IMG_20261027_235537.png", contentDescription = "Owner", contentScale = ContentScale.Fit, modifier = Modifier.height(16.dp))
