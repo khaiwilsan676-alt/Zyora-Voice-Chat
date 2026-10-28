@@ -142,14 +142,17 @@ fun RoomProfile(
             }
         }
         remote?.let { latest ->
-            sequenceOf("name", "displayName", "userName", "image", "photo", "photoURL", "avatar", "picture").forEach { key ->
-                val value = latest.optString(key, "")
-                if (value.isNotBlank() && value != "null") merged.put(key, value)
+            sequenceOf("name", "displayName", "userName", "nickname", "image", "photo", "photoURL", "avatar", "picture", "profileImage", "avatarUrl").forEach { key ->
+                val value = latest.optString(key, "").trim()
+                val isPlaceholderName = key in setOf("name", "displayName", "userName", "nickname") && value.equals("User", ignoreCase = true)
+                val isPlaceholderAvatar = key in setOf("image", "photo", "photoURL", "avatar", "picture", "profileImage", "avatarUrl") &&
+                    (value.endsWith("/default-avatar.png") || value == "default-avatar.png")
+                if (value.isNotBlank() && value != "null" && !isPlaceholderName && !isPlaceholderAvatar) merged.put(key, value)
             }
         }
         profileCacheKeys.forEach { profileDb.saveProfile(it, merged) }
         loadedProfile = merged
-        remote?.optString("name")?.takeIf { it.isNotBlank() && it != "null" }?.let { displayName = it }
+        remote?.let { latest -> sequenceOf("name", "displayName", "userName", "nickname").map { latest.optString(it, "").trim() }.firstOrNull { it.isNotBlank() && it != "null" && !it.equals("User", ignoreCase = true) }?.let { displayName = it } }
         remote?.let { latest ->
             sequenceOf("image", "photo", "photoURL", "avatar", "picture").map { latest.optString(it, "") }
                 .firstOrNull { it.isNotBlank() && it != "null" }?.takeIf { it != displayImage }?.let { displayImage = it }
