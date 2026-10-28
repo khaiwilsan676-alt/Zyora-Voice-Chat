@@ -56,20 +56,28 @@ internal object ProfilePersistence {
     }
 
     suspend fun load(target: TargetUser?): JSONObject? = withContext(Dispatchers.IO) {
-        runCatching {
-            val uid = (target?.uid ?: target?.id ?: target?.accountId).orEmpty().trim()
-            if (uid.isBlank()) return@runCatching null
-            val encoded = URLEncoder.encode(uid, "UTF-8")
-            val connection = (URL("$API/api/users?search=$encoded&uid=$encoded").openConnection() as HttpURLConnection).apply {
-                requestMethod = "GET"
-                connectTimeout = 12000
-                readTimeout = 12000
-            }
-            val body = connection.inputStream.bufferedReader().use { it.readText() }
-            connection.disconnect()
-            val root = JSONObject(body)
-            root.optJSONObject("user") ?: root.optJSONArray("users")?.optJSONObject(0)
-        }.getOrNull()
+        val identifiers = listOf(target?.uid, target?.id, target?.accountId, target?.displayAccountNumber)
+            .filterNotNull().map { it.trim() }.filter { it.isNotBlank() && it != "—" }.distinct()
+        for (identifier in identifiers) {
+            val result = runCatching {
+                val encoded = URLEncoder.encode(identifier, "UTF-8")
+                val connection = (URL("$API/api/users?search=$encoded&uid=$encoded&accountId=$encoded").openConnection() as HttpURLConnection).apply {
+                    requestMethod = "GET"
+                    connectTimeout = 12000
+                    readTimeout = 12000
+                }
+                val status = connection.responseCode
+                val stream = if (status in 200..299) connection.inputStream else connection.errorStream
+                val body = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+                connection.disconnect()
+                if (status !in 200..299 || body.isBlank()) null else {
+                    val root = JSONObject(body)
+                    root.optJSONObject("user") ?: root.optJSONArray("users")?.optJSONObject(0)
+                }
+            }.getOrNull()
+            if (result != null) return@withContext result
+        }
+        null
     }
 
     fun updateCache(context: Context, keys: List<String>, fields: Map<String, String>) {
