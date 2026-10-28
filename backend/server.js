@@ -1169,7 +1169,9 @@ app.post("/api/store/purchase", async (req, res) => {
     const duration = String(req.body?.duration || "").trim().toUpperCase();
     const price = Number(req.body?.price);
     const prices = {v1:1000000,v10:1200000,v2:600000,v3:549999,v4:500000,v5:259000,v6:890999,v7:425000,v8:525000,v9:359999,a1:250000,a2:500000,a3:750000,a4:700000,a5:249000,a6:300000,a7:199000,a8:500000,t1:2700000,t2:2400000,t3:2700000,t4:2400000,t5:2700000,t6:2400000,t7:899999,t8:700000,t9:1000000,c1:500000,c2:250000,c3:300000,c4:246000,c5:159000,c6:200000,i1:10000000};
-    if (!userId || !prices[itemId] || prices[itemId] !== price || !["Vehicle","Avatar Frame","Theme","Chat Bubble","ID"].includes(tab) || !/^\d+D$/.test(duration) || !name || !image) return res.status(400).json({ error: "Invalid store item" });
+    const expectedTab = itemId.startsWith("v") ? "Vehicle" : itemId.startsWith("a") ? "Avatar Frame" : itemId.startsWith("t") ? "Theme" : itemId.startsWith("c") ? "Chat Bubble" : itemId === "i1" ? "ID" : "";
+    const expectedDuration = itemId.startsWith("v") ? "5D" : itemId.startsWith("a") || itemId.startsWith("c") && itemId !== "c2" || itemId === "i1" ? "3D" : itemId === "c2" ? "2D" : itemId.startsWith("t") ? "30D" : "";
+    if (!userId || !prices[itemId] || prices[itemId] !== price || tab !== expectedTab || duration !== expectedDuration || !name || !image) return res.status(400).json({ error: "Invalid store item" });
     const now = Date.now();
     const inventory = db.collection("storeInventory");
     const existing = await inventory.findOne({ userId, itemId, expiresAt: { $gt: now } });
