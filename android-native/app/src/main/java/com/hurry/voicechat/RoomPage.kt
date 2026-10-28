@@ -206,6 +206,31 @@ fun RoomPage(
     var roomAdminUsers by remember(roomId) { mutableStateOf<List<RoomInfoFollower>>(emptyList()) }
     var roomMicMode by remember(roomId) { mutableIntStateOf(appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).getInt("micMode_$roomId", 10)) }
     var roomTheme by remember(roomId) { mutableStateOf(appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).getString("theme_$roomId", "forest-night") ?: "forest-night") }
+    var purchasedRoomThemeImage by remember(roomId) { mutableStateOf("") }
+    LaunchedEffect(roomId, roomTheme) {
+        purchasedRoomThemeImage = ""
+        if (roomTheme.isNotBlank() && roomTheme !in setOf("forest-night", "mood-light", "custom")) {
+            withContext(Dispatchers.IO) {
+                runCatching {
+                    val encoded = java.net.URLEncoder.encode(roomOwner.accountId.ifBlank { roomOwner.id.ifBlank { roomOwner.uid } }, "UTF-8")
+                    val conn = (java.net.URL("https://zyora-voice-chat.onrender.com/api/store/inventory/$encoded").openConnection() as java.net.HttpURLConnection).apply {
+                        connectTimeout = 8000
+                        readTimeout = 8000
+                    }
+                    try {
+                        if (conn.responseCode !in 200..299) ""
+                        else {
+                            val root = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
+                            val items = root.optJSONArray("items") ?: JSONArray()
+                            (0 until items.length()).map { items.getJSONObject(it) }
+                                .firstOrNull { it.optString("itemId") == roomTheme && it.optString("tab") == "Theme" && it.optLong("expiresAt") > System.currentTimeMillis() }
+                                ?.optString("image", "").orEmpty()
+                        }
+                    } finally { conn.disconnect() }
+                }.getOrDefault("")
+            }.let { image -> purchasedRoomThemeImage = image }
+        }
+    }
     
     val canonicalWalletUserId = accountId.ifBlank { currentUser.uid.ifBlank { currentUser.id } }
 
@@ -660,7 +685,7 @@ fun RoomPage(
 
     Box(Modifier.fillMaxSize().background(Color.Black)){
         JitsiRoomAudio(roomId=roomId,userName=roomDisplayName,canSpeak=seats.any { it.number <= roomMicMode && it.occupied && it.accountId == accountId && !it.muted },onSpeakingChanged={localVoiceSpeaking=it})
-        AsyncImage(model=when(roomTheme) { "mood-light" -> "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/1784533036732~2.jpg"; "custom" -> appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).getString("customTheme_$roomId", null) ?: "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/1784875884052~2.jpg"; else -> "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/1784875884052~2.jpg" },contentDescription="Room theme background",modifier=Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
+        AsyncImage(model=when(roomTheme) { "mood-light" -> "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/1784533036732~2.jpg"; "custom" -> appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).getString("customTheme_$roomId", null) ?: "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/1784875884052~2.jpg"; else -> if (purchasedRoomThemeImage.isNotBlank()) "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/$purchasedRoomThemeImage" else "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/1784875884052~2.jpg" },contentDescription="Room theme background",modifier=Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
 
         Row(modifier = Modifier.align(Alignment.TopStart).padding(top = 84.dp, start = 4.dp),verticalAlignment = Alignment.CenterVertically,horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             Row(modifier = Modifier.height(22.dp).background(Brush.horizontalGradient(listOf(Color(0xE6242B35),Color(0x99242B35),Color.Transparent))).clickable { showInfo = true }.padding(start = 12.dp, end = 12.dp),verticalAlignment = Alignment.CenterVertically) {
