@@ -174,7 +174,19 @@ fun PublicProfileScreen(
         
         // Sync all necessary fields from remote to override cache, especially if user deleted them
         remote?.let { latest ->
-            val keysToSync = listOf("name", "displayName", "userName", "image", "photo", "photoURL", "avatar", "picture", "coverPhotos", "coverPhoto", "albumImages", "bio", "age", "gender")
+            // Normalize server aliases so a fresh install restores the same profile name and DP.
+            val remoteName = sequenceOf("name", "displayName", "userName", "nickname").map { latest.optString(it, "").trim() }.firstOrNull { it.isNotBlank() && it != "null" }
+            val remoteAvatar = sequenceOf("image", "photo", "photoURL", "avatar", "picture", "profileImage", "avatarUrl").map { latest.optString(it, "").trim() }.firstOrNull { it.isNotBlank() && it != "null" && !it.endsWith("/default-avatar.png") }
+            if (!remoteName.isNullOrBlank()) {
+                merged.put("name", remoteName)
+                merged.put("displayName", remoteName)
+                merged.put("userName", remoteName)
+            }
+            if (!remoteAvatar.isNullOrBlank()) {
+                merged.put("image", remoteAvatar)
+                merged.put("photo", remoteAvatar)
+            }
+            val keysToSync = listOf("coverPhotos", "coverPhoto", "albumImages", "bio", "age", "gender")
             keysToSync.forEach { key ->
                 if (latest.has(key)) {
                     val value = latest.optString(key, "")
@@ -297,7 +309,7 @@ fun PublicProfileScreen(
                             }
                         } else {
                             IconButton(onClick = { showEditSheet = true }) {
-                                Icon(Icons.Outlined.Edit, "Edit", tint = Color.White)
+                                Icon(Icons.Outlined.EditNote, "Edit", tint = Color.White)
                             }
                         }
                     }
