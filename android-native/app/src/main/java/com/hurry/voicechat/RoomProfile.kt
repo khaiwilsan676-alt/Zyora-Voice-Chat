@@ -154,8 +154,8 @@ fun RoomProfile(
         loadedProfile = merged
         remote?.let { latest -> sequenceOf("name", "displayName", "userName", "nickname").map { latest.optString(it, "").trim() }.firstOrNull { it.isNotBlank() && it != "null" && !it.equals("User", ignoreCase = true) }?.let { displayName = it } }
         remote?.let { latest ->
-            sequenceOf("image", "photo", "photoURL", "avatar", "picture").map { latest.optString(it, "") }
-                .firstOrNull { it.isNotBlank() && it != "null" }?.takeIf { it != displayImage }?.let { displayImage = it }
+            sequenceOf("image", "photo", "photoURL", "avatar", "picture", "profileImage", "avatarUrl").map { latest.optString(it, "").trim() }
+                .firstOrNull { it.isNotBlank() && it != "null" && !it.endsWith("/default-avatar.png") && it != "default-avatar.png" }?.takeIf { it != displayImage }?.let { displayImage = it }
         }
         val stableDetails = cached ?: remote
         stableDetails?.optString("gender")?.takeIf { it.isNotBlank() && it != "null" }?.let { displayGender = it }
