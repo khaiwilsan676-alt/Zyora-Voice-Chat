@@ -220,24 +220,24 @@ fun Fourgride(
 
     val base = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/"
     val tools = listOf(
-        ToolItem("Clear-Chat", "IMG_20260814_110525.png") { onClearChat() },
-        ToolItem("Public msg", "IMG_20260814_110608.png") { onTogglePublicMsg() },
-        ToolItem("Entry Effect", "IMG_20260814_110709.png") {
+        ToolItem("Clear-Chat", "IMG_20261028_182124.png") { onClearChat() },
+        ToolItem("Public msg", "IMG_20261028_182153.png") { onTogglePublicMsg() },
+        ToolItem("Entry Effect", "IMG_20261028_182218.png") {
             entryEffect = !entryEffect
             prefs.edit().putBoolean("entry_effect", entryEffect).apply()
         },
-        ToolItem("Gift Effect", "IMG_20260814_110727.png") {
+        ToolItem("Gift Effect", "IMG_20261028_182239.png") {
             giftEffect = !giftEffect
             prefs.edit().putBoolean("gift_effect", giftEffect).apply()
         },
-        ToolItem("Music", "IMG_20260814_144255.png") { MusicPlaybackState.wasPlayedOnMusicPage = false; MusicPlaybackState.musicPageBackPressed = false; showMusic = true },
-        ToolItem("Speaker", "IMG_20260814_110628.png") { onToggleSpeaker() },
-        ToolItem("Store", "IMG_20260814_110501.png") { onOpenStore?.invoke("store") },
-        ToolItem("My-Iteam", "IMG_20260814_110545.png") { onOpenStore?.invoke("bag") }
+        ToolItem("Music", "IMG_20261028_182305.png") { MusicPlaybackState.wasPlayedOnMusicPage = false; MusicPlaybackState.musicPageBackPressed = false; showMusic = true },
+        ToolItem("Speaker", "IMG_20261028_182329.png") { onToggleSpeaker() },
+        ToolItem("Store", "IMG_20261028_234208.png") { onOpenStore?.invoke("store") },
+        ToolItem("My-Iteam", "IMG_20261028_182358.png") { onOpenStore?.invoke("bag") }
     )
     val playTools = listOf(
-        ToolItem("Lucky bag", "IMG_20261021_170707.png") { hideToolsAfterLucky = true; showLuckyBag = true },
-        ToolItem("Pk Battle", "IMG_20260814_110802.png") { }
+        ToolItem("Lucky bag", "IMG_20261028_182446.png") { hideToolsAfterLucky = true; showLuckyBag = true },
+        ToolItem("Pk Battle", "IMG_20261028_182422.png") { }
     )
 
     if (!hideToolsAfterLucky) {
@@ -246,44 +246,44 @@ fun Fourgride(
         Column(
             Modifier.fillMaxWidth()
                 .clip(RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp))
-                .background(Color.White)
+                .background(Color.Black.copy(alpha = 0.85f)) // Transparent halka black
                 .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 24.dp)
                 .heightIn(max = LocalConfiguration.current.screenHeightDp.dp * 0.70f)
         ) {
             Row(Modifier.fillMaxWidth().padding(bottom = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("Tools", modifier = Modifier.weight(1f), fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1F2937))
+                Text("Tools", modifier = Modifier.weight(1f), fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
             }
 
             Row(Modifier.fillMaxWidth().padding(bottom = 16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                ToolCell(Modifier.weight(1f), "Clear-Chat", base + "IMG_20260814_110525.png", onClick = onClearChat)
-                ToolCell(Modifier.weight(1f), "Public msg", base + "IMG_20260814_110608.png", toggle = !publicMsgOff, onClick = onTogglePublicMsg)
-                ToolCell(Modifier.weight(1f), "Entry Effect", base + "IMG_20260814_110709.png", toggle = entryEffect, onClick = {
+                ToolCell(Modifier.weight(1f), "Clear-Chat", base + "IMG_20261028_182124.png", onClick = onClearChat)
+                ToolCell(Modifier.weight(1f), "Public msg", base + "IMG_20261028_182153.png", toggle = !publicMsgOff, onClick = onTogglePublicMsg)
+                ToolCell(Modifier.weight(1f), "Entry Effect", base + "IMG_20261028_182218.png", toggle = entryEffect, onClick = {
                     entryEffect = !entryEffect
                     prefs.edit().putBoolean("entry_effect", entryEffect).apply()
                 })
-                ToolCell(Modifier.weight(1f), "Gift Effect", base + "IMG_20260814_110727.png", toggle = giftEffect, onClick = {
+                ToolCell(Modifier.weight(1f), "Gift Effect", base + "IMG_20261028_182239.png", toggle = giftEffect, onClick = {
                     giftEffect = !giftEffect
                     prefs.edit().putBoolean("gift_effect", giftEffect).apply()
                 })
             }
 
             Row(Modifier.fillMaxWidth().padding(bottom = 16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                ToolCell(Modifier.weight(1f), "Music", base + "IMG_20260814_144255.png", onClick = { MusicPlaybackState.wasPlayedOnMusicPage = false; MusicPlaybackState.musicPageBackPressed = false; showMusic = true })
+                ToolCell(Modifier.weight(1f), "Music", base + "IMG_20261028_182305.png", onClick = { MusicPlaybackState.wasPlayedOnMusicPage = false; MusicPlaybackState.musicPageBackPressed = false; showMusic = true })
                 Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                    AsyncImage(model = base + "IMG_20260814_110628.png", contentDescription = "Speaker", modifier = Modifier.size(48.dp), contentScale = ContentScale.Fit)
+                    AsyncImage(model = base + "IMG_20261028_182329.png", contentDescription = "Speaker", modifier = Modifier.size(48.dp), contentScale = ContentScale.Fit)
                     Row(Modifier.padding(top = 4.dp).clickable { onToggleSpeaker() }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("Speaker", fontSize = 10.sp, color = Color(0xFF374151), maxLines = 1, softWrap = false)
+                        Text("Speaker", fontSize = 10.sp, color = Color.White.copy(alpha = 0.9f), maxLines = 1, softWrap = false)
                         ToolToggle(speaker)
                     }
                 }
-                ToolCell(Modifier.weight(1f), "Store", base + "IMG_20260814_110501.png", onClick = { onOpenStore?.invoke("store") })
-                ToolCell(Modifier.weight(1f), "My-Iteam", base + "IMG_20260814_110545.png", onClick = { onOpenStore?.invoke("bag") })
+                ToolCell(Modifier.weight(1f), "Store", base + "IMG_20261028_234208.png", onClick = { onOpenStore?.invoke("store") })
+                ToolCell(Modifier.weight(1f), "My-Iteam", base + "IMG_20261028_182358.png", onClick = { onOpenStore?.invoke("bag") })
             }
 
-            Text("Play Tools", modifier = Modifier.padding(top = 8.dp, bottom = 8.dp), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF1F2937))
+            Text("Play Tools", modifier = Modifier.padding(top = 8.dp, bottom = 8.dp), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                ToolCell(Modifier.weight(1f), "Lucky bag", base + "1790602570756~2.jpg", onClick = { hideToolsAfterLucky = true; showLuckyBag = true })
-                ToolCell(Modifier.weight(1f), "Pk Battle", base + "IMG_20260814_110802.png", onClick = {})
+                ToolCell(Modifier.weight(1f), "Lucky bag", base + "IMG_20261028_182446.png", onClick = { hideToolsAfterLucky = true; showLuckyBag = true })
+                ToolCell(Modifier.weight(1f), "Pk Battle", base + "IMG_20261028_182422.png", onClick = {})
                 Spacer(Modifier.weight(1f))
                 Spacer(Modifier.weight(1f))
             }
@@ -520,7 +520,8 @@ private fun ToolCell(
             AsyncImage(model = imageUrl, contentDescription = title, modifier = Modifier.fillMaxSize().then(if (toggle == null) Modifier.clickable(onClick = onClick) else Modifier), contentScale = ContentScale.Fit)
             if (toggle != null) Box(Modifier.align(Alignment.BottomEnd).clickable(onClick = onClick)) { ToolToggle(toggle) }
         }
-        Text(title, modifier = Modifier.padding(top = 4.dp), fontSize = 10.sp, color = Color(0xFF374151), maxLines = 1, softWrap = false)
+        // Yahan text color white kiya hai taki transparent black me saaf dikhe
+        Text(title, modifier = Modifier.padding(top = 4.dp), fontSize = 10.sp, color = Color.White.copy(alpha = 0.9f), maxLines = 1, softWrap = false)
     }
 }
 
