@@ -115,7 +115,7 @@ fun DailyCheckInModal(
                         ) {
                             DayCard(day = 1, reward = "+10,000", image = "file_00000000b2d481fd8cd233482dbeb9ef.png", currentDay = currentDay, modifier = Modifier.weight(1f))
                             DayCard(day = 2, reward = "+10,000", image = "file_00000000b2d481fd8cd233482dbeb9ef.png", currentDay = currentDay, modifier = Modifier.weight(1f))
-                            DayCard(day = 3, reward = "×2 Days", image = "file_00000000d808821186c1b7b612eea3fc.png", currentDay = currentDay, modifier = Modifier.weight(1f))
+                            DayCard(day = 3, reward = "×2 Days", image = "file_00000000882882088d745d793bd43e06.png", currentDay = currentDay, modifier = Modifier.weight(1f))
                             DayCard(day = 4, reward = "+15,000", image = "file_00000000b2d481fd8cd233482dbeb9ef.png", currentDay = currentDay, modifier = Modifier.weight(1f))
                         }
 
