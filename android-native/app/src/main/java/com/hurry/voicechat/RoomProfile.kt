@@ -167,9 +167,9 @@ fun RoomProfile(
     var showReports by remember { mutableStateOf(false) }
 
     LaunchedEffect(user.uid, user.id, user.accountId, cachedProfile) {
-        val profile = ProfilePersistence.load(
+        val profile = (if (cachedProfile == null) ProfilePersistence.load(
             TargetUser(id = user.id, uid = user.uid, accountId = user.accountId, name = user.name, photo = user.image, image = user.image)
-        ) ?: cachedProfile ?: return@LaunchedEffect
+        ) else null) ?: cachedProfile ?: return@LaunchedEffect
         if (profile.has("officialHeadTag")) officialHeadTag = profile.optBoolean("officialHeadTag")
         if (profile.has("officialTag")) officialTag = profile.optBoolean("officialTag")
         if (profile.has("adminTag")) adminTag = profile.optBoolean("adminTag")
