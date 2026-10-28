@@ -351,35 +351,32 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             if (!theme) {
-                                if (item.image.endsWith(".mp4", ignoreCase = true)) {
+                                val vehicleVideoInBag = isBag && isVehicle && !item.video.isNullOrBlank()
+                                val previewVideo = if (vehicleVideoInBag) item.video!! else item.image
+                                if (previewVideo.endsWith(".mp4", ignoreCase = true)) {
                                     val isV1 = item.id == "v1"
                                     val removeGreen = if (isVehicle) isV1 else true
-                                    
                                     val mediaModifier = if (isVehicle && !isV1) {
                                         Modifier.fillMaxWidth().wrapContentHeight()
                                     } else {
-                                        // Update here to include isBubble
                                         Modifier.fillMaxWidth().height(if (isVehicle || isFrame || isBubble) 120.dp else 80.dp)
                                     }
-                                    
                                     val gridBottomFade = if (isVehicle) {
                                         when (item.id) {
                                             "v2", "v4", "v6" -> 0.15f
                                             else -> 0.1f
                                         }
                                     } else 0f
-                                    
                                     StoreVideoPreview(
-                                        url = StoreAssetBase + item.image,
+                                        url = StoreAssetBase + previewVideo,
                                         modifier = mediaModifier,
-                                        pause = true,
+                                        pause = !vehicleVideoInBag,
                                         topFade = if (isVehicle) 0.1f else 0f,
                                         bottomFade = gridBottomFade,
                                         removeGreenScreen = removeGreen,
                                         mute = item.id == "a8"
                                     )
                                 } else {
-                                    // Update here to include isBubble
                                     val mediaModifier = Modifier.fillMaxWidth().height(if (isVehicle || isFrame || isBubble) 120.dp else 80.dp)
                                     AsyncImage(model = StoreAssetBase + item.image, contentDescription = item.name, modifier = mediaModifier)
                                 }
