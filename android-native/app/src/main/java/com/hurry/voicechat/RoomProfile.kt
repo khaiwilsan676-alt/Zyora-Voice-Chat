@@ -122,11 +122,11 @@ fun RoomProfile(
     LaunchedEffect(user.uid, user.id, user.accountId, profileCacheKeys) {
         val profileDb = NativeIndexDatabase(context)
         val cached = profileCacheKeys.firstNotNullOfOrNull { profileDb.loadProfile(it) }
-        val remote = ProfilePersistence.load(TargetUser(
+        val remote = if (cached == null) ProfilePersistence.load(TargetUser(
             id = user.id, uid = user.uid, accountId = user.accountId,
             name = user.name, photo = user.image, image = user.image,
             gender = user.gender, age = user.age, bio = user.bio
-        ))
+        )) else null
         if (cached == null && remote == null) return@LaunchedEffect
 
         // Cache all non-name/DP fields once. Always refresh only name and avatar from MongoDB.
