@@ -1147,6 +1147,66 @@ app.post("/api/wallet/initialize", async (req, res) => {
   }
 });
 
+app.get("/api/store/inventory/:userId", async (req, res) => {
+  try {
+    const userId = String(req.params.userId || "").trim();
+    if (!userId) return res.status(400).json({ error: "userId required" });
+    const items = await db.collection("storeInventory").find({ userId }).toArray();
+    res.json({ items, balance: await walletBalance(userId) });
+  } catch (error) {
+    console.error("GET /api/store/inventory error:", error.message);
+    res.status(503).json({ error: "Store inventory unavailable" });
+  }
+});
+app.post("/api/store/purchase", async (req, res) => {
+  try {
+    const userId = String(req.body?.userId || "").trim();
+    const itemId = String(req.body?.itemId || "").trim();
+    const name = String(req.body?.name || "").slice(0, 100);
+    const tab = String(req.body?.tab || "").trim();
+    const image = String(req.body?.image || "").slice(0, 300);
+    const duration = String(req.body?.duration || "").trim().toUpperCase();
+    const price = Number(req.body?.price);
+    const prices = {v1:1000000,v10:1200000,v2:600000,v3:549999,v4:500000,v5:259000,v6:890999,v7:425000,v8:525000,v9:359999,a1:250000,a2:500000,a3:750000,a4:700000,a5:249000,a6:300000,a7:199000,a8:500000,t1:2700000,t2:2400000,t3:2700000,t4:2400000,t5:2700000,t6:2400000,t7:899999,t8:700000,t9:1000000,c1:500000,c2:250000,c3:300000,c4:246000,c5:159000,c6:200000,i1:10000000};
+    if (!userId || !prices[itemId] || prices[itemId] !== price || !["Vehicle","Avatar Frame","Theme","Chat Bubble","ID"].includes(tab) || !/^\d+D$/.test(duration) || !name || !image) return res.status(400).json({ error: "Invalid store item" });
+    const now = Date.now();
+    const inventory = db.collection("storeInventory");
+    const existing = await inventory.findOne({ userId, itemId, expiresAt: { $gt: now } });
+    if (existing) return res.status(409).json({ error: "Item already owned", balance: await walletBalance(userId), item: existing });
+    const debit = await debitWallet(userId, price);
+    if (!debit) return res.status(409).json({ error: "Insufficient coins", balance: await walletBalance(userId) });
+    const item = { userId, itemId, name, tab, image, duration, price, purchasedAt: now, expiresAt: now + Number(duration.slice(0, -1)) * 86400000, equipped: false };
+    try {
+      await inventory.updateOne({ userId, itemId }, { $set: item }, { upsert: true });
+      await db.collection("walletTransactions").insertOne({ userId, type: "store_purchase", amount: -price, itemId, createdAt: now });
+    } catch (error) {
+      await creditLuckyBagWallet(userId, price);
+      throw error;
+    }
+    res.json({ success: true, item, balance: await walletBalance(userId) });
+  } catch (error) {
+    console.error("POST /api/store/purchase error:", error.message);
+    res.status(503).json({ error: "Store purchase failed" });
+  }
+});
+app.post("/api/store/equip", async (req, res) => {
+  try {
+    const userId = String(req.body?.userId || "").trim();
+    const itemId = String(req.body?.itemId || "").trim();
+    const equipped = req.body?.equipped === true;
+    if (!userId || !itemId) return res.status(400).json({ error: "userId and itemId required" });
+    const inventory = db.collection("storeInventory");
+    const item = await inventory.findOne({ userId, itemId, expiresAt: { $gt: Date.now() } });
+    if (!item) return res.status(404).json({ error: "Owned item not found or expired" });
+    await inventory.updateMany({ userId, tab: item.tab }, { $set: { equipped: false } });
+    await inventory.updateOne({ userId, itemId }, { $set: { equipped } });
+    res.json({ success: true, equipped });
+  } catch (error) {
+    console.error("POST /api/store/equip error:", error.message);
+    res.status(503).json({ error: "Could not update equipped item" });
+  }
+});
+
 app.get("/api/lucky-bag/wallet/:userId", async (req, res) => {
   try {
     const userId = String(req.params.userId || "").trim();
