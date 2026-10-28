@@ -112,6 +112,7 @@ fun RoomProfile(
     val profileCacheKeys = listOfNotNull(user.uid, user.id, user.accountId).filter { it.isNotBlank() }.distinct()
     val profileCacheKey = profileCacheKeys.firstOrNull().orEmpty()
     val cachedProfile = remember(profileCacheKeys) { val db = NativeIndexDatabase(context); profileCacheKeys.firstNotNullOfOrNull { db.loadProfile(it) } }
+    var loadedProfile by remember(profileCacheKeys) { mutableStateOf(cachedProfile) }
 
     var displayName by remember(user.uid, user.id, user.accountId, user.name, cachedProfile) { mutableStateOf(cachedProfile?.optString("name")?.takeIf { it.isNotBlank() && it != "null" } ?: user.name.ifBlank { "User" }) }
     var displayImage by remember(user.uid, user.id, user.accountId, user.image, cachedProfile) { mutableStateOf(sequenceOf("image", "photo", "photoURL", "avatar", "picture").map { cachedProfile?.optString(it, "").orEmpty() }.firstOrNull { it.isNotBlank() && it != "null" } ?: user.image) }
@@ -145,6 +146,7 @@ fun RoomProfile(
             }
         }
         profileCacheKeys.forEach { profileDb.saveProfile(it, merged) }
+        loadedProfile = merged
         remote?.optString("name")?.takeIf { it.isNotBlank() && it != "null" }?.let { displayName = it }
         remote?.let { latest ->
             sequenceOf("image", "photo", "photoURL", "avatar", "picture").map { latest.optString(it, "") }
@@ -168,8 +170,8 @@ fun RoomProfile(
 
     // Tag values share the same cached profile payload. Never make a second MongoDB
     // request here; the profile-loading effect above owns the one-time remote fallback.
-    LaunchedEffect(user.uid, user.id, user.accountId, cachedProfile) {
-        val profile = cachedProfile ?: return@LaunchedEffect
+    LaunchedEffect(user.uid, user.id, user.accountId, loadedProfile) {
+        val profile = loadedProfile ?: return@LaunchedEffect
         if (profile.has("officialHeadTag")) officialHeadTag = profile.optBoolean("officialHeadTag")
         if (profile.has("officialTag")) officialTag = profile.optBoolean("officialTag")
         if (profile.has("adminTag")) adminTag = profile.optBoolean("adminTag")
