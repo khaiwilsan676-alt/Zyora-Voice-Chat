@@ -1767,15 +1767,18 @@ private fun formatMusicTime(seconds: Float): String {
             }
         }
     }
-    // Room chat always displays these tags, regardless of profile enable flags.
-    val officialHeadTag = true
-    val officialTag = true
-    val adminTag = true
-    val serviceTag = true
-    val hostTag = true
-    val coinSellerTag = true
-    
+    // Show only badges actually assigned to this account; never fabricate profile tags.
     val isRoomOwnerMessage = m.senderAccountId == roomOwnerId
+    val officialHeadTag = profileTags?.optBoolean("officialHeadTag", false) == true
+    val officialTag = profileTags?.optBoolean("officialTag", false) == true
+    val adminTag = profileTags?.optBoolean("adminTag", false) == true
+    val serviceTag = profileTags?.optBoolean("serviceTag", false) == true ||
+        profileTags?.optBoolean("csTag", false) == true
+    val hostTag = profileTags?.optBoolean("hostTag", false) == true ||
+        profileTags?.optBoolean("isHost", false) == true || isRoomOwnerMessage
+    val coinSellerTag = profileTags?.optBoolean("coinSellerTag", false) == true ||
+        profileTags?.optBoolean("coinSeller", false) == true ||
+        profileTags?.optBoolean("sellerTag", false) == true
     
     Row(Modifier.fillMaxWidth().padding(vertical=2.dp),verticalAlignment=Alignment.Top,horizontalArrangement=Arrangement.Start){
         val cachedName = profileTags?.let { profile -> sequenceOf("name", "displayName", "userName").map { profile.optString(it, "") }.firstOrNull { it.isNotBlank() && it != "null" } }.orEmpty()
