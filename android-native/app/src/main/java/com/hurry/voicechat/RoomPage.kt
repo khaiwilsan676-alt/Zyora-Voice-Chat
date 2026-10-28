@@ -1619,16 +1619,18 @@ private fun formatMusicTime(seconds: Float): String {
     var profileTags by remember(m.senderAccountId) { mutableStateOf(profileDb.loadProfile(m.senderAccountId)) }
     LaunchedEffect(m.senderAccountId) {
         if (m.senderAccountId.isNotBlank()) {
-            val remote = ProfilePersistence.load(
+            val existingCache = profileDb.loadProfile(m.senderAccountId)
+            val remote = if (existingCache == null) ProfilePersistence.load(
                 TargetUser(uid = m.senderAccountId, id = m.senderAccountId, accountId = m.senderAccountId, name = m.sender, image = m.senderImage)
-            )
+            ) else null
             if (remote != null) {
                 val merged = profileDb.loadProfile(m.senderAccountId) ?: JSONObject()
                 listOf("officialHeadTag", "officialTag", "adminTag", "serviceTag", "coinSellerTag", "coinSeller", "sellerTag", "csTag").forEach { key ->
                     if (remote.has(key)) merged.put(key, remote.opt(key))
                 }
                 if (m.sender.isNotBlank()) merged.put("name", m.sender)
-                if (m.senderImage.isNotBlank()) merged.put("image", m.senderImage)
+                if (m.senderImage.isNotBlank() && !merged.has("image")) merged.put("image", m.senderImage)
+                if (m.sender.isNotBlank() && !merged.has("name")) merged.put("name", m.sender)
                 profileDb.saveProfile(m.senderAccountId, merged)
                 profileTags = merged
             }
