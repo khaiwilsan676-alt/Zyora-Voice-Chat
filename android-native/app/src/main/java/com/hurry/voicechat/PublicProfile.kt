@@ -91,8 +91,12 @@ fun PublicProfileScreen(
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
-    val profileCacheKey = targetUser?.uid?.takeIf { it.isNotBlank() } ?: targetUser?.id?.takeIf { it.isNotBlank() } ?: targetUser?.accountId.orEmpty()
-    val cachedProfile = remember(profileCacheKey) { NativeIndexDatabase(context).loadProfile(profileCacheKey) }
+    val profileCacheKeys = listOf(targetUser?.uid, targetUser?.id, targetUser?.accountId, targetUser?.displayAccountNumber).filter { !it.isNullOrBlank() }.map { it!! }.distinct()
+    val profileCacheKey = profileCacheKeys.firstOrNull().orEmpty()
+    val cachedProfile = remember(profileCacheKeys) {
+        val db = NativeIndexDatabase(context)
+        profileCacheKeys.firstNotNullOfOrNull { db.loadProfile(it) }
+    }
 
     // Vercel serves files inside the public/ directory from the URL root.
     val profileAsset: (String) -> String = { path ->
@@ -161,9 +165,9 @@ fun PublicProfileScreen(
     val location = targetUser?.location ?: "India"
 
     LaunchedEffect(targetUser?.uid, targetUser?.id, targetUser?.accountId, profileCacheKey) {
-        val remote = ProfilePersistence.load(targetUser)
         val cache = NativeIndexDatabase(context)
-        val cached = if (profileCacheKey.isNotBlank()) cache.loadProfile(profileCacheKey) else null
+        val cached = profileCacheKeys.firstNotNullOfOrNull { cache.loadProfile(it) }
+        val remote = if (cached == null) ProfilePersistence.load(targetUser) else null
         if (remote == null && cached == null) return@LaunchedEffect
 
         val merged = org.json.JSONObject(cached?.toString() ?: "{}")
