@@ -1165,6 +1165,7 @@ app.post("/api/store/purchase", async (req, res) => {
     const name = String(req.body?.name || "").slice(0, 100);
     const tab = String(req.body?.tab || "").trim();
     const image = String(req.body?.image || "").slice(0, 300);
+    const video = String(req.body?.video || "").slice(0, 300);
     const duration = String(req.body?.duration || "").trim().toUpperCase();
     const price = Number(req.body?.price);
     const prices = {v1:1000000,v10:1200000,v2:600000,v3:549999,v4:500000,v5:259000,v6:890999,v7:425000,v8:525000,v9:359999,a1:250000,a2:500000,a3:750000,a4:700000,a5:249000,a6:300000,a7:199000,a8:500000,t1:2700000,t2:2400000,t3:2700000,t4:2400000,t5:2700000,t6:2400000,t7:899999,t8:700000,t9:1000000,c1:500000,c2:250000,c3:300000,c4:246000,c5:159000,c6:200000,i1:10000000};
@@ -1175,7 +1176,7 @@ app.post("/api/store/purchase", async (req, res) => {
     if (existing) return res.status(409).json({ error: "Item already owned", balance: await walletBalance(userId), item: existing });
     const debit = await debitWallet(userId, price);
     if (!debit) return res.status(409).json({ error: "Insufficient coins", balance: await walletBalance(userId) });
-    const item = { userId, itemId, name, tab, image, duration, price, purchasedAt: now, expiresAt: now + Number(duration.slice(0, -1)) * 86400000, equipped: false };
+    const item = { userId, itemId, name, tab, image, video, duration, price, purchasedAt: now, expiresAt: now + Number(duration.slice(0, -1)) * 86400000, equipped: false };
     try {
       await inventory.updateOne({ userId, itemId }, { $set: item }, { upsert: true });
       await db.collection("walletTransactions").insertOne({ userId, type: "store_purchase", amount: -price, itemId, createdAt: now });
