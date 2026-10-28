@@ -410,7 +410,7 @@ fun RoomProfile(
                             .background(Color.LightGray)
                     )
                     NativeAvatarFrameOverlay(
-                        userId = user.accountId.ifBlank { user.uid.ifBlank { user.id } },
+                        userId = user.accountId.orEmpty().ifBlank { user.uid.orEmpty().ifBlank { user.id.orEmpty() } },
                         modifier = Modifier.fillMaxSize()
                     )
                     
