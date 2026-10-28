@@ -11,8 +11,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil3.ImageLoader
 import coil3.compose.AsyncImage
 
 data class EmojiSticker(val id:String,val name:String,val src:String)
@@ -20,6 +22,13 @@ data class EmojiSticker(val id:String,val name:String,val src:String)
 @Composable
 fun EmojiPicker(onClose:()->Unit={},onSelectEmoji:(EmojiSticker)->Unit={}){
  var activeTab by remember{mutableStateOf("emojis")}
+ val context = LocalContext.current
+ 
+ // Ye fresh ImageLoader bina GIF decoder ke hai, isse is screen par GIF pause (static) rahenge
+ val staticImageLoader = remember {
+  ImageLoader.Builder(context).build()
+ }
+
  val stickers=listOf(
   EmojiSticker("laugh","Laugh","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/512.gif"),
   EmojiSticker("sad","Sad","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/512%20(6).gif"),
@@ -42,7 +51,7 @@ fun EmojiPicker(onClose:()->Unit={},onSelectEmoji:(EmojiSticker)->Unit={}){
   // Yaha background sidha Black kar diya hai, purani image hata di
   Box(Modifier.fillMaxWidth().fillMaxHeight(.42f).background(Color.Black)){
    
-   // Top Border overlap image 
+   // Top Border overlap image - FillBounds use kiya hai taaki ekdam edge-to-edge overlap ho bina kisi break ke
    AsyncImage(
     model="https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/file_0000000022f481fab7ddec2efb9449f9.png",
     contentDescription="Top Border",
@@ -50,7 +59,7 @@ fun EmojiPicker(onClose:()->Unit={},onSelectEmoji:(EmojiSticker)->Unit={}){
         .fillMaxWidth()
         .height(30.dp) // Border ki height yaha se adjust kar lena
         .align(Alignment.TopCenter), 
-    contentScale=ContentScale.FillWidth
+    contentScale=ContentScale.FillBounds 
    )
 
    Column(Modifier.fillMaxSize().padding(horizontal=16.dp,vertical=12.dp)){
@@ -74,7 +83,14 @@ fun EmojiPicker(onClose:()->Unit={},onSelectEmoji:(EmojiSticker)->Unit={}){
       },
       horizontalAlignment=Alignment.CenterHorizontally
      ){
-      AsyncImage(model=s.src,contentDescription=s.name,modifier=Modifier.size(48.dp),contentScale=ContentScale.Fit)
+      // Yaha imageLoader mein staticImageLoader pass kiya taaki GIF is sheet par rooka rahe (paused rahe)
+      AsyncImage(
+       model=s.src,
+       imageLoader=staticImageLoader,
+       contentDescription=s.name,
+       modifier=Modifier.size(48.dp),
+       contentScale=ContentScale.Fit
+      )
       Text(s.name.trim(),fontSize=11.sp,color=Color.White.copy(alpha=.90f),maxLines=1)
      }
     }
