@@ -290,9 +290,42 @@ fun RoomSettingPage(
         }
     }
 
-    val themeItems = remember(customTheme) {
-        if (customTheme.isNotBlank()) listOf(RoomThemeChoice("custom", "Custom", customTheme)) + roomThemeChoices
-        else roomThemeChoices
+    val storeRoomThemes = remember { mutableStateListOf<RoomThemeChoice>() }
+    LaunchedEffect(currentUserId) {
+        if (currentUserId.isBlank()) return@LaunchedEffect
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val encoded = java.net.URLEncoder.encode(currentUserId, "UTF-8")
+                val conn = (URL("$SETTINGS_API/api/store/inventory/$encoded").openConnection() as HttpURLConnection).apply {
+                    connectTimeout = 8000
+                    readTimeout = 8000
+                }
+                try {
+                    if (conn.responseCode !in 200..299) emptyList()
+                    else {
+                        val root = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
+                        val arr = root.optJSONArray("items") ?: JSONArray()
+                        (0 until arr.length()).mapNotNull { index ->
+                            val item = arr.optJSONObject(index) ?: return@mapNotNull null
+                            val id = item.optString("itemId")
+                            val expiry = item.optLong("expiresAt")
+                            if (item.optString("tab") == "Theme" && id.isNotBlank() && expiry > System.currentTimeMillis()) {
+                                val image = item.optString("image")
+                                if (image.isNotBlank()) RoomThemeChoice(id, item.optString("name", id), RAW_SETTINGS + image) else null
+                            } else null
+                        }
+                    }
+                } finally { conn.disconnect() }
+            }.getOrDefault(emptyList())
+        }.let { found ->
+            storeRoomThemes.clear()
+            storeRoomThemes.addAll(found)
+        }
+    }
+
+    val themeItems = remember(customTheme, storeRoomThemes.toList()) {
+        (if (customTheme.isNotBlank()) listOf(RoomThemeChoice("custom", "Custom", customTheme)) else emptyList()) +
+            roomThemeChoices + storeRoomThemes.toList()
     }
 
     DisposableEffect(roomOwnerId) {
