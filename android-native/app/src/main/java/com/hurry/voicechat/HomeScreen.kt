@@ -1,4 +1,4 @@
-Package com.hurry.voicechat
+package com.hurry.voicechat
 
 import androidx.compose.animation.core.animateFloat
 
