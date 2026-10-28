@@ -1160,7 +1160,7 @@ fun RoomPage(
                         requestMethod="PUT"; connectTimeout=10000; readTimeout=10000; doOutput=true
                         setRequestProperty("Content-Type","application/json")
                     }
-                    val payload = JSONObject().put("accountId", roomId).put("id", roomId).put("name", saved.roomName).put("dp", saved.roomDp).put("image", saved.roomDp).put("message", saved.announcement).put("announcement", saved.announcement).put("isLocked", saved.isLocked).put("country", roomOwner.country)
+                    val payload = JSONObject().put("accountId", roomId).put("id", roomId).put("name", saved.roomName).put("dp", saved.roomDp).put("image", saved.roomDp).put("message", saved.announcement).put("announcement", saved.announcement).put("theme", saved.theme).put("isLocked", saved.isLocked).put("country", roomOwner.country)
                     conn.outputStream.use { it.write(payload.toString().toByteArray(Charsets.UTF_8)) }
                     val status=conn.responseCode
                     if (status !in 200..299) throw java.io.IOException("Room save failed: HTTP $status")
