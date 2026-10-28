@@ -38,7 +38,9 @@ internal object ProfilePersistence {
             val payload = JSONObject().put("uid", uid).put("id", target?.id ?: uid)
             val account = target?.accountId ?: target?.displayAccountNumber
             if (!account.isNullOrBlank() && account != "—") payload.put("accountId", account)
+            val removeFields = fields.filter { (_, value) -> value.isBlank() || value == "[]" }.keys.toList()
             fields.forEach { (key, value) -> payload.put(key, value) }
+            if (removeFields.isNotEmpty()) payload.put("removeFields", JSONArray(removeFields))
             val connection = (URL("$API/api/users").openConnection() as HttpURLConnection).apply {
                 requestMethod = "PUT"
                 connectTimeout = 12000
@@ -68,6 +70,18 @@ internal object ProfilePersistence {
             val root = JSONObject(body)
             root.optJSONObject("user") ?: root.optJSONArray("users")?.optJSONObject(0)
         }.getOrNull()
+    }
+
+    fun updateCache(context: Context, keys: List<String>, fields: Map<String, String>) {
+        val db = NativeIndexDatabase(context)
+        val uniqueKeys = keys.filter { it.isNotBlank() }.distinct()
+        uniqueKeys.forEach { key ->
+            val cached = db.loadProfile(key) ?: JSONObject()
+            fields.forEach { (field, value) ->
+                if (value.isBlank() || value == "[]") cached.remove(field) else cached.put(field, value)
+            }
+            db.saveProfile(key, cached)
+        }
     }
 
     fun stringList(raw: String?): List<String> = runCatching {
