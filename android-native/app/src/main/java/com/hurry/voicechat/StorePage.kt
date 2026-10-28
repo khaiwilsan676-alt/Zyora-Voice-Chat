@@ -129,6 +129,36 @@ private val nativeStoreItems = listOf(
     NativeStoreItem("i1", "ID Badge 8", "1784533036732~2.jpg", "ID", 5, 10000000, "3D", ownedByDefault = true)
 )
 
+@Composable
+fun NativeAvatarFrameOverlay(userId: String, modifier: Modifier = Modifier) {
+    var frame by remember(userId) { mutableStateOf<JSONObject?>(null) }
+    LaunchedEffect(userId) {
+        frame = null
+        if (userId.isNotBlank()) withContext(Dispatchers.IO) {
+            runCatching {
+                val encoded = URLEncoder.encode(userId, "UTF-8")
+                val c = (URL("https://zyora-voice-chat.onrender.com/api/store/inventory/$encoded").openConnection() as HttpURLConnection).apply { connectTimeout=8000; readTimeout=8000 }
+                val code = c.responseCode
+                if (code !in 200..299) throw IllegalStateException("Inventory unavailable")
+                val json = JSONObject(c.inputStream.bufferedReader().use { it.readText() }); c.disconnect()
+                val items = json.optJSONArray("items") ?: JSONArray()
+                (0 until items.length()).map { items.getJSONObject(it) }
+                    .firstOrNull { it.optString("tab") == "Avatar Frame" && it.optBoolean("equipped") && it.optLong("expiresAt") > System.currentTimeMillis() }
+            }.onSuccess { frame = it }
+        }
+    }
+    val selected = frame
+    if (selected != null) {
+        val video = selected.optString("video", "")
+        if (video.isNotBlank()) {
+            StoreVideoPreview(url = StoreAssetBase + video, modifier = modifier, pause = false, topFade = 0f, bottomFade = 0f, removeGreenScreen = true, mute = true)
+        } else {
+            val image = selected.optString("image", "")
+            if (image.isNotBlank()) AsyncImage(model = StoreAssetBase + image, contentDescription = "Equipped avatar frame", modifier = modifier, contentScale = ContentScale.Fit)
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: String = "") {
@@ -883,7 +913,7 @@ private fun StoreChromaImage(
 }
 
 @Composable
-private fun StoreVideoPreview(
+fun StoreVideoPreview(
     url: String, 
     modifier: Modifier = Modifier, 
     pause: Boolean = false, 
