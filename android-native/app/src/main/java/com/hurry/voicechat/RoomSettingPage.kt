@@ -309,7 +309,7 @@ fun RoomSettingPage(
                             val item = arr.optJSONObject(index) ?: return@mapNotNull null
                             val id = item.optString("itemId")
                             val expiry = item.optLong("expiresAt")
-                            if (item.optString("tab") == "Theme" && id.isNotBlank() && expiry > System.currentTimeMillis()) {
+                            if (item.optString("tab") == "Theme" && item.optBoolean("equipped") && id.isNotBlank() && expiry > System.currentTimeMillis()) {
                                 val image = item.optString("image")
                                 if (image.isNotBlank()) RoomThemeChoice(id, item.optString("name", id), RAW_SETTINGS + image) else null
                             } else null
