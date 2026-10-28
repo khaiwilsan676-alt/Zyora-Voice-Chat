@@ -133,7 +133,7 @@ fun RoomInfo(
                     }
                     Column {
                         Text("Host",fontSize=10.sp,fontWeight=FontWeight.Medium,color=Color.White.copy(alpha=.50f))
-                        Text(roomOwner.name.ifBlank{"Unknown"},Modifier.padding(top=4.dp),
+                        Text(ownerDisplayName.ifBlank{"Unknown"},Modifier.padding(top=4.dp),
                             fontSize=12.sp,fontWeight=FontWeight.Medium,color=Color.White)
                     }
                     Column {
@@ -149,8 +149,8 @@ fun RoomInfo(
                 ) {
                     item {
                         // Owner is a simple member row, not a full-width card.
-                        MemberRow(roomOwner.name, roomOwner.image, roomOwner.accountId, "Owner", Color(0xFF278CF5)) {
-                            onOpenProfile(RoomInfoFollower(roomOwner.accountId, roomOwner.name, roomOwner.image))
+                        MemberRow(ownerDisplayName, ownerDisplayImage, roomOwner.accountId, "Owner", Color(0xFF278CF5)) {
+                            onOpenProfile(RoomInfoFollower(roomOwner.accountId, ownerDisplayName, ownerDisplayImage))
                         }
                     }
                     items(roomAdmins.filter { admin ->
