@@ -1,6 +1,7 @@
 package com.hurry.voicechat
 
 import android.annotation.SuppressLint
+import android.webkit.CookieManager
 import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
 import android.webkit.WebView
@@ -11,9 +12,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
 
 /**
- * Native container for the original Fruitparty.tsx screen.
- * Keeps the real game's artwork, layout, round state, records, rules,
- * socket events and wallet transaction logic instead of a fake Compose clone.
+ * Loads the real Fruitparty.tsx game UI in the native room.
+ * Keep the original web game's artwork, layout, controls and game logic.
  */
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
@@ -28,6 +28,7 @@ fun Fruitparty(
             WebView(context).apply {
                 setBackgroundColor(android.graphics.Color.BLACK)
                 settings.javaScriptEnabled = true
+                settings.javaScriptCanOpenWindowsAutomatically = true
                 settings.domStorageEnabled = true
                 settings.databaseEnabled = true
                 settings.mediaPlaybackRequiresUserGesture = false
@@ -36,6 +37,12 @@ fun Fruitparty(
                 settings.setSupportZoom(false)
                 settings.allowFileAccess = false
                 settings.allowContentAccess = true
+                settings.cacheMode = android.webkit.WebSettings.LOAD_DEFAULT
+
+                // The original game uses browser storage and live socket requests.
+                CookieManager.getInstance().setAcceptCookie(true)
+                CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
+
                 webChromeClient = WebChromeClient()
                 webViewClient = object : WebViewClient() {
                     override fun onPageFinished(view: WebView, url: String) {
