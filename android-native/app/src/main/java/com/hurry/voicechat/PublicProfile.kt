@@ -121,6 +121,9 @@ fun PublicProfileScreen(
     var showActionSheet by remember { mutableStateOf(false) }
     var showUserReport by remember { mutableStateOf(false) }
     var showChat by remember { mutableStateOf(false) }
+    
+    // Naya variable for Avatar Cropping overlay
+    var cropImageUri by remember { mutableStateOf<String?>(null) }
 
     var fullImageIndex by remember { mutableStateOf<Int?>(null) }
     var isFollowing by remember { mutableStateOf(false) }
@@ -140,13 +143,47 @@ fun PublicProfileScreen(
     val userPhoto = profileAsset(userPhotoRaw)
 
     val avatarPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        uri?.let { picked -> val saved = ProfilePersistence.imageDataUri(context, picked) ?: picked.toString(); selectedAvatarUri = saved; if (!isOtherUser) coroutineScope.launch { val fields = mapOf("image" to saved, "photo" to saved); ProfilePersistence.save(targetUser, fields); if (profileCacheKey.isNotBlank()) { val db = NativeIndexDatabase(context); val cached = db.loadProfile(profileCacheKey) ?: org.json.JSONObject(); fields.forEach { (key, value) -> cached.put(key, value) }; db.saveProfile(profileCacheKey, cached) } } }
+        uri?.let { picked -> 
+            val saved = ProfilePersistence.imageDataUri(context, picked) ?: picked.toString()
+            cropImageUri = saved // Seedha save hone se pehle crop UI mein bhej diya
+        }
     }
+    
     val albumPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         uri?.let { picked -> if (albumImages.size < 4) { val saved = ProfilePersistence.imageDataUri(context, picked) ?: picked.toString(); albumImages = albumImages + saved; if (!isOtherUser) coroutineScope.launch { val fields = mapOf("albumImages" to org.json.JSONArray(albumImages).toString()); ProfilePersistence.save(targetUser, fields); if (profileCacheKey.isNotBlank()) { val db = NativeIndexDatabase(context); val cached = db.loadProfile(profileCacheKey) ?: org.json.JSONObject(); fields.forEach { (key, value) -> cached.put(key, value) }; db.saveProfile(profileCacheKey, cached) } } } }
     }
+    
     val backgroundPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         uri?.let { picked -> if (coverPhotos.size < 4) { val saved = ProfilePersistence.imageDataUri(context, picked) ?: picked.toString(); coverPhotos = coverPhotos + saved; if (!isOtherUser) coroutineScope.launch { val fields = mapOf("coverPhotos" to org.json.JSONArray(coverPhotos).toString(), "coverPhoto" to saved); ProfilePersistence.save(targetUser, fields); if (profileCacheKey.isNotBlank()) { val db = NativeIndexDatabase(context); val cached = db.loadProfile(profileCacheKey) ?: org.json.JSONObject(); fields.forEach { (key, value) -> cached.put(key, value) }; db.saveProfile(profileCacheKey, cached) } } } }
+    }
+
+    // Helper functions to remove images
+    val removeCoverPhoto: (String) -> Unit = { photo ->
+        coverPhotos = coverPhotos - photo
+        if (!isOtherUser) coroutineScope.launch {
+            val fields = mapOf("coverPhotos" to org.json.JSONArray(coverPhotos).toString())
+            ProfilePersistence.save(targetUser, fields)
+            if (profileCacheKey.isNotBlank()) {
+                val db = NativeIndexDatabase(context)
+                val cached = db.loadProfile(profileCacheKey) ?: org.json.JSONObject()
+                fields.forEach { (key, value) -> cached.put(key, value) }
+                db.saveProfile(profileCacheKey, cached)
+            }
+        }
+    }
+
+    val removeAlbumImage: (String) -> Unit = { photo ->
+        albumImages = albumImages - photo
+        if (!isOtherUser) coroutineScope.launch {
+            val fields = mapOf("albumImages" to org.json.JSONArray(albumImages).toString())
+            ProfilePersistence.save(targetUser, fields)
+            if (profileCacheKey.isNotBlank()) {
+                val db = NativeIndexDatabase(context)
+                val cached = db.loadProfile(profileCacheKey) ?: org.json.JSONObject()
+                fields.forEach { (key, value) -> cached.put(key, value) }
+                db.saveProfile(profileCacheKey, cached)
+            }
+        }
     }
     
     val followers = targetUser?.followers ?: 0
@@ -159,8 +196,6 @@ fun PublicProfileScreen(
         val cached = if (profileCacheKey.isNotBlank()) cache.loadProfile(profileCacheKey) else null
         if (remote == null && cached == null) return@LaunchedEffect
 
-        // First visit seeds index.db from MongoDB. Later visits keep non-name/DP fields
-        // from index.db and refresh only name/avatar from MongoDB.
         val merged = org.json.JSONObject(cached?.toString() ?: "{}")
         if (cached == null && remote != null) {
             val keys = remote.keys()
@@ -271,12 +306,8 @@ fun PublicProfileScreen(
                             }
                         }
                     }
-
-                    // Floating Avatar
-                    Box(contentAlignment = Alignment.Center, modifier = Modifier.height(24.dp).width(48.dp)) {
-                        AsyncImage(model = profileAsset("/IMG_20261028_004355.png"), contentDescription = "Level", contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
-                        Text("1", color = Color(0xFFF5DDA0), fontSize = 9.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
-                    }
+                    
+                    // Floating Level Avatar yaha se HATA diya gaya hai
                 }
             }
 
@@ -324,21 +355,24 @@ fun PublicProfileScreen(
                                 }
                             }
 
-                            // TAG 1: Official Head (Size utna hi rakha hai - 30.dp)
-                            AsyncImage(model = profileAsset("/file_00000000ef2c82118b2266596d0e992d.png"), contentDescription = "Official Head", contentScale = ContentScale.Fit, modifier = Modifier.height(31.dp).widthIn(max = 80.dp))
+                            // TAG 1: Official Head (Updated)
+                            AsyncImage(model = profileAsset("/file_000000005c388246a5d95dba880d7eb9.png"), contentDescription = "Official Head", contentScale = ContentScale.Fit, modifier = Modifier.height(31.dp).widthIn(max = 80.dp))
                             
                             // TAG 2: Official (Size chhota kar diya - 22.dp)
                             AsyncImage(model = profileAsset("/IMG_20261027_102250.png"), contentDescription = "Official", contentScale = ContentScale.Fit, modifier = Modifier.height(22.dp).widthIn(max = 60.dp))
                         }
 
-                        // ROW 2: Baaki 3 Tags (Size chhota kar diya - 22.dp)
+                        // ROW 2: Baaki Tags (Admin, CS, Host, Coin Seller)
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             AsyncImage(model = profileAsset("/IMG_20261027_114117.png"), contentDescription = "Admin", contentScale = ContentScale.Fit, modifier = Modifier.height(22.dp).widthIn(max = 60.dp))
                             AsyncImage(model = profileAsset("/IMG_20261027_102207.png"), contentDescription = "Service / CS", contentScale = ContentScale.Fit, modifier = Modifier.height(22.dp).widthIn(max = 60.dp))
-                            AsyncImage(model = profileAsset("/IMG_20261027_105359.png"), contentDescription = "Coin Seller", contentScale = ContentScale.Fit, modifier = Modifier.height(22.dp).widthIn(max = 60.dp))
+                            // New Host Tag added here
+                            AsyncImage(model = profileAsset("/IMG_20261028_120624.png"), contentDescription = "Host", contentScale = ContentScale.Fit, modifier = Modifier.height(22.dp).widthIn(max = 60.dp))
+                            // Updated Coin Seller Tag
+                            AsyncImage(model = profileAsset("/IMG_20261028_110222.png"), contentDescription = "Coin Seller", contentScale = ContentScale.Fit, modifier = Modifier.height(22.dp).widthIn(max = 60.dp))
                         }
                     }
 
@@ -366,7 +400,16 @@ fun PublicProfileScreen(
                         Text("$followers Fans", fontSize = 12.sp, color = Color.Gray)
                     }
 
-                    Row(modifier = Modifier.padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                    // Yahan Lv.1 wale Badge ko ID ke theek niche lagaya hai, aur doosre badge se pehle.
+                    Row(modifier = Modifier.padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        // Level 1 Badge (Shifted from Top)
+                        Box(contentAlignment = Alignment.CenterEnd, modifier = Modifier.height(24.dp).width(48.dp)) {
+                            AsyncImage(model = profileAsset("/IMG_20261028_004355.png"), contentDescription = "Level", contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
+                            // White Text, Normal font, Right-side corner par aligned perfectly inside image
+                            Text("Lv.1", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Normal, modifier = Modifier.padding(end = 6.dp))
+                        }
+                        
+                        // Old Profile Badge
                         AsyncImage(model = profileAsset("/1785486414756.png"), contentDescription = "Profile badge", contentScale = ContentScale.Fit, modifier = Modifier.height(24.dp).widthIn(max = 52.dp))
                     }
 
@@ -520,6 +563,64 @@ fun PublicProfileScreen(
     }
 
     // --- OVERLAYS & BOTTOM SHEETS ---
+
+    // Avatar Cropping Overlay (Top-level Dialog for overlap)
+    if (cropImageUri != null) {
+        Dialog(onDismissRequest = { cropImageUri = null }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+            Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+                
+                // Content: Image & Square Crop box (Visual 10x10 representation)
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    AsyncImage(
+                        model = cropImageUri,
+                        contentDescription = "To be cropped",
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                    // The Cropping Box
+                    Box(modifier = Modifier.fillMaxWidth().aspectRatio(1f).border(2.dp, Color.White))
+                }
+                
+                // Top Action Bar
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 24.dp)
+                        .windowInsetsPadding(WindowInsets.statusBars),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Top Left Corner: Cross Icon
+                    IconButton(onClick = { cropImageUri = null }, modifier = Modifier.size(32.dp)) {
+                        Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White, modifier = Modifier.size(28.dp))
+                    }
+                    
+                    // Top Right Corner: Save Text Button
+                    Text(
+                        text = "Save",
+                        color = Color.White,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.clickable {
+                            val saved = cropImageUri!!
+                            selectedAvatarUri = saved
+                            cropImageUri = null
+                            if (!isOtherUser) coroutineScope.launch { 
+                                val fields = mapOf("image" to saved, "photo" to saved)
+                                ProfilePersistence.save(targetUser, fields)
+                                if (profileCacheKey.isNotBlank()) { 
+                                    val db = NativeIndexDatabase(context)
+                                    val cached = db.loadProfile(profileCacheKey) ?: org.json.JSONObject()
+                                    fields.forEach { (key, value) -> cached.put(key, value) }
+                                    db.saveProfile(profileCacheKey, cached) 
+                                } 
+                            }
+                        }.padding(8.dp)
+                    )
+                }
+            }
+        }
+    }
 
     if (isOtherUser && showActionSheet) {
         ModalBottomSheet(
@@ -720,7 +821,21 @@ fun PublicProfileScreen(
                                 }
                             }
                             coverPhotos.take(4).forEach { photo ->
-                                AsyncImage(model = photo, contentDescription = "Background", contentScale = ContentScale.Crop, modifier = Modifier.requiredSize(64.dp).clip(RoundedCornerShape(6.dp)))
+                                // Wrapping with Box for Top Right Cross Icon
+                                Box(modifier = Modifier.requiredSize(64.dp).clip(RoundedCornerShape(6.dp))) {
+                                    AsyncImage(model = photo, contentDescription = "Background", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                                    Icon(
+                                        Icons.Default.Close,
+                                        contentDescription = "Remove",
+                                        tint = Color.White,
+                                        modifier = Modifier
+                                            .align(Alignment.TopEnd)
+                                            .padding(2.dp)
+                                            .size(16.dp)
+                                            .background(Color.Black.copy(alpha = 0.5f), CircleShape)
+                                            .clickable { removeCoverPhoto(photo) }
+                                    )
+                                }
                             }
                         }
                     }
@@ -747,8 +862,20 @@ fun PublicProfileScreen(
                                 }
                             }
                             albumImages.take(4).forEachIndexed { index, image ->
-                                Box(modifier = Modifier.requiredSize(64.dp).clip(RoundedCornerShape(6.dp)).clickable { fullImageIndex = index }) {
-                                    AsyncImage(model = profileAsset(image), contentDescription = "Album photo", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                                // Wrapping with Box for Top Right Cross Icon
+                                Box(modifier = Modifier.requiredSize(64.dp).clip(RoundedCornerShape(6.dp))) {
+                                    AsyncImage(model = profileAsset(image), contentDescription = "Album photo", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize().clickable { fullImageIndex = index })
+                                    Icon(
+                                        Icons.Default.Close,
+                                        contentDescription = "Remove",
+                                        tint = Color.White,
+                                        modifier = Modifier
+                                            .align(Alignment.TopEnd)
+                                            .padding(2.dp)
+                                            .size(16.dp)
+                                            .background(Color.Black.copy(alpha = 0.5f), CircleShape)
+                                            .clickable { removeAlbumImage(image) }
+                                    )
                                 }
                             }
                         }
@@ -1080,7 +1207,6 @@ private fun RealProfileChatIcon() {
         }
         drawPath(path = bubble, color = Color.White)
 
-        // Middle mein 3 transparent dots (Background color use karke fake cutout)
         val dotColor = Color(0xFF1DC4E9)
         val dotRadius = w * 0.08f
         val dotY = h * 0.48f
@@ -1126,8 +1252,6 @@ fun PublicProfile(
     onMessage: () -> Unit = {},
     currentUserId: String = ""
 ) {
-    // The previous empty wrapper caused the public-profile route to render nothing.
-    // Convert the room/user model into the screen model and render the actual UI.
     val target = remember(user) {
         TargetUser(
             id = user.id,
