@@ -299,23 +299,21 @@ private fun MeMenuIcon(type: MeIconType) {
                 } else if (item.label == "Level") {
                     Box(
                         modifier = Modifier.padding(end = 8.dp),
-                        contentAlignment = Alignment.CenterStart
+                        contentAlignment = Alignment.CenterEnd // Yaha se text right side shift ho jayega image ke andar
                     ) {
                         AsyncImage(
-                            model = RAW_ME + "IMG_20260917_220530.png",
+                            model = RAW_ME + "IMG_20261028_004355.png", // Nayi Image yaha lagayi hai
                             contentDescription = null,
-                            modifier = Modifier.height(25.dp), // Image teri requirement ke hisaab se badi hai
-                            contentScale = ContentScale.Fit,
-                            colorFilter = androidx.compose.ui.graphics.ColorFilter.colorMatrix(
-                                androidx.compose.ui.graphics.ColorMatrix().apply { setToSaturation(0f) }
-                            )
+                            modifier = Modifier.height(25.dp), 
+                            contentScale = ContentScale.Fit
+                            // ColorFilter maine hata diya taaki nayi image ke real colors theek se show ho
                         )
                         Text(
                             text = "Lv.0",
-                            fontSize = 10.sp, // Text thora aur chota kar diya (11.sp se 10.sp)
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White,
-                            modifier = Modifier.padding(start = 6.dp) // Padding wapas pehle wali kardi!
+                            fontSize = 10.sp, 
+                            fontWeight = FontWeight.Normal, // Text ko normal kar diya
+                            color = Color.White, // White color rakha hai
+                            modifier = Modifier.padding(end = 6.dp) // Right side se padding di hai taaki image ke andar fit rahe
                         )
                     }
                 }
