@@ -1,7 +1,6 @@
 package com.hurry.voicechat
 
 import androidx.compose.animation.core.animateFloat
-
 import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -171,7 +170,7 @@ fun HomeScreen(
     val dao = remember {
         runCatching { HurryDatabase.get(context).roomDao() }.getOrNull()
     }
-    val roomSyncPrefs = remember { context.getSharedPreferences("native_room_sync", Context.MODE_PRIVATE) }
+    val roomSyncPrefs = remember { context.getSharedPreferences("native_room_sync", Context.MODEPRIVATE) }
 
     var rooms by remember { mutableStateOf(NativeRoomMemoryCache.rooms) }
     var selectedCountry by remember { mutableStateOf("all") }
@@ -277,24 +276,12 @@ fun HomeScreen(
         else list.filter { countryMatches(it.country, selectedCountry) }
     }
 
-    // Build rows once per room-list change. LazyColumn renders only visible rows;
-    // avoid repeatedly copying the growing list and triggering a full recomposition every 40ms.
     val roomRows = remember(filteredRooms) { filteredRooms.chunked(2) }
 
+    // 🔴 YEHA SE GREY LINE HATA DI HAI (Modifier.drawWithContent block removed)
     Column(
         Modifier.fillMaxSize()
             .background(Color(0xFFF5F5F5))
-            .then(
-                Modifier.drawWithContent {
-                    drawContent()
-                    val edgeHeight = 1.dp.toPx()
-                    drawRect(
-                        color = Color.White,
-                        topLeft = Offset(0f, size.height - edgeHeight),
-                        size = Size(size.width, edgeHeight)
-                    )
-                }
-            )
     ) {
         // ═══════════ FIXED TOP HEADER (does not scroll) ═══════════
         Column(
@@ -338,7 +325,6 @@ fun HomeScreen(
                 }
                 Spacer(Modifier.weight(1f))
                 
-                // 🔴 SEARCH OR HOUSE ICON KE BEECH KA GAP EXACT 3.DP HAI
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(3.dp) 
@@ -357,7 +343,6 @@ fun HomeScreen(
 
         // ═══════════ SCROLLABLE AREA ═══════════
         Box(Modifier.fillMaxSize()) {
-            // Yaha par bas overscroll disable kiya hai, design/logic kuch nahi chheda hai.
             androidx.compose.runtime.CompositionLocalProvider(
                 androidx.compose.foundation.LocalOverscrollConfiguration provides null
             ) {
@@ -388,7 +373,6 @@ fun HomeScreen(
                                     AsyncImage(
                                         model = banners[page],
                                         contentDescription = null,
-                                        // 🔴 1ST BANNER = INVITE FRIENDS, 2ND = ROOM SUPPORT
                                         modifier = Modifier.fillMaxSize().clickable(
                                             indication = null, 
                                             interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
@@ -494,7 +478,6 @@ fun HomeScreen(
                 }
             }
             
-            // 🔴 STICKY HEADER TRANSPARENT GAP FIX (Added offset -8.dp to match LazyColumn)
             if (countrySticky) {
                 Box(
                     Modifier
@@ -511,19 +494,45 @@ fun HomeScreen(
                 }
             }
 
-            AsyncImage(
-                model = RAW + "IMG_20260916_002115.png",
-                contentDescription = "Right Corner Decoration",
+            // 🔴 YEHA PAR ICON CHANGE KIYA HAI EKDAM 1000222917.jpg JAISA (Logic and position strictly same)
+            Box(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .padding(end = 12.dp, bottom = 38.dp) 
                     .size(70.dp)
+                    .clip(androidx.compose.foundation.shape.CircleShape)
+                    .background(Color(0xFFF25430))
                     .clickable(
                         indication = null,
                         interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
                     ) { showDailyCheckIn = true },
-                contentScale = ContentScale.Fit
-            )
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterVertically,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    androidx.compose.foundation.Canvas(modifier = Modifier.size(24.dp)) {
+                        drawCircle(
+                            color = Color.White,
+                            radius = size.minDimension / 2f,
+                            style = Stroke(width = 3.dp.toPx())
+                        )
+                        drawCircle(
+                            color = Color.White,
+                            radius = size.minDimension / 5.5f,
+                            style = Stroke(width = 3.dp.toPx())
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Mine",
+                        color = Color.Black.copy(alpha = 0.15f),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
 
             DailyCheckInModal(
                 isOpen = showDailyCheckIn,
