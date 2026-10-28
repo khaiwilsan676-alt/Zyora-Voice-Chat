@@ -163,39 +163,19 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int) {
         if (walletUserId.isNotBlank()) {
             withContext(Dispatchers.IO) {
                 runCatching {
-                    // BUG FIX: Pehle apna current local balance le taaki server usko 0 se replace na kare
-                    val currentLocal = dao.getUserData() ?: UserDataEntity()
-                    
-                    val initConnection = (URL("https://zyora-voice-chat.onrender.com/api/wallet/initialize").openConnection() as HttpURLConnection).apply {
-                        requestMethod = "POST"
-                        doOutput = true
-                        connectTimeout = 8000
-                        readTimeout = 8000
-                        setRequestProperty("Content-Type", "application/json")
-                    }
-                    try {
-                        initConnection.outputStream.bufferedWriter().use { writer ->
-                            // BUG FIX: 0 ki jagah currentLocal.balance bhej rahe hain taaki reset na ho
-                            writer.write(JSONObject().put("userId", walletUserId).put("localBalance", currentLocal.balance).toString())
-                        }
-                        if (initConnection.responseCode !in 200..299) throw IllegalStateException("Wallet migration failed")
-                    } finally { initConnection.disconnect() }
-
+                    // Mine > Wallet and Lucky Bag use the same canonical MongoDB users.coins balance.
                     val encodedId = URLEncoder.encode(walletUserId, "UTF-8")
                     val connection = (URL("https://zyora-voice-chat.onrender.com/api/lucky-bag/wallet/$encodedId").openConnection() as HttpURLConnection).apply {
                         connectTimeout = 8000
                         readTimeout = 8000
                     }
                     try {
-                        if (connection.responseCode in 200..299) {
-                            val wallet = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
-                            val serverBalance = wallet.optLong("balance").coerceAtLeast(0L)
-                            
-                            val existing = dao.getUserData() ?: UserDataEntity()
-                            // BUG FIX: Max function lagaya hai. Taaki agar server kabhi galti se choti value (jaise 0) bheje, toh tera local data ud na jaye
-                            val finalBalance = maxOf(existing.balance, serverBalance)
-                            dao.saveUserData(existing.copy(balance = finalBalance))
-                        }
+                        if (connection.responseCode !in 200..299) throw IllegalStateException("Wallet fetch failed")
+                        val wallet = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
+                        val serverBalance = wallet.optLong("balance").coerceAtLeast(0L)
+                        val existing = dao.getUserData() ?: UserDataEntity()
+                        // Local Room value is only a display cache; never merge it into or overrule MongoDB.
+                        dao.saveUserData(existing.copy(balance = serverBalance))
                     } finally { connection.disconnect() }
                 }
             }
