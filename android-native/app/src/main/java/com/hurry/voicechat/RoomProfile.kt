@@ -124,7 +124,7 @@ fun RoomProfile(
         val profileDb = NativeIndexDatabase(context)
         val cached = profileCacheKeys.firstNotNullOfOrNull { profileDb.loadProfile(it) }
         // Refresh the server copy even when index.db has a cached profile.
-        // Cached data remains the fallback if MongoDB is temporarily unavailable.
+        // Cached data remains the fallback if GitHub storage is temporarily unavailable.
         val remote = ProfilePersistence.load(TargetUser(
             id = user.id, uid = user.uid, accountId = user.accountId,
             name = user.name, photo = user.image, image = user.image,
@@ -132,7 +132,7 @@ fun RoomProfile(
         ))
         if (cached == null && remote == null) return@LaunchedEffect
 
-        // Cache all non-name/DP fields once. Always refresh only name and avatar from MongoDB.
+        // Cache all non-name/DP fields once. Always refresh only name and avatar from GitHub storage.
         val merged = org.json.JSONObject(cached?.toString() ?: "{}")
         if (cached == null && remote != null) {
             val keys = remote.keys()
@@ -173,7 +173,7 @@ fun RoomProfile(
     var premiumTag by remember(user.premiumTag) { mutableStateOf(user.premiumTag == true) }
     var showReports by remember { mutableStateOf(false) }
 
-    // Tag values share the same cached profile payload. Never make a second MongoDB
+    // Tag values share the same cached profile payload. Never make a second GitHub storage
     // request here; the profile-loading effect above owns the one-time remote fallback.
     LaunchedEffect(user.uid, user.id, user.accountId, loadedProfile) {
         val profile = loadedProfile ?: return@LaunchedEffect
