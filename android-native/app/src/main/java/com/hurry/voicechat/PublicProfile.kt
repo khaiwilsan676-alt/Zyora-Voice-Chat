@@ -606,12 +606,16 @@ fun PublicProfileScreen(
                             if (savedUri != null) {
                                 selectedAvatarUri = savedUri
                                 if (!isOtherUser) {
-                                    val fields = mapOf("image" to savedUri, "photo" to savedUri)
-                                    // Save the new DP to index.db immediately so the app uses it
-                                    // on the next open, while MongoDB is updated in the background.
-                                    ProfilePersistence.updateCache(context, profileCacheKeys, fields)
+                                    ProfilePersistence.updateCache(context, profileCacheKeys, mapOf("image" to savedUri, "photo" to savedUri))
                                     coroutineScope.launch {
-                                        ProfilePersistence.save(targetUser, fields)
+                                        val ownerId = (targetUser?.accountId ?: targetUser?.displayAccountNumber ?: targetUser?.id ?: targetUser?.uid).orEmpty()
+                                        val hostedUrl = ProfilePersistence.uploadDpToGitHub(savedUri, ownerId)
+                                        if (hostedUrl != null) {
+                                            val fields = mapOf("image" to hostedUrl, "photo" to hostedUrl, "avatar" to hostedUrl)
+                                            selectedAvatarUri = hostedUrl
+                                            ProfilePersistence.updateCache(context, profileCacheKeys, fields)
+                                            ProfilePersistence.save(targetUser, fields)
+                                        }
                                     }
                                 }
                             }
