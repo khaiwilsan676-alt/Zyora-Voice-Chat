@@ -748,13 +748,47 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
     return () => { active = false; };
   }, []);
 
-  // GitHub OAuth is handled server-side; the provider secret never reaches the browser.
+  // Google account chooser + Firebase Google authentication.
   const handleGoogleLogin = async () => {
     setAuthError(null);
     const isBanned = await checkBanBeforeLogin();
     if (isBanned) return;
     setLoading(true);
-    window.location.assign("/api/auth/github");
+    try {
+      const googleProvider = new GoogleAuthProvider();
+      googleProvider.setCustomParameters({ prompt: "select_account" });
+      const userCredential = await signInWithPopup(auth, googleProvider);
+      const user = userCredential.user;
+      const userName = user.displayName || user.email?.split("@")[0] || "User";
+      const userEmail = user.email || "";
+      const userPhoto = user.photoURL || "/default-avatar.png";
+      const syncResult = await syncUserToMongoDB(user.uid, userName, userEmail, userPhoto);
+
+      localStorage.setItem("userName", syncResult.name);
+      localStorage.setItem("userEmail", userEmail);
+      localStorage.setItem("userPhoto", syncResult.image);
+      localStorage.setItem("userUID", user.uid);
+      localStorage.setItem("accountNumber", syncResult.accountId);
+      await processLoginSuccess({
+        ...user,
+        name: syncResult.name,
+        image: syncResult.image,
+        accountId: syncResult.accountId,
+        accountNumber: syncResult.accountId,
+      });
+    } catch (error: any) {
+      console.error("Google sign-in failed:", error);
+      const code = error?.code || "";
+      if (code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request") {
+        setAuthError("Google sign-in was cancelled. Please try again.");
+      } else if (code === "auth/unauthorized-domain") {
+        setAuthError("This website domain is not authorized for Google sign-in in Firebase.");
+      } else {
+        setAuthError(error?.message || "Google sign-in failed. Please try again.");
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Login with Account button click handler (with ban pre-check)
