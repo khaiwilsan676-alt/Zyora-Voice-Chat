@@ -165,7 +165,7 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int) {
                 runCatching {
                     // Mine > Wallet and Lucky Bag use the same canonical GitHub storage users.coins balance.
                     val encodedId = URLEncoder.encode(walletUserId, "UTF-8")
-                    val connection = (URL("https://zyora-voice-chat.onrender.com/api/lucky-bag/wallet/$encodedId").openConnection() as HttpURLConnection).apply {
+                    val connection = (URL("https://zyora-server.onrender.com/api/lucky-bag/wallet/$encodedId").openConnection() as HttpURLConnection).apply {
                         connectTimeout = 8000
                         readTimeout = 8000
                     }
