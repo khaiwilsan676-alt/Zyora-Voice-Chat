@@ -124,7 +124,7 @@ fun Newuserafterlogin(onBack: () -> Unit, onComplete: () -> Unit) {
                         val uid = prefs.getString("uid", "").orEmpty()
                         if (selectedUri != null) {
                             val dataUri = withContext(Dispatchers.IO) {
-                                val bytes = context.contentResolver.openInputStream(selectedUri!!)?.use { it.readBytes() } ?: error("Could not read selected photo")
+                                val bytes = context.contentResolver.openInputStream(selectedUri!!)?.use { it.readBytes() } ?: throw IllegalStateException("Could not read selected photo")
                                 "data:image/jpeg;base64," + Base64.encodeToString(bytes, Base64.NO_WRAP)
                             }
                             finalAvatar = ProfilePersistence.uploadDpToGitHub(dataUri, prefs.getString("accountId", uid).orEmpty()) ?: dataUri
