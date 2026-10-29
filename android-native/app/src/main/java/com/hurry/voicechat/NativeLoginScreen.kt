@@ -53,7 +53,7 @@ import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 
-private const val HURRY_API_BASE = "https://zyora-voice-chat.onrender.com"
+private const val HURRY_API_BASE = "https://zyora-server.onrender.com"
 private const val HURRY_VIDEO = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/gemini_generated_video_99a3cc1a~3.mp4"
 private const val HURRY_LOGO = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/logo.png"
 
