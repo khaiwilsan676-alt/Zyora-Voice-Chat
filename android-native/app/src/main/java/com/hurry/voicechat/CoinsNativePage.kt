@@ -163,7 +163,7 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int) {
         if (walletUserId.isNotBlank()) {
             withContext(Dispatchers.IO) {
                 runCatching {
-                    // Mine > Wallet and Lucky Bag use the same canonical MongoDB users.coins balance.
+                    // Mine > Wallet and Lucky Bag use the same canonical GitHub storage users.coins balance.
                     val encodedId = URLEncoder.encode(walletUserId, "UTF-8")
                     val connection = (URL("https://zyora-voice-chat.onrender.com/api/lucky-bag/wallet/$encodedId").openConnection() as HttpURLConnection).apply {
                         connectTimeout = 8000
@@ -174,7 +174,7 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int) {
                         val wallet = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
                         val serverBalance = wallet.optLong("balance").coerceAtLeast(0L)
                         val existing = dao.getUserData() ?: UserDataEntity()
-                        // Local Room value is only a display cache; never merge it into or overrule MongoDB.
+                        // Local Room value is only a display cache; never merge it into or overrule GitHub storage.
                         dao.saveUserData(existing.copy(balance = serverBalance))
                     } finally { connection.disconnect() }
                 }
