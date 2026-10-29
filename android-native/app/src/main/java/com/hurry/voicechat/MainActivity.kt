@@ -87,7 +87,17 @@ class MainActivity : ComponentActivity() {
             if (showLaunch) {
                 HurryLaunchScreen()
             } else if (!authenticated) {
-                NativeLoginScreen(onLoginSuccess = { authenticated = true; profileSetupComplete = getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE).getBoolean("profileSetupComplete", false) })
+                NativeLoginScreen(onLoginSuccess = {
+                    val authPrefs = getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE)
+                    val needsSetup = authPrefs.getBoolean("needsProfileSetup", false)
+                    if (needsSetup) {
+                        authPrefs.edit().putBoolean("profileSetupComplete", false).apply()
+                        profileSetupComplete = false
+                    } else {
+                        profileSetupComplete = authPrefs.getBoolean("profileSetupComplete", true)
+                    }
+                    authenticated = true
+                })
             } else if (getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE)
                     .getBoolean("needsProfileSetup", false) && !profileSetupComplete) {
                 Newuserafterlogin(
