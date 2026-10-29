@@ -85,6 +85,12 @@ class MainActivity : ComponentActivity() {
                 HurryLaunchScreen()
             } else if (!authenticated) {
                 NativeLoginScreen(onLoginSuccess = { authenticated = true })
+            } else if (getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE)
+                    .getBoolean("needsProfileSetup", false)) {
+                Newuserafterlogin(
+                    onBack = { authenticated = false },
+                    onComplete = { authenticated = true }
+                )
             } else {
                 HurryNativeRoot(onLogout = { authenticated = false })
             }
