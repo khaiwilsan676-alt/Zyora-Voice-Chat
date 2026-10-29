@@ -1,31 +1,24 @@
-import { createHash } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function getCloudinaryConfig() {
-  const raw = process.env.CLOUDINARY_URL?.trim();
-  if (!raw) return null;
-
-  try {
-    const parsed = new URL(raw);
-    if (parsed.protocol !== "cloudinary:") return null;
-    const cloudName = parsed.hostname;
-    const apiKey = decodeURIComponent(parsed.username);
-    const apiSecret = decodeURIComponent(parsed.password);
-    if (!cloudName || !apiKey || !apiSecret) return null;
-    return { cloudName, apiKey, apiSecret };
-  } catch {
-    return null;
-  }
-}
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+const MIME_TO_EXT: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "image/gif": "gif",
+};
 
 export async function POST(request: NextRequest) {
-  const config = getCloudinaryConfig();
-  if (!config) {
+  const token = process.env.GITHUB_TOKEN || process.env.GITHUB_UPLOAD_TOKEN;
+  const repository = process.env.GITHUB_UPLOAD_REPOSITORY || "khaiwilsan676-alt/Zyora-Voice-Chat";
+  const branch = process.env.GITHUB_UPLOAD_BRANCH || "main";
+
+  if (!token) {
     return NextResponse.json(
-      { error: "Image storage is not configured on the server." },
+      { error: "GitHub image storage is not configured. Set GITHUB_TOKEN on the server." },
       { status: 503 },
     );
   }
@@ -38,52 +31,66 @@ export async function POST(request: NextRequest) {
   }
 
   const file = form.get("file");
-  const folderInput = String(form.get("folder") || "zyora/profiles");
-  const allowedFolders = new Set(["zyora/profiles", "zyora/rooms", "zyora/albums"]);
-  const folder = allowedFolders.has(folderInput) ? folderInput : "zyora/profiles";
+  const userId = String(form.get("userId") || "").trim();
 
-  if (!(file instanceof File)) {
-    return NextResponse.json({ error: "Choose an image to upload." }, { status: 400 });
+  if (!userId || !/^[a-zA-Z0-9_-]{1,100}$/.test(userId)) {
+    return NextResponse.json({ error: "A valid userId is required." }, { status: 400 });
   }
-  if (!["image/jpeg", "image/png", "image/webp", "image/gif"].includes(file.type)) {
+  if (!(file instanceof File)) {
+    return NextResponse.json({ error: "Choose a profile image to upload." }, { status: 400 });
+  }
+
+  const extension = MIME_TO_EXT[file.type];
+  if (!extension) {
     return NextResponse.json({ error: "Only JPG, PNG, WEBP, or GIF images are allowed." }, { status: 415 });
   }
-  if (file.size <= 0 || file.size > 5 * 1024 * 1024) {
-    return NextResponse.json({ error: "Image must be 5 MB or smaller." }, { status: 413 });
+  if (file.size <= 0 || file.size > MAX_IMAGE_BYTES) {
+    return NextResponse.json({ error: "Profile image must be 5 MB or smaller." }, { status: 413 });
   }
 
+  const path = `public/user-dp/${userId}/dp-${Date.now()}.${extension}`;
+  const bytes = Buffer.from(await file.arrayBuffer());
+  const content = bytes.toString("base64");
+  const apiUrl = `https://api.github.com/repos/${repository}/contents/${path.split("/").map(encodeURIComponent).join("/")}`;
+
   try {
-    const timestamp = Math.floor(Date.now() / 1000).toString();
-    const signatureBase = `folder=${folder}&timestamp=${timestamp}${config.apiSecret}`;
-    const signature = createHash("sha1").update(signatureBase).digest("hex");
+    const response = await fetch(apiUrl, {
+      method: "PUT",
+      headers: {
+        Accept: "application/vnd.github+json",
+        Authorization: `Bearer ${token}`,
+        "X-GitHub-Api-Version": "2022-11-28",
+        "Content-Type": "application/json",
+        "User-Agent": "Zyora-Image-Upload",
+      },
+      body: JSON.stringify({
+        message: `Upload profile image for user ${userId}`,
+        content,
+        branch,
+      }),
+      cache: "no-store",
+    });
 
-    const upload = new FormData();
-    upload.set("file", file);
-    upload.set("folder", folder);
-    upload.set("timestamp", timestamp);
-    upload.set("api_key", config.apiKey);
-    upload.set("signature", signature);
-
-    const response = await fetch(
-      `https://api.cloudinary.com/v1_1/${config.cloudName}/image/upload`,
-      { method: "POST", body: upload, cache: "no-store" },
-    );
     const result = await response.json().catch(() => ({}));
-
-    if (!response.ok || typeof result.secure_url !== "string") {
-      console.error("Cloudinary upload failed:", response.status, result.error?.message || "unknown error");
-      return NextResponse.json({ error: "Image upload failed. Please try again." }, { status: 502 });
+    if (!response.ok) {
+      console.error("GitHub image upload failed:", response.status, result.message || "unknown error");
+      const status = response.status === 401 || response.status === 403 ? 502 : response.status;
+      return NextResponse.json(
+        { error: "GitHub image upload failed. Check repository access and token permissions." },
+        { status },
+      );
     }
 
+    const url = `https://raw.githubusercontent.com/${repository}/${branch}/${path}`;
     return NextResponse.json({
       success: true,
-      url: result.secure_url,
-      publicId: result.public_id,
-      bytes: result.bytes,
-      format: result.format,
+      url,
+      path,
+      size: file.size,
+      sha: result.content?.sha,
     });
   } catch (error) {
-    console.error("Image upload request failed:", error);
-    return NextResponse.json({ error: "Image upload service is temporarily unavailable." }, { status: 502 });
+    console.error("GitHub image upload request failed:", error);
+    return NextResponse.json({ error: "GitHub image storage is temporarily unavailable." }, { status: 502 });
   }
 }
