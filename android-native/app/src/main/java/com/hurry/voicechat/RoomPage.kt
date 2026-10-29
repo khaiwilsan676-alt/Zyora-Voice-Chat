@@ -326,6 +326,7 @@ fun RoomPage(
                         val message = saved.optString("message", saved.optString("announcement", "")).takeUnless { it == "null" }.orEmpty()
                         val savedMicMode = saved.optInt("micMode", roomMicMode).let { if (it in listOf(5, 10, 15)) it else roomMicMode }
                         val savedTheme = saved.optString("theme", roomTheme).takeUnless { it.isBlank() || it == "null" } ?: roomTheme
+                        val savedCustomTheme = saved.optString("customTheme", saved.optString("themeImage", "")).takeUnless { it == "null" }.orEmpty()
                         val savedAdminsJson = saved.optJSONArray("admin") ?: JSONArray()
                         val savedAdmins = (0 until savedAdminsJson.length()).mapNotNull { i -> savedAdminsJson.optString(i).takeIf { it.isNotBlank() && it != "null" } }.distinct()
                         launch(Dispatchers.Main) {
@@ -335,7 +336,7 @@ fun RoomPage(
                             roomMicMode = savedMicMode
                             roomTheme = savedTheme
                             roomAdminIds = savedAdmins
-                            appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).edit().putInt("micMode_$roomId", savedMicMode).putString("theme_$roomId", savedTheme).apply()
+                            appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).edit().putInt("micMode_$roomId", savedMicMode).putString("theme_$roomId", savedTheme).putString("customTheme_$roomId", savedCustomTheme).apply()
                         }
                     }
                 } finally { conn.disconnect() }
@@ -1242,9 +1243,9 @@ fun RoomPage(
         if(showStore) StorePage(onBack={showStore=false}, initialView=storeInitialView, userId=accountId.ifBlank{roomOwner.accountId.ifBlank{roomOwner.id}})
         if(showInfo) RoomInfo(isOpen=true,onClose={showInfo=false},isRoomOwner=accountId==roomOwner.accountId.ifBlank{roomOwner.id},roomOwner=RoomInfoOwner(id=roomOwner.id,uid=roomOwner.uid,accountId=roomOwner.accountId.ifBlank{roomOwner.id},name=roomOwner.name,image=roomOwner.image),roomData=RoomInfoData(roomName,roomImage,announcement,roomId),roomFollowers=roomFollowers,roomAdmins=roomAdminUsers,onOpenProfile={ follower -> seats.firstOrNull{it.accountId==follower.accountId}?.let{selectedSeat=it.number};showInfo=false },onCopyId={ id -> clipboard.setText(AnnotatedString(id));copiedId=id },copied=copiedId==roomId)
         if(showActiveUsers) ActiveUsers(isOpen=true,onClose={showActiveUsers=false},roomUsers=activeRoomUsers,currentUser=ActiveUserNative(accountId,roomDisplayName,roomDisplayImage),roomOwnerId=roomOwner.accountId.ifBlank{roomOwner.id},onOpenProfile={ user -> seats.firstOrNull{it.accountId==user.accountId}?.let{selectedSeat=it.number};showActiveUsers=false },onCopyUserId={ id -> clipboard.setText(AnnotatedString(id));copiedId=id })
-        if(showSettings) RoomSettingPage(initial = RoomSettingsDataNative(roomName=roomName,roomDp=roomImage,announcement=announcement,micMode=roomMicMode,theme=roomTheme,isLocked=locked,admin=roomAdminIds),roomOwnerId=roomId,currentUserId=accountId,onBack={showSettings=false},onSave={saved->
+        if(showSettings) RoomSettingPage(initial = RoomSettingsDataNative(roomName=roomName,roomDp=roomImage,announcement=announcement,micMode=roomMicMode,theme=roomTheme,isLocked=locked,admin=roomAdminIds,customTheme=appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).getString("customTheme_$roomId", "").orEmpty()),roomOwnerId=roomId,currentUserId=accountId,onBack={showSettings=false},onSave={saved->
             roomName=saved.roomName;roomImage=saved.roomDp;announcement=saved.announcement;roomMicMode=saved.micMode;roomTheme=saved.theme;roomAdminIds=saved.admin;locked=saved.isLocked;showSettings=false
-            appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).edit().putInt("micMode_$roomId", saved.micMode).putString("theme_$roomId", saved.theme).apply()
+            appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).edit().putInt("micMode_$roomId", saved.micMode).putString("theme_$roomId", saved.theme).putString("customTheme_$roomId", saved.customTheme).apply()
             // RoomSettingPage already persisted the complete room settings before invoking onSave.
             // Do not issue a second partial PUT here: it used to reset mic mode/admin fields on the server.
         })
