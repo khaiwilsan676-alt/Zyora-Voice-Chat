@@ -69,6 +69,46 @@ const mongoClient = process.env.MONGODB_URI
 
 let db = null;
 
+const crypto = require("node:crypto");
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "164837688319-uu6uhd20mner48etd4ci6aeu3nuvt8gp.apps.googleusercontent.com";
+function authSession() { return crypto.randomBytes(32).toString("base64url"); }
+function passwordHash(password, salt) { return crypto.scryptSync(password, salt, 64).toString("hex"); }
+function normalizeEmail(value) { return String(value || "").trim().toLowerCase(); }
+app.post("/api/auth/email", async (req, res) => {
+  try {
+    if (!db) return res.status(503).json({ error: "Account service is temporarily unavailable." });
+    const email = normalizeEmail(req.body?.email), password = String(req.body?.password || ""), create = req.body?.create === true;
+    if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) return res.status(400).json({ error: "Please enter a valid email." });
+    if (password.length < 6 || password.length > 256) return res.status(400).json({ error: "Password must be at least 6 characters." });
+    const key = crypto.createHash("sha256").update(email).digest("hex"), accounts = db.collection("auth_accounts");
+    let account = await accounts.findOne({ email });
+    if (create) {
+      if (account) return res.status(409).json({ error: "An account already exists with this email. Please login instead." });
+      const salt = crypto.randomBytes(16).toString("hex");
+      account = { email, uid: "email:" + key, salt, passwordHash: passwordHash(password, salt), createdAt: new Date() };
+      await accounts.insertOne(account);
+    } else {
+      if (!account) return res.status(401).json({ error: "Invalid email or password." });
+      const supplied = Buffer.from(passwordHash(password, account.salt), "hex"), expected = Buffer.from(account.passwordHash, "hex");
+      if (supplied.length !== expected.length || !crypto.timingSafeEqual(supplied, expected)) return res.status(401).json({ error: "Invalid email or password." });
+    }
+    return res.json({ localId: account.uid, email, displayName: email.split("@")[0], photoUrl: "", idToken: authSession() });
+  } catch (error) { console.error("Email authentication failed:", error); return res.status(500).json({ error: "Could not authenticate this account. Please try again." }); }
+});
+app.post("/api/auth/google", async (req, res) => {
+  try {
+    const idToken = String(req.body?.idToken || "");
+    if (!idToken) return res.status(400).json({ error: "Google sign-in token is missing." });
+    const verify = await fetch("https://oauth2.googleapis.com/tokeninfo?id_token=" + encodeURIComponent(idToken));
+    if (!verify.ok) return res.status(401).json({ error: "Google sign-in could not be verified." });
+    const profile = await verify.json();
+    if (profile.aud !== GOOGLE_CLIENT_ID || profile.email_verified !== "true" || !profile.sub || !profile.email) return res.status(401).json({ error: "Google account verification failed." });
+    const uid = "google:" + String(profile.sub);
+    return res.json({ localId: uid, email: profile.email, displayName: profile.name || profile.email.split("@")[0], photoUrl: profile.picture || "", idToken: authSession() });
+  } catch (error) { console.error("Google authentication failed:", error); return res.status(502).json({ error: "Google sign-in service is temporarily unavailable." }); }
+});
+
+
 const onlineUsers = new Map();
 
 const memoryRoundWinners = {
