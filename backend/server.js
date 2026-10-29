@@ -618,6 +618,7 @@ app.put("/api/rooms", async (req, res) => {
     const incomingDp = firstText(data.dp, data.image, data.roomDp, data["Room dp"]);
     const savedDp = firstText(existingRoom.dp, existingRoom.image, existingRoom.roomDp, existingRoom["Room dp"]);
     const incomingTheme = firstText(data.theme, data.roomTheme, data["Room Theme"]);
+    const incomingCustomTheme = firstText(data.customTheme, data.themeImage, existingRoom.customTheme, existingRoom.themeImage);
     const incomingMessage = firstText(data.message, data.announcement);
     const hasLockState = Object.prototype.hasOwnProperty.call(data, "isLocked");
     const hasPassword = Object.prototype.hasOwnProperty.call(data, "roomPassword");
@@ -636,6 +637,8 @@ app.put("/api/rooms", async (req, res) => {
       country: firstText(data.country, data.Country, existingRoom.country, existingRoom.Country) || "🇮🇳",
       message: incomingMessage || firstText(existingRoom.message, existingRoom.announcement),
       theme: incomingTheme || firstText(existingRoom.theme, existingRoom.roomTheme, existingRoom["Room Theme"]) || "forest-night",
+      customTheme: incomingCustomTheme,
+      themeImage: incomingCustomTheme,
       micMode: data.micMode !== undefined && Number.isFinite(Number(data.micMode))
         ? Number(data.micMode)
         : Number.isFinite(Number(existingRoom.micMode)) ? Number(existingRoom.micMode) : 15,
