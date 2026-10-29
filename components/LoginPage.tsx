@@ -8,7 +8,9 @@ import { socket } from "../src/lib/socket"
 import { ArrowLeft, ArrowRight, Eye, EyeOff, User } from 'lucide-react'
 import { 
   signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword 
+  createUserWithEmailAndPassword,
+  GoogleAuthProvider,
+  signInWithPopup
 } from "firebase/auth";
 import { auth } from "../src/lib/firebase";
 
