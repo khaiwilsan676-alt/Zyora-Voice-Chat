@@ -17,6 +17,28 @@ import java.net.URLEncoder
 internal object ProfilePersistence {
     private const val API = "https://zyora-voice-chat.onrender.com"
 
+
+    suspend fun uploadDpToGitHub(dataUri: String, userId: String): String? = withContext(Dispatchers.IO) {
+        runCatching {
+            if (!dataUri.startsWith("data:image/") || userId.isBlank()) return@runCatching null
+            val connection = (URL("https://zyora-voice-chat.vercel.app/api/upload-image").openConnection() as HttpURLConnection).apply {
+                requestMethod = "POST"
+                connectTimeout = 20000
+                readTimeout = 30000
+                doOutput = true
+                setRequestProperty("Content-Type", "application/json; charset=utf-8")
+            }
+            val payload = JSONObject().put("userId", userId).put("folder", "user-dp").put("imageData", dataUri)
+            connection.outputStream.use { it.write(payload.toString().toByteArray(Charsets.UTF_8)) }
+            val status = connection.responseCode
+            val stream = if (status in 200..299) connection.inputStream else connection.errorStream
+            val response = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+            connection.disconnect()
+            if (status !in 200..299) return@runCatching null
+            JSONObject(response).optString("url").takeIf { it.startsWith("https://raw.githubusercontent.com/") }
+        }.getOrNull()
+    }
+
     fun imageDataUri(context: Context, uri: Uri): String? = runCatching {
         val source = context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it) } ?: return null
         val maxEdge = 720
