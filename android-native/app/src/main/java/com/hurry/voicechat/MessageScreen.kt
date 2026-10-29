@@ -263,7 +263,7 @@ fun NativeChatScreen(
             reconnectionDelay = 1000
             reconnectionDelayMax = 5000
         }
-        val chatSocket = IO.socket("https://zyora-voice-chat.onrender.com", opts)
+        val chatSocket = IO.socket("https://zyora-server.onrender.com", opts)
         directSocket = chatSocket
         val mainHandler = Handler(Looper.getMainLooper())
         val incoming = Emitter.Listener { args ->
@@ -331,7 +331,7 @@ fun NativeChatScreen(
         socketOptions.reconnectionDelay = 1000
         socketOptions.reconnectionDelayMax = 5000
         val officialSocket: Socket = IO.socket(
-            "https://zyora-voice-chat.onrender.com",
+            "https://zyora-server.onrender.com",
             socketOptions
         )
 
