@@ -76,6 +76,9 @@ class MainActivity : ComponentActivity() {
                         .getString("uid", null).isNullOrBlank().not()
                 )
             }
+            var profileSetupComplete by remember {
+                mutableStateOf(getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE).getBoolean("profileSetupComplete", false))
+            }
             LaunchedEffect(Unit) {
                 kotlinx.coroutines.delay(1200)
                 showLaunch = false
@@ -84,12 +87,12 @@ class MainActivity : ComponentActivity() {
             if (showLaunch) {
                 HurryLaunchScreen()
             } else if (!authenticated) {
-                NativeLoginScreen(onLoginSuccess = { authenticated = true })
+                NativeLoginScreen(onLoginSuccess = { authenticated = true; profileSetupComplete = getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE).getBoolean("profileSetupComplete", false) })
             } else if (getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE)
-                    .getBoolean("needsProfileSetup", false)) {
+                    .getBoolean("needsProfileSetup", false) && !profileSetupComplete) {
                 Newuserafterlogin(
                     onBack = { authenticated = false },
-                    onComplete = { authenticated = true }
+                    onComplete = { profileSetupComplete = true; authenticated = true }
                 )
             } else {
                 HurryNativeRoot(onLogout = { authenticated = false })
