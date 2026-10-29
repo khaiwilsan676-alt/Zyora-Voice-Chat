@@ -47,7 +47,7 @@ const openUserDB = (): Promise<IDBDatabase> => {
   });
 };
 
-const getUserFromMongoDB = async (uid: string) => {
+const getUserFromGitHub = async (uid: string) => {
   if (!uid) return null;
 
   const response = await fetch(
@@ -59,7 +59,7 @@ const getUserFromMongoDB = async (uid: string) => {
   }
 
   if (!response.ok) {
-    throw new Error(`MongoDB user fetch failed: ${response.status}`);
+    throw new Error(`GitHub storage user fetch failed: ${response.status}`);
   }
 
   const result = await response.json();
@@ -656,7 +656,7 @@ export default function MePage({ onLogout, onPublicProfileChange, onNavigate }: 
         }
 
         try {
-          const res = await getUserFromMongoDB(uid);
+          const res = await getUserFromGitHub(uid);
           const sheetData = res && (res.user || res.data || res);
           
           let resolvedName = localStorage.getItem("userName") || "";
