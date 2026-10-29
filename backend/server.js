@@ -603,31 +603,50 @@ app.put("/api/rooms", async (req, res) => {
     }
 
     const rooms = db.collection("rooms");
+    const roomFilter = {
+      $or: [
+        { accountId },
+        { id: accountId },
+        { roomId: accountId },
+        { "Room Admin": accountId }
+      ]
+    };
+    const existingRoom = await rooms.findOne(roomFilter) || {};
+    const firstText = (...values) => values
+      .map((value) => value == null ? "" : String(value).trim())
+      .find((value) => value && value !== "null") || "";
+    const incomingDp = firstText(data.dp, data.image, data.roomDp, data["Room dp"]);
+    const savedDp = firstText(existingRoom.dp, existingRoom.image, existingRoom.roomDp, existingRoom["Room dp"]);
+    const incomingTheme = firstText(data.theme, data.roomTheme, data["Room Theme"]);
+    const incomingMessage = firstText(data.message, data.announcement);
+    const hasLockState = Object.prototype.hasOwnProperty.call(data, "isLocked");
+    const hasPassword = Object.prototype.hasOwnProperty.call(data, "roomPassword");
+    const incomingAdmins = Array.isArray(data.admin) ? data.admin
+      : Array.isArray(data.admins) ? data.admins : existingRoom.admin;
 
+    // Room settings arrive from multiple clients with slightly different field names.
+    // Merge partial updates with the saved record so a DP/theme/admin list can never
+    // be reset by a client that only sends name or mic mode.
     const roomData = {
       accountId,
       id: accountId,
       roomId: accountId,
-      name: data.name || data.roomName || data["Room Name"] || "Room",
-      dp: data.dp || data.image || data.roomDp || data["Room dp"] || "/default-avatar.png",
-      country: data.country || data.Country || "🇮🇳",
-      message: data.message || data.announcement || "",
-      theme: data.theme || "default",
-      micMode: data.micMode !== undefined ? Number(data.micMode) : 15,
-      isLocked: Boolean(data.isLocked),
-      roomPassword: data.roomPassword || null,
+      name: firstText(data.name, data.roomName, data["Room Name"], existingRoom.name, existingRoom.roomName) || "Room",
+      dp: incomingDp || savedDp || "/default-avatar.png",
+      country: firstText(data.country, data.Country, existingRoom.country, existingRoom.Country) || "🇮🇳",
+      message: incomingMessage || firstText(existingRoom.message, existingRoom.announcement),
+      theme: incomingTheme || firstText(existingRoom.theme, existingRoom.roomTheme, existingRoom["Room Theme"]) || "forest-night",
+      micMode: data.micMode !== undefined && Number.isFinite(Number(data.micMode))
+        ? Number(data.micMode)
+        : Number.isFinite(Number(existingRoom.micMode)) ? Number(existingRoom.micMode) : 15,
+      admin: incomingAdmins || [],
+      isLocked: hasLockState ? Boolean(data.isLocked) : Boolean(existingRoom.isLocked),
+      roomPassword: hasPassword ? (data.roomPassword || null) : (existingRoom.roomPassword || null),
       updatedAt: Date.now()
     };
 
     await rooms.updateOne(
-      {
-        $or: [
-          { accountId },
-          { id: accountId },
-          { roomId: accountId },
-          { "Room Admin": accountId }
-        ]
-      },
+      roomFilter,
       {
         $set: roomData,
         $setOnInsert: {
