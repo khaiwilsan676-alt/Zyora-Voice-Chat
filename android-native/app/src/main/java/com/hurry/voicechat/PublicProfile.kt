@@ -1094,8 +1094,15 @@ fun PublicProfileScreen(
                         color = Color(0xFF1DC4E9),
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.clickable {
-                            val today = java.time.LocalDate.now()
-                            userAge = (today.year - selectedYear - if (today.monthValue < selectedMonth || (today.monthValue == selectedMonth && today.dayOfMonth < selectedDay)) 1 else 0).coerceIn(0, 120)
+                            val today = java.util.Calendar.getInstance()
+                            val birth = java.util.Calendar.getInstance().apply {
+                                set(selectedYear, selectedMonth - 1, selectedDay, 0, 0, 0)
+                                set(java.util.Calendar.MILLISECOND, 0)
+                            }
+                            userAge = (today.get(java.util.Calendar.YEAR) - selectedYear -
+                                if (today.get(java.util.Calendar.MONTH) < birth.get(java.util.Calendar.MONTH) ||
+                                    (today.get(java.util.Calendar.MONTH) == birth.get(java.util.Calendar.MONTH) &&
+                                        today.get(java.util.Calendar.DAY_OF_MONTH) < selectedDay)) 1 else 0).coerceIn(0, 120)
                             if (!isOtherUser) coroutineScope.launch { val fields = mapOf("age" to userAge.toString()); ProfilePersistence.save(targetUser, fields); if (profileCacheKey.isNotBlank()) { val db = NativeIndexDatabase(context); val cached = db.loadProfile(profileCacheKey) ?: org.json.JSONObject(); fields.forEach { (key, value) -> if (value.isBlank() || value == "[]") cached.remove(key) else cached.put(key, value) }; listOf(targetUser?.uid, targetUser?.id, targetUser?.accountId, targetUser?.displayAccountNumber, profileCacheKey).filter { !it.isNullOrBlank() }.distinct().forEach { db.saveProfile(it!!, cached) } } }
                             showAgeScreen = false
                         }
