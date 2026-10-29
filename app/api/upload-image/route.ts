@@ -49,14 +49,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid upload request." }, { status: 400 });
   }
 
-  const allowedFolders = new Set(["user-dp", "user-albums", "user-covers"]);
+  const allowedFolders = new Set(["user-dp", "user-albums", "user-covers", "room-dp", "room-theme"]);
   const folder = allowedFolders.has(folderInput) ? folderInput : "user-dp";
   if (!userId || !/^[a-zA-Z0-9_-]{1,100}$/.test(userId)) return NextResponse.json({ error: "A valid userId is required." }, { status: 400 });
   const extension = MIME_TO_EXT[mimeType];
   if (!extension) return NextResponse.json({ error: "Only JPG, PNG, WEBP, or GIF images are allowed." }, { status: 415 });
   if (bytes.length <= 0 || bytes.length > MAX_IMAGE_BYTES) return NextResponse.json({ error: "Profile image must be 5 MB or smaller." }, { status: 413 });
 
-  const path = `public/${folder}/${userId}/${folder === "user-dp" ? "dp" : folder === "user-albums" ? "album" : "cover"}-${Date.now()}.${extension}`;
+  const imagePrefix = folder === "user-dp" || folder === "room-dp"
+    ? "dp"
+    : folder === "user-albums" ? "album"
+    : folder === "user-covers" ? "cover"
+    : "theme";
+  const path = `public/${folder}/${userId}/${imagePrefix}-${Date.now()}.${extension}`;
   const apiUrl = `https://api.github.com/repos/${repository}/contents/${path.split("/").map(encodeURIComponent).join("/")}`;
   try {
     const response = await fetch(apiUrl, {
