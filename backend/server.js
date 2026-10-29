@@ -1035,6 +1035,27 @@ app.put("/api/users", async (req, res) => {
 
     const users = db.collection("users");
 
+    // Do not let profile edits or stale clients erase a previously saved avatar
+    // by sending an empty/default image. Explicit removeFields remains supported.
+    const avatarFields = ["photo", "image", "photoURL", "avatar", "picture"];
+    const explicitlyRemovingAvatar = removeFields.some((field) => avatarFields.includes(field));
+    const existingUser = await users.findOne({
+      $or: [{ uid }, { id: uid }, { appLongId: uid }]
+    });
+    if (existingUser && !explicitlyRemovingAvatar) {
+      const isUsableAvatar = (value) => {
+        const candidate = String(value || "").trim();
+        return candidate && candidate !== "/default-avatar.png" && candidate !== "default-avatar.png";
+      };
+      const existingAvatar = avatarFields.map((field) => existingUser[field]).find(isUsableAvatar);
+      const incomingAvatar = avatarFields.map((field) => profileData[field]).find(isUsableAvatar);
+      if (existingAvatar && !incomingAvatar) {
+        for (const field of avatarFields) {
+          if (!isUsableAvatar(profileData[field])) profileData[field] = existingAvatar;
+        }
+      }
+    }
+
     const userData = {
       ...profileData,
       id: String(data.id || uid),
