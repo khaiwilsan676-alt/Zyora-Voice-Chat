@@ -1324,7 +1324,7 @@ export default function PublicProfile({
 
       if (uid !== 'N/A') {
         const cachedProfile = await loadProfileFromDB(uid);
-        if (cachedProfile && isValidName(cachedProfile.name)) {
+        if (cachedProfile && isValidName(cachedProfile.name) && Boolean(String(cachedProfile.photo || cachedProfile.image || cachedProfile.avatar || cachedProfile.photoURL || '').trim()) && !['/default-avatar.png', 'default-avatar.png'].includes(String(cachedProfile.photo || cachedProfile.image || cachedProfile.avatar || cachedProfile.photoURL || '').trim())) {
           setUser({
             name: cachedProfile.name, uid: uid,
             displayAccountNumber: cachedProfile.displayAccountNumber || '',
