@@ -32,6 +32,9 @@ export async function POST(request: NextRequest) {
 
   const file = form.get("file");
   const userId = String(form.get("userId") || "").trim();
+  const folderInput = String(form.get("folder") || "user-dp");
+  const allowedFolders = new Set(["user-dp", "user-albums", "user-covers"]);
+  const folder = allowedFolders.has(folderInput) ? folderInput : "user-dp";
 
   if (!userId || !/^[a-zA-Z0-9_-]{1,100}$/.test(userId)) {
     return NextResponse.json({ error: "A valid userId is required." }, { status: 400 });
@@ -48,7 +51,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Profile image must be 5 MB or smaller." }, { status: 413 });
   }
 
-  const path = `public/user-dp/${userId}/dp-${Date.now()}.${extension}`;
+  const path = `public/${folder}/${userId}/${folder === "user-dp" ? "dp" : folder === "user-albums" ? "album" : "cover"}-${Date.now()}.${extension}`;
   const bytes = Buffer.from(await file.arrayBuffer());
   const content = bytes.toString("base64");
   const apiUrl = `https://api.github.com/repos/${repository}/contents/${path.split("/").map(encodeURIComponent).join("/")}`;
@@ -64,7 +67,7 @@ export async function POST(request: NextRequest) {
         "User-Agent": "Zyora-Image-Upload",
       },
       body: JSON.stringify({
-        message: `Upload profile image for user ${userId}`,
+        message: `Upload ${folder} image for user ${userId}`,
         content,
         branch,
       }),
