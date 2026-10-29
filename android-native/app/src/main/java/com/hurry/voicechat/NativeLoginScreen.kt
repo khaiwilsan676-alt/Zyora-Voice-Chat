@@ -498,6 +498,7 @@ private fun syncHurryUser(user: JSONObject, context: android.content.Context) {
         .putString("country", country)
         .putString("deviceId", deviceId)
         .putBoolean("needsProfileSetup", existingProfile.length() == 0)
+        .putBoolean("profileSetupComplete", if (existingProfile.length() == 0) false else authPrefs.getBoolean("profileSetupComplete", true))
         .putString("pendingProfileJson", profile.toString())
         .putBoolean("profileSyncPending", true)
         .apply()
