@@ -138,7 +138,7 @@ fun PublicProfileScreen(
     var userBio by remember(profileCacheKey, cachedProfile, targetUser?.bio) { mutableStateOf(cachedProfile?.optString("bio")?.takeIf { it != "null" } ?: targetUser?.bio ?: "") }
     var userAge by remember(profileCacheKey, cachedProfile, targetUser?.age) { mutableIntStateOf(if (cachedProfile?.has("age") == true) cachedProfile.optInt("age", targetUser?.age ?: 0) else targetUser?.age ?: 0) }
     
-    // Keep profile details in index.db; MongoDB remains the source for the latest name and DP.
+    // Keep profile details in index.db; GitHub storage remains the source for the latest name and DP.
     var userGender by remember(profileCacheKey, cachedProfile, targetUser?.gender) { mutableStateOf(cachedProfile?.optString("gender")?.takeIf { it.isNotBlank() && it != "null" } ?: targetUser?.gender?.takeIf { it.isNotBlank() } ?: "Male") }
     
     val displayAccNum = targetUser?.displayAccountNumber?.takeIf { it.isNotBlank() } ?: targetUser?.accountId?.takeIf { it.isNotBlank() } ?: "—"
