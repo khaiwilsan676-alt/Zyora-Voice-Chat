@@ -104,7 +104,58 @@ app.post("/api/auth/google", async (req, res) => {
     const profile = await verify.json();
     if (profile.aud !== GOOGLE_CLIENT_ID || profile.email_verified !== "true" || !profile.sub || !profile.email) return res.status(401).json({ error: "Google account verification failed." });
     const uid = "google:" + String(profile.sub);
-    return res.json({ localId: uid, email: profile.email, displayName: profile.name || profile.email.split("@")[0], photoUrl: profile.picture || "", idToken: authSession() });
+    const account = {
+      uid,
+      provider: "google",
+      email: normalizeEmail(profile.email),
+      displayName: String(profile.name || profile.email.split("@")[0]).slice(0, 120),
+      photoUrl: String(profile.picture || "").slice(0, 2048),
+      emailVerified: true,
+      updatedAt: new Date().toISOString(),
+    };
+
+    // Optional private GitHub repository backup. Never embed GITHUB_TOKEN in the APK.
+    // Configure GITHUB_TOKEN and ZYORA_USER_DATA_REPO (owner/private-repo) on the backend host.
+    const githubToken = process.env.GITHUB_TOKEN;
+    const userDataRepo = String(process.env.ZYORA_USER_DATA_REPO || "").trim();
+    if (githubToken && userDataRepo) {
+      if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(userDataRepo)) {
+        return res.status(503).json({ error: "User storage configuration is invalid." });
+      }
+      const safeId = crypto.createHash("sha256").update(String(profile.sub)).digest("hex");
+      const path = `users/${safeId}.json`;
+      const apiUrl = `https://api.github.com/repos/${userDataRepo}/contents/${path}`;
+      const headers = {
+        Authorization: `Bearer ${githubToken}`,
+        Accept: "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+      };
+      const existing = await fetch(apiUrl, { headers, cache: "no-store" });
+      let existingSha;
+      if (existing.ok) {
+        const previous = await existing.json();
+        existingSha = typeof previous.sha === "string" ? previous.sha : undefined;
+      } else if (existing.status !== 404) {
+        console.error("GitHub user storage lookup failed:", existing.status);
+        return res.status(503).json({ error: "Account storage is temporarily unavailable." });
+      }
+      const saved = await fetch(apiUrl, {
+        method: "PUT",
+        headers: { ...headers, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: "Zyora: save Google account profile",
+          content: Buffer.from(JSON.stringify(account, null, 2) + "\\n").toString("base64"),
+          ...(existingSha ? { sha: existingSha } : {}),
+        }),
+        cache: "no-store",
+      });
+      if (!saved.ok) {
+        console.error("GitHub user storage commit failed:", saved.status);
+        return res.status(503).json({ error: "Could not save your account. Please try again." });
+      }
+    }
+
+    return res.json({ localId: uid, email: account.email, displayName: account.displayName, photoUrl: account.photoUrl, idToken: authSession() });
   } catch (error) { console.error("Google authentication failed:", error); return res.status(502).json({ error: "Google sign-in service is temporarily unavailable." }); }
 });
 
