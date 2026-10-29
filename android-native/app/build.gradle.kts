@@ -3,7 +3,6 @@ plugins {
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.devtools.ksp")
-    id("com.google.gms.google-services")
 }
 android {
     namespace = "com.hurry.voicechat"
@@ -20,13 +19,6 @@ android {
         compose = true
         buildConfig = true
     }
-    val firebaseApiKey = providers.gradleProperty("FIREBASE_API_KEY")
-        .orElse(providers.environmentVariable("FIREBASE_API_KEY"))
-        .orElse(providers.environmentVariable("NEXT_PUBLIC_FIREBASE_API_KEY"))
-        .orElse("AIzaSyCnTCkTKXHjsWBQmgSqfiJtR5kjZgb5aUY")
-        .get()
-        .replace("\\", "\\\\")
-        .replace("\"", "\\\"")
     val supabaseAnonKey = providers.gradleProperty("SUPABASE_ANON_KEY")
         .orElse(providers.environmentVariable("SUPABASE_ANON_KEY"))
         .orElse(providers.environmentVariable("NEXT_PUBLIC_SUPABASE_ANON_KEY"))
@@ -35,7 +27,6 @@ android {
         .replace("\\", "\\\\")
         .replace("\"", "\\\"")
     defaultConfig {
-        buildConfigField("String", "FIREBASE_API_KEY", "\"$firebaseApiKey\"")
         buildConfigField("String", "SUPABASE_ANON_KEY", "\"$supabaseAnonKey\"")
     }
     compileOptions {
@@ -52,8 +43,6 @@ dependencies {
     implementation("androidx.credentials:credentials:1.5.0")
     implementation("androidx.credentials:credentials-play-services-auth:1.5.0")
     implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
-    implementation("com.google.firebase:firebase-auth:23.2.1")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.10.2")
     implementation("androidx.core:core-splashscreen:1.0.1")
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
