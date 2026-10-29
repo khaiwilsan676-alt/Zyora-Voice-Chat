@@ -7,7 +7,7 @@ import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 
-private const val API_BASE = "https://zyora-voice-chat.onrender.com"
+private const val API_BASE = "https://zyora-server.onrender.com"
 
 data class RoomSyncResult(val rooms: List<HurryRoom>, val serverTime: Long)
 
