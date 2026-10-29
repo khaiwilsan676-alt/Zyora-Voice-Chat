@@ -249,6 +249,13 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                                     .putString("mine_room_image", serverRoom.image)
                                     .putString("mine_room_country", serverRoom.country)
                                     .putString("mine_room_account_id", serverRoom.accountId)
+                                    .putString("mine_room_announcement", serverRoom.announcement)
+                                    .putString("mine_room_dp", serverRoom.image)
+                                    .putString("room_theme_${serverRoom.id}", saved.optString("theme", saved.optString("roomTheme", "forest-night")).ifBlank { "forest-night" })
+                                    .putString("room_custom_theme_${serverRoom.id}", saved.optString("customTheme", saved.optString("themeImage", "")))
+                                    .putInt("room_mic_mode_${serverRoom.id}", saved.optInt("micMode", 10))
+                                    .putBoolean("room_locked_${serverRoom.id}", saved.optBoolean("isLocked", false))
+                                    .putString("room_password_${serverRoom.id}", saved.optString("roomPassword", ""))
                                     .apply()
                                 mineCreatedRoom = serverRoom
                             }
@@ -266,6 +273,12 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                                 .put("country", local.country)
                                 .put("message", local.announcement)
                                 .put("announcement", local.announcement)
+                                .put("theme", authPrefs.getString("room_theme_${local.id}", "forest-night"))
+                                .put("customTheme", authPrefs.getString("room_custom_theme_${local.id}", ""))
+                                .put("themeImage", authPrefs.getString("room_custom_theme_${local.id}", ""))
+                                .put("micMode", authPrefs.getInt("room_mic_mode_${local.id}", 10))
+                                .put("isLocked", authPrefs.getBoolean("room_locked_${local.id}", local.locked))
+                                .put("roomPassword", authPrefs.getString("room_password_${local.id}", ""))
                             val save = (URL("https://zyora-server.onrender.com/api/rooms").openConnection() as HttpURLConnection).apply {
                                 requestMethod = "PUT"
                                 connectTimeout = 10000
