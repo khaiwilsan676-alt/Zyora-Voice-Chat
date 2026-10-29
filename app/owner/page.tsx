@@ -815,7 +815,7 @@ export default function StaffPanel() {
               id: String(u._id || u.id || u.uid || index + 1),
               name: u.name || u.displayName || u.userName || 'User',
               username: u.username || u.userName || `@${(u.name || 'user').toLowerCase().replace(/\s+/g, '')}`,
-              hurryId: String(u.accountId || u.displayUserNumber || u.appLongId || u.hurryId || u.id || '—'),
+              hurryId: String(u.githubId || (typeof u.uid === 'string' && u.uid.startsWith('github:') ? u.uid.slice(7) : '') || (typeof u.id === 'string' && u.id.startsWith('github:') ? u.id.slice(7) : '') || u.accountId || u.displayUserNumber || u.appLongId || u.hurryId || u.id || '—'),
               email: u.email || u.gmail || u.emailPhone || '—',
               role: u.role || 'NORMAL',
               image: u.image || u.photo || u.avatar || u.photoURL || ''
@@ -1285,8 +1285,8 @@ export default function StaffPanel() {
                       <tr className="border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                         <th className="py-4 pl-4 pr-2 w-12">S.No</th>
                         <th className="py-4 px-2 w-1/3">User Profile & Avatar</th>
-                        <th className="py-4 px-2">User ID (MongoDB)</th>
-                        <th className="py-4 px-2">Email (Firebase Gmail)</th>
+                        <th className="py-4 px-2">GitHub User ID</th>
+                        <th className="py-4 px-2">GitHub Email</th>
                         <th className="py-4 px-2">Role</th>
                         <th className="py-4 pr-4 text-right">Actions</th>
                       </tr>
