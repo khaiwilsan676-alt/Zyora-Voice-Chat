@@ -9,6 +9,7 @@ import { socket } from '@/src/lib/socket';
 import Reports from '@/components/Reports';
 import OwnerBan from '@/components/ownerban';
 import { apiUrl } from "@/src/lib/api";
+import OwnerGitHubUpload from '@/components/OwnerGitHubUpload';
 
 // ==============================================================
 // VALID LOGIN CREDENTIALS
@@ -1200,6 +1201,11 @@ export default function StaffPanel() {
             ]}
           />
 
+          <div className={`flex items-center gap-3 px-6 py-3 text-[14px] font-bold cursor-pointer transition-colors ${activeTab === 'github_upload' ? 'bg-indigo-600 text-white' : 'text-white hover:bg-white/5'}`} onClick={() => setActiveTab('github_upload')}>
+            <span className="text-[16px] drop-shadow-md">📤</span>
+            <span>GitHub Upload</span>
+          </div>
+
           <div className="flex items-center gap-3 px-6 py-3 text-[14px] font-bold text-white hover:bg-white/5 cursor-pointer transition-colors mt-2" onClick={() => setActiveTab('system')}>
             <span className="text-[16px] drop-shadow-md">🛠️</span>
             <span>System</span>
@@ -1226,6 +1232,8 @@ export default function StaffPanel() {
             <MoreVertical className="w-6 h-6" />
           </button>
         </header>
+
+        {activeTab === 'github_upload' && <OwnerGitHubUpload />}
 
         {activeTab === 'manage_users' && (
           <div className="flex flex-col h-full bg-white">
@@ -2271,7 +2279,7 @@ export default function StaffPanel() {
           </div>
         )}
 
-        {activeTab !== 'manage_users' && activeTab !== 'game_fruit_party' && activeTab !== 'game_wild_party' && activeTab !== 'themes' && activeTab !== 'gift_catalog' && activeTab !== 'ai_chats' && activeTab !== 'feedback' && activeTab !== 'official_msg' && activeTab !== 'reports' && activeTab !== 'bans' && activeTab !== 'tickets' && (
+        {activeTab !== 'github_upload' && activeTab !== 'manage_users' && activeTab !== 'game_fruit_party' && activeTab !== 'game_wild_party' && activeTab !== 'themes' && activeTab !== 'gift_catalog' && activeTab !== 'ai_chats' && activeTab !== 'feedback' && activeTab !== 'official_msg' && activeTab !== 'reports' && activeTab !== 'bans' && activeTab !== 'tickets' && (
           <div className="p-8 max-w-5xl mx-auto w-full">
             <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
               <h2 className="text-xl font-bold text-slate-800 capitalize">
