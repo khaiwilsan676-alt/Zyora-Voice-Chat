@@ -218,8 +218,8 @@ const compressImage = (file: File, maxWidth: number, maxHeight: number, quality:
 }
 
 
-const uploadImageToGitHub = async (dataUrl: string, folder: "user-dp" | "user-albums" | "user-covers"): Promise<string> => {
-  const rawUserId = user?.uid || localStorage.getItem("userUID") || localStorage.getItem("userPhone") || user?.displayAccountNumber;
+const uploadImageToGitHub = async (dataUrl: string, folder: "user-dp" | "user-albums" | "user-covers", currentUserId?: string): Promise<string> => {
+  const rawUserId = currentUserId || localStorage.getItem("userUID") || localStorage.getItem("userPhone");
   const userId = String(rawUserId || "").replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 100);
   if (!userId) throw new Error("Please sign in again before uploading images.");
 
@@ -1528,7 +1528,7 @@ export default function PublicProfile({
     }
     try {
       const compressedBase64 = await compressImage(file, 800, 400, 0.7)
-      const imageUrl = await uploadImageToGitHub(compressedBase64, "user-covers")
+      const imageUrl = await uploadImageToGitHub(compressedBase64, "user-covers", user.uid || user.displayAccountNumber)
       const updated = [...coverPhotos, imageUrl]
       setCoverPhotos(updated)
       localStorage.setItem('userCoverPhotos', JSON.stringify(updated))
@@ -1589,7 +1589,7 @@ export default function PublicProfile({
       }
       try {
         const compressedBase64 = await compressImage(file, 600, 600, 0.7)
-        const imageUrl = await uploadImageToGitHub(compressedBase64, "user-albums")
+        const imageUrl = await uploadImageToGitHub(compressedBase64, "user-albums", user.uid || user.displayAccountNumber)
         const updatedAlbum = [...albumImages, imageUrl]
         setAlbumImages(updatedAlbum)
         localStorage.setItem('userAlbumImages', JSON.stringify(updatedAlbum))
@@ -1612,7 +1612,7 @@ export default function PublicProfile({
 
   const handleCropSave = async (croppedImage: string) => {
     try {
-      const imageUrl = await uploadImageToGitHub(croppedImage, "user-dp")
+      const imageUrl = await uploadImageToGitHub(croppedImage, "user-dp", user.uid || user.displayAccountNumber)
       setCropImageSrc(null)
       localStorage.setItem('userPhoto', imageUrl)
       setUser((prev) => ({ ...prev, photo: imageUrl }))
