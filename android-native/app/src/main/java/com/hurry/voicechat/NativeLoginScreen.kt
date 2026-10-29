@@ -424,11 +424,11 @@ private fun syncHurryUser(user: JSONObject, context: android.content.Context) {
     val accountId = existingAccount.ifBlank { generatedAccountId }
     val emailName = email.substringBefore("@").ifBlank { "User" }
     val name = existingProfile.optString("name").ifBlank {
-        existingProfile.optString("Name").ifBlank { emailName }
+        existingProfile.optString("Name").ifBlank { user.optString("displayName").ifBlank { emailName } }
     }
     val image = existingProfile.optString("image").ifBlank {
         existingProfile.optString("avatar").ifBlank {
-            existingProfile.optString("photo").ifBlank { "/default-avatar.png" }
+            existingProfile.optString("photo").ifBlank { user.optString("photoUrl").ifBlank { "/default-avatar.png" } }
         }
     }
     val country = existingProfile.optString("country").ifBlank {
