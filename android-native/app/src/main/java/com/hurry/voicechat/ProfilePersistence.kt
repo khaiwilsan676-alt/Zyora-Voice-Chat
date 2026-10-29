@@ -15,7 +15,7 @@ import java.net.URL
 import java.net.URLEncoder
 
 internal object ProfilePersistence {
-    private const val API = "https://zyora-voice-chat.onrender.com"
+    private const val API = "https://zyora-server.onrender.com"
 
 
     suspend fun uploadDpToGitHub(dataUri: String, userId: String): String? = withContext(Dispatchers.IO) {
