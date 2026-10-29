@@ -76,7 +76,8 @@ data class RoomSettingsDataNative(
     val isLocked: Boolean = false,
     val roomPassword: String = "",
     val roomDp: String = "",
-    val admin: List<String> = emptyList()
+    val admin: List<String> = emptyList(),
+    val customTheme: String = ""
 )
 
 private data class RoomThemeChoice(val id: String, val name: String, val image: String)
@@ -145,7 +146,8 @@ private suspend fun saveRoomSettingsRemote(roomId: String, userId: String, data:
         .put("roomName", data.roomName).put("name", data.roomName).put("Room Name", data.roomName)
         .put("roomDp", data.roomDp).put("image", data.roomDp).put("Room dp", data.roomDp)
         .put("announcement", data.announcement).put("message", data.announcement)
-        .put("theme", data.theme).put("admin", JSONArray(data.admin))
+        .put("theme", data.theme).put("customTheme", data.customTheme).put("themeImage", data.customTheme)
+        .put("admin", JSONArray(data.admin))
         .put("isLocked", data.isLocked).put("roomPassword", data.roomPassword)
         .put("micMode", data.micMode)
     val connection = (URL("$SETTINGS_API/api/rooms").openConnection() as HttpURLConnection).apply {
@@ -197,7 +199,7 @@ fun RoomSettingPage(
     var tempMicMode by remember { mutableIntStateOf(initial.micMode) }
     var adminSearch by remember { mutableStateOf("") }
     var admins by remember(initial.admin) { mutableStateOf(initial.admin) }
-    var customTheme by remember { mutableStateOf("") }
+    var customTheme by remember(roomOwnerId) { mutableStateOf(context.getSharedPreferences("room_settings", Context.MODE_PRIVATE).getString("customTheme_$roomOwnerId", "").orEmpty()) }
     var pendingPicker by remember { mutableStateOf("photo") }
     var saving by remember { mutableStateOf(false) }
     var saveError by remember { mutableStateOf("") }
@@ -211,13 +213,15 @@ fun RoomSettingPage(
             saveError = ""
             val ready = newState.copy(
                 roomName = newState.roomName.trim().ifBlank { "Room" },
-                admin = admins // Ensure current admins are always included
+                admin = admins, // Ensure current admins are always included
+                customTheme = newState.customTheme.ifBlank { customTheme }
             )
             runCatching {
                 saveRoomSettingsRemote(roomOwnerId, currentUserId, ready)
                 context.getSharedPreferences("room_settings", Context.MODE_PRIVATE).edit()
                     .putInt("micMode_$roomOwnerId", ready.micMode)
                     .putString("theme_$roomOwnerId", ready.theme)
+                    .putString("customTheme_$roomOwnerId", ready.customTheme)
                     .apply()
             }.onSuccess {
                 state = ready
@@ -282,7 +286,7 @@ fun RoomSettingPage(
                         performSave(state.copy(roomDp = dataUrl)) // Auto Save!
                     } else {
                         customTheme = dataUrl
-                        performSave(state.copy(theme = "custom")) // Auto Save!
+                        performSave(state.copy(theme = "custom", customTheme = dataUrl)) // Auto Save!
                         sheet = ""
                     }
                 }
