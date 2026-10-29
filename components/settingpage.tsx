@@ -118,7 +118,7 @@ export default function SettingPage({
           });
 
           if (!response.ok) {
-            throw new Error(`MongoDB logout update failed: ${response.status}`);
+            throw new Error(`GitHub storage logout update failed: ${response.status}`);
           }
       } catch (error) {
         console.error("Error updating logout status:", error);
