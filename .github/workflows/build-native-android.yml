@@ -58,6 +58,7 @@ jobs:
           GITHUB_RUN_NUMBER: ${{ github.run_number }}
           HURRY_VERSION_NAME: "1.0.${{ github.run_number }}"
           FIREBASE_API_KEY: ${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }}
+          GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: gradle assembleDebug --no-daemon --stacktrace --max-workers=2
 
