@@ -17,7 +17,7 @@ import DailyCheckInModal from '../components/DailyCheckInModal'
 import InviteFriends from './InviteFriends'
 import Leaderboard from './Leaderboard'
 
-// ============ MONGODB / INDEXEDDB DATA HELPERS ============
+// ============ GitHub storage / INDEXEDDB DATA HELPERS ============
 
 
 const normalizeRoomImage = (value: any, roomId: string): string => {
@@ -29,39 +29,39 @@ const normalizeRoomImage = (value: any, roomId: string): string => {
   return image;
 };
 
-const fetchAllRoomsFromMongoDB = async (): Promise<any[]> => {
+const fetchAllRoomsFromGitHub storage = async (): Promise<any[]> => {
   const response = await fetch("/api/rooms");
   if (!response.ok) {
-    throw new Error(`MongoDB rooms fetch failed: ${response.status}`);
+    throw new Error(`GitHub storage rooms fetch failed: ${response.status}`);
   }
   const result = await response.json();
   return Array.isArray(result?.rooms) ? result.rooms : [];
 };
 
-const fetchRoomFromMongoDB = async (roomId: string): Promise<any | null> => {
+const fetchRoomFromGitHub storage = async (roomId: string): Promise<any | null> => {
   if (!roomId) return null;
   const response = await fetch(`/api/rooms?roomId=${encodeURIComponent(roomId)}`);
   if (!response.ok) {
     if (response.status === 404) return null;
-    throw new Error(`MongoDB room fetch failed: ${response.status}`);
+    throw new Error(`GitHub storage room fetch failed: ${response.status}`);
   }
   const result = await response.json();
   return result?.room || null;
 };
 
-const saveRoomToMongoDB = async (roomData: any) => {
+const saveRoomToGitHub storage = async (roomData: any) => {
   const response = await fetch("/api/rooms", {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(roomData),
   });
   if (!response.ok) {
-    throw new Error(`MongoDB room save failed: ${response.status}`);
+    throw new Error(`GitHub storage room save failed: ${response.status}`);
   }
   return response.json();
 };
 
-const saveUserToMongoDB = async (userData: any) => {
+const saveUserToGitHub = async (userData: any) => {
   const uid = userData.uid || userData.id || userData.appLongId;
   if (!uid) {
     throw new Error("Missing user uid");
@@ -72,7 +72,7 @@ const saveUserToMongoDB = async (userData: any) => {
     body: JSON.stringify({ ...userData, uid }),
   });
   if (!response.ok) {
-    throw new Error(`MongoDB user save failed: ${response.status}`);
+    throw new Error(`GitHub storage user save failed: ${response.status}`);
   }
   return response.json();
 };
@@ -487,7 +487,7 @@ async function fetchSearchResults(
       }
     }
   } catch (error) {
-    console.error("MongoDB user search error:", error);
+    console.error("GitHub storage user search error:", error);
   }
 
   for (const room of globalRooms) {
@@ -1088,7 +1088,7 @@ export default function HomePage({ onLogout }: HomePageProps) {
 
     const loadRooms = async () => {
       try {
-        const rawRooms = await fetchAllRoomsFromMongoDB();
+        const rawRooms = await fetchAllRoomsFromGitHub storage();
         if (!isMounted) return;
         if (Array.isArray(rawRooms)) {
           const rooms: GlobalRoom[] = rawRooms.map((data: any) => {
@@ -1181,7 +1181,7 @@ export default function HomePage({ onLogout }: HomePageProps) {
         const timeoutPromise = new Promise((_, reject) =>
           setTimeout(() => reject(new Error('Timeout')), 3000)
         );
-        const res: any = await Promise.race([fetchAllRoomsFromMongoDB(), timeoutPromise]);
+        const res: any = await Promise.race([fetchAllRoomsFromGitHub storage(), timeoutPromise]);
         if (!isMounted) return;
         const roomsArr: any[] = Array.isArray(res) ? res : (res?.rooms || []);
         if (roomsArr.length > 0) {
@@ -1432,7 +1432,7 @@ export default function HomePage({ onLogout }: HomePageProps) {
 
             if (uid) {
               try {
-                const mongoRoom = await fetchRoomFromMongoDB(uid);
+                const mongoRoom = await fetchRoomFromGitHub storage(uid);
                 if (mongoRoom) {
                   const mName = mongoRoom.name || mongoRoom.roomName || mongoRoom['Room Name'];
                   const mDp = mongoRoom.image || mongoRoom.dp || mongoRoom.roomDp || mongoRoom['Room dp'];
@@ -1440,7 +1440,7 @@ export default function HomePage({ onLogout }: HomePageProps) {
                   if (mDp && mDp !== 'undefined' && mDp !== 'null') actualDp = mDp;
                 }
               } catch (err) {
-                console.warn('Error fetching room from MongoDB in loadProfile:', err);
+                console.warn('Error fetching room from GitHub storage in loadProfile:', err);
               }
             }
 
@@ -1913,7 +1913,7 @@ export default function HomePage({ onLogout }: HomePageProps) {
     };
 
     try {
-      await saveRoomToMongoDB({
+      await saveRoomToGitHub storage({
         roomId: userUID,
         id: userUID, 
         roomName: defaultRoomName,
@@ -1924,7 +1924,7 @@ export default function HomePage({ onLogout }: HomePageProps) {
         theme: 'default'
       });
 
-      await saveUserToMongoDB({
+      await saveUserToGitHub({
         id: userUID,
         appLongId: userUID,
         name: userName || defaultRoomName,
@@ -1969,9 +1969,9 @@ export default function HomePage({ onLogout }: HomePageProps) {
     if (isOwner) {
       let mongoOwnerRoom: any = null;
       try {
-        mongoOwnerRoom = await fetchRoomFromMongoDB(String(currentAccountId || userUID));
+        mongoOwnerRoom = await fetchRoomFromGitHub storage(String(currentAccountId || userUID));
       } catch (error) {
-        console.warn('Owner room MongoDB fetch failed:', error);
+        console.warn('Owner room GitHub storage fetch failed:', error);
       }
 
       let ownerName =
@@ -2046,7 +2046,7 @@ export default function HomePage({ onLogout }: HomePageProps) {
       );
 
       const roomData: any = await Promise.race([
-        fetchRoomFromMongoDB(canonicalRoomId),
+        fetchRoomFromGitHub storage(canonicalRoomId),
         timeoutPromise,
       ]);
 
@@ -2103,7 +2103,7 @@ export default function HomePage({ onLogout }: HomePageProps) {
   const handleRoomPasswordSubmit = async () => {
     if (!selectedLockedRoom) return;
     try {
-      const roomData = await fetchRoomFromMongoDB(selectedLockedRoom.id || selectedLockedRoom.accountId || '');
+      const roomData = await fetchRoomFromGitHub storage(selectedLockedRoom.id || selectedLockedRoom.accountId || '');
       if (roomData) {
         if (roomData.isLocked && roomData.roomPassword === enteredRoomPassword) {
           setShowRoomPasswordCard(false)
@@ -2184,7 +2184,7 @@ export default function HomePage({ onLogout }: HomePageProps) {
         return;
       }
 
-      const roomData = await fetchRoomFromMongoDB(id);
+      const roomData = await fetchRoomFromGitHub storage(id);
       if (roomData) {
         handleUserCardClick({
           id: roomData.ID || roomData.id || roomData.roomId || id,
