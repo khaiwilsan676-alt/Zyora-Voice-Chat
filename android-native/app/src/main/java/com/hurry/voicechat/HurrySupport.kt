@@ -41,7 +41,7 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.delay
 
-private const val DAISY_SUPPORT_SOCKET_URL = "https://zyora-voice-chat.onrender.com"
+private const val DAISY_SUPPORT_SOCKET_URL = "https://zyora-server.onrender.com"
 private const val DAISY_IMAGE = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/1785612362650~2.jpg"
 private val SupportBlue = Color(0xFF3B82F6)
 private val SupportBg = Color(0xFFF0F2F5)
