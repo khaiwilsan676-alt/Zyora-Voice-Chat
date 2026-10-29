@@ -77,7 +77,13 @@ class MainActivity : ComponentActivity() {
                 )
             }
             var profileSetupComplete by remember {
-                mutableStateOf(getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE).getBoolean("profileSetupComplete", false))
+                mutableStateOf(
+                    getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE).let { prefs ->
+                        // Never let a stale local completion flag hide the new-user page.
+                        !prefs.getBoolean("needsProfileSetup", false) &&
+                            prefs.getBoolean("profileSetupComplete", false)
+                    }
+                )
             }
             LaunchedEffect(Unit) {
                 kotlinx.coroutines.delay(1200)
@@ -102,7 +108,14 @@ class MainActivity : ComponentActivity() {
                     .getBoolean("needsProfileSetup", false) && !profileSetupComplete) {
                 Newuserafterlogin(
                     onBack = { authenticated = false },
-                    onComplete = { profileSetupComplete = true; authenticated = true }
+                    onComplete = {
+                        getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE).edit()
+                            .putBoolean("needsProfileSetup", false)
+                            .putBoolean("profileSetupComplete", true)
+                            .apply()
+                        profileSetupComplete = true
+                        authenticated = true
+                    }
                 )
             } else {
                 HurryNativeRoot(onLogout = { authenticated = false })
