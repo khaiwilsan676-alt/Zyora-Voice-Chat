@@ -217,6 +217,27 @@ const compressImage = (file: File, maxWidth: number, maxHeight: number, quality:
   })
 }
 
+
+const uploadImageToGitHub = async (dataUrl: string, folder: "user-dp" | "user-albums" | "user-covers"): Promise<string> => {
+  const rawUserId = user?.uid || localStorage.getItem("userUID") || localStorage.getItem("userPhone") || user?.displayAccountNumber;
+  const userId = String(rawUserId || "").replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 100);
+  if (!userId) throw new Error("Please sign in again before uploading images.");
+
+  const blobResponse = await fetch(dataUrl);
+  const blob = await blobResponse.blob();
+  const form = new FormData();
+  form.append("file", blob, "image.jpg");
+  form.append("userId", userId);
+  form.append("folder", folder);
+
+  const response = await fetch("/api/upload-image", { method: "POST", body: form });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok || !result?.success || typeof result?.url !== "string") {
+    throw new Error(result?.error || "Image upload failed. Please try again.");
+  }
+  return result.url;
+};
+
 const GreenColorRemovalShader = ({
   imageSrc,
   className = "",
@@ -1507,7 +1528,8 @@ export default function PublicProfile({
     }
     try {
       const compressedBase64 = await compressImage(file, 800, 400, 0.7)
-      const updated = [...coverPhotos, compressedBase64]
+      const imageUrl = await uploadImageToGitHub(compressedBase64, "user-covers")
+      const updated = [...coverPhotos, imageUrl]
       setCoverPhotos(updated)
       localStorage.setItem('userCoverPhotos', JSON.stringify(updated))
       localStorage.setItem('userCoverPhoto', updated[0])
@@ -1562,16 +1584,21 @@ export default function PublicProfile({
     if (file) {
       if (albumImages.length >= 7) {
         alert('You can only upload up to 7 images in the album.')
+        e.target.value = ''
         return
       }
       try {
         const compressedBase64 = await compressImage(file, 600, 600, 0.7)
-        const updatedAlbum = [...albumImages, compressedBase64]
+        const imageUrl = await uploadImageToGitHub(compressedBase64, "user-albums")
+        const updatedAlbum = [...albumImages, imageUrl]
         setAlbumImages(updatedAlbum)
         localStorage.setItem('userAlbumImages', JSON.stringify(updatedAlbum))
         await saveToMongoDB({ albumImages: updatedAlbum, album: updatedAlbum })
       } catch (err) {
-        console.error('Album image compression error:', err)
+        console.error('Album image upload error:', err)
+        alert(err instanceof Error ? err.message : 'Album image upload failed. Please try again.')
+      } finally {
+        e.target.value = ''
       }
     }
   }
@@ -1584,11 +1611,17 @@ export default function PublicProfile({
   }
 
   const handleCropSave = async (croppedImage: string) => {
-    setCropImageSrc(null)
-    localStorage.setItem('userPhoto', croppedImage)
-    setUser((prev) => ({ ...prev, photo: croppedImage }))
-    await saveToMongoDB({ photo: croppedImage, image: croppedImage, photoURL: croppedImage })
-    await saveProfileToDB({ ...user, photo: croppedImage, albumImages, coverPhotos })
+    try {
+      const imageUrl = await uploadImageToGitHub(croppedImage, "user-dp")
+      setCropImageSrc(null)
+      localStorage.setItem('userPhoto', imageUrl)
+      setUser((prev) => ({ ...prev, photo: imageUrl }))
+      await saveToMongoDB({ photo: imageUrl, image: imageUrl, photoURL: imageUrl })
+      await saveProfileToDB({ ...user, photo: imageUrl, albumImages, coverPhotos })
+    } catch (err) {
+      console.error('Profile image upload error:', err)
+      alert(err instanceof Error ? err.message : 'Profile image upload failed. Please try again.')
+    }
   }
 
   const handleNameSave = async () => {
