@@ -602,7 +602,7 @@ useEffect(() => {
           });
         }
       }
-    } catch (e) { console.warn("Failed to fetch fresh room settings from MongoDB", e); }
+    } catch (e) { console.warn("Failed to fetch fresh room settings from GitHub storage", e); }
   };
   loadRoomSettings();
   return () => { mounted = false; };
@@ -1066,7 +1066,7 @@ const handleSaveSettings = async (data: Partial<RoomSettingsData>) => {
     };
     const res = await fetch(apiUrl('/api/rooms'), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dbRoomData) });
     if (!res.ok) console.warn('Room settings save failed:', res.status);
-  } catch (error) { console.error("Failed to save room settings to MongoDB", error); }
+  } catch (error) { console.error("Failed to save room settings to GitHub storage", error); }
 
   if (isOwnerOfRoom) {
     let existingMyRoom: any = {};
