@@ -58,7 +58,7 @@ export default function Reports() {
       setReports(localReports.sort((a: any, b: any) => (b.timestamp || 0) - (a.timestamp || 0)));
     });
 
-    // Request is live-only; the server deliberately returns no MongoDB history.
+    // Request is live-only; the server deliberately returns no GitHub storage history.
     socket.emit('user_report_history_request');
 
     const handleHistoryResponse = (data: any) => {
