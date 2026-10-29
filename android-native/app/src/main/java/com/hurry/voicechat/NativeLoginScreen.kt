@@ -164,7 +164,7 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
                         scope.launch {
                             loading = true
                             try {
-                                val user = googleSupabaseSignIn(context)
+                                val user = googleBackendSignIn(context)
                                 withContext(Dispatchers.IO) { syncHurryUser(user, context) }
                                 context.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE).edit()
                                     .putString("uid", user.optString("localId"))
@@ -349,7 +349,7 @@ private fun AuthField(
     }
 }
 
-private suspend fun googleSupabaseSignIn(context: android.content.Context): JSONObject {
+private suspend fun googleBackendSignIn(context: android.content.Context): JSONObject {
     val credentialManager = CredentialManager.create(context)
     val serverClientId = "164837688319-uu6uhd20mner48etd4ci6aeu3nuvt8gp.apps.googleusercontent.com"
     val credential = try {
@@ -515,9 +515,8 @@ private fun syncHurryUser(user: JSONObject, context: android.content.Context) {
             .putBoolean("profileSyncPending", false)
             .apply()
     } else {
-        // Keep the profile queued locally for a retry on the next login. Do not
-        // discard a successful Firebase session because the profile API is offline.
-        android.util.Log.w("ZyoraAuth", "Profile sync queued; HTTP $saveCode: $saveResponse")
+        // Profile storage is required: do not silently finish login while server persistence failed.
+        throw IllegalStateException("Could not save your account to Zyora server (HTTP $saveCode). Please try again.")
     }
 }
 
