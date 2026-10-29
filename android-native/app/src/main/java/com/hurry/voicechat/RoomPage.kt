@@ -213,7 +213,7 @@ fun RoomPage(
             withContext(Dispatchers.IO) {
                 runCatching {
                     val encoded = java.net.URLEncoder.encode(roomOwner.accountId.ifBlank { roomOwner.id.ifBlank { roomOwner.uid } }, "UTF-8")
-                    val conn = (java.net.URL("https://zyora-voice-chat.onrender.com/api/store/inventory/$encoded").openConnection() as java.net.HttpURLConnection).apply {
+                    val conn = (java.net.URL("https://zyora-server.onrender.com/api/store/inventory/$encoded").openConnection() as java.net.HttpURLConnection).apply {
                         connectTimeout = 8000
                         readTimeout = 8000
                     }
@@ -248,7 +248,7 @@ fun RoomPage(
         withContext(Dispatchers.IO) {
             runCatching {
                 val encodedRoom = java.net.URLEncoder.encode(roomId, "UTF-8")
-                val connection = (java.net.URL("https://zyora-voice-chat.onrender.com/api/lucky-bag/room/$encodedRoom").openConnection() as java.net.HttpURLConnection).apply {
+                val connection = (java.net.URL("https://zyora-server.onrender.com/api/lucky-bag/room/$encodedRoom").openConnection() as java.net.HttpURLConnection).apply {
                     connectTimeout = 8000
                     readTimeout = 8000
                 }
@@ -278,7 +278,7 @@ fun RoomPage(
                 roomAdminIds.mapNotNull { adminId ->
                     runCatching {
                         val encoded = java.net.URLEncoder.encode(adminId, "UTF-8")
-                        val conn = (java.net.URL("https://zyora-voice-chat.onrender.com/api/users?search=$encoded&accountId=$encoded&q=$encoded").openConnection() as java.net.HttpURLConnection).apply {
+                        val conn = (java.net.URL("https://zyora-server.onrender.com/api/users?search=$encoded&accountId=$encoded&q=$encoded").openConnection() as java.net.HttpURLConnection).apply {
                             connectTimeout = 2500
                             readTimeout = 2500
                         }
@@ -316,7 +316,7 @@ fun RoomPage(
         withContext(Dispatchers.IO) {
             runCatching {
                 val encoded = java.net.URLEncoder.encode(roomId, "UTF-8")
-                val conn = (java.net.URL("https://zyora-voice-chat.onrender.com/api/rooms?roomId=$encoded").openConnection() as java.net.HttpURLConnection).apply { connectTimeout=10000; readTimeout=10000 }
+                val conn = (java.net.URL("https://zyora-server.onrender.com/api/rooms?roomId=$encoded").openConnection() as java.net.HttpURLConnection).apply { connectTimeout=10000; readTimeout=10000 }
                 try {
                     if (conn.responseCode in 200..299) {
                         val root = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
@@ -347,7 +347,7 @@ fun RoomPage(
         if (accountId.isBlank() || accountId == "guest") return@LaunchedEffect
         followed = withContext(Dispatchers.IO) {
             runCatching {
-                val url = java.net.URL("https://zyora-voice-chat.onrender.com/api/room-follows?userId=" + java.net.URLEncoder.encode(accountId, "UTF-8"))
+                val url = java.net.URL("https://zyora-server.onrender.com/api/room-follows?userId=" + java.net.URLEncoder.encode(accountId, "UTF-8"))
                 val conn = (url.openConnection() as java.net.HttpURLConnection).apply { connectTimeout = 8000; readTimeout = 8000 }
                 try {
                     val body = conn.inputStream.bufferedReader().use { it.readText() }
@@ -551,7 +551,7 @@ fun RoomPage(
     val backendRoomUsers=remember{mutableStateListOf<ActiveUserNative>()}
 
     DisposableEffect(roomId,accountId,roomDisplayName,roomDisplayImage,roomOwner.id,roomOwner.accountId) {
-        val roomSocket = IO.socket("https://zyora-voice-chat.onrender.com")
+        val roomSocket = IO.socket("https://zyora-server.onrender.com")
         roomSocketRef.value=roomSocket
         val mainHandler = Handler(Looper.getMainLooper())
         val presenceListener = Emitter.Listener { args ->
@@ -597,7 +597,7 @@ fun RoomPage(
                     kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
                         val vehicleVideo = runCatching {
                             val encodedUser = java.net.URLEncoder.encode(senderId, "UTF-8")
-                            val conn = (java.net.URL("https://zyora-voice-chat.onrender.com/api/store/inventory/$encodedUser").openConnection() as java.net.HttpURLConnection).apply {
+                            val conn = (java.net.URL("https://zyora-server.onrender.com/api/store/inventory/$encodedUser").openConnection() as java.net.HttpURLConnection).apply {
                                 connectTimeout = 8000
                                 readTimeout = 8000
                             }
@@ -692,7 +692,7 @@ fun RoomPage(
                 kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
                     val vehicleVideo = runCatching {
                         val encodedUser = java.net.URLEncoder.encode(accountId, "UTF-8")
-                        val conn = (java.net.URL("https://zyora-voice-chat.onrender.com/api/store/inventory/$encodedUser").openConnection() as java.net.HttpURLConnection).apply {
+                        val conn = (java.net.URL("https://zyora-server.onrender.com/api/store/inventory/$encodedUser").openConnection() as java.net.HttpURLConnection).apply {
                             connectTimeout = 8000
                             readTimeout = 8000
                         }
@@ -783,7 +783,7 @@ fun RoomPage(
                                         runCatching {
                                             val encodedUser = java.net.URLEncoder.encode(accountId, "UTF-8")
                                             val encodedRoom = java.net.URLEncoder.encode(roomId, "UTF-8")
-                                            val url = if (next) java.net.URL("https://zyora-voice-chat.onrender.com/api/room-follows") else java.net.URL("https://zyora-voice-chat.onrender.com/api/room-follows?userId=$encodedUser&roomId=$encodedRoom")
+                                            val url = if (next) java.net.URL("https://zyora-server.onrender.com/api/room-follows") else java.net.URL("https://zyora-server.onrender.com/api/room-follows?userId=$encodedUser&roomId=$encodedRoom")
                                             val conn = (url.openConnection() as java.net.HttpURLConnection).apply {
                                                 requestMethod = if (next) "POST" else "DELETE"
                                                 connectTimeout = 8000
@@ -1247,7 +1247,7 @@ fun RoomPage(
             appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).edit().putInt("micMode_$roomId", saved.micMode).putString("theme_$roomId", saved.theme).apply()
             CoroutineScope(Dispatchers.IO).launch {
                 runCatching {
-                    val conn = (java.net.URL("https://zyora-voice-chat.onrender.com/api/rooms").openConnection() as java.net.HttpURLConnection).apply {
+                    val conn = (java.net.URL("https://zyora-server.onrender.com/api/rooms").openConnection() as java.net.HttpURLConnection).apply {
                         requestMethod="PUT"; connectTimeout=10000; readTimeout=10000; doOutput=true
                         setRequestProperty("Content-Type","application/json")
                     }
@@ -1530,7 +1530,7 @@ fun RoomPage(
                                     CoroutineScope(Dispatchers.IO).launch {
                                         val result = runCatching {
                                             val payload = JSONObject().put("bagId", luckyBagId).put("userId", accountId)
-                                            val connection = (java.net.URL("https://zyora-voice-chat.onrender.com/api/lucky-bag/claim").openConnection() as java.net.HttpURLConnection).apply {
+                                            val connection = (java.net.URL("https://zyora-server.onrender.com/api/lucky-bag/claim").openConnection() as java.net.HttpURLConnection).apply {
                                                 requestMethod = "POST"
                                                 connectTimeout = 12000
                                                 readTimeout = 15000
