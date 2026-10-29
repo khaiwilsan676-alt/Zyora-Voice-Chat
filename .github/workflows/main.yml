@@ -41,14 +41,24 @@ jobs:
       - name: Build Next.js
         run: npm run build
 
+      # The web app is server-rendered and its API routes cannot be exported to ./out.
+      # The native shell loads the deployed Zyora URL (capacitor.config.ts server.url).
+      # Capacitor still requires a webDir containing index.html for sync.
+      - name: Prepare Capacitor Web Directory
+        run: |
+          mkdir -p out
+          cat > out/index.html <<'HTMLEOF'
+          <!doctype html>
+          <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body></body></html>
+          HTMLEOF
+
       - name: Setup Android SDK
         uses: android-actions/setup-android@v4
         with:
           packages: platform-tools platforms;android-35 build-tools;35.0.0
 
       - name: Sync Capacitor
-        run: |
-          npx cap sync android
+        run: npx cap sync android
 
       - name: Copy google-services.json
         run: |
@@ -122,6 +132,6 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: hurry-release-apk
+          name: zyora-release-apk
           path: android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
