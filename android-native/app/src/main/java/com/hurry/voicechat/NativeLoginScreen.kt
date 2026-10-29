@@ -497,6 +497,7 @@ private fun syncHurryUser(user: JSONObject, context: android.content.Context) {
         .putString("image", image)
         .putString("country", country)
         .putString("deviceId", deviceId)
+        .putBoolean("needsProfileSetup", existingProfile.length() == 0)
         .putString("pendingProfileJson", profile.toString())
         .putBoolean("profileSyncPending", true)
         .apply()
