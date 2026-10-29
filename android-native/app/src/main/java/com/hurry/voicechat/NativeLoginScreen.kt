@@ -427,7 +427,13 @@ private fun syncHurryUser(user: JSONObject, context: android.content.Context) {
         if (code !in 200..299 || response.isBlank()) JSONObject()
         else {
             val root = JSONObject(response)
-            root.optJSONObject("user") ?: root.optJSONObject("data") ?: root
+            // The users endpoint can return { users: [...] }; treating that wrapper
+            // as a profile made every new Google account look like an existing user.
+            root.optJSONObject("user")
+                ?: root.optJSONObject("data")
+                ?: root.optJSONArray("users")?.optJSONObject(0)
+                ?: root.optJSONArray("results")?.optJSONObject(0)
+                ?: root
         }
     }.getOrDefault(JSONObject())
 
@@ -494,6 +500,20 @@ private fun syncHurryUser(user: JSONObject, context: android.content.Context) {
     // Save the signed-in identity locally before network profile sync. A temporary
     // Render/GitHub storage outage must not turn a valid Firebase login into a failed login.
     val authPrefs = context.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE)
+    // Require the welcome/setup screen when the actual user record lacks required
+    // onboarding fields. JSONObject.length() is not a valid test here because an
+    // API wrapper can contain metadata while the profile itself is still empty.
+    val existingName = sequenceOf("name", "Name", "displayName", "userName")
+        .map { existingProfile.optString(it, "").trim() }
+        .firstOrNull { it.isNotBlank() && it != "null" && !it.equals("User", ignoreCase = true) }
+        .orEmpty()
+    val existingBirthday = sequenceOf("birthday", "birthDate", "dateOfBirth")
+        .map { existingProfile.optString(it, "").trim() }
+        .firstOrNull { it.isNotBlank() && it != "null" }
+        .orEmpty()
+    val existingGender = existingProfile.optString("gender", "").trim()
+    val needsSetup = existingName.isBlank() || existingBirthday.isBlank() ||
+        existingGender.isBlank() || existingGender == "null"
     authPrefs.edit()
         .putString("uid", uid)
         .putString("email", email)
@@ -504,8 +524,8 @@ private fun syncHurryUser(user: JSONObject, context: android.content.Context) {
         .putString("image", image)
         .putString("country", country)
         .putString("deviceId", deviceId)
-        .putBoolean("needsProfileSetup", existingProfile.length() == 0)
-        .putBoolean("profileSetupComplete", if (existingProfile.length() == 0) false else authPrefs.getBoolean("profileSetupComplete", true))
+        .putBoolean("needsProfileSetup", needsSetup)
+        .putBoolean("profileSetupComplete", if (needsSetup) false else authPrefs.getBoolean("profileSetupComplete", true))
         .putString("pendingProfileJson", profile.toString())
         .putBoolean("profileSyncPending", true)
         .apply()
