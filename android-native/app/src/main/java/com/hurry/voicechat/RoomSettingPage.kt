@@ -217,15 +217,29 @@ fun RoomSettingPage(
                 customTheme = newState.customTheme.ifBlank { customTheme }
             )
             runCatching {
-                saveRoomSettingsRemote(roomOwnerId, currentUserId, ready)
+                // Store selected room images in the repository so they survive reinstall
+                // and are available on other devices; do not save temporary device URIs.
+                val stableRoomId = roomOwnerId.ifBlank { currentUserId }
+                val permanentDp = if (ready.roomDp.startsWith("data:image/")) {
+                    ProfilePersistence.uploadDpToGitHub(ready.roomDp, "$stableRoomId-room", "room-dp")
+                        ?: error("Room DP upload failed. Please try again.")
+                } else ready.roomDp
+                val permanentTheme = if (ready.customTheme.startsWith("data:image/")) {
+                    ProfilePersistence.uploadDpToGitHub(ready.customTheme, "$stableRoomId-theme", "room-theme")
+                        ?: error("Room theme upload failed. Please try again.")
+                } else ready.customTheme
+                val permanent = ready.copy(roomDp = permanentDp, customTheme = permanentTheme)
+                saveRoomSettingsRemote(roomOwnerId, currentUserId, permanent)
                 context.getSharedPreferences("room_settings", Context.MODE_PRIVATE).edit()
-                    .putInt("micMode_$roomOwnerId", ready.micMode)
-                    .putString("theme_$roomOwnerId", ready.theme)
-                    .putString("customTheme_$roomOwnerId", ready.customTheme)
+                    .putString("roomDp_$roomOwnerId", permanent.roomDp)
+                    .putInt("micMode_$roomOwnerId", permanent.micMode)
+                    .putString("theme_$roomOwnerId", permanent.theme)
+                    .putString("customTheme_$roomOwnerId", permanent.customTheme)
                     .apply()
-            }.onSuccess {
-                state = ready
-                onSave(ready)
+                permanent
+            }.onSuccess { permanent ->
+                state = permanent
+                onSave(permanent)
             }.onFailure { saveError = it.message ?: "Network error. Try again." }
             saving = false
         }
