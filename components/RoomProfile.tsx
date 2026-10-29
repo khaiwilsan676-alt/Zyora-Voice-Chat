@@ -266,7 +266,7 @@ export default function RoomProfile({
     tags.vipTag ||
     tags.premiumTag
 
-  // Fetch tags from MongoDB
+  // Fetch tags from GitHub storage
   useEffect(() => {
     const uid = user.uid || user.id || user.accountId
 
@@ -281,7 +281,7 @@ export default function RoomProfile({
         )
 
         if (!response.ok) {
-          throw new Error(`MongoDB user fetch failed: ${response.status}`)
+          throw new Error(`GitHub storage user fetch failed: ${response.status}`)
         }
 
         const result = await response.json()
@@ -296,7 +296,7 @@ export default function RoomProfile({
           })
         }
       } catch (err) {
-        console.warn('Error fetching tags from MongoDB:', err)
+        console.warn('Error fetching tags from GitHub storage:', err)
 
         if (!cancelled) {
           setTags({
