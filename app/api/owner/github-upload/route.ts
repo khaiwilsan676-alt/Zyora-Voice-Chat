@@ -4,7 +4,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const REPO = "khaiwilsan676-alt/Zyora-Voice-Chat";
-const MAX_BYTES = 5 * 1024 * 1024;
+const MAX_BYTES = 3 * 1024 * 1024;
 
 export async function POST(request: NextRequest) {
   try {
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
 
     const decoded = Buffer.from(contentBase64, "base64");
     if (!decoded.length || decoded.length > MAX_BYTES) {
-      return NextResponse.json({ error: "File must be between 1 byte and 5 MB." }, { status: 413 });
+      return NextResponse.json({ error: "File must be between 1 byte and 3 MB." }, { status: 413 });
     }
     if (decoded.toString("base64") !== contentBase64.replace(/\s/g, "")) {
       return NextResponse.json({ error: "Invalid file data." }, { status: 400 });
