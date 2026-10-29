@@ -209,6 +209,55 @@ fun RoomPage(
     var roomMicMode by remember(roomId) { mutableIntStateOf(appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).getInt("micMode_$roomId", 10)) }
     var roomTheme by remember(roomId) { mutableStateOf(appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).getString("theme_$roomId", "forest-night") ?: "forest-night") }
     var purchasedRoomThemeImage by remember(roomId) { mutableStateOf("") }
+
+    // GitHub-backed server data is authoritative for room settings. Refresh it on
+    // each room open so DP/theme survive clearing app data and signing in elsewhere.
+    LaunchedEffect(roomId) {
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val encoded = java.net.URLEncoder.encode(roomId, "UTF-8")
+                val connection = (java.net.URL("https://zyora-server.onrender.com/api/rooms?roomId=$encoded").openConnection() as java.net.HttpURLConnection).apply {
+                    connectTimeout = 10000
+                    readTimeout = 10000
+                    setRequestProperty("Accept", "application/json")
+                }
+                try {
+                    if (connection.responseCode in 200..299) {
+                        val root = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
+                        val saved = root.optJSONObject("room") ?: root
+                        val savedDp = sequenceOf("dp", "image", "roomDp", "Room dp")
+                            .map { saved.optString(it, "").trim() }
+                            .firstOrNull { it.isNotBlank() && it != "null" && it != "/default-avatar.png" }
+                            .orEmpty()
+                        val savedTheme = sequenceOf("theme", "roomTheme", "Room Theme")
+                            .map { saved.optString(it, "").trim() }
+                            .firstOrNull { it.isNotBlank() && it != "null" }
+                            ?: "forest-night"
+                        val savedCustomTheme = sequenceOf("customTheme", "themeImage")
+                            .map { saved.optString(it, "").trim() }
+                            .firstOrNull { it.isNotBlank() && it != "null" }
+                            .orEmpty()
+                        withContext(Dispatchers.Main) {
+                            roomName = saved.optString("name", saved.optString("roomName", roomName)).ifBlank { roomName }
+                            if (savedDp.isNotBlank()) roomImage = savedDp
+                            announcement = saved.optString("message", saved.optString("announcement", announcement))
+                            roomTheme = savedTheme
+                            roomMicMode = saved.optInt("micMode", roomMicMode)
+                            locked = saved.optBoolean("isLocked", locked)
+                            roomPassword = saved.optString("roomPassword", roomPassword)
+                            val admins = saved.optJSONArray("admin") ?: saved.optJSONArray("admins")
+                            if (admins != null) roomAdminIds = (0 until admins.length()).map { admins.optString(it) }.filter { it.isNotBlank() }
+                            appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).edit()
+                                .putString("theme_$roomId", savedTheme)
+                                .putString("customTheme_$roomId", savedCustomTheme)
+                                .putInt("micMode_$roomId", roomMicMode)
+                                .apply()
+                        }
+                    }
+                } finally { connection.disconnect() }
+            }.onFailure { android.util.Log.w("ZyoraRoom", "Could not refresh saved room settings", it) }
+        }
+    }
     LaunchedEffect(roomId, roomTheme) {
         purchasedRoomThemeImage = ""
         if (roomTheme.isNotBlank() && roomTheme !in setOf("forest-night", "mood-light", "custom")) {
