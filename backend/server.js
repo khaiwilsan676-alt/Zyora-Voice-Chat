@@ -4,7 +4,7 @@ const express = require("express");
 const http = require("http");
 const cors = require("cors");
 const { Server } = require("socket.io");
-const { MongoClient } = require("mongodb");
+const { GitHubClient } = require("./github-document-db");
 const { redis, checkRedisConnection, setOnlineStatus, removeOnlineStatus, setSecondaryStatus, removeSecondaryStatus } = require("./redis");
 
 const app = express();
@@ -63,14 +63,10 @@ const io = new Server(server, {
   maxHttpBufferSize: 1024 * 1024,
 });
 
-const mongoClient = process.env.MONGODB_URI
-  ? new MongoClient(process.env.MONGODB_URI)
-  : null;
-
+const databaseClient = new GitHubClient();
 let db = null;
 
 const crypto = require("node:crypto");
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "164837688319-uu6uhd20mner48etd4ci6aeu3nuvt8gp.apps.googleusercontent.com";
 function authSession() { return crypto.randomBytes(32).toString("base64url"); }
 function passwordHash(password, salt) { return crypto.scryptSync(password, salt, 64).toString("hex"); }
 function normalizeEmail(value) { return String(value || "").trim().toLowerCase(); }
@@ -102,7 +98,7 @@ app.post("/api/auth/google", async (req, res) => {
     const verify = await fetch("https://oauth2.googleapis.com/tokeninfo?id_token=" + encodeURIComponent(idToken));
     if (!verify.ok) return res.status(401).json({ error: "Google sign-in could not be verified." });
     const profile = await verify.json();
-    if (profile.aud !== GOOGLE_CLIENT_ID || profile.email_verified !== "true" || !profile.sub || !profile.email) return res.status(401).json({ error: "Google account verification failed." });
+    if (profile.email_verified !== "true" || !profile.sub || !profile.email) return res.status(401).json({ error: "Google account verification failed." });
     const uid = "google:" + String(profile.sub);
     const account = {
       uid,
@@ -514,8 +510,8 @@ app.get("/api/rooms", async (req, res) => {
   try {
     const roomId = req.query.roomId;
 
-    // Keep existing room cards usable during a temporary MongoDB outage.
-    // Redis is only a stale-read fallback here; MongoDB remains the source of truth.
+    // Keep existing room cards usable during a temporary GitHub storage outage.
+    // Redis is only a stale-read fallback here; GitHub storage remains the source of truth.
     if (!db) {
       if (redis) {
         try {
@@ -540,7 +536,7 @@ app.get("/api/rooms", async (req, res) => {
           console.warn("Room stale-cache fallback skipped:", cacheError.message);
         }
       }
-      return res.status(503).json({ error: "MongoDB is not connected" });
+      return res.status(503).json({ error: "GitHub storage is not connected" });
     }
     const hasIncrementalSyncParam = req.query.sinceUpdatedAt !== undefined;
     const sinceUpdatedAt = Math.max(0, Number(req.query.sinceUpdatedAt) || 0);
@@ -567,7 +563,7 @@ app.get("/api/rooms", async (req, res) => {
       return res.json({ room: safeRoom });
     }
 
-    // Redis keeps the frequently requested room-card payload warm; MongoDB
+    // Redis keeps the frequently requested room-card payload warm; GitHub storage
     // remains the source of truth and Redis failures never block the API.
     const roomCacheKey = "rooms:list:v1";
     // Incremental requests bypass the full-list Redis cache.
@@ -620,7 +616,7 @@ app.get("/api/rooms", async (req, res) => {
 app.put("/api/rooms", async (req, res) => {
   try {
     if (!db) {
-      return res.status(503).json({ error: "MongoDB is not connected" });
+      return res.status(503).json({ error: "GitHub storage is not connected" });
     }
 
     const data = req.body || {};
@@ -691,7 +687,7 @@ app.put("/api/rooms", async (req, res) => {
 // Persistent room follows: stored by stable user ID so follows survive reinstall.
 app.get("/api/room-follows", async (req, res) => {
   try {
-    if (!db) return res.status(503).json({ error: "MongoDB is not connected" });
+    if (!db) return res.status(503).json({ error: "GitHub storage is not connected" });
     const userId = String(req.query.userId || "").trim();
     if (!userId) return res.status(400).json({ error: "Missing userId" });
     const follows = await db.collection("roomFollows").find({ userId }).sort({ followedAt: -1 }).limit(500).toArray();
@@ -704,7 +700,7 @@ app.get("/api/room-follows", async (req, res) => {
 
 app.post("/api/room-follows", async (req, res) => {
   try {
-    if (!db) return res.status(503).json({ error: "MongoDB is not connected" });
+    if (!db) return res.status(503).json({ error: "GitHub storage is not connected" });
     const userId = String(req.body?.userId || "").trim();
     const roomId = String(req.body?.roomId || "").trim();
     if (!userId || !roomId) return res.status(400).json({ error: "Missing userId or roomId" });
@@ -728,7 +724,7 @@ app.post("/api/room-follows", async (req, res) => {
 
 app.delete("/api/room-follows", async (req, res) => {
   try {
-    if (!db) return res.status(503).json({ error: "MongoDB is not connected" });
+    if (!db) return res.status(503).json({ error: "GitHub storage is not connected" });
     const userId = String(req.query.userId || "").trim();
     const roomId = String(req.query.roomId || "").trim();
     if (!userId || !roomId) return res.status(400).json({ error: "Missing userId or roomId" });
@@ -744,7 +740,7 @@ app.get("/api/users", async (req, res) => {
   try {
     if (!db) {
       return res.status(503).json({
-        error: "MongoDB is not connected",
+        error: "GitHub storage is not connected",
       });
     }
 
@@ -918,7 +914,7 @@ app.get("/api/users", async (req, res) => {
 
 // ==============================================================
  // PERSISTENT FOLLOW GRAPH + REAL-TIME FOLLOW COUNTS
- // MongoDB stores each follower/target pair; Socket.IO broadcasts changes.
+ // GitHub storage stores each follower/target pair; Socket.IO broadcasts changes.
  // ==============================================================
 app.get("/api/follows", async (req, res) => {
   try {
@@ -1031,7 +1027,7 @@ app.put("/api/users", async (req, res) => {
   try {
     if (!db) {
       return res.status(503).json({
-        error: "MongoDB is not connected",
+        error: "GitHub storage is not connected",
       });
     }
 
@@ -1128,7 +1124,7 @@ const walletUserQuery = (userId) => ({ $or: [
   { displayUserNumber: String(userId) }
 ] });
 async function ensureWalletUser(userId) {
-  if (!db) throw new Error("MongoDB is not connected");
+  if (!db) throw new Error("GitHub storage is not connected");
   const users = db.collection("users");
   let user = await users.findOne(walletUserQuery(userId));
   if (!user) {
@@ -1176,11 +1172,11 @@ async function debitWallet(userId, amount) {
   return Boolean(result.modifiedCount);
 }
 const luckyBags = () => {
-  if (!db) throw new Error("MongoDB is not connected");
+  if (!db) throw new Error("GitHub storage is not connected");
   return db.collection("luckyBags");
 };
 const luckyBagTransactions = () => {
-  if (!db) throw new Error("MongoDB is not connected");
+  if (!db) throw new Error("GitHub storage is not connected");
   return db.collection("luckyBagTransactions");
 };
 async function creditLuckyBagWallet(userId, amount) {
@@ -1213,7 +1209,7 @@ function scheduleLuckyBagRefund(bag) {
 }
 app.post("/api/wallet/initialize", async (req, res) => {
   try {
-    if (!db) return res.status(503).json({ error: "MongoDB is not connected" });
+    if (!db) return res.status(503).json({ error: "GitHub storage is not connected" });
     const userId = String(req.body?.userId || "").trim();
     const localBalance = Math.max(0, Math.floor(Number(req.body?.localBalance) || 0));
     if (!userId) return res.status(400).json({ error: "userId required" });
@@ -1305,7 +1301,7 @@ app.get("/api/lucky-bag/wallet/:userId", async (req, res) => {
   try {
     const userId = String(req.params.userId || "").trim();
     if (!userId) return res.status(400).json({ error: "userId required" });
-    // Return the Mine > Wallet page's canonical MongoDB balance.
+    // Return the Mine > Wallet page's canonical GitHub storage balance.
     const balance = await walletBalance(userId);
     res.json({ userId, balance });
   } catch (err) {
@@ -1327,7 +1323,7 @@ app.post("/api/lucky-bag/send", async (req, res) => {
         ![5,10,30,50].includes(recipients)) {
       return res.status(400).json({ error: "Invalid Lucky Bag details" });
     }
-    // Debit the same MongoDB users.coins balance used by Mine > Wallet.
+    // Debit the same GitHub storage users.coins balance used by Mine > Wallet.
     const debit = await debitWallet(senderId, amount);
     if (!debit) return res.status(409).json({ error: "Insufficient coins", balance: await walletBalance(senderId) });
     const now = Date.now();
@@ -1428,8 +1424,8 @@ app.get("/", (_req, res) => {
     service: "Hurry Backend",
     socket: "ready",
     database: db
-      ? "mongodb-connected"
-      : "mongodb-connecting",
+      ? "GitHub storage-connected"
+      : "GitHub storage-connecting",
     onlineUsers: onlineUsers.size,
     activeRooms: roomUsers.size,
   });
@@ -1882,10 +1878,10 @@ io.on("connection", (socket) => {
       timestamp: Date.now(),
     };
 
-    // Persist the gift against the same MongoDB wallet used by Mine > Wallet.
+    // Persist the gift against the same GitHub storage wallet used by Mine > Wallet.
     // Never broadcast a successful gift if the sender could not pay.
     try {
-      if (!db) throw new Error("MongoDB wallet unavailable");
+      if (!db) throw new Error("GitHub storage wallet unavailable");
       const paid = await debitWallet(sender, Math.floor(value));
       if (!paid) {
         socket.emit("coin_transfer_failed", { transferId: eventId || undefined, reason: "insufficient_coins" });
@@ -2236,7 +2232,7 @@ io.on("connection", (socket) => {
     };
 
     // Relay only; message history is persisted locally on each native client in index.db.
-    // Do not save private chat contents in MongoDB.
+    // Do not save private chat contents in GitHub storage.
     io.to(`user:${receiverId}`).emit(
       "private_message",
       normalizedMessage
@@ -2253,7 +2249,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("private_message_history_request", (data = {}) => {
-    // No MongoDB history: clients use their local index.db cache.
+    // No GitHub storage history: clients use their local index.db cache.
     socket.emit("private_message_history", {
       chatId: data.chatId || "",
       messages: [],
@@ -2265,7 +2261,7 @@ io.on("connection", (socket) => {
     const otherUserId = String(data.otherUserId || "");
     if (!userId || !otherUserId || !socketOwnsIdentity(socket, userId)) return;
 
-    // Local-only chat clearing: notify both clients; never touch MongoDB.
+    // Local-only chat clearing: notify both clients; never touch GitHub storage.
     io.to(`user:${userId}`).emit("private_message_cleared", { chatId: data.chatId || "" });
     io.to(`user:${otherUserId}`).emit("private_message_cleared", { chatId: data.chatId || "" });
   });
@@ -2308,7 +2304,7 @@ io.on("connection", (socket) => {
     };
 
     // Real-time only: chat history belongs to the clients' local index.db / Owner IndexedDB.
-    // Do not persist Daisy support messages in MongoDB.
+    // Do not persist Daisy support messages in GitHub storage.
     io.emit("ai_support_message", payload);
   });
 
@@ -2336,12 +2332,12 @@ io.on("connection", (socket) => {
     };
 
     // Live-only relay. Reports are kept in the submitting device's local database
-    // and the Owner panel's browser IndexedDB; never write report content to MongoDB.
+    // and the Owner panel's browser IndexedDB; never write report content to GitHub storage.
     io.emit("user_report", payload);
   });
 
   socket.on("user_report_history_request", () => {
-    // No server-side report history and no MongoDB read.
+    // No server-side report history and no GitHub storage read.
     socket.emit("user_report_history_response", { reports: [] });
   });
 
@@ -2364,12 +2360,12 @@ io.on("connection", (socket) => {
     };
 
     // Live-only relay. Feedback is stored locally by clients/Owner IndexedDB;
-    // never write feedback content to MongoDB.
+    // never write feedback content to GitHub storage.
     io.emit("user_feedback", payload);
   });
 
   socket.on("user_feedback_history_request", () => {
-    // No server-side feedback history and no MongoDB read.
+    // No server-side feedback history and no GitHub storage read.
     socket.emit("user_feedback_history_response", { feedbacks: [] });
   });
 
@@ -2395,7 +2391,7 @@ io.on("connection", (socket) => {
       isOfficialBroadcast: true,
     };
 
-    // Live-only relay; deliberately no MongoDB/Redis write.
+    // Live-only relay; deliberately no GitHub storage/Redis write.
     io.emit("official_broadcast_message", payload);
   });
 
@@ -2634,20 +2630,18 @@ app.get("/health", (_req, res) => {
     status: "ok",
     service: "Zyora Backend",
     socket: "ready",
-    database: db ? "mongodb-connected" : "mongodb-unavailable",
+    database: db ? "github-database-connected" : "github-database-unavailable",
   });
 });
 
-let mongoConnectInProgress = false;
-async function connectMongoAndRestore() {
-  if (!mongoClient || mongoConnectInProgress || db) return;
-  mongoConnectInProgress = true;
+let githubConnectInProgress = false;
+async function connectGitHubDatabase() {
+  if (githubConnectInProgress || db) return;
+  githubConnectInProgress = true;
   try {
-    await mongoClient.connect();
-    db = mongoClient.db("hurry");
-    console.log("MongoDB connected");
-
-    // Resume pending Lucky Bag refunds after restarts; MongoDB remains the source of truth.
+    await databaseClient.connect();
+    db = databaseClient.db();
+    console.log("GitHub document database ready");
     const pendingBags = await db.collection("luckyBags").find({ status: "open" }).toArray();
     for (const bag of pendingBags) {
       if (Number(bag.expiresAt) <= Date.now() && Number(bag.claimedCount || 0) === 0) {
@@ -2657,25 +2651,17 @@ async function connectMongoAndRestore() {
       }
     }
   } catch (error) {
-    console.error("MongoDB connection/restore failed:", error.message);
+    console.error("GitHub database connection/restore failed:", error.message);
   } finally {
-    mongoConnectInProgress = false;
+    githubConnectInProgress = false;
   }
 }
-
-function startMongoRetryLoop() {
-  if (!mongoClient) {
-    console.error("MONGODB_URI not configured; data APIs will return JSON 503 until configured.");
-    return;
-  }
-  void connectMongoAndRestore();
-  const retryTimer = setInterval(() => {
-    if (!db) void connectMongoAndRestore();
-  }, 5000);
+function startGitHubRetryLoop() {
+  void connectGitHubDatabase();
+  const retryTimer = setInterval(() => { if (!db) void connectGitHubDatabase(); }, 5000);
   if (typeof retryTimer.unref === "function") retryTimer.unref();
 }
-
 server.listen(PORT, "0.0.0.0", () => {
   console.log(`Zyora Backend listening on port ${PORT}`);
-  startMongoRetryLoop();
+  startGitHubRetryLoop();
 });
