@@ -278,11 +278,18 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
                                 if (password.length < 6) throw IllegalArgumentException("Password must be at least 6 characters long.")
                                 val user = withContext(Dispatchers.IO) { backendEmailAuth(email.trim(), password, page == "signup") }
                                 withContext(Dispatchers.IO) { syncHurryUser(user, context) }
-                                context.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE).edit()
+                                val authPrefs = context.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE)
+                                authPrefs.edit()
                                     .putString("uid", user.optString("localId"))
                                     .putString("email", user.optString("email", email.trim()))
                                     .putString("idToken", user.optString("idToken"))
                                     .apply()
+                                if (page == "signup") {
+                                    authPrefs.edit()
+                                        .putBoolean("needsProfileSetup", true)
+                                        .putBoolean("profileSetupComplete", false)
+                                        .apply()
+                                }
                                 onLoginSuccess()
                             } catch (t: Throwable) {
                                 error = authErrorText(t.message ?: "Authentication failed. Please try again.")
