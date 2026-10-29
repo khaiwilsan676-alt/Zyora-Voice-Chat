@@ -433,7 +433,7 @@ private fun syncHurryUser(user: JSONObject, context: android.content.Context) {
                 ?: root.optJSONObject("data")
                 ?: root.optJSONArray("users")?.optJSONObject(0)
                 ?: root.optJSONArray("results")?.optJSONObject(0)
-                ?: root
+                ?: if (root.has("name") || root.has("displayName") || root.has("image") || root.has("photo")) root else JSONObject()
         }
     }.getOrDefault(JSONObject())
 
