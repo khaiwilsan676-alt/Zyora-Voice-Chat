@@ -829,7 +829,7 @@ export default function RoomSettingPage({ onBack, roomOwnerId, roomData, onSave 
       if (status === '404') hint = '\n\n(API route /api/rooms nahi mil rahi)'
       else if (status === '413') hint = '\n\n(DP bahut bada hai, chhota image use karo)'
       else if (status === '400') hint = '\n\n(Data format galat hai)'
-      else if (status === '500') hint = '\n\n(Server error — MongoDB check karo)'
+      else if (status === '500') hint = '\n\n(Server error — GitHub storage check karo)'
       alert(`Save failed!\n\nStatus: ${status}${hint}\n\nMessage: ${err?.message || 'Network error'}`)
     } finally {
       setIsSaving(false)
