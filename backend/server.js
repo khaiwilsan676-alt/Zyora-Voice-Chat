@@ -78,7 +78,7 @@ app.post("/api/auth/email", async (req, res) => {
   try {
     if (!db) return res.status(503).json({ error: "Account service is temporarily unavailable." });
     const email = normalizeEmail(req.body?.email), password = String(req.body?.password || ""), create = req.body?.create === true;
-    if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) return res.status(400).json({ error: "Please enter a valid email." });
+    if (!email.includes("@") || email.lastIndexOf(".") <= email.indexOf("@") + 1 || email.includes(" ")) return res.status(400).json({ error: "Please enter a valid email." });
     if (password.length < 6 || password.length > 256) return res.status(400).json({ error: "Password must be at least 6 characters." });
     const key = crypto.createHash("sha256").update(email).digest("hex"), accounts = db.collection("auth_accounts");
     let account = await accounts.findOne({ email });
