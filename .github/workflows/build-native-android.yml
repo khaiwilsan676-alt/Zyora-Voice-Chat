@@ -1,4 +1,4 @@
-name: Build Native Hurry APK
+name: Build Zyora Native APK
 
 on:
   workflow_dispatch:
