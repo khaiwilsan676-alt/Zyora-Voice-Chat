@@ -45,7 +45,7 @@ fun Newuserafterlogin(onBack: () -> Unit, onComplete: () -> Unit) {
     val scope = rememberCoroutineScope()
     var nickname by remember { mutableStateOf(prefs.getString("name", "").orEmpty()) }
     var birthday by remember { mutableStateOf(prefs.getString("birthday", "").orEmpty()) }
-    var country by remember { mutableStateOf(prefs.getString("country", "India").orEmpty().ifBlank { "India" }) }
+    var country by remember { mutableStateOf(prefs.getString("countryName", "India").orEmpty().ifBlank { "India" }) }
     var gender by remember { mutableStateOf(prefs.getString("gender", "").orEmpty()) }
     var avatar by remember { mutableStateOf(prefs.getString("image", "").orEmpty()) }
     var selectedUri by remember { mutableStateOf<Uri?>(null) }
@@ -129,6 +129,20 @@ fun Newuserafterlogin(onBack: () -> Unit, onComplete: () -> Unit) {
                             }
                             finalAvatar = ProfilePersistence.uploadDpToGitHub(dataUri, prefs.getString("accountId", uid).orEmpty()) ?: dataUri
                         }
+                        val countryInfo = mapOf(
+                            "India" to ("🇮🇳" to "IN"), "United States" to ("🇺🇸" to "US"),
+                            "United Kingdom" to ("🇬🇧" to "GB"), "Pakistan" to ("🇵🇰" to "PK"),
+                            "Bangladesh" to ("🇧🇩" to "BD"), "Nepal" to ("🇳🇵" to "NP"),
+                            "Sri Lanka" to ("🇱🇰" to "LK"), "Indonesia" to ("🇮🇩" to "ID"),
+                            "Philippines" to ("🇵🇭" to "PH"), "Thailand" to ("🇹🇭" to "TH"),
+                            "Vietnam" to ("🇻🇳" to "VN"), "Japan" to ("🇯🇵" to "JP"),
+                            "South Korea" to ("🇰🇷" to "KR"), "Saudi Arabia" to ("🇸🇦" to "SA"),
+                            "United Arab Emirates" to ("🇦🇪" to "AE"), "Canada" to ("🇨🇦" to "CA"),
+                            "Australia" to ("🇦🇺" to "AU"), "Other" to ("🌐" to "OTHER")
+                        )
+                        val flagAndCode = countryInfo[country] ?: ("🌐" to "OTHER")
+                        val birthDate = java.time.LocalDate.parse(birthday)
+                        val age = java.time.Period.between(birthDate, java.time.LocalDate.now()).years.coerceAtLeast(0)
                         val payload = JSONObject()
                             .put("id", uid).put("uid", uid).put("appLongId", uid)
                             .put("accountId", prefs.getString("accountId", uid).orEmpty())
@@ -136,7 +150,8 @@ fun Newuserafterlogin(onBack: () -> Unit, onComplete: () -> Unit) {
                             .put("name", nickname.trim()).put("displayName", nickname.trim())
                             .put("email", prefs.getString("email", "").orEmpty())
                             .put("image", finalAvatar).put("avatar", finalAvatar).put("photo", finalAvatar)
-                            .put("country", country).put("birthday", birthday).put("gender", gender)
+                            .put("country", flagAndCode.first).put("countryName", country).put("countryCode", flagAndCode.second)
+                            .put("birthday", birthday).put("age", age).put("gender", gender)
                         withContext(Dispatchers.IO) {
                             val conn = (URL("$NEW_USER_API/api/users").openConnection() as HttpURLConnection).apply {
                                 requestMethod = "PUT"; connectTimeout = 15000; readTimeout = 15000; doOutput = true
@@ -150,7 +165,7 @@ fun Newuserafterlogin(onBack: () -> Unit, onComplete: () -> Unit) {
                                 if (code !in 200..299) error("Save failed (HTTP $code): $response")
                             } finally { conn.disconnect() }
                         }
-                        prefs.edit().putString("name", nickname.trim()).putString("image", finalAvatar).putString("photo", finalAvatar).putString("country", country).putString("birthday", birthday).putString("gender", gender).putBoolean("needsProfileSetup", false).putBoolean("profileSetupComplete", true).apply()
+                        prefs.edit().putString("name", nickname.trim()).putString("image", finalAvatar).putString("photo", finalAvatar).putString("country", flagAndCode.first).putString("countryName", country).putString("birthday", birthday).putString("gender", gender).putInt("age", age).putBoolean("needsProfileSetup", false).putBoolean("profileSetupComplete", true).apply()
                         onComplete()
                     } catch (t: Throwable) { error = t.message ?: "Could not save profile. Please try again." }
                     finally { saving = false }
