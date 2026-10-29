@@ -142,8 +142,17 @@ fun Newuserafterlogin(onBack: () -> Unit, onComplete: () -> Unit) {
                             "Australia" to ("🇦🇺" to "AU"), "Other" to ("🌐" to "OTHER")
                         )
                         val flagAndCode = countryInfo[country] ?: ("🌐" to "OTHER")
-                        val birthDate = java.time.LocalDate.parse(birthday)
-                        val age = java.time.Period.between(birthDate, java.time.LocalDate.now()).years.coerceAtLeast(0)
+                        val birthParts = birthday.split("-").map { it.toInt() }
+                        val birthCalendar = Calendar.getInstance().apply {
+                            set(birthParts[0], birthParts[1] - 1, birthParts[2], 0, 0, 0)
+                            set(Calendar.MILLISECOND, 0)
+                        }
+                        val todayCalendar = Calendar.getInstance()
+                        var age = todayCalendar.get(Calendar.YEAR) - birthCalendar.get(Calendar.YEAR)
+                        if (todayCalendar.get(Calendar.MONTH) < birthCalendar.get(Calendar.MONTH) ||
+                            (todayCalendar.get(Calendar.MONTH) == birthCalendar.get(Calendar.MONTH) &&
+                                todayCalendar.get(Calendar.DAY_OF_MONTH) < birthCalendar.get(Calendar.DAY_OF_MONTH))) age--
+                        age = age.coerceAtLeast(0)
                         val payload = JSONObject()
                             .put("id", uid).put("uid", uid).put("appLongId", uid)
                             .put("accountId", prefs.getString("accountId", uid).orEmpty())
