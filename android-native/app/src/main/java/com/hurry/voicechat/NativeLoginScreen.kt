@@ -350,7 +350,7 @@ private fun AuthField(
 
 private suspend fun googleBackendSignIn(context: android.content.Context): JSONObject {
     val credentialManager = CredentialManager.create(context)
-    val serverClientId = "164837688319-uu6uhd20mner48etd4ci6aeu3nuvt8gp.apps.googleusercontent.com"
+    val serverClientId = context.getString(R.string.default_web_client_id)
 
     // The user explicitly tapped the Google button: show Google's real account
     // chooser, then send the selected account's ID token to Zyora's backend.
@@ -485,7 +485,7 @@ private fun syncHurryUser(user: JSONObject, context: android.content.Context) {
         setRequestProperty("Content-Type", "application/json")
     }
     // Save the signed-in identity locally before network profile sync. A temporary
-    // Render/MongoDB outage must not turn a valid Firebase login into a failed login.
+    // Render/GitHub storage outage must not turn a valid Firebase login into a failed login.
     val authPrefs = context.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE)
     authPrefs.edit()
         .putString("uid", uid)
