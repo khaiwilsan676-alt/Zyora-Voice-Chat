@@ -834,7 +834,7 @@ export default function Wallet({ onBack, initialTab = 'wallet' }: WalletProps) {
           </div>
         )}
 
-        {/* Agent Specific Content — real Coin Seller profile from MongoDB */}
+        {/* Agent Specific Content — real Coin Seller profile from GitHub storage */}
         {activeTab === 'agent' && (
           <div className="flex flex-col mt-5">
             {coinSeller ? (
