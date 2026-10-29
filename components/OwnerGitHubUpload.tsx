@@ -19,7 +19,7 @@ export default function OwnerGitHubUpload() {
     if (!targetPath.startsWith("public/") && !targetPath.startsWith("android-native/")) {
       setResult({ ok: false, text: "Path public/ ya android-native/ ke andar hona chahiye." }); return;
     }
-    if (file.size > 5 * 1024 * 1024) { setResult({ ok: false, text: "Maximum file size 5 MB hai." }); return; }
+    if (file.size > 3 * 1024 * 1024) { setResult({ ok: false, text: "Maximum file size 3 MB hai." }); return; }
     setBusy(true); setResult(null);
     try {
       const contentBase64 = await new Promise<string>((resolve, reject) => {
@@ -69,7 +69,7 @@ export default function OwnerGitHubUpload() {
             <input value={message} onChange={e => setMessage(e.target.value)} maxLength={120} className="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-indigo-500" />
           </div>
           <button type="button" onClick={() => fileInput.current?.click()} className="flex w-full items-center gap-3 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 text-left hover:border-indigo-400">
-            <File className="h-5 w-5 text-slate-500" /><span className="min-w-0 flex-1"><span className="block text-sm font-bold text-slate-800">{file ? file.name : "Choose file"}</span><span className="block text-xs text-slate-500">{file ? `${(file.size / 1024).toFixed(1)} KB · selected` : "Images, assets, source files · up to 5 MB"}</span></span>
+            <File className="h-5 w-5 text-slate-500" /><span className="min-w-0 flex-1"><span className="block text-sm font-bold text-slate-800">{file ? file.name : "Choose file"}</span><span className="block text-xs text-slate-500">{file ? `${(file.size / 1024).toFixed(1)} KB · selected` : "Images, assets, source files · up to 3 MB"}</span></span>
           </button>
           <input ref={fileInput} type="file" className="hidden" onChange={e => { setFile(e.target.files?.[0] || null); setResult(null); }} />
           <button type="button" disabled={busy || !file || !secret} onClick={upload} className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-3 text-sm font-extrabold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50">
