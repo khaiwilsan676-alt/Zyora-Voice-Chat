@@ -698,71 +698,63 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
     }
   }
 
-  // Complete Supabase OAuth after Google redirects back to Zyora.
+  // Complete the server-verified GitHub OAuth session.
   useEffect(() => {
     let active = true;
-    const finishOAuth = async () => {
+    const finishGitHubOAuth = async () => {
       if (typeof window === "undefined") return;
-      const hasCode = new URLSearchParams(window.location.search).has("code");
-      const hasToken = window.location.hash.includes("access_token=");
-      if (!hasCode && !hasToken) return;
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("github") === "error") {
+        setAuthError("GitHub sign-in failed. Please check the OAuth app settings and try again.");
+        window.history.replaceState({}, document.title, window.location.pathname);
+        return;
+      }
+      if (params.get("github") !== "success") return;
+
       setLoading(true);
       setAuthError(null);
       try {
-        const supabase = await getSupabaseAuthClient();
-        let sessionResult = await supabase.auth.getSession();
-        if (sessionResult.error) throw sessionResult.error;
-        let session = sessionResult.data?.session;
-        if (!session && hasCode) {
-          const exchanged = await supabase.auth.exchangeCodeForSession(window.location.href);
-          if (exchanged.error) throw exchanged.error;
-          session = exchanged.data?.session;
+        const response = await fetch("/api/auth/github/session", { cache: "no-store", credentials: "same-origin" });
+        if (!response.ok) throw new Error("GitHub session could not be verified. Please try again.");
+        const payload = await response.json();
+        if (!payload?.authenticated || !payload?.user?.uid) {
+          throw new Error("GitHub session is missing or expired. Please sign in again.");
         }
-        if (!session?.user) throw new Error("Google returned without a session. Check the Supabase Google provider and redirect URL settings.");
         if (!active) return;
-        const u = session.user;
+
+        const user = payload.user;
+        const syncResult = await syncUserToMongoDB(user.uid, user.name, user.email || "", user.image || "");
+        localStorage.setItem("userName", syncResult.name);
+        localStorage.setItem("userEmail", user.email || "");
+        localStorage.setItem("userPhoto", syncResult.image);
+        localStorage.setItem("userUID", user.uid);
+        localStorage.setItem("accountNumber", syncResult.accountId);
         await processLoginSuccess({
-          id: u.id, uid: u.id, email: u.email || "",
-          name: u.user_metadata?.full_name || u.user_metadata?.name || (u.email || "").split("@")[0] || "User",
-          image: u.user_metadata?.avatar_url || u.user_metadata?.picture || "",
-          photo: u.user_metadata?.avatar_url || u.user_metadata?.picture || ""
+          ...user,
+          name: syncResult.name,
+          image: syncResult.image,
+          accountId: syncResult.accountId,
+          accountNumber: syncResult.accountId,
         });
         window.history.replaceState({}, document.title, window.location.pathname);
-      } catch (e: any) {
-        console.error("Google OAuth callback failed:", e);
-        if (active) setAuthError(e?.message || "Google authentication failed. Check Supabase provider settings.");
+      } catch (error: any) {
+        console.error("GitHub OAuth callback failed:", error);
+        if (active) setAuthError(error?.message || "GitHub authentication failed. Please try again.");
       } finally {
         if (active) setLoading(false);
       }
     };
-    void finishOAuth();
+    void finishGitHubOAuth();
     return () => { active = false; };
   }, []);
 
-  // Google login uses Supabase Auth; Firebase remains for email/password only.
+  // GitHub OAuth is handled server-side; the provider secret never reaches the browser.
   const handleGoogleLogin = async () => {
     setAuthError(null);
-
     const isBanned = await checkBanBeforeLogin();
     if (isBanned) return;
-
     setLoading(true);
-    try {
-      const supabase = await getSupabaseAuthClient();
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: window.location.origin,
-          queryParams: { access_type: "offline", prompt: "select_account" },
-        },
-      });
-
-      if (error) throw error;
-    } catch (error: any) {
-      console.error("Supabase Google login error:", error);
-      setAuthError(error?.message || "Google sign-in failed. Please try again.");
-      setLoading(false);
-    }
+    window.location.assign("/api/auth/github");
   };
 
   // Login with Account button click handler (with ban pre-check)
