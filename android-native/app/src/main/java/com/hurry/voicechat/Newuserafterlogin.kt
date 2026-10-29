@@ -105,7 +105,7 @@ fun Newuserafterlogin(onBack: () -> Unit, onComplete: () -> Unit) {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     listOf("Male", "Female").forEach { item ->
                         val chosen = gender == item
-                        Surface(modifier = Modifier.weight(1f).height(44.dp).clickable { gender = item }, shape = RoundedCornerShape(10.dp), color = if (chosen) Color(0xFFE3EEFF) else Color(0xFFF5F7FA), border = androidx.compose.foundation.BorderStroke(1.dp, if (chosen) Color(0xFF4C83D9) else Color(0xFFE2E7EF)) {
+                        Surface(modifier = Modifier.weight(1f).height(44.dp).clickable { gender = item }, shape = RoundedCornerShape(10.dp), color = if (chosen) Color(0xFFE3EEFF) else Color(0xFFF5F7FA), border = androidx.compose.foundation.BorderStroke(1.dp, if (chosen) Color(0xFF4C83D9) else Color(0xFFE2E7EF))) {
                             Box(contentAlignment = Alignment.Center) { Text(item, color = if (chosen) Color(0xFF2865B8) else Color(0xFF4B5563), fontWeight = if (chosen) FontWeight.SemiBold else FontWeight.Normal) }
                         }
                     }
