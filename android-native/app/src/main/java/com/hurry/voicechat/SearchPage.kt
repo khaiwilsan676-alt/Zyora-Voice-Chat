@@ -84,7 +84,7 @@ fun SearchPage(onBack:()->Unit={},onOpenProfile:(RoomProfileUser)->Unit={},onOpe
   val fetched=withContext(Dispatchers.IO) {
    runCatching {
     val encoded=URLEncoder.encode(q,"UTF-8")
-    val endpoint = if (tab == "Room") "https://zyora-voice-chat.onrender.com/api/rooms" else "https://zyora-voice-chat.onrender.com/api/users?search=$encoded&accountId=$encoded&q=$encoded"
+    val endpoint = if (tab == "Room") "https://zyora-server.onrender.com/api/rooms" else "https://zyora-server.onrender.com/api/users?search=$encoded&accountId=$encoded&q=$encoded"
     val conn=URL(endpoint).openConnection() as HttpURLConnection
     conn.connectTimeout=3500; conn.readTimeout=3500
     try {
