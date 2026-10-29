@@ -1,9 +1,9 @@
 name: Deploy Hurry to GitHub Pages
 
+# Zyora is a server-rendered Next.js app and is deployed on Vercel.
+# GitHub Pages cannot host its API routes or server-side profile persistence.
+# Keep this workflow manual-only so pushes do not trigger a broken static deploy.
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
 
 permissions:
@@ -29,13 +29,15 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build static site
+      - name: Build Next.js app
         run: npm run build
 
-      - name: Publish to gh-pages
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_branch: gh-pages
-          publish_dir: ./out
-          force_orphan: false
+      - name: Explain deployment target
+        run: |
+          echo "Build completed. This repository uses server-side Next.js features that GitHub Pages cannot run."
+          echo "Deploy this app through Vercel so API routes and server profile persistence remain available."
+          if [ ! -d out ]; then
+            echo "No static export directory exists; skipping GitHub Pages publication."
+          else
+            echo "Static export directory found, but publication is intentionally disabled for this server app."
+          fi
