@@ -144,7 +144,7 @@ app.post("/api/auth/google", async (req, res) => {
         headers: { ...headers, "Content-Type": "application/json" },
         body: JSON.stringify({
           message: "Zyora: save Google account profile",
-          content: Buffer.from(JSON.stringify(account, null, 2) + "\\n").toString("base64"),
+          content: Buffer.from(JSON.stringify(account, null, 2) + "\n").toString("base64"),
           ...(existingSha ? { sha: existingSha } : {}),
         }),
         cache: "no-store",
