@@ -18,7 +18,7 @@ internal object ProfilePersistence {
     private const val API = "https://zyora-server.onrender.com"
 
 
-    suspend fun uploadDpToGitHub(dataUri: String, userId: String): String? = withContext(Dispatchers.IO) {
+    suspend fun uploadDpToGitHub(dataUri: String, userId: String, folder: String = "user-dp"): String? = withContext(Dispatchers.IO) {
         runCatching {
             if (!dataUri.startsWith("data:image/") || userId.isBlank()) return@runCatching null
             val connection = (URL("https://zyora-voice-chat.vercel.app/api/upload-image").openConnection() as HttpURLConnection).apply {
@@ -28,7 +28,7 @@ internal object ProfilePersistence {
                 doOutput = true
                 setRequestProperty("Content-Type", "application/json; charset=utf-8")
             }
-            val payload = JSONObject().put("userId", userId).put("folder", "user-dp").put("imageData", dataUri)
+            val payload = JSONObject().put("userId", userId).put("folder", folder).put("imageData", dataUri)
             connection.outputStream.use { it.write(payload.toString().toByteArray(Charsets.UTF_8)) }
             val status = connection.responseCode
             val stream = if (status in 200..299) connection.inputStream else connection.errorStream
