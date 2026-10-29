@@ -64,8 +64,8 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: hurry-native-${{ github.run_number }}
-          name: Hurry Native ${{ github.run_number }}
-          body: Automatic Native APK update for commit ${{ github.sha }}
+          name: Zyora Native ${{ github.run_number }}
+          body: Zyora Native APK. Backend API: https://zyora-voice-chat.onrender.com. Includes current Native app code from commit ${{ github.sha }}.
           make_latest: true
           files: android-native/app/build/outputs/apk/debug/app-debug.apk
 
@@ -74,8 +74,8 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: hurry-native-latest
-          name: Hurry Native Latest
-          body: Always points to the newest successful native Android build.
+          name: Zyora Native Latest
+          body: Always points to the newest successful Zyora Native Android build.
           prerelease: false
           make_latest: false
           files: android-native/app/build/outputs/apk/debug/app-debug.apk
@@ -83,6 +83,6 @@ jobs:
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: hurry-native-debug
+          name: zyora-native-debug
           path: android-native/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
