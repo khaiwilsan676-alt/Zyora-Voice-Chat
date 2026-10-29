@@ -1245,19 +1245,8 @@ fun RoomPage(
         if(showSettings) RoomSettingPage(initial = RoomSettingsDataNative(roomName=roomName,roomDp=roomImage,announcement=announcement,micMode=roomMicMode,theme=roomTheme,isLocked=locked,admin=roomAdminIds),roomOwnerId=roomId,currentUserId=accountId,onBack={showSettings=false},onSave={saved->
             roomName=saved.roomName;roomImage=saved.roomDp;announcement=saved.announcement;roomMicMode=saved.micMode;roomTheme=saved.theme;roomAdminIds=saved.admin;locked=saved.isLocked;showSettings=false
             appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).edit().putInt("micMode_$roomId", saved.micMode).putString("theme_$roomId", saved.theme).apply()
-            CoroutineScope(Dispatchers.IO).launch {
-                runCatching {
-                    val conn = (java.net.URL("https://zyora-server.onrender.com/api/rooms").openConnection() as java.net.HttpURLConnection).apply {
-                        requestMethod="PUT"; connectTimeout=10000; readTimeout=10000; doOutput=true
-                        setRequestProperty("Content-Type","application/json")
-                    }
-                    val payload = JSONObject().put("accountId", roomId).put("id", roomId).put("name", saved.roomName).put("dp", saved.roomDp).put("image", saved.roomDp).put("message", saved.announcement).put("announcement", saved.announcement).put("theme", saved.theme).put("isLocked", saved.isLocked).put("country", roomOwner.country)
-                    conn.outputStream.use { it.write(payload.toString().toByteArray(Charsets.UTF_8)) }
-                    val status=conn.responseCode
-                    if (status !in 200..299) throw java.io.IOException("Room save failed: HTTP $status")
-                    conn.disconnect()
-                }
-            }
+            // RoomSettingPage already persisted the complete room settings before invoking onSave.
+            // Do not issue a second partial PUT here: it used to reset mic mode/admin fields on the server.
         })
         if(showGift) GiftPicker(open=true,onClose={showGift=false},seats=seats.toList(),roomId=roomId,currentUserAccountId=accountId,currentUserName=roomDisplayName,currentUserImage=roomDisplayImage,roomUsers=activeRoomUsers)
         if(showGames) GamesSheet(onClose={showGames=false},onWildParty={showGames=false;showWildParty=true},onFruitParty={showGames=false;showFruitParty=true})
