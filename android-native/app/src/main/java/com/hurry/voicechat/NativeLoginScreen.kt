@@ -31,7 +31,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
-import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
@@ -352,15 +351,22 @@ private fun AuthField(
 private suspend fun googleBackendSignIn(context: android.content.Context): JSONObject {
     val credentialManager = CredentialManager.create(context)
     val serverClientId = "164837688319-uu6uhd20mner48etd4ci6aeu3nuvt8gp.apps.googleusercontent.com"
-    val credential = try {
-        val option = GetGoogleIdOption.Builder().setServerClientId(serverClientId).setFilterByAuthorizedAccounts(false).setAutoSelectEnabled(false).build()
-        credentialManager.getCredential(context, GetCredentialRequest.Builder().addCredentialOption(option).build()).credential
-    } catch (_: androidx.credentials.exceptions.GetCredentialException) {
-        val option = GetSignInWithGoogleOption.Builder(serverClientId).build()
-        credentialManager.getCredential(context, GetCredentialRequest.Builder().addCredentialOption(option).build()).credential
+
+    // The user explicitly tapped the Google button: show Google's real account
+    // chooser, then send the selected account's ID token to Zyora's backend.
+    // No Firebase sign-in and no local/fake account picker.
+    val option = GetSignInWithGoogleOption.Builder(serverClientId).build()
+    val request = GetCredentialRequest.Builder().addCredentialOption(option).build()
+    val credential = credentialManager.getCredential(context, request).credential
+
+    if (credential !is CustomCredential || credential.type != GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
+        throw IllegalStateException("Google did not return a valid sign-in credential.")
     }
-    if (credential !is CustomCredential || credential.type != GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) throw IllegalStateException("Google did not return a valid sign-in credential.")
-    val googleCredential = try { GoogleIdTokenCredential.createFrom(credential.data) } catch (_: GoogleIdTokenParsingException) { throw IllegalStateException("Could not read the Google sign-in response.") }
+    val googleCredential = try {
+        GoogleIdTokenCredential.createFrom(credential.data)
+    } catch (_: GoogleIdTokenParsingException) {
+        throw IllegalStateException("Could not read the Google sign-in response.")
+    }
     return postAuthJson("/api/auth/google", JSONObject().put("idToken", googleCredential.idToken))
 }
 private fun backendEmailAuth(email: String, password: String, create: Boolean): JSONObject =
