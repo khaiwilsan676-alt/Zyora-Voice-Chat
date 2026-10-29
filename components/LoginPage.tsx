@@ -124,7 +124,7 @@ export const getOrCreateAccountNumber = (uid: string) => {
   return String(10000000 + (positiveHash % 90000000))
 }
 
-const getUserFromMongoDB = async (uid: string) => {
+const getUserFromGitHub = async (uid: string) => {
   if (!uid) return null;
 
   const response = await fetch(
@@ -136,14 +136,14 @@ const getUserFromMongoDB = async (uid: string) => {
   }
 
   if (!response.ok) {
-    throw new Error(`MongoDB user fetch failed: ${response.status}`);
+    throw new Error(`GitHub storage user fetch failed: ${response.status}`);
   }
 
   const result = await response.json();
   return result?.user || null;
 };
 
-const saveUserToMongoDB = async (userData: any) => {
+const saveUserToGitHub = async (userData: any) => {
   const uid = userData.uid || userData.id || userData.appLongId;
 
   if (!uid) {
@@ -162,14 +162,14 @@ const saveUserToMongoDB = async (userData: any) => {
   });
 
   if (!response.ok) {
-    throw new Error(`MongoDB user save failed: ${response.status}`);
+    throw new Error(`GitHub storage user save failed: ${response.status}`);
   }
 
   return response.json();
 };
 
-// HELPER: Sync and Lock User Profile in MongoDB
-const syncUserToMongoDB = async (uid: string, name: string, email: string, photo: string) => {
+// HELPER: Sync and Lock User Profile in GitHub storage
+const syncUserToGitHub = async (uid: string, name: string, email: string, photo: string) => {
   try {
     let finalAccountId = ""
     let existingName = ""
@@ -177,7 +177,7 @@ const syncUserToMongoDB = async (uid: string, name: string, email: string, photo
     let existingBio = ""
     let existingCountry = ""
 
-    const res = await getUserFromMongoDB(uid)
+    const res = await getUserFromGitHub(uid)
     const existingUser = res && (res.user || res.data || res)
 
     let existingEmail = ""
@@ -224,14 +224,14 @@ const syncUserToMongoDB = async (uid: string, name: string, email: string, photo
       deviceId: deviceId
     }
 
-    await saveUserToMongoDB(userData)
+    await saveUserToGitHub(userData)
 
     localStorage.setItem("accountNumber", finalAccountId)
     localStorage.setItem(`user_account_number_${uid}`, finalAccountId)
 
     return { accountId: finalAccountId, name: finalName, image: finalImage }
   } catch (err) {
-    console.error("Error syncing user to MongoDB:", err)
+    console.error("Error syncing user to GitHub storage:", err)
     return { accountId: getOrCreateAccountNumber(uid), name: name || email.split('@')[0] || 'User', image: photo || '/default-avatar.png' }
   }
 }
@@ -239,7 +239,7 @@ const syncUserToMongoDB = async (uid: string, name: string, email: string, photo
 // HELPER: Check if user is new (hasn't selected gender yet)
 const checkIfNewUser = async (uid: string): Promise<boolean> => {
   try {
-    const res = await getUserFromMongoDB(uid)
+    const res = await getUserFromGitHub(uid)
     const userData = res && (res.user || res.data || res)
     if (userData && (userData.id || userData.AppLongId || userData['App long ID'] || userData.Name || userData.name)) {
       const gender = userData.gender || userData.Gender
@@ -427,7 +427,7 @@ function CountrySelectionPage({
           setupComplete: true
         }
 
-        await saveUserToMongoDB(userDocData)
+        await saveUserToGitHub(userDocData)
 
         localStorage.setItem("userName", defaultData.name)
         localStorage.setItem("userPhoto", defaultData.image)
@@ -667,7 +667,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
         setPendingUserData(userData)
         setShowGenderPage(true)
       } else {
-        const res = await getUserFromMongoDB(userId)
+        const res = await getUserFromGitHub(userId)
         const existingData = res && (res.user || res.data || res)
         if (existingData) {
           const name = existingData.name || existingData.Name
@@ -725,7 +725,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
         if (!active) return;
 
         const user = payload.user;
-        const syncResult = await syncUserToMongoDB(user.uid, user.name, user.email || "", user.image || "");
+        const syncResult = await syncUserToGitHub(user.uid, user.name, user.email || "", user.image || "");
         localStorage.setItem("userName", syncResult.name);
         localStorage.setItem("userEmail", user.email || "");
         localStorage.setItem("userPhoto", syncResult.image);
@@ -764,7 +764,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
       const userName = user.displayName || user.email?.split("@")[0] || "User";
       const userEmail = user.email || "";
       const userPhoto = user.photoURL || "/default-avatar.png";
-      const syncResult = await syncUserToMongoDB(user.uid, userName, userEmail, userPhoto);
+      const syncResult = await syncUserToGitHub(user.uid, userName, userEmail, userPhoto);
 
       localStorage.setItem("userName", syncResult.name);
       localStorage.setItem("userEmail", userEmail);
@@ -837,7 +837,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
         const userName = `${officialCred.type.toUpperCase()} - ${officialCred.id}`
         const officialID = officialCred.id
 
-        const syncResult = await syncUserToMongoDB(officialID, userName, officialCred.email, "")
+        const syncResult = await syncUserToGitHub(officialID, userName, officialCred.email, "")
 
         const userData = {
           id: officialID,
@@ -873,7 +873,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
         const userPhoto = user.photoURL || "/default-avatar.png"
         const userUID = user.uid
 
-        const syncResult = await syncUserToMongoDB(userUID, userName, userEmail, userPhoto)
+        const syncResult = await syncUserToGitHub(userUID, userName, userEmail, userPhoto)
 
         localStorage.setItem("userName", syncResult.name);
         localStorage.setItem("userEmail", userEmail);
@@ -948,7 +948,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
       
-      const syncResult = await syncUserToMongoDB(
+      const syncResult = await syncUserToGitHub(
         user.uid,
         email.split('@')[0],
         email,
