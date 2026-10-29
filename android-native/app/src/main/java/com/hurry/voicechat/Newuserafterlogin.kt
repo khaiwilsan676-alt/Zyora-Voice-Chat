@@ -3,7 +3,6 @@ package com.hurry.voicechat
 import android.app.DatePickerDialog
 import android.content.Context
 import android.net.Uri
-import android.util.Base64
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -124,8 +123,8 @@ fun Newuserafterlogin(onBack: () -> Unit, onComplete: () -> Unit) {
                         val uid = prefs.getString("uid", "").orEmpty()
                         if (selectedUri != null) {
                             val dataUri = withContext(Dispatchers.IO) {
-                                val bytes = context.contentResolver.openInputStream(selectedUri!!)?.use { it.readBytes() } ?: throw IllegalStateException("Could not read selected photo")
-                                "data:image/jpeg;base64," + Base64.encodeToString(bytes, Base64.NO_WRAP)
+                                ProfilePersistence.imageDataUri(context, selectedUri!!)
+                                    ?: throw IllegalStateException("Could not process the selected photo. Please choose another image.")
                             }
                             finalAvatar = ProfilePersistence.uploadDpToGitHub(dataUri, prefs.getString("accountId", uid).orEmpty())
                                 ?: throw IllegalStateException("Profile photo upload failed. Please choose the photo again or continue without a photo.")
