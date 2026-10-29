@@ -127,7 +127,8 @@ fun Newuserafterlogin(onBack: () -> Unit, onComplete: () -> Unit) {
                                 val bytes = context.contentResolver.openInputStream(selectedUri!!)?.use { it.readBytes() } ?: throw IllegalStateException("Could not read selected photo")
                                 "data:image/jpeg;base64," + Base64.encodeToString(bytes, Base64.NO_WRAP)
                             }
-                            finalAvatar = ProfilePersistence.uploadDpToGitHub(dataUri, prefs.getString("accountId", uid).orEmpty()) ?: dataUri
+                            finalAvatar = ProfilePersistence.uploadDpToGitHub(dataUri, prefs.getString("accountId", uid).orEmpty())
+                                ?: throw IllegalStateException("Profile photo upload failed. Please choose the photo again or continue without a photo.")
                         }
                         val countryInfo = mapOf(
                             "India" to ("🇮🇳" to "IN"), "United States" to ("🇺🇸" to "US"),
@@ -162,7 +163,13 @@ fun Newuserafterlogin(onBack: () -> Unit, onComplete: () -> Unit) {
                                 val code = conn.responseCode
                                 val stream = if (code in 200..299) conn.inputStream else conn.errorStream
                                 val response = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
-                                if (code !in 200..299) throw IllegalStateException("Save failed (HTTP $code): $response")
+                                if (code !in 200..299) {
+                                    val serverMessage = runCatching { JSONObject(response).optString("error") }.getOrDefault("")
+                                    val safeMessage = serverMessage.takeIf { it.isNotBlank() }
+                                        ?: if (response.trimStart().startsWith("<")) "Zyora server returned an HTML error (HTTP $code). Please try again in a moment."
+                                        else "Could not save your profile (HTTP $code). Please try again."
+                                    throw IllegalStateException(safeMessage)
+                                }
                             } finally { conn.disconnect() }
                         }
                         prefs.edit().putString("name", nickname.trim()).putString("image", finalAvatar).putString("photo", finalAvatar).putString("country", flagAndCode.first).putString("countryName", country).putString("birthday", birthday).putString("gender", gender).putInt("age", age).putBoolean("needsProfileSetup", false).putBoolean("profileSetupComplete", true).apply()
