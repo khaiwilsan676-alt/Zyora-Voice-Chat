@@ -137,7 +137,7 @@ fun NativeAvatarFrameOverlay(userId: String, modifier: Modifier = Modifier) {
         if (userId.isNotBlank()) withContext(Dispatchers.IO) {
             runCatching {
                 val encoded = URLEncoder.encode(userId, "UTF-8")
-                val c = (URL("https://zyora-voice-chat.onrender.com/api/store/inventory/$encoded").openConnection() as HttpURLConnection).apply { connectTimeout=8000; readTimeout=8000 }
+                val c = (URL("https://zyora-server.onrender.com/api/store/inventory/$encoded").openConnection() as HttpURLConnection).apply { connectTimeout=8000; readTimeout=8000 }
                 val code = c.responseCode
                 if (code !in 200..299) throw IllegalStateException("Inventory unavailable")
                 val json = JSONObject(c.inputStream.bufferedReader().use { it.readText() }); c.disconnect()
@@ -189,7 +189,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
         withContext(Dispatchers.IO) {
             runCatching {
                 val encoded = URLEncoder.encode(userId, "UTF-8")
-                val c = (URL("https://zyora-voice-chat.onrender.com/api/store/inventory/$encoded").openConnection() as HttpURLConnection).apply { connectTimeout=10000; readTimeout=10000 }
+                val c = (URL("https://zyora-server.onrender.com/api/store/inventory/$encoded").openConnection() as HttpURLConnection).apply { connectTimeout=10000; readTimeout=10000 }
                 val code = c.responseCode
                 val stream = if (code in 200..299) c.inputStream else c.errorStream
                 val json = JSONObject(stream.bufferedReader().use { it.readText() }); c.disconnect()
@@ -427,7 +427,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                                                 } else equippedIds.remove(item.id)
                                                 if (userId.isNotBlank()) storeScope.launch {
                                                     withContext(Dispatchers.IO) { runCatching {
-                                                        val c = (URL("https://zyora-voice-chat.onrender.com/api/store/equip").openConnection() as HttpURLConnection).apply {
+                                                        val c = (URL("https://zyora-server.onrender.com/api/store/equip").openConnection() as HttpURLConnection).apply {
                                                             requestMethod="POST"; doOutput=true; connectTimeout=10000; readTimeout=10000
                                                             setRequestProperty("Content-Type", "application/json")
                                                         }
@@ -444,7 +444,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                                                 storeScope.launch {
                                                     val result = withContext(Dispatchers.IO) {
                                                         runCatching {
-                                                            val c = (URL("https://zyora-voice-chat.onrender.com/api/store/purchase").openConnection() as HttpURLConnection).apply {
+                                                            val c = (URL("https://zyora-server.onrender.com/api/store/purchase").openConnection() as HttpURLConnection).apply {
                                                                 requestMethod="POST"; doOutput=true; connectTimeout=10000; readTimeout=10000
                                                                 setRequestProperty("Content-Type", "application/json")
                                                             }
@@ -570,7 +570,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                             storeScope.launch {
                                 val result = withContext(Dispatchers.IO) {
                                     runCatching {
-                                        val c = (URL("https://zyora-voice-chat.onrender.com/api/store/equip").openConnection() as HttpURLConnection).apply {
+                                        val c = (URL("https://zyora-server.onrender.com/api/store/equip").openConnection() as HttpURLConnection).apply {
                                             requestMethod = "POST"; doOutput = true; connectTimeout = 10000; readTimeout = 10000
                                             setRequestProperty("Content-Type", "application/json")
                                         }
@@ -597,7 +597,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                             storeScope.launch {
                                 val result = withContext(Dispatchers.IO) {
                                     runCatching {
-                                        val c = (URL("https://zyora-voice-chat.onrender.com/api/store/purchase").openConnection() as HttpURLConnection).apply {
+                                        val c = (URL("https://zyora-server.onrender.com/api/store/purchase").openConnection() as HttpURLConnection).apply {
                                             requestMethod = "POST"; doOutput = true; connectTimeout = 10000; readTimeout = 10000
                                             setRequestProperty("Content-Type", "application/json")
                                         }
