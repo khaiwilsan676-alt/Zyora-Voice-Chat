@@ -187,6 +187,24 @@ fun RoomPage(
     val accountId=currentUser.accountId.ifBlank{currentUser.uid.ifBlank{currentUser.id.ifBlank{"guest"}}}
     val clipboard = LocalClipboardManager.current
     val appContext = LocalContext.current
+    var roomWalletBalance by remember(accountId) { mutableLongStateOf(0L) }
+    LaunchedEffect(accountId) {
+        if (accountId.isBlank() || accountId == "guest") return@LaunchedEffect
+        val serverBalance = withContext(Dispatchers.IO) {
+            runCatching {
+                val encoded = java.net.URLEncoder.encode(accountId, "UTF-8")
+                val conn = (java.net.URL("https://zyora-server.onrender.com/api/lucky-bag/wallet/" + encoded).openConnection() as java.net.HttpURLConnection).apply {
+                    connectTimeout = 10000
+                    readTimeout = 10000
+                }
+                try {
+                    if (conn.responseCode !in 200..299) error("Wallet unavailable")
+                    JSONObject(conn.inputStream.bufferedReader().use { it.readText() }).optLong("balance", 0L).coerceAtLeast(0L)
+                } finally { conn.disconnect() }
+            }.getOrNull()
+        }
+        if (serverBalance != null) roomWalletBalance = serverBalance
+    }
     val currentProfileKeys = listOf(currentUser.uid, currentUser.id, currentUser.accountId, accountId).filter { it.isNotBlank() }.distinct()
     val cachedCurrentProfile = remember(currentProfileKeys) {
         val profileDb = NativeIndexDatabase(appContext)
@@ -693,6 +711,13 @@ fun RoomPage(
                 }
             }
         }
+        val walletBalanceListener = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
+            if (payload.optString("userId") == accountId) {
+                val updated = payload.optLong("balance", -1L)
+                if (updated >= 0L) mainHandler.post { roomWalletBalance = updated }
+            }
+        }
         val luckyBagBannerListener = Emitter.Listener { args ->
             val payload = args.firstOrNull() as? JSONObject ?: return@Listener
             if (payload.optString("roomId") == roomId && payload.optString("senderId") != accountId) {
@@ -785,6 +810,7 @@ fun RoomPage(
         roomSocket.on("room_chat_cleared",clearedListener)
         roomSocket.on("room_seats",seatListener)
         roomSocket.on("lucky_bag_banner",luckyBagBannerListener)
+        roomSocket.on("wallet_balance_updated",walletBalanceListener)
         roomSocket.on(Socket.EVENT_CONNECT,connectListener)
         roomSocket.connect()
         onDispose {
@@ -794,6 +820,7 @@ fun RoomPage(
             roomSocket.off("room_chat_cleared",clearedListener)
             roomSocket.off("room_seats",seatListener)
             roomSocket.off("lucky_bag_banner",luckyBagBannerListener)
+            roomSocket.off("wallet_balance_updated",walletBalanceListener)
             roomSocket.off(Socket.EVENT_CONNECT,connectListener)
             roomSocket.disconnect()
             roomSocket.close()
@@ -1303,7 +1330,19 @@ fun RoomPage(
             // RoomSettingPage already persisted the complete room settings before invoking onSave.
             // Do not issue a second partial PUT here: it used to reset mic mode/admin fields on the server.
         })
-        if(showGift) GiftPicker(open=true,onClose={showGift=false},seats=seats.toList(),roomId=roomId,currentUserAccountId=accountId,currentUserName=roomDisplayName,currentUserImage=roomDisplayImage,roomUsers=activeRoomUsers)
+        if(showGift) GiftPicker(
+            open = true,
+            onClose = { showGift = false },
+            seats = seats.toList(),
+            roomId = roomId,
+            currentUserAccountId = accountId,
+            currentUserName = roomDisplayName,
+            currentUserImage = roomDisplayImage,
+            roomUsers = activeRoomUsers,
+            walletBalance = roomWalletBalance,
+            onDebitWallet = { requested -> if (requested <= roomWalletBalance) roomWalletBalance else null },
+            onSendCoinTransfer = { transfer -> roomSocketRef.value?.emit("coin_transfer", JSONObject(transfer)) }
+        )
         if(showGames) GamesSheet(onClose={showGames=false},onWildParty={showGames=false;showWildParty=true},onFruitParty={showGames=false;showFruitParty=true})
         if(showRoomTask) Roomtask(onBack={showRoomTask=false})
         if(showWildParty) Wildparty(onClose={showWildParty=false},onMinimize={showWildParty=false})
