@@ -374,20 +374,24 @@ private suspend fun googleBackendSignIn(context: android.content.Context): JSONO
         throw IllegalStateException("Could not read the Google sign-in response.")
     }
 
-    // Google is only the identity provider; Firebase Authentication owns the session and UID.
-    val firebaseCredential = GoogleAuthProvider.getCredential(googleCredential.idToken, null)
-    val result = Tasks.await(
-        FirebaseAuth.getInstance().signInWithCredential(firebaseCredential),
-        60,
-        java.util.concurrent.TimeUnit.SECONDS
-    )
-    val firebaseUser = result.user ?: throw IllegalStateException("Firebase did not return a Google account.")
-    val firebaseToken = Tasks.await(
-        firebaseUser.getIdToken(true),
-        60,
-        java.util.concurrent.TimeUnit.SECONDS
-    ).token ?: throw IllegalStateException("Could not obtain Firebase sign-in token.")
-    return postAuthJson("/api/auth/firebase", JSONObject().put("idToken", firebaseToken))
+    // Credential Manager runs in the caller's coroutine. Firebase Tasks.await()
+    // and the HTTP request are blocking, so keep them off Android's main thread.
+    return withContext(Dispatchers.IO) {
+        // Google is only the identity provider; Firebase Authentication owns the session and UID.
+        val firebaseCredential = GoogleAuthProvider.getCredential(googleCredential.idToken, null)
+        val result = Tasks.await(
+            FirebaseAuth.getInstance().signInWithCredential(firebaseCredential),
+            60,
+            java.util.concurrent.TimeUnit.SECONDS
+        )
+        val firebaseUser = result.user ?: throw IllegalStateException("Firebase did not return a Google account.")
+        val firebaseToken = Tasks.await(
+            firebaseUser.getIdToken(true),
+            60,
+            java.util.concurrent.TimeUnit.SECONDS
+        ).token ?: throw IllegalStateException("Could not obtain Firebase sign-in token.")
+        postAuthJson("/api/auth/firebase", JSONObject().put("idToken", firebaseToken))
+    }
 }
 private fun backendEmailAuth(context: android.content.Context, email: String, password: String, create: Boolean): JSONObject {
     val auth = FirebaseAuth.getInstance()
