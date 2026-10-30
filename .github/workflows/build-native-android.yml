@@ -63,7 +63,7 @@ jobs:
         run: gradle assembleDebug --no-daemon --stacktrace --max-workers=2
 
       - name: Stream Native APK in browser with Appetize
-        if: ${{ env.APPETIZE_API_TOKEN != '' && env.APPETIZE_PUBLIC_KEY != '' && github.event_name != 'pull_request' }}
+        if: ${{ env.APPETIZE_API_TOKEN != '' && github.event_name != 'pull_request' }}
         id: appetize
         uses: appetizeio/github-action-appetize@v1.1.0
         env:
