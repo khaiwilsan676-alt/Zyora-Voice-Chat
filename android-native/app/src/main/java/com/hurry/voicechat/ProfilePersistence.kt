@@ -21,7 +21,7 @@ internal object ProfilePersistence {
     suspend fun uploadDpToGitHub(dataUri: String, userId: String, folder: String = "user-dp"): String? = withContext(Dispatchers.IO) {
         runCatching {
             if (!dataUri.startsWith("data:image/") || userId.isBlank()) return@runCatching null
-            val connection = (URL("https://zyora-voice-chat.vercel.app/api/upload-image").openConnection() as HttpURLConnection).apply {
+            val connection = (URL("$API/api/upload-image").openConnection() as HttpURLConnection).apply {
                 requestMethod = "POST"
                 connectTimeout = 20000
                 readTimeout = 30000
