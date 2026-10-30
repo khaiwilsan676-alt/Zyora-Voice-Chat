@@ -19,24 +19,30 @@ internal object ProfilePersistence {
 
 
     suspend fun uploadDpToGitHub(dataUri: String, userId: String, folder: String = "user-dp"): String? = withContext(Dispatchers.IO) {
-        runCatching {
-            if (!dataUri.startsWith("data:image/") || userId.isBlank()) return@runCatching null
-            val connection = (URL("$API/api/upload-image").openConnection() as HttpURLConnection).apply {
-                requestMethod = "POST"
-                connectTimeout = 20000
-                readTimeout = 30000
-                doOutput = true
-                setRequestProperty("Content-Type", "application/json; charset=utf-8")
-            }
+        if (!dataUri.startsWith("data:image/") || userId.isBlank()) return@withContext null
+        val connection = (URL("$API/api/upload-image").openConnection() as HttpURLConnection).apply {
+            requestMethod = "POST"
+            connectTimeout = 20000
+            readTimeout = 45000
+            doOutput = true
+            setRequestProperty("Content-Type", "application/json; charset=utf-8")
+        }
+        try {
             val payload = JSONObject().put("userId", userId).put("folder", folder).put("imageData", dataUri)
             connection.outputStream.use { it.write(payload.toString().toByteArray(Charsets.UTF_8)) }
             val status = connection.responseCode
             val stream = if (status in 200..299) connection.inputStream else connection.errorStream
             val response = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+            if (status !in 200..299) {
+                val message = runCatching { JSONObject(response).optString("error") }.getOrNull()
+                throw IllegalStateException(message?.takeIf { it.isNotBlank() } ?: "Image upload failed (HTTP $status).")
+            }
+            val hostedUrl = JSONObject(response).optString("url")
+            hostedUrl.takeIf { it.startsWith("$API/api/profile-image?path=") || it.startsWith("https://raw.githubusercontent.com/") }
+                ?: throw IllegalStateException("Image uploaded but the server returned an invalid image URL.")
+        } finally {
             connection.disconnect()
-            if (status !in 200..299) return@runCatching null
-            JSONObject(response).optString("url").takeIf { it.startsWith("$API/api/profile-image?path=") || it.startsWith("https://raw.githubusercontent.com/") }
-        }.getOrNull()
+        }
     }
 
     fun imageDataUri(context: Context, uri: Uri): String? = runCatching {
