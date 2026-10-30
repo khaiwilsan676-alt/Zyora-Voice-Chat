@@ -175,9 +175,8 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int) {
                         val wallet = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
                         val serverBalance = wallet.optLong("balance").coerceAtLeast(0L)
                         val existing = dao.getUserData() ?: UserDataEntity()
-                        
-                        // FIX: Agar server se balance 0 aaye, to wo tumhare local dummy coins ko overwrite nahi karega! 
-                        if (serverBalance > existing.balance) {
+                        // Server wallet is authoritative: sync both increases and spending/decreases.
+                        if (serverBalance != existing.balance) {
                             dao.saveUserData(existing.copy(balance = serverBalance))
                         }
                     } finally { connection.disconnect() }
