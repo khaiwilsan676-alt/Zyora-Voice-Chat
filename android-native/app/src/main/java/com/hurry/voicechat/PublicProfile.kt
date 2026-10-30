@@ -132,6 +132,7 @@ fun PublicProfileScreen(
     
     // Crop State
     var uriToCrop by remember { mutableStateOf<String?>(null) }
+    var avatarSaving by remember { mutableStateOf(false) }
 
     // User Data State
     var userName by remember(profileCacheKey, cachedProfile) { mutableStateOf(cachedProfile?.optString("name")?.takeIf { it.isNotBlank() && it != "null" } ?: targetUser?.name?.takeIf { it.isNotBlank() } ?: "User") }
@@ -601,25 +602,32 @@ fun PublicProfileScreen(
                         color = Color(0xFF1DC4E9), 
                         fontSize = 16.sp, 
                         fontWeight = FontWeight.Bold,
-                        modifier = Modifier.clickable {
+                        modifier = Modifier.clickable(enabled = !avatarSaving) {
                             val savedUri = uriToCrop
-                            if (savedUri != null) {
-                                selectedAvatarUri = savedUri
-                                if (!isOtherUser) {
-                                    ProfilePersistence.updateCache(context, profileCacheKeys, mapOf("image" to savedUri, "photo" to savedUri))
-                                    coroutineScope.launch {
-                                        val ownerId = (targetUser?.accountId ?: targetUser?.displayAccountNumber ?: targetUser?.id ?: targetUser?.uid).orEmpty()
+                            if (savedUri != null && !isOtherUser) {
+                                avatarSaving = true
+                                coroutineScope.launch {
+                                    try {
+                                        val ownerId = listOf(targetUser?.uid, targetUser?.id, targetUser?.accountId, targetUser?.displayAccountNumber)
+                                            .firstOrNull { !it.isNullOrBlank() && it != "—" }.orEmpty()
+                                        if (ownerId.isBlank()) error("Account ID is missing. Please sign in again.")
                                         val hostedUrl = ProfilePersistence.uploadDpToGitHub(savedUri, ownerId)
-                                        if (hostedUrl != null) {
-                                            val fields = mapOf("image" to hostedUrl, "photo" to hostedUrl, "avatar" to hostedUrl)
-                                            selectedAvatarUri = hostedUrl
-                                            ProfilePersistence.updateCache(context, profileCacheKeys, fields)
-                                            ProfilePersistence.save(targetUser, fields)
-                                        }
+                                            ?: error("Photo upload failed. Check GitHub image storage and try again.")
+                                        val fields = mapOf("image" to hostedUrl, "photo" to hostedUrl, "avatar" to hostedUrl)
+                                        if (!ProfilePersistence.save(targetUser, fields)) error("Photo uploaded but profile could not be saved. Please retry.")
+                                        selectedAvatarUri = hostedUrl
+                                        ProfilePersistence.updateCache(context, profileCacheKeys, fields)
+                                        Toast.makeText(context, "Profile photo saved", Toast.LENGTH_SHORT).show()
+                                    } catch (error: Throwable) {
+                                        Toast.makeText(context, error.message ?: "Profile photo upload failed", Toast.LENGTH_LONG).show()
+                                    } finally {
+                                        avatarSaving = false
+                                        uriToCrop = null
                                     }
                                 }
+                            } else {
+                                uriToCrop = null
                             }
-                            uriToCrop = null
                         }.padding(8.dp)
                     )
                 }
