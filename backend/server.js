@@ -1070,7 +1070,43 @@ app.post("/api/upload-image", async (req, res) => {
       return res.status(502).json({ error: "GitHub image upload failed. Check the server token's repository contents permission." });
     }
     const url = "https://zyora-server.onrender.com/api/profile-image?path=" + encodeURIComponent(path);
-    return res.json({ success: true, url, path, size: bytes.length });
+
+    // A profile photo upload must also persist its GitHub URL in the canonical
+    // GitHub-backed user metadata. This runs before returning success, so the
+    // client never treats an uploaded-but-unlinked image as a completed upload.
+    if (folder === "user-dp") {
+      if (!db) {
+        return res.status(503).json({ error: "GitHub user metadata storage is not connected." });
+      }
+      await db.collection("users").updateOne(
+        { $or: [
+          { uid: userId }, { id: userId }, { appLongId: userId },
+          { accountId: userId }, { accountNumber: userId }, { displayUserNumber: userId }
+        ] },
+        {
+          $set: {
+            image: url,
+            avatar: url,
+            photo: url,
+            photoURL: url,
+            imageUrl: url,
+            profileImageUrl: url,
+            imageStoragePath: path,
+            imageUpdatedAt: new Date().toISOString(),
+            updatedAt: Date.now()
+          },
+          $setOnInsert: {
+            uid: userId,
+            id: userId,
+            appLongId: userId,
+            createdAt: Date.now()
+          }
+        },
+        { upsert: true }
+      );
+    }
+
+    return res.json({ success: true, url, path, size: bytes.length, metadataSaved: folder === "user-dp" });
   } catch (error) {
     console.error("POST /api/upload-image error:", error.message);
     return res.status(502).json({ error: "Profile image upload is temporarily unavailable." });
