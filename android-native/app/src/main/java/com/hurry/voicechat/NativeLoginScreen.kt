@@ -20,6 +20,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import android.app.Activity
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -37,6 +40,8 @@ import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.tasks.Tasks
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -73,6 +78,35 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf("") }
     var showPrivacyPolicy by remember { mutableStateOf(false) }
+    val legacyGoogleLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode != Activity.RESULT_OK || result.data == null) {
+            loading = false
+            error = "Google sign-in was cancelled. Please try again."
+        } else {
+            scope.launch {
+                loading = true
+                error = ""
+                try {
+                    val user = withContext(Dispatchers.IO) {
+                        legacyGoogleBackendSignIn(context, result.data!!)
+                    }
+                    withContext(Dispatchers.IO) { syncHurryUser(user, context) }
+                    context.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE).edit()
+                        .putString("uid", user.optString("localId"))
+                        .putString("email", user.optString("email"))
+                        .putString("idToken", user.optString("idToken"))
+                        .apply()
+                    onLoginSuccess()
+                } catch (t: Throwable) {
+                    error = authErrorText(t.message ?: "Google sign-in failed. Please try again.")
+                } finally {
+                    loading = false
+                }
+            }
+        }
+    }
 
     Box(Modifier.fillMaxSize().background(Color(0xFF111827))) {
         val backgroundPlayer = remember(context) {
@@ -176,7 +210,15 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
                                     .apply()
                                 onLoginSuccess()
                             } catch (t: Throwable) {
-                                error = authErrorText(t.message ?: "Google sign-in failed. Please try again.")
+                                if (t is androidx.credentials.exceptions.NoCredentialException) {
+                                    val options = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                                        .requestIdToken(context.getString(R.string.default_web_client_id))
+                                        .requestEmail()
+                                        .build()
+                                    legacyGoogleLauncher.launch(GoogleSignIn.getClient(context, options).signInIntent)
+                                } else {
+                                    error = authErrorText(t.message ?: "Google sign-in failed. Please try again.")
+                                }
                             } finally {
                                 loading = false
                             }
@@ -415,6 +457,25 @@ private suspend fun googleBackendSignIn(context: android.content.Context): JSONO
         postAuthJson("/api/auth/firebase", JSONObject().put("idToken", firebaseToken))
     }
 }
+private fun legacyGoogleBackendSignIn(context: android.content.Context, data: android.content.Intent): JSONObject {
+    val account = Tasks.await(GoogleSignIn.getSignedInAccountFromIntent(data))
+    val idToken = account.idToken
+        ?: throw IllegalStateException("Google did not return an ID token. Check the Firebase Web OAuth client ID.")
+    val firebaseCredential = GoogleAuthProvider.getCredential(idToken, null)
+    val result = Tasks.await(
+        FirebaseAuth.getInstance().signInWithCredential(firebaseCredential),
+        60,
+        java.util.concurrent.TimeUnit.SECONDS
+    )
+    val firebaseUser = result.user ?: throw IllegalStateException("Firebase did not return a Google account.")
+    val firebaseToken = Tasks.await(
+        firebaseUser.getIdToken(true),
+        60,
+        java.util.concurrent.TimeUnit.SECONDS
+    ).token ?: throw IllegalStateException("Could not obtain Firebase sign-in token.")
+    return postAuthJson("/api/auth/firebase", JSONObject().put("idToken", firebaseToken))
+}
+
 private fun backendEmailAuth(context: android.content.Context, email: String, password: String, create: Boolean): JSONObject {
     val auth = FirebaseAuth.getInstance()
     val result = if (create) {
