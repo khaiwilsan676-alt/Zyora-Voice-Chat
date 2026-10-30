@@ -29,8 +29,6 @@ android {
         .replace("\"", "\\\"")
     defaultConfig {
         buildConfigField("String", "SUPABASE_ANON_KEY", "\"$supabaseAnonKey\"")
-        // Use the Firebase project's registered Web OAuth client when CI secret is not configured.
-        resValue("string", "default_web_client_id", providers.environmentVariable("GOOGLE_WEB_CLIENT_ID").orElse("164837688319-uu6uhd20mner48etd4ci6aeu3nuvt8gp.apps.googleusercontent.com").get())
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
