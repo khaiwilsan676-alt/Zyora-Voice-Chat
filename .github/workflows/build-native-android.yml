@@ -62,6 +62,27 @@ jobs:
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: gradle assembleDebug --no-daemon --stacktrace --max-workers=2
 
+      - name: Stream Native APK in browser with Appetize
+        if: ${{ env.APPETIZE_API_TOKEN != '' && env.APPETIZE_PUBLIC_KEY != '' && github.event_name != 'pull_request' }}
+        id: appetize
+        uses: appetizeio/github-action-appetize@v1.1.0
+        env:
+          APPETIZE_API_TOKEN: ${{ secrets.APPETIZE_API_TOKEN }}
+          APPETIZE_PUBLIC_KEY: ${{ secrets.APPETIZE_PUBLIC_KEY }}
+        with:
+          apiToken: ${{ env.APPETIZE_API_TOKEN }}
+          publicKey: ${{ env.APPETIZE_PUBLIC_KEY }}
+          appFile: android-native/app/build/outputs/apk/debug/app-debug.apk
+          platform: android
+          note: Zyora native commit ${{ github.sha }}
+          timeout: '600'
+
+      - name: Publish browser preview link
+        if: ${{ steps.appetize.outputs.publicKey != '' }}
+        run: |
+          echo "## Zyora Native Browser Preview" >> "$GITHUB_STEP_SUMMARY"
+          echo "Open the actual Android app in your browser: https://appetize.io/app/${{ steps.appetize.outputs.publicKey }}" >> "$GITHUB_STEP_SUMMARY"
+
       - name: Upload Native APK
         uses: actions/upload-artifact@v4
         with:
