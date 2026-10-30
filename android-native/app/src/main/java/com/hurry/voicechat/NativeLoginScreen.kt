@@ -32,6 +32,7 @@ import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
 import com.google.firebase.auth.FirebaseAuth
@@ -361,9 +362,30 @@ private fun AuthField(
 private suspend fun googleBackendSignIn(context: android.content.Context): JSONObject {
     val credentialManager = CredentialManager.create(context)
     val serverClientId = context.getString(R.string.default_web_client_id)
-    val option = GetSignInWithGoogleOption.Builder(serverClientId).build()
-    val request = GetCredentialRequest.Builder().addCredentialOption(option).build()
-    val credential = credentialManager.getCredential(context, request).credential
+    // First use the dedicated Google sign-in button flow. If Google Play services
+    // cannot complete that flow, retry with the standard Google ID credential
+    // picker so an account that is not yet authorized for this app can still sign in.
+    val signInOption = GetSignInWithGoogleOption.Builder(serverClientId).build()
+    val signInRequest = GetCredentialRequest.Builder().addCredentialOption(signInOption).build()
+    val credential = try {
+        credentialManager.getCredential(context, signInRequest).credential
+    } catch (firstError: Exception) {
+        if (firstError is kotlinx.coroutines.CancellationException) throw firstError
+        val googleIdOption = GetGoogleIdOption.Builder()
+            .setFilterByAuthorizedAccounts(false)
+            .setServerClientId(serverClientId)
+            .setAutoSelectEnabled(false)
+            .build()
+        val fallbackRequest = GetCredentialRequest.Builder()
+            .addCredentialOption(googleIdOption)
+            .build()
+        try {
+            credentialManager.getCredential(context, fallbackRequest).credential
+        } catch (fallbackError: Exception) {
+            fallbackError.addSuppressed(firstError)
+            throw fallbackError
+        }
+    }
 
     if (credential !is CustomCredential || credential.type != GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
         throw IllegalStateException("Google did not return a valid sign-in credential.")
