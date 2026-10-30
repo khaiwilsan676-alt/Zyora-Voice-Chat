@@ -55,7 +55,7 @@ internal object ProfilePersistence {
 
     suspend fun save(target: TargetUser?, fields: Map<String, String>) = withContext(Dispatchers.IO) {
         runCatching {
-            val uid = (target?.uid ?: target?.id ?: target?.accountId).orEmpty().trim()
+            val uid = listOf(target?.uid, target?.id, target?.accountId, target?.displayAccountNumber).firstOrNull { !it.isNullOrBlank() && it != "—" }.orEmpty().trim()
             if (uid.isBlank() || fields.isEmpty()) return@runCatching false
             val payload = JSONObject().put("uid", uid).put("id", target?.id ?: uid)
             val account = target?.accountId ?: target?.displayAccountNumber
