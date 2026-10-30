@@ -20,16 +20,6 @@ android {
         compose = true
         buildConfig = true
     }
-    val supabaseAnonKey = providers.gradleProperty("SUPABASE_ANON_KEY")
-        .orElse(providers.environmentVariable("SUPABASE_ANON_KEY"))
-        .orElse(providers.environmentVariable("NEXT_PUBLIC_SUPABASE_ANON_KEY"))
-        .orElse("")
-        .get()
-        .replace("\\", "\\\\")
-        .replace("\"", "\\\"")
-    defaultConfig {
-        buildConfigField("String", "SUPABASE_ANON_KEY", "\"$supabaseAnonKey\"")
-    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
