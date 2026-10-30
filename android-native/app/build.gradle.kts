@@ -3,7 +3,6 @@ plugins {
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.devtools.ksp")
-    id("com.google.gms.google-services")
 }
 android {
     namespace = "com.hurry.voicechat"
@@ -29,6 +28,7 @@ android {
         .replace("\"", "\\\"")
     defaultConfig {
         buildConfigField("String", "SUPABASE_ANON_KEY", "\"$supabaseAnonKey\"")
+        resValue("string", "default_web_client_id", providers.environmentVariable("GOOGLE_WEB_CLIENT_ID").orElse("").get())
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
