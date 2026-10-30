@@ -35,7 +35,7 @@ internal object ProfilePersistence {
             val response = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
             connection.disconnect()
             if (status !in 200..299) return@runCatching null
-            JSONObject(response).optString("url").takeIf { it.startsWith("https://raw.githubusercontent.com/") }
+            JSONObject(response).optString("url").takeIf { it.startsWith("$API/api/profile-image?path=") || it.startsWith("https://raw.githubusercontent.com/") }
         }.getOrNull()
     }
 
