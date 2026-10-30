@@ -1439,12 +1439,53 @@ app.get("/api/lucky-bag/wallet/:userId", async (req, res) => {
     const userId = String(req.params.userId || "").trim();
     if (!userId) return res.status(400).json({ error: "userId required" });
     // Return the Mine > Wallet page's canonical GitHub storage balance.
-    const balance = await walletBalance(userId);
-    res.json({ userId, balance });
+    const user = await ensureWalletUser(userId);
+    const balance = Math.max(0, Number(user?.coins ?? 0));
+    const diamonds = Math.max(0, Number(user?.diamonds ?? 0));
+    res.set("Cache-Control", "no-store");
+    res.json({ userId, balance, diamonds });
   } catch (err) {
     res.status(503).json({ error: "Lucky Bag wallet unavailable" });
   }
 });
+app.post("/api/wallet/exchange", async (req, res) => {
+  try {
+    if (!db) return res.status(503).json({ error: "GitHub storage is not connected" });
+    const userId = String(req.body?.userId || "").trim();
+    const diamonds = Number(req.body?.diamonds);
+    if (!userId || !Number.isSafeInteger(diamonds) || diamonds <= 0) {
+      return res.status(400).json({ error: "Valid userId and diamonds are required" });
+    }
+    const coins = Math.floor(diamonds * 33 / 100);
+    if (coins <= 0) return res.status(400).json({ error: "Exchange amount is too small" });
+    await ensureWalletUser(userId);
+    const result = await db.collection("users").updateOne(
+      { ...walletUserQuery(userId), diamonds: { $gte: diamonds } },
+      { $inc: { diamonds: -diamonds, coins }, $set: { walletUpdatedAt: Date.now() } }
+    );
+    if (!result.modifiedCount) {
+      const user = await ensureWalletUser(userId);
+      return res.status(409).json({
+        error: "Insufficient diamonds",
+        balance: Math.max(0, Number(user?.coins ?? 0)),
+        diamonds: Math.max(0, Number(user?.diamonds ?? 0))
+      });
+    }
+    const user = await ensureWalletUser(userId);
+    await db.collection("walletTransactions").insertOne({
+      userId, type: "diamond_exchange", amount: coins, diamonds: -diamonds, createdAt: Date.now()
+    });
+    return res.json({
+      success: true,
+      balance: Math.max(0, Number(user?.coins ?? 0)),
+      diamonds: Math.max(0, Number(user?.diamonds ?? 0))
+    });
+  } catch (error) {
+    console.error("POST /api/wallet/exchange error:", error.message);
+    return res.status(503).json({ error: "Wallet exchange unavailable" });
+  }
+});
+
 app.post("/api/lucky-bag/send", async (req, res) => {
   try {
     const senderId = String(req.body?.senderId || "").trim();
