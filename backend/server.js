@@ -527,6 +527,7 @@ app.get("/api/rooms", async (req, res) => {
         const id = encodeURIComponent(String(safeRoom.accountId || safeRoom.id || roomId));
         safeRoom.dp = `${base}/api/rooms/image?roomId=${id}`;
         safeRoom.image = safeRoom.dp;
+        safeRoom.roomDp = safeRoom.dp;
       }
       return res.json({ room: safeRoom });
     }
@@ -634,6 +635,8 @@ app.put("/api/rooms", async (req, res) => {
       roomId: accountId,
       name: firstText(data.name, data.roomName, data["Room Name"], existingRoom.name, existingRoom.roomName) || "Room",
       dp: incomingDp || savedDp || "/default-avatar.png",
+      image: incomingDp || savedDp || "/default-avatar.png",
+      roomDp: incomingDp || savedDp || "/default-avatar.png",
       country: firstText(data.country, data.Country, existingRoom.country, existingRoom.Country) || "🇮🇳",
       message: incomingMessage || firstText(existingRoom.message, existingRoom.announcement),
       theme: incomingTheme || firstText(existingRoom.theme, existingRoom.roomTheme, existingRoom["Room Theme"]) || "forest-night",
