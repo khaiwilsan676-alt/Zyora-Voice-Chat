@@ -2812,9 +2812,21 @@ app.post("/api/daily-checkin", async (req, res) => {
     // crediting twice, even if the check-in marker was already written.
     let coinsAwarded = 0;
     if (Number(reward.coins || 0) > 0) {
-      const creditedNow = await creditWalletOnce(userId, Number(reward.coins), creditKey);
-      if (creditedNow) coinsAwarded = Number(reward.coins);
-      await db.collection("walletTransactions").updateOne(
+      const walletTransactions = db.collection("walletTransactions");
+      const priorCredit = await walletTransactions.findOne({
+        userId, type: "daily_checkin", dateKey: today, day
+      });
+      if (priorCredit) {
+        // Older successful claims wrote this transaction only after wallet credit.
+        // Migrate its idempotency marker without awarding the same reward twice.
+        await db.collection("users").updateOne(
+          walletUserQuery(userId), { $addToSet: { dailyCheckInCredits: creditKey } }
+        );
+      } else {
+        const creditedNow = await creditWalletOnce(userId, Number(reward.coins), creditKey);
+        if (creditedNow) coinsAwarded = Number(reward.coins);
+      }
+      await walletTransactions.updateOne(
         { userId, type: "daily_checkin", dateKey: today, day },
         { $setOnInsert: {
           userId, type: "daily_checkin", amount: Number(reward.coins),
