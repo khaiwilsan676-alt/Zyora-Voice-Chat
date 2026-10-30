@@ -35,6 +35,7 @@ import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.GoogleAuthProvider
 import com.google.android.gms.tasks.Tasks
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -360,10 +361,6 @@ private fun AuthField(
 private suspend fun googleBackendSignIn(context: android.content.Context): JSONObject {
     val credentialManager = CredentialManager.create(context)
     val serverClientId = context.getString(R.string.default_web_client_id)
-
-    // The user explicitly tapped the Google button: show Google's real account
-    // chooser, then send the selected account's ID token to Zyora's backend.
-    // No Firebase sign-in and no local/fake account picker.
     val option = GetSignInWithGoogleOption.Builder(serverClientId).build()
     val request = GetCredentialRequest.Builder().addCredentialOption(option).build()
     val credential = credentialManager.getCredential(context, request).credential
@@ -376,7 +373,21 @@ private suspend fun googleBackendSignIn(context: android.content.Context): JSONO
     } catch (_: GoogleIdTokenParsingException) {
         throw IllegalStateException("Could not read the Google sign-in response.")
     }
-    return postAuthJson("/api/auth/google", JSONObject().put("idToken", googleCredential.idToken))
+
+    // Google is only the identity provider; Firebase Authentication owns the session and UID.
+    val firebaseCredential = GoogleAuthProvider.getCredential(googleCredential.idToken, null)
+    val result = Tasks.await(
+        FirebaseAuth.getInstance().signInWithCredential(firebaseCredential),
+        60,
+        java.util.concurrent.TimeUnit.SECONDS
+    )
+    val firebaseUser = result.user ?: throw IllegalStateException("Firebase did not return a Google account.")
+    val firebaseToken = Tasks.await(
+        firebaseUser.getIdToken(true),
+        60,
+        java.util.concurrent.TimeUnit.SECONDS
+    ).token ?: throw IllegalStateException("Could not obtain Firebase sign-in token.")
+    return postAuthJson("/api/auth/firebase", JSONObject().put("idToken", firebaseToken))
 }
 private fun backendEmailAuth(context: android.content.Context, email: String, password: String, create: Boolean): JSONObject {
     val auth = FirebaseAuth.getInstance()
