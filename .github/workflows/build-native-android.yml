@@ -60,10 +60,10 @@ jobs:
           GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
         run: |
           if [ -z "$GOOGLE_WEB_CLIENT_ID" ]; then
-            echo "::error::GOOGLE_WEB_CLIENT_ID is empty for this build."
-            exit 1
+            echo "Using the registered Firebase Web OAuth client ID fallback from Gradle."
+          else
+            echo "Google Web Client ID secret is present (value hidden)."
           fi
-          echo "Google Web Client ID secret is present (value hidden)."
 
       - name: Build actual Native APK
         working-directory: android-native
