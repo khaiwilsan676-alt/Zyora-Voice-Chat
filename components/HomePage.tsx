@@ -29,7 +29,7 @@ const normalizeRoomImage = (value: any, roomId: string): string => {
   return image;
 };
 
-const fetchAllRoomsFromGitHub storage = async (): Promise<any[]> => {
+const fetchAllRoomsFromGitHubStorage = async (): Promise<any[]> => {
   const response = await fetch("/api/rooms");
   if (!response.ok) {
     throw new Error(`GitHub storage rooms fetch failed: ${response.status}`);
@@ -38,7 +38,7 @@ const fetchAllRoomsFromGitHub storage = async (): Promise<any[]> => {
   return Array.isArray(result?.rooms) ? result.rooms : [];
 };
 
-const fetchRoomFromGitHub storage = async (roomId: string): Promise<any | null> => {
+const fetchRoomFromGitHubStorage = async (roomId: string): Promise<any | null> => {
   if (!roomId) return null;
   const response = await fetch(`/api/rooms?roomId=${encodeURIComponent(roomId)}`);
   if (!response.ok) {
@@ -49,7 +49,7 @@ const fetchRoomFromGitHub storage = async (roomId: string): Promise<any | null> 
   return result?.room || null;
 };
 
-const saveRoomToGitHub storage = async (roomData: any) => {
+const saveRoomToGitHubStorage = async (roomData: any) => {
   const response = await fetch("/api/rooms", {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
@@ -1088,7 +1088,7 @@ export default function HomePage({ onLogout }: HomePageProps) {
 
     const loadRooms = async () => {
       try {
-        const rawRooms = await fetchAllRoomsFromGitHub storage();
+        const rawRooms = await fetchAllRoomsFromGitHubStorage();
         if (!isMounted) return;
         if (Array.isArray(rawRooms)) {
           const rooms: GlobalRoom[] = rawRooms.map((data: any) => {
@@ -1181,7 +1181,7 @@ export default function HomePage({ onLogout }: HomePageProps) {
         const timeoutPromise = new Promise((_, reject) =>
           setTimeout(() => reject(new Error('Timeout')), 3000)
         );
-        const res: any = await Promise.race([fetchAllRoomsFromGitHub storage(), timeoutPromise]);
+        const res: any = await Promise.race([fetchAllRoomsFromGitHubStorage(), timeoutPromise]);
         if (!isMounted) return;
         const roomsArr: any[] = Array.isArray(res) ? res : (res?.rooms || []);
         if (roomsArr.length > 0) {
@@ -1432,7 +1432,7 @@ export default function HomePage({ onLogout }: HomePageProps) {
 
             if (uid) {
               try {
-                const mongoRoom = await fetchRoomFromGitHub storage(uid);
+                const mongoRoom = await fetchRoomFromGitHubStorage(uid);
                 if (mongoRoom) {
                   const mName = mongoRoom.name || mongoRoom.roomName || mongoRoom['Room Name'];
                   const mDp = mongoRoom.image || mongoRoom.dp || mongoRoom.roomDp || mongoRoom['Room dp'];
@@ -1913,7 +1913,7 @@ export default function HomePage({ onLogout }: HomePageProps) {
     };
 
     try {
-      await saveRoomToGitHub storage({
+      await saveRoomToGitHubStorage({
         roomId: userUID,
         id: userUID, 
         roomName: defaultRoomName,
@@ -1969,7 +1969,7 @@ export default function HomePage({ onLogout }: HomePageProps) {
     if (isOwner) {
       let mongoOwnerRoom: any = null;
       try {
-        mongoOwnerRoom = await fetchRoomFromGitHub storage(String(currentAccountId || userUID));
+        mongoOwnerRoom = await fetchRoomFromGitHubStorage(String(currentAccountId || userUID));
       } catch (error) {
         console.warn('Owner room GitHub storage fetch failed:', error);
       }
@@ -2046,7 +2046,7 @@ export default function HomePage({ onLogout }: HomePageProps) {
       );
 
       const roomData: any = await Promise.race([
-        fetchRoomFromGitHub storage(canonicalRoomId),
+        fetchRoomFromGitHubStorage(canonicalRoomId),
         timeoutPromise,
       ]);
 
@@ -2103,7 +2103,7 @@ export default function HomePage({ onLogout }: HomePageProps) {
   const handleRoomPasswordSubmit = async () => {
     if (!selectedLockedRoom) return;
     try {
-      const roomData = await fetchRoomFromGitHub storage(selectedLockedRoom.id || selectedLockedRoom.accountId || '');
+      const roomData = await fetchRoomFromGitHubStorage(selectedLockedRoom.id || selectedLockedRoom.accountId || '');
       if (roomData) {
         if (roomData.isLocked && roomData.roomPassword === enteredRoomPassword) {
           setShowRoomPasswordCard(false)
@@ -2184,7 +2184,7 @@ export default function HomePage({ onLogout }: HomePageProps) {
         return;
       }
 
-      const roomData = await fetchRoomFromGitHub storage(id);
+      const roomData = await fetchRoomFromGitHubStorage(id);
       if (roomData) {
         handleUserCardClick({
           id: roomData.ID || roomData.id || roomData.roomId || id,
