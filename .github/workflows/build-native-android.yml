@@ -26,6 +26,9 @@ jobs:
   build-native-apk:
     name: Compile Native Android app
     runs-on: ubuntu-latest
+    env:
+      APPETIZE_API_TOKEN: ${{ secrets.APPETIZE_API_TOKEN }}
+      APPETIZE_PUBLIC_KEY: ${{ secrets.APPETIZE_PUBLIC_KEY }}
     timeout-minutes: 40
     steps:
       - name: Checkout repository
@@ -66,9 +69,6 @@ jobs:
         if: ${{ env.APPETIZE_API_TOKEN != '' && github.event_name != 'pull_request' }}
         id: appetize
         uses: appetizeio/github-action-appetize@v1.1.0
-        env:
-          APPETIZE_API_TOKEN: ${{ secrets.APPETIZE_API_TOKEN }}
-          APPETIZE_PUBLIC_KEY: ${{ secrets.APPETIZE_PUBLIC_KEY }}
         with:
           apiToken: ${{ env.APPETIZE_API_TOKEN }}
           publicKey: ${{ env.APPETIZE_PUBLIC_KEY }}
