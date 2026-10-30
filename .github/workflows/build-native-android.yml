@@ -63,6 +63,23 @@ jobs:
           path: ~/.android/debug.keystore
           key: zyora-native-debug-keystore-v1
 
+      - name: Ensure stable Android debug signing key exists
+        run: |
+          mkdir -p "$HOME/.android"
+          if [ ! -f "$HOME/.android/debug.keystore" ]; then
+            keytool -genkeypair -v \
+              -keystore "$HOME/.android/debug.keystore" \
+              -storepass android \
+              -alias androiddebugkey \
+              -keypass android \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -dname "CN=Android Debug,O=Android,C=US"
+          fi
+          chmod 600 "$HOME/.android/debug.keystore"
+          keytool -list -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey | grep -E "SHA1:|SHA256:"
+
       - name: Build actual Native APK
         working-directory: android-native
         env:
