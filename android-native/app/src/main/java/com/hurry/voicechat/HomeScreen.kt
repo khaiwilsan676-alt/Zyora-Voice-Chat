@@ -565,7 +565,6 @@ fun HomeScreen(
                 onSignIn = {
                     if (!checkInSubmitting && !claimedToday && checkInUserId.isNotBlank()) {
                         checkInSubmitting = true
-                        claimedToday = true
                         checkInScope.launch {
                             val result = runCatching {
                                 withContext(Dispatchers.IO) {
@@ -581,10 +580,29 @@ fun HomeScreen(
                                         connection.outputStream.use { it.write(payload.toByteArray(Charsets.UTF_8)) }
                                         val code = connection.responseCode
                                         val stream = if (code in 200..299) connection.inputStream else connection.errorStream
-                                        val response = org.json.JSONObject(stream.bufferedReader().use { it.readText() })
+                                        val responseText = stream.bufferedReader().use { it.readText() }
+                                        val response = org.json.JSONObject(responseText)
                                         if (code !in 200..299 || !response.optBoolean("success")) {
                                             error(response.optString("error", "Daily reward could not be claimed"))
                                         }
+
+                                        val balance = response.optLong("balance", -1L)
+                                        if (balance >= 0L) runCatching {
+                                            val walletDao = WalletDatabase.get(context).walletDao()
+                                            val old = walletDao.getUserData() ?: UserDataEntity()
+                                            walletDao.saveUserData(old.copy(balance = balance))
+                                            val coins = response.optLong("coinsAwarded", 0L)
+                                            if (coins > 0L) walletDao.insertTransaction(
+                                                TransactionEntity(
+                                                    title = "Daily Check-in",
+                                                    amount = coins,
+                                                    date = java.text.SimpleDateFormat("yyyy.MM.dd HH:mm", java.util.Locale.getDefault()).format(java.util.Date()),
+                                                    timestamp = System.currentTimeMillis(),
+                                                    type = "daily_checkin"
+                                                )
+                                            )
+                                        }
+
                                         response
                                     } finally { connection.disconnect() }
                                 }
@@ -592,23 +610,9 @@ fun HomeScreen(
                             result.onSuccess { response ->
                                 checkInDay = response.optInt("day", checkInDay).coerceIn(1, 7)
                                 claimedToday = true
-                                val balance = response.optLong("balance", -1L)
-                                if (balance >= 0L) runCatching {
-                                    val walletDao = WalletDatabase.get(context).walletDao()
-                                    val old = walletDao.getUserData() ?: UserDataEntity()
-                                    walletDao.saveUserData(old.copy(balance = balance))
-                                    val coins = response.optLong("coinsAwarded", 0L)
-                                    if (coins > 0L) walletDao.insertTransaction(
-                                        TransactionEntity(
-                                            title = "Daily Check-in",
-                                            amount = coins,
-                                            date = java.text.SimpleDateFormat("yyyy.MM.dd HH:mm", java.util.Locale.getDefault()).format(java.util.Date()),
-                                            timestamp = System.currentTimeMillis(),
-                                            type = "daily_checkin"
-                                        )
-                                    )
-                                }
-                            }.onFailure { claimedToday = false }
+                            }.onFailure {
+                                claimedToday = false
+                            }
                             checkInSubmitting = false
                         }
                     }

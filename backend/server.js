@@ -2749,13 +2749,13 @@ app.post("/api/check-ban", async (req, res) => {
  // record survives APK uninstall/reinstall for the same user ID.
  // ==============================================================
 const DAILY_CHECKIN_REWARDS = {
-  1: { coins: 10000 },
-  2: { coins: 10000 },
+  1: { coins: 5000 },
+  2: { coins: 5000 },
   3: { items: [{ itemId: "daily-frame-day3", name: "Daily Reward Frame", tab: "Avatar Frame", image: "file_00000000882882088d745d793bd43e06.png" }] },
-  4: { coins: 15000 },
-  5: { coins: 20000, items: [{ itemId: "daily-frame-day5", name: "Daily Reward Frame", tab: "Avatar Frame", image: "IMG_20260903_141944.png" }] },
-  6: { coins: 20000, items: [{ itemId: "daily-theme-day6", name: "Daily Reward Theme", tab: "Theme", image: "IMG-20260903-WA0076.jpg" }] },
-  7: { coins: 30000, items: [
+  4: { coins: 10000 },
+  5: { coins: 10000, items: [{ itemId: "daily-frame-day5", name: "Daily Reward Frame", tab: "Avatar Frame", image: "IMG_20260903_141944.png" }] },
+  6: { coins: 10000, items: [{ itemId: "daily-theme-day6", name: "Daily Reward Theme", tab: "Theme", image: "IMG-20260903-WA0076.jpg" }] },
+  7: { coins: 15000, items: [
     { itemId: "daily-frame-day7", name: "Big Reward Frame", tab: "Avatar Frame", image: "file_0000000044388211996656afc9ce9c03.png" },
     { itemId: "daily-theme-day7", name: "Big Reward Theme", tab: "Theme", image: "IMG-20260903-WA0077.jpg" }
   ] }
