@@ -310,7 +310,7 @@ fun PublicProfileScreen(
                             }
                         } else {
                             IconButton(onClick = { showEditSheet = true }) {
-                                Icon(Icons.Outlined.EditNote, "Edit", tint = Color.White)
+                                Icon(Icons.Outlined.Edit, "Edit", tint = Color.White)
                             }
                         }
                     }
