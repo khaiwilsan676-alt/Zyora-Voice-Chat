@@ -12,14 +12,14 @@ const MIME_TO_EXT: Record<string, string> = {
 };
 
 export async function POST(request: NextRequest) {
-  const token = process.env.GITHUB_TOKEN || process.env.GITHUB_UPLOAD_TOKEN;
+  const token = process.env.GITHUB_DATA_TOKEN || process.env.GITHUB_TOKEN || process.env.GITHUB_UPLOAD_TOKEN;
   // Never silently upload user photos to the public source-code repository.
   // Configure this to the dedicated private user-data repository on the server.
-  const repository = String(process.env.GITHUB_UPLOAD_REPOSITORY || "").trim();
-  const branch = process.env.GITHUB_UPLOAD_BRANCH || "main";
-  if (!token) return NextResponse.json({ error: "GitHub image storage is not configured. Set GITHUB_TOKEN on the server." }, { status: 503 });
+  const repository = String(process.env.GITHUB_DATA_REPOSITORY || process.env.GITHUB_UPLOAD_REPOSITORY || "khaiwilsan676-alt/Zyora-Server").trim();
+  const branch = process.env.GITHUB_DATA_BRANCH || process.env.GITHUB_UPLOAD_BRANCH || "main";
+  if (!token) return NextResponse.json({ error: "GitHub image storage is not configured. Set GITHUB_DATA_TOKEN on the server." }, { status: 503 });
   if (!repository || !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository)) {
-    return NextResponse.json({ error: "Private GitHub image storage is not configured. Set GITHUB_UPLOAD_REPOSITORY to the dedicated private repository on the server." }, { status: 503 });
+    return NextResponse.json({ error: "Private GitHub image storage is not configured. Set GITHUB_DATA_REPOSITORY on the server." }, { status: 503 });
   }
 
   let userId = "";
