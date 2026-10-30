@@ -1,0 +1,8 @@
+1. Fix Android `HomeScreen.kt`:
+   - Remove the optimistic `claimedToday = true`.
+   - Wrap the DB insertion in `withContext(Dispatchers.IO)`.
+   - Keep the API call logic.
+2. Fix Android `DailyCheckInModal.kt`:
+   - Change reward texts: +5,000 (day 1,2), +10,000 (day 4,5,6), +15,000 (day 7).
+3. Fix `backend/server.js`:
+   - Change `DAILY_CHECKIN_REWARDS` to match the TSX configuration (5000, 10000, 15000).

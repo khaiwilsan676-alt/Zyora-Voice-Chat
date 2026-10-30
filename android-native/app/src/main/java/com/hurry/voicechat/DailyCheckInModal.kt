@@ -113,10 +113,10 @@ fun DailyCheckInModal(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            DayCard(day = 1, reward = "+10,000", image = "file_00000000b2d481fd8cd233482dbeb9ef.png", currentDay = currentDay, modifier = Modifier.weight(1f))
-                            DayCard(day = 2, reward = "+10,000", image = "file_00000000b2d481fd8cd233482dbeb9ef.png", currentDay = currentDay, modifier = Modifier.weight(1f))
+                            DayCard(day = 1, reward = "+5,000", image = "file_00000000b2d481fd8cd233482dbeb9ef.png", currentDay = currentDay, modifier = Modifier.weight(1f))
+                            DayCard(day = 2, reward = "+5,000", image = "file_00000000b2d481fd8cd233482dbeb9ef.png", currentDay = currentDay, modifier = Modifier.weight(1f))
                             DayCard(day = 3, reward = "×2 Days", image = "file_00000000882882088d745d793bd43e06.png", currentDay = currentDay, modifier = Modifier.weight(1f))
-                            DayCard(day = 4, reward = "+15,000", image = "file_00000000b2d481fd8cd233482dbeb9ef.png", currentDay = currentDay, modifier = Modifier.weight(1f))
+                            DayCard(day = 4, reward = "+10,000", image = "file_00000000b2d481fd8cd233482dbeb9ef.png", currentDay = currentDay, modifier = Modifier.weight(1f))
                         }
 
                         Spacer(modifier = Modifier.height(8.dp))
@@ -352,8 +352,8 @@ private fun renderDay5Special() {
         horizontalArrangement = Arrangement.spacedBy(16.dp), 
         verticalAlignment = Alignment.CenterVertically 
     ) {
-        RewardItemIcon("file_00000000b2d481fd8cd233482dbeb9ef.png", "+20,000", 36.dp)
-        RewardItemIcon("IMG_20260903_141944.png", "×2Days", 44.dp)
+        RewardItemIcon("file_00000000b2d481fd8cd233482dbeb9ef.png", "+10,000", 36.dp)
+        RewardItemIcon("IMG_20260903_141944.png", "×1 Day", 44.dp)
     }
 }
 
@@ -363,8 +363,8 @@ private fun renderDay6Special() {
         horizontalArrangement = Arrangement.spacedBy(16.dp), 
         verticalAlignment = Alignment.CenterVertically 
     ) {
-        RewardItemIcon("file_00000000b2d481fd8cd233482dbeb9ef.png", "+20,000", 36.dp)
-        RewardItemIcon("IMG-20260903-WA0076.jpg", "×2Days", 36.dp)
+        RewardItemIcon("file_00000000b2d481fd8cd233482dbeb9ef.png", "+10,000", 36.dp)
+        RewardItemIcon("IMG-20260903-WA0076.jpg", "×2 Days", 36.dp)
     }
 }
 
@@ -375,8 +375,8 @@ private fun renderDay7Special() {
         horizontalArrangement = Arrangement.spacedBy(30.dp, Alignment.CenterHorizontally), 
         verticalAlignment = Alignment.CenterVertically 
     ) {
-        // Yaha par +15,000 se +30,000 kar diya gaya hai
-        RewardItemIcon("file_00000000b2d481fd8cd233482dbeb9ef.png", "+30,000", 44.dp)
+        // Updated to +15,000 as per TSX
+        RewardItemIcon("file_00000000b2d481fd8cd233482dbeb9ef.png", "+15,000", 44.dp)
         RewardItemIcon("file_0000000044388211996656afc9ce9c03.png", "×3 days", 50.dp)
         RewardItemIcon("IMG-20260903-WA0077.jpg", "×3 days", 50.dp)
     }
