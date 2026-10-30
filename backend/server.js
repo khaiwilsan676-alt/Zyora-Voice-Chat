@@ -1067,7 +1067,11 @@ app.post("/api/upload-image", async (req, res) => {
     const result = await upload.json().catch(() => ({}));
     if (!upload.ok) {
       console.error("Profile image GitHub upload failed:", upload.status, result.message || "");
-      return res.status(502).json({ error: "GitHub image upload failed. Check the server token's repository contents permission." });
+      const reason = String(result.message || "GitHub rejected the upload").slice(0, 180);
+      return res.status(502).json({
+        error: "GitHub image upload failed (HTTP " + upload.status + "): " + reason,
+        githubStatus: upload.status
+      });
     }
     const url = "https://zyora-server.onrender.com/api/profile-image?path=" + encodeURIComponent(path);
 
