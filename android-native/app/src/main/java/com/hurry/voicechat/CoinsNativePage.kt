@@ -174,8 +174,10 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int) {
     val authPrefs = remember { context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE) }
     
     val walletUserId = remember {
-        authPrefs.getString("accountId", null)?.takeIf { it.isNotBlank() }
-            ?: authPrefs.getString("uid", "").orEmpty()
+        // Use the immutable login UID as the canonical wallet key.
+        // The server also resolves legacy account-number aliases to this same user.
+        authPrefs.getString("uid", null)?.takeIf { it.isNotBlank() }
+            ?: authPrefs.getString("accountId", "").orEmpty()
     }
 
     var tab by remember { mutableStateOf(initialTab) }
