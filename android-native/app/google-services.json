@@ -14,11 +14,11 @@
       },
       "oauth_client": [
         {
-          "client_id": "164837688319-8lbr61mds7jakcul1oeeb3d4hcokd73i.apps.googleusercontent.com",
+          "client_id": "164837688319-1uqkajbktb07huiamc7mp4dpo1kga0a4.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.hawa.app",
-            "certificate_hash": "623f277018a126e75a130ee3a629c3a2210815a0"
+            "certificate_hash": "3c70a8dd449b74f65d74889fa8580cc5ca2eb852"
           }
         },
         {
