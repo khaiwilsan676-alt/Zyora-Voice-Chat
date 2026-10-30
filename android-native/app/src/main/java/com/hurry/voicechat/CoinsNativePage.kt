@@ -125,6 +125,38 @@ private suspend fun recordTransaction(dao: WalletDao, title: String, amount: Lon
     ))
 }
 
+private suspend fun fetchCanonicalWallet(userId: String): JSONObject? = withContext(Dispatchers.IO) {
+    runCatching {
+        val encoded = URLEncoder.encode(userId, "UTF-8")
+        val connection = (URL("https://zyora-server.onrender.com/api/lucky-bag/wallet/$encoded").openConnection() as HttpURLConnection).apply {
+            connectTimeout = 12000
+            readTimeout = 12000
+        }
+        try {
+            if (connection.responseCode !in 200..299) return@runCatching null
+            JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
+        } finally { connection.disconnect() }
+    }.getOrNull()
+}
+
+private suspend fun exchangeCanonicalWallet(userId: String, diamonds: Long): JSONObject? = withContext(Dispatchers.IO) {
+    runCatching {
+        val connection = (URL("https://zyora-server.onrender.com/api/wallet/exchange").openConnection() as HttpURLConnection).apply {
+            requestMethod = "POST"
+            connectTimeout = 12000
+            readTimeout = 12000
+            doOutput = true
+            setRequestProperty("Content-Type", "application/json; charset=utf-8")
+        }
+        try {
+            val payload = JSONObject().put("userId", userId).put("diamonds", diamonds)
+            connection.outputStream.use { it.write(payload.toString().toByteArray(Charsets.UTF_8)) }
+            if (connection.responseCode !in 200..299) return@runCatching null
+            JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
+        } finally { connection.disconnect() }
+    }.getOrNull()
+}
+
 // ═══════════════════════════════════════════════════════
 // PUBLIC ENTRY POINTS
 // ═══════════════════════════════════════════════════════
@@ -158,33 +190,16 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int) {
     var showDetails by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(walletUserId) {
+        // Local Room is only a display cache. GitHub-backed server values are authoritative.
         coins = loadBalance(dao)
         diamonds = loadDiamonds(dao)
-        
-        if (walletUserId.isNotBlank()) {
-            withContext(Dispatchers.IO) {
-                runCatching {
-                    // Mine > Wallet and Lucky Bag use the same canonical GitHub storage users.coins balance.
-                    val encodedId = URLEncoder.encode(walletUserId, "UTF-8")
-                    val connection = (URL("https://zyora-server.onrender.com/api/lucky-bag/wallet/$encodedId").openConnection() as HttpURLConnection).apply {
-                        connectTimeout = 8000
-                        readTimeout = 8000
-                    }
-                    try {
-                        if (connection.responseCode !in 200..299) throw IllegalStateException("Wallet fetch failed")
-                        val wallet = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
-                        val serverBalance = wallet.optLong("balance").coerceAtLeast(0L)
-                        val existing = dao.getUserData() ?: UserDataEntity()
-                        // Server wallet is authoritative: sync both increases and spending/decreases.
-                        if (serverBalance != existing.balance) {
-                            dao.saveUserData(existing.copy(balance = serverBalance))
-                        }
-                    } finally { connection.disconnect() }
-                }
-            }
-        }
-        coins = loadBalance(dao)
-        diamonds = loadDiamonds(dao)
+        if (walletUserId.isBlank()) return@LaunchedEffect
+        val wallet = fetchCanonicalWallet(walletUserId) ?: return@LaunchedEffect
+        val serverBalance = wallet.optLong("balance").coerceAtLeast(0L)
+        val serverDiamonds = wallet.optLong("diamonds").coerceAtLeast(0L)
+        dao.saveUserData(UserDataEntity(balance = serverBalance, diamonds = serverDiamonds))
+        coins = serverBalance
+        diamonds = serverDiamonds
     }
 
     if (showDetails != null) {
@@ -296,14 +311,15 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int) {
                             val c = cin.toLongOrNull() ?: 0L
                             if (d > 0 && c > 0) {
                                 scope.launch {
-                                    if (subtractDiamondsFromDB(dao, d)) {
+                                    val updated = exchangeCanonicalWallet(walletUserId, d)
+                                    if (updated != null) {
+                                        val serverBalance = updated.optLong("balance").coerceAtLeast(0L)
+                                        val serverDiamonds = updated.optLong("diamonds").coerceAtLeast(0L)
+                                        dao.saveUserData(UserDataEntity(balance = serverBalance, diamonds = serverDiamonds))
                                         recordTransaction(dao, "Diamond Exchange", -d, "diamond")
-                                        addCoinsToDB(dao, c)
                                         din = ""; cin = ""
-                                        
-                                        // FIX: Exchange karte hi UI update ho jaye
-                                        coins = loadBalance(dao)
-                                        diamonds = loadDiamonds(dao)
+                                        coins = serverBalance
+                                        diamonds = serverDiamonds
                                     }
                                 }
                             }
@@ -330,14 +346,15 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int) {
                             val c = cin.toLongOrNull() ?: 0L
                             if (d > 0 && c > 0) {
                                 scope.launch {
-                                    if (subtractDiamondsFromDB(dao, d)) {
+                                    val updated = exchangeCanonicalWallet(walletUserId, d)
+                                    if (updated != null) {
+                                        val serverBalance = updated.optLong("balance").coerceAtLeast(0L)
+                                        val serverDiamonds = updated.optLong("diamonds").coerceAtLeast(0L)
+                                        dao.saveUserData(UserDataEntity(balance = serverBalance, diamonds = serverDiamonds))
                                         recordTransaction(dao, "Diamond Exchange", -d, "diamond")
-                                        addCoinsToDB(dao, c)
                                         din = ""; cin = ""
-                                        
-                                        // FIX: Exchange karte hi UI update ho jaye
-                                        coins = loadBalance(dao)
-                                        diamonds = loadDiamonds(dao)
+                                        coins = serverBalance
+                                        diamonds = serverDiamonds
                                     }
                                 }
                             }
@@ -363,12 +380,9 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int) {
             PaySheet(onClose = { showPayUsingSheet = false },
                 onSelect = {
                     scope.launch {
-                        addCoinsToDB(dao, 1_030_000L)
-                        recordTransaction(dao, "Buy Coins", 1_030_000L, "coin")
+                        // Payment selection alone is not proof of a completed UPI payment.
+                        // Never credit a local-only balance; credit is added after server-side payment verification.
                         showPayUsingSheet = false
-                        
-                        // FIX: Coins buy karne pe screen turant update ho!
-                        coins = loadBalance(dao) 
                     }
                 })
         }
