@@ -2590,11 +2590,14 @@ app.get("/api/daily-checkin", async (req, res) => {
     if (!userId) return res.status(400).json({ error: "Missing userId" });
     const record = await db.collection("dailyCheckIns").findOne({ userId });
     const today = indiaDateKey();
+    const claimedToday = String(record?.claimedDate || "") === today;
     res.json({
       success: true,
-      currentDay: Math.min(7, Math.max(1, Number(record?.currentDay || 1))),
+      currentDay: claimedToday
+        ? Math.min(7, Math.max(1, Number(record?.lastRewardDay || 1)))
+        : Math.min(7, Math.max(1, Number(record?.currentDay || 1))),
       claimedDate: String(record?.claimedDate || ""),
-      claimedToday: String(record?.claimedDate || "") === today
+      claimedToday
     });
   } catch (err) {
     console.error("GET /api/daily-checkin error:", err);
@@ -2616,8 +2619,8 @@ app.post("/api/daily-checkin", async (req, res) => {
     );
     const existing = await checkins.findOne({ userId });
     if (String(existing?.claimedDate || "") === today) {
-      return res.status(409).json({
-        success: false, alreadyClaimed: true,
+      return res.json({
+        success: true, alreadyClaimed: true,
         currentDay: Number(existing?.currentDay || 1),
         claimedDate: today, balance: await walletBalance(userId)
       });
