@@ -549,37 +549,34 @@ private fun KeptRoomBubble(room: HurryRoom, onOpen: () -> Unit, onExit: () -> Un
             )
             Box(
                 Modifier.align(Alignment.BottomEnd)
-                    .offset(x = (-110).dp, y = (-80).dp)
-                    .size(600.dp)
+                    .size(58.dp)
                     .clip(RoundedCornerShape(50))
-                    .background(Color(0xFFF04A2D)),
+                    .background(Color(0x33F44336)),
                 contentAlignment = Alignment.Center
             ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    androidx.compose.foundation.Canvas(Modifier.size(112.dp)) {
-                        val center = androidx.compose.ui.geometry.Offset(size.width / 2f, size.height / 2f)
-                        drawCircle(
-                            color = Color.White,
-                            radius = size.minDimension * 0.43f,
-                            center = center,
-                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 7.dp.toPx())
+                androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
+                    val arcSize = androidx.compose.ui.geometry.Size(size.width * pulse, size.height * pulse)
+                    val inset = (size.width - arcSize.width) / 2f
+                    drawArc(
+                        color = Color(0x99F44336),
+                        startAngle = 42f,
+                        sweepAngle = 276f,
+                        useCenter = false,
+                        topLeft = Offset(inset, inset),
+                        size = arcSize,
+                        style = androidx.compose.ui.graphics.drawscope.Stroke(
+                            width = 4.dp.toPx(),
+                            cap = androidx.compose.ui.graphics.StrokeCap.Round
                         )
-                        drawCircle(
-                            color = Color.White,
-                            radius = size.minDimension * 0.27f,
-                            center = center,
-                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 7.dp.toPx())
-                        )
-                    }
-                    Spacer(Modifier.height(34.dp))
-                    Text(
-                        text = "Mine",
-                        color = Color(0xFFE94328),
-                        fontSize = 30.sp,
-                        fontWeight = FontWeight.Medium
+                    )
+                    drawArc(
+                        color = Color(0x55F44336),
+                        startAngle = 42f,
+                        sweepAngle = 276f,
+                        useCenter = false,
+                        topLeft = Offset(5.dp.toPx(), 5.dp.toPx()),
+                        size = androidx.compose.ui.geometry.Size(size.width - 10.dp.toPx(), size.height - 10.dp.toPx()),
+                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.dp.toPx())
                     )
                 }
             }
@@ -614,6 +611,22 @@ private fun KeptRoomBubble(room: HurryRoom, onOpen: () -> Unit, onExit: () -> Un
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
             )
+            Box(
+                Modifier.align(Alignment.BottomEnd)
+                    .size(17.dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(Color(0xFFF04A2D))
+                    .border(2.dp, Color.White, RoundedCornerShape(50)),
+                contentAlignment = Alignment.Center
+            ) {
+                androidx.compose.foundation.Canvas(Modifier.size(10.dp)) {
+                    val center = androidx.compose.ui.geometry.Offset(size.width / 2f, size.height / 2f)
+                    drawCircle(Color.White, radius = size.minDimension * 0.43f, center = center,
+                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.5.dp.toPx()))
+                    drawCircle(Color.White, radius = size.minDimension * 0.18f, center = center,
+                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.2.dp.toPx()))
+                }
+            }
             val wave = androidx.compose.animation.core.rememberInfiniteTransition(label = "kept_room_wave")
             val wave1 by wave.animateFloat(initialValue = 0.25f, targetValue = 1f, animationSpec = androidx.compose.animation.core.infiniteRepeatable(animation = androidx.compose.animation.core.tween(380, easing = androidx.compose.animation.core.LinearEasing), repeatMode = androidx.compose.animation.core.RepeatMode.Reverse), label = "kept_wave_1")
             val wave2 by wave.animateFloat(initialValue = 0.9f, targetValue = 0.2f, animationSpec = androidx.compose.animation.core.infiniteRepeatable(animation = androidx.compose.animation.core.tween(470, easing = androidx.compose.animation.core.LinearEasing), repeatMode = androidx.compose.animation.core.RepeatMode.Reverse), label = "kept_wave_2")
