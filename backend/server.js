@@ -1018,9 +1018,11 @@ app.post("/api/users/unblock", async (req, res) => {
 
 // Profile media is stored in the same private GitHub data repository as user records.
 function profileMediaConfig() {
+  // Use the exact same credentials and repository fallbacks as GitHubDocumentDB.
+  // This keeps media uploads working when the deployment uses the legacy upload env names.
   return {
-    token: String(process.env.GITHUB_DATA_TOKEN || process.env.GITHUB_TOKEN || "").trim(),
-    repository: String(process.env.GITHUB_DATA_REPOSITORY || "khaiwilsan676-alt/Zyora-Server").trim(),
+    token: String(process.env.GITHUB_DATA_TOKEN || process.env.GITHUB_TOKEN || process.env.GITHUB_UPLOAD_TOKEN || "").trim(),
+    repository: String(process.env.GITHUB_DATA_REPOSITORY || process.env.GITHUB_UPLOAD_REPOSITORY || "khaiwilsan676-alt/Zyora-Server").trim(),
     branch: String(process.env.GITHUB_DATA_BRANCH || "main").trim()
   };
 }
@@ -1039,7 +1041,9 @@ app.post("/api/upload-image", async (req, res) => {
     const folder = PROFILE_MEDIA_FOLDERS.has(folderInput) ? folderInput : "user-dp";
     const dataUri = String(req.body?.imageData || "");
     const match = dataUri.match(/^data:(image\/(?:jpeg|png|webp|gif));base64,([A-Za-z0-9+/=]+)$/);
-    if (!userId || !/^[a-zA-Z0-9_-]{1,100}$/.test(userId)) return res.status(400).json({ error: "A valid user ID is required." });
+    // Google/email UIDs contain ":"; hash the stable identity for a safe GitHub path segment.
+    if (!userId || userId.length > 256) return res.status(400).json({ error: "A valid user ID is required." });
+    const storageId = crypto.createHash("sha256").update(userId).digest("hex").slice(0, 32);
     if (!match) return res.status(400).json({ error: "A valid image is required." });
     const extension = PROFILE_MEDIA_TYPES[match[1]];
     const bytes = Buffer.from(match[2], "base64");
@@ -1047,7 +1051,7 @@ app.post("/api/upload-image", async (req, res) => {
       return res.status(413).json({ error: "Profile image must be 5 MB or smaller." });
     }
     const prefix = folder === "user-dp" || folder === "room-dp" ? "dp" : folder === "user-albums" ? "album" : folder === "user-covers" ? "cover" : "theme";
-    const path = "public/" + folder + "/" + userId + "/" + prefix + "-" + Date.now() + "." + extension;
+    const path = "public/" + folder + "/" + storageId + "/" + prefix + "-" + Date.now() + "." + extension;
     const apiUrl = "https://api.github.com/repos/" + repository + "/contents/" + path.split("/").map(encodeURIComponent).join("/");
     const upload = await fetch(apiUrl, {
       method: "PUT",
