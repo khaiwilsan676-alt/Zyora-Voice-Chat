@@ -126,7 +126,9 @@ fun Newuserafterlogin(onBack: () -> Unit, onComplete: () -> Unit) {
                                 ProfilePersistence.imageDataUri(context, selectedUri!!)
                                     ?: throw IllegalStateException("Could not process the selected photo. Please choose another image.")
                             }
-                            finalAvatar = ProfilePersistence.uploadDpToGitHub(dataUri, prefs.getString("accountId", uid).orEmpty())
+                            val photoOwnerId = uid.ifBlank { prefs.getString("accountId", "").orEmpty() }.trim()
+                            if (photoOwnerId.isBlank()) throw IllegalStateException("Account ID is not ready. Please sign in again.")
+                            finalAvatar = ProfilePersistence.uploadDpToGitHub(dataUri, photoOwnerId)
                                 ?: throw IllegalStateException("Profile photo upload failed. Please choose the photo again or continue without a photo.")
                         }
                         val countryInfo = mapOf(
