@@ -55,6 +55,16 @@ jobs:
         with:
           gradle-version: '8.13'
 
+      - name: Validate Google sign-in build configuration
+        env:
+          GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
+        run: |
+          if [ -z "$GOOGLE_WEB_CLIENT_ID" ]; then
+            echo "::error::GOOGLE_WEB_CLIENT_ID is empty for this build."
+            exit 1
+          fi
+          echo "Google Web Client ID secret is present (value hidden)."
+
       - name: Build actual Native APK
         working-directory: android-native
         env:
@@ -64,6 +74,18 @@ jobs:
           GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: gradle assembleDebug --no-daemon --stacktrace --max-workers=2
+
+      - name: Report APK signing certificate fingerprint for Google OAuth
+        if: ${{ success() }}
+        run: |
+          APK="android-native/app/build/outputs/apk/debug/app-debug.apk"
+          APKSIGNER="$ANDROID_HOME/build-tools/36.0.0/apksigner"
+          "$APKSIGNER" verify --print-certs "$APK" | tee /tmp/zyora-apk-certificate.txt
+          SHA1=$(sed -n 's/.*certificate SHA-1 digest: //p' /tmp/zyora-apk-certificate.txt | head -n 1)
+          echo "## Google OAuth Android certificate" >> "$GITHUB_STEP_SUMMARY"
+          echo "Package: com.hawa.app" >> "$GITHUB_STEP_SUMMARY"
+          echo "APK signing SHA-1: \`$SHA1\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "Compare this SHA-1 with the Android OAuth client registered in Google Cloud."
 
       - name: Stream Native APK in browser with Appetize
         if: ${{ env.APPETIZE_API_TOKEN != '' && github.event_name != 'pull_request' }}
