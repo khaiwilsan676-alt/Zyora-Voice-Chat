@@ -1299,6 +1299,21 @@ async function creditWallet(userId, amount) {
   });
   if (!result.modifiedCount) throw new Error("Wallet user not found");
 }
+async function creditWalletOnce(userId, amount, creditKey) {
+  const value = Number(amount);
+  const key = String(creditKey || "").trim();
+  if (!Number.isFinite(value) || value <= 0 || !key) throw new Error("Invalid idempotent wallet credit");
+  await ensureWalletUser(userId);
+  const result = await db.collection("users").updateOne(
+    { ...walletUserQuery(userId), dailyCheckInCredits: { $ne: key } },
+    {
+      $inc: { coins: value },
+      $addToSet: { dailyCheckInCredits: key },
+      $set: { walletUpdatedAt: Date.now() }
+    }
+  );
+  return Boolean(result.modifiedCount);
+}
 async function debitWallet(userId, amount) {
   const value = Number(amount);
   if (!Number.isFinite(value) || value <= 0) return false;
@@ -2785,42 +2800,50 @@ app.post("/api/daily-checkin", async (req, res) => {
       { upsert: true }
     );
     const existing = await checkins.findOne({ userId });
-    if (String(existing?.claimedDate || "") === today) {
-      return res.json({
-        success: true, alreadyClaimed: true,
-        currentDay: Number(existing?.currentDay || 1),
-        claimedDate: today, balance: await walletBalance(userId)
-      });
+    const alreadyClaimed = String(existing?.claimedDate || "") === today;
+    const day = alreadyClaimed
+      ? Math.min(7, Math.max(1, Number(existing?.lastRewardDay || existing?.currentDay || 1)))
+      : Math.min(7, Math.max(1, Number(existing?.currentDay || 1)));
+    const reward = DAILY_CHECKIN_REWARDS[day] || {};
+    const creditKey = "daily-checkin:" + today + ":day:" + day;
+
+    // Credit first with a deterministic idempotency key stored on the canonical
+    // users document. A retry repairs a previous interrupted claim without
+    // crediting twice, even if the check-in marker was already written.
+    let coinsAwarded = 0;
+    if (Number(reward.coins || 0) > 0) {
+      const creditedNow = await creditWalletOnce(userId, Number(reward.coins), creditKey);
+      if (creditedNow) coinsAwarded = Number(reward.coins);
+      await db.collection("walletTransactions").updateOne(
+        { userId, type: "daily_checkin", dateKey: today, day },
+        { $setOnInsert: {
+          userId, type: "daily_checkin", amount: Number(reward.coins),
+          day, dateKey: today, creditKey, createdAt: Date.now()
+        } },
+        { upsert: true }
+      );
     }
 
-    const day = Math.min(7, Math.max(1, Number(existing?.currentDay || 1)));
-    const reward = DAILY_CHECKIN_REWARDS[day];
-    const nextDay = day === 7 ? 1 : day + 1;
-    const claim = await checkins.updateOne(
-      { userId, claimedDate: { $ne: today } },
-      { $set: { claimedDate: today, currentDay: nextDay, lastRewardDay: day, updatedAt: Date.now() } }
-    );
-    if (!claim.modifiedCount) {
-      const latest = await checkins.findOne({ userId });
-      return res.json({
-        success: true, alreadyClaimed: true,
-        currentDay: Number(latest?.currentDay || nextDay),
-        claimedDate: today, balance: await walletBalance(userId)
-      });
+    if (!alreadyClaimed) {
+      const nextDay = day === 7 ? 1 : day + 1;
+      const claim = await checkins.updateOne(
+        { userId, claimedDate: { $ne: today } },
+        { $set: { claimedDate: today, currentDay: nextDay, lastRewardDay: day, updatedAt: Date.now() } }
+      );
+      if (!claim.modifiedCount) {
+        const latest = await checkins.findOne({ userId });
+        if (String(latest?.claimedDate || "") !== today) {
+          throw new Error("Daily check-in claim could not be finalized");
+        }
+      }
     }
 
-    if (reward.coins) {
-      await creditWallet(userId, reward.coins);
-      await db.collection("walletTransactions").insertOne({
-        userId, type: "daily_checkin", amount: reward.coins, day, dateKey: today, createdAt: Date.now()
-      });
-    }
     if (Array.isArray(reward.items)) {
       const inventory = db.collection("storeInventory");
       for (const item of reward.items) {
         await inventory.updateOne(
           { userId, itemId: item.itemId },
-          { $set: {
+          { $setOnInsert: {
             userId, ...item, duration: "PERMANENT", price: 0,
             purchasedAt: Date.now(), expiresAt: 4102444800000,
             equipped: false, source: "daily_checkin", rewardDay: day
@@ -2829,12 +2852,19 @@ app.post("/api/daily-checkin", async (req, res) => {
         );
       }
     }
-    res.json({
-      success: true, alreadyClaimed: false, day,
-      currentDay: nextDay, claimedDate: today,
-      coinsAwarded: Number(reward.coins || 0),
+
+    const nextDay = day === 7 ? 1 : day + 1;
+    const balance = await walletBalance(userId);
+    res.set("Cache-Control", "no-store");
+    return res.json({
+      success: true,
+      alreadyClaimed,
+      day,
+      currentDay: alreadyClaimed ? day : nextDay,
+      claimedDate: today,
+      coinsAwarded,
       itemsAwarded: reward.items || [],
-      balance: await walletBalance(userId)
+      balance
     });
   } catch (err) {
     console.error("POST /api/daily-checkin error:", err);
