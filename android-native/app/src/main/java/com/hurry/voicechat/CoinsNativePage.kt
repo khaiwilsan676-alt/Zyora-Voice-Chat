@@ -38,10 +38,11 @@ import java.net.URLEncoder
 
 private const val RAW_WALLET = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/"
 
-// Real App Logos (Official Play Store Icons)
-private const val GPAY_LOGO = "https://play-lh.googleusercontent.com/HArtbyi53u0jnqhnnxkQnMx9dHOERNcprZyKnInd2nrfM7Wd9iqWAxg4HDtqYGvfwTqI=w120-h120-rw"
-private const val PHONEPE_LOGO = "https://play-lh.googleusercontent.com/6iyA2zVz5PyyFATTXys-BkY8Xm6Tqcv8m2cEOh8Qh-L0J-JvA2G78cT00j42mQ9rMw=w120-h120-rw"
-private const val PAYTM_LOGO = "https://play-lh.googleusercontent.com/6_Qan3RBgpJUj0C2sp4943jNN5G0Fq04h4vM3LzaZlZg-g9T668hT2t5wF-cRtvJc4w=w120-h120-rw"
+// Real App Logos (Updated)
+private const val GPAY_LOGO = RAW_WALLET + "IMG_20261030_135231.jpg"
+private const val PHONEPE_LOGO = RAW_WALLET + "IMG_20261030_135211.jpg"
+private const val PAYTM_LOGO = RAW_WALLET + "IMG_20261030_135245.jpg"
+private const val DIAMOND_ICON = "file_00000000552c81f4b6f31ba13346015e.png"
 
 // ═══════════════════════════════════════════════════════
 // ROOM DB — FruitPartyDB equivalent
@@ -174,8 +175,11 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int) {
                         val wallet = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
                         val serverBalance = wallet.optLong("balance").coerceAtLeast(0L)
                         val existing = dao.getUserData() ?: UserDataEntity()
-                        // Local Room value is only a display cache; never merge it into or overrule GitHub storage.
-                        dao.saveUserData(existing.copy(balance = serverBalance))
+                        
+                        // FIX: Agar server se balance 0 aaye, to wo tumhare local dummy coins ko overwrite nahi karega! 
+                        if (serverBalance > existing.balance) {
+                            dao.saveUserData(existing.copy(balance = serverBalance))
+                        }
                     } finally { connection.disconnect() }
                 }
             }
@@ -258,7 +262,7 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int) {
                             Text((if (tab == 1) diamonds else coins).toString(),
                                 fontSize = 22.sp, color = Color(0xFFFACC15), fontWeight = FontWeight.Bold)
                             
-                            val iconImage = if (tab == 1) "1787321690452.png" else "file_00000000e56882119c217d508b6733dc.png"
+                            val iconImage = if (tab == 1) DIAMOND_ICON else "file_00000000e56882119c217d508b6733dc.png"
                             AsyncImage(RAW_WALLET + iconImage,
                                 null, Modifier.size(20.dp), contentScale = ContentScale.Fit)
                         }
@@ -297,6 +301,10 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int) {
                                         recordTransaction(dao, "Diamond Exchange", -d, "diamond")
                                         addCoinsToDB(dao, c)
                                         din = ""; cin = ""
+                                        
+                                        // FIX: Exchange karte hi UI update ho jaye
+                                        coins = loadBalance(dao)
+                                        diamonds = loadDiamonds(dao)
                                     }
                                 }
                             }
@@ -327,6 +335,10 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int) {
                                         recordTransaction(dao, "Diamond Exchange", -d, "diamond")
                                         addCoinsToDB(dao, c)
                                         din = ""; cin = ""
+                                        
+                                        // FIX: Exchange karte hi UI update ho jaye
+                                        coins = loadBalance(dao)
+                                        diamonds = loadDiamonds(dao)
                                     }
                                 }
                             }
@@ -355,6 +367,9 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int) {
                         addCoinsToDB(dao, 1_030_000L)
                         recordTransaction(dao, "Buy Coins", 1_030_000L, "coin")
                         showPayUsingSheet = false
+                        
+                        // FIX: Coins buy karne pe screen turant update ho!
+                        coins = loadBalance(dao) 
                     }
                 })
         }
@@ -455,7 +470,7 @@ private fun DiamondsContent(
                     horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text("100 =", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF6B7280))
                     AsyncImage(
-                        RAW_WALLET + "1787321690452.png",
+                        RAW_WALLET + DIAMOND_ICON,
                         null, Modifier.size(14.dp), contentScale = ContentScale.Fit
                     )
                     Text("33", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF6B7280))
@@ -464,7 +479,7 @@ private fun DiamondsContent(
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 DiamondInputBox("Input multiple", din, Modifier.weight(1f), onDinChange,
-                    icon = "1787321690452.png", suffix = "x100")
+                    icon = DIAMOND_ICON, suffix = "x100")
                 Text("=", color = Color(0xFFD1D5DB), fontWeight = FontWeight.Bold)
                 DiamondInputBox("Coins", cin, Modifier.weight(1f), onCinChange,
                     icon = "file_00000000e56882119c217d508b6733dc.png")
@@ -604,7 +619,7 @@ private fun DiamondInputBox(
     }
 }
 
-// ─── Agent chat icon (blue circle + white bubble + 3 dots) ───
+// ─── Agent chat icon ───
 @Composable
 private fun ChatIcon() {
     Box(Modifier.size(44.dp).clickable {}, contentAlignment = Alignment.Center) {
@@ -642,7 +657,6 @@ private fun PaymentSheet(onClose: () -> Unit, onRecharge: () -> Unit) {
                 Text("Payment Method", Modifier.align(Alignment.Center),
                     fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF111827))
                 
-                // IN 🇮🇳 Pill Corner Curve fix - RoundedCornerShape(50) for perfect pill
                 Row(Modifier.align(Alignment.CenterEnd)
                     .clip(RoundedCornerShape(50.dp)).background(Color(0xFFF3F4F6))
                     .padding(horizontal = 10.dp, vertical = 6.dp),
@@ -681,10 +695,10 @@ private fun PaymentSheet(onClose: () -> Unit, onRecharge: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically) {
                 Text("UPI", fontSize = 18.sp, fontWeight = FontWeight.Black, color = Color(0xFF1F2937))
                 
-                // Real Logos 
-                AsyncImage(GPAY_LOGO, null, Modifier.padding(start = 10.dp).size(22.dp).clip(RoundedCornerShape(50)))
-                AsyncImage(PHONEPE_LOGO, null, Modifier.padding(start = 8.dp).size(22.dp).clip(RoundedCornerShape(50)))
-                AsyncImage(PAYTM_LOGO, null, Modifier.padding(start = 8.dp).size(22.dp).clip(RoundedCornerShape(50)))
+                // Crop daala hai yahan taaki Circle mein perfectly fit ho
+                AsyncImage(GPAY_LOGO, null, Modifier.padding(start = 10.dp).size(22.dp).clip(RoundedCornerShape(50)), contentScale = ContentScale.Crop)
+                AsyncImage(PHONEPE_LOGO, null, Modifier.padding(start = 8.dp).size(22.dp).clip(RoundedCornerShape(50)), contentScale = ContentScale.Crop)
+                AsyncImage(PAYTM_LOGO, null, Modifier.padding(start = 8.dp).size(22.dp).clip(RoundedCornerShape(50)), contentScale = ContentScale.Crop)
                 
                 Spacer(Modifier.weight(1f))
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -694,7 +708,6 @@ private fun PaymentSheet(onClose: () -> Unit, onRecharge: () -> Unit) {
                         fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF111827))
                 }
                 
-                // Green Dot ko Blue Dot kar diya yahan Color(0xFF0044FF) use karke
                 Box(Modifier.padding(start = 12.dp).size(20.dp)
                     .clip(RoundedCornerShape(50))
                     .border(2.dp, Color(0xFF0044FF), RoundedCornerShape(50)),
@@ -728,20 +741,26 @@ private fun PaySheet(onClose: () -> Unit, onSelect: () -> Unit) {
 
             Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
                 PayRow("GPay", onSelect) {
-                    AsyncImage(GPAY_LOGO, null, Modifier.fillMaxSize().clip(RoundedCornerShape(50)))
+                    AsyncImage(GPAY_LOGO, null, Modifier.fillMaxSize().clip(RoundedCornerShape(50)), contentScale = ContentScale.Crop)
                 }
                 HorizontalDivider(color = Color(0xFFF9FAFB))
                 PayRow("PhonePe", onSelect) {
-                    AsyncImage(PHONEPE_LOGO, null, Modifier.fillMaxSize().clip(RoundedCornerShape(50)))
+                    AsyncImage(PHONEPE_LOGO, null, Modifier.fillMaxSize().clip(RoundedCornerShape(50)), contentScale = ContentScale.Crop)
                 }
                 HorizontalDivider(color = Color(0xFFF9FAFB))
                 PayRow("Paytm", onSelect) {
-                    AsyncImage(PAYTM_LOGO, null, Modifier.fillMaxSize().clip(RoundedCornerShape(50)))
+                    AsyncImage(PAYTM_LOGO, null, Modifier.fillMaxSize().clip(RoundedCornerShape(50)), contentScale = ContentScale.Crop)
                 }
                 HorizontalDivider(color = Color(0xFFF9FAFB))
+                
+                // 3 DOT FIX - Ekdam center me rahega ab text nahi boxes use kiye hain!
                 PayRow("Other", onSelect) {
                     Box(Modifier.fillMaxSize().clip(RoundedCornerShape(50)).background(Color(0xFFF3F4F6)), contentAlignment = Alignment.Center) {
-                        Text("...", fontSize = 17.sp, fontWeight = FontWeight.Black, color = Color(0xFF9CA3AF))
+                        Row(horizontalArrangement = Arrangement.spacedBy(3.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Box(Modifier.size(4.5.dp).clip(RoundedCornerShape(50)).background(Color(0xFF9CA3AF)))
+                            Box(Modifier.size(4.5.dp).clip(RoundedCornerShape(50)).background(Color(0xFF9CA3AF)))
+                            Box(Modifier.size(4.5.dp).clip(RoundedCornerShape(50)).background(Color(0xFF9CA3AF)))
+                        }
                     }
                 }
             }
@@ -756,7 +775,7 @@ private fun PayRow(name: String, onClick: () -> Unit, icon: @Composable () -> Un
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
-            Modifier.size(44.dp), // Transparent Box kyuki Real Icon directly render ho jayega
+            Modifier.size(44.dp), 
             contentAlignment = Alignment.Center
         ) { icon() }
         Text(name, Modifier.padding(start = 16.dp),
