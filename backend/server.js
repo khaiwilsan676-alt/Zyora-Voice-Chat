@@ -1018,12 +1018,12 @@ app.post("/api/users/unblock", async (req, res) => {
 
 // Profile media is stored in the same private GitHub data repository as user records.
 function profileMediaConfig() {
-  // Use the exact same credentials and repository fallbacks as GitHubDocumentDB.
-  // This keeps media uploads working when the deployment uses the legacy upload env names.
+  // Prefer dedicated media credentials/repository when configured. Database and
+  // media storage can live in different private repositories.
   return {
-    token: String(process.env.GITHUB_DATA_TOKEN || process.env.GITHUB_TOKEN || process.env.GITHUB_UPLOAD_TOKEN || "").trim(),
-    repository: String(process.env.GITHUB_DATA_REPOSITORY || process.env.GITHUB_UPLOAD_REPOSITORY || "khaiwilsan676-alt/Zyora-Server").trim(),
-    branch: String(process.env.GITHUB_DATA_BRANCH || "main").trim()
+    token: String(process.env.GITHUB_UPLOAD_TOKEN || process.env.GITHUB_DATA_TOKEN || process.env.GITHUB_TOKEN || "").trim(),
+    repository: String(process.env.GITHUB_UPLOAD_REPOSITORY || process.env.GITHUB_DATA_REPOSITORY || "khaiwilsan676-alt/Zyora-Server").trim(),
+    branch: String(process.env.GITHUB_UPLOAD_BRANCH || process.env.GITHUB_DATA_BRANCH || "main").trim()
   };
 }
 const PROFILE_MEDIA_FOLDERS = new Set(["user-dp", "user-albums", "user-covers", "room-dp", "room-theme"]);
