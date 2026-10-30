@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import androidx.room.*
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 // ═══════════════════════════════════════════════════════
@@ -176,6 +177,37 @@ fun HomeScreen(
     var rooms by remember { mutableStateOf(NativeRoomMemoryCache.rooms) }
     var selectedCountry by remember { mutableStateOf("all") }
     var showDailyCheckIn by remember { mutableStateOf(false) }
+
+    val authPrefs = remember { context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE) }
+    val checkInUserId = remember {
+        authPrefs.getString("accountId", null)?.takeIf { it.isNotBlank() }
+            ?: authPrefs.getString("uid", "").orEmpty()
+    }
+    val checkInScope = rememberCoroutineScope()
+    var checkInDay by remember { mutableIntStateOf(1) }
+    var claimedToday by remember { mutableStateOf(false) }
+    var checkInSubmitting by remember { mutableStateOf(false) }
+
+    LaunchedEffect(checkInUserId) {
+        if (checkInUserId.isBlank()) return@LaunchedEffect
+        runCatching {
+            withContext(Dispatchers.IO) {
+                val encoded = java.net.URLEncoder.encode(checkInUserId, "UTF-8")
+                val connection = (java.net.URL("https://zyora-server.onrender.com/api/daily-checkin?userId=$encoded").openConnection() as java.net.HttpURLConnection).apply {
+                    connectTimeout = 10000
+                    readTimeout = 10000
+                }
+                try {
+                    if (connection.responseCode !in 200..299) error("Daily check-in unavailable")
+                    org.json.JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
+                } finally { connection.disconnect() }
+            }
+        }.onSuccess { data ->
+            checkInDay = data.optInt("currentDay", 1).coerceIn(1, 7)
+            claimedToday = data.optBoolean("claimedToday", false)
+        }
+    }
+
 
     LaunchedEffect(Unit) {
         if (NativeRoomMemoryCache.rooms == null) {
@@ -528,9 +560,61 @@ fun HomeScreen(
             DailyCheckInModal(
                 isOpen = showDailyCheckIn,
                 onClose = { showDailyCheckIn = false },
-                currentDay = 1,
-                onSignIn = { },
-                claimedToday = false
+
+                currentDay = checkInDay,
+                onSignIn = {
+                    if (!checkInSubmitting && !claimedToday && checkInUserId.isNotBlank()) {
+                        checkInSubmitting = true
+                        claimedToday = true
+                        checkInScope.launch {
+                            val result = runCatching {
+                                withContext(Dispatchers.IO) {
+                                    val connection = (java.net.URL("https://zyora-server.onrender.com/api/daily-checkin").openConnection() as java.net.HttpURLConnection).apply {
+                                        requestMethod = "POST"
+                                        doOutput = true
+                                        connectTimeout = 12000
+                                        readTimeout = 12000
+                                        setRequestProperty("Content-Type", "application/json; charset=utf-8")
+                                    }
+                                    try {
+                                        val payload = org.json.JSONObject().put("userId", checkInUserId).toString()
+                                        connection.outputStream.use { it.write(payload.toByteArray(Charsets.UTF_8)) }
+                                        val code = connection.responseCode
+                                        val stream = if (code in 200..299) connection.inputStream else connection.errorStream
+                                        val response = org.json.JSONObject(stream.bufferedReader().use { it.readText() })
+                                        if (code !in 200..299 || !response.optBoolean("success")) {
+                                            error(response.optString("error", "Daily reward could not be claimed"))
+                                        }
+                                        response
+                                    } finally { connection.disconnect() }
+                                }
+                            }
+                            result.onSuccess { response ->
+                                checkInDay = response.optInt("day", checkInDay).coerceIn(1, 7)
+                                claimedToday = true
+                                val balance = response.optLong("balance", -1L)
+                                if (balance >= 0L) runCatching {
+                                    val walletDao = WalletDatabase.get(context).walletDao()
+                                    val old = walletDao.getUserData() ?: UserDataEntity()
+                                    walletDao.saveUserData(old.copy(balance = balance))
+                                    val coins = response.optLong("coinsAwarded", 0L)
+                                    if (coins > 0L) walletDao.insertTransaction(
+                                        TransactionEntity(
+                                            title = "Daily Check-in",
+                                            amount = coins,
+                                            date = java.text.SimpleDateFormat("yyyy.MM.dd HH:mm", java.util.Locale.getDefault()).format(java.util.Date()),
+                                            timestamp = System.currentTimeMillis(),
+                                            type = "daily_checkin"
+                                        )
+                                    )
+                                }
+                            }.onFailure { claimedToday = false }
+                            checkInSubmitting = false
+                        }
+                    }
+                },
+                claimedToday = claimedToday || checkInSubmitting
+
             )
         }
     }
