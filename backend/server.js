@@ -2566,73 +2566,111 @@ app.post("/api/check-ban", async (req, res) => {
  // Browser/WebView storage remains the fast local cache, while this
  // record survives APK uninstall/reinstall for the same user ID.
  // ==============================================================
+const DAILY_CHECKIN_REWARDS = {
+  1: { coins: 10000 },
+  2: { coins: 10000 },
+  3: { items: [{ itemId: "daily-frame-day3", name: "Daily Reward Frame", tab: "Avatar Frame", image: "file_00000000882882088d745d793bd43e06.png" }] },
+  4: { coins: 15000 },
+  5: { coins: 20000, items: [{ itemId: "daily-frame-day5", name: "Daily Reward Frame", tab: "Avatar Frame", image: "IMG_20260903_141944.png" }] },
+  6: { coins: 20000, items: [{ itemId: "daily-theme-day6", name: "Daily Reward Theme", tab: "Theme", image: "IMG-20260903-WA0076.jpg" }] },
+  7: { coins: 30000, items: [
+    { itemId: "daily-frame-day7", name: "Big Reward Frame", tab: "Avatar Frame", image: "file_0000000044388211996656afc9ce9c03.png" },
+    { itemId: "daily-theme-day7", name: "Big Reward Theme", tab: "Theme", image: "IMG-20260903-WA0077.jpg" }
+  ] }
+};
+function indiaDateKey() {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit"
+  }).format(new Date());
+}
 app.get("/api/daily-checkin", async (req, res) => {
   try {
-    if (!db) return res.status(503).json({ error: "DB not connected" });
+    if (!db) return res.status(503).json({ error: "GitHub storage is not connected" });
     const userId = String(req.query.userId || "").trim();
     if (!userId) return res.status(400).json({ error: "Missing userId" });
-
     const record = await db.collection("dailyCheckIns").findOne({ userId });
+    const today = indiaDateKey();
     res.json({
       success: true,
-      currentDay: Number(record?.currentDay || 1),
+      currentDay: Math.min(7, Math.max(1, Number(record?.currentDay || 1))),
       claimedDate: String(record?.claimedDate || ""),
+      claimedToday: String(record?.claimedDate || "") === today
     });
   } catch (err) {
     console.error("GET /api/daily-checkin error:", err);
     res.status(500).json({ error: "Internal error" });
   }
 });
-
 app.post("/api/daily-checkin", async (req, res) => {
   try {
-    if (!db) return res.status(503).json({ error: "DB not connected" });
-
+    if (!db) return res.status(503).json({ error: "GitHub storage is not connected" });
     const userId = String(req.body?.userId || "").trim();
-    const dateKey = String(req.body?.dateKey || "").trim();
-    const requestedDay = Number(req.body?.currentDay || 1);
+    if (!userId) return res.status(400).json({ error: "userId required" });
 
-    if (!userId || !dateKey || !Number.isInteger(requestedDay) || requestedDay < 1 || requestedDay > 7) {
-      return res.status(400).json({ error: "Invalid check-in data" });
-    }
-
-    const existing = await db.collection("dailyCheckIns").findOne({ userId });
-
-    if (existing?.claimedDate === dateKey) {
-      return res.json({
-        success: true,
-        alreadyClaimed: true,
-        currentDay: Number(existing.currentDay || requestedDay),
-        claimedDate: dateKey,
+    const today = indiaDateKey();
+    const checkins = db.collection("dailyCheckIns");
+    await checkins.updateOne(
+      { userId },
+      { $setOnInsert: { userId, currentDay: 1, claimedDate: "" } },
+      { upsert: true }
+    );
+    const existing = await checkins.findOne({ userId });
+    if (String(existing?.claimedDate || "") === today) {
+      return res.status(409).json({
+        success: false, alreadyClaimed: true,
+        currentDay: Number(existing?.currentDay || 1),
+        claimedDate: today, balance: await walletBalance(userId)
       });
     }
 
-    const nextDay = requestedDay < 7 ? requestedDay + 1 : 1;
-    await db.collection("dailyCheckIns").updateOne(
-      { userId },
-      {
-        $set: {
-          userId,
-          currentDay: nextDay,
-          claimedDate: dateKey,
-          updatedAt: Date.now(),
-        },
-      },
-      { upsert: true }
+    const day = Math.min(7, Math.max(1, Number(existing?.currentDay || 1)));
+    const reward = DAILY_CHECKIN_REWARDS[day];
+    const nextDay = day === 7 ? 1 : day + 1;
+    const claim = await checkins.updateOne(
+      { userId, claimedDate: { $ne: today } },
+      { $set: { claimedDate: today, currentDay: nextDay, lastRewardDay: day, updatedAt: Date.now() } }
     );
+    if (!claim.modifiedCount) {
+      const latest = await checkins.findOne({ userId });
+      return res.status(409).json({
+        success: false, alreadyClaimed: true,
+        currentDay: Number(latest?.currentDay || nextDay),
+        claimedDate: today, balance: await walletBalance(userId)
+      });
+    }
 
+    if (reward.coins) {
+      await creditWallet(userId, reward.coins);
+      await db.collection("walletTransactions").insertOne({
+        userId, type: "daily_checkin", amount: reward.coins, day, dateKey: today, createdAt: Date.now()
+      });
+    }
+    if (Array.isArray(reward.items)) {
+      const inventory = db.collection("storeInventory");
+      for (const item of reward.items) {
+        await inventory.updateOne(
+          { userId, itemId: item.itemId },
+          { $set: {
+            userId, ...item, duration: "PERMANENT", price: 0,
+            purchasedAt: Date.now(), expiresAt: 4102444800000,
+            equipped: false, source: "daily_checkin", rewardDay: day
+          } },
+          { upsert: true }
+        );
+      }
+    }
     res.json({
-      success: true,
-      alreadyClaimed: false,
-      currentDay: nextDay,
-      claimedDate: dateKey,
+      success: true, alreadyClaimed: false, day,
+      currentDay: nextDay, claimedDate: today,
+      coinsAwarded: Number(reward.coins || 0),
+      itemsAwarded: reward.items || [],
+      balance: await walletBalance(userId)
     });
   } catch (err) {
     console.error("POST /api/daily-checkin error:", err);
-    res.status(500).json({ error: "Internal error" });
+    res.status(500).json({ error: "Could not claim daily reward" });
   }
 });
-
 
 const PORT = process.env.PORT || 10000;
 
