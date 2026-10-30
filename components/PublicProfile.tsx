@@ -1122,7 +1122,7 @@ export default function PublicProfile({
     setPosition({ x: 0, y: 0 })
   }, [fullImageIndex])
 
-  const saveToGitHub storage = async (updateData: Record<string, any>) => {
+  const saveToGitHubStorage = async (updateData: Record<string, any>) => {
     const currentUid = user.uid || localStorage.getItem('userUID') || localStorage.getItem('userPhone')
     if (!currentUid || currentUid === 'N/A') return
 
@@ -1534,7 +1534,7 @@ export default function PublicProfile({
       localStorage.setItem('userCoverPhotos', JSON.stringify(updated))
       localStorage.setItem('userCoverPhoto', updated[0])
       setUser((prev) => ({ ...prev, coverPhoto: updated[0] }))
-      await saveToGitHub storage({ coverPhoto: updated[0], coverImage: updated[0], coverPhotos: updated })
+      await saveToGitHubStorage({ coverPhoto: updated[0], coverImage: updated[0], coverPhotos: updated })
     } catch (err) {
       console.error('Cover compression error:', err)
     } finally {
@@ -1550,7 +1550,7 @@ export default function PublicProfile({
     localStorage.setItem('userCoverPhoto', primary)
     setUser((prev) => ({ ...prev, coverPhoto: primary }))
     if (currentCoverIndex >= updated.length) setCurrentCoverIndex(0)
-    await saveToGitHub storage({ coverPhoto: primary, coverImage: primary, coverPhotos: updated })
+    await saveToGitHubStorage({ coverPhoto: primary, coverImage: primary, coverPhotos: updated })
   }
 
   const handleTouchStart = (index: number) => {
@@ -1573,7 +1573,7 @@ export default function PublicProfile({
     updated.unshift(pinnedImage)
     setAlbumImages(updated)
     localStorage.setItem('userAlbumImages', JSON.stringify(updated))
-    await saveToGitHub storage({ albumImages: updated, album: updated })
+    await saveToGitHubStorage({ albumImages: updated, album: updated })
     if (typeof window !== 'undefined' && navigator.vibrate) {
       navigator.vibrate(50)
     }
@@ -1593,7 +1593,7 @@ export default function PublicProfile({
         const updatedAlbum = [...albumImages, imageUrl]
         setAlbumImages(updatedAlbum)
         localStorage.setItem('userAlbumImages', JSON.stringify(updatedAlbum))
-        await saveToGitHub storage({ albumImages: updatedAlbum, album: updatedAlbum })
+        await saveToGitHubStorage({ albumImages: updatedAlbum, album: updatedAlbum })
       } catch (err) {
         console.error('Album image upload error:', err)
         alert(err instanceof Error ? err.message : 'Album image upload failed. Please try again.')
@@ -1607,7 +1607,7 @@ export default function PublicProfile({
     const updated = albumImages.filter((_, index) => index !== indexToRemove)
     setAlbumImages(updated)
     localStorage.setItem('userAlbumImages', JSON.stringify(updated))
-    await saveToGitHub storage({ albumImages: updated, album: updated })
+    await saveToGitHubStorage({ albumImages: updated, album: updated })
   }
 
   const handleCropSave = async (croppedImage: string) => {
@@ -1616,7 +1616,7 @@ export default function PublicProfile({
       setCropImageSrc(null)
       localStorage.setItem('userPhoto', imageUrl)
       setUser((prev) => ({ ...prev, photo: imageUrl }))
-      await saveToGitHub storage({ photo: imageUrl, image: imageUrl, photoURL: imageUrl })
+      await saveToGitHubStorage({ photo: imageUrl, image: imageUrl, photoURL: imageUrl })
       await saveProfileToDB({ ...user, photo: imageUrl, albumImages, coverPhotos })
     } catch (err) {
       console.error('Profile image upload error:', err)
@@ -1630,7 +1630,7 @@ export default function PublicProfile({
     const updatedUser = { ...user, name: finalNewName }
     setUser(updatedUser)
     setShowNameScreen(false)
-    await saveToGitHub storage({ name: finalNewName, displayName: finalNewName, userName: finalNewName })
+    await saveToGitHubStorage({ name: finalNewName, displayName: finalNewName, userName: finalNewName })
     await saveProfileToDB({ ...updatedUser, albumImages, coverPhotos })
   }
 
@@ -1640,7 +1640,7 @@ export default function PublicProfile({
     const updatedUser = { ...user, age: parsedAge }
     setUser(updatedUser)
     setShowAgeScreen(false)
-    await saveToGitHub storage({ age: parsedAge })
+    await saveToGitHubStorage({ age: parsedAge })
     await saveProfileToDB({ ...updatedUser, albumImages, coverPhotos })
   }
 
@@ -1665,7 +1665,7 @@ export default function PublicProfile({
     const updatedUser = { ...user, age: finalAge };
     setUser(updatedUser);
     setShowAgeScreen(false);
-    await saveToGitHub storage({ age: finalAge });
+    await saveToGitHubStorage({ age: finalAge });
     await saveProfileToDB({ ...updatedUser, albumImages, coverPhotos });
   };
 
@@ -1674,7 +1674,7 @@ export default function PublicProfile({
     const updatedUser = { ...user, bio: editBio };
     setUser(updatedUser);
     setShowBioScreen(false);
-    await saveToGitHub storage({ bio: editBio, about: editBio });
+    await saveToGitHubStorage({ bio: editBio, about: editBio });
     await saveProfileToDB({ ...updatedUser, albumImages, coverPhotos });
   }
 
