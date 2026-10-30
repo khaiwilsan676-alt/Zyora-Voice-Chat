@@ -549,34 +549,37 @@ private fun KeptRoomBubble(room: HurryRoom, onOpen: () -> Unit, onExit: () -> Un
             )
             Box(
                 Modifier.align(Alignment.BottomEnd)
-                    .size(58.dp)
+                    .offset(x = (-110).dp, y = (-80).dp)
+                    .size(600.dp)
                     .clip(RoundedCornerShape(50))
-                    .background(Color(0x33F44336)),
+                    .background(Color(0xFFF04A2D)),
                 contentAlignment = Alignment.Center
             ) {
-                androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
-                    val arcSize = androidx.compose.ui.geometry.Size(size.width * pulse, size.height * pulse)
-                    val inset = (size.width - arcSize.width) / 2f
-                    drawArc(
-                        color = Color(0x99F44336),
-                        startAngle = 42f,
-                        sweepAngle = 276f,
-                        useCenter = false,
-                        topLeft = Offset(inset, inset),
-                        size = arcSize,
-                        style = androidx.compose.ui.graphics.drawscope.Stroke(
-                            width = 4.dp.toPx(),
-                            cap = androidx.compose.ui.graphics.StrokeCap.Round
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    androidx.compose.foundation.Canvas(Modifier.size(112.dp)) {
+                        val center = androidx.compose.ui.geometry.Offset(size.width / 2f, size.height / 2f)
+                        drawCircle(
+                            color = Color.White,
+                            radius = size.minDimension * 0.43f,
+                            center = center,
+                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 7.dp.toPx())
                         )
-                    )
-                    drawArc(
-                        color = Color(0x55F44336),
-                        startAngle = 42f,
-                        sweepAngle = 276f,
-                        useCenter = false,
-                        topLeft = Offset(5.dp.toPx(), 5.dp.toPx()),
-                        size = androidx.compose.ui.geometry.Size(size.width - 10.dp.toPx(), size.height - 10.dp.toPx()),
-                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.dp.toPx())
+                        drawCircle(
+                            color = Color.White,
+                            radius = size.minDimension * 0.27f,
+                            center = center,
+                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 7.dp.toPx())
+                        )
+                    }
+                    Spacer(Modifier.height(34.dp))
+                    Text(
+                        text = "Mine",
+                        color = Color(0xFFE94328),
+                        fontSize = 30.sp,
+                        fontWeight = FontWeight.Medium
                     )
                 }
             }
