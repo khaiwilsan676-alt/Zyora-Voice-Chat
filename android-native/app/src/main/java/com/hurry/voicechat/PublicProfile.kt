@@ -45,6 +45,57 @@ import coil3.compose.AsyncImage
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
+
+@Composable
+private fun LucidePublicProfileIcon(
+    warning: Boolean,
+    modifier: Modifier = Modifier,
+    tint: Color = Color.White
+) {
+    Canvas(modifier = modifier) {
+        val sx = size.width / 24f
+        val sy = size.height / 24f
+        drawContext.transform.scale(sx, sy, Offset.Zero)
+        val stroke = Stroke(
+            width = 2f,
+            cap = StrokeCap.Round,
+            join = StrokeJoin.Round
+        )
+        if (warning) {
+            val triangle = Path().apply {
+                moveTo(10.29f, 3.86f)
+                cubicTo(11.05f, 2.58f, 12.95f, 2.58f, 13.71f, 3.86f)
+                lineTo(22.18f, 18f)
+                cubicTo(22.94f, 19.28f, 21.99f, 21f, 20.53f, 21f)
+                lineTo(3.47f, 21f)
+                cubicTo(2.01f, 21f, 1.06f, 19.28f, 1.82f, 18f)
+                close()
+            }
+            drawPath(triangle, tint, style = stroke)
+            val mark = Path().apply {
+                moveTo(12f, 9f)
+                lineTo(12f, 13f)
+            }
+            drawPath(mark, tint, style = stroke)
+            drawCircle(tint, radius = 0.8f, center = Offset(12f, 17f))
+        } else {
+            val pencil = Path().apply {
+                moveTo(12f, 20f)
+                lineTo(21f, 20f)
+                moveTo(16.5f, 3.5f)
+                cubicTo(17.67f, 2.33f, 19.57f, 2.33f, 20.74f, 3.5f)
+                cubicTo(21.91f, 4.67f, 21.91f, 6.57f, 20.74f, 7.74f)
+                lineTo(8f, 20f)
+                lineTo(4f, 21f)
+                lineTo(5f, 17f)
+                close()
+            }
+            drawPath(pencil, tint, style = stroke)
+        }
+        drawContext.transform.scale(1f / sx, 1f / sy, Offset.Zero)
+    }
+}
+
 // --- DATA CLASSES ---
 
 data class TargetUser(
@@ -306,11 +357,11 @@ fun PublicProfileScreen(
                         }
                         if (isOtherUser) {
                             IconButton(onClick = { showActionSheet = true }) {
-                                Icon(Icons.Outlined.Warning, "Report", tint = Color.White)
+                                LucidePublicProfileIcon(warning = true, modifier = Modifier.size(24.dp))
                             }
                         } else {
                             IconButton(onClick = { showEditSheet = true }) {
-                                Icon(Icons.Outlined.Edit, "Edit", tint = Color.White)
+                                LucidePublicProfileIcon(warning = false, modifier = Modifier.size(22.dp))
                             }
                         }
                     }
@@ -432,7 +483,7 @@ fun PublicProfileScreen(
 
                     Row(modifier = Modifier.padding(top = 8.dp), verticalAlignment = Alignment.Top) {
                         if (!isOtherUser) {
-                            Icon(Icons.Outlined.Edit, "Edit Bio", tint = Color.Gray, modifier = Modifier.size(16.dp).clickable { showEditSheet = true })
+                            LucidePublicProfileIcon(warning = false, tint = Color.Gray, modifier = Modifier.size(14.dp).clickable { showEditSheet = true })
                             Spacer(modifier = Modifier.width(8.dp))
                         }
                         Text(
