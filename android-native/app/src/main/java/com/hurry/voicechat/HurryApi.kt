@@ -31,7 +31,7 @@ object HurryApi {
                         ?: o.optString("id").takeIf { it.isNotBlank() && it != "null" }
                         ?: continue
                     // Support DP field names used by both legacy and current room records.
-                    val rawImage = sequenceOf("roomDp", "dp", "image", "roomImage", "avatarUrl", "profileImage")
+                    val rawImage = sequenceOf("dp", "image", "roomDp", "roomImage", "avatarUrl", "profileImage")
                         .map { key -> o.optString(key, "").trim() }
                         .firstOrNull { it.isNotEmpty() && it != "null" && it != "undefined" }
                         .orEmpty()
@@ -48,7 +48,8 @@ object HurryApi {
                             image = roomImage,
                             announcement = o.optString("announcement", o.optString("message", "")),
                             country = o.optString("country", "🇮🇳"),
-                            locked = o.optBoolean("isLocked", false)
+                            locked = o.optBoolean("isLocked", false),
+                            accountId = o.optString("accountId", id).takeIf { it.isNotBlank() && it != "null" } ?: id
                         )
                     )
                 }
