@@ -508,6 +508,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
             ) {
                 KeptRoomBubble(
                     room = keptRoom!!,
+                    alignWithDailyCheckIn = tab == HurryTab.HOME,
                     onOpen = { openedRoom = keptRoom },
                     onExit = {
                         keptRoom = null
@@ -532,7 +533,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
 }
 
 @Composable
-private fun KeptRoomBubble(room: HurryRoom, onOpen: () -> Unit, onExit: () -> Unit) {
+private fun KeptRoomBubble(room: HurryRoom, alignWithDailyCheckIn: Boolean, onOpen: () -> Unit, onExit: () -> Unit) {
     var drag by remember(room.id) { mutableStateOf(Offset.Zero) }
     var dragging by remember { mutableStateOf(false) }
     Box(Modifier.fillMaxSize()) {
@@ -583,7 +584,7 @@ private fun KeptRoomBubble(room: HurryRoom, onOpen: () -> Unit, onExit: () -> Un
         }
         Box(
             Modifier.align(Alignment.BottomEnd)
-                .padding(end = 12.dp, bottom = 176.dp)
+                .padding(end = 12.dp, bottom = if (alignWithDailyCheckIn) 110.dp else 176.dp)
                 .offset { IntOffset(drag.x.roundToInt(), drag.y.roundToInt()) }
                 .size(56.dp).clip(RoundedCornerShape(50))
                 .background(Color.White)
