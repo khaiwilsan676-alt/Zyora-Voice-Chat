@@ -120,7 +120,7 @@ fun Newuserafterlogin(onBack: () -> Unit, onComplete: () -> Unit) {
                     saving = true; error = ""
                     try {
                         var finalAvatar = avatar
-                        val uid = prefs.getString("uid", "").orEmpty()
+                        val uid = prefs.getString("uid", "").orEmpty().ifBlank { prefs.getString("accountId", "").orEmpty() }
                         if (selectedUri != null) {
                             val dataUri = withContext(Dispatchers.IO) {
                                 ProfilePersistence.imageDataUri(context, selectedUri!!)
