@@ -34,6 +34,8 @@ import androidx.credentials.GetCredentialRequest
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
+import com.google.firebase.auth.FirebaseAuth
+import com.google.android.gms.tasks.Tasks
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -276,7 +278,7 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
                             try {
                                 if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches()) throw IllegalArgumentException("Please enter a valid email.")
                                 if (password.length < 6) throw IllegalArgumentException("Password must be at least 6 characters long.")
-                                val user = withContext(Dispatchers.IO) { backendEmailAuth(email.trim(), password, page == "signup") }
+                                val user = withContext(Dispatchers.IO) { backendEmailAuth(context, email.trim(), password, page == "signup") }
                                 withContext(Dispatchers.IO) { syncHurryUser(user, context) }
                                 val authPrefs = context.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE)
                                 authPrefs.edit()
@@ -376,8 +378,18 @@ private suspend fun googleBackendSignIn(context: android.content.Context): JSONO
     }
     return postAuthJson("/api/auth/google", JSONObject().put("idToken", googleCredential.idToken))
 }
-private fun backendEmailAuth(email: String, password: String, create: Boolean): JSONObject =
-    postAuthJson("/api/auth/email", JSONObject().put("email", email).put("password", password).put("create", create))
+private fun backendEmailAuth(context: android.content.Context, email: String, password: String, create: Boolean): JSONObject {
+    val auth = FirebaseAuth.getInstance()
+    val result = if (create) {
+        Tasks.await(auth.createUserWithEmailAndPassword(email, password), 60, java.util.concurrent.TimeUnit.SECONDS)
+    } else {
+        Tasks.await(auth.signInWithEmailAndPassword(email, password), 60, java.util.concurrent.TimeUnit.SECONDS)
+    }
+    val firebaseUser = result.user ?: throw IllegalStateException("Firebase did not return an account.")
+    val token = Tasks.await(firebaseUser.getIdToken(true), 60, java.util.concurrent.TimeUnit.SECONDS).token
+        ?: throw IllegalStateException("Could not obtain Firebase sign-in token.")
+    return postAuthJson("/api/auth/firebase", JSONObject().put("idToken", token))
+}
 private fun postAuthJson(path: String, payload: JSONObject): JSONObject {
     val connection = (URL("$HURRY_API_BASE$path").openConnection() as HttpURLConnection).apply {
         requestMethod = "POST"; connectTimeout = 15000; readTimeout = 20000; doOutput = true
