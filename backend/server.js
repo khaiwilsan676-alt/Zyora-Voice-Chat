@@ -1013,6 +1013,89 @@ app.post("/api/users/unblock", async (req, res) => {
   }
 });
 
+// Profile media is stored in the same private GitHub data repository as user records.
+function profileMediaConfig() {
+  return {
+    token: String(process.env.GITHUB_DATA_TOKEN || process.env.GITHUB_TOKEN || "").trim(),
+    repository: String(process.env.GITHUB_DATA_REPOSITORY || "khaiwilsan676-alt/Zyora-Server").trim(),
+    branch: String(process.env.GITHUB_DATA_BRANCH || "main").trim()
+  };
+}
+const PROFILE_MEDIA_FOLDERS = new Set(["user-dp", "user-albums", "user-covers", "room-dp", "room-theme"]);
+const PROFILE_MEDIA_TYPES = {
+  "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif"
+};
+app.post("/api/upload-image", async (req, res) => {
+  try {
+    const { token, repository, branch } = profileMediaConfig();
+    if (!token || !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository)) {
+      return res.status(503).json({ error: "GitHub profile image storage is not configured." });
+    }
+    const userId = String(req.body?.userId || "").trim();
+    const folderInput = String(req.body?.folder || "user-dp");
+    const folder = PROFILE_MEDIA_FOLDERS.has(folderInput) ? folderInput : "user-dp";
+    const dataUri = String(req.body?.imageData || "");
+    const match = dataUri.match(/^data:(image\/(?:jpeg|png|webp|gif));base64,([A-Za-z0-9+/=]+)$/);
+    if (!userId || !/^[a-zA-Z0-9_-]{1,100}$/.test(userId)) return res.status(400).json({ error: "A valid user ID is required." });
+    if (!match) return res.status(400).json({ error: "A valid image is required." });
+    const extension = PROFILE_MEDIA_TYPES[match[1]];
+    const bytes = Buffer.from(match[2], "base64");
+    if (!extension || bytes.length <= 0 || bytes.length > 5 * 1024 * 1024) {
+      return res.status(413).json({ error: "Profile image must be 5 MB or smaller." });
+    }
+    const prefix = folder === "user-dp" || folder === "room-dp" ? "dp" : folder === "user-albums" ? "album" : folder === "user-covers" ? "cover" : "theme";
+    const path = "public/" + folder + "/" + userId + "/" + prefix + "-" + Date.now() + "." + extension;
+    const apiUrl = "https://api.github.com/repos/" + repository + "/contents/" + path.split("/").map(encodeURIComponent).join("/");
+    const upload = await fetch(apiUrl, {
+      method: "PUT",
+      headers: {
+        Accept: "application/vnd.github+json",
+        Authorization: "Bearer " + token,
+        "X-GitHub-Api-Version": "2022-11-28",
+        "Content-Type": "application/json",
+        "User-Agent": "Zyora-Profile-Media"
+      },
+      body: JSON.stringify({ message: "Upload " + folder + " image for " + userId, content: bytes.toString("base64"), branch })
+    });
+    const result = await upload.json().catch(() => ({}));
+    if (!upload.ok) {
+      console.error("Profile image GitHub upload failed:", upload.status, result.message || "");
+      return res.status(502).json({ error: "GitHub image upload failed. Check the server token's repository contents permission." });
+    }
+    const url = "https://zyora-server.onrender.com/api/profile-image?path=" + encodeURIComponent(path);
+    return res.json({ success: true, url, path, size: bytes.length });
+  } catch (error) {
+    console.error("POST /api/upload-image error:", error.message);
+    return res.status(502).json({ error: "Profile image upload is temporarily unavailable." });
+  }
+});
+app.get("/api/profile-image", async (req, res) => {
+  try {
+    const { token, repository, branch } = profileMediaConfig();
+    const path = String(req.query.path || "");
+    if (!token) return res.status(503).end();
+    if (!/^public\/(user-dp|user-albums|user-covers|room-dp|room-theme)\/[A-Za-z0-9_-]{1,100}\/[A-Za-z0-9_-]+\.(jpg|png|webp|gif)$/.test(path)) {
+      return res.status(400).end();
+    }
+    const apiUrl = "https://api.github.com/repos/" + repository + "/contents/" + path.split("/").map(encodeURIComponent).join("/") + "?ref=" + encodeURIComponent(branch);
+    const imageResponse = await fetch(apiUrl, {
+      headers: {
+        Accept: "application/vnd.github.raw",
+        Authorization: "Bearer " + token,
+        "X-GitHub-Api-Version": "2022-11-28",
+        "User-Agent": "Zyora-Profile-Media"
+      }
+    });
+    if (!imageResponse.ok) return res.status(imageResponse.status === 404 ? 404 : 502).end();
+    res.setHeader("Content-Type", imageResponse.headers.get("content-type") || "image/jpeg");
+    res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+    return res.send(Buffer.from(await imageResponse.arrayBuffer()));
+  } catch (error) {
+    console.error("GET /api/profile-image error:", error.message);
+    return res.status(502).end();
+  }
+});
+
 app.put("/api/users", async (req, res) => {
   try {
     if (!db) {
