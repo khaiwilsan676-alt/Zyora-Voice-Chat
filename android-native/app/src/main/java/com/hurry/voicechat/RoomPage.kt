@@ -1353,7 +1353,8 @@ fun RoomPage(
                 val timestamp=System.currentTimeMillis()
                 val selected=seats[seatIndex]
                 seats[seatIndex]=selected.copy(gifSrc=sticker.src,gifTimestamp=timestamp)
-                roomSocketRef.value?.emit("room_seat_action",JSONObject().put("roomId",roomId).put("userId",accountId).put("action","emoji").put("seatNumber",selected.number).put("user",JSONObject().put("name",roomDisplayName.ifBlank{"User"}).put("image",roomDisplayImage.ifBlank{"https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/default-avatar.png"}).put("accountId",accountId)).put("src",sticker.src).put("timestamp",timestamp))
+                val seatMediaUrl = sticker.videoUrl?.takeIf { it.isNotBlank() } ?: sticker.src
+                roomSocketRef.value?.emit("room_seat_action",JSONObject().put("roomId",roomId).put("userId",accountId).put("action","emoji").put("seatNumber",selected.number).put("user",JSONObject().put("name",roomDisplayName.ifBlank{"User"}).put("image",roomDisplayImage.ifBlank{"https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/default-avatar.png"}).put("accountId",accountId)).put("src",seatMediaUrl).put("timestamp",timestamp))
                 
                 Handler(Looper.getMainLooper()).postDelayed({ if(seats.getOrNull(seatIndex)?.gifTimestamp==timestamp) seats[seatIndex]=seats[seatIndex].copy(gifSrc="",gifTimestamp=0L) },5000)
             }
@@ -1809,7 +1810,17 @@ private fun formatMusicTime(seconds: Float): String {
                 } else AsyncImage(model=raw+"file_000000003e7482309b7f6e7f2a922160.png",contentDescription="Empty seat",modifier=Modifier.fillMaxSize(.65f),contentScale=ContentScale.Fit)
             }
             
-            if(showGif && seat.gifSrc.isNotBlank()) AsyncImage(model=seat.gifSrc,contentDescription="Emoji reaction",modifier=Modifier.fillMaxSize(),contentScale=ContentScale.Fit)
+            if(showGif && seat.gifSrc.isNotBlank()) {
+                if (seat.gifSrc.substringBefore("?").lowercase().endsWith(".mp4")) {
+                    TransparentSeatVideoPlayer(
+                        videoUrl = seat.gifSrc,
+                        modifier = Modifier.fillMaxSize(),
+                        onVideoFinished = { showGif = false }
+                    )
+                } else {
+                    AsyncImage(model=seat.gifSrc,contentDescription="Emoji reaction",modifier=Modifier.fillMaxSize(),contentScale=ContentScale.Fit)
+                }
+            }
             
             if(seat.muted) Box(Modifier.align(Alignment.BottomEnd).clip(CircleShape).background(Color.Red).padding(2.dp)) { Icon(Icons.Default.MicOff,null,tint=Color.White,modifier=Modifier.size(12.dp)) }
         }
