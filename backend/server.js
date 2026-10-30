@@ -2635,8 +2635,8 @@ app.post("/api/daily-checkin", async (req, res) => {
     );
     if (!claim.modifiedCount) {
       const latest = await checkins.findOne({ userId });
-      return res.status(409).json({
-        success: false, alreadyClaimed: true,
+      return res.json({
+        success: true, alreadyClaimed: true,
         currentDay: Number(latest?.currentDay || nextDay),
         claimedDate: today, balance: await walletBalance(userId)
       });
