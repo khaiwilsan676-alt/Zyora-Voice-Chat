@@ -1644,15 +1644,7 @@ export function LuckyComboButton() {
       recipientMode: comboData.recipientMode || "single",
     });
 
-    const isSelfRecipient = comboData.recipientIds.some((id: string) => String(id) === String(comboData.senderId));
-    if (isSelfRecipient) {
-      const diamondCredit = Math.floor(totalCost * 0.1);
-      if (diamondCredit > 0) {
-        await addDiamondsToLocalDB(diamondCredit);
-        await recordDiamondTransaction("Diamonds received — " + comboData.giftName, diamondCredit);
-        window.dispatchEvent(new CustomEvent("hurry:diamonds-updated", { detail: { amount: diamondCredit } }));
-      }
-    }
+    // Recipient diamonds are credited by the MongoDB server after transfer success.
 
     window.dispatchEvent(new CustomEvent("hurry:lucky-slider", {
       detail: {
