@@ -20,42 +20,79 @@ internal object ProfilePersistence {
 
     suspend fun uploadDpToGitHub(dataUri: String, userId: String, folder: String = "user-dp"): String? = withContext(Dispatchers.IO) {
         if (!dataUri.startsWith("data:image/") || userId.isBlank()) return@withContext null
-        val connection = (URL("$API/api/upload-image").openConnection() as HttpURLConnection).apply {
-            requestMethod = "POST"
-            connectTimeout = 20000
-            readTimeout = 45000
-            doOutput = true
-            setRequestProperty("Content-Type", "application/json; charset=utf-8")
-        }
-        try {
-            val payload = JSONObject().put("userId", userId).put("folder", folder).put("imageData", dataUri)
-            connection.outputStream.use { it.write(payload.toString().toByteArray(Charsets.UTF_8)) }
-            val status = connection.responseCode
-            val stream = if (status in 200..299) connection.inputStream else connection.errorStream
-            val response = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
-            if (status !in 200..299) {
-                val message = runCatching { JSONObject(response).optString("error") }.getOrNull()
-                throw IllegalStateException(message?.takeIf { it.isNotBlank() } ?: "Image upload failed (HTTP $status).")
+        val payload = JSONObject().put("userId", userId).put("folder", folder).put("imageData", dataUri).toString().toByteArray(Charsets.UTF_8)
+        var endpoint = URL("$API/api/upload-image")
+        var attempt = 0
+        while (attempt < 3) {
+            val connection = (endpoint.openConnection() as HttpURLConnection).apply {
+                requestMethod = "POST"
+                instanceFollowRedirects = false
+                connectTimeout = 20000
+                readTimeout = 60000
+                doOutput = true
+                setRequestProperty("Content-Type", "application/json; charset=utf-8")
+                setFixedLengthStreamingMode(payload.size)
             }
-            val hostedUrl = JSONObject(response).optString("url")
-            hostedUrl.takeIf { it.startsWith("$API/api/profile-image?path=") || it.startsWith("https://raw.githubusercontent.com/") }
-                ?: throw IllegalStateException("Image uploaded but the server returned an invalid image URL.")
-        } finally {
-            connection.disconnect()
+            try {
+                connection.outputStream.use { it.write(payload) }
+                val status = connection.responseCode
+                if (status in 300..399) {
+                    val location = connection.getHeaderField("Location")
+                    val redirected = location?.let { URL(endpoint, it) }
+                    val sameUploadEndpoint = redirected != null &&
+                        redirected.protocol.equals("https", ignoreCase = true) &&
+                        redirected.host.equals(endpoint.host, ignoreCase = true) &&
+                        redirected.path.trimEnd('/').equals("/api/upload-image", ignoreCase = true)
+                    if (sameUploadEndpoint && attempt < 2) {
+                        endpoint = redirected!!
+                        attempt++
+                        continue
+                    }
+                    throw IllegalStateException("Upload endpoint redirect (HTTP $status). Please retry; server route needs attention.")
+                }
+                val stream = if (status in 200..299) connection.inputStream else connection.errorStream
+                val response = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+                if (status !in 200..299) {
+                    val message = runCatching { JSONObject(response).optString("error") }.getOrNull()
+                    throw IllegalStateException(message?.takeIf { it.isNotBlank() } ?: "Image upload failed (HTTP $status).")
+                }
+                val hostedUrl = JSONObject(response).optString("url")
+                return@withContext hostedUrl.takeIf { it.startsWith("$API/api/profile-image?path=") || it.startsWith("https://raw.githubusercontent.com/") }
+                    ?: throw IllegalStateException("Image uploaded but the server returned an invalid image URL.")
+            } finally {
+                connection.disconnect()
+            }
         }
+        throw IllegalStateException("Image upload redirect could not be completed.")
     }
 
     fun imageDataUri(context: Context, uri: Uri): String? = runCatching {
         val source = context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it) } ?: return null
-        val maxEdge = 720
+        val maxEdge = 1600
         val scale = minOf(1f, maxEdge.toFloat() / maxOf(source.width, source.height))
-        val bitmap = if (scale < 1f) Bitmap.createScaledBitmap(source, (source.width * scale).toInt().coerceAtLeast(1), (source.height * scale).toInt().coerceAtLeast(1), true) else source
-        val bytes = ByteArrayOutputStream().use { out ->
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 68, out)
-            out.toByteArray()
+        var bitmap = if (scale < 1f) Bitmap.createScaledBitmap(source, (source.width * scale).toInt().coerceAtLeast(1), (source.height * scale).toInt().coerceAtLeast(1), true) else source
+        var quality = 84
+        var bytes = ByteArray(0)
+        do {
+            bytes = ByteArrayOutputStream().use { out ->
+                bitmap.compress(Bitmap.CompressFormat.JPEG, quality, out)
+                out.toByteArray()
+            }
+            if (bytes.size <= 4_800 * 1024 || quality <= 48) break
+            quality -= 8
+        } while (quality >= 48)
+        if (bytes.size > 4_800 * 1024 && bitmap !== source) {
+            bitmap.recycle()
+            val reducedScale = 1200f / maxOf(source.width, source.height)
+            bitmap = Bitmap.createScaledBitmap(source, (source.width * reducedScale).toInt().coerceAtLeast(1), (source.height * reducedScale).toInt().coerceAtLeast(1), true)
+            bytes = ByteArrayOutputStream().use { out ->
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 48, out)
+                out.toByteArray()
+            }
         }
         if (bitmap !== source) bitmap.recycle()
         if (source !== bitmap) source.recycle()
+        if (bytes.isEmpty() || bytes.size > 4_800 * 1024) return null
         "data:image/jpeg;base64," + Base64.encodeToString(bytes, Base64.NO_WRAP)
     }.getOrNull()
 
