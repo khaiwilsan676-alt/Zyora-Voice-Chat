@@ -480,16 +480,38 @@ export default function GiftPicker({
   useEffect(() => {
     let alive = true;
     const fetchBal = async () => {
-      const b = await loadWalletBalance();
-      if (alive && b !== null) setWalletBalance(b);
+      if (!currentUserAccountId) return;
+      try {
+        const response = await fetch(`https://zyora-server.onrender.com/api/lucky-bag/wallet/${encodeURIComponent(currentUserAccountId)}`, { cache: "no-store" });
+        if (!response.ok) return;
+        const wallet = await response.json();
+        if (alive) setWalletBalance(Math.max(0, Number(wallet.balance) || 0));
+      } catch (error) {
+        console.error("Canonical gift wallet refresh failed:", error);
+      }
     };
-    fetchBal();
-    const id = setInterval(fetchBal, 1000);
+    const onWalletUpdated = (data: any = {}) => {
+      if (String(data.userId || "") === String(currentUserAccountId || "") && Number.isFinite(Number(data.balance))) {
+        setWalletBalance(Math.max(0, Number(data.balance)));
+      }
+    };
+    const onWalletFailed = (data: any = {}) => {
+      if (data.reason === "insufficient_coins") {
+        void fetchBal();
+        triggerInsufficient("Insufficient Balance", true);
+      }
+    };
+    void fetchBal();
+    const id = setInterval(() => { void fetchBal() }, 5000);
+    socket.on("wallet_balance_updated", onWalletUpdated);
+    socket.on("coin_transfer_failed", onWalletFailed);
     return () => {
       alive = false;
       clearInterval(id);
+      socket.off("wallet_balance_updated", onWalletUpdated);
+      socket.off("coin_transfer_failed", onWalletFailed);
     };
-  }, []);
+  }, [currentUserAccountId]);
 
   useEffect(() => {
     if (playingVideo) return;
@@ -628,17 +650,8 @@ export default function GiftPicker({
       netDeductionCost = totalSendCost - luckyReturnAmount;
     }
 
-    // Debit/credit the same shared wallet used by Wallet, Store and the games.
-    // Re-check inside the IndexedDB readwrite transaction to avoid stale-balance sends.
-    const updatedBalance = await updateWalletBalance(-netDeductionCost);
-    if (updatedBalance === null) {
-      setWalletBalance(await loadWalletBalance());
-      setSending(false);
-      triggerInsufficient("Insufficient Balance", true);
-      return;
-    }
-    setWalletBalance(updatedBalance);
-    await recordGiftTransaction(selectedGiftObj.name, -netDeductionCost);
+    // The server performs the authoritative atomic debit in MongoDB.
+    // Do not mutate IndexedDB before the server confirms the transfer.
 
     if (roomId && currentUserAccountId && recipientIds.length > 0) {
       const uniqueTransferId = `tx-${currentUserAccountId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -667,16 +680,7 @@ export default function GiftPicker({
         recipientMode,
       });
 
-      const isSelfRecipient = recipientIds.some(id => String(id) === String(currentUserAccountId));
-      if (isSelfRecipient && isLuckyGiftTab) {
-        const diamondCredit = Math.floor(totalCost * 0.1);
-        if (diamondCredit > 0) {
-          await addDiamondsToLocalDB(diamondCredit);
-          await recordDiamondTransaction("Diamonds received — " + selectedGiftObj.name, diamondCredit);
-          window.dispatchEvent(new CustomEvent("hurry:diamonds-updated", { detail: { amount: diamondCredit } }));
-        }
-      }
-
+      // Recipient diamonds are credited by the server to MongoDB.
       if (isLuckyGiftTab) {
         window.dispatchEvent(new CustomEvent("hurry:lucky-slider", {
           detail: {
@@ -1614,9 +1618,7 @@ export function LuckyComboButton() {
       return;
     }
 
-    await updateWalletBalance(-finalDeductionCost);
-    await recordGiftTransaction(comboData.giftName, -finalDeductionCost);
-
+    // MongoDB debits the complete transfer and applies any server-side Lucky return.
     const comboTransferId = `combo-${comboData.senderId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
     socket.emit("coin_transfer", {
