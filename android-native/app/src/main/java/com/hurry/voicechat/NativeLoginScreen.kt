@@ -782,7 +782,7 @@ private fun postAuthJson(path: String, payload: JSONObject): JSONObject {
 }
 
 private fun lookupAccountEmail(accountId: String): String {
-    val url = URL("\$HURRY_API_BASE/api/users?accountId=\${java.net.URLEncoder.encode(accountId, "UTF-8")}")
+    val url = URL("$HURRY_API_BASE/api/users?accountId=${java.net.URLEncoder.encode(accountId, "UTF-8")}")
     val connection = (url.openConnection() as HttpURLConnection).apply {
         requestMethod = "GET"; connectTimeout = 12000; readTimeout = 15000
         setRequestProperty("Accept", "application/json")
