@@ -193,15 +193,16 @@ fun PublicProfileScreen(
     // Keep profile details in index.db; GitHub storage remains the source for the latest name and DP.
     var userGender by remember(profileCacheKey, cachedProfile, targetUser?.gender) { mutableStateOf(cachedProfile?.optString("gender")?.takeIf { it.isNotBlank() && it != "null" } ?: targetUser?.gender?.takeIf { it.isNotBlank() } ?: "Male") }
     
+    var liveProfileTags by remember(profileCacheKey, cachedProfile) { mutableStateOf(cachedProfile) }
     val displayAccNum = targetUser?.displayAccountNumber?.takeIf { it.isNotBlank() } ?: targetUser?.accountId?.takeIf { it.isNotBlank() } ?: "—"
     val isCoreOfficial = displayAccNum == "100002" || displayAccNum == "100003"
     val isRedOfficial = displayAccNum == "500001"
-    val showOfficialHead = isCoreOfficial || targetUser?.officialHeadTag == true || cachedProfile?.optBoolean("officialHeadTag", false) == true
-    val showOfficial = isCoreOfficial || isRedOfficial || targetUser?.officialTag == true || cachedProfile?.optBoolean("officialTag", false) == true
-    val showAdmin = isCoreOfficial || targetUser?.adminTag == true || cachedProfile?.optBoolean("adminTag", false) == true
-    val showService = isCoreOfficial || targetUser?.serviceTag == true || cachedProfile?.optBoolean("serviceTag", false) == true || cachedProfile?.optBoolean("csTag", false) == true
-    val showHost = isCoreOfficial || cachedProfile?.optBoolean("hostTag", false) == true || cachedProfile?.optBoolean("isHost", false) == true
-    val showCoinSeller = isCoreOfficial || targetUser?.coinSellerTag == true || cachedProfile?.optBoolean("coinSellerTag", false) == true || cachedProfile?.optBoolean("coinSeller", false) == true || cachedProfile?.optBoolean("sellerTag", false) == true
+    val showOfficialHead = isCoreOfficial || targetUser?.officialHeadTag == true || liveProfileTags?.optBoolean("officialHeadTag", false) == true
+    val showOfficial = isCoreOfficial || isRedOfficial || targetUser?.officialTag == true || liveProfileTags?.optBoolean("officialTag", false) == true
+    val showAdmin = isCoreOfficial || targetUser?.adminTag == true || liveProfileTags?.optBoolean("adminTag", false) == true
+    val showService = isCoreOfficial || targetUser?.serviceTag == true || liveProfileTags?.optBoolean("serviceTag", false) == true || liveProfileTags?.optBoolean("csTag", false) == true
+    val showHost = isCoreOfficial || liveProfileTags?.optBoolean("hostTag", false) == true || liveProfileTags?.optBoolean("isHost", false) == true
+    val showCoinSeller = isCoreOfficial || targetUser?.coinSellerTag == true || liveProfileTags?.optBoolean("coinSellerTag", false) == true || liveProfileTags?.optBoolean("coinSeller", false) == true || liveProfileTags?.optBoolean("sellerTag", false) == true
     
     val defaultAvatar = "/file_000000009aac81faa8564416680aba4e.png"
     val userPhotoRaw = selectedAvatarUri ?: targetUser?.photo?.takeIf { it.isNotBlank() } ?: targetUser?.image?.takeIf { it.isNotBlank() } ?: defaultAvatar
@@ -260,6 +261,7 @@ fun PublicProfileScreen(
         }
 
         if (profileCacheKey.isNotBlank()) listOf(targetUser?.uid, targetUser?.id, targetUser?.accountId, targetUser?.displayAccountNumber, profileCacheKey).filter { !it.isNullOrBlank() }.distinct().forEach { cache.saveProfile(it!!, merged) }
+        liveProfileTags = merged
 
         merged.optString("name").takeIf { it.isNotBlank() && it != "null" }?.let { userName = it }
         
