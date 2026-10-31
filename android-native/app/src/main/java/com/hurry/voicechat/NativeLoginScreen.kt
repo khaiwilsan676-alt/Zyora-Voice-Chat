@@ -57,6 +57,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.window.Dialog
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -68,6 +69,7 @@ import java.net.URL
 private const val HURRY_API_BASE = "https://zyora-server.onrender.com"
 private const val HURRY_VIDEO = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/VID_20261031_074114_256_bsl~2.mp4"
 private const val HURRY_LOGO = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/logo.png"
+private const val GOOGLE_LOADING_IMAGE = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261031_215612.png"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -79,6 +81,10 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
     var password by remember { mutableStateOf("") }
     var showPassword by remember { mutableStateOf(false) }
     var loading by remember { mutableStateOf(false) }
+    var googleLoading by remember { mutableStateOf(false) }
+    var showDeviceRegisteredDialog by remember { mutableStateOf(false) }
+    var registeredDeviceAccountId by remember { mutableStateOf("") }
+    var registeredDeviceEmail by remember { mutableStateOf("") }
     var error by remember { mutableStateOf("") }
     var showPrivacyPolicy by remember { mutableStateOf(false) }
     val legacyGoogleLauncher = rememberLauncherForActivityResult(
@@ -92,10 +98,19 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
                 loading = true
                 error = ""
                 try {
-                    val user = withContext(Dispatchers.IO) {
-                        legacyGoogleBackendSignIn(context, result.data!!)
+                    val user = withContext(Dispatchers.IO) { legacyGoogleBackendSignIn(context, result.data!!) }
+                    if (isDifferentRegisteredGoogleAccount(user, context)) {
+                        val prefs = context.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE)
+                        registeredDeviceAccountId = prefs.getString("registeredGoogleAccountId", "").orEmpty()
+                            .ifBlank { prefs.getString("accountId", "").orEmpty() }
+                        registeredDeviceEmail = prefs.getString("registeredGoogleEmail", "").orEmpty()
+                        showDeviceRegisteredDialog = true
+                        FirebaseAuth.getInstance().signOut()
+                        return@launch
                     }
+                    googleLoading = true
                     withContext(Dispatchers.IO) { syncHurryUser(user, context) }
+                    rememberRegisteredGoogleAccount(user, context)
                     context.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE).edit()
                         .putString("uid", user.optString("localId"))
                         .putString("email", user.optString("email"))
@@ -333,7 +348,18 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
                             loading = true
                             try {
                                 val user = googleBackendSignIn(context)
+                                if (isDifferentRegisteredGoogleAccount(user, context)) {
+                                    val prefs = context.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE)
+                                    registeredDeviceAccountId = prefs.getString("registeredGoogleAccountId", "").orEmpty()
+                                        .ifBlank { prefs.getString("accountId", "").orEmpty() }
+                                    registeredDeviceEmail = prefs.getString("registeredGoogleEmail", "").orEmpty()
+                                    showDeviceRegisteredDialog = true
+                                    FirebaseAuth.getInstance().signOut()
+                                    return@launch
+                                }
+                                googleLoading = true
                                 withContext(Dispatchers.IO) { syncHurryUser(user, context) }
+                                rememberRegisteredGoogleAccount(user, context)
                                 context.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE).edit()
                                     .putString("uid", user.optString("localId"))
                                     .putString("email", user.optString("email"))
@@ -524,6 +550,44 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
                 Spacer(Modifier.height(28.dp))
             }
         }
+
+        if (googleLoading) {
+            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.18f)), contentAlignment = Alignment.Center) {
+                Column(
+                    Modifier.size(82.dp).clip(RoundedCornerShape(0.12.dp)).background(Color.Black.copy(alpha = 0.20f)),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    AsyncImage(model = GOOGLE_LOADING_IMAGE, contentDescription = null, modifier = Modifier.size(48.dp))
+                    Spacer(Modifier.height(0.1.dp))
+                    CircularProgressIndicator(Modifier.size(15.dp), color = Color.White, strokeWidth = 1.5.dp)
+                }
+            }
+        }
+
+        if (showDeviceRegisteredDialog) {
+            Dialog(onDismissRequest = { showDeviceRegisteredDialog = false }) {
+                Column(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(0.12.dp)).background(Color(0xFF171717)).padding(18.dp),
+                    horizontalAlignment = Alignment.Start
+                ) {
+                    Text("Tips", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.height(14.dp))
+                    Text("Your Device has a Registered account (ID: " + registeredDeviceAccountId.ifBlank { "USER ID" } + ")",
+                        color = Color.White, fontSize = 14.sp, lineHeight = 20.sp)
+                    Spacer(Modifier.height(8.dp))
+                    Text("Register Method: Google (" + registeredDeviceEmail.ifBlank { "Google Email" } + ")",
+                        color = Color.White, fontSize = 14.sp, lineHeight = 20.sp)
+                    Spacer(Modifier.height(18.dp))
+                    Button(
+                        onClick = { showDeviceRegisteredDialog = false },
+                        modifier = Modifier.fillMaxWidth().height(42.dp),
+                        shape = RoundedCornerShape(0.12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB), contentColor = Color.White)
+                    ) { Text("OK", fontSize = 14.sp, fontWeight = FontWeight.SemiBold) }
+                }
+            }
+        }
     }
 }
 
@@ -594,6 +658,22 @@ private fun AuthField(
             }
         }
     }
+}
+
+private fun isDifferentRegisteredGoogleAccount(user: JSONObject, context: android.content.Context): Boolean {
+    val prefs = context.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE)
+    val registeredUid = prefs.getString("registeredGoogleUid", "").orEmpty()
+    val incomingUid = user.optString("localId").trim()
+    return registeredUid.isNotBlank() && incomingUid.isNotBlank() && registeredUid != incomingUid
+}
+
+private fun rememberRegisteredGoogleAccount(user: JSONObject, context: android.content.Context) {
+    val prefs = context.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE)
+    prefs.edit()
+        .putString("registeredGoogleUid", user.optString("localId"))
+        .putString("registeredGoogleEmail", user.optString("email"))
+        .putString("registeredGoogleAccountId", prefs.getString("accountId", "").orEmpty())
+        .apply()
 }
 
 private suspend fun googleBackendSignIn(context: android.content.Context): JSONObject {
