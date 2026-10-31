@@ -612,16 +612,54 @@ fun PublicProfileScreen(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-                Button(
-                    onClick = { showChat = true },
-                    modifier = Modifier.weight(1f).height(48.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1DC4E9)),
-                    shape = RoundedCornerShape(16.dp)
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(48.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Brush.horizontalGradient(listOf(Color(0xFF1DC4E9), Color(0xFF1DE9B6))))
+                        .clickable { showChat = true },
+                    contentAlignment = Alignment.Center
                 ) {
-                    RealProfileChatIcon()
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Chat", fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+                        RealProfileChatIcon()
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Chat", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = Color.White)
+                    }
                 }
+            }
+        }
+    }
+
+    if (isOtherUser && showChat) {
+        val authPrefs = context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE)
+        val currentUser = remember {
+            HurryUser(
+                id = authPrefs.getString("uid", "").orEmpty().ifBlank { authPrefs.getString("accountId", "").orEmpty() },
+                name = authPrefs.getString("name", "User").orEmpty(),
+                image = authPrefs.getString("image", "").orEmpty().ifBlank { authPrefs.getString("photo", "").orEmpty() }
+            )
+        }
+        val chatTarget = remember(targetUser) {
+            HurryUser(
+                id = targetUser?.uid?.takeIf { it.isNotBlank() }
+                    ?: targetUser?.id?.takeIf { it.isNotBlank() }
+                    ?: targetUser?.accountId.orEmpty(),
+                name = userName,
+                image = userPhoto
+            )
+        }
+        Dialog(
+            onDismissRequest = { showChat = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Box(Modifier.fillMaxSize().background(Color.White)) {
+                ChatScreen(
+                    currentUser = currentUser,
+                    targetUser = chatTarget,
+                    onClose = { showChat = false },
+                    onJoinRoom = onJoinRoom
+                )
             }
         }
     }
@@ -1341,26 +1379,16 @@ private fun RealProfileChatIcon() {
         val h = size.height
         val bubble = Path().apply {
             moveTo(w * 0.5f, h * 0.08f)
-            cubicTo(w * 0.25f, h * 0.08f, w * 0.07f, h * 0.27f, w * 0.07f, h * 0.51f)
-            cubicTo(w * 0.07f, h * 0.75f, w * 0.25f, h * 0.93f, w * 0.5f, h * 0.93f)
-            cubicTo(w * 0.59f, h * 0.93f, w * 0.68f, h * 0.90f, w * 0.75f, h * 0.85f)
-            lineTo(w * 0.93f, h * 0.94f)
-            lineTo(w * 0.89f, h * 0.75f)
-            cubicTo(w * 0.96f, h * 0.67f, w * 0.98f, h * 0.59f, w * 0.98f, h * 0.5f)
-            cubicTo(w * 0.98f, h * 0.26f, w * 0.77f, h * 0.08f, w * 0.5f, h * 0.08f)
+            cubicTo(w * 0.26f, h * 0.08f, w * 0.07f, h * 0.27f, w * 0.07f, h * 0.51f)
+            cubicTo(w * 0.07f, h * 0.76f, w * 0.27f, h * 0.94f, w * 0.51f, h * 0.94f)
+            cubicTo(w * 0.61f, h * 0.94f, w * 0.70f, h * 0.91f, w * 0.78f, h * 0.85f)
+            lineTo(w * 0.96f, h * 0.94f)
+            lineTo(w * 0.91f, h * 0.75f)
+            cubicTo(w * 0.97f, h * 0.68f, w * 0.99f, h * 0.59f, w * 0.99f, h * 0.50f)
+            cubicTo(w * 0.99f, h * 0.26f, w * 0.76f, h * 0.08f, w * 0.5f, h * 0.08f)
             close()
         }
         drawPath(path = bubble, color = Color.White)
-
-        // Middle mein 3 transparent dots (Background color use karke fake cutout)
-        val dotColor = Color(0xFF1DC4E9)
-        val dotRadius = w * 0.08f
-        val dotY = h * 0.48f
-        val spacing = w * 0.22f
-
-        drawCircle(color = dotColor, radius = dotRadius, center = Offset(w * 0.5f - spacing, dotY))
-        drawCircle(color = dotColor, radius = dotRadius, center = Offset(w * 0.5f, dotY))
-        drawCircle(color = dotColor, radius = dotRadius, center = Offset(w * 0.5f + spacing, dotY))
     }
 }
 
