@@ -1427,11 +1427,13 @@ fun PublicProfile(
     currentUserId: String = ""
 ) {
     val target = remember(user) {
+        val accountNumber = user.accountId?.takeIf { it.isNotBlank() } ?: user.id
+        val isSingaporeOfficial = accountNumber == "100002" || accountNumber == "100003"
         TargetUser(
             id = user.id,
             uid = user.uid,
             name = user.name,
-            displayAccountNumber = user.accountId?.takeIf { it.isNotBlank() } ?: user.id,
+            displayAccountNumber = accountNumber,
             accountId = user.accountId,
             photo = user.image,
             coverPhoto = user.coverPhoto,
@@ -1439,9 +1441,9 @@ fun PublicProfile(
             age = user.age,
             followers = user.followers,
             bio = user.bio,
-            location = user.country,
-            country = user.country,
-            flag = user.flag,
+            location = if (isSingaporeOfficial) "Singapore" else user.country,
+            country = if (isSingaporeOfficial) "Singapore" else user.country,
+            flag = if (isSingaporeOfficial) "🇸🇬" else user.flag,
             officialHeadTag = user.officialHeadTag,
             officialTag = user.officialTag,
             adminTag = user.adminTag,
