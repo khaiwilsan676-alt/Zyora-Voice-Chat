@@ -194,6 +194,14 @@ fun PublicProfileScreen(
     var userGender by remember(profileCacheKey, cachedProfile, targetUser?.gender) { mutableStateOf(cachedProfile?.optString("gender")?.takeIf { it.isNotBlank() && it != "null" } ?: targetUser?.gender?.takeIf { it.isNotBlank() } ?: "Male") }
     
     val displayAccNum = targetUser?.displayAccountNumber?.takeIf { it.isNotBlank() } ?: targetUser?.accountId?.takeIf { it.isNotBlank() } ?: "—"
+    val isCoreOfficial = displayAccNum == "100002" || displayAccNum == "100003"
+    val isRedOfficial = displayAccNum == "500001"
+    val showOfficialHead = isCoreOfficial || targetUser?.officialHeadTag == true || cachedProfile?.optBoolean("officialHeadTag", false) == true
+    val showOfficial = isCoreOfficial || isRedOfficial || targetUser?.officialTag == true || cachedProfile?.optBoolean("officialTag", false) == true
+    val showAdmin = isCoreOfficial || targetUser?.adminTag == true || cachedProfile?.optBoolean("adminTag", false) == true
+    val showService = isCoreOfficial || targetUser?.serviceTag == true || cachedProfile?.optBoolean("serviceTag", false) == true || cachedProfile?.optBoolean("csTag", false) == true
+    val showHost = isCoreOfficial || cachedProfile?.optBoolean("hostTag", false) == true || cachedProfile?.optBoolean("isHost", false) == true
+    val showCoinSeller = isCoreOfficial || targetUser?.coinSellerTag == true || cachedProfile?.optBoolean("coinSellerTag", false) == true || cachedProfile?.optBoolean("coinSeller", false) == true || cachedProfile?.optBoolean("sellerTag", false) == true
     
     val defaultAvatar = "/file_000000009aac81faa8564416680aba4e.png"
     val userPhotoRaw = selectedAvatarUri ?: targetUser?.photo?.takeIf { it.isNotBlank() } ?: targetUser?.image?.takeIf { it.isNotBlank() } ?: defaultAvatar
@@ -412,36 +420,27 @@ fun PublicProfileScreen(
                                 }
                             }
 
-                            // TAG 1: Official Head (Updated)
-                            AsyncImage(model = profileAsset("/file_000000005c388246a5d95dba880d7eb9.png"), contentDescription = "Official Head", contentScale = ContentScale.Fit, modifier = Modifier.height(31.dp).widthIn(max = 80.dp))
-                            
-                            // TAG 2: Official (Size chhota kar diya - 22.dp)
-                            AsyncImage(model = profileAsset("/IMG_20261027_102250.png"), contentDescription = "Official", contentScale = ContentScale.Fit, modifier = Modifier.height(22.dp).widthIn(max = 60.dp))
+                            if (showOfficialHead) AsyncImage(model = profileAsset("/file_000000005c388246a5d95dba880d7eb9.png"), contentDescription = "Official Head", contentScale = ContentScale.Fit, modifier = Modifier.height(31.dp).widthIn(max = 80.dp))
+                            if (showOfficial) AsyncImage(model = profileAsset("/IMG_20261027_102250.png"), contentDescription = "Official", contentScale = ContentScale.Fit, modifier = Modifier.height(22.dp).widthIn(max = 60.dp))
                         }
 
-                        // ROW 2: Baaki Tags (Admin, CS, Host, Coin Seller)
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            AsyncImage(model = profileAsset("/IMG_20261027_114117.png"), contentDescription = "Admin", contentScale = ContentScale.Fit, modifier = Modifier.height(22.dp).widthIn(max = 60.dp))
-                            AsyncImage(model = profileAsset("/IMG_20261027_102207.png"), contentDescription = "Service / CS", contentScale = ContentScale.Fit, modifier = Modifier.height(22.dp).widthIn(max = 60.dp))
-                            // New Host Tag updated (image changed, size matched with Official tag)
-                            AsyncImage(model = profileAsset("/IMG_20261028_154914.png"), contentDescription = "Host", contentScale = ContentScale.Fit, modifier = Modifier.height(19.dp).widthIn(max = 60.dp))
-                            // Updated Coin Seller Tag
-                            AsyncImage(model = profileAsset("/IMG_20261028_110222.png"), contentDescription = "Coin Seller", contentScale = ContentScale.Fit, modifier = Modifier.height(22.dp).widthIn(max = 60.dp))
+                        if (showAdmin || showService || showHost || showCoinSeller) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                if (showAdmin) AsyncImage(model = profileAsset("/IMG_20261027_114117.png"), contentDescription = "Admin", contentScale = ContentScale.Fit, modifier = Modifier.height(22.dp).widthIn(max = 60.dp))
+                                if (showService) AsyncImage(model = profileAsset("/IMG_20261027_102207.png"), contentDescription = "Service", contentScale = ContentScale.Fit, modifier = Modifier.height(22.dp).widthIn(max = 60.dp))
+                                if (showHost) AsyncImage(model = profileAsset("/IMG_20261028_154914.png"), contentDescription = "Host", contentScale = ContentScale.Fit, modifier = Modifier.height(19.dp).widthIn(max = 60.dp))
+                                if (showCoinSeller) AsyncImage(model = profileAsset("/IMG_20261028_110222.png"), contentDescription = "Coin Seller", contentScale = ContentScale.Fit, modifier = Modifier.height(22.dp).widthIn(max = 60.dp))
+                            }
                         }
-                    }
-
                     // ID & Followers
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
-                        AsyncImage(
-                            model = profileAsset("/file_0000000063b481fa89d3c7729265058b.png"),
-                            contentDescription = "Purple ID Badge",
-                            contentScale = ContentScale.Fit,
-                            modifier = Modifier.height(30.dp).widthIn(min = 22.dp, max = 35.dp).padding(end = 4.dp)
-                        )
-                        Text(displayAccNum, fontSize = 12.sp, color = Color.Gray)
+                        if (isCoreOfficial) {
+                            AsyncImage(model = profileAsset("/file_0000000063b481fa89d3c7729265058b.png"), contentDescription = "Purple ID Badge", contentScale = ContentScale.Fit, modifier = Modifier.height(30.dp).widthIn(min = 22.dp, max = 35.dp).padding(end = 4.dp))
+                            Text(displayAccNum, fontSize = 12.sp, color = Color.Gray)
+                        } else if (isRedOfficial) {
+                            Box(Modifier.height(22.dp).clip(RoundedCornerShape(4.dp)).background(Color(0xFFDC2626)).padding(horizontal = 7.dp), contentAlignment = Alignment.Center) { Text("ID", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold) }
+                            Text(displayAccNum, fontSize = 12.sp, color = Color(0xFFDC2626))
+                        } else Text("ID: $displayAccNum", fontSize = 12.sp, color = Color.Gray)
 
                         IconButton(
                             onClick = {
