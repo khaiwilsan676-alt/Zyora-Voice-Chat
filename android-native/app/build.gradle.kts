@@ -39,6 +39,24 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 }
+
+// The native onboarding screen uses the original gender illustrations stored in
+// the web app's public directory. Copy them into generated Android resources
+// with Android-safe lowercase resource names before resource processing.
+val generatedGenderResources = layout.buildDirectory.dir("generated/res/genderAssets")
+val copyGenderAssets = tasks.register<Copy>("copyGenderAssets") {
+    from(rootProject.layout.projectDirectory.dir("../public")) {
+        include("IMG_20261031_121547.png", "IMG_20261031_121627.png")
+        rename { fileName -> fileName.lowercase() }
+    }
+    into(generatedGenderResources.map { it.dir("drawable") })
+}
+
+android.sourceSets.getByName("main").res.srcDir(generatedGenderResources)
+tasks.named("preBuild").configure {
+    dependsOn(copyGenderAssets)
+}
+
 kotlin {
     jvmToolchain(17)
 }
