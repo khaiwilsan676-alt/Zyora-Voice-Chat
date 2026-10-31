@@ -227,6 +227,9 @@ fun RoomPage(
     var roomMicMode by remember(roomId) { mutableIntStateOf(appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).getInt("micMode_$roomId", 10)) }
     var roomTheme by remember(roomId) { mutableStateOf(appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).getString("theme_$roomId", "forest-night") ?: "forest-night") }
     var purchasedRoomThemeImage by remember(roomId) { mutableStateOf("") }
+    var roomCustomThemeUrl by remember(roomId) {
+        mutableStateOf(appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).getString("customTheme_$roomId", "").orEmpty())
+    }
 
     // GitHub-backed server data is authoritative for room settings. Refresh it on
     // each room open so DP/theme survive clearing app data and signing in elsewhere.
@@ -409,7 +412,7 @@ fun RoomPage(
                             roomAdminIds = savedAdmins
                             locked = savedLocked
                             roomPassword = savedRoomPassword
-                            purchasedRoomThemeImage = savedCustomTheme
+                            roomCustomThemeUrl = savedCustomTheme
                             appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).edit().putInt("micMode_$roomId", savedMicMode).putString("theme_$roomId", savedTheme).putString("customTheme_$roomId", savedCustomTheme).apply()
                         }
                     }
@@ -842,7 +845,7 @@ fun RoomPage(
             "deer-moonlight" -> "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_00000000dec082119e076cff4bc01164.png"
             "moon-light-new" -> "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_0000000050288211aecacc1c105240c7.png"
             "dark-night-flower" -> "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_000000006ec4821182b483795db2d94c.png"
-            "custom" -> purchasedRoomThemeImage.takeIf { it.startsWith("https://") } ?: appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).getString("customTheme_$roomId", null) ?: "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/1784875884052~2.jpg"
+            "custom" -> roomCustomThemeUrl.takeIf { it.startsWith("https://") } ?: "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/1784875884052~2.jpg"
             else -> if (purchasedRoomThemeImage.isNotBlank()) "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/$purchasedRoomThemeImage" else "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/1784875884052~2.jpg"
         },contentDescription="Room theme background",modifier=Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
 
@@ -1337,7 +1340,7 @@ fun RoomPage(
         if(showInfo) RoomInfo(isOpen=true,onClose={showInfo=false},isRoomOwner=accountId==roomOwner.accountId.ifBlank{roomOwner.id},roomOwner=RoomInfoOwner(id=roomOwner.id,uid=roomOwner.uid,accountId=roomOwner.accountId.ifBlank{roomOwner.id},name=roomOwner.name,image=roomOwner.image),roomData=RoomInfoData(roomName,roomImage,announcement,roomId),roomFollowers=roomFollowers,roomAdmins=roomAdminUsers,onOpenProfile={ follower -> seats.firstOrNull{it.accountId==follower.accountId}?.let{selectedSeat=it.number};showInfo=false },onCopyId={ id -> clipboard.setText(AnnotatedString(id));copiedId=id },copied=copiedId==roomId)
         if(showActiveUsers) ActiveUsers(isOpen=true,onClose={showActiveUsers=false},roomUsers=activeRoomUsers,currentUser=ActiveUserNative(accountId,roomDisplayName,roomDisplayImage),roomOwnerId=roomOwner.accountId.ifBlank{roomOwner.id},onOpenProfile={ user -> seats.firstOrNull{it.accountId==user.accountId}?.let{selectedSeat=it.number};showActiveUsers=false },onCopyUserId={ id -> clipboard.setText(AnnotatedString(id));copiedId=id })
         if(showSettings) RoomSettingPage(initial = RoomSettingsDataNative(roomName=roomName,roomDp=roomImage,announcement=announcement,micMode=roomMicMode,theme=roomTheme,isLocked=locked,roomPassword=roomPassword,admin=roomAdminIds,customTheme=appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).getString("customTheme_$roomId", "").orEmpty()),roomOwnerId=roomId,currentUserId=accountId,onBack={showSettings=false},onSave={saved->
-            roomName=saved.roomName;roomImage=saved.roomDp;announcement=saved.announcement;roomMicMode=saved.micMode;roomTheme=saved.theme;roomAdminIds=saved.admin;locked=saved.isLocked;roomPassword=saved.roomPassword;showSettings=false
+            roomName=saved.roomName;roomImage=saved.roomDp;announcement=saved.announcement;roomMicMode=saved.micMode;roomTheme=saved.theme;roomCustomThemeUrl=saved.customTheme;roomAdminIds=saved.admin;locked=saved.isLocked;roomPassword=saved.roomPassword;showSettings=false
             appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).edit().putInt("micMode_$roomId", saved.micMode).putString("theme_$roomId", saved.theme).putString("customTheme_$roomId", saved.customTheme).apply()
             // RoomSettingPage already persisted the complete room settings before invoking onSave.
             // Do not issue a second partial PUT here: it used to reset mic mode/admin fields on the server.
