@@ -164,11 +164,13 @@ fun RoomProfile(
     }
 
     // Tag States
-    var adminTag by remember(user.adminTag, cachedProfile) { mutableStateOf(user.adminTag == true || cachedProfile?.optBoolean("adminTag", false) == true) }
-    var officialTag by remember(user.officialTag, cachedProfile) { mutableStateOf(user.officialTag == true || cachedProfile?.optBoolean("officialTag", false) == true) }
-    var officialHeadTag by remember(user.officialHeadTag, cachedProfile) { mutableStateOf(user.officialHeadTag == true || cachedProfile?.optBoolean("officialHeadTag", false) == true) }
-    var serviceTag by remember(user.serviceTag) { mutableStateOf(user.serviceTag == true) }
-    var coinSellerTag by remember(user.coinSellerTag) { mutableStateOf(user.coinSellerTag == true) }
+    val isCoreOfficialAccount = user.accountId == "100002" || user.accountId == "100003" || user.id == "100002" || user.id == "100003"
+    val isRedOfficialAccount = user.accountId == "500001" || user.id == "500001"
+    var adminTag by remember(user.adminTag, cachedProfile, isCoreOfficialAccount) { mutableStateOf(isCoreOfficialAccount || user.adminTag == true || cachedProfile?.optBoolean("adminTag", false) == true) }
+    var officialTag by remember(user.officialTag, cachedProfile, isCoreOfficialAccount, isRedOfficialAccount) { mutableStateOf(isCoreOfficialAccount || isRedOfficialAccount || user.officialTag == true || cachedProfile?.optBoolean("officialTag", false) == true) }
+    var officialHeadTag by remember(user.officialHeadTag, cachedProfile, isCoreOfficialAccount) { mutableStateOf(isCoreOfficialAccount || user.officialHeadTag == true || cachedProfile?.optBoolean("officialHeadTag", false) == true) }
+    var serviceTag by remember(user.serviceTag, cachedProfile, isCoreOfficialAccount) { mutableStateOf(isCoreOfficialAccount || user.serviceTag == true || cachedProfile?.optBoolean("serviceTag", false) == true) }
+    var coinSellerTag by remember(user.coinSellerTag, cachedProfile, isCoreOfficialAccount) { mutableStateOf(isCoreOfficialAccount || user.coinSellerTag == true || cachedProfile?.optBoolean("coinSellerTag", false) == true) }
     var vipTag by remember(user.vipTag) { mutableStateOf(user.vipTag == true) }
     var premiumTag by remember(user.premiumTag) { mutableStateOf(user.premiumTag == true) }
     var showReports by remember { mutableStateOf(false) }
@@ -301,13 +303,13 @@ fun RoomProfile(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center
                     ) {
-                        AsyncImage(
-                            model = "file_0000000063b481fa89d3c7729265058b.png".fullUrl(),
-                            contentDescription = "Purple ID Badge",
-                            contentScale = ContentScale.Fit,
-                            modifier = Modifier.height(30.dp).widthIn(min = 22.dp, max = 35.dp).padding(end = 4.dp)
-                        )
-                        Text(accountId, color = Color.DarkGray, fontSize = 14.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(start = 4.dp))
+                        if (isCoreOfficialAccount) {
+                            AsyncImage(model = "file_0000000063b481fa89d3c7729265058b.png".fullUrl(), contentDescription = "Purple ID Badge", contentScale = ContentScale.Fit, modifier = Modifier.height(30.dp).widthIn(min = 22.dp, max = 35.dp).padding(end = 4.dp))
+                            Text(accountId, color = Color.DarkGray, fontSize = 14.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(start = 4.dp))
+                        } else if (isRedOfficialAccount) {
+                            Box(Modifier.height(22.dp).clip(RoundedCornerShape(4.dp)).background(Color(0xFFDC2626)).padding(horizontal = 7.dp), contentAlignment = Alignment.Center) { Text("ID", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold) }
+                            Text(accountId, color = Color(0xFFDC2626), fontSize = 14.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(start = 4.dp))
+                        } else Text("ID: $accountId", color = Color.DarkGray, fontSize = 14.sp, fontWeight = FontWeight.Medium)
                         if (accountId != "N/A" && accountId != "User") {
                             IconButton(
                                 onClick = {
