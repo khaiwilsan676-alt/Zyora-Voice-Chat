@@ -642,17 +642,9 @@ export default function Wallet({ onBack, initialTab = 'wallet' }: WalletProps) {
   }
 
   const executeBuyCoins = async () => {
-    if(!selectedAmountToBuy) return;
-    const amount = selectedAmountToBuy.coins;
-    
-    setWalletBalance((prev) => (prev ?? 0) + amount)
-    await addCoinsToDB(amount)
-    await recordTransaction('Buy Coins', amount, 'coin')
-    setWalletBalance(await loadBalanceFromDB())
-
-    setShowPayUsingSheet(false)
-    setShowPaymentSheet(false)
-    setSelectedAmountToBuy(null)
+    // A payment selection is not proof of a completed payment. Never mint
+    // coins in IndexedDB; only a verified payment webhook may credit MongoDB.
+    window.alert('Payment verification is not connected yet. No coins were added.');
   }
 
   const handleExchange = async () => {
