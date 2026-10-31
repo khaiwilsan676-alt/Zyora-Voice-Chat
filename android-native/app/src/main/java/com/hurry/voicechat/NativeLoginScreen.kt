@@ -300,7 +300,14 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
                                     if (email.trim().isEmpty()) throw IllegalArgumentException("Please enter a valid account.")
                                     if (password.length < 6) throw IllegalArgumentException("Password must be at least 6 characters long.")
                                     
-                                    val user = withContext(Dispatchers.IO) { backendEmailAuth(context, email.trim(), password, false) }
+                                    val accountInput = email.trim()
+                                    val loginEmail = if (accountInput.matches(Regex("\\d{4,12}"))) {
+                                        withContext(Dispatchers.IO) { lookupAccountEmail(accountInput) }
+                                    } else accountInput
+                                    if (!android.util.Patterns.EMAIL_ADDRESS.matcher(loginEmail).matches()) {
+                                        throw IllegalArgumentException("Enter a valid Zyora Account ID.")
+                                    }
+                                    val user = withContext(Dispatchers.IO) { backendEmailAuth(context, loginEmail, password, false) }
                                     withContext(Dispatchers.IO) { syncHurryUser(user, context) }
                                     
                                     val authPrefs = context.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE)
@@ -774,16 +781,49 @@ private fun postAuthJson(path: String, payload: JSONObject): JSONObject {
     return json
 }
 
+private fun lookupAccountEmail(accountId: String): String {
+    val url = URL("\$HURRY_API_BASE/api/users?accountId=\${java.net.URLEncoder.encode(accountId, "UTF-8")}")
+    val connection = (url.openConnection() as HttpURLConnection).apply {
+        requestMethod = "GET"; connectTimeout = 12000; readTimeout = 15000
+        setRequestProperty("Accept", "application/json")
+    }
+    try {
+        val code = connection.responseCode
+        val stream = if (code in 200..299) connection.inputStream else connection.errorStream
+        val response = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+        val root = runCatching { JSONObject(response) }.getOrElse { JSONObject() }
+        if (code !in 200..299) throw IllegalArgumentException("Zyora Account ID not found.")
+        val profile = root.optJSONObject("user")
+            ?: root.optJSONArray("users")?.optJSONObject(0)
+            ?: throw IllegalArgumentException("Zyora Account ID not found.")
+        val foundId = profile.optString("accountId").ifBlank { profile.optString("accountNumber") }
+        if (foundId != accountId) throw IllegalArgumentException("Zyora Account ID not found.")
+        return profile.optString("email").ifBlank { profile.optString("gmail") }
+            .takeIf { it.contains("@") }
+            ?: throw IllegalArgumentException("This account has no linked email. Use Google login.")
+    } finally {
+        connection.disconnect()
+    }
+}
+
 private fun syncHurryUser(user: JSONObject, context: android.content.Context) {
     val uid = user.optString("localId")
     val email = user.optString("email")
     if (uid.isBlank()) throw IllegalStateException("Sign-in service did not return a user ID.")
 
     val specialAccounts = mapOf(
+        "Ed89IA0lyzUXlIplzH660OUdBmT2" to "100002",
+        "dCt4l5GbjnMpOeBywiDSH6XfCoj1" to "100003",
+        "a0yVqX9dEiS2ZZH6eQmpjs3QrUf1" to "500001",
         "HUSxSvQnabgU029dWYt1TUV04hd2" to "100002",
         "ADqW31RGBMaosOzy0HiqexKSD7h1" to "100003",
         "100002" to "100002",
         "100003" to "100003"
+    )
+    val officialNames = mapOf(
+        "Ed89IA0lyzUXlIplzH660OUdBmT2" to "Zyora Official_IN",
+        "dCt4l5GbjnMpOeBywiDSH6XfCoj1" to "Zyora.IN",
+        "a0yVqX9dEiS2ZZH6eQmpjs3QrUf1" to "500001"
     )
     val officialIds = setOf("500001", "500002", "500003", "500004", "500005")
     val adminIds = setOf("700001", "700002", "700003")
@@ -819,12 +859,12 @@ private fun syncHurryUser(user: JSONObject, context: android.content.Context) {
     }
     // Server mapping for this Firebase UID is the stable account-ID source.
     val serverAccountId = user.optString("accountId").trim()
-    val accountId = serverAccountId.ifBlank { existingAccount.ifBlank { generatedAccountId } }
+    val accountId = specialAccounts[uid] ?: serverAccountId.ifBlank { existingAccount.ifBlank { generatedAccountId } }
     val emailName = email.substringBefore("@").ifBlank { "User" }
-    val name = existingProfile.optString("name").ifBlank {
+    val name = officialNames[uid] ?: existingProfile.optString("name").ifBlank {
         existingProfile.optString("Name").ifBlank { user.optString("displayName").ifBlank { emailName } }
     }
-    val image = existingProfile.optString("image").ifBlank {
+    val image = if (officialNames.containsKey(uid)) HURRY_LOGO else existingProfile.optString("image").ifBlank {
         existingProfile.optString("avatar").ifBlank {
             existingProfile.optString("photo").ifBlank { user.optString("photoUrl").ifBlank { "/default-avatar.png" } }
         }
