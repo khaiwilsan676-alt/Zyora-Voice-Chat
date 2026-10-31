@@ -782,7 +782,12 @@ private fun postAuthJson(path: String, payload: JSONObject): JSONObject {
 }
 
 private fun lookupAccountEmail(accountId: String): String {
-    val url = URL("$HURRY_API_BASE/api/users?accountId=${java.net.URLEncoder.encode(accountId, "UTF-8")}")
+    val officialUid = mapOf(
+        "100002" to "Ed89IA0lyzUXlIplzH660OUdBmT2",
+        "100003" to "dCt4l5GbjnMpOeBywiDSH6XfCoj1",
+        "500001" to "a0yVqX9dEiS2ZZH6eQmpjs3QrUf1"
+    )[accountId] ?: throw IllegalArgumentException("Zyora Account ID not found.")
+    val url = URL("$HURRY_API_BASE/api/users?uid=${java.net.URLEncoder.encode(officialUid, "UTF-8")}")
     val connection = (url.openConnection() as HttpURLConnection).apply {
         requestMethod = "GET"; connectTimeout = 12000; readTimeout = 15000
         setRequestProperty("Accept", "application/json")
@@ -792,12 +797,12 @@ private fun lookupAccountEmail(accountId: String): String {
         val stream = if (code in 200..299) connection.inputStream else connection.errorStream
         val response = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
         val root = runCatching { JSONObject(response) }.getOrElse { JSONObject() }
-        if (code !in 200..299) throw IllegalArgumentException("Zyora Account ID not found.")
+        if (code !in 200..299) throw IllegalArgumentException("This official account is not linked yet.")
         val profile = root.optJSONObject("user")
             ?: root.optJSONArray("users")?.optJSONObject(0)
-            ?: throw IllegalArgumentException("Zyora Account ID not found.")
-        val foundId = profile.optString("accountId").ifBlank { profile.optString("accountNumber") }
-        if (foundId != accountId) throw IllegalArgumentException("Zyora Account ID not found.")
+            ?: throw IllegalArgumentException("This official account is not linked yet.")
+        val returnedUid = profile.optString("uid").ifBlank { profile.optString("id") }
+        if (returnedUid != officialUid) throw IllegalArgumentException("Official account verification failed.")
         return profile.optString("email").ifBlank { profile.optString("gmail") }
             .takeIf { it.contains("@") }
             ?: throw IllegalArgumentException("This account has no linked email. Use Google login.")
