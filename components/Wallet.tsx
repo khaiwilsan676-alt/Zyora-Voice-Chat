@@ -500,23 +500,31 @@ export default function Wallet({ onBack, initialTab = 'wallet' }: WalletProps) {
 
   useEffect(() => {
     let isMounted = true
-
+    const walletUserId = localStorage.getItem('userUID') || localStorage.getItem('userId') || localStorage.getItem('userPhone') || ''
     const fetchBalance = async () => {
-      const bal = await loadBalanceFromDB()
-      const diamondBal = await loadDiamondBalanceFromDB()
-      if (isMounted) {
-        if (bal !== null) setWalletBalance(bal)
-        setDiamondBalance(diamondBal)
+      if (!walletUserId) return
+      try {
+        const response = await fetch(apiUrl('/api/lucky-bag/wallet/' + encodeURIComponent(walletUserId)), { cache: 'no-store' })
+        if (!response.ok) return
+        const wallet = await response.json()
+        if (!isMounted) return
+        const coins = Math.max(0, Number(wallet.balance) || 0)
+        const diamonds = Math.max(0, Number(wallet.diamonds) || 0)
+        setWalletBalance(coins)
+        setDiamondBalance(diamonds)
+        // IndexedDB is a disposable display cache, never the wallet authority.
+        try {
+          const db = await initDB()
+          const tx = db.transaction(STORE_NAME, 'readwrite')
+          tx.objectStore(STORE_NAME).put({ balance: coins, diamonds }, 'user_data')
+        } catch {}
+      } catch (error) {
+        console.error('Canonical wallet refresh failed:', error)
       }
     }
-
-    fetchBalance()
-    const intervalId = setInterval(fetchBalance, 1000)
-
-    return () => {
-      isMounted = false
-      clearInterval(intervalId)
-    }
+    void fetchBalance()
+    const intervalId = setInterval(() => { void fetchBalance() }, 5000)
+    return () => { isMounted = false; clearInterval(intervalId) }
   }, [])
 
   // Load the real Coin Seller account from the registered users database.
@@ -648,23 +656,35 @@ export default function Wallet({ onBack, initialTab = 'wallet' }: WalletProps) {
   }
 
   const handleExchange = async () => {
-    const diamondNum = parseFloat(diamonds) || 0
-    const coinNum = parseFloat(coins) || 0
-    if (diamondNum <= 0 || coinNum <= 0) return
-
-    const availableDiamonds = await loadDiamondBalanceFromDB()
-    if (diamondNum > availableDiamonds) return
-
-    const removed = await subtractDiamondsFromDB(diamondNum)
-    if (!removed) return
-
-    await recordTransaction('Diamond Exchange', -diamondNum, 'diamond')
-    await addCoinsToDB(coinNum)
-
-    setDiamonds('')
-    setCoins('')
-    setWalletBalance(await loadBalanceFromDB())
-    setDiamondBalance(await loadDiamondBalanceFromDB())
+    const diamondNum = Math.floor(parseFloat(diamonds) || 0)
+    if (diamondNum <= 0) return
+    const walletUserId = localStorage.getItem('userUID') || localStorage.getItem('userId') || localStorage.getItem('userPhone') || ''
+    if (!walletUserId) return
+    try {
+      const response = await fetch(apiUrl('/api/wallet/exchange'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: walletUserId, diamonds: diamondNum }),
+      })
+      const result = await response.json().catch(() => ({}))
+      if (!response.ok || result?.success !== true) {
+        if (Number.isFinite(Number(result?.balance))) setWalletBalance(Number(result.balance))
+        if (Number.isFinite(Number(result?.diamonds))) setDiamondBalance(Number(result.diamonds))
+        return
+      }
+      setWalletBalance(Math.max(0, Number(result.balance) || 0))
+      setDiamondBalance(Math.max(0, Number(result.diamonds) || 0))
+      await recordTransaction('Diamond Exchange', -diamondNum, 'diamond')
+      try {
+        const db = await initDB()
+        const tx = db.transaction(STORE_NAME, 'readwrite')
+        tx.objectStore(STORE_NAME).put({ balance: result.balance, diamonds: result.diamonds }, 'user_data')
+      } catch {}
+      setDiamonds('')
+      setCoins('')
+    } catch (error) {
+      console.error('Canonical diamond exchange failed:', error)
+    }
   }
 
   if (showDetails) {
