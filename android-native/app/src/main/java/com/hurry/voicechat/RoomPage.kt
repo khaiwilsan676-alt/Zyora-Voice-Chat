@@ -409,6 +409,7 @@ fun RoomPage(
                             roomAdminIds = savedAdmins
                             locked = savedLocked
                             roomPassword = savedRoomPassword
+                            purchasedRoomThemeImage = savedCustomTheme
                             appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).edit().putInt("micMode_$roomId", savedMicMode).putString("theme_$roomId", savedTheme).putString("customTheme_$roomId", savedCustomTheme).apply()
                         }
                     }
@@ -841,7 +842,7 @@ fun RoomPage(
             "deer-moonlight" -> "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_00000000dec082119e076cff4bc01164.png"
             "moon-light-new" -> "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_0000000050288211aecacc1c105240c7.png"
             "dark-night-flower" -> "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_000000006ec4821182b483795db2d94c.png"
-            "custom" -> appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).getString("customTheme_$roomId", null) ?: "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/1784875884052~2.jpg"
+            "custom" -> purchasedRoomThemeImage.takeIf { it.startsWith("https://") } ?: appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).getString("customTheme_$roomId", null) ?: "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/1784875884052~2.jpg"
             else -> if (purchasedRoomThemeImage.isNotBlank()) "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/$purchasedRoomThemeImage" else "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/1784875884052~2.jpg"
         },contentDescription="Room theme background",modifier=Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
 
@@ -996,7 +997,6 @@ fun RoomPage(
                                     AsyncImage(model = "https://zyora-voice-chat.vercel.app/IMG_20261028_004355.png", contentDescription = "Level", contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
                                     Text("Lv.1", color = Color.White, fontSize = 7.sp, fontWeight = FontWeight.Normal, modifier = Modifier.padding(end = 6.dp))
                                 }
-                                AsyncImage(model = "https://zyora-voice-chat.vercel.app/file_0000000063b481fa89d3c7729265058b.png", contentDescription = "Purple ID Badge", contentScale = ContentScale.Fit, modifier = Modifier.size(18.dp))
                             }
                             Text("Enter the Room",color=Color.White,fontSize=12.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Medium, modifier=Modifier.padding(start=2.dp).clickable { selectedChatProfile = message })
                         }
@@ -1900,16 +1900,6 @@ private fun formatMusicTime(seconds: Float): String {
                 if (isRoomOwnerMessage) {
                     AsyncImage(model = "https://zyora-voice-chat.vercel.app/IMG_20261027_235537.png", contentDescription = "Owner", contentScale = ContentScale.Fit, modifier = Modifier.height(16.dp))
                 }
-                if (isCoreOfficial) {
-                    AsyncImage(model="https://zyora-voice-chat.vercel.app/file_0000000063b481fa89d3c7729265058b.png",contentDescription="Purple ID",modifier=Modifier.size(width=24.dp,height=18.dp),contentScale=ContentScale.Fit)
-                    Text(m.senderAccountId,color=Color.White.copy(alpha=.7f),fontSize=9.sp)
-                } else if (isRedOfficial) {
-                    Box(Modifier.clip(RoundedCornerShape(3.dp)).background(Color(0xFFDC2626)).padding(horizontal=5.dp,vertical=2.dp)) { Text("ID",color=Color.White,fontSize=9.sp,fontWeight=FontWeight.Bold) }
-                    Text(m.senderAccountId,color=Color(0xFFFF7777),fontSize=9.sp)
-                } else {
-                    Text("ID: ${m.senderAccountId}",color=Color.White.copy(alpha=.6f),fontSize=9.sp,maxLines=1)
-                }
-
                 Box(modifier = Modifier.height(18.dp).width(36.dp), contentAlignment = Alignment.CenterEnd) {
                     AsyncImage(model = "https://zyora-voice-chat.vercel.app/IMG_20261028_004355.png", contentDescription = "Level", contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
                     Text("Lv.1", color = Color.White, fontSize = 7.sp, fontWeight = FontWeight.Normal, modifier = Modifier.padding(end = 6.dp))
