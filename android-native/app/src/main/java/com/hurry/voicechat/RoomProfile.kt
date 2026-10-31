@@ -180,11 +180,11 @@ fun RoomProfile(
     // request here; the profile-loading effect above owns the one-time remote fallback.
     LaunchedEffect(user.uid, user.id, user.accountId, loadedProfile) {
         val profile = loadedProfile ?: return@LaunchedEffect
-        if (profile.has("officialHeadTag")) officialHeadTag = profile.optBoolean("officialHeadTag")
-        if (profile.has("officialTag")) officialTag = profile.optBoolean("officialTag")
-        if (profile.has("adminTag")) adminTag = profile.optBoolean("adminTag")
-        if (profile.has("serviceTag")) serviceTag = profile.optBoolean("serviceTag")
-        if (profile.has("coinSellerTag")) coinSellerTag = profile.optBoolean("coinSellerTag")
+        if (profile.has("officialHeadTag")) officialHeadTag = isCoreOfficialAccount || profile.optBoolean("officialHeadTag")
+        if (profile.has("officialTag")) officialTag = isCoreOfficialAccount || isRedOfficialAccount || profile.optBoolean("officialTag")
+        if (profile.has("adminTag")) adminTag = isCoreOfficialAccount || profile.optBoolean("adminTag")
+        if (profile.has("serviceTag")) serviceTag = isCoreOfficialAccount || profile.optBoolean("serviceTag")
+        if (profile.has("coinSellerTag")) coinSellerTag = isCoreOfficialAccount || profile.optBoolean("coinSellerTag")
         hostTag = isCoreOfficialAccount || profile.optBoolean("hostTag", false) || profile.optBoolean("isHost", false)
         if (profile.has("vipTag")) vipTag = profile.optBoolean("vipTag")
         if (profile.has("premiumTag")) premiumTag = profile.optBoolean("premiumTag")
