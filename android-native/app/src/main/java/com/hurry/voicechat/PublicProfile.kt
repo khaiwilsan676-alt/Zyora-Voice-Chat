@@ -432,6 +432,8 @@ fun PublicProfileScreen(
                                 if (showCoinSeller) AsyncImage(model = profileAsset("/IMG_20261028_110222.png"), contentDescription = "Coin Seller", contentScale = ContentScale.Fit, modifier = Modifier.height(22.dp).widthIn(max = 60.dp))
                             }
                         }
+                    }
+
                     // ID & Followers
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
                         if (isCoreOfficial) {
