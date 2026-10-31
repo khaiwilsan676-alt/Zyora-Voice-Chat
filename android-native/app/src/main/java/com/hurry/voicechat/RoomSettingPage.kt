@@ -6,9 +6,12 @@ import android.graphics.BitmapFactory
 import android.util.Base64
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.rememberTransformableState
+import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -41,7 +44,9 @@ import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -88,7 +93,12 @@ private const val RAW_SETTINGS = "https://raw.githubusercontent.com/khaiwilsan67
 
 private val roomThemeChoices = listOf(
     RoomThemeChoice("forest-night", "Forest Night", RAW_SETTINGS + "1784875884052~2.jpg"),
-    RoomThemeChoice("mood-light", "Moon Light", RAW_SETTINGS + "1784533036732~2.jpg")
+    RoomThemeChoice("mood-light", "Moon Light", RAW_SETTINGS + "1784533036732~2.jpg"),
+    RoomThemeChoice("lantern-tree", "Lantern tree", RAW_SETTINGS + "file_000000001db88211a17274a0cb143387.png"),
+    RoomThemeChoice("northern-light", "Northern Light", RAW_SETTINGS + "file_000000004f388211b534832cd6b1f1a2.png"),
+    RoomThemeChoice("sword-ruins", "Sword Ruins", RAW_SETTINGS + "file_0000000085a48211ae91d22ca50879e2.png"),
+    RoomThemeChoice("cornfield-portal", "Cornfield Portal", RAW_SETTINGS + "file_00000000baec8211b803a01c54381503.png"),
+    RoomThemeChoice("deer-moonlight", "Deer Moonlight", RAW_SETTINGS + "file_00000000dec082119e076cff4bc01164.png")
 )
 
 // Tailwind palette
@@ -204,21 +214,21 @@ fun RoomSettingPage(
     var saving by remember { mutableStateOf(false) }
     var saveError by remember { mutableStateOf("") }
     val members = remember { mutableStateListOf<NativeSettingMember>() }
+    
+    // DP Cropping Uri state
+    var croppingUri by remember { mutableStateOf<android.net.Uri?>(null) }
 
     // 🔥 COMMON SAVE FUNCTION 🔥 
-    // Ye function ab Confirm dabane pe ya modal close hone pe directly chalega, aur server par save kar dega!
     val performSave = { newState: RoomSettingsDataNative ->
         scope.launch {
             saving = true
             saveError = ""
             val ready = newState.copy(
                 roomName = newState.roomName.trim().ifBlank { "Room" },
-                admin = admins, // Ensure current admins are always included
+                admin = admins,
                 customTheme = newState.customTheme.ifBlank { customTheme }
             )
             runCatching {
-                // Store selected room images in the repository so they survive reinstall
-                // and are available on other devices; do not save temporary device URIs.
                 val stableRoomId = roomOwnerId.ifBlank { currentUserId }
                 val permanentDp = if (ready.roomDp.startsWith("data:image/")) {
                     ProfilePersistence.uploadDpToGitHub(ready.roomDp, "$stableRoomId-room", "room-dp")
@@ -293,18 +303,22 @@ fun RoomSettingPage(
     }
 
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        if (uri != null) scope.launch {
-            runCatching { cropImageToDataUrl(context, uri) }
-                .onSuccess { dataUrl ->
-                    if (pendingPicker == "photo") {
-                        performSave(state.copy(roomDp = dataUrl)) // Auto Save!
-                    } else {
-                        customTheme = dataUrl
-                        performSave(state.copy(theme = "custom", customTheme = dataUrl)) // Auto Save!
-                        sheet = ""
-                    }
+        if (uri != null) {
+            if (pendingPicker == "photo") {
+                // Ab direct convert/save ki jagah Crop UI khulega
+                croppingUri = uri
+            } else {
+                // Custom theme code ekdam untouched
+                scope.launch {
+                    runCatching { cropImageToDataUrl(context, uri) }
+                        .onSuccess { dataUrl ->
+                            customTheme = dataUrl
+                            performSave(state.copy(theme = "custom", customTheme = dataUrl))
+                            sheet = ""
+                        }
+                        .onFailure { saveError = it.message ?: "Could not load image" }
                 }
-                .onFailure { saveError = it.message ?: "Could not load image" }
+            }
         }
     }
 
@@ -377,7 +391,6 @@ fun RoomSettingPage(
 
     Box(Modifier.fillMaxSize().background(Color.White)) {
         Column(Modifier.fillMaxSize()) {
-            // ═══════════ HEADER ═══════════
             Row(
                 Modifier.fillMaxWidth().background(Color.White)
                     .statusBarsPadding()
@@ -395,16 +408,13 @@ fun RoomSettingPage(
                     fontSize = 18.sp, fontWeight = FontWeight.Bold, color = gray800, textAlign = TextAlign.Center
                 )
                 
-                // Spacer daala taaki Text perfectly center me rahe! "Save" button hata diya hai!
                 Spacer(Modifier.size(40.dp))
             }
 
-            // ═══════════ BODY ═══════════
             Column(
                 Modifier.fillMaxSize().verticalScroll(rememberScrollState())
                     .padding(horizontal = 16.dp, vertical = 24.dp)
             ) {
-                // Photo block
                 Column(
                     Modifier.fillMaxWidth().padding(bottom = 24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
@@ -435,7 +445,6 @@ fun RoomSettingPage(
                     }
                 }
 
-                // Rows — no dividers
                 SettingRow("Room Name", state.roomName) { draft = state.roomName; sheet = "name" }
                 SettingRow("Room Announcement", state.announcement) { draft = state.announcement; sheet = "announcement" }
                 SettingRow("Theme", themeItems.firstOrNull { it.id == state.theme }?.name ?: "") { sheet = "theme" }
@@ -444,7 +453,6 @@ fun RoomSettingPage(
                     password = if (state.isLocked) state.roomPassword else ""; sheet = "lock"
                 }
                 
-                // Mic Mode
                 Box(Modifier.fillMaxWidth().padding(bottom = 20.dp)) {
                     Row(
                         Modifier.fillMaxWidth().padding(horizontal = 4.dp),
@@ -477,7 +485,6 @@ fun RoomSettingPage(
         }
     }
 
-    // ═══════════ MODALS ═══════════
     when (sheet) {
         "name" -> CenteredModal(scrimAlpha = 0.5f, onDismiss = { sheet = "" }) {
             Column(
@@ -621,7 +628,6 @@ fun RoomSettingPage(
                                 Modifier.weight(1f)
                                     .clip(RoundedCornerShape(12.dp))
                                     .then(
-                                        // Sirf Blue border lagai hai, color nikal diya!
                                         if (selected) Modifier.border(2.dp, blue500, RoundedCornerShape(12.dp)) else Modifier
                                     )
                                     .clickable { tempMicMode = mode }
@@ -659,7 +665,6 @@ fun RoomSettingPage(
                 }
             }
         }
-        // Admin pe bahar click karne ya back lene par auto-save ho jayega!
         "admin" -> BottomSheetModal(scrimAlpha = 0.35f, heightFraction = 0.5f, dark = false, onDismiss = { 
             performSave(state.copy(admin = admins))
             sheet = "" 
@@ -825,6 +830,115 @@ fun RoomSettingPage(
                             onClick = { sheet = "admin" }
                         )
                     }
+                }
+            }
+        }
+    }
+
+    // 🔥 NEW CROP IMAGE DIALOG WITH CANCEL & SAVE BUTTONS AND 10x10 CROP SQUARE 🔥
+    if (croppingUri != null) {
+        Dialog(
+            onDismissRequest = { croppingUri = null },
+            properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
+        ) {
+            var scale by remember { mutableFloatStateOf(1f) }
+            var offset by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
+            var bitmap by remember { mutableStateOf<Bitmap?>(null) }
+
+            LaunchedEffect(croppingUri) {
+                withContext(Dispatchers.IO) {
+                    context.contentResolver.openInputStream(croppingUri!!)?.use {
+                        bitmap = BitmapFactory.decodeStream(it)
+                    }
+                }
+            }
+
+            Box(Modifier.fillMaxSize().background(Color.Black)) {
+                if (bitmap != null) {
+                    val transformableState = rememberTransformableState { zoomChange, offsetChange, _ ->
+                        scale = (scale * zoomChange).coerceIn(0.5f, 5f)
+                        offset += offsetChange
+                    }
+
+                    Box(Modifier.fillMaxSize().transformable(transformableState), contentAlignment = Alignment.Center) {
+                        // Background Zoomable/Pannable Image
+                        Image(
+                            bitmap = bitmap!!.asImageBitmap(),
+                            contentDescription = "Crop Image",
+                            modifier = Modifier.graphicsLayer {
+                                scaleX = scale
+                                scaleY = scale
+                                translationX = offset.x
+                                translationY = offset.y
+                            },
+                            contentScale = ContentScale.Fit
+                        )
+
+                        // 10x10 Crop Square (1:1 Ratio Square) - stays static in center
+                        Box(
+                            Modifier
+                                .fillMaxWidth()
+                                .aspectRatio(1f)
+                                .border(2.dp, Color.White)
+                        )
+                    }
+                }
+
+                // Top Bar with ekdam left 'Cancel' and top right 'Save'
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .statusBarsPadding()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "Cancel",
+                        color = Color.White,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier
+                            .clickable { croppingUri = null }
+                            .padding(8.dp)
+                    )
+                    Text(
+                        text = "Save",
+                        color = Color.White,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier
+                            .clickable {
+                                if (bitmap != null) {
+                                    scope.launch {
+                                        val base64 = withContext(Dispatchers.IO) {
+                                            try {
+                                                val b = bitmap!!
+                                                val size = minOf(b.width, b.height)
+                                                // Approximating crop mathematically depending on pan/zoom
+                                                val cropSize = (size / scale).toInt().coerceIn(1, size)
+                                                val xOffsetScaled = (offset.x).toInt()
+                                                val yOffsetScaled = (offset.y).toInt()
+
+                                                val startX = ((b.width - cropSize) / 2 - xOffsetScaled).coerceIn(0, b.width - cropSize)
+                                                val startY = ((b.height - cropSize) / 2 - yOffsetScaled).coerceIn(0, b.height - cropSize)
+
+                                                val cropped = Bitmap.createBitmap(b, startX, startY, cropSize, cropSize)
+                                                val scaled = Bitmap.createScaledBitmap(cropped, 640, 640, true)
+                                                val out = ByteArrayOutputStream()
+                                                scaled.compress(Bitmap.CompressFormat.JPEG, 90, out)
+                                                "data:image/jpeg;base64," + Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP)
+                                            } catch (e: Exception) {
+                                                // Fallback if math fails
+                                                cropImageToDataUrl(context, croppingUri!!)
+                                            }
+                                        }
+                                        performSave(state.copy(roomDp = base64))
+                                        croppingUri = null
+                                    }
+                                }
+                            }
+                            .padding(8.dp)
+                    )
                 }
             }
         }
@@ -1078,6 +1192,8 @@ private fun ThemeFullScreen(
     onPick: (String) -> Unit,
     onUploadCustom: () -> Unit
 ) {
+    var selectedTheme by remember(current) { mutableStateOf(current) }
+    
     Dialog(
         onDismissRequest = onBack,
         properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
@@ -1092,26 +1208,43 @@ private fun ThemeFullScreen(
                     Modifier.size(40.dp).clip(CircleShape).clickable(onClick = onBack),
                     contentAlignment = Alignment.Center
                 ) { Icon(Icons.Default.ArrowBack, null, tint = gray800, modifier = Modifier.size(24.dp)) }
+                
                 Text(
                     "Room Theme", Modifier.weight(1f),
                     fontSize = 18.sp, fontWeight = FontWeight.Bold, color = gray800, textAlign = TextAlign.Center
                 )
-                Spacer(Modifier.width(40.dp))
+                
+                // Save button added at the top right corner
+                Box(
+                    Modifier.defaultMinSize(minWidth = 40.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable { onPick(selectedTheme) }
+                        .padding(horizontal = 4.dp, vertical = 8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        "Save",
+                        color = Color.Black,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
+            
             Column(
                 Modifier.weight(1f).verticalScroll(rememberScrollState())
                     .padding(horizontal = 12.dp, vertical = 16.dp)
             ) {
                 LazyVerticalGrid(
-                    columns = GridCells.Fixed(3),
+                    columns = GridCells.Fixed(2),
                     modifier = Modifier.fillMaxWidth().heightIn(max = 640.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     if (!hasCustom) {
                         item {
                             Box(
-                                Modifier.fillMaxWidth().aspectRatio(0.75f)
+                                Modifier.fillMaxWidth().aspectRatio(0.86f)
                                     .clip(RoundedCornerShape(8.dp))
                                     .dashedBorder(gray300, 1.dp, 8.dp)
                                     .background(gray50)
@@ -1122,10 +1255,10 @@ private fun ThemeFullScreen(
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     verticalArrangement = Arrangement.Center
                                 ) {
-                                    Text("+", color = gray400, fontSize = 16.sp)
+                                    Text("+", color = gray400, fontSize = 24.sp)
                                     Text(
-                                        "Custom", color = gray500, fontSize = 10.sp,
-                                        fontWeight = FontWeight.Normal,
+                                        "Custom", color = gray500, fontSize = 12.sp,
+                                        fontWeight = FontWeight.Medium,
                                         modifier = Modifier.padding(top = 2.dp)
                                     )
                                 }
@@ -1137,30 +1270,30 @@ private fun ThemeFullScreen(
                             Modifier.fillMaxWidth()
                                 .clip(RoundedCornerShape(8.dp))
                                 .then(
-                                    if (current == theme.id) Modifier
+                                    if (selectedTheme == theme.id) Modifier
                                         .padding(2.dp)
                                         .border(2.dp, blue400, RoundedCornerShape(8.dp)) else Modifier
                                 )
-                                .clickable { onPick(theme.id) }
+                                .clickable { selectedTheme = theme.id }
                         ) {
-                            Box(Modifier.fillMaxWidth().aspectRatio(0.75f).clip(RoundedCornerShape(8.dp))) {
+                            Box(Modifier.fillMaxWidth().aspectRatio(0.86f).clip(RoundedCornerShape(8.dp))) { 
                                 AsyncImage(
                                     model = theme.image, contentDescription = theme.name,
                                     modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop
                                 )
                                 if (theme.id == "custom") {
                                     Box(
-                                        Modifier.align(Alignment.TopStart).padding(4.dp)
+                                        Modifier.align(Alignment.TopStart).padding(6.dp)
                                             .clip(RoundedCornerShape(4.dp))
                                             .background(Color.Black.copy(alpha = 0.6f))
-                                            .padding(horizontal = 4.dp, vertical = 2.dp)
-                                    ) { Text("Custom", color = Color.White, fontSize = 8.sp) }
+                                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                                    ) { Text("Custom", color = Color.White, fontSize = 10.sp) }
                                 }
                             }
                             Text(
-                                theme.name, fontSize = 10.sp, color = gray700,
+                                theme.name, fontSize = 12.sp, color = gray700,
                                 fontWeight = FontWeight.Medium, textAlign = TextAlign.Center,
-                                modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 2.dp),
+                                modifier = Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 4.dp),
                                 maxLines = 1, overflow = TextOverflow.Ellipsis
                             )
                         }
