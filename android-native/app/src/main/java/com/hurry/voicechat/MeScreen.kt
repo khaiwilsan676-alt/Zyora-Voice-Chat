@@ -130,13 +130,17 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(5.dp)
                             ) {
-                                AsyncImage(
-                                    model = RAW_ME + "file_0000000063b481fa89d3c7729265058b.png",
-                                    contentDescription = "Purple ID",
-                                    modifier = Modifier.height(22.dp).widthIn(max = 52.dp),
-                                    contentScale = ContentScale.Fit
-                                )
-                                Text(account, fontSize = 12.sp, fontWeight = FontWeight.Medium, color = Color(0xFF111827))
+                                if (account in setOf("100002", "100003", "500001")) {
+                                    AsyncImage(
+                                        model = RAW_ME + "file_0000000063b481fa89d3c7729265058b.png",
+                                        contentDescription = "Official ID",
+                                        modifier = Modifier.height(22.dp).widthIn(max = 52.dp),
+                                        contentScale = ContentScale.Fit
+                                    )
+                                    Text(account, fontSize = 12.sp, fontWeight = FontWeight.Medium, color = Color(0xFF111827))
+                                } else {
+                                    Text("ID:$account", fontSize = 12.sp, fontWeight = FontWeight.Medium, color = Color(0xFF111827))
+                                }
                                 androidx.compose.material3.Icon(
                                     imageVector = Icons.Filled.ContentCopy,
                                     contentDescription = "Copy ID",
