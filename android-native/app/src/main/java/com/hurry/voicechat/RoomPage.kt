@@ -831,7 +831,17 @@ fun RoomPage(
 
     Box(Modifier.fillMaxSize().background(Color.Black)){
         JitsiRoomAudio(roomId=roomId,userName=roomDisplayName,canSpeak=seats.any { it.number <= roomMicMode && it.occupied && it.accountId == accountId && !it.muted },onSpeakingChanged={localVoiceSpeaking=it})
-        AsyncImage(model=when(roomTheme) { "mood-light" -> "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/1784533036732~2.jpg"; "custom" -> appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).getString("customTheme_$roomId", null) ?: "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/1784875884052~2.jpg"; else -> if (purchasedRoomThemeImage.isNotBlank()) "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/$purchasedRoomThemeImage" else "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/1784875884052~2.jpg" },contentDescription="Room theme background",modifier=Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
+        AsyncImage(model=when(roomTheme) {
+            "forest-night" -> "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/1784875884052~2.jpg"
+            "mood-light" -> "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/1784533036732~2.jpg"
+            "lantern-tree" -> "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_000000001db88211a17274a0cb143387.png"
+            "northern-light" -> "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_000000004f388211b534832cd6b1f1a2.png"
+            "sword-ruins" -> "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_0000000085a48211ae91d22ca50879e2.png"
+            "cornfield-portal" -> "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_00000000baec8211b803a01c54381503.png"
+            "deer-moonlight" -> "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_00000000dec082119e076cff4bc01164.png"
+            "custom" -> appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).getString("customTheme_$roomId", null) ?: "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/1784875884052~2.jpg"
+            else -> if (purchasedRoomThemeImage.isNotBlank()) "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/$purchasedRoomThemeImage" else "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/1784875884052~2.jpg"
+        },contentDescription="Room theme background",modifier=Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
 
         Row(modifier = Modifier.align(Alignment.TopStart).padding(top = 84.dp, start = 4.dp),verticalAlignment = Alignment.CenterVertically,horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             Row(modifier = Modifier.height(22.dp).background(Brush.horizontalGradient(listOf(Color(0xE6242B35),Color(0x99242B35),Color.Transparent))).clickable { showInfo = true }.padding(start = 12.dp, end = 12.dp),verticalAlignment = Alignment.CenterVertically) {
