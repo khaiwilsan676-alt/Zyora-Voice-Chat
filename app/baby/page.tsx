@@ -11,7 +11,6 @@ const notes = [
 
 export default function BabyPage() {
   const [opened, setOpened] = useState(false)
-  const [surprise, setSurprise] = useState(false)
   const [noteIndex, setNoteIndex] = useState(0)
 
   const openNote = () => {
@@ -117,8 +116,6 @@ export default function BabyPage() {
         <p>made with love, just because.</p>
         <span>♡</span>
       </footer>
-
-      {surprise && <div className="surprise-overlay" onClick={() => setSurprise(false)} />}
       <style jsx global>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&display=swap');
         * { box-sizing: border-box; }
