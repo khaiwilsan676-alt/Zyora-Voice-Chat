@@ -18,6 +18,8 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -26,6 +28,7 @@ import android.app.Activity
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -187,14 +190,145 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
                 PrivacySection("8. Policy Updates and Contact", "We may update this policy as Zyora evolves. If you have questions or a privacy-related request, reach out to the Zyora team through the support option in the app.")
                 Spacer(Modifier.height(30.dp))
             }
+        } else if (page == "official_login") {
+            // New Official Login Screen with 40% blue to grey gradient
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colorStops = arrayOf(
+                                0.0f to Color(0xFFDBEAFE), // Top Light Blue
+                                0.4f to Color(0xFFF3F4F6), // Mixes into Greyish White at 40%
+                                1.0f to Color(0xFFF3F4F6)  // Greyish White till bottom
+                            )
+                        )
+                    )
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .statusBarsPadding()
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    // Back Arrow only (No Forgot Password)
+                    Row(Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 40.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = Color.Black,
+                            modifier = Modifier
+                                .size(28.dp)
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null
+                                ) {
+                                    page = "welcome"
+                                    email = ""
+                                    password = ""
+                                    error = ""
+                                }
+                        )
+                    }
+
+                    // Welcome Text
+                    Text(
+                        text = "👋 Welcome\nSign in with Account",
+                        color = Color.Black,
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center,
+                        lineHeight = 32.sp
+                    )
+                    
+                    Spacer(Modifier.height(40.dp))
+
+                    if (error.isNotBlank()) {
+                        Text(error, color = Color.White, fontSize = 13.sp, modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Color(0xFFEF4444)).padding(12.dp))
+                        Spacer(Modifier.height(16.dp))
+                    }
+
+                    // Account Field (White Box)
+                    OfficialAuthField(
+                        icon = Icons.Filled.Person,
+                        value = email,
+                        onValueChange = { email = it },
+                        placeholder = "Account",
+                        hideText = false,
+                        keyboardType = KeyboardType.Email
+                    )
+                    
+                    Spacer(Modifier.height(16.dp))
+
+                    // Password Field (White Box)
+                    OfficialAuthField(
+                        icon = Icons.Filled.Lock,
+                        value = password,
+                        onValueChange = { password = it },
+                        placeholder = "Password",
+                        hideText = true,
+                        keyboardType = KeyboardType.Password
+                    )
+
+                    Spacer(Modifier.height(48.dp))
+
+                    // Login Button (Blue)
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                loading = true
+                                error = ""
+                                try {
+                                    if (email.trim().isEmpty()) throw IllegalArgumentException("Please enter a valid account.")
+                                    if (password.length < 6) throw IllegalArgumentException("Password must be at least 6 characters long.")
+                                    
+                                    val user = withContext(Dispatchers.IO) { backendEmailAuth(context, email.trim(), password, false) }
+                                    withContext(Dispatchers.IO) { syncHurryUser(user, context) }
+                                    
+                                    val authPrefs = context.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE)
+                                    authPrefs.edit()
+                                        .putString("uid", user.optString("localId"))
+                                        .putString("email", user.optString("email", email.trim()))
+                                        .putString("idToken", user.optString("idToken"))
+                                        .apply()
+                                        
+                                    onLoginSuccess()
+                                } catch (t: Throwable) {
+                                    error = authErrorText(t.message ?: "Authentication failed. Please try again.")
+                                } finally {
+                                    loading = false
+                                }
+                            }
+                        },
+                        enabled = !loading && email.isNotBlank() && password.isNotBlank(),
+                        modifier = Modifier.fillMaxWidth().height(54.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB), contentColor = Color.White, disabledContainerColor = Color(0xFF2563EB).copy(alpha = 0.5f))
+                    ) {
+                        if (loading) CircularProgressIndicator(Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
+                        else Text("Log in", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                    
+                    Spacer(Modifier.height(30.dp))
+                }
+            }
         } else if (page == "welcome") {
             Column(Modifier.fillMaxSize().padding(horizontal = 20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Spacer(Modifier.weight(1f))
+                
+                // Weight thoda kam kiya (1f se 0.8f) taaki sab kuch thoda upar shift ho (approx 4%)
+                Spacer(Modifier.weight(0.80f)) 
+                
                 Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
                     AsyncImage(model = HURRY_LOGO, contentDescription = "Zyora", modifier = Modifier.size(80.dp).clip(RoundedCornerShape(18.dp)))
                     Text("Zyora", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold)
                 }
-                Spacer(Modifier.weight(1.4f))
+                
+                // Ye weight bhi thoda kam kiya (1.4f se 1.25f) taaki elements better aligned rahein upar ki taraf
+                Spacer(Modifier.weight(1.25f)) 
+                
+                // Google Button - Width 2-4% decrease ki hai (fillMaxWidth(0.96f) use karke)
                 Button(
                     onClick = {
                         error = ""
@@ -225,7 +359,7 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
                         }
                     },
                     enabled = !loading,
-                    modifier = Modifier.fillMaxWidth().height(54.dp),
+                    modifier = Modifier.fillMaxWidth(0.96f).height(54.dp), // Yahan width thodi kam ki
                     shape = RoundedCornerShape(50),
                     colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color(0xFF222222))
                 ) {
@@ -233,17 +367,44 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
                     Spacer(Modifier.width(10.dp))
                     Text("Google", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                 }
+                
                 Spacer(Modifier.height(14.dp))
+                
+                // Account Button - Iski width bhi same 2-4% decrease ki hai (fillMaxWidth(0.96f))
                 Button(
                     onClick = { page = "login"; error = "" },
-                    modifier = Modifier.fillMaxWidth().height(54.dp),
+                    modifier = Modifier.fillMaxWidth(0.96f).height(54.dp), // Yahan width thodi kam ki
                     shape = RoundedCornerShape(50),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB), contentColor = Color.White)
                 ) {
-                    AccountLoginIcon(Modifier.size(24.dp))
+                    SimpleUserIcon(Modifier.size(24.dp))
                     Spacer(Modifier.width(10.dp))
                     Text("Account", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                 }
+                
+                Spacer(Modifier.height(18.dp))
+                
+                // Divider Line
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Divider(Modifier.weight(1f), color = Color.White.copy(alpha = 0.3f), thickness = 1.dp)
+                    Text(" Or ", color = Color.White.copy(alpha = 0.7f), fontSize = 14.sp, modifier = Modifier.padding(horizontal = 8.dp))
+                    Divider(Modifier.weight(1f), color = Color.White.copy(alpha = 0.3f), thickness = 1.dp)
+                }
+                
+                Spacer(Modifier.height(18.dp))
+                
+                // Official Login White Card (Iski width waisi ki waisi 100% full rakhi hai)
+                Button(
+                    onClick = { page = "official_login"; error = "" }, 
+                    modifier = Modifier.fillMaxWidth().height(54.dp),
+                    shape = RoundedCornerShape(0.9.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color(0xFF2563EB))
+                ) {
+                    OfficialLoginIcon(Modifier.size(24.dp))
+                    Spacer(Modifier.width(10.dp))
+                    Text("Official. Login", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                }
+                
                 if (error.isNotBlank()) {
                     Spacer(Modifier.height(10.dp))
                     Text(error, color = Color.White, fontSize = 12.sp, textAlign = TextAlign.Center,
@@ -366,6 +527,40 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
     }
 }
 
+// New component for the Official Login Screen input fields
+@Composable
+private fun OfficialAuthField(
+    icon: ImageVector,
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+    hideText: Boolean,
+    keyboardType: KeyboardType
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color.White)
+            .padding(horizontal = 16.dp, vertical = 18.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(imageVector = icon, contentDescription = null, tint = Color.Black, modifier = Modifier.size(22.dp))
+        Spacer(Modifier.width(16.dp))
+        Box(Modifier.weight(1f)) {
+            if (value.isEmpty()) Text(placeholder, color = Color(0xFF9CA3AF), fontSize = 15.sp)
+            BasicTextField(
+                value = value,
+                onValueChange = onValueChange,
+                singleLine = true,
+                textStyle = androidx.compose.ui.text.TextStyle(color = Color.Black, fontSize = 15.sp),
+                visualTransformation = if (hideText) PasswordVisualTransformation() else VisualTransformation.None,
+                keyboardOptions = KeyboardOptions(keyboardType = keyboardType)
+            )
+        }
+    }
+}
+
 @Composable
 private fun AuthField(
     label: String,
@@ -404,9 +599,6 @@ private fun AuthField(
 private suspend fun googleBackendSignIn(context: android.content.Context): JSONObject {
     val credentialManager = CredentialManager.create(context)
     val serverClientId = context.getString(R.string.default_web_client_id)
-    // First use the dedicated Google sign-in button flow. If Google Play services
-    // cannot complete that flow, retry with the standard Google ID credential
-    // picker so an account that is not yet authorized for this app can still sign in.
     val signInOption = GetSignInWithGoogleOption.Builder(serverClientId).build()
     val signInRequest = GetCredentialRequest.Builder().addCredentialOption(signInOption).build()
     val credential = try {
@@ -438,10 +630,7 @@ private suspend fun googleBackendSignIn(context: android.content.Context): JSONO
         throw IllegalStateException("Could not read the Google sign-in response.")
     }
 
-    // Credential Manager runs in the caller's coroutine. Firebase Tasks.await()
-    // and the HTTP request are blocking, so keep them off Android's main thread.
     return withContext(Dispatchers.IO) {
-        // Google is only the identity provider; Firebase Authentication owns the session and UID.
         val firebaseCredential = GoogleAuthProvider.getCredential(googleCredential.idToken, null)
         val result = Tasks.await(
             FirebaseAuth.getInstance().signInWithCredential(firebaseCredential),
@@ -508,7 +697,6 @@ private fun syncHurryUser(user: JSONObject, context: android.content.Context) {
     val email = user.optString("email")
     if (uid.isBlank()) throw IllegalStateException("Sign-in service did not return a user ID.")
 
-    // Match the real app: each Firebase UID gets one persistent public account ID.
     val specialAccounts = mapOf(
         "HUSxSvQnabgU029dWYt1TUV04hd2" to "100002",
         "ADqW31RGBMaosOzy0HiqexKSD7h1" to "100003",
@@ -524,7 +712,6 @@ private fun syncHurryUser(user: JSONObject, context: android.content.Context) {
         else -> (10000000L + accountHash % 90000000L).toString()
     }
 
-    // Read the existing profile first so a returning user keeps their ID, name, avatar and country.
     val existingProfile = runCatching {
         val get = (URL("$HURRY_API_BASE/api/users?uid=${java.net.URLEncoder.encode(uid, "UTF-8")}").openConnection() as HttpURLConnection).apply {
             requestMethod = "GET"; connectTimeout = 10000; readTimeout = 10000
@@ -537,8 +724,6 @@ private fun syncHurryUser(user: JSONObject, context: android.content.Context) {
         if (code !in 200..299 || response.isBlank()) JSONObject()
         else {
             val root = JSONObject(response)
-            // The users endpoint can return { users: [...] }; treating that wrapper
-            // as a profile made every new Google account look like an existing user.
             root.optJSONObject("user")
                 ?: root.optJSONObject("data")
                 ?: root.optJSONArray("users")?.optJSONObject(0)
@@ -565,8 +750,6 @@ private fun syncHurryUser(user: JSONObject, context: android.content.Context) {
     }
     val deviceId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID).orEmpty()
 
-    // A temporary backend outage must not turn a valid Firebase/Google login into
-    // an authentication failure. Explicit ban responses still block the account.
     val isBanned = runCatching {
         val banConnection = (URL("$HURRY_API_BASE/api/check-ban").openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"; connectTimeout = 8000; readTimeout = 8000; doOutput = true
@@ -597,7 +780,6 @@ private fun syncHurryUser(user: JSONObject, context: android.content.Context) {
         .put("image", image).put("avatar", image)
         .put("accountId", accountId).put("accountNumber", accountId)
         .put("country", country).put("deviceId", deviceId)
-    // Keep existing profile fields (gender, bio, setup state, etc.) when updating the account.
     val keys = existingProfile.keys()
     while (keys.hasNext()) {
         val key = keys.next()
@@ -607,12 +789,8 @@ private fun syncHurryUser(user: JSONObject, context: android.content.Context) {
         requestMethod = "PUT"; connectTimeout = 12000; readTimeout = 12000; doOutput = true
         setRequestProperty("Content-Type", "application/json")
     }
-    // Save the signed-in identity locally before network profile sync. A temporary
-    // Render/GitHub storage outage must not turn a valid Firebase login into a failed login.
+    
     val authPrefs = context.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE)
-    // Require the welcome/setup screen when the actual user record lacks required
-    // onboarding fields. JSONObject.length() is not a valid test here because an
-    // API wrapper can contain metadata while the profile itself is still empty.
     val existingName = sequenceOf("name", "Name", "displayName", "userName")
         .map { existingProfile.optString(it, "").trim() }
         .firstOrNull { it.isNotBlank() && it != "null" && !it.equals("User", ignoreCase = true) }
@@ -660,7 +838,6 @@ private fun syncHurryUser(user: JSONObject, context: android.content.Context) {
             .putBoolean("profileSyncPending", false)
             .apply()
     } else {
-        // Profile storage is required: do not silently finish login while server persistence failed.
         throw IllegalStateException("Could not save your account to Zyora server (HTTP $saveCode). Please try again.")
     }
 }
@@ -732,19 +909,39 @@ private fun GoogleLoginIcon(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun AccountLoginIcon(modifier: Modifier = Modifier) {
-    val accountIcon = remember {
-        // Updated viewportWidth & Height to 512f based on the new SVG
+private fun SimpleUserIcon(modifier: Modifier = Modifier) {
+    val userIcon = remember {
         ImageVector.Builder(
-            name = "Account", defaultWidth = 48.dp, defaultHeight = 48.dp, viewportWidth = 512f, viewportHeight = 512f
-        ).path(fill = SolidColor(Color(0xFFFFFFFF))) {
-            // Head (Circle)
+            name = "User", defaultWidth = 24.dp, defaultHeight = 24.dp, viewportWidth = 24f, viewportHeight = 24f
+        ).path(fill = SolidColor(Color.White)) {
+            moveTo(12f, 12f)
+            curveToRelative(2.21f, 0f, 4f, -1.79f, 4f, -4f)
+            reflectiveCurveToRelative(-1.79f, -4f, -4f, -4f)
+            reflectiveCurveToRelative(-4f, 1.79f, -4f, 4f)
+            reflectiveCurveToRelative(1.79f, 4f, 4f, 4f)
+            close()
+            moveTo(12f, 14f)
+            curveToRelative(-2.67f, 0f, -8f, 1.34f, -8f, 4f)
+            verticalLineToRelative(2f)
+            horizontalLineToRelative(16f)
+            verticalLineToRelative(-2f)
+            curveToRelative(0f, -2.66f, -5.33f, -4f, -8f, -4f)
+            close()
+        }.build()
+    }
+    Icon(imageVector = userIcon, contentDescription = "User Icon", modifier = modifier, tint = Color.Unspecified)
+}
+
+@Composable
+private fun OfficialLoginIcon(modifier: Modifier = Modifier) {
+    val accountIcon = remember {
+        ImageVector.Builder(
+            name = "OfficialAccount", defaultWidth = 48.dp, defaultHeight = 48.dp, viewportWidth = 512f, viewportHeight = 512f
+        ).path(fill = SolidColor(Color(0xFF2563EB))) {
             moveTo(224f, 41f)
             arcToRelative(108f, 108f, 0f, true, true, 0f, 216f)
             arcToRelative(108f, 108f, 0f, true, true, 0f, -216f)
             close()
-            
-            // Person Body
             moveTo(220f, 280f)
             curveTo(157f, 283f, 112f, 319f, 88f, 369f)
             curveTo(75f, 396f, 68f, 425f, 68f, 454f)
@@ -752,8 +949,6 @@ private fun AccountLoginIcon(modifier: Modifier = Modifier) {
             lineTo(224f, 352f)
             curveTo(224f, 324f, 223f, 301f, 220f, 280f)
             close()
-            
-            // Lock Shackle
             moveTo(253f, 361f)
             verticalLineTo(328f)
             curveTo(253f, 291f, 274f, 271f, 303f, 271f)
@@ -765,8 +960,6 @@ private fun AccountLoginIcon(modifier: Modifier = Modifier) {
             curveTo(286f, 295f, 277f, 306f, 277f, 328f)
             verticalLineTo(361f)
             close()
-            
-            // Lock Body
             moveTo(241f, 357f)
             quadTo(241f, 348f, 251f, 348f)
             horizontalLineTo(355f)
@@ -778,5 +971,5 @@ private fun AccountLoginIcon(modifier: Modifier = Modifier) {
             close()
         }.build()
     }
-    Icon(imageVector = accountIcon, contentDescription = "Account Logo", modifier = modifier, tint = Color.Unspecified)
+    Icon(imageVector = accountIcon, contentDescription = "Official Login Logo", modifier = modifier, tint = Color.Unspecified)
 }
