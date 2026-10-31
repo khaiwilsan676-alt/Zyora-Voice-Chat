@@ -98,7 +98,9 @@ private val roomThemeChoices = listOf(
     RoomThemeChoice("northern-light", "Northern Light", RAW_SETTINGS + "file_000000004f388211b534832cd6b1f1a2.png"),
     RoomThemeChoice("sword-ruins", "Sword Ruins", RAW_SETTINGS + "file_0000000085a48211ae91d22ca50879e2.png"),
     RoomThemeChoice("cornfield-portal", "Cornfield Portal", RAW_SETTINGS + "file_00000000baec8211b803a01c54381503.png"),
-    RoomThemeChoice("deer-moonlight", "Deer Moonlight", RAW_SETTINGS + "file_00000000dec082119e076cff4bc01164.png")
+    RoomThemeChoice("deer-moonlight", "Deer Moonlight", RAW_SETTINGS + "file_00000000dec082119e076cff4bc01164.png"),
+    RoomThemeChoice("moon-light-new", "Moon light", RAW_SETTINGS + "file_0000000050288211aecacc1c105240c7.png"),
+    RoomThemeChoice("dark-night-flower", "Dark night flower", RAW_SETTINGS + "file_000000006ec4821182b483795db2d94c.png")
 )
 
 // Tailwind palette
@@ -1244,9 +1246,9 @@ private fun ThemeFullScreen(
                     if (!hasCustom) {
                         item {
                             Box(
-                                Modifier.fillMaxWidth().aspectRatio(0.86f)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .dashedBorder(gray300, 1.dp, 8.dp)
+                                Modifier.fillMaxWidth().aspectRatio(1f)
+                                    .clip(RoundedCornerShape(13.dp))
+                                    .dashedBorder(gray300, 1.dp, 13.dp)
                                     .background(gray50)
                                     .clickable(onClick = onUploadCustom),
                                 contentAlignment = Alignment.Center
@@ -1268,19 +1270,30 @@ private fun ThemeFullScreen(
                     gridItems(items) { theme ->
                         Column(
                             Modifier.fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp))
+                                .clip(RoundedCornerShape(13.dp))
                                 .then(
                                     if (selectedTheme == theme.id) Modifier
                                         .padding(2.dp)
-                                        .border(2.dp, blue400, RoundedCornerShape(8.dp)) else Modifier
+                                        .border(2.dp, blue400, RoundedCornerShape(13.dp)) else Modifier
                                 )
                                 .clickable { selectedTheme = theme.id }
                         ) {
-                            Box(Modifier.fillMaxWidth().aspectRatio(0.86f).clip(RoundedCornerShape(8.dp))) { 
+                            Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(13.dp))) { 
                                 AsyncImage(
                                     model = theme.image, contentDescription = theme.name,
-                                    modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop
+                                    modifier = Modifier.fillMaxWidth().wrapContentHeight(), 
+                                    contentScale = ContentScale.FillWidth 
                                 )
+                                
+                                // 👉 YAHAN ADD KIYA HAI NEW BLACK/10 OVERLAY LOGIC 👈
+                                if (selectedTheme == theme.id) {
+                                    Box(
+                                        Modifier
+                                            .matchParentSize() // Image ki puri height & width lega
+                                            .background(Color.Black.copy(alpha = 0.1f)) // 10% black opacity overlay
+                                    )
+                                }
+
                                 if (theme.id == "custom") {
                                     Box(
                                         Modifier.align(Alignment.TopStart).padding(6.dp)
