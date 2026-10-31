@@ -155,10 +155,14 @@ fun Newuserafterlogin(onBack: () -> Unit, onComplete: () -> Unit) {
                                     .clip(CircleShape)
                             )
                         } else {
-                            Icon(
-                                painter = painterResource(id = android.R.drawable.ic_menu_camera), 
-                                contentDescription = null, 
-                                tint = Color.Gray
+                            // Agar DP nahi hai toh App Logo Colorless mode me show karega
+                            androidx.compose.foundation.Image(
+                                painter = painterResource(id = R.drawable.logo),
+                                contentDescription = "Default Logo",
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(CircleShape),
+                                colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
                             )
                         }
                     }
@@ -167,13 +171,13 @@ fun Newuserafterlogin(onBack: () -> Unit, onComplete: () -> Unit) {
                             .align(Alignment.BottomEnd)
                             .size(20.dp)
                             .clip(CircleShape)
-                            .background(Color(0xFFFFD500)),
+                            .background(Color(0xFF0088FF)), // Camera button blue color
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             painter = painterResource(id = android.R.drawable.ic_menu_camera),
                             contentDescription = null,
-                            tint = Color.Black,
+                            tint = Color.White,
                             modifier = Modifier.size(12.dp)
                         )
                     }
@@ -227,7 +231,7 @@ fun Newuserafterlogin(onBack: () -> Unit, onComplete: () -> Unit) {
                 Divider(color = Color(0xFFEEEEEE), thickness = 1.dp)
             }
 
-            // Updated Country Section (Dropdown with Flag, Code, and Downward logic)
+            // Country Section 
             Column {
                 Text("Country", color = Color(0xFFBBBBBB), fontSize = 14.sp)
                 Spacer(modifier = Modifier.height(8.dp))
@@ -241,7 +245,7 @@ fun Newuserafterlogin(onBack: () -> Unit, onComplete: () -> Unit) {
                     Row(
                         Modifier
                             .fillMaxWidth()
-                            .menuAnchor() // Isse menu hamesha isi ke niche proper open hogi
+                            .menuAnchor()
                             .clickable { countryMenu = true },
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
@@ -300,7 +304,13 @@ fun Newuserafterlogin(onBack: () -> Unit, onComplete: () -> Unit) {
                         modifier = Modifier
                             .weight(1f)
                             .height(56.dp)
-                            .clickable { gender = "Male" },
+                            .clickable { 
+                                gender = "Male"
+                                // Agar nickname khali hai ya kachra hai toh default Male name set karega
+                                if (nickname.isBlank() || nickname == "jsjsjs" || nickname == "null") {
+                                    nickname = listOf("Simpson", "Edward", "Liho").random()
+                                }
+                            },
                         shape = RoundedCornerShape(16.dp),
                         color = if (isMale) Color(0xFF4AC4FA) else Color(0xFFE0E0E0)
                     ) {
@@ -310,13 +320,7 @@ fun Newuserafterlogin(onBack: () -> Unit, onComplete: () -> Unit) {
                             horizontalArrangement = Arrangement.Center
                         ) {
                             Text("♂ Male", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            androidx.compose.foundation.Image(
-                                painter = painterResource(id = R.drawable.img_20261031_121547),
-                                contentDescription = "Male",
-                                modifier = Modifier.size(36.dp),
-                                colorFilter = if (isMale) null else ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
-                            )
+                            // Image hata di gayi hai
                         }
                     }
 
@@ -325,7 +329,13 @@ fun Newuserafterlogin(onBack: () -> Unit, onComplete: () -> Unit) {
                         modifier = Modifier
                             .weight(1f)
                             .height(56.dp)
-                            .clickable { gender = "Female" },
+                            .clickable { 
+                                gender = "Female"
+                                // Agar nickname khali hai ya kachra hai toh default Female name set karega
+                                if (nickname.isBlank() || nickname == "jsjsjs" || nickname == "null") {
+                                    nickname = listOf("Eman", "Barbie", "Ali").random()
+                                }
+                            },
                         shape = RoundedCornerShape(16.dp),
                         color = if (isFemale) Color(0xFFFF85C2) else Color(0xFFE0E0E0)
                     ) {
@@ -335,13 +345,7 @@ fun Newuserafterlogin(onBack: () -> Unit, onComplete: () -> Unit) {
                             horizontalArrangement = Arrangement.Center
                         ) {
                             Text("♀ Female", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            androidx.compose.foundation.Image(
-                                painter = painterResource(id = R.drawable.img_20261031_121627),
-                                contentDescription = "Female",
-                                modifier = Modifier.size(36.dp),
-                                colorFilter = if (isFemale) null else ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
-                            )
+                            // Image hata di gayi hai
                         }
                     }
                 }
@@ -367,8 +371,6 @@ fun Newuserafterlogin(onBack: () -> Unit, onComplete: () -> Unit) {
                             var finalAvatar = avatar
                             val uid = prefs.getString("uid", "").orEmpty().ifBlank { prefs.getString("accountId", "").orEmpty() }
                             if (selectedUri != null) {
-                                // Keep the compressed image in the same MongoDB profile write.
-                                // Do not route profile photos through GitHub storage.
                                 finalAvatar = withContext(Dispatchers.IO) {
                                     ProfilePersistence.imageDataUri(context, selectedUri!!)
                                         ?: throw IllegalStateException("Could not process the selected photo. Please choose another image.")
@@ -445,12 +447,12 @@ fun Newuserafterlogin(onBack: () -> Unit, onComplete: () -> Unit) {
                     .height(52.dp)
                     .padding(horizontal = 32.dp),
                 shape = RoundedCornerShape(26.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFD500))
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0088FF)) // Submit button blue color
             ) {
                 if (saving) {
                     CircularProgressIndicator(Modifier.size(24.dp), color = Color.White, strokeWidth = 2.dp)
                 } else {
-                    Text("Submit", color = Color.Black, fontWeight = FontWeight.Medium, fontSize = 16.sp)
+                    Text("Submit", color = Color.White, fontWeight = FontWeight.Medium, fontSize = 16.sp) // White text on blue background
                 }
             }
             Spacer(Modifier.height(24.dp))
