@@ -191,14 +191,14 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
                 Spacer(Modifier.height(30.dp))
             }
         } else if (page == "official_login") {
-            // New Official Login Screen with 40% blue to grey gradient
+            // Updated Official Login Screen with proper strong blue 🔵 at top
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(
                         Brush.verticalGradient(
                             colorStops = arrayOf(
-                                0.0f to Color(0xFFDBEAFE), // Top Light Blue
+                                0.0f to Color(0xFF3B82F6), // Strong Blue matching 🔵
                                 0.4f to Color(0xFFF3F4F6), // Mixes into Greyish White at 40%
                                 1.0f to Color(0xFFF3F4F6)  // Greyish White till bottom
                             )
@@ -316,8 +316,6 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
             }
         } else if (page == "welcome") {
             Column(Modifier.fillMaxSize().padding(horizontal = 20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                
-                // Weight thoda kam kiya (1f se 0.8f) taaki sab kuch thoda upar shift ho (approx 4%)
                 Spacer(Modifier.weight(0.80f)) 
                 
                 Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -325,10 +323,9 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
                     Text("Zyora", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold)
                 }
                 
-                // Ye weight bhi thoda kam kiya (1.4f se 1.25f) taaki elements better aligned rahein upar ki taraf
                 Spacer(Modifier.weight(1.25f)) 
                 
-                // Google Button - Width 2-4% decrease ki hai (fillMaxWidth(0.96f) use karke)
+                // Google Button - Icon Left, Text Middle
                 Button(
                     onClick = {
                         error = ""
@@ -359,27 +356,31 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
                         }
                     },
                     enabled = !loading,
-                    modifier = Modifier.fillMaxWidth(0.96f).height(54.dp), // Yahan width thodi kam ki
+                    modifier = Modifier.fillMaxWidth(0.96f).height(54.dp),
                     shape = RoundedCornerShape(50),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color(0xFF222222))
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color(0xFF222222)),
+                    contentPadding = PaddingValues(horizontal = 20.dp) // Added padding for edges
                 ) {
-                    GoogleLoginIcon(Modifier.size(24.dp))
-                    Spacer(Modifier.width(10.dp))
-                    Text("Google", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                    Box(Modifier.fillMaxSize()) {
+                        GoogleLoginIcon(Modifier.size(24.dp).align(Alignment.CenterStart))
+                        Text("Google", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.align(Alignment.Center))
+                    }
                 }
                 
                 Spacer(Modifier.height(14.dp))
                 
-                // Account Button - Iski width bhi same 2-4% decrease ki hai (fillMaxWidth(0.96f))
+                // Account Button - Icon Left, Text Middle
                 Button(
                     onClick = { page = "login"; error = "" },
-                    modifier = Modifier.fillMaxWidth(0.96f).height(54.dp), // Yahan width thodi kam ki
+                    modifier = Modifier.fillMaxWidth(0.96f).height(54.dp),
                     shape = RoundedCornerShape(50),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB), contentColor = Color.White)
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB), contentColor = Color.White),
+                    contentPadding = PaddingValues(horizontal = 20.dp)
                 ) {
-                    SimpleUserIcon(Modifier.size(24.dp))
-                    Spacer(Modifier.width(10.dp))
-                    Text("Account", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                    Box(Modifier.fillMaxSize()) {
+                        SimpleUserIcon(Modifier.size(24.dp).align(Alignment.CenterStart))
+                        Text("Account", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.align(Alignment.Center))
+                    }
                 }
                 
                 Spacer(Modifier.height(18.dp))
@@ -393,16 +394,15 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
                 
                 Spacer(Modifier.height(18.dp))
                 
-                // Official Login White Card (Iski width waisi ki waisi 100% full rakhi hai)
+                // Official Login Small Square Card (No text, just icon)
                 Button(
                     onClick = { page = "official_login"; error = "" }, 
-                    modifier = Modifier.fillMaxWidth().height(54.dp),
-                    shape = RoundedCornerShape(0.9.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color(0xFF2563EB))
+                    modifier = Modifier.size(60.dp), // Square card size
+                    shape = RoundedCornerShape(16.dp), // Rounded like iOS style app icon
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color(0xFF2563EB)),
+                    contentPadding = PaddingValues(0.dp)
                 ) {
-                    OfficialLoginIcon(Modifier.size(24.dp))
-                    Spacer(Modifier.width(10.dp))
-                    Text("Official. Login", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                    OfficialLoginIcon(Modifier.size(32.dp))
                 }
                 
                 if (error.isNotBlank()) {
