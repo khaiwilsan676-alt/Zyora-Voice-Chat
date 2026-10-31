@@ -220,14 +220,16 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
     val languagePrefs = remember { context.getSharedPreferences("zyora_settings", android.content.Context.MODE_PRIVATE) }
     var languageCode by remember { mutableStateOf(languagePrefs.getString("appLanguage", "en") ?: "en") }
     val userId = remember { authPrefs.getString("uid", "").orEmpty() }
+    // Isolate the local Mine-room cache by Firebase UID when multiple Google accounts use one device.
+    val mineRoomKey = "mine_room_${userId}"
     var mineCreatedRoom by remember {
         mutableStateOf(
-            if (authPrefs.getBoolean("mine_room_created", false)) HurryRoom(
-                id = authPrefs.getString("mine_room_id", userId).orEmpty(),
-                name = authPrefs.getString("mine_room_name", "Room").orEmpty(),
-                image = authPrefs.getString("mine_room_image", "").orEmpty(),
-                country = authPrefs.getString("mine_room_country", "🇮🇳").orEmpty(),
-                accountId = authPrefs.getString("mine_room_account_id", userId).orEmpty()
+            if (authPrefs.getBoolean("${mineRoomKey}_created", false)) HurryRoom(
+                id = authPrefs.getString("${mineRoomKey}_id", userId).orEmpty(),
+                name = authPrefs.getString("${mineRoomKey}_name", "Room").orEmpty(),
+                image = authPrefs.getString("${mineRoomKey}_image", "").orEmpty(),
+                country = authPrefs.getString("${mineRoomKey}_country", "🇮🇳").orEmpty(),
+                accountId = authPrefs.getString("${mineRoomKey}_account_id", userId).orEmpty()
             ) else null
         )
     }
@@ -257,14 +259,14 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                             )
                             withContext(Dispatchers.Main) {
                                 authPrefs.edit()
-                                    .putBoolean("mine_room_created", true)
-                                    .putString("mine_room_id", serverRoom.id)
-                                    .putString("mine_room_name", serverRoom.name)
-                                    .putString("mine_room_image", serverRoom.image)
-                                    .putString("mine_room_country", serverRoom.country)
-                                    .putString("mine_room_account_id", serverRoom.accountId)
-                                    .putString("mine_room_announcement", serverRoom.announcement)
-                                    .putString("mine_room_dp", serverRoom.image)
+                                    .putBoolean("${mineRoomKey}_created", true)
+                                    .putString("${mineRoomKey}_id", serverRoom.id)
+                                    .putString("${mineRoomKey}_name", serverRoom.name)
+                                    .putString("${mineRoomKey}_image", serverRoom.image)
+                                    .putString("${mineRoomKey}_country", serverRoom.country)
+                                    .putString("${mineRoomKey}_account_id", serverRoom.accountId)
+                                    .putString("${mineRoomKey}_announcement", serverRoom.announcement)
+                                    .putString("${mineRoomKey}_dp", serverRoom.image)
                                     .putString("room_theme_${serverRoom.id}", saved.optString("theme", saved.optString("roomTheme", "forest-night")).ifBlank { "forest-night" })
                                     .putString("room_custom_theme_${serverRoom.id}", saved.optString("customTheme", saved.optString("themeImage", "")))
                                     .putInt("room_mic_mode_${serverRoom.id}", saved.optInt("micMode", 10))
@@ -415,12 +417,12 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                                         accountId = stableOwnerId.ifBlank { userId }
                                     ).also {
                                         authPrefs.edit()
-                                            .putBoolean("mine_room_created", true)
-                                            .putString("mine_room_id", it.id)
-                                            .putString("mine_room_name", it.name)
-                                            .putString("mine_room_image", it.image)
-                                            .putString("mine_room_country", it.country)
-                                            .putString("mine_room_account_id", it.accountId)
+                                            .putBoolean("${mineRoomKey}_created", true)
+                                            .putString("${mineRoomKey}_id", it.id)
+                                            .putString("${mineRoomKey}_name", it.name)
+                                            .putString("${mineRoomKey}_image", it.image)
+                                            .putString("${mineRoomKey}_country", it.country)
+                                            .putString("${mineRoomKey}_account_id", it.accountId)
                                             .apply()
                                         mineCreatedRoom = it
                                         roomCreateScope.launch {
