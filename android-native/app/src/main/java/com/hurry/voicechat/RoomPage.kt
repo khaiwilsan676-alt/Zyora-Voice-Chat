@@ -1886,7 +1886,7 @@ private fun formatMusicTime(seconds: Float): String {
     val officialTag = isCoreOfficial || isRedOfficial || profileTags?.optBoolean("officialTag", false) == true
     val adminTag = isCoreOfficial || profileTags?.optBoolean("adminTag", false) == true
     val serviceTag = isCoreOfficial || profileTags?.optBoolean("serviceTag", false) == true || profileTags?.optBoolean("csTag", false) == true
-    val hostTag = isCoreOfficial || profileTags?.optBoolean("hostTag", false) == true || profileTags?.optBoolean("isHost", false) == true || isRoomOwnerMessage
+    val hostTag = isCoreOfficial || profileTags?.optBoolean("hostTag", false) == true || profileTags?.optBoolean("isHost", false) == true
     val coinSellerTag = isCoreOfficial || profileTags?.optBoolean("coinSellerTag", false) == true || profileTags?.optBoolean("coinSeller", false) == true || profileTags?.optBoolean("sellerTag", false) == true
     
     Row(Modifier.fillMaxWidth().padding(vertical=2.dp),verticalAlignment=Alignment.Top,horizontalArrangement=Arrangement.Start){
