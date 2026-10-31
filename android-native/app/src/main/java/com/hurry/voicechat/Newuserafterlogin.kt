@@ -13,14 +13,16 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -31,10 +33,11 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
-import java.net.URLEncoder
 import java.util.Calendar
 
 private const val NEW_USER_API = "https://zyora-server.onrender.com"
+
+data class CountryData(val name: String, val flag: String, val dialCode: String, val code: String)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -51,7 +54,32 @@ fun Newuserafterlogin(onBack: () -> Unit, onComplete: () -> Unit) {
     var countryMenu by remember { mutableStateOf(false) }
     var saving by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf("") }
-    val countries = listOf("India", "United States", "United Kingdom", "Pakistan", "Bangladesh", "Nepal", "Sri Lanka", "Indonesia", "Philippines", "Thailand", "Vietnam", "Japan", "South Korea", "Saudi Arabia", "United Arab Emirates", "Canada", "Australia", "Other")
+    
+    val countries = listOf(
+        CountryData("India", "🇮🇳", "+91", "IN"),
+        CountryData("Singapore", "🇸🇬", "+65", "SG"),
+        CountryData("United States", "🇺🇸", "+1", "US"),
+        CountryData("United Kingdom", "🇬🇧", "+44", "GB"),
+        CountryData("Pakistan", "🇵🇰", "+92", "PK"),
+        CountryData("Bangladesh", "🇧🇩", "+880", "BD"),
+        CountryData("Nepal", "🇳🇵", "+977", "NP"),
+        CountryData("Sri Lanka", "🇱🇰", "+94", "LK"),
+        CountryData("Indonesia", "🇮🇩", "+62", "ID"),
+        CountryData("Philippines", "🇵🇭", "+63", "PH"),
+        CountryData("Thailand", "🇹🇭", "+66", "TH"),
+        CountryData("Vietnam", "🇻🇳", "+84", "VN"),
+        CountryData("Malaysia", "🇲🇾", "+60", "MY"),
+        CountryData("Japan", "🇯🇵", "+81", "JP"),
+        CountryData("South Korea", "🇰🇷", "+82", "KR"),
+        CountryData("Saudi Arabia", "🇸🇦", "+966", "SA"),
+        CountryData("United Arab Emirates", "🇦🇪", "+971", "AE"),
+        CountryData("Canada", "🇨🇦", "+1", "CA"),
+        CountryData("Australia", "🇦🇺", "+61", "AU"),
+        CountryData("Germany", "🇩🇪", "+49", "DE"),
+        CountryData("France", "🇫🇷", "+33", "FR"),
+        CountryData("Other", "🌐", "+00", "OTHER")
+    )
+    
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) { selectedUri = uri; avatar = uri.toString() }
     }
@@ -63,142 +91,367 @@ fun Newuserafterlogin(onBack: () -> Unit, onComplete: () -> Unit) {
         }, now.get(Calendar.YEAR) - 18, now.get(Calendar.MONTH), now.get(Calendar.DAY_OF_MONTH)).show()
     }
 
-    Column(Modifier.fillMaxSize().background(Color(0xFFF4F6FA)).statusBarsPadding().navigationBarsPadding()) {
-        Row(Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color(0xFF1F2937)) }
-            Spacer(Modifier.width(8.dp))
-            Text("Welcome To Zyora", fontSize = 21.sp, fontWeight = FontWeight.Bold, color = Color(0xFF202B3C))
+    Column(
+        Modifier
+            .fillMaxSize()
+            .background(Color.White)
+            .statusBarsPadding()
+            .navigationBarsPadding()
+    ) {
+        // Top Bar
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .height(56.dp)
+                .padding(horizontal = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onBack) { 
+                Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.Black) 
+            }
         }
-        Column(Modifier.fillMaxSize().padding(horizontal = 20.dp).padding(top = 16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text("Avatar", color = Color(0xFF263449), fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-                Box(Modifier.size(76.dp).clip(CircleShape).background(Color(0xFFDCE5F2)).clickable { imagePicker.launch("image/*") }, contentAlignment = Alignment.Center) {
-                    if (avatar.isNotBlank() && avatar != "/default-avatar.png") {
-                        AsyncImage(model = selectedUri ?: avatar, contentDescription = "Choose profile photo", modifier = Modifier.fillMaxSize().clip(CircleShape))
-                    } else {
-                        Icon(Icons.Default.CameraAlt, contentDescription = "Choose profile photo", tint = Color(0xFF4773AE), modifier = Modifier.size(28.dp))
-                    }
-                }
-            }
-            ProfileInputRow("Nickname") {
-                BasicTextField(value = nickname, onValueChange = { nickname = it.take(30) }, singleLine = true, modifier = Modifier.fillMaxWidth(), textStyle = androidx.compose.ui.text.TextStyle(color = Color(0xFF263449), fontSize = 15.sp), decorationBox = { inner -> if (nickname.isBlank()) Text("Enter nickname", color = Color(0xFF9AA4B2), fontSize = 15.sp); inner() })
-            }
-            ProfileInputRow("Birthday") {
-                Row(Modifier.fillMaxWidth().clickable { chooseBirthday() }, horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text(birthday.ifBlank { "Choose birthday" }, color = if (birthday.isBlank()) Color(0xFF9AA4B2) else Color(0xFF263449), fontSize = 15.sp)
-                    Text("›", color = Color(0xFF718096), fontSize = 24.sp)
-                }
-            }
-            ProfileInputRow("Country") {
-                Box {
-                    Row(Modifier.fillMaxWidth().clickable { countryMenu = true }, horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Text(country, color = Color(0xFF263449), fontSize = 15.sp)
-                        Text("⌄", color = Color(0xFF718096), fontSize = 20.sp)
-                    }
-                    DropdownMenu(expanded = countryMenu, onDismissRequest = { countryMenu = false }, modifier = Modifier.heightIn(max = 320.dp).background(Color.White)) {
-                        countries.forEach { item -> DropdownMenuItem(text = { Text(item) }, onClick = { country = item; countryMenu = false }) }
-                    }
-                }
-            }
-            ProfileInputRow("Gender") {
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    listOf("Male", "Female").forEach { item ->
-                        val chosen = gender == item
-                        Surface(modifier = Modifier.weight(1f).height(44.dp).clickable { gender = item }, shape = RoundedCornerShape(10.dp), color = if (chosen) Color(0xFFE3EEFF) else Color(0xFFF5F7FA), border = androidx.compose.foundation.BorderStroke(1.dp, if (chosen) Color(0xFF4C83D9) else Color(0xFFE2E7EF))) {
-                            Box(contentAlignment = Alignment.Center) { Text(item, color = if (chosen) Color(0xFF2865B8) else Color(0xFF4B5563), fontWeight = if (chosen) FontWeight.SemiBold else FontWeight.Normal) }
-                        }
-                    }
-                }
-            }
-            if (error.isNotBlank()) Text(error, color = Color(0xFFDC2626), fontSize = 13.sp)
-            Spacer(Modifier.weight(1f))
-            Button(onClick = {
-                if (nickname.isBlank()) { error = "Please enter your nickname"; return@Button }
-                if (birthday.isBlank()) { error = "Please choose your birthday"; return@Button }
-                if (gender.isBlank()) { error = "Please choose Male or Female"; return@Button }
-                scope.launch {
-                    saving = true; error = ""
-                    try {
-                        var finalAvatar = avatar
-                        val uid = prefs.getString("uid", "").orEmpty().ifBlank { prefs.getString("accountId", "").orEmpty() }
-                        if (selectedUri != null) {
-                            val dataUri = withContext(Dispatchers.IO) {
-                                ProfilePersistence.imageDataUri(context, selectedUri!!)
-                                    ?: throw IllegalStateException("Could not process the selected photo. Please choose another image.")
-                            }
-                            val photoOwnerId = uid.ifBlank { prefs.getString("accountId", "").orEmpty() }.trim()
-                            if (photoOwnerId.isBlank()) throw IllegalStateException("Account ID is not ready. Please sign in again.")
-                            finalAvatar = ProfilePersistence.uploadDpToGitHub(dataUri, photoOwnerId)
-                                ?: throw IllegalStateException("Profile photo upload failed. Please choose the photo again or continue without a photo.")
-                        }
-                        val countryInfo = mapOf(
-                            "India" to ("🇮🇳" to "IN"), "United States" to ("🇺🇸" to "US"),
-                            "United Kingdom" to ("🇬🇧" to "GB"), "Pakistan" to ("🇵🇰" to "PK"),
-                            "Bangladesh" to ("🇧🇩" to "BD"), "Nepal" to ("🇳🇵" to "NP"),
-                            "Sri Lanka" to ("🇱🇰" to "LK"), "Indonesia" to ("🇮🇩" to "ID"),
-                            "Philippines" to ("🇵🇭" to "PH"), "Thailand" to ("🇹🇭" to "TH"),
-                            "Vietnam" to ("🇻🇳" to "VN"), "Japan" to ("🇯🇵" to "JP"),
-                            "South Korea" to ("🇰🇷" to "KR"), "Saudi Arabia" to ("🇸🇦" to "SA"),
-                            "United Arab Emirates" to ("🇦🇪" to "AE"), "Canada" to ("🇨🇦" to "CA"),
-                            "Australia" to ("🇦🇺" to "AU"), "Other" to ("🌐" to "OTHER")
-                        )
-                        val flagAndCode = countryInfo[country] ?: ("🌐" to "OTHER")
-                        val birthParts = birthday.split("-").map { it.toInt() }
-                        val birthCalendar = Calendar.getInstance().apply {
-                            set(birthParts[0], birthParts[1] - 1, birthParts[2], 0, 0, 0)
-                            set(Calendar.MILLISECOND, 0)
-                        }
-                        val todayCalendar = Calendar.getInstance()
-                        var age = todayCalendar.get(Calendar.YEAR) - birthCalendar.get(Calendar.YEAR)
-                        if (todayCalendar.get(Calendar.MONTH) < birthCalendar.get(Calendar.MONTH) ||
-                            (todayCalendar.get(Calendar.MONTH) == birthCalendar.get(Calendar.MONTH) &&
-                                todayCalendar.get(Calendar.DAY_OF_MONTH) < birthCalendar.get(Calendar.DAY_OF_MONTH))) age--
-                        age = age.coerceAtLeast(0)
-                        val payload = JSONObject()
-                            .put("id", uid).put("uid", uid).put("appLongId", uid)
-                            .put("accountId", prefs.getString("accountId", uid).orEmpty())
-                            .put("accountNumber", prefs.getString("accountId", uid).orEmpty())
-                            .put("name", nickname.trim()).put("displayName", nickname.trim())
-                            .put("email", prefs.getString("email", "").orEmpty())
-                            .put("image", finalAvatar).put("avatar", finalAvatar).put("photo", finalAvatar)
-                            .put("country", flagAndCode.first).put("countryName", country).put("countryCode", flagAndCode.second)
-                            .put("birthday", birthday).put("age", age).put("gender", gender)
-                        withContext(Dispatchers.IO) {
-                            val conn = (URL("$NEW_USER_API/api/users").openConnection() as HttpURLConnection).apply {
-                                requestMethod = "PUT"; connectTimeout = 15000; readTimeout = 15000; doOutput = true
-                                setRequestProperty("Content-Type", "application/json")
-                            }
-                            try {
-                                conn.outputStream.use { it.write(payload.toString().toByteArray(Charsets.UTF_8)) }
-                                val code = conn.responseCode
-                                val stream = if (code in 200..299) conn.inputStream else conn.errorStream
-                                val response = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
-                                if (code !in 200..299) {
-                                    val serverMessage = runCatching { JSONObject(response).optString("error") }.getOrDefault("")
-                                    val safeMessage = serverMessage.takeIf { it.isNotBlank() }
-                                        ?: if (response.trimStart().startsWith("<")) "Zyora server returned an HTML error (HTTP $code). Please try again in a moment."
-                                        else "Could not save your profile (HTTP $code). Please try again."
-                                    throw IllegalStateException(safeMessage)
-                                }
-                            } finally { conn.disconnect() }
-                        }
-                        prefs.edit().putString("name", nickname.trim()).putString("image", finalAvatar).putString("photo", finalAvatar).putString("country", flagAndCode.first).putString("countryName", country).putString("birthday", birthday).putString("gender", gender).putInt("age", age).putBoolean("needsProfileSetup", false).putBoolean("profileSetupComplete", true).apply()
-                        onComplete()
-                    } catch (t: Throwable) { error = t.message ?: "Could not save profile. Please try again." }
-                    finally { saving = false }
-                }
-            }, enabled = !saving, modifier = Modifier.fillMaxWidth().height(50.dp), shape = RoundedCornerShape(12.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3979D6))) {
-                if (saving) CircularProgressIndicator(Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp) else Text("Continue", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
-            }
-            Spacer(Modifier.height(12.dp))
-        }
-    }
-}
 
-@Composable
-private fun ProfileInputRow(label: String, content: @Composable () -> Unit) {
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Color.White).padding(horizontal = 15.dp, vertical = 13.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text(label, color = Color(0xFF7B8798), fontSize = 13.sp, fontWeight = FontWeight.Medium)
-        content()
+        Column(
+            Modifier
+                .fillMaxSize()
+                .padding(horizontal = 24.dp)
+                .padding(top = 8.dp), 
+            verticalArrangement = Arrangement.spacedBy(20.dp)
+        ) {
+            // Title and Subtitle
+            Column {
+                Text("Hi, welcome to Zyora", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text("Improve information to match accurate friends~", fontSize = 14.sp, color = Color(0xFF555555))
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Avatar Section
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Profile photo", color = Color(0xFFBBBBBB), fontSize = 15.sp)
+                Box(
+                    Modifier
+                        .size(64.dp)
+                        .clickable { imagePicker.launch("image/*") }
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(64.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFFEEEEEE)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (avatar.isNotBlank() && avatar != "/default-avatar.png") {
+                            AsyncImage(
+                                model = selectedUri ?: avatar,
+                                contentDescription = "Profile photo",
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(CircleShape)
+                            )
+                        } else {
+                            Icon(
+                                painter = painterResource(id = android.R.drawable.ic_menu_camera), 
+                                contentDescription = null, 
+                                tint = Color.Gray
+                            )
+                        }
+                    }
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .size(20.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFFFFD500)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            painter = painterResource(id = android.R.drawable.ic_menu_camera),
+                            contentDescription = null,
+                            tint = Color.Black,
+                            modifier = Modifier.size(12.dp)
+                        )
+                    }
+                }
+            }
+
+            // Nickname Section
+            Column {
+                Text("Nickname", color = Color(0xFFBBBBBB), fontSize = 14.sp)
+                Spacer(modifier = Modifier.height(8.dp))
+                BasicTextField(
+                    value = nickname,
+                    onValueChange = { nickname = it.take(30) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    textStyle = androidx.compose.ui.text.TextStyle(color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.Medium),
+                    decorationBox = { inner -> 
+                        Box(Modifier.fillMaxWidth()) {
+                            if (nickname.isBlank()) Text("", color = Color.Transparent)
+                            inner()
+                        }
+                    }
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Divider(color = if (nickname.isBlank()) Color(0xFFFF69B4) else Color(0xFFEEEEEE), thickness = 1.dp)
+                if (nickname.isBlank()) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text("Please enter a nickname", color = Color(0xFFFF69B4), fontSize = 12.sp)
+                }
+            }
+
+            // Birthday Section
+            Column {
+                Text("Birthday", color = Color(0xFFBBBBBB), fontSize = 14.sp)
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable { chooseBirthday() },
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = birthday.ifBlank { "YYYY-MM-DD" },
+                        color = if (birthday.isBlank()) Color(0xFFBBBBBB) else Color.Black,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Divider(color = Color(0xFFEEEEEE), thickness = 1.dp)
+            }
+
+            // Updated Country Section (Dropdown with Flag, Code, and Downward logic)
+            Column {
+                Text("Country", color = Color(0xFFBBBBBB), fontSize = 14.sp)
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                ExposedDropdownMenuBox(
+                    expanded = countryMenu,
+                    onExpandedChange = { countryMenu = it }
+                ) {
+                    val currentCountry = countries.find { it.name == country } ?: countries.first()
+                    
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .menuAnchor() // Isse menu hamesha isi ke niche proper open hogi
+                            .clickable { countryMenu = true },
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(currentCountry.flag, fontSize = 20.sp)
+                            Spacer(Modifier.width(8.dp))
+                            Text(currentCountry.name, color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                        }
+                        Text(currentCountry.dialCode, color = Color(0xFFBBBBBB), fontSize = 14.sp)
+                    }
+                    
+                    ExposedDropdownMenu(
+                        expanded = countryMenu,
+                        onDismissRequest = { countryMenu = false },
+                        modifier = Modifier
+                            .background(Color.White)
+                            .heightIn(max = 350.dp)
+                    ) {
+                        countries.forEach { item ->
+                            DropdownMenuItem(
+                                text = { 
+                                    Row(
+                                        Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text(text = item.flag, fontSize = 20.sp)
+                                            Spacer(modifier = Modifier.width(12.dp))
+                                            Text(text = item.name, color = Color.Black, fontSize = 15.sp)
+                                        }
+                                        Text(text = item.dialCode, color = Color.Gray, fontSize = 13.sp)
+                                    }
+                                },
+                                onClick = { 
+                                    country = item.name 
+                                    countryMenu = false 
+                                },
+                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                            )
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Divider(color = Color(0xFFEEEEEE), thickness = 1.dp)
+            }
+
+            // Gender Section
+            Column {
+                Text("Gender", color = Color(0xFFBBBBBB), fontSize = 14.sp)
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    val isMale = gender == "Male"
+                    Surface(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(56.dp)
+                            .clickable { gender = "Male" },
+                        shape = RoundedCornerShape(16.dp),
+                        color = if (isMale) Color(0xFF4AC4FA) else Color(0xFFE0E0E0)
+                    ) {
+                        Row(
+                            Modifier.fillMaxSize(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Text("♂ Male", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            androidx.compose.foundation.Image(
+                                painter = painterResource(id = R.drawable.img_20261031_121547),
+                                contentDescription = "Male",
+                                modifier = Modifier.size(36.dp),
+                                colorFilter = if (isMale) null else ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
+                            )
+                        }
+                    }
+
+                    val isFemale = gender == "Female"
+                    Surface(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(56.dp)
+                            .clickable { gender = "Female" },
+                        shape = RoundedCornerShape(16.dp),
+                        color = if (isFemale) Color(0xFFFF85C2) else Color(0xFFE0E0E0)
+                    ) {
+                        Row(
+                            Modifier.fillMaxSize(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Text("♀ Female", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            androidx.compose.foundation.Image(
+                                painter = painterResource(id = R.drawable.img_20261031_121627),
+                                contentDescription = "Female",
+                                modifier = Modifier.size(36.dp),
+                                colorFilter = if (isFemale) null else ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
+                            )
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Text("*Gender will not be changed after you select", color = Color(0xFFFF69B4), fontSize = 12.sp)
+            }
+
+            if (error.isNotBlank()) {
+                Text(error, color = Color(0xFFDC2626), fontSize = 13.sp)
+            }
+
+            Spacer(Modifier.weight(1f))
+
+            // Submit Button
+            Button(
+                onClick = {
+                    if (nickname.isBlank()) { error = "Please enter your nickname"; return@Button }
+                    if (birthday.isBlank()) { error = "Please choose your birthday"; return@Button }
+                    if (gender.isBlank()) { error = "Please choose Male or Female"; return@Button }
+                    scope.launch {
+                        saving = true; error = ""
+                        try {
+                            var finalAvatar = avatar
+                            val uid = prefs.getString("uid", "").orEmpty().ifBlank { prefs.getString("accountId", "").orEmpty() }
+                            if (selectedUri != null) {
+                                val dataUri = withContext(Dispatchers.IO) {
+                                    ProfilePersistence.imageDataUri(context, selectedUri!!)
+                                        ?: throw IllegalStateException("Could not process the selected photo. Please choose another image.")
+                                }
+                                val photoOwnerId = uid.ifBlank { prefs.getString("accountId", "").orEmpty() }.trim()
+                                if (photoOwnerId.isBlank()) throw IllegalStateException("Account ID is not ready. Please sign in again.")
+                                finalAvatar = ProfilePersistence.uploadDpToGitHub(dataUri, photoOwnerId)
+                                    ?: throw IllegalStateException("Profile photo upload failed. Please choose the photo again or continue without a photo.")
+                            }
+                            
+                            val selectedCountryData = countries.find { it.name == country } ?: countries.last()
+                            
+                            val birthParts = birthday.split("-").map { it.toInt() }
+                            val birthCalendar = Calendar.getInstance().apply {
+                                set(birthParts[0], birthParts[1] - 1, birthParts[2], 0, 0, 0)
+                                set(Calendar.MILLISECOND, 0)
+                            }
+                            val todayCalendar = Calendar.getInstance()
+                            var age = todayCalendar.get(Calendar.YEAR) - birthCalendar.get(Calendar.YEAR)
+                            if (todayCalendar.get(Calendar.MONTH) < birthCalendar.get(Calendar.MONTH) ||
+                                (todayCalendar.get(Calendar.MONTH) == birthCalendar.get(Calendar.MONTH) &&
+                                    todayCalendar.get(Calendar.DAY_OF_MONTH) < birthCalendar.get(Calendar.DAY_OF_MONTH))) age--
+                            age = age.coerceAtLeast(0)
+                            
+                            val payload = JSONObject()
+                                .put("id", uid).put("uid", uid).put("appLongId", uid)
+                                .put("accountId", prefs.getString("accountId", uid).orEmpty())
+                                .put("accountNumber", prefs.getString("accountId", uid).orEmpty())
+                                .put("name", nickname.trim()).put("displayName", nickname.trim())
+                                .put("email", prefs.getString("email", "").orEmpty())
+                                .put("image", finalAvatar).put("avatar", finalAvatar).put("photo", finalAvatar)
+                                .put("country", selectedCountryData.flag).put("countryName", selectedCountryData.name).put("countryCode", selectedCountryData.code)
+                                .put("birthday", birthday).put("age", age).put("gender", gender)
+                            
+                            withContext(Dispatchers.IO) {
+                                val conn = (URL("$NEW_USER_API/api/users").openConnection() as HttpURLConnection).apply {
+                                    requestMethod = "PUT"; connectTimeout = 15000; readTimeout = 15000; doOutput = true
+                                    setRequestProperty("Content-Type", "application/json")
+                                }
+                                try {
+                                    conn.outputStream.use { it.write(payload.toString().toByteArray(Charsets.UTF_8)) }
+                                    val code = conn.responseCode
+                                    val stream = if (code in 200..299) conn.inputStream else conn.errorStream
+                                    val response = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+                                    if (code !in 200..299) {
+                                        val serverMessage = runCatching { JSONObject(response).optString("error") }.getOrDefault("")
+                                        val safeMessage = serverMessage.takeIf { it.isNotBlank() }
+                                            ?: if (response.trimStart().startsWith("<")) "Zyora server returned an HTML error (HTTP $code). Please try again in a moment."
+                                            else "Could not save your profile (HTTP $code). Please try again."
+                                        throw IllegalStateException(safeMessage)
+                                    }
+                                } finally { conn.disconnect() }
+                            }
+                            prefs.edit()
+                                .putString("name", nickname.trim())
+                                .putString("image", finalAvatar)
+                                .putString("photo", finalAvatar)
+                                .putString("country", selectedCountryData.flag)
+                                .putString("countryName", selectedCountryData.name)
+                                .putString("birthday", birthday)
+                                .putString("gender", gender)
+                                .putInt("age", age)
+                                .putBoolean("needsProfileSetup", false)
+                                .putBoolean("profileSetupComplete", true)
+                                .apply()
+                            onComplete()
+                        } catch (t: Throwable) { error = t.message ?: "Could not save profile. Please try again." }
+                        finally { saving = false }
+                    }
+                },
+                enabled = !saving,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp)
+                    .padding(horizontal = 32.dp),
+                shape = RoundedCornerShape(26.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFD500))
+            ) {
+                if (saving) {
+                    CircularProgressIndicator(Modifier.size(24.dp), color = Color.White, strokeWidth = 2.dp)
+                } else {
+                    Text("Submit", color = Color.Black, fontWeight = FontWeight.Medium, fontSize = 16.sp)
+                }
+            }
+            Spacer(Modifier.height(24.dp))
+        }
     }
 }
