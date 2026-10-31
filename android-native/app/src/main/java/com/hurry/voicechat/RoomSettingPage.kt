@@ -173,8 +173,8 @@ private suspend fun saveRoomSettingsRemote(roomId: String, userId: String, data:
         connection.outputStream.use { it.write(payload.toString().toByteArray(Charsets.UTF_8)) }
         val code = connection.responseCode
         if (code !in 200..299) {
-            val error = connection.errorStream?.bufferedReader()?.use { it.readText() }.orEmpty()
-            error("Save failed: HTTP $code ${error.take(180)}")
+            val errorBody = connection.errorStream?.bufferedReader()?.use { it.readText() }.orEmpty()
+            kotlin.error("Save failed: HTTP $code ${errorBody.take(180)}")
         }
     } finally { connection.disconnect() }
 
@@ -185,8 +185,8 @@ private suspend fun saveRoomSettingsRemote(roomId: String, userId: String, data:
             .put("roomId", roomId).put("userId", userId).put("roomOwnerId", roomId)
             .put("roomName", data.roomName).put("roomDp", data.roomDp)
             .put("announcement", data.announcement).put("micMode", data.micMode)
-            .put("theme", data.theme).put("isLocked", data.isLocked)
-            .put("roomPassword", data.roomPassword).put("updatedAt", System.currentTimeMillis())
+            .put("theme", data.theme).put("customTheme", data.customTheme).put("themeImage", data.customTheme)
+            .put("isLocked", data.isLocked).put("roomPassword", data.roomPassword).put("updatedAt", System.currentTimeMillis())
         socket.emit("room_settings_update", event)
         kotlinx.coroutines.delay(350)
         socket.disconnect()
@@ -241,7 +241,7 @@ fun RoomSettingPage(
                         ?: error("Room theme upload failed. Please try again.")
                 } else ready.customTheme
                 val permanent = ready.copy(roomDp = permanentDp, customTheme = permanentTheme)
-                saveRoomSettingsRemote(roomOwnerId, currentUserId, permanent)
+                saveRoomSettingsRemote(stableRoomId, currentUserId, permanent)
                 context.getSharedPreferences("room_settings", Context.MODE_PRIVATE).edit()
                     .putString("roomDp_$roomOwnerId", permanent.roomDp)
                     .putInt("micMode_$roomOwnerId", permanent.micMode)
