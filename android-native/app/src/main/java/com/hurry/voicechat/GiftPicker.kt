@@ -275,15 +275,8 @@ fun GiftPicker(
                     "recipientMode" to recipientMode.name.lowercase(),
                 ))
 
-                if (recipientIds.contains(currentUserAccountId) && isLuckyGiftTab) {
-                    val diamondCredit = (totalCost * 0.1).toInt()
-                    if (diamondCredit > 0) {
-                        onCreditDiamonds(diamondCredit)
-                        onRecordDiamondTransaction(
-                            "Diamonds received — ${selectedGiftObj.name}", diamondCredit
-                        )
-                    }
-                }
+                // The server credits recipient diamonds in MongoDB after the coin debit.
+                // Never credit the sender locally here; that caused duplicate/stale balances.
 
                 if (selectedGiftObj.video != null && !isLuckyGiftTab) {
                     onSendGiftVideoPlay(mapOf(
