@@ -161,11 +161,12 @@ const saveUserToGitHub = async (userData: any) => {
     }),
   });
 
-  if (!response.ok) {
-    throw new Error(`GitHub storage user save failed: ${response.status}`);
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok || result?.success !== true) {
+    throw new Error(result?.error || `MongoDB profile save failed: ${response.status}`);
   }
 
-  return response.json();
+  return result;
 };
 
 // HELPER: Sync and Lock User Profile in GitHub storage
@@ -395,19 +396,14 @@ function CountrySelectionPage({
     setIsSubmitting(true)
     
     try {
-      const defaultData = selectedGender === 'female' 
-        ? {
-            name: 'Barrey',
-            image: '/IMG_20260804_211013.jpg',
-            gender: 'female'
-          }
-        : {
-            name: 'Simpson',
-            image: '/IMG_20260804_211031.jpg',
-            gender: 'male'
-          }
+      const defaultData = selectedGender === 'female'
+        ? { image: '/IMG_20260804_211013.jpg', gender: 'female' }
+        : { image: '/IMG_20260804_211031.jpg', gender: 'male' }
 
       const countryFlag = COUNTRIES.find(c => c.code === selectedCountry)?.flag || '🇮🇳'
+      const profileName = String(userData?.name || userData?.displayName || userData?.fullName || userData?.email?.split('@')[0] || '').trim()
+      const profileImage = String(userData?.photoURL || userData?.photoUrl || userData?.photo || userData?.image || userData?.avatar || defaultData.image).trim()
+      const profileAge = Number(userData?.age) > 0 ? Number(userData.age) : undefined
 
       if (userData?.id || userData?.uid) {
         const userId = userData.id || userData.uid
@@ -415,22 +411,23 @@ function CountrySelectionPage({
         const userDocData = {
           id: userId,
           appLongId: userId,
-          name: defaultData.name,
-          image: defaultData.image,
-          avatar: defaultData.image,
+          name: profileName || 'User',
+          image: profileImage,
+          avatar: profileImage,
           gender: selectedGender,
           country: countryFlag,
           countryCode: selectedCountry,
           email: userData.email || '',
           accountId: localStorage.getItem("accountNumber") || getOrCreateAccountNumber(userId),
           accountNumber: localStorage.getItem("accountNumber") || getOrCreateAccountNumber(userId),
+          ...(profileAge ? { age: profileAge } : {}),
           setupComplete: true
         }
 
         await saveUserToGitHub(userDocData)
 
-        localStorage.setItem("userName", defaultData.name)
-        localStorage.setItem("userPhoto", defaultData.image)
+        localStorage.setItem("userName", profileName || 'User')
+        localStorage.setItem("userPhoto", profileImage)
         localStorage.setItem("userGender", selectedGender)
         localStorage.setItem("userCountry", countryFlag)
         localStorage.setItem("userCountryCode", selectedCountry)
@@ -440,8 +437,8 @@ function CountrySelectionPage({
 
       onComplete(selectedGender, selectedCountry)
     } catch (error) {
-      console.error("Error updating gender:", error)
-      onComplete(selectedGender, selectedCountry)
+      console.error("Error saving new user profile to MongoDB:", error)
+      alert(error instanceof Error ? error.message : "Could not save your profile. Please try again.")
     } finally {
       setIsSubmitting(false)
     }
