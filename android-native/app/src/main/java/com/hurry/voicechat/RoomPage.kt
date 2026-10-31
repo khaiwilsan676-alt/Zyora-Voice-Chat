@@ -839,6 +839,8 @@ fun RoomPage(
             "sword-ruins" -> "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_0000000085a48211ae91d22ca50879e2.png"
             "cornfield-portal" -> "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_00000000baec8211b803a01c54381503.png"
             "deer-moonlight" -> "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_00000000dec082119e076cff4bc01164.png"
+            "moon-light-new" -> "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_0000000050288211aecacc1c105240c7.png"
+            "dark-night-flower" -> "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_000000006ec4821182b483795db2d94c.png"
             "custom" -> appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).getString("customTheme_$roomId", null) ?: "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/1784875884052~2.jpg"
             else -> if (purchasedRoomThemeImage.isNotBlank()) "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/$purchasedRoomThemeImage" else "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/1784875884052~2.jpg"
         },contentDescription="Room theme background",modifier=Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
