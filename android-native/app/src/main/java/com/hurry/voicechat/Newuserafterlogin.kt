@@ -367,14 +367,12 @@ fun Newuserafterlogin(onBack: () -> Unit, onComplete: () -> Unit) {
                             var finalAvatar = avatar
                             val uid = prefs.getString("uid", "").orEmpty().ifBlank { prefs.getString("accountId", "").orEmpty() }
                             if (selectedUri != null) {
-                                val dataUri = withContext(Dispatchers.IO) {
+                                // Keep the compressed image in the same MongoDB profile write.
+                                // Do not route profile photos through GitHub storage.
+                                finalAvatar = withContext(Dispatchers.IO) {
                                     ProfilePersistence.imageDataUri(context, selectedUri!!)
                                         ?: throw IllegalStateException("Could not process the selected photo. Please choose another image.")
                                 }
-                                val photoOwnerId = uid.ifBlank { prefs.getString("accountId", "").orEmpty() }.trim()
-                                if (photoOwnerId.isBlank()) throw IllegalStateException("Account ID is not ready. Please sign in again.")
-                                finalAvatar = ProfilePersistence.uploadDpToGitHub(dataUri, photoOwnerId)
-                                    ?: throw IllegalStateException("Profile photo upload failed. Please choose the photo again or continue without a photo.")
                             }
                             
                             val selectedCountryData = countries.find { it.name == country } ?: countries.last()
@@ -403,8 +401,8 @@ fun Newuserafterlogin(onBack: () -> Unit, onComplete: () -> Unit) {
                             
                             withContext(Dispatchers.IO) {
                                 val conn = (URL("$NEW_USER_API/api/users").openConnection() as HttpURLConnection).apply {
-                                    requestMethod = "PUT"; connectTimeout = 15000; readTimeout = 15000; doOutput = true
-                                    setRequestProperty("Content-Type", "application/json")
+                                    requestMethod = "PUT"; connectTimeout = 30000; readTimeout = 45000; doOutput = true
+                                    setRequestProperty("Content-Type", "application/json; charset=utf-8")
                                 }
                                 try {
                                     conn.outputStream.use { it.write(payload.toString().toByteArray(Charsets.UTF_8)) }
@@ -417,6 +415,10 @@ fun Newuserafterlogin(onBack: () -> Unit, onComplete: () -> Unit) {
                                             ?: if (response.trimStart().startsWith("<")) "Zyora server returned an HTML error (HTTP $code). Please try again in a moment."
                                             else "Could not save your profile (HTTP $code). Please try again."
                                         throw IllegalStateException(safeMessage)
+                                    }
+                                    val saveResult = runCatching { JSONObject(response) }.getOrNull()
+                                    if (saveResult?.optBoolean("success", false) != true || saveResult.optJSONObject("user") == null) {
+                                        throw IllegalStateException("Server did not confirm that your profile was saved to MongoDB. Please retry.")
                                     }
                                 } finally { conn.disconnect() }
                             }
