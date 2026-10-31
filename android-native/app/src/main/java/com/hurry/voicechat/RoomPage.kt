@@ -1861,12 +1861,12 @@ private fun formatMusicTime(seconds: Float): String {
     LaunchedEffect(m.senderAccountId) {
         if (m.senderAccountId.isNotBlank()) {
             val existingCache = profileDb.loadProfile(m.senderAccountId)
-            val remote = if (existingCache == null) ProfilePersistence.load(
+            val remote = ProfilePersistence.load(
                 TargetUser(uid = m.senderAccountId, id = m.senderAccountId, accountId = m.senderAccountId, name = m.sender, image = m.senderImage)
-            ) else null
+            )
             if (remote != null) {
                 val merged = profileDb.loadProfile(m.senderAccountId) ?: JSONObject()
-                listOf("officialHeadTag", "officialTag", "adminTag", "serviceTag", "coinSellerTag", "coinSeller", "sellerTag", "csTag").forEach { key ->
+                listOf("officialHeadTag", "officialTag", "adminTag", "serviceTag", "coinSellerTag", "coinSeller", "sellerTag", "csTag", "hostTag", "isHost").forEach { key ->
                     if (remote.has(key)) merged.put(key, remote.opt(key))
                 }
                 val remoteName = sequenceOf("name", "displayName", "userName").map { remote.optString(it, "") }.firstOrNull { it.isNotBlank() && it != "null" } ?: m.sender
