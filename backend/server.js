@@ -1095,7 +1095,6 @@ app.post("/api/upload-image", async (req, res) => {
             photoURL: url,
             imageUrl: url,
             profileImageUrl: url,
-            imageStoragePath: path,
             imageUpdatedAt: new Date().toISOString(),
             updatedAt: Date.now()
           },
