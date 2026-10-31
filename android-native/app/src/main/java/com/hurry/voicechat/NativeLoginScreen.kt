@@ -782,12 +782,13 @@ private fun postAuthJson(path: String, payload: JSONObject): JSONObject {
 }
 
 private fun lookupAccountEmail(accountId: String): String {
-    val officialUid = mapOf(
-        "100002" to "Ed89IA0lyzUXlIplzH660OUdBmT2",
-        "100003" to "dCt4l5GbjnMpOeBywiDSH6XfCoj1",
-        "500001" to "a0yVqX9dEiS2ZZH6eQmpjs3QrUf1"
-    )[accountId] ?: throw IllegalArgumentException("Zyora Account ID not found.")
-    val url = URL("$HURRY_API_BASE/api/users?uid=${java.net.URLEncoder.encode(officialUid, "UTF-8")}")
+    val normalizedId = accountId.trim()
+    if (!normalizedId.matches(Regex("\\d{4,12}"))) {
+        throw IllegalArgumentException("Enter a valid Zyora Account ID.")
+    }
+    // Resolve the live profile by its public Zyora ID. Do not depend on stale
+    // hard-coded Firebase UIDs from a previous Firebase project.
+    val url = URL("$HURRY_API_BASE/api/users?accountId=${java.net.URLEncoder.encode(normalizedId, "UTF-8")}")
     val connection = (url.openConnection() as HttpURLConnection).apply {
         requestMethod = "GET"; connectTimeout = 12000; readTimeout = 15000
         setRequestProperty("Accept", "application/json")
@@ -797,15 +798,19 @@ private fun lookupAccountEmail(accountId: String): String {
         val stream = if (code in 200..299) connection.inputStream else connection.errorStream
         val response = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
         val root = runCatching { JSONObject(response) }.getOrElse { JSONObject() }
-        if (code !in 200..299) throw IllegalArgumentException("This official account is not linked yet.")
+        if (code !in 200..299) throw IllegalArgumentException("Zyora Account ID not found.")
         val profile = root.optJSONObject("user")
             ?: root.optJSONArray("users")?.optJSONObject(0)
-            ?: throw IllegalArgumentException("This official account is not linked yet.")
-        val returnedUid = profile.optString("uid").ifBlank { profile.optString("id") }
-        if (returnedUid != officialUid) throw IllegalArgumentException("Official account verification failed.")
-        return profile.optString("email").ifBlank { profile.optString("gmail") }
-            .takeIf { it.contains("@") }
-            ?: throw IllegalArgumentException("This account has no linked email. Use Google login.")
+            ?: throw IllegalArgumentException("Zyora Account ID not found.")
+        val returnedId = sequenceOf("accountId", "accountNumber", "displayUserNumber", "Account Number")
+            .map { profile.optString(it, "").trim() }
+            .firstOrNull { it.isNotBlank() && it != "null" }
+            .orEmpty()
+        if (returnedId != normalizedId) throw IllegalArgumentException("Zyora Account ID verification failed.")
+        return sequenceOf("email", "gmail", "emailPhone")
+            .map { profile.optString(it, "").trim() }
+            .firstOrNull { it.contains("@") }
+            ?: throw IllegalArgumentException("This Zyora account has no linked email. Contact Zyora Support.")
     } finally {
         connection.disconnect()
     }
@@ -967,7 +972,11 @@ private fun syncHurryUser(user: JSONObject, context: android.content.Context) {
             .putBoolean("profileSyncPending", false)
             .apply()
     } else {
-        throw IllegalStateException("Could not save your account to Zyora server (HTTP $saveCode). Please try again.")
+        val serverReason = runCatching { JSONObject(saveResponse).optString("error") }.getOrDefault("")
+        throw IllegalStateException(
+            "Could not save your account to Zyora server (HTTP $saveCode)" +
+                if (serverReason.isNotBlank()) ": $serverReason" else ". Please try again."
+        )
     }
 }
 
