@@ -1364,8 +1364,9 @@ fun RoomPage(
             if(seatIndex>=0){
                 val timestamp=System.currentTimeMillis()
                 val selected=seats[seatIndex]
-                seats[seatIndex]=selected.copy(gifSrc=sticker.src,gifTimestamp=timestamp)
+                // The seat overlay must receive the animation URL, not the picker thumbnail.
                 val seatMediaUrl = sticker.videoUrl?.takeIf { it.isNotBlank() } ?: sticker.src
+                seats[seatIndex]=selected.copy(gifSrc=seatMediaUrl,gifTimestamp=timestamp)
                 roomSocketRef.value?.emit("room_seat_action",JSONObject().put("roomId",roomId).put("userId",accountId).put("action","emoji").put("seatNumber",selected.number).put("user",JSONObject().put("name",roomDisplayName.ifBlank{"User"}).put("image",roomDisplayImage.ifBlank{"https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/default-avatar.png"}).put("accountId",accountId)).put("src",seatMediaUrl).put("timestamp",timestamp))
                 
                 Handler(Looper.getMainLooper()).postDelayed({ if(seats.getOrNull(seatIndex)?.gifTimestamp==timestamp) seats[seatIndex]=seats[seatIndex].copy(gifSrc="",gifTimestamp=0L) },5000)
