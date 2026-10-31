@@ -10,6 +10,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.unit.dp
 import java.text.SimpleDateFormat
 import java.util.*
@@ -28,7 +29,7 @@ data class NativeChatMessage(val id:String,val text:String,val sender:String,val
   }
   LazyColumn(Modifier.weight(1f).fillMaxWidth().padding(horizontal=12.dp)){items(messages){m->Row(Modifier.fillMaxWidth().padding(vertical=4.dp),horizontalArrangement=if(m.sender=="me")Arrangement.End else Arrangement.Start){Surface(color=if(m.sender=="me")Color(0xFFE9F3FF) else Color(0xFFF1F1F1),shape=MaterialTheme.shapes.medium){Column(Modifier.padding(horizontal=12.dp,vertical=8.dp)){if(m.type=="image")Text("[Image]");Text(m.text);Text(SimpleDateFormat("HH:mm",Locale.getDefault()).format(Date(m.timestamp)),style=MaterialTheme.typography.labelSmall,color=Color.Gray)}}}}}
   if(reply!=null)Row(Modifier.fillMaxWidth().padding(horizontal=12.dp)){Text("Replying to "+reply!!.text,Modifier.weight(1f));TextButton({reply=null}){Text("Cancel")}}
-  Row(Modifier.fillMaxWidth().padding(8.dp),verticalAlignment=Alignment.CenterVertically){OutlinedTextField(value=input,onValueChange={input=it},modifier=Modifier.weight(1f),placeholder={Text("Message")},singleLine=true);IconButton(onClick={if(input.isNotBlank()){messages=messages+NativeChatMessage(UUID.randomUUID().toString(),input,"me");input=""}}){Icon(Icons.Default.Send,"Send")}}
+  Row(Modifier.fillMaxWidth().padding(8.dp),verticalAlignment=Alignment.CenterVertically){OutlinedTextField(value=input,onValueChange={input=it},modifier=Modifier.weight(1f),placeholder={Text("Message")},singleLine=true,shape=RectangleShape);IconButton(onClick={if(input.isNotBlank()){messages=messages+NativeChatMessage(UUID.randomUUID().toString(),input,"me");input=""}}){Icon(Icons.Default.Send,"Send")}}
  }
  if(options)AlertDialog(onDismissRequest={options=false},title={Text("Options")},text={Text(if(blocked)"User is blocked" else "Block this user")},confirmButton={TextButton({blocked=!blocked;options=false}){Text(if(blocked)"Block" else "Unblock")}})
 }
