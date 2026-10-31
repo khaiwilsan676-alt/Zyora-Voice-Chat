@@ -1610,7 +1610,18 @@ export function LuckyComboButton() {
     luckyReturnPercent = winTimes > 0 ? winTimes : 0;
     const finalDeductionCost = totalCost - luckyReturnAmount;
 
-    const bal = await loadWalletBalance();
+    let bal = 0;
+    try {
+      const response = await fetch(`https://zyora-server.onrender.com/api/lucky-bag/wallet/${encodeURIComponent(comboData.senderId)}`, { cache: "no-store" });
+      if (!response.ok) throw new Error("Wallet unavailable");
+      const wallet = await response.json();
+      bal = Math.max(0, Number(wallet.balance) || 0);
+      setWalletBalance(bal);
+    } catch {
+      setBusy(false);
+      setComboData(null);
+      return;
+    }
     if (bal < finalDeductionCost) {
       window.dispatchEvent(new CustomEvent("hurry:insufficient"));
       setBusy(false);
