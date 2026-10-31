@@ -171,6 +171,7 @@ fun RoomProfile(
     var officialHeadTag by remember(user.officialHeadTag, cachedProfile, isCoreOfficialAccount) { mutableStateOf(isCoreOfficialAccount || user.officialHeadTag == true || cachedProfile?.optBoolean("officialHeadTag", false) == true) }
     var serviceTag by remember(user.serviceTag, cachedProfile, isCoreOfficialAccount) { mutableStateOf(isCoreOfficialAccount || user.serviceTag == true || cachedProfile?.optBoolean("serviceTag", false) == true) }
     var coinSellerTag by remember(user.coinSellerTag, cachedProfile, isCoreOfficialAccount) { mutableStateOf(isCoreOfficialAccount || user.coinSellerTag == true || cachedProfile?.optBoolean("coinSellerTag", false) == true) }
+    var hostTag by remember(cachedProfile, isCoreOfficialAccount) { mutableStateOf(isCoreOfficialAccount || cachedProfile?.optBoolean("hostTag", false) == true || cachedProfile?.optBoolean("isHost", false) == true) }
     var vipTag by remember(user.vipTag) { mutableStateOf(user.vipTag == true) }
     var premiumTag by remember(user.premiumTag) { mutableStateOf(user.premiumTag == true) }
     var showReports by remember { mutableStateOf(false) }
@@ -184,13 +185,14 @@ fun RoomProfile(
         if (profile.has("adminTag")) adminTag = profile.optBoolean("adminTag")
         if (profile.has("serviceTag")) serviceTag = profile.optBoolean("serviceTag")
         if (profile.has("coinSellerTag")) coinSellerTag = profile.optBoolean("coinSellerTag")
+        hostTag = isCoreOfficialAccount || profile.optBoolean("hostTag", false) || profile.optBoolean("isHost", false)
         if (profile.has("vipTag")) vipTag = profile.optBoolean("vipTag")
         if (profile.has("premiumTag")) premiumTag = profile.optBoolean("premiumTag")
     }
 
 
 
-    val hasAnyTag = officialHeadTag || officialTag || adminTag || serviceTag || coinSellerTag || vipTag || premiumTag
+    val hasAnyTag = officialHeadTag || officialTag || adminTag || serviceTag || hostTag || coinSellerTag || vipTag || premiumTag
     val accountId = generateStableId(user.accountId ?: user.id ?: user.uid ?: "User")
     
     val genderColor = if (displayGender.equals("female", true) || displayGender.equals("f", true) || displayGender == "♀") {
@@ -279,6 +281,7 @@ fun RoomProfile(
                             if (officialTag) AsyncImage(model = "IMG_20261027_102250.png".fullUrl(), contentDescription = "Official", contentScale = ContentScale.Fit, modifier = Modifier.height(22.dp).widthIn(max = 60.dp))
                             if (adminTag) AsyncImage(model = "IMG_20261027_114117.png".fullUrl(), contentDescription = "Admin", contentScale = ContentScale.Fit, modifier = Modifier.height(22.dp).widthIn(max = 60.dp))
                             if (serviceTag) AsyncImage(model = "IMG_20261027_102207.png".fullUrl(), contentDescription = "Service / CS", contentScale = ContentScale.Fit, modifier = Modifier.height(22.dp).widthIn(max = 60.dp))
+                            if (hostTag) AsyncImage(model = "IMG_20261028_154914.png".fullUrl(), contentDescription = "Host", contentScale = ContentScale.Fit, modifier = Modifier.height(19.dp).widthIn(max = 60.dp))
                             if (coinSellerTag) AsyncImage(model = "IMG_20261027_105359.png".fullUrl(), contentDescription = "Coin Seller", contentScale = ContentScale.Fit, modifier = Modifier.height(22.dp).widthIn(max = 60.dp))
                         }
                     }
