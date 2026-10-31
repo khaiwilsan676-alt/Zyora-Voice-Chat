@@ -157,7 +157,7 @@ fun Newuserafterlogin(onBack: () -> Unit, onComplete: () -> Unit) {
                         } else {
                             // Agar DP nahi hai toh App Logo Colorless mode me show karega
                             androidx.compose.foundation.Image(
-                                painter = painterResource(id = R.drawable.logo),
+                                painter = painterResource(id = R.drawable.hurry_logo),
                                 contentDescription = "Default Logo",
                                 modifier = Modifier
                                     .fillMaxSize()
