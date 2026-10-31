@@ -1900,8 +1900,15 @@ private fun formatMusicTime(seconds: Float): String {
                 if (isRoomOwnerMessage) {
                     AsyncImage(model = "https://zyora-voice-chat.vercel.app/IMG_20261027_235537.png", contentDescription = "Owner", contentScale = ContentScale.Fit, modifier = Modifier.height(16.dp))
                 }
-                if (isCoreOfficial) AsyncImage(model="https://zyora-voice-chat.vercel.app/file_0000000063b481fa89d3c7729265058b.png",contentDescription="Purple ID",modifier=Modifier.size(width=24.dp,height=18.dp),contentScale=ContentScale.Fit)
-                else if (isRedOfficial) Box(Modifier.clip(RoundedCornerShape(3.dp)).background(Color(0xFFDC2626)).padding(horizontal=5.dp,vertical=2.dp)) { Text("ID",color=Color.White,fontSize=9.sp,fontWeight=FontWeight.Bold) }
+                if (isCoreOfficial) {
+                    AsyncImage(model="https://zyora-voice-chat.vercel.app/file_0000000063b481fa89d3c7729265058b.png",contentDescription="Purple ID",modifier=Modifier.size(width=24.dp,height=18.dp),contentScale=ContentScale.Fit)
+                    Text(m.senderAccountId,color=Color.White.copy(alpha=.7f),fontSize=9.sp)
+                } else if (isRedOfficial) {
+                    Box(Modifier.clip(RoundedCornerShape(3.dp)).background(Color(0xFFDC2626)).padding(horizontal=5.dp,vertical=2.dp)) { Text("ID",color=Color.White,fontSize=9.sp,fontWeight=FontWeight.Bold) }
+                    Text(m.senderAccountId,color=Color(0xFFFF7777),fontSize=9.sp)
+                } else {
+                    Text("ID: ${m.senderAccountId}",color=Color.White.copy(alpha=.6f),fontSize=9.sp,maxLines=1)
+                }
 
                 Box(modifier = Modifier.height(18.dp).width(36.dp), contentAlignment = Alignment.CenterEnd) {
                     AsyncImage(model = "https://zyora-voice-chat.vercel.app/IMG_20261028_004355.png", contentDescription = "Level", contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
