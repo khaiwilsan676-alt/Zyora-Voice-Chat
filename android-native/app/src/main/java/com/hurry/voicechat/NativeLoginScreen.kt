@@ -66,7 +66,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 private const val HURRY_API_BASE = "https://zyora-server.onrender.com"
-private const val HURRY_VIDEO = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/gemini_generated_video_99a3cc1a~3.mp4"
+private const val HURRY_VIDEO = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/VID_20261031_074114_256_bsl~2.mp4"
 private const val HURRY_LOGO = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/logo.png"
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -191,15 +191,15 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
                 Spacer(Modifier.height(30.dp))
             }
         } else if (page == "official_login") {
-            // Updated Official Login Screen with proper strong blue 🔵 at top
+            // Updated Official Login Screen with proper strong blue 🔵 at top, exactly 25% coverage
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(
                         Brush.verticalGradient(
                             colorStops = arrayOf(
-                                0.0f to Color(0xFF3B82F6), // Strong Blue matching 🔵
-                                0.4f to Color(0xFFF3F4F6), // Mixes into Greyish White at 40%
+                                0.0f to Color(0xFF2563EB), // Strong Blue (no sky blue)
+                                0.25f to Color(0xFFF3F4F6), // Mixes into Greyish White at exactly 25%
                                 1.0f to Color(0xFFF3F4F6)  // Greyish White till bottom
                             )
                         )
@@ -394,15 +394,15 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
                 
                 Spacer(Modifier.height(18.dp))
                 
-                // Official Login Small Square Card (No text, just icon)
+                // Official Login Small Square Card (Thora chota kiya gaya)
                 Button(
                     onClick = { page = "official_login"; error = "" }, 
-                    modifier = Modifier.size(60.dp), // Square card size
-                    shape = RoundedCornerShape(16.dp), // Rounded like iOS style app icon
+                    modifier = Modifier.size(50.dp), // Square card size reduced
+                    shape = RoundedCornerShape(13.dp), // Rounded like iOS style app icon
                     colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color(0xFF2563EB)),
                     contentPadding = PaddingValues(0.dp)
                 ) {
-                    OfficialLoginIcon(Modifier.size(32.dp))
+                    OfficialLoginIcon(Modifier.size(29.dp)) // Icon size adjusted
                 }
                 
                 if (error.isNotBlank()) {
