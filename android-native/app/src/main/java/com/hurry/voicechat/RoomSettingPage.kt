@@ -307,10 +307,8 @@ fun RoomSettingPage(
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) {
             if (pendingPicker == "photo") {
-                // Ab direct convert/save ki jagah Crop UI khulega
                 croppingUri = uri
             } else {
-                // Custom theme code ekdam untouched
                 scope.launch {
                     runCatching { cropImageToDataUrl(context, uri) }
                         .onSuccess { dataUrl ->
@@ -594,7 +592,8 @@ fun RoomSettingPage(
             onUploadCustom = { pendingPicker = "theme"; picker.launch("image/*") }
         )
         
-        "mic" -> BottomSheetModal(scrimAlpha = 0.3f, heightFraction = 0.40f, onDismiss = { sheet = "" }) {
+        // 👉 MIC SHEET HEIGHT 40% SE 50% KAR DI HAI (10% INCREASE) 👈
+        "mic" -> BottomSheetModal(scrimAlpha = 0.3f, heightFraction = 0.50f, onDismiss = { sheet = "" }) {
             Column(Modifier.fillMaxSize()) {
                 Row(
                     Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
@@ -863,7 +862,6 @@ fun RoomSettingPage(
                     }
 
                     Box(Modifier.fillMaxSize().transformable(transformableState), contentAlignment = Alignment.Center) {
-                        // Background Zoomable/Pannable Image
                         Image(
                             bitmap = bitmap!!.asImageBitmap(),
                             contentDescription = "Crop Image",
@@ -876,7 +874,6 @@ fun RoomSettingPage(
                             contentScale = ContentScale.Fit
                         )
 
-                        // 10x10 Crop Square (1:1 Ratio Square) - stays static in center
                         Box(
                             Modifier
                                 .fillMaxWidth()
@@ -886,7 +883,6 @@ fun RoomSettingPage(
                     }
                 }
 
-                // Top Bar with ekdam left 'Cancel' and top right 'Save'
                 Row(
                     Modifier
                         .fillMaxWidth()
@@ -916,7 +912,6 @@ fun RoomSettingPage(
                                             try {
                                                 val b = bitmap!!
                                                 val size = minOf(b.width, b.height)
-                                                // Approximating crop mathematically depending on pan/zoom
                                                 val cropSize = (size / scale).toInt().coerceIn(1, size)
                                                 val xOffsetScaled = (offset.x).toInt()
                                                 val yOffsetScaled = (offset.y).toInt()
@@ -930,7 +925,6 @@ fun RoomSettingPage(
                                                 scaled.compress(Bitmap.CompressFormat.JPEG, 90, out)
                                                 "data:image/jpeg;base64," + Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP)
                                             } catch (e: Exception) {
-                                                // Fallback if math fails
                                                 cropImageToDataUrl(context, croppingUri!!)
                                             }
                                         }
@@ -1216,7 +1210,6 @@ private fun ThemeFullScreen(
                     fontSize = 18.sp, fontWeight = FontWeight.Bold, color = gray800, textAlign = TextAlign.Center
                 )
                 
-                // Save button added at the top right corner
                 Box(
                     Modifier.defaultMinSize(minWidth = 40.dp)
                         .clip(RoundedCornerShape(8.dp))
@@ -1269,28 +1262,25 @@ private fun ThemeFullScreen(
                     }
                     gridItems(items) { theme ->
                         Column(
-                            Modifier.fillMaxWidth()
-                                .clip(RoundedCornerShape(13.dp))
-                                .then(
-                                    if (selectedTheme == theme.id) Modifier
-                                        .padding(2.dp)
-                                        .border(2.dp, blue400, RoundedCornerShape(13.dp)) else Modifier
-                                )
-                                .clickable { selectedTheme = theme.id }
+                            Modifier.fillMaxWidth().clickable { selectedTheme = theme.id }
                         ) {
-                            Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(13.dp))) { 
+                            Box(
+                                Modifier.fillMaxWidth()
+                                    .clip(RoundedCornerShape(13.dp))
+                                    .border(2.dp, if (selectedTheme == theme.id) blue400 else Color.Transparent, RoundedCornerShape(13.dp))
+                            ) {
                                 AsyncImage(
                                     model = theme.image, contentDescription = theme.name,
-                                    modifier = Modifier.fillMaxWidth().wrapContentHeight(), 
+                                    modifier = Modifier.fillMaxWidth().wrapContentHeight().clip(RoundedCornerShape(13.dp)), 
                                     contentScale = ContentScale.FillWidth 
                                 )
                                 
-                                // 👉 YAHAN ADD KIYA HAI NEW BLACK/10 OVERLAY LOGIC 👈
                                 if (selectedTheme == theme.id) {
                                     Box(
                                         Modifier
-                                            .matchParentSize() // Image ki puri height & width lega
-                                            .background(Color.Black.copy(alpha = 0.1f)) // 10% black opacity overlay
+                                            .matchParentSize()
+                                            .clip(RoundedCornerShape(13.dp))
+                                            .background(Color.Black.copy(alpha = 0.1f))
                                     )
                                 }
 
