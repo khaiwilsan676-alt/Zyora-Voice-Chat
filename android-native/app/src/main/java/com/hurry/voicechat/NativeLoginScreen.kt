@@ -735,7 +735,9 @@ private fun syncHurryUser(user: JSONObject, context: android.content.Context) {
     val existingAccount = existingProfile.optString("accountId").ifBlank {
         existingProfile.optString("accountNumber").ifBlank { existingProfile.optString("Account Number") }
     }
-    val accountId = existingAccount.ifBlank { generatedAccountId }
+    // Server mapping for this Firebase UID is the stable account-ID source.
+    val serverAccountId = user.optString("accountId").trim()
+    val accountId = serverAccountId.ifBlank { existingAccount.ifBlank { generatedAccountId } }
     val emailName = email.substringBefore("@").ifBlank { "User" }
     val name = existingProfile.optString("name").ifBlank {
         existingProfile.optString("Name").ifBlank { user.optString("displayName").ifBlank { emailName } }
