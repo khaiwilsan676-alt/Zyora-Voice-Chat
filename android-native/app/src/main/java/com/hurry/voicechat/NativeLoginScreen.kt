@@ -120,6 +120,7 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
                 } catch (t: Throwable) {
                     error = authErrorText(t.message ?: "Google sign-in failed. Please try again.")
                 } finally {
+                    googleLoading = false
                     loading = false
                 }
             }
@@ -377,6 +378,7 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
                                     error = authErrorText(t.message ?: "Google sign-in failed. Please try again.")
                                 }
                             } finally {
+                                googleLoading = false
                                 loading = false
                             }
                         }
