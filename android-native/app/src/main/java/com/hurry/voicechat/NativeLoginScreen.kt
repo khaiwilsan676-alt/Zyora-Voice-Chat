@@ -563,11 +563,11 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
         if (googleLoading) {
             Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.18f)), contentAlignment = Alignment.Center) {
                 Column(
-                    Modifier.size(82.dp).clip(RoundedCornerShape(0.12.dp)).background(Color.Black.copy(alpha = 0.20f)),
+                    Modifier.size(82.dp).clip(RoundedCornerShape(10.dp)).background(Color.Black.copy(alpha = 0.60f)),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
-                    AsyncImage(model = GOOGLE_LOADING_IMAGE, contentDescription = null, modifier = Modifier.size(48.dp))
+                    AsyncImage(model = GOOGLE_LOADING_IMAGE, contentDescription = null, modifier = Modifier.size(42.dp))
                     Spacer(Modifier.height(0.1.dp))
                     CircularProgressIndicator(Modifier.size(15.dp), color = Color.White, strokeWidth = 1.5.dp)
                 }
@@ -577,21 +577,21 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
         if (showDeviceRegisteredDialog) {
             Dialog(onDismissRequest = { showDeviceRegisteredDialog = false }) {
                 Column(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(0.12.dp)).background(Color(0xFF171717)).padding(18.dp),
-                    horizontalAlignment = Alignment.Start
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Color(0xFF171717)).padding(18.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text("Tips", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                    Text("Tips", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
                     Spacer(Modifier.height(14.dp))
                     Text("Your Device has a Registered account (ID: " + registeredDeviceAccountId.ifBlank { "USER ID" } + ")",
-                        color = Color.White, fontSize = 14.sp, lineHeight = 20.sp)
+                        color = Color.White, fontSize = 14.sp, lineHeight = 20.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
                     Spacer(Modifier.height(8.dp))
                     Text("Register Method: Google (" + registeredDeviceEmail.ifBlank { "Google Email" } + ")",
-                        color = Color.White, fontSize = 14.sp, lineHeight = 20.sp)
+                        color = Color.White, fontSize = 14.sp, lineHeight = 20.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
                     Spacer(Modifier.height(18.dp))
                     Button(
                         onClick = { showDeviceRegisteredDialog = false },
                         modifier = Modifier.fillMaxWidth().height(42.dp),
-                        shape = RoundedCornerShape(0.12.dp),
+                        shape = RoundedCornerShape(8.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB), contentColor = Color.White)
                     ) { Text("OK", fontSize = 14.sp, fontWeight = FontWeight.SemiBold) }
                 }
