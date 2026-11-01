@@ -30,7 +30,7 @@ import coil3.compose.AsyncImage
 
 data class RoomInfoOwner(val id:String="",val uid:String="",val accountId:String="",val name:String,val image:String)
 data class RoomInfoData(val roomName:String,val roomDp:String,val roomAnnouncement:String,val roomId:String)
-data class RoomInfoFollower(val accountId:String,val name:String,val image:String)
+data class RoomInfoFollower(val accountId:String,val name:String,val image:String,val country:String="")
 
 @Composable
 fun RoomInfo(
@@ -54,6 +54,31 @@ fun RoomInfo(
     var ownerDisplayImage by remember(roomOwner.id, roomOwner.uid, roomOwner.accountId, roomOwner.image) {
         mutableStateOf(if (isLogoOwner) "https://zyora-voice-chat.vercel.app/logo.png" else roomOwner.image)
     }
+    var ownerCountry by remember(roomOwner.accountId) { mutableStateOf("") }
+    var memberProfiles by remember { mutableStateOf<Map<String, RoomInfoFollower>>(emptyMap()) }
+
+    LaunchedEffect(roomFollowers.map { it.accountId }, roomAdmins.map { it.accountId }) {
+        val all = (roomFollowers + roomAdmins).distinctBy { it.accountId }.filter { it.accountId.isNotBlank() }
+        val loaded = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            all.mapNotNull { member -> runCatching {
+                val encoded = java.net.URLEncoder.encode(member.accountId, "UTF-8")
+                val conn = (java.net.URL("https://zyora-server.onrender.com/api/users?search=" + encoded + "&accountId=" + encoded + "&q=" + encoded).openConnection() as java.net.HttpURLConnection).apply { connectTimeout=5000; readTimeout=5000 }
+                try {
+                    if (conn.responseCode !in 200..299) return@runCatching null
+                    val raw = conn.inputStream.bufferedReader().use { it.readText() }.trim()
+                    val arr = if (raw.startsWith("[")) org.json.JSONArray(raw) else org.json.JSONObject(raw).let { root -> root.optJSONArray("users") ?: root.optJSONArray("results") ?: org.json.JSONArray().apply { root.optJSONObject("user")?.let { put(it) } } }
+                    val u = (0 until arr.length()).mapNotNull { arr.optJSONObject(it) }.firstOrNull { it.optString("accountId", it.optString("accountNumber", "")) == member.accountId || it.optString("uid") == member.accountId || it.optString("id") == member.accountId }
+                    u?.let { user ->
+                        val name = sequenceOf("name","displayName","userName","nickname").map { user.optString(it,"").trim() }.firstOrNull { it.isNotBlank() && it!="null" } ?: member.name
+                        val image = sequenceOf("image","photo","photoURL","avatar","picture","profileImage").map { user.optString(it,"").trim() }.firstOrNull { it.isNotBlank() && it!="null" } ?: member.image
+                        val country = sequenceOf("country","countryName","location").map { user.optString(it,"").trim() }.firstOrNull { it.isNotBlank() && it!="null" } ?: member.country
+                        member.accountId to RoomInfoFollower(member.accountId,name,image,country)
+                    }
+                } finally { conn.disconnect() }
+            }.getOrNull() }.toMap()
+        }
+        memberProfiles = loaded
+    }
 
     LaunchedEffect(roomOwner.id, roomOwner.uid, roomOwner.accountId) {
         if (isLogoOwner) return@LaunchedEffect
@@ -70,6 +95,7 @@ fun RoomInfo(
         profile.optString("name").takeIf { it.isNotBlank() && it != "null" }?.let {
             ownerDisplayName = it
         }
+        ownerCountry = sequenceOf("country","countryName","location").map { profile.optString(it,"").trim() }.firstOrNull { it.isNotBlank() && it!="null" }.orEmpty()
         sequenceOf("image", "photo", "photoURL", "avatar", "picture")
             .map { profile.optString(it, "") }
             .firstOrNull { it.isNotBlank() && it != "null" }
@@ -167,7 +193,10 @@ fun RoomInfo(
                             Text(roomData.roomName.ifBlank{"Room"},fontSize=14.sp,
                                 fontWeight=FontWeight.SemiBold,color=Color.White)
                             Row(verticalAlignment=Alignment.CenterVertically) {
-                                Text("ID: "+roomData.roomId,fontSize=10.sp,color=Color.White.copy(alpha=.60f))
+                                if (roomData.roomId in setOf("100002","100003","500001")) {
+                                    AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261101_125212.png", contentDescription="Purple ID Badge", modifier=Modifier.height(16.dp).widthIn(min=22.dp,max=30.dp), contentScale=ContentScale.Fit)
+                                    Text(roomData.roomId,fontSize=10.sp,color=Color.White.copy(alpha=.60f))
+                                } else Text("ID: "+roomData.roomId,fontSize=10.sp,color=Color.White.copy(alpha=.60f))
                                 IconButton(onClick={onCopyId(roomData.roomId)},modifier=Modifier.size(26.dp)) {
                                     Icon(Icons.Default.ContentCopy,contentDescription="Copy room ID",
                                         tint=Color.White.copy(alpha=.70f),modifier=Modifier.size(15.dp))
@@ -194,8 +223,8 @@ fun RoomInfo(
                 ) {
                     item {
                         // Owner is a simple member row, not a full-width card.
-                        MemberRow(ownerDisplayName, if (isLogoOwner) "https://zyora-voice-chat.vercel.app/logo.png" else ownerDisplayImage, roomOwner.accountId, "Owner", Color(0xFF278CF5)) {
-                            onOpenProfile(RoomInfoFollower(roomOwner.accountId, ownerDisplayName, ownerDisplayImage))
+                        MemberRow(ownerDisplayName, if (isLogoOwner) "https://zyora-voice-chat.vercel.app/logo.png" else ownerDisplayImage, roomOwner.accountId, "Owner", ownerCountry) {
+                            onOpenProfile(RoomInfoFollower(roomOwner.accountId, ownerDisplayName, ownerDisplayImage, ownerCountry))
                         }
                     }
                     items(roomAdmins.filter { admin ->
@@ -203,12 +232,14 @@ fun RoomInfo(
                             admin.accountId != roomOwner.accountId &&
                             roomFollowers.none { it.accountId == admin.accountId }
                     }, key = { "admin-${it.accountId}" }) { admin ->
-                        MemberRow(admin.name, admin.image, admin.accountId, "House", Color(0xFF22A447)) {
-                            onOpenProfile(admin)
+                        val profile = memberProfiles[admin.accountId] ?: admin
+                        MemberRow(profile.name, profile.image, profile.accountId, "House", profile.country) {
+                            onOpenProfile(profile)
                         }
                     }
                     items(roomFollowers.filter { it.accountId != roomOwner.accountId && roomAdmins.none { a -> a.accountId == it.accountId } }, key = { "member-${it.accountId}" }) { f ->
-                        MemberRow(f.name, f.image, f.accountId, "", Color.Transparent) { onOpenProfile(f) }
+                        val profile = memberProfiles[f.accountId] ?: f
+                        MemberRow(profile.name, profile.image, profile.accountId, "", profile.country) { onOpenProfile(profile) }
                     }
                     if (roomFollowers.isEmpty() && roomAdmins.isEmpty()) {
                         item {
@@ -228,7 +259,7 @@ private fun MemberRow(
     image: String,
     id: String,
     role: String,
-    roleColor: Color,
+    country: String,
     onClick: () -> Unit
 ) {
     Row(
@@ -243,30 +274,33 @@ private fun MemberRow(
         )
         Text(name.ifBlank { "User" }, Modifier.weight(1f).padding(start = 11.dp),
             fontSize = 13.sp, fontWeight = FontWeight.Medium, color = Color.White, maxLines = 1)
-        if (role == "Owner") {
-            Spacer(Modifier.weight(1f))
-            Box(
-                Modifier.padding(start = 8.dp).size(24.dp).clip(CircleShape).background(Color(0xFF3B82F6)),
-                contentAlignment = Alignment.Center
-            ) {
-                androidx.compose.material3.Icon(
-                    androidx.compose.material.icons.Icons.Default.Home,
-                    contentDescription = "Owner", tint = Color.White, modifier = Modifier.size(14.dp)
-                )
-            }
+        if (country.isNotBlank()) Text(countryFlagEmoji(country), fontSize = 15.sp, modifier = Modifier.padding(end = 5.dp))
+        Box(Modifier.height(16.dp).width(36.dp), contentAlignment = Alignment.CenterEnd) {
+            AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261028_004355.png", contentDescription="Level",
+                contentScale=ContentScale.FillBounds, modifier=Modifier.fillMaxSize())
+            Text("Lv.1", color=Color.White, fontSize=8.sp, fontWeight=FontWeight.Bold, modifier=Modifier.padding(end=5.dp))
         }
-        if (role.isNotBlank() && role != "Owner") {
-            Row(
-                Modifier.clip(RoundedCornerShape(5.dp)).background(roleColor).padding(horizontal = 7.dp, vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(3.dp)
-            ) {
-                if (role == "House") androidx.compose.material3.Icon(
-                    androidx.compose.material.icons.Icons.Default.Home,
-                    contentDescription = null, tint = Color.White, modifier = Modifier.size(12.dp)
-                )
-                Text(role, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
-            }
+        if (role == "Owner") {
+            AsyncImage(model=ROOM_ADMIN_TAG, contentDescription="Owner", contentScale=ContentScale.Fit,
+                modifier=Modifier.padding(start=7.dp).height(19.dp).width(42.dp))
         }
     }
+}
+
+private fun countryFlagEmoji(country: String): String {
+    val code = when (country.trim().lowercase()) {
+        "india", "indian" -> "IN"
+        "united states", "usa", "us" -> "US"
+        "united kingdom", "uk", "britain" -> "GB"
+        "pakistan" -> "PK"
+        "bangladesh" -> "BD"
+        "nepal" -> "NP"
+        "sri lanka" -> "LK"
+        "uae", "united arab emirates" -> "AE"
+        "saudi arabia" -> "SA"
+        "canada" -> "CA"
+        "australia" -> "AU"
+        else -> country.trim().uppercase().takeIf { it.length == 2 } ?: return "🌐"
+    }
+    return code.map { String(Character.toChars(0x1F1E6 + it.code - 65)) }.joinToString("")
 }
