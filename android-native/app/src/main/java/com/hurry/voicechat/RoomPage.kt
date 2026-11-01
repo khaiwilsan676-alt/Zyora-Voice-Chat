@@ -849,6 +849,22 @@ fun RoomPage(
             else -> if (purchasedRoomThemeImage.isNotBlank()) "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/$purchasedRoomThemeImage" else "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/1784875884052~2.jpg"
         },contentDescription="Room theme background",modifier=Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
 
+        // CUP AND MUSIC PILLS REVERTED TO ORIGINAL TOP LEFT OVERLAY POSITION
+        Row(modifier = Modifier.align(Alignment.TopStart).padding(top = 84.dp, start = 4.dp),verticalAlignment = Alignment.CenterVertically,horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(modifier = Modifier.height(22.dp).background(Brush.horizontalGradient(listOf(Color(0xE6242B35),Color(0x99242B35),Color.Transparent))).clickable { showInfo = true }.padding(start = 12.dp, end = 12.dp),verticalAlignment = Alignment.CenterVertically) {
+                TransparentGreenImage(url = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/1788258883971~2.jpg",modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("0", color = Color(0xFFEEF3A3), fontSize = 12.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, letterSpacing = 0.1.sp)
+                Icon(Icons.Default.ChevronRight, null, tint = Color(0xFFEEF3A3), modifier = Modifier.padding(start = 4.dp).size(10.dp))
+            }
+            if (musicControllerMinimized && miniMusicTrack != null) {
+                Row(modifier = Modifier.height(26.dp).clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha = 0.30f)).clickable { musicControllerMinimized = false }.padding(start = 2.dp, end = 10.dp),verticalAlignment = Alignment.CenterVertically,horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    AsyncImage(model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_00000000ee70820b9fd0dfe71739874e.png",contentDescription = "Music",modifier = Modifier.size(22.dp),contentScale = ContentScale.Fit)
+                    Text(text = miniMusicTrack?.name.orEmpty(),color = Color.White,fontSize = 11.sp,fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,maxLines = 1,overflow = TextOverflow.Clip,modifier = Modifier.widthIn(max = 68.dp).basicMarquee(iterations = Int.MAX_VALUE))
+                }
+            }
+        }
+
         Column(Modifier.fillMaxSize().imePadding()){
             // Top Room DP card and Top Right Options
             Row(Modifier.fillMaxWidth().padding(top=40.dp,start=0.dp,end=8.dp),verticalAlignment=Alignment.CenterVertically){ 
@@ -915,42 +931,27 @@ fun RoomPage(
                     }
                 }
                 Spacer(Modifier.weight(1f))
-                // Right aligned Top Icons + Task Image exactly below Power Icon
-                Column(horizontalAlignment = Alignment.End) {
-                    Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){
-                        Row(modifier=Modifier.height(32.dp).clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha=.30f)).clickable{showActiveUsers=true}.padding(horizontal=12.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){
-                            Image(painterResource(R.drawable.ic_hurry_people),contentDescription="Active users",modifier=Modifier.size(16.dp))
-                            Text(backendRoomUsers.size.toString(),color=Color.White,fontSize=12.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold)
-                        }
-                        if(accountId==roomOwner.accountId.ifBlank{roomOwner.id}) {
-                            Box(Modifier.size(32.dp).clip(CircleShape).background(Color.Black.copy(alpha=.30f)).clickable{showSettings=true},contentAlignment=Alignment.Center){Image(painterResource(R.drawable.ic_hurry_settings),contentDescription="Room settings",modifier=Modifier.size(18.dp))}
-                        }
-                        Box(Modifier.size(32.dp).clip(CircleShape).background(Color.Black.copy(alpha=.30f)).clickable{showExitMenu=true},contentAlignment=Alignment.Center){Image(painterResource(R.drawable.ic_hurry_power),contentDescription="Exit room",modifier=Modifier.size(18.dp))}
+                // Right aligned Top Icons
+                Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){
+                    Row(modifier=Modifier.height(32.dp).clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha=.30f)).clickable{showActiveUsers=true}.padding(horizontal=12.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){
+                        Image(painterResource(R.drawable.ic_hurry_people),contentDescription="Active users",modifier=Modifier.size(16.dp))
+                        Text(backendRoomUsers.size.toString(),color=Color.White,fontSize=12.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold)
                     }
-                    Spacer(Modifier.height(0.2.dp)) // Gap under Power icon before Task Image
-                    TransparentGreenImage(url="https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG-20260902-WA0066.jpg",modifier=Modifier.size(63.dp).clickable { showRoomTask=true })
-                }
-            }
-
-            // Top Cup car and Music card moved directly below DP with exact 0.2dp gap
-            Spacer(Modifier.height(0.2.dp))
-            Row(modifier = Modifier.padding(start = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Row(modifier = Modifier.height(22.dp).background(Brush.horizontalGradient(listOf(Color(0xE6242B35),Color(0x99242B35),Color.Transparent))).clickable { showInfo = true }.padding(start = 12.dp, end = 12.dp),verticalAlignment = Alignment.CenterVertically) {
-                    TransparentGreenImage(url = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/1788258883971~2.jpg",modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text("0", color = Color(0xFFEEF3A3), fontSize = 12.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, letterSpacing = 0.1.sp)
-                    Icon(Icons.Default.ChevronRight, null, tint = Color(0xFFEEF3A3), modifier = Modifier.padding(start = 4.dp).size(10.dp))
-                }
-                if (musicControllerMinimized && miniMusicTrack != null) {
-                    Row(modifier = Modifier.height(26.dp).clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha = 0.30f)).clickable { musicControllerMinimized = false }.padding(start = 2.dp, end = 10.dp),verticalAlignment = Alignment.CenterVertically,horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        AsyncImage(model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_00000000ee70820b9fd0dfe71739874e.png",contentDescription = "Music",modifier = Modifier.size(22.dp),contentScale = ContentScale.Fit)
-                        Text(text = miniMusicTrack?.name.orEmpty(),color = Color.White,fontSize = 11.sp,fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,maxLines = 1,overflow = TextOverflow.Clip,modifier = Modifier.widthIn(max = 68.dp).basicMarquee(iterations = Int.MAX_VALUE))
+                    if(accountId==roomOwner.accountId.ifBlank{roomOwner.id}) {
+                        Box(Modifier.size(32.dp).clip(CircleShape).background(Color.Black.copy(alpha=.30f)).clickable{showSettings=true},contentAlignment=Alignment.Center){Image(painterResource(R.drawable.ic_hurry_settings),contentDescription="Room settings",modifier=Modifier.size(18.dp))}
                     }
+                    Box(Modifier.size(32.dp).clip(CircleShape).background(Color.Black.copy(alpha=.30f)).clickable{showExitMenu=true},contentAlignment=Alignment.Center){Image(painterResource(R.drawable.ic_hurry_power),contentDescription="Exit room",modifier=Modifier.size(18.dp))}
                 }
             }
             
-            // SEAT LAYOUT
-            val topPadding = if (roomMicMode == 5) 36.dp else 44.dp
+            // FIXED HEIGHT ROW TO PREVENT JUMPING
+            Spacer(Modifier.height(0.2.dp))
+            Row(modifier = Modifier.padding(start = 4.dp).height(26.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                // Keep this intentionally empty to match layout height without shifting
+            }
+            
+            // SEAT LAYOUT WITH REDUCED TOP PADDING TO SHIFT UP
+            val topPadding = if (roomMicMode == 5) 32.dp else 40.dp
             Column(Modifier.fillMaxWidth().padding(horizontal=10.dp).padding(top=topPadding, bottom=8.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
                 val micSize = 66.dp
                 
@@ -994,7 +995,7 @@ fun RoomPage(
                         }
                     }
                 } else if (clearedBy.isNotBlank()) {
-                    // NEW CLEARED CHAT MESSAGE UI (Matches 1000225181.jpg)
+                    // CLEARED CHAT MESSAGE UI WITH SMALLER FONT
                     item {
                         Column(Modifier.fillMaxWidth().padding(start=4.dp, top=8.dp, end=82.dp, bottom=2.dp)) {
                             Column(Modifier.wrapContentWidth().clip(RoundedCornerShape(12.dp)).background(Color.Black.copy(alpha=.30f)).padding(horizontal=12.dp, vertical=8.dp), verticalArrangement=Arrangement.spacedBy(4.dp)) {
@@ -1005,8 +1006,8 @@ fun RoomPage(
                                     Text("System", color=Color(0xFFD1D1D1), fontSize=15.sp, fontWeight=FontWeight.Medium)
                                 }
                                 Row(verticalAlignment=Alignment.CenterVertically, horizontalArrangement=Arrangement.spacedBy(4.dp)) {
-                                    Text(clearedBy, color=Color(0xFFE2C67D), fontSize=15.sp, fontWeight=FontWeight.Bold, maxLines=1, softWrap=false, overflow=TextOverflow.Ellipsis)
-                                    Text("cleared the chat message", color=Color.White, fontSize=15.sp, fontWeight=FontWeight.Normal, maxLines=1, softWrap=false)
+                                    Text(clearedBy, color=Color(0xFFE2C67D), fontSize=13.sp, fontWeight=FontWeight.Bold, maxLines=1, softWrap=false, overflow=TextOverflow.Ellipsis)
+                                    Text("cleared the chat message", color=Color.White, fontSize=13.sp, fontWeight=FontWeight.Normal, maxLines=1, softWrap=false)
                                 }
                             }
                         }
@@ -1088,8 +1089,8 @@ fun RoomPage(
         val sideBannerPager = androidx.compose.foundation.pager.rememberPagerState(pageCount = { sideBannerImages.size })
         LaunchedEffect(Unit) { while (true) { kotlinx.coroutines.delay(3000); if (!sideBannerPager.isScrollInProgress) sideBannerPager.animateScrollToPage((sideBannerPager.currentPage + 1) % sideBannerImages.size) } }
 
-        // BOTTOM RIGHT CORNER GAP FIX (Banner to Game image exactly 0.2dp)
-        Column(modifier=Modifier.align(Alignment.BottomEnd).padding(end=10.dp, bottom=68.dp).heightIn(max=380.dp).verticalScroll(rememberScrollState()),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(0.2.dp)) {
+        // BOTTOM RIGHT CORNER (Task Image Reverted back here)
+        Column(modifier=Modifier.align(Alignment.BottomEnd).padding(end=10.dp, bottom=68.dp).heightIn(max=380.dp).verticalScroll(rememberScrollState()),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(2.dp)) {
             if (showFloatingLuckyBag) {
                 AsyncImage(
                     model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261021_170707.png",
@@ -1117,7 +1118,8 @@ fun RoomPage(
                 }
             }
             
-            // Task Image is removed from here and moved to the Top
+            // Task Image reverted back to bottom right above games
+            TransparentGreenImage(url="https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG-20260902-WA0066.jpg",modifier=Modifier.size(63.dp).clickable { showRoomTask=true })
             AsyncImage(model="https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/file_000000002a8c81fab8232bebeeeb45cc.png",contentDescription="Games",modifier=Modifier.size(56.dp).clickable { showGames=true },contentScale=ContentScale.Fit)
         }
         
