@@ -398,7 +398,7 @@ fun RoomPage(
                         val name = saved.optString("name", saved.optString("roomName", "")).takeUnless { it == "null" }.orEmpty()
                         val image = saved.optString("dp", saved.optString("image", saved.optString("roomDp", ""))).takeUnless { it == "null" }.orEmpty()
                         val message = saved.optString("message", saved.optString("announcement", "")).takeUnless { it == "null" }.orEmpty()
-                        val savedMicMode = saved.optInt("micMode", roomMicMode).let { if (it in listOf(5, 10, 15)) it else roomMicMode }
+                        val savedMicMode = saved.optInt("micMode", roomMicMode).let { if (it in listOf(5, 10, 13)) it else roomMicMode }
                         val savedTheme = saved.optString("theme", roomTheme).takeUnless { it.isBlank() || it == "null" } ?: roomTheme
                         val savedCustomTheme = saved.optString("customTheme", saved.optString("themeImage", "")).takeUnless { it == "null" }.orEmpty()
                         val savedLocked = saved.optBoolean("isLocked", locked)
@@ -955,8 +955,12 @@ fun RoomPage(
                     }
                 } else {
                     val micSize = 61.dp
-                    seats.take(roomMicMode.coerceIn(5, 15)).chunked(5).forEach { rowSeats ->
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    val rowSizes = if (roomMicMode == 10) listOf(2, 4, 4) else listOf(1, 4, 4, 4)
+                    var seatOffset = 0
+                    rowSizes.forEach { rowSize ->
+                        val rowSeats = seats.drop(seatOffset).take(rowSize)
+                        seatOffset += rowSize
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                             rowSeats.forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, isSpeaking = seat.speaking || (seat.accountId == accountId && localVoiceSpeaking), seatSize = micSize) { selectedSeat = seat.number; showSeatSheet = !seat.occupied } }
                         }
                     }
