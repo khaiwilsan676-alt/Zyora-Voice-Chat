@@ -99,15 +99,6 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
                 error = ""
                 try {
                     val user = withContext(Dispatchers.IO) { legacyGoogleBackendSignIn(context, result.data!!) }
-                    if (isDifferentRegisteredGoogleAccount(user, context)) {
-                        val prefs = context.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE)
-                        registeredDeviceAccountId = prefs.getString("registeredGoogleAccountId", "").orEmpty()
-                            .ifBlank { prefs.getString("accountId", "").orEmpty() }
-                        registeredDeviceEmail = prefs.getString("registeredGoogleEmail", "").orEmpty()
-                        showDeviceRegisteredDialog = true
-                        FirebaseAuth.getInstance().signOut()
-                        return@launch
-                    }
                     googleLoading = true
                     withContext(Dispatchers.IO) { syncHurryUser(user, context) }
                     rememberRegisteredGoogleAccount(user, context)
@@ -356,15 +347,6 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
                             loading = true
                             try {
                                 val user = googleBackendSignIn(context)
-                                if (isDifferentRegisteredGoogleAccount(user, context)) {
-                                    val prefs = context.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE)
-                                    registeredDeviceAccountId = prefs.getString("registeredGoogleAccountId", "").orEmpty()
-                                        .ifBlank { prefs.getString("accountId", "").orEmpty() }
-                                    registeredDeviceEmail = prefs.getString("registeredGoogleEmail", "").orEmpty()
-                                    showDeviceRegisteredDialog = true
-                                    FirebaseAuth.getInstance().signOut()
-                                    return@launch
-                                }
                                 googleLoading = true
                                 withContext(Dispatchers.IO) { syncHurryUser(user, context) }
                                 rememberRegisteredGoogleAccount(user, context)
