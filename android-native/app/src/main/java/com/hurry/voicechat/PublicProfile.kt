@@ -440,7 +440,7 @@ fun PublicProfileScreen(
                     // ID & Followers
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
                         if (isCoreOfficial || isRedOfficial) {
-                            AsyncImage(model = profileAsset("/IMG_20261101_120950.png"), contentDescription = "Purple ID Badge", contentScale = ContentScale.Fit, modifier = Modifier.height(30.dp).widthIn(min = 22.dp, max = 35.dp).padding(end = 4.dp))
+                            AsyncImage(model = profileAsset("/IMG_20261101_125212.png"), contentDescription = "Purple ID Badge", contentScale = ContentScale.Fit, modifier = Modifier.height(30.dp).widthIn(min = 22.dp, max = 35.dp).padding(end = 4.dp))
                             Text(displayAccNum, fontSize = 12.sp, color = Color.Gray)
                         } else Text("ID: $displayAccNum", fontSize = 12.sp, color = Color.Gray)
 
