@@ -832,7 +832,7 @@ private fun syncHurryUser(user: JSONObject, context: android.content.Context) {
     if (uid.isBlank()) throw IllegalStateException("Sign-in service did not return a user ID.")
 
     val specialAccounts = mapOf(
-        "Ed89IA0lyzUXlIplzH660OUdBmT2" to "100002",
+        "na7uRGa4ZPU4Suq6P63fxX6q1P12" to "100002",
         "dCt4l5GbjnMpOeBywiDSH6XfCoj1" to "100003",
         "a0yVqX9dEiS2ZZH6eQmpjs3QrUf1" to "500001",
         "HUSxSvQnabgU029dWYt1TUV04hd2" to "100002",
@@ -841,7 +841,7 @@ private fun syncHurryUser(user: JSONObject, context: android.content.Context) {
         "100003" to "100003"
     )
     val officialNames = mapOf(
-        "Ed89IA0lyzUXlIplzH660OUdBmT2" to "Zyora Official_IN",
+        "na7uRGa4ZPU4Suq6P63fxX6q1P12" to "Zyora Official_IN",
         "dCt4l5GbjnMpOeBywiDSH6XfCoj1" to "Zyora.IN",
         "a0yVqX9dEiS2ZZH6eQmpjs3QrUf1" to "500001"
     )
