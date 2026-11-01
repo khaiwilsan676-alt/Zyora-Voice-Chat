@@ -1917,7 +1917,7 @@ private fun formatMusicTime(seconds: Float): String {
                 Text(cachedName.ifBlank { m.sender },color=Color.White.copy(alpha=.9f),fontSize=12.sp,lineHeight=13.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold,maxLines=1,overflow=TextOverflow.Ellipsis)
                 
                 val isEnterRoomMessage = m.type == "join" || m.text.equals("Enter the Room", ignoreCase = true)
-                val showPurpleIdImage = isEnterRoomMessage && m.senderAccountId in setOf("100002", "100003", "500002")
+                val showPurpleIdImage = isEnterRoomMessage && m.senderAccountId in setOf("100002", "100003", "500001")
                 if (isRoomOwnerMessage) {
                     AsyncImage(model = "https://zyora-voice-chat.vercel.app/IMG_20261027_235537.png", contentDescription = "Owner", contentScale = ContentScale.Fit, modifier = Modifier.height(16.dp))
                 }
