@@ -99,7 +99,6 @@ fun ActiveUsers(
      item { Text("No active users",modifier=Modifier.fillMaxWidth().padding(18.dp),textAlign=TextAlign.Center,fontSize=12.sp,color=Color.White.copy(alpha=.65f)) }
     }
    }
-   }
   }
  }
 }
