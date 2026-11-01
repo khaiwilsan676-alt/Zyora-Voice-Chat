@@ -1015,6 +1015,11 @@ fun RoomPage(
                                 if (isRoomOwnerMessage) {
                                     AsyncImage(model = "https://zyora-voice-chat.vercel.app/IMG_20261027_235537.png", contentDescription = "Owner", contentScale = ContentScale.Fit, modifier = Modifier.height(16.dp))
                                 }
+                                // Match the exact ID-badge rule used by Public Profile's ID row.
+                                val hasPublicProfileIdImage = message.senderAccountId in setOf("100002", "100003", "500001")
+                                if (hasPublicProfileIdImage) {
+                                    AsyncImage(model = "https://zyora-voice-chat.vercel.app/IMG_20261101_125212.png", contentDescription = "Purple ID", contentScale = ContentScale.Fit, modifier = Modifier.height(16.dp).widthIn(min = 14.dp, max = 22.dp))
+                                }
                                 
                                 Box(modifier = Modifier.height(18.dp).width(36.dp), contentAlignment = Alignment.CenterEnd) {
                                     AsyncImage(model = "https://zyora-voice-chat.vercel.app/IMG_20261028_004355.png", contentDescription = "Level", contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
@@ -1920,8 +1925,6 @@ private fun formatMusicTime(seconds: Float): String {
             Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(3.dp)){
                 Text(cachedName.ifBlank { m.sender },color=Color.White.copy(alpha=.9f),fontSize=12.sp,lineHeight=13.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold,maxLines=1,overflow=TextOverflow.Ellipsis)
                 
-                val isEnterRoomMessage = m.type == "join" || m.text.equals("Enter the Room", ignoreCase = true)
-                val showPurpleIdImage = isEnterRoomMessage && m.senderAccountId in setOf("100002", "100003", "500001")
                 if (isRoomOwnerMessage) {
                     AsyncImage(model = "https://zyora-voice-chat.vercel.app/IMG_20261027_235537.png", contentDescription = "Owner", contentScale = ContentScale.Fit, modifier = Modifier.height(16.dp))
                 }
