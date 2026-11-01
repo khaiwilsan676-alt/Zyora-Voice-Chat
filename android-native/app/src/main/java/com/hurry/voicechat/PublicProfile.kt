@@ -383,7 +383,7 @@ fun PublicProfileScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
+                        .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
                         .background(Color.White)
                         .padding(horizontal = 16.dp, vertical = 16.dp)
                         .padding(top = 4.dp)
