@@ -549,15 +549,17 @@ fun MiniMusicControllerCard(
         Card(
             modifier = modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .height(170.dp)
+                .padding(horizontal = 16.dp, vertical = 8.dp),
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(containerColor = Color.Black),
             elevation = CardDefaults.cardElevation(8.dp)
         ) {
             if (showVolumeView) {
                 Column(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
                 ) {
                     Box(
                         modifier = Modifier.fillMaxWidth(),
@@ -572,12 +574,12 @@ fun MiniMusicControllerCard(
                         Text(
                             text = "Volume",
                             color = Color.White,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Normal
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(32.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
@@ -616,12 +618,13 @@ fun MiniMusicControllerCard(
                         Icon(Icons.Default.VolumeUp, contentDescription = "High Volume", tint = Color.White)
                     }
                     
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
                 }
             } 
             else {
                 Column(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp)
+                    modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 6.dp),
+                    verticalArrangement = Arrangement.Center
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -650,12 +653,13 @@ fun MiniMusicControllerCard(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
 
                     Text(
                         text = track.name,
                         color = Color.White,
-                        fontSize = 16.sp,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Normal,
                         maxLines = 1,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -664,7 +668,7 @@ fun MiniMusicControllerCard(
                         textAlign = TextAlign.Center
                     )
 
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -695,7 +699,7 @@ fun MiniMusicControllerCard(
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -732,7 +736,7 @@ fun MiniMusicControllerCard(
                         
                         Box(
                             modifier = Modifier
-                                .size(52.dp)
+                                .size(40.dp)
                                 .clip(CircleShape)
                                 .background(Color.White)
                                 .clickable {
