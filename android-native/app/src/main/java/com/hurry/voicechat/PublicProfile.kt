@@ -826,64 +826,192 @@ fun PublicProfileScreen(
             var reportCategory by remember { mutableStateOf("") }
             var reportDescription by remember { mutableStateOf("") }
             var reportSubmitted by remember { mutableStateOf(false) }
+            val reportReasons = listOf(
+                "Harassment or bullying",
+                "Hate speech",
+                "Violence or dangerous content",
+                "Nudity or sexual content",
+                "Spam or scam",
+                "Fake account",
+                "Other"
+            )
             Column(
-                modifier = Modifier.fillMaxSize().background(Color.White).windowInsetsPadding(WindowInsets.statusBars).padding(16.dp)
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color(0xFFF7F8FA))
+                    .windowInsetsPadding(WindowInsets.statusBars)
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color.White)
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(onClick = { showUserReport = false }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color(0xFF374151))
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color(0xFF202633))
                     }
-                    Spacer(Modifier.weight(1f))
-                    Text("Report", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF111827))
-                    Spacer(Modifier.weight(1f))
+                    Text(
+                        "Report",
+                        modifier = Modifier.weight(1f),
+                        fontSize = 19.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color(0xFF202633),
+                        textAlign = TextAlign.Center
+                    )
                     Spacer(Modifier.width(48.dp))
                 }
+
                 if (reportSubmitted) {
                     Column(
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier.fillMaxSize().padding(28.dp),
                         verticalArrangement = Arrangement.Center,
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text("Thank You!", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color(0xFF111827))
-                        Text("Your report has been submitted successfully.", color = Color(0xFF6B7280), textAlign = TextAlign.Center, modifier = Modifier.padding(top = 8.dp))
-                        Button(onClick = { showUserReport = false }, modifier = Modifier.fillMaxWidth().padding(top = 24.dp)) { Text("OK") }
+                        Box(
+                            modifier = Modifier.size(76.dp).clip(CircleShape).background(Color(0xFFE7F8F0)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.Check, contentDescription = null, tint = Color(0xFF16A36A), modifier = Modifier.size(38.dp))
+                        }
+                        Text("Thanks for letting us know", fontSize = 21.sp, fontWeight = FontWeight.Bold, color = Color(0xFF202633), modifier = Modifier.padding(top = 20.dp))
+                        Text(
+                            "Your report helps us keep Zyora safe for everyone.",
+                            color = Color(0xFF77808E),
+                            fontSize = 14.sp,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
+                        Button(
+                            onClick = { showUserReport = false },
+                            modifier = Modifier.fillMaxWidth().padding(top = 28.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF237BEE))
+                        ) { Text("Done", color = Color.White, fontWeight = FontWeight.SemiBold) }
                     }
                 } else {
-                    Text("Select a reason", fontSize = 14.sp, color = Color(0xFF374151), modifier = Modifier.padding(top = 20.dp, bottom = 12.dp))
-                    val reportCategories = listOf("Violence", "Abusing", "Illegal", "Other's")
-                    reportCategories.chunked(2).forEach { rowCategories ->
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            rowCategories.forEach { category ->
-                                FilterChip(
-                                    selected = reportCategory == category,
-                                    onClick = { reportCategory = category },
-                                    label = { Text(category) },
-                                    modifier = Modifier.weight(1f)
-                                )
+                    Column(
+                        modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 18.dp)
+                    ) {
+                        Text(
+                            "Why are you reporting this account?",
+                            fontSize = 21.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF202633),
+                            modifier = Modifier.padding(top = 22.dp)
+                        )
+                        Text(
+                            "Choose the reason that best describes the problem. Your report is private.",
+                            fontSize = 13.sp,
+                            color = Color(0xFF7A8492),
+                            modifier = Modifier.padding(top = 7.dp, bottom = 18.dp)
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Color.White).padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            AsyncImage(
+                                model = userPhoto,
+                                contentDescription = "Reported account",
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.size(48.dp).clip(CircleShape)
+                            )
+                            Column(modifier = Modifier.weight(1f).padding(start = 12.dp)) {
+                                Text(userName, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF202633), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text("ID: $displayAccNum", fontSize = 12.sp, color = Color(0xFF8992A0), modifier = Modifier.padding(top = 3.dp))
+                            }
+                            Icon(Icons.Default.Shield, contentDescription = null, tint = Color(0xFF237BEE), modifier = Modifier.size(22.dp))
+                        }
+
+                        Text(
+                            "SELECT A REASON",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF8A93A0),
+                            modifier = Modifier.padding(top = 24.dp, bottom = 9.dp)
+                        )
+                        Column(
+                            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Color.White)
+                        ) {
+                            reportReasons.forEachIndexed { index, reason ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().clickable { reportCategory = reason }.padding(horizontal = 15.dp, vertical = 15.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(reason, modifier = Modifier.weight(1f), fontSize = 14.sp, color = Color(0xFF303846))
+                                    Box(
+                                        modifier = Modifier.size(20.dp).border(
+                                            width = if (reportCategory == reason) 6.dp else 1.5.dp,
+                                            color = if (reportCategory == reason) Color(0xFF237BEE) else Color(0xFFB9C1CC),
+                                            shape = CircleShape
+                                        )
+                                    )
+                                }
+                                if (index != reportReasons.lastIndex) {
+                                    Divider(color = Color(0xFFF0F2F5), thickness = 1.dp, modifier = Modifier.padding(start = 15.dp))
+                                }
                             }
                         }
+
+                        Text(
+                            "ADDITIONAL DETAILS (OPTIONAL)",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF8A93A0),
+                            modifier = Modifier.padding(top = 22.dp, bottom = 9.dp)
+                        )
+                        OutlinedTextField(
+                            value = reportDescription,
+                            onValueChange = { if (it.length <= 500) reportDescription = it },
+                            modifier = Modifier.fillMaxWidth().height(124.dp),
+                            placeholder = { Text("Tell us a little more...", color = Color(0xFF9AA3AF), fontSize = 13.sp) },
+                            shape = RoundedCornerShape(12.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Color(0xFF237BEE),
+                                unfocusedBorderColor = Color(0xFFE1E5EB),
+                                focusedContainerColor = Color.White,
+                                unfocusedContainerColor = Color.White
+                            )
+                        )
+                        Text(
+                            "${reportDescription.length}/500",
+                            modifier = Modifier.fillMaxWidth().padding(top = 5.dp, bottom = 20.dp),
+                            textAlign = TextAlign.End,
+                            fontSize = 11.sp,
+                            color = Color(0xFF9AA3AF)
+                        )
                     }
-                    OutlinedTextField(
-                        value = reportDescription,
-                        onValueChange = { reportDescription = it },
-                        modifier = Modifier.fillMaxWidth().padding(top = 16.dp).height(140.dp),
-                        label = { Text("Description") }
-                    )
-                    Spacer(Modifier.weight(1f))
-                    Button(
-                        onClick = {
-                            if (reportCategory.isNotBlank()) {
-                                reportSubmitted = true
-                            } else {
-                                Toast.makeText(context, "Select a reason", Toast.LENGTH_SHORT).show()
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1DC4E9))
-                    ) { Text("Submit", color = Color.White) }
+
+                    Column(
+                        modifier = Modifier.fillMaxWidth().background(Color.White).navigationBarsPadding().padding(horizontal = 18.dp, vertical = 14.dp)
+                    ) {
+                        Button(
+                            onClick = {
+                                if (reportCategory.isNotBlank()) {
+                                    reportSubmitted = true
+                                } else {
+                                    Toast.makeText(context, "Please select a reason", Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth().height(50.dp),
+                            enabled = reportCategory.isNotBlank(),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF237BEE),
+                                disabledContainerColor = Color(0xFFD5DCE6)
+                            )
+                        ) {
+                            Text("Submit report", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                        }
+                        Text(
+                            "We review reports to help keep the community safe.",
+                            modifier = Modifier.fillMaxWidth().padding(top = 9.dp),
+                            textAlign = TextAlign.Center,
+                            fontSize = 11.sp,
+                            color = Color(0xFF929BA8)
+                        )
+                    }
                 }
             }
         }
