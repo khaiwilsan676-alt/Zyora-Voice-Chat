@@ -396,7 +396,7 @@ fun RoomPage(
                         val name = saved.optString("name", saved.optString("roomName", "")).takeUnless { it == "null" }.orEmpty()
                         val image = saved.optString("dp", saved.optString("image", saved.optString("roomDp", ""))).takeUnless { it == "null" }.orEmpty()
                         val message = saved.optString("message", saved.optString("announcement", "")).takeUnless { it == "null" }.orEmpty()
-                        val savedMicMode = saved.optInt("micMode", roomMicMode).let { if (it in listOf(5, 10, 13)) it else roomMicMode }
+                        val savedMicMode = saved.optInt("micMode", roomMicMode).let { if (it in listOf(5, 10, 15)) it else roomMicMode }
                         val savedTheme = saved.optString("theme", roomTheme).takeUnless { it.isBlank() || it == "null" } ?: roomTheme
                         val savedCustomTheme = saved.optString("customTheme", saved.optString("themeImage", "")).takeUnless { it == "null" }.orEmpty()
                         val savedLocked = saved.optBoolean("isLocked", locked)
@@ -865,218 +865,265 @@ fun RoomPage(
             }
         }
 
-        Column(Modifier.fillMaxSize().imePadding()){
-            // Top Room DP card and Top Right Options
-            Row(Modifier.fillMaxWidth().padding(top=40.dp,start=0.dp,end=8.dp),verticalAlignment=Alignment.CenterVertically){ 
-                Row(modifier = Modifier.height(44.dp).clip(RoundedCornerShape(topEnd = 50.dp, bottomEnd = 50.dp)).background(Color.Black.copy(alpha = 0.3f)).clickable { showInfo = true }.padding(start = 4.dp, end = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    FallbackAsyncImage(model = roomImage,contentDescription = "Room profile",modifier = Modifier.size(44.dp).clip(RoundedCornerShape(8.dp)),contentScale = ContentScale.Crop)
-                    Column(Modifier.padding(start = 8.dp), verticalArrangement = Arrangement.Center) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text(text = roomName,color = Color.White,fontSize = 13.sp,fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,maxLines = 1,modifier = Modifier.widthIn(max = 85.dp).basicMarquee(iterations = Int.MAX_VALUE),overflow = TextOverflow.Clip)
-                            Text(roomCountryFlag(roomOwner.country), color = Color.White, fontSize = 13.sp)
-                            if (accountId != roomOwner.accountId.ifBlank { roomOwner.id }) {
-                                Box(Modifier.size(20.dp).clip(CircleShape).background(if (followed) Color(0xFF9CA3AF) else Color(0xFF3B82F6)).clickable {
-                                    val next = !followed
-                                    followed = next
-                                    onFollowToggle(roomId, next)
-                                    kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
-                                        runCatching {
-                                            val encodedUser = java.net.URLEncoder.encode(accountId, "UTF-8")
-                                            val encodedRoom = java.net.URLEncoder.encode(roomId, "UTF-8")
-                                            val url = if (next) java.net.URL("https://zyora-server.onrender.com/api/room-follows") else java.net.URL("https://zyora-server.onrender.com/api/room-follows?userId=$encodedUser&roomId=$encodedRoom")
-                                            val conn = (url.openConnection() as java.net.HttpURLConnection).apply {
-                                                requestMethod = if (next) "POST" else "DELETE"
-                                                connectTimeout = 8000
-                                                readTimeout = 8000
-                                                if (next) {
-                                                    doOutput = true
-                                                    setRequestProperty("Content-Type", "application/json")
+        // FULL ROOM CONTENT LAYOUT
+        Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TOP UI FROM JUMPING
+            
+            // --- TOP SECTION (FIXED, NO IME PADDING) ---
+            Box(Modifier.fillMaxWidth()) {
+                Column(Modifier.fillMaxWidth()) {
+                    // Top Room DP card and Top Right Options
+                    Row(Modifier.fillMaxWidth().padding(top=40.dp,start=0.dp,end=8.dp),verticalAlignment=Alignment.CenterVertically){ 
+                        Row(modifier = Modifier.height(44.dp).clip(RoundedCornerShape(topEnd = 50.dp, bottomEnd = 50.dp)).background(Color.Black.copy(alpha = 0.3f)).clickable { showInfo = true }.padding(start = 4.dp, end = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                            FallbackAsyncImage(model = roomImage,contentDescription = "Room profile",modifier = Modifier.size(44.dp).clip(RoundedCornerShape(8.dp)),contentScale = ContentScale.Crop)
+                            Column(Modifier.padding(start = 8.dp), verticalArrangement = Arrangement.Center) {
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Text(text = roomName,color = Color.White,fontSize = 13.sp,fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,maxLines = 1,modifier = Modifier.widthIn(max = 85.dp).basicMarquee(iterations = Int.MAX_VALUE),overflow = TextOverflow.Clip)
+                                    Text(roomCountryFlag(roomOwner.country), color = Color.White, fontSize = 13.sp)
+                                    if (accountId != roomOwner.accountId.ifBlank { roomOwner.id }) {
+                                        Box(Modifier.size(20.dp).clip(CircleShape).background(if (followed) Color(0xFF9CA3AF) else Color(0xFF3B82F6)).clickable {
+                                            val next = !followed
+                                            followed = next
+                                            onFollowToggle(roomId, next)
+                                            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                                                runCatching {
+                                                    val encodedUser = java.net.URLEncoder.encode(accountId, "UTF-8")
+                                                    val encodedRoom = java.net.URLEncoder.encode(roomId, "UTF-8")
+                                                    val url = if (next) java.net.URL("https://zyora-server.onrender.com/api/room-follows") else java.net.URL("https://zyora-server.onrender.com/api/room-follows?userId=$encodedUser&roomId=$encodedRoom")
+                                                    val conn = (url.openConnection() as java.net.HttpURLConnection).apply {
+                                                        requestMethod = if (next) "POST" else "DELETE"
+                                                        connectTimeout = 8000
+                                                        readTimeout = 8000
+                                                        if (next) {
+                                                            doOutput = true
+                                                            setRequestProperty("Content-Type", "application/json")
+                                                        }
+                                                    }
+                                                    if (next) {
+                                                        val payload = JSONObject()
+                                                            .put("userId", accountId)
+                                                            .put("roomId", roomId)
+                                                            .put("roomName", roomName)
+                                                            .put("roomImage", roomImage)
+                                                            .put("roomCountry", roomOwner.country)
+                                                            .put("followerName", roomDisplayName)
+                                                            .put("followerImage", roomDisplayImage)
+                                                        conn.outputStream.use { it.write(payload.toString().toByteArray(Charsets.UTF_8)) }
+                                                    }
+                                                    conn.responseCode
+                                                    conn.disconnect()
                                                 }
                                             }
-                                            if (next) {
-                                                val payload = JSONObject()
-                                                    .put("userId", accountId)
-                                                    .put("roomId", roomId)
-                                                    .put("roomName", roomName)
-                                                    .put("roomImage", roomImage)
-                                                    .put("roomCountry", roomOwner.country)
-                                                    .put("followerName", roomDisplayName)
-                                                    .put("followerImage", roomDisplayImage)
-                                                conn.outputStream.use { it.write(payload.toString().toByteArray(Charsets.UTF_8)) }
-                                            }
-                                            conn.responseCode
-                                            conn.disconnect()
+                                        }, contentAlignment = Alignment.Center) {
+                                            Icon(imageVector = if(followed) Icons.Default.Check else Icons.Default.Add,contentDescription = if(followed) "Following" else "Follow",tint = Color.White,modifier = Modifier.size(14.dp))
                                         }
                                     }
-                                }, contentAlignment = Alignment.Center) {
-                                    Icon(imageVector = if(followed) Icons.Default.Check else Icons.Default.Add,contentDescription = if(followed) "Following" else "Follow",tint = Color.White,modifier = Modifier.size(14.dp))
+                                }
+                                val roomOwnerAccountId = roomOwner.accountId.ifBlank { roomOwner.id.ifBlank { roomId } }
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp), modifier = Modifier.offset(y = (-3).dp)) {
+                                    when (roomOwnerAccountId) {
+                                        "100002", "100003", "500001" -> {
+                                            AsyncImage(
+                                                model = "https://zyora-voice-chat.vercel.app/IMG_20261101_125212.png",
+                                                contentDescription = "Purple ID Badge",
+                                                contentScale = ContentScale.Fit,
+                                                modifier = Modifier.height(13.dp).widthIn(min = 12.dp, max = 18.dp)
+                                            )
+                                            Text(roomOwnerAccountId, color = Color.White.copy(alpha = 0.9f), fontSize = 10.sp)
+                                        }
+                                        else -> Text("ID: $roomOwnerAccountId", color = Color.White.copy(alpha = 0.9f), fontSize = 10.sp)
+                                    }
                                 }
                             }
                         }
-                        val roomOwnerAccountId = roomOwner.accountId.ifBlank { roomOwner.id.ifBlank { roomId } }
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp), modifier = Modifier.offset(y = (-3).dp)) {
-                            when (roomOwnerAccountId) {
-                                "100002", "100003", "500001" -> {
-                                    AsyncImage(
-                                        model = "https://zyora-voice-chat.vercel.app/IMG_20261101_125212.png",
-                                        contentDescription = "Purple ID Badge",
-                                        contentScale = ContentScale.Fit,
-                                        modifier = Modifier.height(13.dp).widthIn(min = 12.dp, max = 18.dp)
-                                    )
-                                    Text(roomOwnerAccountId, color = Color.White.copy(alpha = 0.9f), fontSize = 10.sp)
+                        Spacer(Modifier.weight(1f))
+                        // Right aligned Top Icons
+                        Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){
+                            Row(modifier=Modifier.height(32.dp).clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha=.30f)).clickable{showActiveUsers=true}.padding(horizontal=12.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){
+                                Image(painterResource(R.drawable.ic_hurry_people),contentDescription="Active users",modifier=Modifier.size(16.dp))
+                                Text(backendRoomUsers.size.toString(),color=Color.White,fontSize=12.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold)
+                            }
+                            if(accountId==roomOwner.accountId.ifBlank{roomOwner.id}) {
+                                Box(Modifier.size(32.dp).clip(CircleShape).background(Color.Black.copy(alpha=.30f)).clickable{showSettings=true},contentAlignment=Alignment.Center){Image(painterResource(R.drawable.ic_hurry_settings),contentDescription="Room settings",modifier=Modifier.size(18.dp))}
+                            }
+                            Box(Modifier.size(32.dp).clip(CircleShape).background(Color.Black.copy(alpha=.30f)).clickable{showExitMenu=true},contentAlignment=Alignment.Center){Image(painterResource(R.drawable.ic_hurry_power),contentDescription="Exit room",modifier=Modifier.size(18.dp))}
+                        }
+                    }
+                    
+                    // FIXED HEIGHT ROW TO PREVENT JUMPING
+                    Spacer(Modifier.height(0.2.dp))
+                    Row(modifier = Modifier.padding(start = 4.dp).height(26.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {}
+                    
+                    // SEAT LAYOUT WITH REDUCED TOP PADDING TO SHIFT UP (5% ouper shift kiya gaya hai)
+                    val topPadding = if (roomMicMode == 5) 12.dp else 20.dp
+                    Column(Modifier.fillMaxWidth().padding(horizontal=10.dp).padding(top=topPadding, bottom=8.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                        val micSize = if (roomMicMode == 15) 60.dp else 66.dp // 15 mic ke liye seat size choti (60)
+                        
+                        if (roomMicMode == 5) {
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                                seats.take(1).forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, isSpeaking = seat.speaking || (seat.accountId == accountId && localVoiceSpeaking), seatSize = micSize) { selectedSeat = seat.number; showSeatSheet = !seat.occupied } }
+                            }
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                seats.drop(1).take(4).forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, isSpeaking = seat.speaking || (seat.accountId == accountId && localVoiceSpeaking), seatSize = micSize) { selectedSeat = seat.number; showSeatSheet = !seat.occupied } }
+                            }
+                        } else {
+                            val rowSizes = when (roomMicMode) {
+                                10 -> listOf(2, 4, 4)
+                                15 -> listOf(5, 5, 5) // 15 mic mode: Total 3 rows, har mein 5 seats
+                                else -> listOf(1, 4, 4, 4)
+                            }
+                            var seatOffset = 0
+                            rowSizes.forEach { rowSize ->
+                                val rowSeats = seats.drop(seatOffset).take(rowSize)
+                                seatOffset += rowSize
+                                val arrangement = if (rowSize == 1) Arrangement.Center else Arrangement.SpaceBetween
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = arrangement) {
+                                    if (roomMicMode == 10 && rowSize == 2) {
+                                        Spacer(modifier = Modifier.width(micSize)) 
+                                        rowSeats.forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, isSpeaking = seat.speaking || (seat.accountId == accountId && localVoiceSpeaking), seatSize = micSize) { selectedSeat = seat.number; showSeatSheet = !seat.occupied } }
+                                        Spacer(modifier = Modifier.width(micSize))
+                                    } else {
+                                        rowSeats.forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, isSpeaking = seat.speaking || (seat.accountId == accountId && localVoiceSpeaking), seatSize = micSize) { selectedSeat = seat.number; showSeatSheet = !seat.occupied } }
+                                    }
                                 }
-                                else -> Text("ID: $roomOwnerAccountId", color = Color.White.copy(alpha = 0.9f), fontSize = 10.sp)
                             }
                         }
                     }
                 }
-                Spacer(Modifier.weight(1f))
-                // Right aligned Top Icons
-                Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){
-                    Row(modifier=Modifier.height(32.dp).clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha=.30f)).clickable{showActiveUsers=true}.padding(horizontal=12.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){
-                        Image(painterResource(R.drawable.ic_hurry_people),contentDescription="Active users",modifier=Modifier.size(16.dp))
-                        Text(backendRoomUsers.size.toString(),color=Color.White,fontSize=12.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold)
-                    }
-                    if(accountId==roomOwner.accountId.ifBlank{roomOwner.id}) {
-                        Box(Modifier.size(32.dp).clip(CircleShape).background(Color.Black.copy(alpha=.30f)).clickable{showSettings=true},contentAlignment=Alignment.Center){Image(painterResource(R.drawable.ic_hurry_settings),contentDescription="Room settings",modifier=Modifier.size(18.dp))}
-                    }
-                    Box(Modifier.size(32.dp).clip(CircleShape).background(Color.Black.copy(alpha=.30f)).clickable{showExitMenu=true},contentAlignment=Alignment.Center){Image(painterResource(R.drawable.ic_hurry_power),contentDescription="Exit room",modifier=Modifier.size(18.dp))}
-                }
-            }
-            
-            // FIXED HEIGHT ROW TO PREVENT JUMPING
-            Spacer(Modifier.height(0.2.dp))
-            Row(modifier = Modifier.padding(start = 4.dp).height(26.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                // Keep this intentionally empty to match layout height without shifting
-            }
-            
-            // SEAT LAYOUT WITH REDUCED TOP PADDING TO SHIFT UP
-            val topPadding = if (roomMicMode == 5) 32.dp else 40.dp
-            Column(Modifier.fillMaxWidth().padding(horizontal=10.dp).padding(top=topPadding, bottom=8.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
-                val micSize = 66.dp
                 
-                if (roomMicMode == 5) {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-                        seats.take(1).forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, isSpeaking = seat.speaking || (seat.accountId == accountId && localVoiceSpeaking), seatSize = micSize) { selectedSeat = seat.number; showSeatSheet = !seat.occupied } }
-                    }
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        seats.drop(1).take(4).forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, isSpeaking = seat.speaking || (seat.accountId == accountId && localVoiceSpeaking), seatSize = micSize) { selectedSeat = seat.number; showSeatSheet = !seat.occupied } }
-                    }
-                } else {
-                    val rowSizes = if (roomMicMode == 10) listOf(2, 4, 4) else listOf(1, 4, 4, 4)
-                    var seatOffset = 0
-                    rowSizes.forEach { rowSize ->
-                        val rowSeats = seats.drop(seatOffset).take(rowSize)
-                        seatOffset += rowSize
-                        val arrangement = if (rowSize == 1) Arrangement.Center else Arrangement.SpaceBetween
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = arrangement) {
-                            if (roomMicMode == 10 && rowSize == 2) {
-                                Spacer(modifier = Modifier.width(micSize)) 
-                                rowSeats.forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, isSpeaking = seat.speaking || (seat.accountId == accountId && localVoiceSpeaking), seatSize = micSize) { selectedSeat = seat.number; showSeatSheet = !seat.occupied } }
-                                Spacer(modifier = Modifier.width(micSize))
-                            } else {
-                                rowSeats.forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, isSpeaking = seat.speaking || (seat.accountId == accountId && localVoiceSpeaking), seatSize = micSize) { selectedSeat = seat.number; showSeatSheet = !seat.occupied } }
-                            }
-                        }
-                    }
+                // TOP DIM OVERLAY WHEN CHAT IS OPEN
+                if (showChat) {
+                    Box(
+                        Modifier
+                            .matchParentSize()
+                            .background(Color.Black.copy(alpha = 0.65f))
+                            .clickable(
+                                indication = null,
+                                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+                            ) { showChat = false; keyboardController?.hide() }
+                    )
                 }
             }
+            // --- END TOP SECTION ---
 
             val chatListState = androidx.compose.foundation.lazy.rememberLazyListState()
             LaunchedEffect(messages.size, imeVisible) { if (messages.isNotEmpty()) chatListState.animateScrollToItem(messages.lastIndex) }
             
-            LazyColumn(state=chatListState,modifier=Modifier.fillMaxWidth().weight(1f).padding(horizontal=10.dp),contentPadding=PaddingValues(bottom=8.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
-                if (showOfficialAnnouncement) {
-                    item {
-                        Column(Modifier.fillMaxWidth().padding(start=4.dp, top=8.dp, end=82.dp, bottom=2.dp)) {
-                            Column(Modifier.fillMaxWidth(.92f).clip(RoundedCornerShape(8.dp)).background(Color.Black.copy(alpha=.30f)).padding(horizontal=14.dp,vertical=12.dp)) {
-                                Text("Announcement: Welcome to Zyora. Any content related to porn, fraud, or fake official accounts will result in a ban!",color=Color(0xFFE2C67D),fontSize=13.sp,lineHeight=16.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Medium)
-                            }
-                        }
+            // --- BOTTOM SECTION (MESSAGES + INPUT/FOOTER, WITH IME PADDING) ---
+            Column(Modifier.fillMaxWidth().weight(1f).imePadding()) {
+                Box(Modifier.weight(1f).fillMaxWidth()) {
+                    
+                    // BOTTOM DIM OVERLAY BEHIND MESSAGES WHEN CHAT IS OPEN
+                    if (showChat) {
+                        Box(
+                            Modifier
+                                .matchParentSize()
+                                .background(Color.Black.copy(alpha = 0.65f))
+                                .clickable(
+                                    indication = null,
+                                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+                                ) { showChat = false; keyboardController?.hide() }
+                        )
                     }
-                } else if (clearedBy.isNotBlank()) {
-                    // CLEARED CHAT MESSAGE UI WITH SMALLER FONT
-                    item {
-                        Column(Modifier.fillMaxWidth().padding(start=4.dp, top=8.dp, end=82.dp, bottom=2.dp)) {
-                            Column(Modifier.wrapContentWidth().clip(RoundedCornerShape(12.dp)).background(Color.Black.copy(alpha=.30f)).padding(horizontal=12.dp, vertical=8.dp), verticalArrangement=Arrangement.spacedBy(4.dp)) {
-                                Row(verticalAlignment=Alignment.CenterVertically, horizontalArrangement=Arrangement.spacedBy(6.dp)) {
-                                    Box(Modifier.size(24.dp).clip(CircleShape).background(Color(0xFF00C853)), contentAlignment=Alignment.Center) {
-                                        Icon(Icons.Default.Notifications, contentDescription="System", tint=Color.White, modifier=Modifier.size(16.dp))
+
+                    LazyColumn(
+                        state = chatListState,
+                        modifier = Modifier.fillMaxSize().padding(horizontal = 10.dp),
+                        contentPadding = PaddingValues(bottom = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        if (showOfficialAnnouncement) {
+                            item {
+                                Column(Modifier.fillMaxWidth().padding(start=4.dp, top=8.dp, end=82.dp, bottom=2.dp)) {
+                                    Column(Modifier.fillMaxWidth(.92f).clip(RoundedCornerShape(8.dp)).background(Color.Black.copy(alpha=.30f)).padding(horizontal=14.dp,vertical=12.dp)) {
+                                        Text("Announcement: Welcome to Zyora. Any content related to porn, fraud, or fake official accounts will result in a ban!",color=Color(0xFFE2C67D),fontSize=13.sp,lineHeight=16.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Medium)
                                     }
-                                    Text("System", color=Color(0xFFD1D1D1), fontSize=15.sp, fontWeight=FontWeight.Medium)
-                                }
-                                Row(verticalAlignment=Alignment.CenterVertically, horizontalArrangement=Arrangement.spacedBy(4.dp)) {
-                                    Text(clearedBy, color=Color(0xFFE2C67D), fontSize=13.sp, fontWeight=FontWeight.Bold, maxLines=1, softWrap=false, overflow=TextOverflow.Ellipsis)
-                                    Text("cleared the chat message", color=Color.White, fontSize=13.sp, fontWeight=FontWeight.Normal, maxLines=1, softWrap=false)
                                 }
                             }
+                        } else if (clearedBy.isNotBlank()) {
+                            // CLEARED CHAT MESSAGE UI WITH SMALLER FONT
+                            item {
+                                Column(Modifier.fillMaxWidth().padding(start=4.dp, top=8.dp, end=82.dp, bottom=2.dp)) {
+                                    Column(Modifier.wrapContentWidth().clip(RoundedCornerShape(12.dp)).background(Color.Black.copy(alpha=.30f)).padding(horizontal=12.dp, vertical=8.dp), verticalArrangement=Arrangement.spacedBy(4.dp)) {
+                                        Row(verticalAlignment=Alignment.CenterVertically, horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+                                            Box(Modifier.size(24.dp).clip(CircleShape).background(Color(0xFF00C853)), contentAlignment=Alignment.Center) {
+                                                Icon(Icons.Default.Notifications, contentDescription="System", tint=Color.White, modifier=Modifier.size(16.dp))
+                                            }
+                                            Text("System", color=Color(0xFFD1D1D1), fontSize=15.sp, fontWeight=FontWeight.Medium)
+                                        }
+                                        Row(verticalAlignment=Alignment.CenterVertically, horizontalArrangement=Arrangement.spacedBy(4.dp)) {
+                                            Text(clearedBy, color=Color(0xFFE2C67D), fontSize=13.sp, fontWeight=FontWeight.Bold, maxLines=1, softWrap=false, overflow=TextOverflow.Ellipsis)
+                                            Text("cleared the chat message", color=Color.White, fontSize=13.sp, fontWeight=FontWeight.Normal, maxLines=1, softWrap=false)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        if(announcement.isNotBlank()) {
+                            item {
+                                Column(Modifier.fillMaxWidth().padding(start=4.dp, end=82.dp, bottom=2.dp)) {
+                                    Column(Modifier.fillMaxWidth(.92f).clip(RoundedCornerShape(8.dp)).background(Color.Black.copy(alpha=.30f)).padding(horizontal=14.dp,vertical=12.dp)) {
+                                        Text("ANNOUNCEMENT: $announcement",color=Color(0xFFE2C67D),fontSize=13.sp,lineHeight=16.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Medium)
+                                    }
+                                }
+                            }
+                        }
+                        items(messages,key={it.id}){message ->
+                            if(message.type=="join") {
+                                Column(Modifier.padding(vertical=2.dp).wrapContentWidth().clip(RoundedCornerShape(8.dp)).background(Color.Black.copy(alpha=.30f)).padding(horizontal=12.dp,vertical=4.dp),horizontalAlignment=Alignment.Start,verticalArrangement=Arrangement.spacedBy(2.dp)){
+                                    Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp), modifier=Modifier.clickable { selectedChatProfile = message }){
+                                        FallbackAsyncImage(model=if (message.senderAccountId in setOf("100002", "100003", "500002")) "https://zyora-voice-chat.vercel.app/logo.png" else message.senderImage,contentDescription=message.sender,modifier=Modifier.size(24.dp).clip(CircleShape),contentScale=ContentScale.Crop)
+                                        Text(message.sender,color=Color.White.copy(alpha=.95f),fontSize=12.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold)
+                                        
+                                        val isRoomOwnerMessage = message.senderAccountId == roomOwner.accountId.ifBlank { roomOwner.id }
+                                        if (isRoomOwnerMessage) {
+                                            AsyncImage(model = "https://zyora-voice-chat.vercel.app/IMG_20261027_235537.png", contentDescription = "Owner", contentScale = ContentScale.Fit, modifier = Modifier.height(16.dp))
+                                        }
+                                        val hasPublicProfileIdImage = message.senderAccountId in setOf("100002", "100003", "500001")
+                                        if (hasPublicProfileIdImage) {
+                                            AsyncImage(model = "https://zyora-voice-chat.vercel.app/IMG_20261101_125212.png", contentDescription = "Purple ID", contentScale = ContentScale.Fit, modifier = Modifier.height(16.dp).widthIn(min = 14.dp, max = 22.dp))
+                                        }
+                                        
+                                        Box(modifier = Modifier.height(16.dp).width(36.dp), contentAlignment = Alignment.CenterEnd) {
+                                            AsyncImage(model = "https://zyora-voice-chat.vercel.app/IMG_20261028_004355.png", contentDescription = "Level", contentScale = ContentScale.FillBounds, modifier = Modifier.fillMaxSize())
+                                            Text("Lv.1", color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(end = 5.dp))
+                                        }
+                                    }
+                                    Text("Enter the Room",color=Color.White,fontSize=12.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Medium, modifier=Modifier.padding(start=2.dp).clickable { selectedChatProfile = message })
+                                }
+                            } else NativeMessage(message, roomOwnerId = roomOwner.accountId.ifBlank { roomOwner.id }, onAvatarClick = { selectedChatProfile = message })
                         }
                     }
                 }
-                if(announcement.isNotBlank()) {
-                    item {
-                        Column(Modifier.fillMaxWidth().padding(start=4.dp, end=82.dp, bottom=2.dp)) {
-                            Column(Modifier.fillMaxWidth(.92f).clip(RoundedCornerShape(8.dp)).background(Color.Black.copy(alpha=.30f)).padding(horizontal=14.dp,vertical=12.dp)) {
-                                Text("ANNOUNCEMENT: $announcement",color=Color(0xFFE2C67D),fontSize=13.sp,lineHeight=16.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Medium)
-                            }
-                        }
+                
+                if(showChat) {
+                    Row(Modifier.fillMaxWidth().background(Color.White).padding(horizontal=10.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                        IconButton(onClick={showEmoji=!showEmoji},modifier=Modifier.size(38.dp)){Image(painterResource(R.drawable.ic_hurry_chat_image),contentDescription="Attach image",modifier=Modifier.size(26.dp))}
+                        androidx.compose.foundation.text.BasicTextField(value=input,onValueChange={input=it},modifier=Modifier.weight(1f).focusRequester(chatFocusRequester).padding(vertical=10.dp),singleLine=true,textStyle=androidx.compose.ui.text.TextStyle(color=Color.Black,fontSize=15.sp),cursorBrush=SolidColor(Color.Blue),decorationBox={innerTextField -> Box { if(input.isEmpty()) Text("Type a message...",color=Color.Gray,fontSize=15.sp); innerTextField() }})
+                        IconButton(onClick={if(input.isNotBlank()){messages.add(NativeRoomMessage(System.currentTimeMillis().toString(),input,roomDisplayName,roomDisplayImage,accountId));input=""}},modifier=Modifier.size(38.dp)){Icon(Icons.Default.Send,null,tint=Color(0xFF3B82F6),modifier=Modifier.size(26.dp))}
                     }
-                }
-                items(messages,key={it.id}){message ->
-                    if(message.type=="join") {
-                        Column(Modifier.padding(vertical=2.dp).wrapContentWidth().clip(RoundedCornerShape(8.dp)).background(Color.Black.copy(alpha=.30f)).padding(horizontal=12.dp,vertical=4.dp),horizontalAlignment=Alignment.Start,verticalArrangement=Arrangement.spacedBy(2.dp)){
-                            Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp), modifier=Modifier.clickable { selectedChatProfile = message }){
-                                FallbackAsyncImage(model=if (message.senderAccountId in setOf("100002", "100003", "500002")) "https://zyora-voice-chat.vercel.app/logo.png" else message.senderImage,contentDescription=message.sender,modifier=Modifier.size(24.dp).clip(CircleShape),contentScale=ContentScale.Crop)
-                                Text(message.sender,color=Color.White.copy(alpha=.95f),fontSize=12.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold)
-                                
-                                val isRoomOwnerMessage = message.senderAccountId == roomOwner.accountId.ifBlank { roomOwner.id }
-                                if (isRoomOwnerMessage) {
-                                    AsyncImage(model = "https://zyora-voice-chat.vercel.app/IMG_20261027_235537.png", contentDescription = "Owner", contentScale = ContentScale.Fit, modifier = Modifier.height(16.dp))
-                                }
-                                val hasPublicProfileIdImage = message.senderAccountId in setOf("100002", "100003", "500001")
-                                if (hasPublicProfileIdImage) {
-                                    AsyncImage(model = "https://zyora-voice-chat.vercel.app/IMG_20261101_125212.png", contentDescription = "Purple ID", contentScale = ContentScale.Fit, modifier = Modifier.height(16.dp).widthIn(min = 14.dp, max = 22.dp))
-                                }
-                                
-                                Box(modifier = Modifier.height(18.dp).width(36.dp), contentAlignment = Alignment.CenterEnd) {
-                                    AsyncImage(model = "https://zyora-voice-chat.vercel.app/IMG_20261028_004355.png", contentDescription = "Level", contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
-                                    Text("Lv.1", color = Color.White, fontSize = 7.sp, fontWeight = FontWeight.Normal, modifier = Modifier.padding(end = 6.dp))
+                } else {
+                    Row(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal=8.dp, vertical=6.dp).height(44.dp),verticalAlignment=Alignment.CenterVertically){
+                        Row(Modifier.weight(1f),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){
+                            RoomFooterButton(onClick={showChat=true},description="Say Hi Chat",icon=R.drawable.ic_hurry_chat)
+                            val selfSeatIndex=seats.indexOfFirst{it.occupied && it.accountId==accountId}
+                            if(selfSeatIndex>=0) {
+                                val seat = seats[selfSeatIndex]
+                                Box(Modifier.size(42.dp).clip(CircleShape).background(Color.Black.copy(alpha=.30f)).clickable{ val nextMuted = !seat.muted; seats[selfSeatIndex]=seat.copy(muted=nextMuted); roomSocketRef.value?.emit("room_seat_action", JSONObject().put("roomId", roomId).put("userId", accountId).put("action", "mute").put("seatNumber", seat.number).put("isMuted", nextMuted)) },contentAlignment=Alignment.Center) {
+                                    Icon(imageVector = if (seat.muted) Icons.Default.MicOff else Icons.Default.Mic,contentDescription = "Microphone",tint = Color.White,modifier = Modifier.size(28.dp))
                                 }
                             }
-                            Text("Enter the Room",color=Color.White,fontSize=12.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Medium, modifier=Modifier.padding(start=2.dp).clickable { selectedChatProfile = message })
+                            if(selfSeatIndex>=0) RoomFooterButton(onClick={showEmoji=true},description="Emoji",icon=R.drawable.ic_hurry_emoji)
                         }
-                    } else NativeMessage(message, roomOwnerId = roomOwner.accountId.ifBlank { roomOwner.id }, onAvatarClick = { selectedChatProfile = message })
-                }
-            }
-            
-            if(showChat) {
-                Row(Modifier.fillMaxWidth().background(Color.White).padding(horizontal=10.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
-                    IconButton(onClick={showEmoji=!showEmoji},modifier=Modifier.size(38.dp)){Image(painterResource(R.drawable.ic_hurry_chat_image),contentDescription="Attach image",modifier=Modifier.size(26.dp))}
-                    androidx.compose.foundation.text.BasicTextField(value=input,onValueChange={input=it},modifier=Modifier.weight(1f).focusRequester(chatFocusRequester).padding(vertical=10.dp),singleLine=true,textStyle=androidx.compose.ui.text.TextStyle(color=Color.Black,fontSize=15.sp),cursorBrush=SolidColor(Color.Blue),decorationBox={innerTextField -> Box { if(input.isEmpty()) Text("Type a message...",color=Color.Gray,fontSize=15.sp); innerTextField() }})
-                    IconButton(onClick={if(input.isNotBlank()){messages.add(NativeRoomMessage(System.currentTimeMillis().toString(),input,roomDisplayName,roomDisplayImage,accountId));input=""}},modifier=Modifier.size(38.dp)){Icon(Icons.Default.Send,null,tint=Color(0xFF3B82F6),modifier=Modifier.size(26.dp))}
-                }
-            } else {
-                Row(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal=8.dp, vertical=6.dp).height(44.dp),verticalAlignment=Alignment.CenterVertically){
-                    Row(Modifier.weight(1f),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){
-                        RoomFooterButton(onClick={showChat=true},description="Say Hi Chat",icon=R.drawable.ic_hurry_chat)
-                        val selfSeatIndex=seats.indexOfFirst{it.occupied && it.accountId==accountId}
-                        if(selfSeatIndex>=0) {
-                            val seat = seats[selfSeatIndex]
-                            Box(Modifier.size(42.dp).clip(CircleShape).background(Color.Black.copy(alpha=.30f)).clickable{ val nextMuted = !seat.muted; seats[selfSeatIndex]=seat.copy(muted=nextMuted); roomSocketRef.value?.emit("room_seat_action", JSONObject().put("roomId", roomId).put("userId", accountId).put("action", "mute").put("seatNumber", seat.number).put("isMuted", nextMuted)) },contentAlignment=Alignment.Center) {
-                                Icon(imageVector = if (seat.muted) Icons.Default.MicOff else Icons.Default.Mic,contentDescription = "Microphone",tint = Color.White,modifier = Modifier.size(28.dp))
-                            }
+                        AsyncImage(
+                            model="https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/file_0000000019c4821180028eebae10dbfc.png",
+                            contentDescription="Gift",
+                            modifier=Modifier.size(56.dp).clickable{showGift=true}.scale(1.1f),
+                            contentScale=ContentScale.Fit
+                        )
+                        Row(Modifier.weight(1f),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp,Alignment.End)){
+                            RoomFooterButton(onClick={showMessageSheet=true},description="Message Box Menu",icon=R.drawable.ic_hurry_mail)
+                            RoomFooterButton(onClick={showMenu=true},description="Apps Menu",icon=R.drawable.ic_hurry_apps)
                         }
-                        if(selfSeatIndex>=0) RoomFooterButton(onClick={showEmoji=true},description="Emoji",icon=R.drawable.ic_hurry_emoji)
-                    }
-                    AsyncImage(
-                        model="https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/file_0000000019c4821180028eebae10dbfc.png",
-                        contentDescription="Gift",
-                        modifier=Modifier.size(56.dp).clickable{showGift=true}.scale(1.1f),
-                        contentScale=ContentScale.Fit
-                    )
-                    Row(Modifier.weight(1f),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp,Alignment.End)){
-                        RoomFooterButton(onClick={showMessageSheet=true},description="Message Box Menu",icon=R.drawable.ic_hurry_mail)
-                        RoomFooterButton(onClick={showMenu=true},description="Apps Menu",icon=R.drawable.ic_hurry_apps)
                     }
                 }
             }
@@ -1131,9 +1178,10 @@ fun RoomPage(
                         visibleState = visibleState, 
                         enter=slideInHorizontally(initialOffsetX={ _ -> screenWidthPx }, animationSpec = tween(durationMillis = 800, easing = LinearOutSlowInEasing)) + fadeIn(animationSpec = tween(800))
                     ) {
-                        Row(Modifier.fillMaxWidth(0.75f).clip(RoundedCornerShape(topStart=50.dp,bottomStart=50.dp,topEnd=0.dp,bottomEnd=0.dp)).background(Brush.horizontalGradient(listOf(Color(0xF52563EB),Color(0x002563EB)))).padding(start=10.dp,end=10.dp,top=2.dp,bottom=2.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+                        // Blue banner - thoda transparent mix aur full username dikhane ke liye weight(1f) add kiya hai
+                        Row(Modifier.fillMaxWidth(0.80f).clip(RoundedCornerShape(topStart=50.dp,bottomStart=50.dp,topEnd=0.dp,bottomEnd=0.dp)).background(Brush.horizontalGradient(listOf(Color(0xCC2563EB),Color(0x802563EB),Color.Transparent))).padding(start=10.dp,end=10.dp,top=2.dp,bottom=2.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(6.dp)) {
                             FallbackAsyncImage(model=toast.image,contentDescription=toast.name,modifier=Modifier.size(24.dp).clip(CircleShape),contentScale=ContentScale.Crop)
-                            Text(toast.name,color=Color.White,fontSize=13.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold,maxLines=1,modifier=Modifier.widthIn(max=95.dp))
+                            Text(toast.name,color=Color.White,fontSize=13.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold,maxLines=1,modifier=Modifier.weight(1f, fill=false))
                             Text("Enter the Room",color=Color.White,fontSize=12.sp,maxLines=1)
                             if (toast.vehicleVideo.isNotBlank()) {
                                 val vehicleUrl = if (toast.vehicleVideo.startsWith("http", true)) toast.vehicleVideo else "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/" + toast.vehicleVideo
@@ -1951,9 +1999,9 @@ private fun formatMusicTime(seconds: Float): String {
                 if (showPurpleIdImage) {
                     AsyncImage(model = "https://zyora-voice-chat.vercel.app/IMG_20261101_125212.png", contentDescription = "Purple ID", contentScale = ContentScale.Fit, modifier = Modifier.height(16.dp).widthIn(min = 14.dp, max = 22.dp))
                 }
-                Box(modifier = Modifier.height(18.dp).width(36.dp), contentAlignment = Alignment.CenterEnd) {
-                    AsyncImage(model = "https://zyora-voice-chat.vercel.app/IMG_20261028_004355.png", contentDescription = "Level", contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
-                    Text("Lv.1", color = Color.White, fontSize = 7.sp, fontWeight = FontWeight.Normal, modifier = Modifier.padding(end = 6.dp))
+                Box(modifier = Modifier.height(16.dp).width(36.dp), contentAlignment = Alignment.CenterEnd) {
+                    AsyncImage(model = "https://zyora-voice-chat.vercel.app/IMG_20261028_004355.png", contentDescription = "Level", contentScale = ContentScale.FillBounds, modifier = Modifier.fillMaxSize())
+                    Text("Lv.1", color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(end = 5.dp))
                 }
             }
             if (officialHeadTag || officialTag || adminTag) {
