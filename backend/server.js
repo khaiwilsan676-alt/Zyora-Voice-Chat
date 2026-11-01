@@ -767,7 +767,7 @@ app.get("/api/users", async (req, res) => {
       // Preserve numeric legacy/official account IDs (for example 100002)
       // when the stored record itself uses that ID as its primary key.
       // Only generate a hash-based public ID for non-numeric Firebase UIDs.
-      if (!numberId || (numberId === id && !/^\\d{4,12}$/.test(id))) {
+      if (!numberId || (numberId === id && !/^\d{4,12}$/.test(id))) {
         let hash = 0;
         for (let i = 0; i < id.length; i++) {
           hash = (hash << 5) - hash + id.charCodeAt(i);
