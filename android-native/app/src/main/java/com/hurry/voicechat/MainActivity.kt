@@ -615,22 +615,6 @@ private fun KeptRoomBubble(room: HurryRoom, alignWithDailyCheckIn: Boolean, onOp
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
             )
-            Box(
-                Modifier.align(Alignment.BottomEnd)
-                    .size(17.dp)
-                    .clip(RoundedCornerShape(50))
-                    .background(Color(0xFFF04A2D))
-                    .border(2.dp, Color.White, RoundedCornerShape(50)),
-                contentAlignment = Alignment.Center
-            ) {
-                androidx.compose.foundation.Canvas(Modifier.size(10.dp)) {
-                    val center = androidx.compose.ui.geometry.Offset(size.width / 2f, size.height / 2f)
-                    drawCircle(Color.White, radius = size.minDimension * 0.43f, center = center,
-                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.5.dp.toPx()))
-                    drawCircle(Color.White, radius = size.minDimension * 0.18f, center = center,
-                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.2.dp.toPx()))
-                }
-            }
             val wave = androidx.compose.animation.core.rememberInfiniteTransition(label = "kept_room_wave")
             val wave1 by wave.animateFloat(initialValue = 0.25f, targetValue = 1f, animationSpec = androidx.compose.animation.core.infiniteRepeatable(animation = androidx.compose.animation.core.tween(380, easing = androidx.compose.animation.core.LinearEasing), repeatMode = androidx.compose.animation.core.RepeatMode.Reverse), label = "kept_wave_1")
             val wave2 by wave.animateFloat(initialValue = 0.9f, targetValue = 0.2f, animationSpec = androidx.compose.animation.core.infiniteRepeatable(animation = androidx.compose.animation.core.tween(470, easing = androidx.compose.animation.core.LinearEasing), repeatMode = androidx.compose.animation.core.RepeatMode.Reverse), label = "kept_wave_2")
