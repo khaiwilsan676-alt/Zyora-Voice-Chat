@@ -551,24 +551,18 @@ fun HomeScreen(
                 }
 
                 // 🔴 RED DROP ZONE - EK DAM CORNER SE CHIPKA HUA BSS
-                if (keptRoom != null) {
-                    AnimatedVisibility(
-                        visible = keptRoomDragging,
-                        modifier = Modifier.align(Alignment.BottomEnd), // Exact Bottom Right Corner
-                        enter = fadeIn(animationSpec = tween(200)),
-                        exit = fadeOut(animationSpec = tween(200))
+                if (keptRoom != null && keptRoomDragging) {
+                    Box(
+                        Modifier
+                            .align(Alignment.BottomEnd)
+                            .size(170.dp)
+                            .offset(x = 85.dp, y = 85.dp)
+                            .background(Color(0xFFE53935), CircleShape),
+                        contentAlignment = Alignment.TopStart
                     ) {
-                        Box(
-                            Modifier
-                                .size(170.dp)
-                                .offset(x = 85.dp, y = 85.dp) // Exact calculation to make it a perfect quarter circle overlap
-                                .background(Color(0xFFE53935), CircleShape),
-                            contentAlignment = Alignment.TopStart
-                        ) {
-                            Canvas(Modifier.padding(start = 28.dp, top = 28.dp).size(42.dp)) {
-                                drawCircle(Color.White, radius = size.width * 0.18f)
-                                drawCircle(Color.White, radius = size.width * 0.42f, style = Stroke(width = 3.dp.toPx()))
-                            }
+                        Canvas(Modifier.padding(start = 28.dp, top = 28.dp).size(42.dp)) {
+                            drawCircle(Color.White, radius = size.width * 0.18f)
+                            drawCircle(Color.White, radius = size.width * 0.42f, style = Stroke(width = 3.dp.toPx()))
                         }
                     }
                 }
