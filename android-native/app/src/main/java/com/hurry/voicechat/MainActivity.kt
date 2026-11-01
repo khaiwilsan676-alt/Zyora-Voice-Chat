@@ -467,18 +467,11 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                                 },
                                 mineCreatedRoom = mineCreatedRoom,
                                 mineSelected = homeMine,
-                                keptRoomContent = keptRoom?.let { room ->
-                                    {
-                                        KeptRoomBubble(
-                                            room = room,
-                                            alignWithDailyCheckIn = true,
-                                            onOpen = { openedRoom = room },
-                                            onExit = {
-                                                keptRoom = null
-                                                authPrefs.edit().remove("kept_room_data").apply()
-                                            }
-                                        )
-                                    }
+                                keptRoom = keptRoom,
+                                onOpenKeptRoom = { keptRoom?.let { openedRoom = it } },
+                                onExitKeptRoom = {
+                                    keptRoom = null
+                                    authPrefs.edit().remove("kept_room_data").apply()
                                 }
                             )
                             HurryTab.MESSAGE -> MessageScreen(onChat = { uid, name, image ->
@@ -534,80 +527,6 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
         }
     }
 }
-
-@Composable
-private fun KeptRoomBubble(room: HurryRoom, alignWithDailyCheckIn: Boolean, onOpen: () -> Unit, onExit: () -> Unit) {
-    var drag by remember(room.id) { mutableStateOf(Offset.Zero) }
-    var dragging by remember { mutableStateOf(false) }
-    val musicMotion = rememberInfiniteTransition(label = "kept-room-music")
-    val musicPhase by musicMotion.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 900, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "kept-room-wave"
-    )
-
-    Box(Modifier.fillMaxSize()) {
-        Box(
-            Modifier.align(Alignment.BottomEnd)
-                .padding(
-                    end = if (alignWithDailyCheckIn) 12.dp else 16.dp,
-                    bottom = if (alignWithDailyCheckIn) 108.2.dp else 80.dp
-                )
-                .offset { IntOffset(drag.x.roundToInt(), drag.y.roundToInt()) }
-                .size(60.dp)
-                .border(2.dp, Color.White, CircleShape)
-                .clip(CircleShape)
-                .clickable(enabled = !dragging) { onOpen() }
-                .pointerInput(room.id) {
-                    detectDragGestures(
-                        onDragStart = { dragging = true },
-                        onDragEnd = {
-                            val shouldExit = drag.y > 24f.dpToPxSafe()
-                            dragging = false
-                            if (shouldExit) onExit()
-                            drag = Offset.Zero
-                        },
-                        onDragCancel = { dragging = false; drag = Offset.Zero },
-                        onDrag = { change, amount ->
-                            change.consume()
-                            drag += amount
-                        }
-                    )
-                },
-            contentAlignment = Alignment.Center
-        ) {
-            AsyncImage(
-                model = room.image,
-                contentDescription = "Kept room",
-                modifier = Modifier.fillMaxSize().clip(CircleShape),
-                contentScale = ContentScale.Crop
-            )
-            Canvas(Modifier.fillMaxSize()) {
-                val centerX = size.width / 2f
-                val centerY = size.height / 2f
-                val heights = listOf(0.30f, 0.48f, 0.36f)
-                val offsets = listOf(-7f, 0f, 7f)
-                heights.forEachIndexed { index, base ->
-                    val pulse = kotlin.math.abs(kotlin.math.sin((musicPhase * 2f * Math.PI) + index * 1.35f)).toFloat()
-                    val halfHeight = size.height * (base * (0.55f + pulse * 0.65f)) / 2f
-                    drawLine(
-                        color = Color.White,
-                        start = androidx.compose.ui.geometry.Offset(centerX + offsets[index].dp.toPx(), centerY - halfHeight),
-                        end = androidx.compose.ui.geometry.Offset(centerX + offsets[index].dp.toPx(), centerY + halfHeight),
-                        strokeWidth = 2.6.dp.toPx(),
-                        cap = StrokeCap.Round
-                    )
-                }
-            }
-        }
-    }
-}
-
-private fun Float.dpToPxSafe(): Float = this * 3f
 
 @Composable
 private fun MeNativeSubPage(title: String, onBack: () -> Unit) {
