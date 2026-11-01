@@ -89,7 +89,8 @@ fun ActiveUsers(
        Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(5.dp)){
         Text(user.name.ifBlank{"User"},fontSize=13.sp,fontWeight=FontWeight.SemiBold,color=Color.White,maxLines=1)
         if(user.accountId==roomOwnerId){
-         Text("OWNER",fontSize=8.sp,fontWeight=FontWeight.Bold,color=Color(0xFF93C5FD))
+         AsyncImage(model=ROOM_ADMIN_TAG,contentDescription="Owner",contentScale=ContentScale.Fit,
+          modifier=Modifier.height(19.dp).width(42.dp))
         }
        }
        Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(6.dp)){
