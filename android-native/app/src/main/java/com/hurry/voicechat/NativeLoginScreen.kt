@@ -99,6 +99,14 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
                 error = ""
                 try {
                     val user = withContext(Dispatchers.IO) { legacyGoogleBackendSignIn(context, result.data!!) }
+                    val deviceLock = withContext(Dispatchers.IO) { verifyDeviceGoogleAccount(user, context) }
+                    if (!deviceLock.optBoolean("allowed", false)) {
+                        registeredDeviceAccountId = deviceLock.optString("registeredAccountId")
+                        registeredDeviceEmail = deviceLock.optString("registeredEmail")
+                        showDeviceRegisteredDialog = true
+                        FirebaseAuth.getInstance().signOut()
+                        return@launch
+                    }
                     googleLoading = true
                     withContext(Dispatchers.IO) { syncHurryUser(user, context) }
                     rememberRegisteredGoogleAccount(user, context)
@@ -347,6 +355,14 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
                             loading = true
                             try {
                                 val user = googleBackendSignIn(context)
+                                val deviceLock = withContext(Dispatchers.IO) { verifyDeviceGoogleAccount(user, context) }
+                                if (!deviceLock.optBoolean("allowed", false)) {
+                                    registeredDeviceAccountId = deviceLock.optString("registeredAccountId")
+                                    registeredDeviceEmail = deviceLock.optString("registeredEmail")
+                                    showDeviceRegisteredDialog = true
+                                    FirebaseAuth.getInstance().signOut()
+                                    return@launch
+                                }
                                 googleLoading = true
                                 withContext(Dispatchers.IO) { syncHurryUser(user, context) }
                                 rememberRegisteredGoogleAccount(user, context)
@@ -649,6 +665,18 @@ private fun AuthField(
             }
         }
     }
+}
+
+private fun verifyDeviceGoogleAccount(user: JSONObject, context: android.content.Context): JSONObject {
+    val deviceId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID).orEmpty()
+    val uid = user.optString("localId").trim()
+    if (deviceId.isBlank() || uid.isBlank()) throw IllegalStateException("Could not verify this device's Google account.")
+    val payload = JSONObject()
+        .put("deviceId", deviceId)
+        .put("uid", uid)
+        .put("email", user.optString("email"))
+        .put("accountId", user.optString("accountId"))
+    return postAuthJson("/api/auth/device-google-lock", payload)
 }
 
 private fun isDifferentRegisteredGoogleAccount(user: JSONObject, context: android.content.Context): Boolean {
