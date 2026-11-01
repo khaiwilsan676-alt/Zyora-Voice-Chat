@@ -184,7 +184,9 @@ fun HomeScreen(
     languageCode: String = "en",
     keptRoom: HurryRoom? = null,
     onOpenKeptRoom: () -> Unit = {},
-    onExitKeptRoom: () -> Unit = {}
+    onExitKeptRoom: () -> Unit = {},
+    selectedTab: HurryTab = HurryTab.HOME,
+    onTabSelected: (HurryTab) -> Unit = {}
 ) {
     val mine = mineSelected
     val context = LocalContext.current
@@ -299,7 +301,12 @@ fun HomeScreen(
     }
 
     if (mine) {
-        MineNativePage(onBack = onPopular, createdRoom = mineCreatedRoom, onCreateRoom = onCreateMineRoom, onSearch = onSearch, languageCode = languageCode)
+        Box(Modifier.fillMaxSize()) {
+            MineNativePage(onBack = onPopular, createdRoom = mineCreatedRoom, onCreateRoom = onCreateMineRoom, onSearch = onSearch, languageCode = languageCode)
+            Box(Modifier.align(Alignment.BottomCenter)) {
+                HurryBottomNav(selectedTab, languageCode = languageCode, onTab = onTabSelected)
+            }
+        }
         return
     }
 
@@ -717,6 +724,9 @@ fun HomeScreen(
                     claimedToday = claimedToday || checkInSubmitting
                 )
             }
+        }
+        Box(Modifier.align(Alignment.BottomCenter)) {
+            HurryBottomNav(selectedTab, languageCode = languageCode, onTab = onTabSelected)
         }
     }
 }
