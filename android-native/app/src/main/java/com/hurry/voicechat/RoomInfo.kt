@@ -74,6 +74,48 @@ fun RoomInfo(
             ?.let { ownerDisplayImage = it }
     }
 
+    // If the room payload only contains the placeholder "User", resolve the
+    // actual host profile by its stable account ID before showing the info sheet.
+    LaunchedEffect(roomOwner.id, roomOwner.uid, roomOwner.accountId, roomOwner.name) {
+        val ownerId = roomOwner.accountId.ifBlank { roomOwner.id.ifBlank { roomOwner.uid } }
+        if (ownerId.isBlank() || (ownerDisplayName.isNotBlank() && ownerDisplayName != "User")) return@LaunchedEffect
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            runCatching {
+                val encoded = java.net.URLEncoder.encode(ownerId, "UTF-8")
+                val connection = (java.net.URL("https://zyora-server.onrender.com/api/users?search=$encoded&accountId=$encoded&q=$encoded").openConnection() as java.net.HttpURLConnection).apply {
+                    connectTimeout = 7000
+                    readTimeout = 7000
+                    setRequestProperty("Accept", "application/json")
+                }
+                try {
+                    if (connection.responseCode !in 200..299) return@runCatching
+                    val raw = connection.inputStream.bufferedReader().use { it.readText() }.trim()
+                    val users = if (raw.startsWith("[")) org.json.JSONArray(raw) else {
+                        val root = org.json.JSONObject(raw)
+                        root.optJSONArray("users") ?: root.optJSONArray("results")
+                            ?: org.json.JSONArray().apply { root.optJSONObject("user")?.let { put(it) } }
+                    }
+                    val user = (0 until users.length()).mapNotNull { users.optJSONObject(it) }.firstOrNull { item ->
+                        item.optString("accountId", item.optString("accountNumber", item.optString("displayUserNumber", ""))) == ownerId ||
+                            item.optString("uid") == ownerId || item.optString("id") == ownerId
+                    } ?: (0 until users.length()).firstNotNullOfOrNull { users.optJSONObject(it) }
+                    user?.let { profile ->
+                        val name = sequenceOf("name", "displayName", "userName")
+                            .map { profile.optString(it, "").trim() }
+                            .firstOrNull { it.isNotBlank() && it != "null" && it != "User" }.orEmpty()
+                        val image = sequenceOf("image", "photo", "photoURL", "avatar", "picture")
+                            .map { profile.optString(it, "").trim() }
+                            .firstOrNull { it.isNotBlank() && it != "null" }.orEmpty()
+                        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                            if (name.isNotBlank()) ownerDisplayName = name
+                            if (image.isNotBlank()) ownerDisplayImage = image
+                        }
+                    }
+                } finally { connection.disconnect() }
+            }
+        }
+    }
+
     Box(Modifier.fillMaxSize(), contentAlignment=Alignment.BottomCenter) {
         Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=.30f)).clickable(onClick=onClose))
         Column(
