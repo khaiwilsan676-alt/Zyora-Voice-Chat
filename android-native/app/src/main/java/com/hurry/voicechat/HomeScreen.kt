@@ -6,6 +6,9 @@ import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 
 import android.content.Context
 import androidx.compose.foundation.background
@@ -186,7 +189,7 @@ fun HomeScreen(
     val dao = remember {
         runCatching { HurryDatabase.get(context).roomDao() }.getOrNull()
     }
-    val roomSyncPrefs = remember { context.getSharedPreferences("native_room_sync", Context.MODE_PRIVATE) }
+    val roomSyncPrefs = remember { context.getSharedPreferences("native_room_sync", Context.MODEPRIVATE) }
 
     var rooms by remember { mutableStateOf(NativeRoomMemoryCache.rooms) }
     var selectedCountry by remember { mutableStateOf("all") }
@@ -323,375 +326,402 @@ fun HomeScreen(
         else list.filter { countryMatches(it.country, selectedCountry) }
     }
 
-    // Build rows once per room-list change. LazyColumn renders only visible rows;
-    // avoid repeatedly copying the growing list and triggering a full recomposition every 40ms.
     val roomRows = remember(filteredRooms) { filteredRooms.chunked(2) }
 
     Box(Modifier.fillMaxSize()) {
-    Column(
-        Modifier.fillMaxSize()
-            .background(Color(0xFFF5F5F5))
+        
+        // --- ADDED: State variables hoisted exactly for Drag & Drop UI ---
+        var keptRoomDrag by remember(keptRoom?.id) { mutableStateOf(Offset.Zero) }
+        var keptRoomDragging by remember(keptRoom?.id) { mutableStateOf(false) }
+        val density = androidx.compose.ui.platform.LocalDensity.current
 
-    ) {
-        // ═══════════ FIXED TOP HEADER (does not scroll) ═══════════
         Column(
-            Modifier
-                .fillMaxWidth()
-                .background(MePageTopGradient)
-                .padding(top = (WindowInsets.statusBars.asPaddingValues().calculateTopPadding() - 16.dp).coerceAtLeast(0.dp))
-                .padding(top = 0.dp, start = 12.dp, end = 0.dp, bottom = 0.dp)
+            Modifier.fillMaxSize()
+                .background(Color(0xFFF5F5F5))
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+            // ═══════════ FIXED TOP HEADER (does not scroll) ═══════════
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .background(MePageTopGradient)
+                    .padding(top = (WindowInsets.statusBars.asPaddingValues().calculateTopPadding() - 16.dp).coerceAtLeast(0.dp))
+                    .padding(top = 0.dp, start = 12.dp, end = 0.dp, bottom = 0.dp)
             ) {
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Box(
-                        Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .clickable { onPopular() }
-                            .padding(horizontal = 4.dp, vertical = 3.dp)
-                    ) {
-                        Text(
-                            nativeText(languageCode, "popular"),
-                            fontSize = 21.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF1E1E1E)
-                        )
-                    }
-                    Box(
-                        Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .clickable { onMine() }
-                            .padding(horizontal = 4.dp, vertical = 3.dp)
-                    ) {
-                        Text(
-                            nativeText(languageCode, "mine"),
-                            fontSize = 21.sp,
-                            fontWeight = FontWeight.Normal,
-                            color = Color(0xFF6B7280)
-                        )
-                    }
-                }
-                Spacer(Modifier.weight(1f))
-                
-                // 🔴 SEARCH OR HOUSE ICON KE BEECH KA GAP EXACT 3.DP HAI
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(3.dp) 
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Box(Modifier.clickable(indication = null, interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }) { onSearch() }) { 
-                        HurrySearchIcon() 
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Box(
+                            Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable { onPopular() }
+                                .padding(horizontal = 4.dp, vertical = 3.dp)
+                        ) {
+                            Text(
+                                nativeText(languageCode, "popular"),
+                                fontSize = 21.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF1E1E1E)
+                            )
+                        }
+                        Box(
+                            Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable { onMine() }
+                                .padding(horizontal = 4.dp, vertical = 3.dp)
+                        ) {
+                            Text(
+                                nativeText(languageCode, "mine"),
+                                fontSize = 21.sp,
+                                fontWeight = FontWeight.Normal,
+                                color = Color(0xFF6B7280)
+                            )
+                        }
                     }
+                    Spacer(Modifier.weight(1f))
                     
-                    Box(Modifier.clickable { onCreateMineRoom() }) {
-                        HurryHouseIcon()
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(3.dp) 
+                    ) {
+                        Box(Modifier.clickable(indication = null, interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }) { onSearch() }) { 
+                            HurrySearchIcon() 
+                        }
+                        
+                        Box(Modifier.clickable { onCreateMineRoom() }) {
+                            HurryHouseIcon()
+                        }
                     }
                 }
             }
-        }
-        // ═══════════ END FIXED TOP HEADER ═══════════
+            // ═══════════ END FIXED TOP HEADER ═══════════
 
-        // ═══════════ SCROLLABLE AREA ═══════════
-        Box(Modifier.fillMaxSize()) {
-            // Yaha par bas overscroll disable kiya hai, design/logic kuch nahi chheda hai.
-            androidx.compose.runtime.CompositionLocalProvider(
-                androidx.compose.foundation.LocalOverscrollConfiguration provides null
-            ) {
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier.fillMaxSize().offset(y = (-8).dp),
-                    contentPadding = PaddingValues(bottom = 80.dp)
+            // ═══════════ SCROLLABLE AREA ═══════════
+            Box(Modifier.fillMaxSize()) {
+                androidx.compose.runtime.CompositionLocalProvider(
+                    androidx.compose.foundation.LocalOverscrollConfiguration provides null
                 ) {
-                    item {
-                        Column(
-                            Modifier
-                                .fillMaxWidth()
-                                .background(Color(0xFFF5F5F5))
-                                .padding(top = 0.dp, start = 12.dp, end = 12.dp, bottom = 4.dp)
-                        ) {
-                            Box(
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier.fillMaxSize().offset(y = (-8).dp),
+                        contentPadding = PaddingValues(bottom = 80.dp)
+                    ) {
+                        item {
+                            Column(
                                 Modifier
                                     .fillMaxWidth()
-                                    .height((13.5f * LocalConfiguration.current.screenHeightDp / 100f).dp)
-                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(Color(0xFFF5F5F5))
+                                    .padding(top = 0.dp, start = 12.dp, end = 12.dp, bottom = 4.dp)
                             ) {
-                                HorizontalPager(
-                                    state = pager,
-                                    modifier = Modifier.fillMaxSize(),
-                                    userScrollEnabled = true,
-                                    pageSpacing = 0.dp
-                                ) { page ->
-                                    AsyncImage(
-                                        model = banners[page],
-                                        contentDescription = null,
-                                        // 🔴 1ST BANNER = INVITE FRIENDS, 2ND = ROOM SUPPORT
-                                        modifier = Modifier.fillMaxSize().clickable(
-                                            indication = null, 
-                                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-                                        ) { 
-                                            if (page == 0) onInviteFriends() 
-                                            else if (page == 1) onRoomSupport() 
-                                            else onInviteFriends()
-                                        },
-                                        contentScale = ContentScale.Crop
-                                    )
-                                }
-                                Row(
+                                Box(
                                     Modifier
-                                        .align(Alignment.BottomCenter)
-                                        .padding(bottom = 5.dp),
-                                    horizontalArrangement = Arrangement.Center
+                                        .fillMaxWidth()
+                                        .height((13.5f * LocalConfiguration.current.screenHeightDp / 100f).dp)
+                                        .clip(RoundedCornerShape(6.dp))
                                 ) {
-                                    repeat(banners.size) { i ->
-                                        Box(
-                                            Modifier
-                                                .padding(horizontal = 1.5.dp)
-                                                .size(5.dp)
-                                                .clip(RoundedCornerShape(50))
-                                                .background(
-                                                    if (i == pager.currentPage) Color.White
-                                                    else Color.White.copy(alpha = 0.75f)
-                                                )
+                                    HorizontalPager(
+                                        state = pager,
+                                        modifier = Modifier.fillMaxSize(),
+                                        userScrollEnabled = true,
+                                        pageSpacing = 0.dp
+                                    ) { page ->
+                                        AsyncImage(
+                                            model = banners[page],
+                                            contentDescription = null,
+                                            modifier = Modifier.fillMaxSize().clickable(
+                                                indication = null, 
+                                                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+                                            ) { 
+                                                if (page == 0) onInviteFriends() 
+                                                else if (page == 1) onRoomSupport() 
+                                                else onInviteFriends()
+                                            },
+                                            contentScale = ContentScale.Crop
                                         )
+                                    }
+                                    Row(
+                                        Modifier
+                                            .align(Alignment.BottomCenter)
+                                            .padding(bottom = 5.dp),
+                                        horizontalArrangement = Arrangement.Center
+                                    ) {
+                                        repeat(banners.size) { i ->
+                                            Box(
+                                                Modifier
+                                                    .padding(horizontal = 1.5.dp)
+                                                    .size(5.dp)
+                                                    .clip(RoundedCornerShape(50))
+                                                    .background(
+                                                        if (i == pager.currentPage) Color.White
+                                                        else Color.White.copy(alpha = 0.75f)
+                                                    )
+                                            )
+                                        }
                                     }
                                 }
                             }
                         }
-                    }
 
-                    item {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 12.dp)
-                                .graphicsLayer { translationY = -4.dp.toPx() },
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            HurryCategoryCard("Honour", HONOUR_BG, Modifier.weight(1f)) { onLeaderboard("honour") }
-                            HurryCategoryCard("Charm",  CHARM_BG,  Modifier.weight(1f)) { onLeaderboard("charm") }
-                            HurryCategoryCard("Room",   ROOM_BG,   Modifier.weight(1f)) { onLeaderboard("room") }
-                        }
-                    }
-
-                    item {
-                        Box(
-                            Modifier
-                                .fillMaxWidth()
-                                .background(Color(0xFFF5F5F5))
-                        ) {
-                            CountryPillRow(
-                                selected = selectedCountry,
-                                onSelect = { selectedCountry = it },
-                                languageCode = languageCode
-                            )
-                        }
-                    }
-
-                    if (rooms == null) {
                         item {
-                            Box(
-                                Modifier.fillMaxWidth().height(180.dp),
-                                contentAlignment = Alignment.Center
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp)
+                                    .graphicsLayer { translationY = -4.dp.toPx() },
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
-                                CircularProgressIndicator(color = Color(0xFF2563EB), strokeWidth = 2.dp)
+                                HurryCategoryCard("Honour", HONOUR_BG, Modifier.weight(1f)) { onLeaderboard("honour") }
+                                HurryCategoryCard("Charm",  CHARM_BG,  Modifier.weight(1f)) { onLeaderboard("charm") }
+                                HurryCategoryCard("Room",   ROOM_BG,   Modifier.weight(1f)) { onLeaderboard("room") }
                             }
                         }
-                    } else if (filteredRooms.isEmpty()) {
+
                         item {
                             Box(
-                                Modifier.fillMaxWidth().height(120.dp),
-                                contentAlignment = Alignment.Center
+                                Modifier
+                                    .fillMaxWidth()
+                                    .background(Color(0xFFF5F5F5))
                             ) {
-                                Text(
-                                    "No rooms in this country",
-                                    fontSize = 14.sp,
-                                    color = Color(0xFF6B7280)
+                                CountryPillRow(
+                                    selected = selectedCountry,
+                                    onSelect = { selectedCountry = it },
+                                    languageCode = languageCode
                                 )
                             }
                         }
-                    } else {
-                        items(
-                            items = roomRows,
-                            key = { row -> row.first().id }
-                        ) { row ->
-                            Row(
-                                Modifier
-                                    .fillMaxWidth()
-                                    .padding(start = 12.dp, end = 12.dp, bottom = 8.dp),
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                row.forEach { room ->
-                                    RoomListCard(room, onRoom, Modifier.weight(1f))
+
+                        if (rooms == null) {
+                            item {
+                                Box(
+                                    Modifier.fillMaxWidth().height(180.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator(color = Color(0xFF2563EB), strokeWidth = 2.dp)
                                 }
-                                if (row.size == 1) Spacer(Modifier.weight(1f))
                             }
-                        }
-                    }
-                }
-            }
-            
-            // 🔴 STICKY HEADER TRANSPARENT GAP FIX (Added offset -8.dp to match LazyColumn)
-            if (countrySticky) {
-                Box(
-                    Modifier
-                        .align(Alignment.TopCenter)
-                        .offset(y = (-8).dp) 
-                        .fillMaxWidth()
-                        .background(Color(0xFFF5F5F5))
-                ) {
-                    CountryPillRow(
-                        selected = selectedCountry,
-                        onSelect = { selectedCountry = it },
-                        languageCode = languageCode
-                    )
-                }
-            }
-
-            if (keptRoom != null) {
-                var keptRoomDrag by remember(keptRoom.id) { mutableStateOf(Offset.Zero) }
-                var keptRoomDragging by remember(keptRoom.id) { mutableStateOf(false) }
-                val keptRoomMusic = rememberInfiniteTransition(label = "home-kept-room-music")
-                val keptRoomMusicPhase by keptRoomMusic.animateFloat(
-                    initialValue = 0f,
-                    targetValue = 1f,
-                    animationSpec = infiniteRepeatable(
-                        animation = tween(durationMillis = 900, easing = LinearEasing),
-                        repeatMode = RepeatMode.Restart
-                    ),
-                    label = "home-kept-room-wave"
-                )
-                val density = androidx.compose.ui.platform.LocalDensity.current
-                Box(
-                    Modifier.align(Alignment.BottomEnd)
-                        .padding(end = 12.dp, bottom = 108.2.dp)
-                        .offset { IntOffset(keptRoomDrag.x.roundToInt(), keptRoomDrag.y.roundToInt()) }
-                        .size(60.dp)
-                        .border(2.dp, Color.White, CircleShape)
-                        .clip(CircleShape)
-                        .pointerInput(keptRoom.id) {
-                            detectDragGestures(
-                                onDragStart = { keptRoomDragging = true },
-                                onDragEnd = {
-                                    val exitThreshold = with(density) { 24.dp.toPx() }
-                                    val shouldExit = keptRoomDrag.y > exitThreshold
-                                    keptRoomDragging = false
-                                    if (shouldExit) onExitKeptRoom()
-                                    keptRoomDrag = Offset.Zero
-                                },
-                                onDragCancel = { keptRoomDragging = false; keptRoomDrag = Offset.Zero },
-                                onDrag = { change, amount ->
-                                    change.consume()
-                                    keptRoomDrag += amount
+                        } else if (filteredRooms.isEmpty()) {
+                            item {
+                                Box(
+                                    Modifier.fillMaxWidth().height(120.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        "No rooms in this country",
+                                        fontSize = 14.sp,
+                                        color = Color(0xFF6B7280)
+                                    )
                                 }
-                            )
-                        }
-                        .clickable(enabled = !keptRoomDragging) { onOpenKeptRoom() },
-                    contentAlignment = Alignment.Center
-                ) {
-                    AsyncImage(
-                        model = keptRoom.image,
-                        contentDescription = "Kept room",
-                        modifier = Modifier.fillMaxSize().clip(CircleShape),
-                        contentScale = ContentScale.Crop
-                    )
-                    Canvas(Modifier.fillMaxSize()) {
-                        val centerX = size.width / 2f
-                        val centerY = size.height / 2f
-                        val heights = listOf(0.30f, 0.48f, 0.36f)
-                        val offsets = listOf(-7f, 0f, 7f)
-                        heights.forEachIndexed { index, base ->
-                            val pulse = kotlin.math.abs(kotlin.math.sin((keptRoomMusicPhase * 2f * Math.PI) + index * 1.35f)).toFloat()
-                            val halfHeight = size.height * (base * (0.55f + pulse * 0.65f)) / 2f
-                            drawLine(
-                                color = Color.White,
-                                start = Offset(centerX + offsets[index].dp.toPx(), centerY - halfHeight),
-                                end = Offset(centerX + offsets[index].dp.toPx(), centerY + halfHeight),
-                                strokeWidth = 2.6.dp.toPx(),
-                                cap = StrokeCap.Round
-                            )
-                        }
-                    }
-                }
-            }
-
-            AsyncImage(
-                model = RAW + "IMG_20260916_002115.png",
-                contentDescription = "Right Corner Decoration",
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(end = 12.dp, bottom = 38.dp) 
-                    .size(70.dp)
-                    .clickable(
-                        indication = null,
-                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-                    ) { showDailyCheckIn = true },
-                contentScale = ContentScale.Fit
-            )
-
-            DailyCheckInModal(
-                isOpen = showDailyCheckIn,
-                onClose = { showDailyCheckIn = false },
-
-                currentDay = checkInDay,
-                onSignIn = {
-                    if (!checkInSubmitting && !claimedToday && checkInUserId.isNotBlank()) {
-                        checkInSubmitting = true
-                        checkInScope.launch {
-                            val result = runCatching {
-                                withContext(Dispatchers.IO) {
-                                    val connection = (java.net.URL("https://zyora-server.onrender.com/api/daily-checkin").openConnection() as java.net.HttpURLConnection).apply {
-                                        requestMethod = "POST"
-                                        doOutput = true
-                                        connectTimeout = 12000
-                                        readTimeout = 12000
-                                        setRequestProperty("Content-Type", "application/json; charset=utf-8")
+                            }
+                        } else {
+                            items(
+                                items = roomRows,
+                                key = { row -> row.first().id }
+                            ) { row ->
+                                Row(
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .padding(start = 12.dp, end = 12.dp, bottom = 8.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    row.forEach { room ->
+                                        RoomListCard(room, onRoom, Modifier.weight(1f))
                                     }
-                                    try {
-                                        val payload = org.json.JSONObject().put("userId", checkInUserId).toString()
-                                        connection.outputStream.use { it.write(payload.toByteArray(Charsets.UTF_8)) }
-                                        val code = connection.responseCode
-                                        val stream = if (code in 200..299) connection.inputStream else connection.errorStream
-                                        val responseText = stream.bufferedReader().use { it.readText() }
-                                        val response = org.json.JSONObject(responseText)
-                                        if (code !in 200..299 || !response.optBoolean("success")) {
-                                            error(response.optString("error", "Daily reward could not be claimed"))
-                                        }
-
-                                        val balance = response.optLong("balance", -1L)
-                                        if (balance >= 0L) runCatching {
-                                            val walletDao = WalletDatabase.get(context).walletDao()
-                                            val old = walletDao.getUserData() ?: UserDataEntity()
-                                            walletDao.saveUserData(old.copy(balance = balance))
-                                            val coins = response.optLong("coinsAwarded", 0L)
-                                            if (coins > 0L) walletDao.insertTransaction(
-                                                TransactionEntity(
-                                                    title = "Daily Check-in",
-                                                    amount = coins,
-                                                    date = java.text.SimpleDateFormat("yyyy.MM.dd HH:mm", java.util.Locale.getDefault()).format(java.util.Date()),
-                                                    timestamp = System.currentTimeMillis(),
-                                                    type = "daily_checkin"
-                                                )
-                                            )
-                                        }
-
-                                        response
-                                    } finally { connection.disconnect() }
+                                    if (row.size == 1) Spacer(Modifier.weight(1f))
                                 }
                             }
-                            result.onSuccess { response ->
-                                checkInDay = response.optInt("day", checkInDay).coerceIn(1, 7)
-                                claimedToday = true
-                            }.onFailure {
-                                claimedToday = false
-                            }
-                            checkInSubmitting = false
                         }
                     }
-                },
-                claimedToday = claimedToday || checkInSubmitting
+                }
+                
+                if (countrySticky) {
+                    Box(
+                        Modifier
+                            .align(Alignment.TopCenter)
+                            .offset(y = (-8).dp) 
+                            .fillMaxWidth()
+                            .background(Color(0xFFF5F5F5))
+                    ) {
+                        CountryPillRow(
+                            selected = selectedCountry,
+                            onSelect = { selectedCountry = it },
+                            languageCode = languageCode
+                        )
+                    }
+                }
 
-            )
+                // 🔴 NEW: RED DROP ZONE (Visible when Keep room dp is dragged)
+                if (keptRoom != null) {
+                    AnimatedVisibility(
+                        visible = keptRoomDragging,
+                        modifier = Modifier.align(Alignment.BottomEnd),
+                        enter = fadeIn(animationSpec = tween(200)),
+                        exit = fadeOut(animationSpec = tween(200))
+                    ) {
+                        Box(
+                            Modifier
+                                .size(170.dp)
+                                .offset(x = 65.dp, y = 65.dp)
+                                .background(Color(0xFFE53935), CircleShape),
+                            contentAlignment = Alignment.TopStart
+                        ) {
+                            Canvas(Modifier.padding(start = 42.dp, top = 42.dp).size(42.dp)) {
+                                drawCircle(Color.White, radius = size.width * 0.18f)
+                                drawCircle(Color.White, radius = size.width * 0.42f, style = Stroke(width = 3.dp.toPx()))
+                            }
+                        }
+                    }
+                }
+
+                // 🔴 NEW: COLUMN FOR STRICT POSITIONING (Keep room dp on top, Daily image on bottom, EXACT 0.2.dp gap)
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(end = 12.dp, bottom = 38.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(0.2.dp)
+                ) {
+                    if (keptRoom != null) {
+                        val keptRoomMusic = rememberInfiniteTransition(label = "home-kept-room-music")
+                        val keptRoomMusicPhase by keptRoomMusic.animateFloat(
+                            initialValue = 0f,
+                            targetValue = 1f,
+                            animationSpec = infiniteRepeatable(
+                                animation = tween(durationMillis = 900, easing = LinearEasing),
+                                repeatMode = RepeatMode.Restart
+                            ),
+                            label = "home-kept-room-wave"
+                        )
+                        Box(
+                            Modifier
+                                .offset { IntOffset(keptRoomDrag.x.roundToInt(), keptRoomDrag.y.roundToInt()) }
+                                .size(60.dp)
+                                .border(2.dp, Color.White, CircleShape)
+                                .clip(CircleShape)
+                                .pointerInput(keptRoom.id) {
+                                    detectDragGestures(
+                                        onDragStart = { keptRoomDragging = true },
+                                        onDragEnd = {
+                                            val exitThresholdY = with(density) { 50.dp.toPx() } // Exit if dropped near red zone
+                                            val exitThresholdX = with(density) { 20.dp.toPx() }
+                                            val shouldExit = keptRoomDrag.y > exitThresholdY || (keptRoomDrag.y > 20f && keptRoomDrag.x > exitThresholdX)
+                                            
+                                            keptRoomDragging = false
+                                            if (shouldExit) onExitKeptRoom()
+                                            keptRoomDrag = Offset.Zero
+                                        },
+                                        onDragCancel = { keptRoomDragging = false; keptRoomDrag = Offset.Zero },
+                                        onDrag = { change, amount ->
+                                            change.consume()
+                                            keptRoomDrag += amount
+                                        }
+                                    )
+                                }
+                                .clickable(enabled = !keptRoomDragging) { onOpenKeptRoom() },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            AsyncImage(
+                                model = keptRoom.image,
+                                contentDescription = "Kept room",
+                                modifier = Modifier.fillMaxSize().clip(CircleShape),
+                                contentScale = ContentScale.Crop
+                            )
+                            Canvas(Modifier.fillMaxSize()) {
+                                val centerX = size.width / 2f
+                                val centerY = size.height / 2f
+                                val heights = listOf(0.30f, 0.48f, 0.36f)
+                                val offsets = listOf(-7f, 0f, 7f)
+                                heights.forEachIndexed { index, base ->
+                                    val pulse = kotlin.math.abs(kotlin.math.sin((keptRoomMusicPhase * 2f * Math.PI) + index * 1.35f)).toFloat()
+                                    val halfHeight = size.height * (base * (0.55f + pulse * 0.65f)) / 2f
+                                    drawLine(
+                                        color = Color.White,
+                                        start = Offset(centerX + offsets[index].dp.toPx(), centerY - halfHeight),
+                                        end = Offset(centerX + offsets[index].dp.toPx(), centerY + halfHeight),
+                                        strokeWidth = 2.6.dp.toPx(),
+                                        cap = StrokeCap.Round
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Bottom Image (Original position mein fix rahegi unless clicked)
+                    AsyncImage(
+                        model = RAW + "IMG_20260916_002115.png",
+                        contentDescription = "Right Corner Decoration",
+                        modifier = Modifier
+                            .size(70.dp)
+                            .clickable(
+                                indication = null,
+                                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+                            ) { showDailyCheckIn = true },
+                        contentScale = ContentScale.Fit
+                    )
+                }
+
+                DailyCheckInModal(
+                    isOpen = showDailyCheckIn,
+                    onClose = { showDailyCheckIn = false },
+                    currentDay = checkInDay,
+                    onSignIn = {
+                        if (!checkInSubmitting && !claimedToday && checkInUserId.isNotBlank()) {
+                            checkInSubmitting = true
+                            checkInScope.launch {
+                                val result = runCatching {
+                                    withContext(Dispatchers.IO) {
+                                        val connection = (java.net.URL("https://zyora-server.onrender.com/api/daily-checkin").openConnection() as java.net.HttpURLConnection).apply {
+                                            requestMethod = "POST"
+                                            doOutput = true
+                                            connectTimeout = 12000
+                                            readTimeout = 12000
+                                            setRequestProperty("Content-Type", "application/json; charset=utf-8")
+                                        }
+                                        try {
+                                            val payload = org.json.JSONObject().put("userId", checkInUserId).toString()
+                                            connection.outputStream.use { it.write(payload.toByteArray(Charsets.UTF_8)) }
+                                            val code = connection.responseCode
+                                            val stream = if (code in 200..299) connection.inputStream else connection.errorStream
+                                            val responseText = stream.bufferedReader().use { it.readText() }
+                                            val response = org.json.JSONObject(responseText)
+                                            if (code !in 200..299 || !response.optBoolean("success")) {
+                                                error(response.optString("error", "Daily reward could not be claimed"))
+                                            }
+
+                                            val balance = response.optLong("balance", -1L)
+                                            if (balance >= 0L) runCatching {
+                                                val walletDao = WalletDatabase.get(context).walletDao()
+                                                val old = walletDao.getUserData() ?: UserDataEntity()
+                                                walletDao.saveUserData(old.copy(balance = balance))
+                                                val coins = response.optLong("coinsAwarded", 0L)
+                                                if (coins > 0L) walletDao.insertTransaction(
+                                                    TransactionEntity(
+                                                        title = "Daily Check-in",
+                                                        amount = coins,
+                                                        date = java.text.SimpleDateFormat("yyyy.MM.dd HH:mm", java.util.Locale.getDefault()).format(java.util.Date()),
+                                                        timestamp = System.currentTimeMillis(),
+                                                        type = "daily_checkin"
+                                                    )
+                                                )
+                                            }
+
+                                            response
+                                        } finally { connection.disconnect() }
+                                    }
+                                }
+                                result.onSuccess { response ->
+                                    checkInDay = response.optInt("day", checkInDay).coerceIn(1, 7)
+                                    claimedToday = true
+                                }.onFailure {
+                                    claimedToday = false
+                                }
+                                checkInSubmitting = false
+                            }
+                        }
+                    },
+                    claimedToday = claimedToday || checkInSubmitting
+                )
+            }
         }
     }
 }
@@ -949,7 +979,5 @@ private fun HurryCategoryCard(
                 contentScale = ContentScale.FillWidth
             )
         }
-    }
-    keptRoomContent?.invoke()
     }
 }
