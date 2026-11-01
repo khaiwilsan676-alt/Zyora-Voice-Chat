@@ -137,23 +137,6 @@ fun Fourgride(
         }
     }
 
-    val musicPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
-        if (uris.isNotEmpty()) {
-            val added = uris.mapNotNull { uri ->
-                runCatching {
-                    context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                    val name = context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
-                        if (cursor.moveToFirst()) cursor.getString(0) else null
-                    } ?: uri.lastPathSegment ?: "Music"
-                    NativeMusicTrack(uri.toString(), name, uri.toString())
-                }.getOrNull()
-            }
-            val updatedTracks = (musicTracks + added).distinctBy { it.id }
-            musicTracks = updatedTracks
-            musicPrefs.edit().putStringSet("uris", updatedTracks.map { it.id }.toSet()).apply()
-        }
-    }
-
     var entryEffect by remember { mutableStateOf(prefs.getBoolean("entry_effect", false)) }
     var giftEffect by remember { mutableStateOf(prefs.getBoolean("gift_effect", false)) }
     var showMusic by remember { mutableStateOf(false) }
@@ -169,12 +152,10 @@ fun Fourgride(
     val audioPermission = if (Build.VERSION.SDK_INT >= 33)
         Manifest.permission.READ_MEDIA_AUDIO else Manifest.permission.READ_EXTERNAL_STORAGE
 
-    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        if (granted) {
-            showDeviceMusic = true
-        } else {
-            musicPicker.launch(arrayOf("audio/*"))
-        }
+    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+        // Permission result ke baad hamesha app ka apna black Add Music page hi khulega.
+        // Device document/file picker kabhi launch nahi hoga.
+        showDeviceMusic = true
     }
     
     // ✅ Yeh strictly control karega ki mini card sheet open hone pe hide ho jaye
