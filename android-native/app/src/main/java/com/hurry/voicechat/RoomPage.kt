@@ -916,7 +916,7 @@ fun RoomPage(
                             when (roomOwnerAccountId) {
                                 "100002", "100003", "500001" -> {
                                     AsyncImage(
-                                        model = "https://zyora-voice-chat.vercel.app/IMG_20261101_120950.png",
+                                        model = "https://zyora-voice-chat.vercel.app/IMG_20261101_125212.png",
                                         contentDescription = "Purple ID Badge",
                                         contentScale = ContentScale.Fit,
                                         modifier = Modifier.height(13.dp).widthIn(min = 12.dp, max = 18.dp)
@@ -1920,7 +1920,7 @@ private fun formatMusicTime(seconds: Float): String {
                     AsyncImage(model = "https://zyora-voice-chat.vercel.app/IMG_20261027_235537.png", contentDescription = "Owner", contentScale = ContentScale.Fit, modifier = Modifier.height(16.dp))
                 }
                 if (showPurpleIdImage) {
-                    AsyncImage(model = "https://zyora-voice-chat.vercel.app/IMG_20261101_120950.png", contentDescription = "ID", contentScale = ContentScale.Fit, modifier = Modifier.height(16.dp).widthIn(min = 14.dp, max = 22.dp))
+                    AsyncImage(model = "https://zyora-voice-chat.vercel.app/IMG_20261101_125212.png", contentDescription = "ID", contentScale = ContentScale.Fit, modifier = Modifier.height(16.dp).widthIn(min = 14.dp, max = 22.dp))
                 }
                 Box(modifier = Modifier.height(18.dp).width(36.dp), contentAlignment = Alignment.CenterEnd) {
                     AsyncImage(model = "https://zyora-voice-chat.vercel.app/IMG_20261028_004355.png", contentDescription = "Level", contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
