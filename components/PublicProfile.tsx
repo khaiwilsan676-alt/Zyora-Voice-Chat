@@ -1071,7 +1071,7 @@ export default function PublicProfile({
   const [showChat, setShowChat] = useState(false)
   const [showUserReport, setShowUserReport] = useState(false)
 
-  const isSpecialAccount = SPECIAL_ACCOUNTS.hasOwnProperty(user.uid || '')
+  const isSpecialAccount = ['100002', '100003', '500001'].includes(String(user.displayAccountNumber || ''))
 
   const [birthYear, setBirthYear] = useState(2003)
   const [birthMonth, setBirthMonth] = useState(4)
@@ -1946,19 +1946,8 @@ export default function PublicProfile({
           <div className="flex items-center gap-1">
             {isSpecialAccount ? (
               <>
-                <span
-                  className="relative font-bold rounded text-white -ml-2.5"
-                  style={{
-                    backgroundImage: 'url(/1785137282040.png)',
-                    backgroundSize: 'cover', backgroundPosition: 'center',
-                    minWidth: '90px', paddingLeft: '0px', paddingRight: '5px',
-                    paddingTop: '2px', paddingBottom: '2px',
-                  }}
-                >
-                  <span className="relative text-xs" style={{ paddingLeft: '32px' }}>
-                    {user.displayAccountNumber}
-                  </span>
-                </span>
+                <img src="/file_0000000063b481fa89d3c7729265058b.png" alt="Official ID" className="h-[22px] w-auto object-contain" />
+                <span className="text-gray-500">ID:{user.displayAccountNumber}</span>
                 <button onClick={handleCopyID} className="text-gray-400 hover:text-gray-600">
                   <Copy size={12} />
                 </button>
