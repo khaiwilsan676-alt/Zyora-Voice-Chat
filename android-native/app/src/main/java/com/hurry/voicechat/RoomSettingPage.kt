@@ -6,12 +6,9 @@ import android.graphics.BitmapFactory
 import android.util.Base64
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.rememberTransformableState
-import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -44,9 +41,7 @@ import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -98,9 +93,7 @@ private val roomThemeChoices = listOf(
     RoomThemeChoice("northern-light", "Northern Light", RAW_SETTINGS + "file_000000004f388211b534832cd6b1f1a2.png"),
     RoomThemeChoice("sword-ruins", "Sword Ruins", RAW_SETTINGS + "file_0000000085a48211ae91d22ca50879e2.png"),
     RoomThemeChoice("cornfield-portal", "Cornfield Portal", RAW_SETTINGS + "file_00000000baec8211b803a01c54381503.png"),
-    RoomThemeChoice("deer-moonlight", "Deer Moonlight", RAW_SETTINGS + "file_00000000dec082119e076cff4bc01164.png"),
-    RoomThemeChoice("moon-light-new", "Moon light", RAW_SETTINGS + "file_0000000050288211aecacc1c105240c7.png"),
-    RoomThemeChoice("dark-night-flower", "Dark night flower", RAW_SETTINGS + "file_000000006ec4821182b483795db2d94c.png")
+    RoomThemeChoice("deer-moonlight", "Deer Moonlight", RAW_SETTINGS + "file_00000000dec082119e076cff4bc01164.png")
 )
 
 // Tailwind palette
@@ -173,8 +166,8 @@ private suspend fun saveRoomSettingsRemote(roomId: String, userId: String, data:
         connection.outputStream.use { it.write(payload.toString().toByteArray(Charsets.UTF_8)) }
         val code = connection.responseCode
         if (code !in 200..299) {
-            val errorBody = connection.errorStream?.bufferedReader()?.use { it.readText() }.orEmpty()
-            kotlin.error("Save failed: HTTP $code ${errorBody.take(180)}")
+            val error = connection.errorStream?.bufferedReader()?.use { it.readText() }.orEmpty()
+            error("Save failed: HTTP $code ${error.take(180)}")
         }
     } finally { connection.disconnect() }
 
@@ -185,8 +178,8 @@ private suspend fun saveRoomSettingsRemote(roomId: String, userId: String, data:
             .put("roomId", roomId).put("userId", userId).put("roomOwnerId", roomId)
             .put("roomName", data.roomName).put("roomDp", data.roomDp)
             .put("announcement", data.announcement).put("micMode", data.micMode)
-            .put("theme", data.theme).put("customTheme", data.customTheme).put("themeImage", data.customTheme)
-            .put("isLocked", data.isLocked).put("roomPassword", data.roomPassword).put("updatedAt", System.currentTimeMillis())
+            .put("theme", data.theme).put("isLocked", data.isLocked)
+            .put("roomPassword", data.roomPassword).put("updatedAt", System.currentTimeMillis())
         socket.emit("room_settings_update", event)
         kotlinx.coroutines.delay(350)
         socket.disconnect()
@@ -216,9 +209,6 @@ fun RoomSettingPage(
     var saving by remember { mutableStateOf(false) }
     var saveError by remember { mutableStateOf("") }
     val members = remember { mutableStateListOf<NativeSettingMember>() }
-    
-    // DP Cropping Uri state
-    var croppingUri by remember { mutableStateOf<android.net.Uri?>(null) }
 
     // 🔥 COMMON SAVE FUNCTION 🔥 
     val performSave = { newState: RoomSettingsDataNative ->
@@ -241,7 +231,7 @@ fun RoomSettingPage(
                         ?: error("Room theme upload failed. Please try again.")
                 } else ready.customTheme
                 val permanent = ready.copy(roomDp = permanentDp, customTheme = permanentTheme)
-                saveRoomSettingsRemote(stableRoomId, currentUserId, permanent)
+                saveRoomSettingsRemote(roomOwnerId, currentUserId, permanent)
                 context.getSharedPreferences("room_settings", Context.MODE_PRIVATE).edit()
                     .putString("roomDp_$roomOwnerId", permanent.roomDp)
                     .putInt("micMode_$roomOwnerId", permanent.micMode)
@@ -305,20 +295,18 @@ fun RoomSettingPage(
     }
 
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        if (uri != null) {
-            if (pendingPicker == "photo") {
-                croppingUri = uri
-            } else {
-                scope.launch {
-                    runCatching { cropImageToDataUrl(context, uri) }
-                        .onSuccess { dataUrl ->
-                            customTheme = dataUrl
-                            performSave(state.copy(theme = "custom", customTheme = dataUrl))
-                            sheet = ""
-                        }
-                        .onFailure { saveError = it.message ?: "Could not load image" }
+        if (uri != null) scope.launch {
+            runCatching { cropImageToDataUrl(context, uri) }
+                .onSuccess { dataUrl ->
+                    if (pendingPicker == "photo") {
+                        performSave(state.copy(roomDp = dataUrl))
+                    } else {
+                        customTheme = dataUrl
+                        performSave(state.copy(theme = "custom", customTheme = dataUrl))
+                        sheet = ""
+                    }
                 }
-            }
+                .onFailure { saveError = it.message ?: "Could not load image" }
         }
     }
 
@@ -592,8 +580,7 @@ fun RoomSettingPage(
             onUploadCustom = { pendingPicker = "theme"; picker.launch("image/*") }
         )
         
-        // 👉 MIC SHEET HEIGHT 40% SE 50% KAR DI HAI (10% INCREASE) 👈
-        "mic" -> BottomSheetModal(scrimAlpha = 0.3f, heightFraction = 0.50f, onDismiss = { sheet = "" }) {
+        "mic" -> BottomSheetModal(scrimAlpha = 0.3f, heightFraction = 0.50f, onDismiss = { sheet = "" }) { // Height increased to 0.50f
             Column(Modifier.fillMaxSize()) {
                 Row(
                     Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
@@ -637,7 +624,7 @@ fun RoomSettingPage(
                             ) {
                                 AsyncImage(
                                     model = asset, contentDescription = "Mic $mode",
-                                    modifier = Modifier.fillMaxWidth().wrapContentHeight(),
+                                    modifier = Modifier.fillMaxWidth().wrapContentHeight().clip(RoundedCornerShape(8.dp)), // Corners curved
                                     contentScale = ContentScale.Fit
                                 )
                                 Text(
@@ -831,110 +818,6 @@ fun RoomSettingPage(
                             onClick = { sheet = "admin" }
                         )
                     }
-                }
-            }
-        }
-    }
-
-    // 🔥 NEW CROP IMAGE DIALOG WITH CANCEL & SAVE BUTTONS AND 10x10 CROP SQUARE 🔥
-    if (croppingUri != null) {
-        Dialog(
-            onDismissRequest = { croppingUri = null },
-            properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
-        ) {
-            var scale by remember { mutableFloatStateOf(1f) }
-            var offset by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
-            var bitmap by remember { mutableStateOf<Bitmap?>(null) }
-
-            LaunchedEffect(croppingUri) {
-                withContext(Dispatchers.IO) {
-                    context.contentResolver.openInputStream(croppingUri!!)?.use {
-                        bitmap = BitmapFactory.decodeStream(it)
-                    }
-                }
-            }
-
-            Box(Modifier.fillMaxSize().background(Color.Black)) {
-                if (bitmap != null) {
-                    val transformableState = rememberTransformableState { zoomChange, offsetChange, _ ->
-                        scale = (scale * zoomChange).coerceIn(0.5f, 5f)
-                        offset += offsetChange
-                    }
-
-                    Box(Modifier.fillMaxSize().transformable(transformableState), contentAlignment = Alignment.Center) {
-                        Image(
-                            bitmap = bitmap!!.asImageBitmap(),
-                            contentDescription = "Crop Image",
-                            modifier = Modifier.graphicsLayer {
-                                scaleX = scale
-                                scaleY = scale
-                                translationX = offset.x
-                                translationY = offset.y
-                            },
-                            contentScale = ContentScale.Fit
-                        )
-
-                        Box(
-                            Modifier
-                                .fillMaxWidth()
-                                .aspectRatio(1f)
-                                .border(2.dp, Color.White)
-                        )
-                    }
-                }
-
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .statusBarsPadding()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = "Cancel",
-                        color = Color.White,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier
-                            .clickable { croppingUri = null }
-                            .padding(8.dp)
-                    )
-                    Text(
-                        text = "Save",
-                        color = Color.White,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier
-                            .clickable {
-                                if (bitmap != null) {
-                                    scope.launch {
-                                        val base64 = withContext(Dispatchers.IO) {
-                                            try {
-                                                val b = bitmap!!
-                                                val size = minOf(b.width, b.height)
-                                                val cropSize = (size / scale).toInt().coerceIn(1, size)
-                                                val xOffsetScaled = (offset.x).toInt()
-                                                val yOffsetScaled = (offset.y).toInt()
-
-                                                val startX = ((b.width - cropSize) / 2 - xOffsetScaled).coerceIn(0, b.width - cropSize)
-                                                val startY = ((b.height - cropSize) / 2 - yOffsetScaled).coerceIn(0, b.height - cropSize)
-
-                                                val cropped = Bitmap.createBitmap(b, startX, startY, cropSize, cropSize)
-                                                val scaled = Bitmap.createScaledBitmap(cropped, 640, 640, true)
-                                                val out = ByteArrayOutputStream()
-                                                scaled.compress(Bitmap.CompressFormat.JPEG, 90, out)
-                                                "data:image/jpeg;base64," + Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP)
-                                            } catch (e: Exception) {
-                                                cropImageToDataUrl(context, croppingUri!!)
-                                            }
-                                        }
-                                        performSave(state.copy(roomDp = base64))
-                                        croppingUri = null
-                                    }
-                                }
-                            }
-                            .padding(8.dp)
-                    )
                 }
             }
         }
@@ -1226,80 +1109,69 @@ private fun ThemeFullScreen(
                 }
             }
             
-            Column(
-                Modifier.weight(1f).verticalScroll(rememberScrollState())
-                    .padding(horizontal = 12.dp, vertical = 16.dp)
+            // Yahan se wrapping column hataya aur grid ko direct space de di
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 12.dp, top = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(bottom = 24.dp) // Bottom scroll padding
             ) {
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(2),
-                    modifier = Modifier.fillMaxWidth().heightIn(max = 640.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    if (!hasCustom) {
-                        item {
-                            Box(
-                                Modifier.fillMaxWidth().aspectRatio(1f)
-                                    .clip(RoundedCornerShape(13.dp))
-                                    .dashedBorder(gray300, 1.dp, 13.dp)
-                                    .background(gray50)
-                                    .clickable(onClick = onUploadCustom),
-                                contentAlignment = Alignment.Center
+                if (!hasCustom) {
+                    item {
+                        Box(
+                            Modifier.fillMaxWidth().aspectRatio(0.86f)
+                                .clip(RoundedCornerShape(8.dp))
+                                .dashedBorder(gray300, 1.dp, 8.dp)
+                                .background(gray50)
+                                .clickable(onClick = onUploadCustom),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
                             ) {
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.Center
-                                ) {
-                                    Text("+", color = gray400, fontSize = 24.sp)
-                                    Text(
-                                        "Custom", color = gray500, fontSize = 12.sp,
-                                        fontWeight = FontWeight.Medium,
-                                        modifier = Modifier.padding(top = 2.dp)
-                                    )
-                                }
+                                Text("+", color = gray400, fontSize = 24.sp)
+                                Text(
+                                    "Custom", color = gray500, fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    modifier = Modifier.padding(top = 2.dp)
+                                )
                             }
                         }
                     }
-                    gridItems(items) { theme ->
-                        Column(
-                            Modifier.fillMaxWidth().clickable { selectedTheme = theme.id }
-                        ) {
-                            Box(
-                                Modifier.fillMaxWidth()
-                                    .clip(RoundedCornerShape(13.dp))
-                                    .border(2.dp, if (selectedTheme == theme.id) blue400 else Color.Transparent, RoundedCornerShape(13.dp))
-                            ) {
-                                AsyncImage(
-                                    model = theme.image, contentDescription = theme.name,
-                                    modifier = Modifier.fillMaxWidth().wrapContentHeight().clip(RoundedCornerShape(13.dp)), 
-                                    contentScale = ContentScale.FillWidth 
-                                )
-                                
-                                if (selectedTheme == theme.id) {
-                                    Box(
-                                        Modifier
-                                            .matchParentSize()
-                                            .clip(RoundedCornerShape(13.dp))
-                                            .background(Color.Black.copy(alpha = 0.1f))
-                                    )
-                                }
-
-                                if (theme.id == "custom") {
-                                    Box(
-                                        Modifier.align(Alignment.TopStart).padding(6.dp)
-                                            .clip(RoundedCornerShape(4.dp))
-                                            .background(Color.Black.copy(alpha = 0.6f))
-                                            .padding(horizontal = 6.dp, vertical = 2.dp)
-                                    ) { Text("Custom", color = Color.White, fontSize = 10.sp) }
-                                }
-                            }
-                            Text(
-                                theme.name, fontSize = 12.sp, color = gray700,
-                                fontWeight = FontWeight.Medium, textAlign = TextAlign.Center,
-                                modifier = Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 4.dp),
-                                maxLines = 1, overflow = TextOverflow.Ellipsis
+                }
+                gridItems(items) { theme ->
+                    Column(
+                        Modifier.fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .then(
+                                if (selectedTheme == theme.id) Modifier
+                                    .padding(2.dp)
+                                    .border(2.dp, blue400, RoundedCornerShape(8.dp)) else Modifier
                             )
+                            .clickable { selectedTheme = theme.id }
+                    ) {
+                        Box(Modifier.fillMaxWidth().aspectRatio(0.86f).clip(RoundedCornerShape(8.dp))) {
+                            AsyncImage(
+                                model = theme.image, contentDescription = theme.name,
+                                modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop
+                            )
+                            if (theme.id == "custom") {
+                                Box(
+                                    Modifier.align(Alignment.TopStart).padding(6.dp)
+                                        .clip(RoundedCornerShape(4.dp))
+                                        .background(Color.Black.copy(alpha = 0.6f))
+                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                ) { Text("Custom", color = Color.White, fontSize = 10.sp) }
+                            }
                         }
+                        Text(
+                            theme.name, fontSize = 12.sp, color = gray700,
+                            fontWeight = FontWeight.Medium, textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 4.dp),
+                            maxLines = 1, overflow = TextOverflow.Ellipsis
+                        )
                     }
                 }
             }
