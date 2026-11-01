@@ -544,11 +544,15 @@ private fun KeptRoomBubble(room: HurryRoom, alignWithDailyCheckIn: Boolean, onOp
     Box(Modifier.fillMaxSize()) {
         Box(
             Modifier.align(Alignment.BottomEnd)
-                .padding(end = 16.dp, bottom = 80.dp) // Adjusted padding to match bottom right as in image
+                .padding(
+                    end = if (alignWithDailyCheckIn) 12.dp else 16.dp,
+                    bottom = if (alignWithDailyCheckIn) 108.2.dp else 80.dp
+                )
                 .offset { IntOffset(drag.x.roundToInt(), drag.y.roundToInt()) }
-                .size(60.dp) // Main bubble size
+                .size(60.dp)
+                .border(2.dp, Color.White, RoundedCornerShape(50))
                 .clip(RoundedCornerShape(50))
-                .background(Color(0xFFF0513B)) // Matched Reddish/Orange color from image
+                .background(Color(0xFFF0513B))
                 .clickable(enabled = !dragging) { onOpen() }
                 .pointerInput(room.id) {
                     detectDragGestures(
