@@ -84,7 +84,7 @@ fun SearchPage(onBack:()->Unit={},onOpenProfile:(RoomProfileUser)->Unit={},onOpe
   val fetched=withContext(Dispatchers.IO) {
    runCatching {
     val encoded=URLEncoder.encode(q,"UTF-8")
-    val endpoint = if (tab == "Room") "https://zyora-server.onrender.com/api/rooms" else "https://zyora-server.onrender.com/api/users?search=$encoded&accountId=$encoded&q=$encoded"
+    val endpoint = if (tab == "Room") "https://zyora-server.onrender.com/api/rooms?sinceUpdatedAt=0" else "https://zyora-server.onrender.com/api/users?search=$encoded&accountId=$encoded&q=$encoded"
     val conn=URL(endpoint).openConnection() as HttpURLConnection
     conn.connectTimeout=3500; conn.readTimeout=3500
     try {
@@ -115,12 +115,24 @@ fun SearchPage(onBack:()->Unit={},onOpenProfile:(RoomProfileUser)->Unit={},onOpe
        .ifBlank{u.optString("Account Number").takeUnless{it=="null"}.orEmpty()}
        .ifBlank{id}
       if (tab == "Room") {
-       val roomId = u.optString("accountId").takeUnless{it=="null"}.orEmpty().ifBlank{u.optString("roomId").ifBlank{id}}
-       val roomName = u.optString("name").takeUnless{it=="null"}.orEmpty().ifBlank{u.optString("roomName").ifBlank{"Room"}}
-       val roomImage = u.optString("dp").takeUnless{it=="null"}.orEmpty().ifBlank{u.optString("image").ifBlank{u.optString("roomDp").ifBlank{u.optString("Room dp","")}}}
+       val roomId = u.optString("roomId").takeUnless{it=="null"}.orEmpty()
+        .ifBlank{u.optString("accountId").takeUnless{it=="null"}.orEmpty()}
+        .ifBlank{u.optString("id").takeUnless{it=="null"}.orEmpty()}
+       val roomAccountId = u.optString("accountId").takeUnless{it=="null"}.orEmpty().ifBlank{roomId}
+       val roomName = u.optString("roomName").takeUnless{it=="null"}.orEmpty()
+        .ifBlank{u.optString("name").takeUnless{it=="null"}.orEmpty().ifBlank{"Room"}}
+       val rawRoomImage = sequenceOf("dp","image","roomDp","roomImage","avatarUrl","profileImage")
+        .map{u.optString(it,"").trim()}
+        .firstOrNull{it.isNotEmpty() && it!="null" && it!="undefined"}.orEmpty()
+       val roomImage = when {
+        rawRoomImage.startsWith("data:image/",true) || rawRoomImage.isBlank() ->
+         "https://zyora-server.onrender.com/api/rooms/image?roomId=${URLEncoder.encode(roomId,"UTF-8")}"
+        rawRoomImage.startsWith("/") -> "https://zyora-server.onrender.com$rawRoomImage"
+        else -> rawRoomImage
+       }
        if (roomId.isBlank() || !seen.add(roomId)) continue
-       if (!roomId.contains(q, true) && !roomName.contains(q, true)) continue
-       list.add(SearchUserNative(roomId,roomId,roomName,u.optString("country","🇮🇳"),roomImage,"",true,u.optBoolean("isLocked",false)))
+       if (!roomId.contains(q,true) && !roomAccountId.contains(q,true) && !roomName.contains(q,true)) continue
+       list.add(SearchUserNative(roomId,roomAccountId,roomName,u.optString("country","🇮🇳"),roomImage,"",true,u.optBoolean("isLocked",false)))
        continue
       }
       if(acc.isBlank() || !seen.add(acc)) continue
@@ -186,15 +198,40 @@ fun SearchPage(onBack:()->Unit={},onOpenProfile:(RoomProfileUser)->Unit={},onOpe
     !hasSearched -> Column(Modifier.fillMaxWidth().padding(top=76.dp),horizontalAlignment=Alignment.CenterHorizontally){Icon(Icons.Default.Search,null,tint=Color(0x669CA3AF),modifier=Modifier.size(48.dp));Spacer(Modifier.height(12.dp));Text("Search ${if(tab=="User")"Users" else "Rooms"}",fontSize=14.sp,fontWeight=FontWeight.SemiBold,color=Color(0xFF6B7280));Text("Enter an ID number to find people",fontSize=12.sp,color=Color(0xFF9CA3AF),modifier=Modifier.padding(top=4.dp))}
     else -> LazyColumn(verticalArrangement=Arrangement.spacedBy(8.dp),contentPadding = PaddingValues(top = 16.dp, bottom = 20.dp)) {
      items(results,key={it.accountId}) { u ->
-      Row(Modifier.fillMaxWidth().clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
-        if (tab == "Room") onOpenRoom(HurryRoom(id=u.id,name=u.name,image=u.image,country=u.country,accountId=u.accountId,locked=u.locked))
-        else onOpenProfile(RoomProfileUser(id=u.id,uid=u.id,accountId=u.accountId,name=u.name,image=u.image,country=u.country,flag="",bio=u.bio))
+      if (tab == "Room") {
+       Column(
+        Modifier.fillMaxWidth().clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
+         onOpenRoom(HurryRoom(id=u.id,name=u.name,image=u.image,country=u.country,accountId=u.accountId,locked=u.locked))
+        }
+       ) {
+        Box(
+         Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(10.dp)).background(Color(0xFFE5E7EB))
+        ) {
+         AsyncImage(
+          model=u.image.ifBlank{"https://zyora-voice-chat.vercel.app/default-avatar.png"},
+          contentDescription=u.name,
+          modifier=Modifier.fillMaxSize(),
+          contentScale=ContentScale.Crop
+         )
+        }
+        Row(
+         Modifier.fillMaxWidth().padding(horizontal=1.dp,vertical=0.5.dp),
+         verticalAlignment=Alignment.CenterVertically,
+         horizontalArrangement=Arrangement.spacedBy(1.dp)
+        ) {
+         Text(countryFlag(u.country),fontSize=16.sp,maxLines=1)
+         Text(
+          u.name,fontSize=14.sp,fontWeight=FontWeight.Normal,color=Color(0xFF202124),
+          maxLines=1,overflow=TextOverflow.Ellipsis,modifier=Modifier.weight(1f)
+         )
+        }
+       }
+      } else {
+       Row(Modifier.fillMaxWidth().clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
+        onOpenProfile(RoomProfileUser(id=u.id,uid=u.id,accountId=u.accountId,name=u.name,image=u.image,country=u.country,flag="",bio=u.bio))
        }.padding(vertical = 8.dp),verticalAlignment=Alignment.CenterVertically) {
-       AsyncImage(model=u.image.ifBlank{"https://zyora-voice-chat.vercel.app/default-avatar.png"},contentDescription=u.name,modifier=Modifier.size(48.dp).clip(if(tab=="Room") RoundedCornerShape(4.dp) else CircleShape).background(Color(0xFFE5E7EB)),contentScale=ContentScale.Crop)
-       Spacer(Modifier.width(12.dp))
-       if (tab == "Room") {
-        Text(text=u.name,fontSize=15.sp,fontWeight=FontWeight.SemiBold,color=Color(0xFF111827),maxLines=1,overflow=TextOverflow.Ellipsis,modifier=Modifier.weight(1f))
-       } else {
+        AsyncImage(model=u.image.ifBlank{"https://zyora-voice-chat.vercel.app/default-avatar.png"},contentDescription=u.name,modifier=Modifier.size(48.dp).clip(CircleShape).background(Color(0xFFE5E7EB)),contentScale=ContentScale.Crop)
+        Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f),verticalArrangement=Arrangement.Center) {
          Text(text=u.name,fontSize=15.sp,fontWeight=FontWeight.SemiBold,color=Color(0xFF111827),maxLines=1,overflow=TextOverflow.Ellipsis)
          Spacer(Modifier.height(3.dp))
