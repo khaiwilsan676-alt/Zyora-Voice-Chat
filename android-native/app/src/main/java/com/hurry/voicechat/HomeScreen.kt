@@ -551,13 +551,14 @@ fun HomeScreen(
                     }
                 }
 
-                // 🔴 RED DROP ZONE - EK DAM CORNER SE CHIPKA HUA BSS
+                // 🔴 RED DROP ZONE - EK DAM CORNER SE CHIPKA HUA BSS (Overlapping Bottom Bar)
                 if (keptRoom != null && keptRoomDragging) {
                     Box(
                         Modifier
                             .align(Alignment.BottomEnd)
                             .size(170.dp)
-                            .offset(x = 85.dp, y = 85.dp)
+                            // Yahan sirf offset ko upar aur right set kiya hai, baaki koi logic touch nahi
+                            .offset(x = 65.dp, y = 25.dp)
                             .background(Color(0xFFE53935), CircleShape),
                         contentAlignment = Alignment.TopStart
                     ) {
