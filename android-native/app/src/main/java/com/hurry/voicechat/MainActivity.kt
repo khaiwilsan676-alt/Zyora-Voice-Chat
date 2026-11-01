@@ -407,6 +407,8 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                         when (tab) {
                             HurryTab.HOME -> HomeScreen(
                                 languageCode = languageCode,
+                                selectedTab = tab,
+                                onTabSelected = { tab = it },
                                 onRoom = { openedRoom = it },
                                 onMine = { homeMine = true },
                                 onPopular = { homeMine = false },
@@ -506,9 +508,6 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                                 else -> MeNativeSubPage(openedMePage!!, onBack = { openedMePage = null })
                             }
                         }
-                    }
-                    if (openedMePage == null) {
-                        HurryBottomNav(tab, languageCode = languageCode, onTab = { tab = it })
                     }
                 }
             }
