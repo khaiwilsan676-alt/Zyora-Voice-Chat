@@ -1,10 +1,19 @@
 package com.hurry.voicechat
 
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 
 import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.input.pointer.pointerInput
@@ -15,6 +24,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -29,6 +39,8 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.unit.IntOffset
+import kotlin.math.roundToInt
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.layout.ContentScale
@@ -166,7 +178,9 @@ fun HomeScreen(
     mineCreatedRoom: HurryRoom? = null,
     mineSelected: Boolean = false,
     languageCode: String = "en",
-    keptRoomContent: (@Composable () -> Unit)? = null
+    keptRoom: HurryRoom? = null,
+    onOpenKeptRoom: () -> Unit = {},
+    onExitKeptRoom: () -> Unit = {}
 ) {
     val mine = mineSelected
     val context = LocalContext.current
@@ -532,6 +546,73 @@ fun HomeScreen(
                         onSelect = { selectedCountry = it },
                         languageCode = languageCode
                     )
+                }
+            }
+
+            if (keptRoom != null) {
+                var keptRoomDrag by remember(keptRoom.id) { mutableStateOf(Offset.Zero) }
+                var keptRoomDragging by remember(keptRoom.id) { mutableStateOf(false) }
+                val keptRoomMusic = rememberInfiniteTransition(label = "home-kept-room-music")
+                val keptRoomMusicPhase by keptRoomMusic.animateFloat(
+                    initialValue = 0f,
+                    targetValue = 1f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(durationMillis = 900, easing = LinearEasing),
+                        repeatMode = RepeatMode.Restart
+                    ),
+                    label = "home-kept-room-wave"
+                )
+                val density = androidx.compose.ui.platform.LocalDensity.current
+                Box(
+                    Modifier.align(Alignment.BottomEnd)
+                        .padding(end = 12.dp, bottom = 108.2.dp)
+                        .offset { IntOffset(keptRoomDrag.x.roundToInt(), keptRoomDrag.y.roundToInt()) }
+                        .size(60.dp)
+                        .border(2.dp, Color.White, CircleShape)
+                        .clip(CircleShape)
+                        .pointerInput(keptRoom.id) {
+                            detectDragGestures(
+                                onDragStart = { keptRoomDragging = true },
+                                onDragEnd = {
+                                    val exitThreshold = with(density) { 24.dp.toPx() }
+                                    val shouldExit = keptRoomDrag.y > exitThreshold
+                                    keptRoomDragging = false
+                                    if (shouldExit) onExitKeptRoom()
+                                    keptRoomDrag = Offset.Zero
+                                },
+                                onDragCancel = { keptRoomDragging = false; keptRoomDrag = Offset.Zero },
+                                onDrag = { change, amount ->
+                                    change.consume()
+                                    keptRoomDrag += amount
+                                }
+                            )
+                        }
+                        .clickable(enabled = !keptRoomDragging) { onOpenKeptRoom() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    AsyncImage(
+                        model = keptRoom.image,
+                        contentDescription = "Kept room",
+                        modifier = Modifier.fillMaxSize().clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                    Canvas(Modifier.fillMaxSize()) {
+                        val centerX = size.width / 2f
+                        val centerY = size.height / 2f
+                        val heights = listOf(0.30f, 0.48f, 0.36f)
+                        val offsets = listOf(-7f, 0f, 7f)
+                        heights.forEachIndexed { index, base ->
+                            val pulse = kotlin.math.abs(kotlin.math.sin((keptRoomMusicPhase * 2f * Math.PI) + index * 1.35f)).toFloat()
+                            val halfHeight = size.height * (base * (0.55f + pulse * 0.65f)) / 2f
+                            drawLine(
+                                color = Color.White,
+                                start = Offset(centerX + offsets[index].dp.toPx(), centerY - halfHeight),
+                                end = Offset(centerX + offsets[index].dp.toPx(), centerY + halfHeight),
+                                strokeWidth = 2.6.dp.toPx(),
+                                cap = StrokeCap.Round
+                            )
+                        }
+                    }
                 }
             }
 
