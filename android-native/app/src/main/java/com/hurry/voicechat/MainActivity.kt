@@ -510,12 +510,16 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                         }
                     }
                 }
-                if (tab != HurryTab.HOME) {
-                    HurryBottomNav(tab, languageCode = languageCode, onTab = { selected ->
-                        tab = selected
-                        if (selected != HurryTab.ME) openedMePage = null
-                        if (selected == HurryTab.HOME) homeMine = false
-                    })
+                if (tab != HurryTab.HOME && openedMePage == null) {
+                    Box(Modifier.fillMaxSize()) {
+                        Box(Modifier.align(Alignment.BottomCenter)) {
+                            HurryBottomNav(tab, languageCode = languageCode, onTab = { selected ->
+                                tab = selected
+                                if (selected != HurryTab.ME) openedMePage = null
+                                if (selected == HurryTab.HOME) homeMine = false
+                            })
+                        }
+                    }
                 }
             }
             LuckyBagNotificationSlider(
