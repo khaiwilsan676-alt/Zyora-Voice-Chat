@@ -13,28 +13,43 @@ import android.provider.OpenableColumns
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.CloseFullscreen
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.PowerSettingsNew
+import androidx.compose.material.icons.filled.QueueMusic
+import androidx.compose.material.icons.filled.Repeat
+import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material.icons.filled.VolumeMute
+import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -43,12 +58,12 @@ import coil3.compose.AsyncImage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-// ✅ GLOBAL STATE — Ab ye compose state use karta hai so sheet aur mini card dono real-time sync rahenge
+// ✅ GLOBAL STATE
 object MusicPlaybackState {
     var currentPlayingUri: String? by mutableStateOf(null)
     var isPlaying: Boolean by mutableStateOf(false)
-    var currentTrack: NativeMusicTrack? by mutableStateOf(null) // Track data store karne ke liye
-    var isMusicPageOpen: Boolean by mutableStateOf(false) // Ye track karega ki card dikhana hai ya nahi
+    var currentTrack: NativeMusicTrack? by mutableStateOf(null) 
+    var isMusicPageOpen: Boolean by mutableStateOf(false) 
     var wasPlayedOnMusicPage: Boolean by mutableStateOf(false)
     var musicPageBackPressed: Boolean by mutableStateOf(false)
     var playlist: List<NativeMusicTrack> by mutableStateOf(emptyList())
@@ -147,18 +162,15 @@ fun Fourgride(
     var deviceMusicTracks by remember { mutableStateOf<List<DeviceMusicItem>>(emptyList()) }
     var addedDeviceIds by remember { mutableStateOf<Set<String>>(emptySet()) }
     var deviceMusicLoading by remember { mutableStateOf(false) }
-    var musicDurations by remember { mutableStateOf<Map<String, Long>>(emptyMap()) }
+    var musicDurations by remember { mutableStateOf>(emptyMap()) }
 
     val audioPermission = if (Build.VERSION.SDK_INT >= 33)
         Manifest.permission.READ_MEDIA_AUDIO else Manifest.permission.READ_EXTERNAL_STORAGE
 
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
-        // Permission result ke baad hamesha app ka apna black Add Music page hi khulega.
-        // Device document/file picker kabhi launch nahi hoga.
         showDeviceMusic = true
     }
     
-    // ✅ Yeh strictly control karega ki mini card sheet open hone pe hide ho jaye
     LaunchedEffect(showMusic) {
         MusicPlaybackState.isMusicPageOpen = showMusic
     }
@@ -227,7 +239,7 @@ fun Fourgride(
         Column(
             Modifier.fillMaxWidth()
                 .clip(RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp))
-                .background(Color.Black.copy(alpha = 0.85f)) // Transparent halka black
+                .background(Color.Black.copy(alpha = 0.85f))
                 .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 24.dp)
                 .heightIn(max = LocalConfiguration.current.screenHeightDp.dp * 0.70f)
         ) {
@@ -287,9 +299,9 @@ fun Fourgride(
             MusicPlaybackState.isMusicPageOpen = false
             onClose()
         }
-        Box(Modifier.fillMaxSize().background(Color.Black)) {
+        Box(Modifier.fillMaxSize().background(Color(0xFF141414))) {
             Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
-                Box(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp), contentAlignment = Alignment.Center) {
+                Box(Modifier.fillMaxWidth().padding(start = 4.dp, end = 16.dp, top = 8.dp, bottom = 8.dp), contentAlignment = Alignment.Center) {
                     IconButton(
                         onClick = {
                             val currentTrack = musicTracks.firstOrNull { it.url == MusicPlaybackState.currentPlayingUri } ?: MusicPlaybackState.currentTrack
@@ -311,8 +323,19 @@ fun Fourgride(
                     Text("Music", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 }
                 if (musicTracks.isEmpty()) {
-                    Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        Text("No music added yet. Tap below to add music from your phone.", color = Color.White.copy(alpha = .45f), fontSize = 13.sp)
+                    Column(
+                        modifier = Modifier.weight(1f).fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        AsyncImage(
+                            model = base + "IMG_20261101_193716.png",
+                            contentDescription = "No Music",
+                            modifier = Modifier.size(100.dp),
+                            contentScale = ContentScale.Fit
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text("You have no music now", color = Color.White.copy(alpha = .45f), fontSize = 13.sp)
                     }
                 } else {
                     LazyColumn(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 16.dp)) {
@@ -385,9 +408,9 @@ fun Fourgride(
 
     if (showDeviceMusic) {
         BackHandler(enabled = true) { showDeviceMusic = false }
-        Box(Modifier.fillMaxSize().background(Color.Black)) {
+        Box(Modifier.fillMaxSize().background(Color(0xFF141414))) {
             Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
-                Box(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp), contentAlignment = Alignment.Center) {
+                Box(Modifier.fillMaxWidth().padding(start = 4.dp, end = 16.dp, top = 8.dp, bottom = 8.dp), contentAlignment = Alignment.Center) {
                     IconButton(onClick = { showDeviceMusic = false }, modifier = Modifier.align(Alignment.CenterStart)) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
                     }
@@ -431,12 +454,12 @@ fun Fourgride(
                                     },
                                     shape = RoundedCornerShape(50),
                                     colors = ButtonDefaults.buttonColors(
-                                        containerColor = if (isAdded) Color(0xFF6B7280) else Color(0xFF3B82F6)
+                                        containerColor = if (isAdded) Color.White.copy(alpha = 0.1f) else Color(0xFF3B82F6)
                                     ),
                                     contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
                                     enabled = !isAdded
                                 ) {
-                                    Text(if (isAdded) "Added" else "Add", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                    Text(if (isAdded) "Added" else "Add", color = if (isAdded) Color.White.copy(alpha = 0.5f) else Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                                 }
                             }
                         }
@@ -459,11 +482,11 @@ fun Fourgride(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp).height(48.dp),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (allAdded) Color(0xFF6B7280) else Color(0xFF3B82F6)
+                        containerColor = if (allAdded) Color.White.copy(alpha = 0.1f) else Color(0xFF3B82F6)
                     ),
                     enabled = !allAdded
                 ) {
-                    Text(if (allAdded) "All Added" else "Add All", color = Color.White, fontWeight = FontWeight.SemiBold)
+                    Text(if (allAdded) "All Added" else "Add All", color = if (allAdded) Color.White.copy(alpha = 0.5f) else Color.White, fontWeight = FontWeight.SemiBold)
                 }
             }
         }
@@ -501,78 +524,275 @@ private fun ToolCell(
             AsyncImage(model = imageUrl, contentDescription = title, modifier = Modifier.fillMaxSize().then(if (toggle == null) Modifier.clickable(onClick = onClick) else Modifier), contentScale = ContentScale.Fit)
             if (toggle != null) Box(Modifier.align(Alignment.BottomEnd).clickable(onClick = onClick)) { ToolToggle(toggle) }
         }
-        // Yahan text color white kiya hai taki transparent black me saaf dikhe
         Text(title, modifier = Modifier.padding(top = 4.dp), fontSize = 10.sp, color = Color.White.copy(alpha = 0.9f), maxLines = 1, softWrap = false)
     }
 }
 
-// ✅ YEH TERA MUSIC CONTROLLER CARD HAI - Isko Room UI me jahan man waha rakh lena
-// Yeh sirf tab dikhega jab (1) Music page band ho, aur (2) Koi song play ho raha ho ya paused ho.
+
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun MiniMusicControllerCard(modifier: Modifier = Modifier) {
+fun MiniMusicControllerCard(
+    modifier: Modifier = Modifier,
+    onOpenMusicPage: () -> Unit = {} 
+) {
     val context = LocalContext.current
     val playingUri = MusicPlaybackState.currentPlayingUri
     val isPlaying = MusicPlaybackState.isPlaying
     val track = MusicPlaybackState.currentTrack
     val isMusicPageOpen = MusicPlaybackState.isMusicPageOpen
 
-    // Agar Music sheet open nahi hai aur track selected hai, tabhi show hoga
+    // ✅ State for toggling volume view and volume level
+    var showVolumeView by remember { mutableStateOf(false) }
+    var volumeLevel by remember { mutableFloatStateOf(0.5f) } 
+
     if (!isMusicPageOpen && playingUri != null && track != null) {
         Card(
             modifier = modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            shape = RoundedCornerShape(50),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF1F2937)),
-            elevation = CardDefaults.cardElevation(4.dp)
+                .padding(16.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.Black),
+            elevation = CardDefaults.cardElevation(8.dp)
         ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Chhota sa music icon
-                Icon(Icons.Default.PlayArrow, contentDescription = null, tint = Color(0xFF3B82F6), modifier = Modifier.size(24.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                
-                // Song ka naam
-                Text(
-                    text = track.name,
-                    color = Color.White,
-                    fontSize = 14.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
-                )
-                
-                // Play/Pause button controller
-                IconButton(onClick = {
-                    if (isPlaying) {
-                        context.startService(Intent(context, RoomMusicService::class.java).setAction(RoomMusicService.ACTION_PAUSE))
-                        MusicPlaybackState.isPlaying = false
-                    } else {
-                        val playIntent = Intent(context, RoomMusicService::class.java)
-                            .setAction(RoomMusicService.ACTION_PLAY)
-                            .putExtra(RoomMusicService.EXTRA_URI, track.url)
-                            .putExtra(RoomMusicService.EXTRA_TITLE, track.name)
-                        ContextCompat.startForegroundService(context, playIntent)
-                        MusicPlaybackState.isPlaying = true
+            if (showVolumeView) {
+                Column(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        IconButton(
+                            onClick = { showVolumeView = false },
+                            modifier = Modifier.align(Alignment.CenterStart)
+                        ) {
+                            Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+                        }
+                        Text(
+                            text = "Volume",
+                            color = Color.White,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
-                }) {
-                    Icon(
-                        imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = "Play/Pause",
-                        tint = Color.White
-                    )
+
+                    Spacer(modifier = Modifier.height(32.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.VolumeMute, contentDescription = "Low Volume", tint = Color.White)
+                        Spacer(modifier = Modifier.width(16.dp))
+                        
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(8.dp) 
+                                .clip(RoundedCornerShape(50))
+                                .background(Color.Gray.copy(alpha = 0.5f)) 
+                                .pointerInput(Unit) {
+                                    detectDragGestures { change, _ ->
+                                        volumeLevel = (change.position.x / size.width.toFloat()).coerceIn(0f, 1f)
+                                    }
+                                }
+                                .pointerInput(Unit) {
+                                    detectTapGestures { offset ->
+                                        volumeLevel = (offset.x / size.width.toFloat()).coerceIn(0f, 1f)
+                                    }
+                                }
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxHeight()
+                                    .fillMaxWidth(fraction = volumeLevel.coerceAtLeast(0.001f))
+                                    .clip(RoundedCornerShape(50))
+                                    .background(Color.White) // ✅ Pura Pink hatakar direct White kar diya
+                            )
+                        }
+                        
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Icon(Icons.Default.VolumeUp, contentDescription = "High Volume", tint = Color.White)
+                    }
+                    
+                    Spacer(modifier = Modifier.height(24.dp))
                 }
-                
-                // Close/Stop Button
-                IconButton(onClick = {
-                    context.startService(Intent(context, RoomMusicService::class.java).setAction(RoomMusicService.ACTION_STOP))
-                    MusicPlaybackState.currentPlayingUri = null
-                    MusicPlaybackState.isPlaying = false
-                    MusicPlaybackState.currentTrack = null
-                }) {
-                    Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White.copy(alpha = 0.7f))
+            } 
+            else {
+                Column(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(
+                            onClick = {
+                                MusicPlaybackState.isMusicPageOpen = true
+                                onOpenMusicPage()
+                            },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(Icons.Default.CloseFullscreen, contentDescription = "Minimize", tint = Color.White)
+                        }
+                        IconButton(
+                            onClick = {
+                                context.startService(Intent(context, RoomMusicService::class.java).setAction(RoomMusicService.ACTION_STOP))
+                                MusicPlaybackState.currentPlayingUri = null
+                                MusicPlaybackState.isPlaying = false
+                                MusicPlaybackState.currentTrack = null
+                            },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(Icons.Default.PowerSettingsNew, contentDescription = "Stop", tint = Color.White)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(
+                        text = track.name,
+                        color = Color.White,
+                        fontSize = 16.sp,
+                        maxLines = 1,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp)
+                            .basicMarquee(iterations = Int.MAX_VALUE), 
+                        textAlign = TextAlign.Center
+                    )
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "00:00", 
+                            color = Color.White.copy(alpha = 0.7f),
+                            fontSize = 12.sp
+                        )
+                        Slider(
+                            value = 0f, 
+                            onValueChange = {},
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(horizontal = 8.dp)
+                                .height(24.dp),
+                            colors = SliderDefaults.colors(
+                                thumbColor = Color.White,
+                                activeTrackColor = Color.White,
+                                inactiveTrackColor = Color.Gray
+                            )
+                        )
+                        Text(
+                            text = formatMusicDuration(track.duration), 
+                            color = Color.White.copy(alpha = 0.7f),
+                            fontSize = 12.sp
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.QueueMusic, 
+                            contentDescription = "Playlist", 
+                            tint = Color.White,
+                            modifier = Modifier.clickable { /* TBD */ }.padding(4.dp)
+                        )
+                        
+                        Icon(
+                            imageVector = Icons.Default.SkipPrevious, 
+                            contentDescription = "Previous", 
+                            tint = Color.White,
+                            modifier = Modifier.clickable {
+                                val playlist = MusicPlaybackState.playlist
+                                val currentIndex = playlist.indexOfFirst { it.url == track.url }
+                                if (currentIndex > 0) {
+                                    val prevTrack = playlist[currentIndex - 1]
+                                    val playIntent = Intent(context, RoomMusicService::class.java)
+                                        .setAction(RoomMusicService.ACTION_PLAY)
+                                        .putExtra(RoomMusicService.EXTRA_URI, prevTrack.url)
+                                        .putExtra(RoomMusicService.EXTRA_TITLE, prevTrack.name)
+                                    ContextCompat.startForegroundService(context, playIntent)
+                                    MusicPlaybackState.currentPlayingUri = prevTrack.url
+                                    MusicPlaybackState.isPlaying = true
+                                    MusicPlaybackState.currentTrack = prevTrack
+                                }
+                            }.padding(4.dp)
+                        )
+                        
+                        Box(
+                            modifier = Modifier
+                                .size(52.dp)
+                                .clip(CircleShape)
+                                .background(Color.White)
+                                .clickable {
+                                    if (isPlaying) {
+                                        context.startService(Intent(context, RoomMusicService::class.java).setAction(RoomMusicService.ACTION_PAUSE))
+                                        MusicPlaybackState.isPlaying = false
+                                    } else {
+                                        val playIntent = Intent(context, RoomMusicService::class.java)
+                                            .setAction(RoomMusicService.ACTION_PLAY)
+                                            .putExtra(RoomMusicService.EXTRA_URI, track.url)
+                                            .putExtra(RoomMusicService.EXTRA_TITLE, track.name)
+                                        ContextCompat.startForegroundService(context, playIntent)
+                                        MusicPlaybackState.isPlaying = true
+                                    }
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                contentDescription = "Play/Pause",
+                                tint = Color.Black,
+                                modifier = Modifier.size(32.dp)
+                            )
+                        }
+
+                        Icon(
+                            imageVector = Icons.Default.SkipNext, 
+                            contentDescription = "Next", 
+                            tint = Color.White,
+                            modifier = Modifier.clickable {
+                                val playlist = MusicPlaybackState.playlist
+                                val currentIndex = playlist.indexOfFirst { it.url == track.url }
+                                if (currentIndex != -1 && currentIndex < playlist.size - 1) {
+                                    val nextTrack = playlist[currentIndex + 1]
+                                    val playIntent = Intent(context, RoomMusicService::class.java)
+                                        .setAction(RoomMusicService.ACTION_PLAY)
+                                        .putExtra(RoomMusicService.EXTRA_URI, nextTrack.url)
+                                        .putExtra(RoomMusicService.EXTRA_TITLE, nextTrack.name)
+                                    ContextCompat.startForegroundService(context, playIntent)
+                                    MusicPlaybackState.currentPlayingUri = nextTrack.url
+                                    MusicPlaybackState.isPlaying = true
+                                    MusicPlaybackState.currentTrack = nextTrack
+                                }
+                            }.padding(4.dp)
+                        )
+
+                        Icon(
+                            imageVector = Icons.Default.Repeat, 
+                            contentDescription = "Repeat", 
+                            tint = Color.White,
+                            modifier = Modifier.clickable { /* TBD */ }.padding(4.dp)
+                        )
+
+                        Icon(
+                            imageVector = Icons.Default.VolumeUp, 
+                            contentDescription = "Volume", 
+                            tint = Color.White,
+                            modifier = Modifier.clickable { showVolumeView = true }.padding(4.dp) 
+                        )
+                    }
                 }
             }
         }
