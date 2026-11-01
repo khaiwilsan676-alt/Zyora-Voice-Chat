@@ -1789,7 +1789,7 @@ private fun RoomChatMessages(
     onSelectMessage: (NativeRoomMessage) -> Unit
 ) {
     LazyColumn(
-                            state = chatListState,
+        state = state,
                             modifier = Modifier.fillMaxSize().padding(horizontal = 10.dp),
                             contentPadding = PaddingValues(bottom = 8.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
