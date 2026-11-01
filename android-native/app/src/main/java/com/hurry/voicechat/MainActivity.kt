@@ -1,6 +1,12 @@
 package com.hurry.voicechat
 
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.graphics.StrokeCap
 
 import android.content.Intent
 import android.net.Uri
@@ -12,6 +18,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -46,6 +53,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import coil3.compose.AsyncImage
 import androidx.compose.ui.Alignment
 import androidx.core.content.FileProvider
@@ -540,7 +548,17 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
 private fun KeptRoomBubble(room: HurryRoom, alignWithDailyCheckIn: Boolean, onOpen: () -> Unit, onExit: () -> Unit) {
     var drag by remember(room.id) { mutableStateOf(Offset.Zero) }
     var dragging by remember { mutableStateOf(false) }
-    
+    val musicMotion = rememberInfiniteTransition(label = "kept-room-music")
+    val musicPhase by musicMotion.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 900, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "kept-room-wave"
+    )
+
     Box(Modifier.fillMaxSize()) {
         Box(
             Modifier.align(Alignment.BottomEnd)
@@ -550,9 +568,8 @@ private fun KeptRoomBubble(room: HurryRoom, alignWithDailyCheckIn: Boolean, onOp
                 )
                 .offset { IntOffset(drag.x.roundToInt(), drag.y.roundToInt()) }
                 .size(60.dp)
-                .border(2.dp, Color.White, RoundedCornerShape(50))
-                .clip(RoundedCornerShape(50))
-                .background(Color(0xFFF0513B))
+                .border(2.dp, Color.White, CircleShape)
+                .clip(CircleShape)
                 .clickable(enabled = !dragging) { onOpen() }
                 .pointerInput(room.id) {
                     detectDragGestures(
@@ -572,18 +589,28 @@ private fun KeptRoomBubble(room: HurryRoom, alignWithDailyCheckIn: Boolean, onOp
                 },
             contentAlignment = Alignment.Center
         ) {
-            // Target Circles Design (White rings exactly matching the image)
-            Box(
-                modifier = Modifier
-                    .size(30.dp)
-                    .border(3.dp, Color.White, RoundedCornerShape(50)),
-                contentAlignment = Alignment.Center
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(12.dp)
-                        .border(3.dp, Color.White, RoundedCornerShape(50))
-                )
+            AsyncImage(
+                model = room.image,
+                contentDescription = "Kept room",
+                modifier = Modifier.fillMaxSize().clip(CircleShape),
+                contentScale = ContentScale.Crop
+            )
+            Canvas(Modifier.fillMaxSize()) {
+                val centerX = size.width / 2f
+                val centerY = size.height / 2f
+                val heights = listOf(0.30f, 0.48f, 0.36f)
+                val offsets = listOf(-7f, 0f, 7f)
+                heights.forEachIndexed { index, base ->
+                    val pulse = kotlin.math.abs(kotlin.math.sin((musicPhase * 2f * Math.PI) + index * 1.35f)).toFloat()
+                    val halfHeight = size.height * (base * (0.55f + pulse * 0.65f)) / 2f
+                    drawLine(
+                        color = Color.White,
+                        start = androidx.compose.ui.geometry.Offset(centerX + offsets[index].dp.toPx(), centerY - halfHeight),
+                        end = androidx.compose.ui.geometry.Offset(centerX + offsets[index].dp.toPx(), centerY + halfHeight),
+                        strokeWidth = 2.6.dp.toPx(),
+                        cap = StrokeCap.Round
+                    )
+                }
             }
         }
     }
