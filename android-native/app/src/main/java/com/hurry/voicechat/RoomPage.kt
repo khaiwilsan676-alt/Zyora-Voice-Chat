@@ -866,7 +866,8 @@ fun RoomPage(
         }
 
         // FULL ROOM CONTENT LAYOUT
-        Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TOP UI FROM JUMPING
+        RoomPageBlock {
+Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TOP UI FROM JUMPING
             
             // --- TOP SECTION (FIXED, NO IME PADDING) ---
             Box(Modifier.fillMaxWidth()) {
@@ -1069,6 +1070,7 @@ fun RoomPage(
                 }
             }
         }
+        }
         
         val sideBannerImages = listOf(
             "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261018_165235.png",
@@ -1111,7 +1113,8 @@ fun RoomPage(
             AsyncImage(model="https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/file_000000002a8c81fab8232bebeeeb45cc.png",contentDescription="Games",modifier=Modifier.size(56.dp).clickable { showGames=true },contentScale=ContentScale.Fit)
         }
         
-        Column(Modifier.align(Alignment.BottomStart).padding(bottom=LocalConfiguration.current.screenHeightDp.dp*0.33f),verticalArrangement=Arrangement.spacedBy(4.dp)) {
+        RoomPageBlock {
+Column(Modifier.align(Alignment.BottomStart).padding(bottom=LocalConfiguration.current.screenHeightDp.dp*0.33f),verticalArrangement=Arrangement.spacedBy(4.dp)) {
             entryToasts.toList().forEach { toast ->
                 key(toast.id) {
                     val visibleState = remember { androidx.compose.animation.core.MutableTransitionState(false).apply { targetState = true } }
@@ -1156,8 +1159,10 @@ fun RoomPage(
                 }
             }
         }
+        }
 
-        if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.isMusicPageOpen && MusicPlaybackState.wasPlayedOnMusicPage && MusicPlaybackState.musicPageBackPressed) {
+        RoomPageBlock {
+if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.isMusicPageOpen && MusicPlaybackState.wasPlayedOnMusicPage && MusicPlaybackState.musicPageBackPressed) {
             val track = miniMusicTrack!!
             Box(
                 modifier = Modifier.align(Alignment.BottomCenter)
@@ -1288,6 +1293,7 @@ fun RoomPage(
                     }
                 }
             }
+        }
         }
         
         if(showExitMenu) RoomExitMenu(
@@ -1775,6 +1781,12 @@ fun RoomPage(
             }
         }
     }
+}
+
+
+@Composable
+private fun RoomPageBlock(content: @Composable () -> Unit) {
+    content()
 }
 
 
