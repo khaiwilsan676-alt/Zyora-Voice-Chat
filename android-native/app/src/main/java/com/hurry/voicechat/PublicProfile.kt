@@ -176,6 +176,7 @@ fun PublicProfileScreen(
     var showBioScreen by remember { mutableStateOf(false) }
     var showActionSheet by remember { mutableStateOf(false) }
     var showUserReport by remember { mutableStateOf(false) }
+    var isUserBlocked by remember(targetUser?.uid, targetUser?.id, targetUser?.accountId) { mutableStateOf(false) }
     var showChat by remember { mutableStateOf(false) }
 
     var fullImageIndex by remember { mutableStateOf<Int?>(null) }
@@ -793,10 +794,10 @@ fun PublicProfileScreen(
                     fontWeight = FontWeight.Medium
                 )
                 Text(
-                    "Block",
+                    if (isUserBlocked) "Unblock" else "Block",
                     modifier = Modifier.fillMaxWidth().clickable {
-                        showActionSheet = false
-                        Toast.makeText(context, "Block user", Toast.LENGTH_SHORT).show()
+                        isUserBlocked = !isUserBlocked
+                        Toast.makeText(context, if (isUserBlocked) "User blocked" else "User unblocked", Toast.LENGTH_SHORT).show()
                     }.padding(vertical = 16.dp),
                     color = Color.White,
                     fontSize = 16.sp,
