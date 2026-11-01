@@ -891,9 +891,13 @@ private fun RoomListCard(
                 fontWeight = FontWeight.Normal,
                 color = Color(0xFF202124),
                 maxLines = 1,
-                modifier = Modifier.weight(1f).run {
-                    if (roomName.length > 16) this.basicMarquee(iterations = Int.MAX_VALUE, velocity = 25.dp) else this
-                }
+                modifier = Modifier.weight(1f).then(
+                    if (roomName.length > 16) {
+                        Modifier.basicMarquee(iterations = Int.MAX_VALUE, velocity = 25.dp)
+                    } else {
+                        Modifier
+                    }
+                )
             )
         }
     }
