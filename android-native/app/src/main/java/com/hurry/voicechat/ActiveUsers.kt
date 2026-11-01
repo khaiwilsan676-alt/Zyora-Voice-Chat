@@ -86,9 +86,6 @@ fun ActiveUsers(
         if(user.accountId==roomOwnerId){
          Text("OWNER",fontSize=8.sp,fontWeight=FontWeight.Bold,color=Color(0xFF93C5FD))
         }
-        if(user.accountId==currentUser.accountId){
-         Text("YOU",fontSize=8.sp,fontWeight=FontWeight.Bold,color=Color(0xFF86EFAC))
-        }
        }
        Text("ID: ${user.accountId}",fontSize=10.sp,color=Color.White.copy(alpha=.60f),maxLines=1)
       }
