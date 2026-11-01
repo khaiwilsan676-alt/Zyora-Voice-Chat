@@ -193,7 +193,7 @@ fun RoomInfo(
                             Text(roomData.roomName.ifBlank{"Room"},fontSize=14.sp,
                                 fontWeight=FontWeight.SemiBold,color=Color.White)
                             Row(verticalAlignment=Alignment.CenterVertically) {
-                                if (roomData.roomId in setOf("100002","100003","500001")) {
+                                if (roomData.roomId in setOf("100002","100003")) {
                                     AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261101_125212.png", contentDescription="Purple ID Badge", modifier=Modifier.height(16.dp).widthIn(min=22.dp,max=30.dp), contentScale=ContentScale.Fit)
                                     Text(roomData.roomId,fontSize=10.sp,color=Color.White.copy(alpha=.60f))
                                 } else Text("ID: "+roomData.roomId,fontSize=10.sp,color=Color.White.copy(alpha=.60f))
@@ -272,17 +272,18 @@ private fun MemberRow(
             modifier = Modifier.size(38.dp).clip(CircleShape),
             contentScale = ContentScale.Crop
         )
-        Text(name.ifBlank { "User" }, Modifier.weight(1f).padding(start = 11.dp),
+        Text(name.ifBlank { "User" }, Modifier.padding(start = 11.dp).widthIn(max = 170.dp),
             fontSize = 13.sp, fontWeight = FontWeight.Medium, color = Color.White, maxLines = 1)
+        if (role == "Owner") {
+            AsyncImage(model=ROOM_ADMIN_TAG, contentDescription="Owner", contentScale=ContentScale.Fit,
+                modifier=Modifier.padding(start=5.dp).height(19.dp).width(42.dp))
+        }
+        Spacer(Modifier.weight(1f))
         if (country.isNotBlank()) Text(countryFlagEmoji(country), fontSize = 15.sp, modifier = Modifier.padding(end = 5.dp))
         Box(Modifier.height(16.dp).width(36.dp), contentAlignment = Alignment.CenterEnd) {
             AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261028_004355.png", contentDescription="Level",
                 contentScale=ContentScale.FillBounds, modifier=Modifier.fillMaxSize())
             Text("Lv.1", color=Color.White, fontSize=8.sp, fontWeight=FontWeight.Bold, modifier=Modifier.padding(end=5.dp))
-        }
-        if (role == "Owner") {
-            AsyncImage(model=ROOM_ADMIN_TAG, contentDescription="Owner", contentScale=ContentScale.Fit,
-                modifier=Modifier.padding(start=7.dp).height(19.dp).width(42.dp))
         }
     }
 }
