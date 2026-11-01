@@ -60,40 +60,45 @@ fun ActiveUsers(
     .background(Color(0xEB000000))
   ){
    Text("Active Users",modifier=Modifier.fillMaxWidth().padding(start=16.dp,end=16.dp,top=16.dp,bottom=8.dp),textAlign=TextAlign.Center,fontSize=16.sp,fontWeight=FontWeight.Bold,color=Color.White)
+   val visibleUsers = (roomUsers + currentUser)
+    .filter { it.accountId.isNotBlank() }
+    .distinctBy { it.accountId }
+    .sortedWith(compareBy<ActiveUserNative> { if (it.accountId == roomOwnerId) 0 else 1 }.thenBy { it.name.lowercase() })
    LazyColumn(
     Modifier.weight(1f).fillMaxWidth(),
     contentPadding=PaddingValues(start=12.dp,end=12.dp,top=8.dp,bottom=16.dp),
     verticalArrangement=Arrangement.spacedBy(12.dp)
    ){
-    item(key="__current_user__"){
-     Row(Modifier.fillMaxWidth().padding(horizontal=4.dp),verticalAlignment=Alignment.CenterVertically){
-      AsyncImage(model=currentUser.image.ifBlank{"/default-avatar.png"},contentDescription=currentUser.name,modifier=Modifier.size(32.dp).clip(CircleShape).clickable{onOpenProfile(currentUser)},contentScale=ContentScale.Crop)
-      Text(currentUser.name.ifBlank{"Owner"},modifier=Modifier.weight(1f).padding(start=8.dp),fontSize=12.sp,fontWeight=FontWeight.SemiBold,color=Color.White,maxLines=1)
-      Box(Modifier.size(24.dp).clip(CircleShape).background(Color(0xFF3B82F6)),contentAlignment=Alignment.Center){
-       androidx.compose.material3.Icon(
-        imageVector=Icons.Filled.Home,
-        contentDescription="Room owner",
-        modifier=Modifier.size(14.dp),
-        tint=Color.White
-       )
-      }
-     }
-    }
-    items(roomUsers.filter{it.accountId != roomOwnerId && it.accountId != currentUser.accountId},key={it.accountId}){user->
-     Row(Modifier.fillMaxWidth().padding(horizontal=4.dp),verticalAlignment=Alignment.CenterVertically){
-      AsyncImage(model=user.image.ifBlank{"/default-avatar.png"},contentDescription=user.name,modifier=Modifier.size(32.dp).clip(CircleShape).clickable{onOpenProfile(user)},contentScale=ContentScale.Crop)
-      Column(Modifier.weight(1f).padding(start=8.dp)){
-       Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)) {
-        Text(user.name,fontSize=12.sp,fontWeight=FontWeight.SemiBold,color=Color.White,maxLines=1)
-        Box(Modifier.size(30.dp),contentAlignment=Alignment.Center) {
-         AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20260917_220530.png",contentDescription="Level Lv.1 - Lv.10",modifier=Modifier.fillMaxSize(),contentScale=ContentScale.Fit)
-         Text("Lv.1",color=Color.White,fontSize=8.sp,fontWeight=FontWeight.Bold)
+    items(visibleUsers,key={it.accountId}){ user ->
+     Row(
+      Modifier.fillMaxWidth().clickable { onOpenProfile(user) }.padding(horizontal=4.dp),
+      verticalAlignment=Alignment.CenterVertically
+     ){
+      AsyncImage(
+       model=user.image.ifBlank{"https://zyora-voice-chat.vercel.app/default-avatar.png"},
+       contentDescription=user.name,
+       modifier=Modifier.size(38.dp).clip(CircleShape),
+       contentScale=ContentScale.Crop
+      )
+      Column(Modifier.weight(1f).padding(start=9.dp)){
+       Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(5.dp)){
+        Text(user.name.ifBlank{"User"},fontSize=13.sp,fontWeight=FontWeight.SemiBold,color=Color.White,maxLines=1)
+        if(user.accountId==roomOwnerId){
+         Text("OWNER",fontSize=8.sp,fontWeight=FontWeight.Bold,color=Color(0xFF93C5FD))
+        }
+        if(user.accountId==currentUser.accountId){
+         Text("YOU",fontSize=8.sp,fontWeight=FontWeight.Bold,color=Color(0xFF86EFAC))
         }
        }
        Text("ID: ${user.accountId}",fontSize=10.sp,color=Color.White.copy(alpha=.60f),maxLines=1)
       }
+      Box(Modifier.size(7.dp).clip(CircleShape).background(Color(0xFF22C55E)))
      }
     }
+    if(visibleUsers.isEmpty()){
+     item { Text("No active users",modifier=Modifier.fillMaxWidth().padding(18.dp),textAlign=TextAlign.Center,fontSize=12.sp,color=Color.White.copy(alpha=.65f)) }
+    }
+   }
    }
   }
  }
