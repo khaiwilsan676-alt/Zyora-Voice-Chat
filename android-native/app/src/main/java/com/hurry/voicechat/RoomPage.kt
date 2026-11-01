@@ -185,7 +185,7 @@ fun RoomPage(
 ) {
     val roomId=roomOwner.id.ifBlank{roomOwner.accountId.ifBlank{roomOwner.uid.ifBlank{"default-room"}}}
     val roomOwnerAccountId = roomOwner.accountId.ifBlank { roomOwner.id }
-    val isLogoRoom = roomOwnerAccountId == "100002"
+    val isLogoRoom = roomOwnerAccountId in setOf("100002", "100003", "500002")
     val accountId=currentUser.accountId.ifBlank{currentUser.uid.ifBlank{currentUser.id.ifBlank{"guest"}}}
     val clipboard = LocalClipboardManager.current
     val appContext = LocalContext.current
@@ -215,7 +215,7 @@ fun RoomPage(
     val roomDisplayName = cachedCurrentProfile?.let { profile ->
         sequenceOf("name", "displayName", "userName").map { profile.optString(it, "") }.firstOrNull { it.isNotBlank() && it != "null" }
     } ?: currentUser.name.ifBlank { "User" }
-    val roomDisplayImage = if (accountId == "100002") "https://zyora-voice-chat.vercel.app/logo.png" else cachedCurrentProfile?.let { profile ->
+    val roomDisplayImage = if (accountId in setOf("100002", "100003", "500002")) "https://zyora-voice-chat.vercel.app/logo.png" else cachedCurrentProfile?.let { profile ->
         sequenceOf("image", "photo", "photoURL", "avatar", "picture").map { profile.optString(it, "") }.firstOrNull { it.isNotBlank() && it != "null" }
     } ?: currentUser.image
     var copiedId by remember { mutableStateOf("") }
