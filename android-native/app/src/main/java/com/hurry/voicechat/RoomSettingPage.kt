@@ -605,7 +605,7 @@ fun RoomSettingPage(
                         verticalAlignment = Alignment.Top,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        listOf(5, 10, 15).forEach { mode ->
+                        listOf(5, 10, 13).forEach { mode ->
                             val asset = when (mode) {
                                 5 -> RAW_SETTINGS + "Screenshot_2026-10-26-13-33-28-361_com.hawa.app.jpg"
                                 10 -> RAW_SETTINGS + "Screenshot_2026-10-26-13-33-19-325_com.hawa.app.jpg"
