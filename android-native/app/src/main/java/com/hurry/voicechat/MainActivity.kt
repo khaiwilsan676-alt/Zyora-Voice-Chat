@@ -466,7 +466,20 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                                     openedRoom = room
                                 },
                                 mineCreatedRoom = mineCreatedRoom,
-                                mineSelected = homeMine
+                                mineSelected = homeMine,
+                                keptRoomContent = keptRoom?.let { room ->
+                                    {
+                                        KeptRoomBubble(
+                                            room = room,
+                                            alignWithDailyCheckIn = true,
+                                            onOpen = { openedRoom = room },
+                                            onExit = {
+                                                keptRoom = null
+                                                authPrefs.edit().remove("kept_room_data").apply()
+                                            }
+                                        )
+                                    }
+                                }
                             )
                             HurryTab.MESSAGE -> MessageScreen(onChat = { uid, name, image ->
                                 openedChat = Triple(uid, name, image)
@@ -505,28 +518,6 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                         HurryBottomNav(tab, languageCode = languageCode, onTab = { tab = it })
                     }
                 }
-            }
-            if (
-                openedRoom == null &&
-                openedChat == null &&
-                openedMePage == null &&
-                openedPublicProfile == null &&
-                openedLeaderboard == null &&
-                !openedInvite &&
-                !openedSearch &&
-                !openedRoomSupport &&
-                tab in setOf(HurryTab.HOME, HurryTab.MESSAGE, HurryTab.ME) &&
-                keptRoom != null
-            ) {
-                KeptRoomBubble(
-                    room = keptRoom!!,
-                    alignWithDailyCheckIn = tab == HurryTab.HOME,
-                    onOpen = { openedRoom = keptRoom },
-                    onExit = {
-                        keptRoom = null
-                        authPrefs.edit().remove("kept_room_data").apply()
-                    }
-                )
             }
             LuckyBagNotificationSlider(
                 currentUserId = userId,
