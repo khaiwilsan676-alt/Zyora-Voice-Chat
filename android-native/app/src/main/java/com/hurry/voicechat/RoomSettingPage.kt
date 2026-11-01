@@ -1112,7 +1112,7 @@ private fun ThemeFullScreen(
             // Yahan se wrapping column hataya aur grid ko direct space de di
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
-                modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 12.dp, top = 16.dp),
+                modifier = Modifier.weight(1f).fillMaxWidth().padding(start = 12.dp, top = 16.dp, end = 12.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 contentPadding = PaddingValues(bottom = 24.dp) // Bottom scroll padding
