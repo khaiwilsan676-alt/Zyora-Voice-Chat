@@ -310,7 +310,6 @@ fun HomeScreen(
         return
     }
 
-    // 🔴 2ND BANNER REMOVED, AB SIRF 3 HAIN
     val banners = listOf(
         RAW + "file_00000000efe88211874bfd6b0392fd41.png", 
         RAW + "file_0000000033348246b73ea85588488c24.png", 
@@ -320,15 +319,6 @@ fun HomeScreen(
     val listState = rememberLazyListState()
     val countrySticky by remember { derivedStateOf { listState.firstVisibleItemIndex >= 3 } }
 
-    LaunchedEffect(Unit) {
-        while (true) {
-            kotlinx.coroutines.delay(5000)
-            if (!pager.isScrollInProgress) {
-                pager.animateScrollToPage((pager.currentPage + 1) % banners.size)
-            }
-        }
-    }
-
     val filteredRooms = remember(rooms, selectedCountry) {
         val list = rooms ?: emptyList()
         if (selectedCountry == "all") list
@@ -337,8 +327,10 @@ fun HomeScreen(
 
     val roomRows = remember(filteredRooms) { filteredRooms.chunked(2) }
 
+    // 🔥 Outermost Box
     Box(Modifier.fillMaxSize()) {
         
+        // Dono states yahan outermost Box me declare kiye hain taaki Red Zone aur Draggable DP dono sync rahe
         var keptRoomDrag by remember(keptRoom?.id) { mutableStateOf(Offset.Zero) }
         var keptRoomDragging by remember(keptRoom?.id) { mutableStateOf(false) }
         val density = androidx.compose.ui.platform.LocalDensity.current
@@ -347,7 +339,7 @@ fun HomeScreen(
             Modifier.fillMaxSize()
                 .background(Color(0xFFF5F5F5))
         ) {
-            // ═══════════ FIXED TOP HEADER (does not scroll) ═══════════
+            // ═══════════ FIXED TOP HEADER ═══════════
             Column(
                 Modifier
                     .fillMaxWidth()
@@ -403,7 +395,6 @@ fun HomeScreen(
                     }
                 }
             }
-            // ═══════════ END FIXED TOP HEADER ═══════════
 
             // ═══════════ SCROLLABLE AREA ═══════════
             Box(Modifier.fillMaxSize()) {
@@ -557,178 +548,181 @@ fun HomeScreen(
                         )
                     }
                 }
-
-                // 🔴 RED DROP ZONE - EK DAM CORNER SE CHIPKA HUA BSS (Overlapping Bottom Bar)
-                if (keptRoom != null && keptRoomDragging) {
-                    Box(
-                        Modifier
-                            .align(Alignment.BottomEnd)
-                            .size(170.dp)
-                            // Yahan sirf offset ko upar aur right set kiya hai, baaki koi logic touch nahi
-                            .offset(x = 65.dp, y = 25.dp)
-                            .background(Color(0xFFE53935), CircleShape),
-                        contentAlignment = Alignment.TopStart
-                    ) {
-                        Canvas(Modifier.padding(start = 28.dp, top = 28.dp).size(42.dp)) {
-                            drawCircle(Color.White, radius = size.width * 0.18f)
-                            drawCircle(Color.White, radius = size.width * 0.42f, style = Stroke(width = 3.dp.toPx()))
-                        }
-                    }
-                }
-
-                // Keep room dp & Bottom Image UI (0.2dp gap)
-                Column(
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(end = 12.dp, bottom = 38.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(0.2.dp)
-                ) {
-                    if (keptRoom != null) {
-                        val keptRoomMusic = rememberInfiniteTransition(label = "home-kept-room-music")
-                        val keptRoomMusicPhase by keptRoomMusic.animateFloat(
-                            initialValue = 0f,
-                            targetValue = 1f,
-                            animationSpec = infiniteRepeatable(
-                                animation = tween(durationMillis = 900, easing = LinearEasing),
-                                repeatMode = RepeatMode.Restart
-                            ),
-                            label = "home-kept-room-wave"
-                        )
-                        Box(
-                            Modifier
-                                .offset { IntOffset(keptRoomDrag.x.roundToInt(), keptRoomDrag.y.roundToInt()) }
-                                .size(60.dp)
-                                .border(2.dp, Color.White, CircleShape)
-                                .clip(CircleShape)
-                                .pointerInput(keptRoom.id) {
-                                    detectDragGestures(
-                                        onDragStart = { keptRoomDragging = true },
-                                        onDragEnd = {
-                                            val exitThresholdY = with(density) { 50.dp.toPx() } 
-                                            val exitThresholdX = with(density) { 20.dp.toPx() }
-                                            val shouldExit = keptRoomDrag.y > exitThresholdY || (keptRoomDrag.y > 20f && keptRoomDrag.x > exitThresholdX)
-                                            
-                                            keptRoomDragging = false
-                                            if (shouldExit) onExitKeptRoom()
-                                            keptRoomDrag = Offset.Zero
-                                        },
-                                        onDragCancel = { keptRoomDragging = false; keptRoomDrag = Offset.Zero },
-                                        onDrag = { change, amount ->
-                                            change.consume()
-                                            keptRoomDrag += amount
-                                        }
-                                    )
-                                }
-                                .clickable(enabled = !keptRoomDragging) { onOpenKeptRoom() },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            AsyncImage(
-                                model = keptRoom.image,
-                                contentDescription = "Kept room",
-                                modifier = Modifier.fillMaxSize().clip(CircleShape),
-                                contentScale = ContentScale.Crop
-                            )
-                            Canvas(Modifier.fillMaxSize()) {
-                                val centerX = size.width / 2f
-                                val centerY = size.height / 2f
-                                val heights = listOf(0.30f, 0.48f, 0.36f)
-                                val offsets = listOf(-7f, 0f, 7f)
-                                heights.forEachIndexed { index, base ->
-                                    val pulse = kotlin.math.abs(kotlin.math.sin((keptRoomMusicPhase * 2f * Math.PI) + index * 1.35f)).toFloat()
-                                    val halfHeight = size.height * (base * (0.55f + pulse * 0.65f)) / 2f
-                                    drawLine(
-                                        color = Color.White,
-                                        start = Offset(centerX + offsets[index].dp.toPx(), centerY - halfHeight),
-                                        end = Offset(centerX + offsets[index].dp.toPx(), centerY + halfHeight),
-                                        strokeWidth = 2.6.dp.toPx(),
-                                        cap = StrokeCap.Round
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    AsyncImage(
-                        model = RAW + "IMG_20260916_002115.png",
-                        contentDescription = "Right Corner Decoration",
-                        modifier = Modifier
-                            .size(70.dp)
-                            .clickable(
-                                indication = null,
-                                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-                            ) { showDailyCheckIn = true },
-                        contentScale = ContentScale.Fit
-                    )
-                }
-
-                DailyCheckInModal(
-                    isOpen = showDailyCheckIn,
-                    onClose = { showDailyCheckIn = false },
-                    currentDay = checkInDay,
-                    onSignIn = {
-                        if (!checkInSubmitting && !claimedToday && checkInUserId.isNotBlank()) {
-                            checkInSubmitting = true
-                            checkInScope.launch {
-                                val result = runCatching {
-                                    withContext(Dispatchers.IO) {
-                                        val connection = (java.net.URL("https://zyora-server.onrender.com/api/daily-checkin").openConnection() as java.net.HttpURLConnection).apply {
-                                            requestMethod = "POST"
-                                            doOutput = true
-                                            connectTimeout = 12000
-                                            readTimeout = 12000
-                                            setRequestProperty("Content-Type", "application/json; charset=utf-8")
-                                        }
-                                        try {
-                                            val payload = org.json.JSONObject().put("userId", checkInUserId).toString()
-                                            connection.outputStream.use { it.write(payload.toByteArray(Charsets.UTF_8)) }
-                                            val code = connection.responseCode
-                                            val stream = if (code in 200..299) connection.inputStream else connection.errorStream
-                                            val responseText = stream.bufferedReader().use { it.readText() }
-                                            val response = org.json.JSONObject(responseText)
-                                            if (code !in 200..299 || !response.optBoolean("success")) {
-                                                error(response.optString("error", "Daily reward could not be claimed"))
-                                            }
-
-                                            val balance = response.optLong("balance", -1L)
-                                            if (balance >= 0L) runCatching {
-                                                val walletDao = WalletDatabase.get(context).walletDao()
-                                                val old = walletDao.getUserData() ?: UserDataEntity()
-                                                walletDao.saveUserData(old.copy(balance = balance))
-                                                val coins = response.optLong("coinsAwarded", 0L)
-                                                if (coins > 0L) walletDao.insertTransaction(
-                                                    TransactionEntity(
-                                                        title = "Daily Check-in",
-                                                        amount = coins,
-                                                        date = java.text.SimpleDateFormat("yyyy.MM.dd HH:mm", java.util.Locale.getDefault()).format(java.util.Date()),
-                                                        timestamp = System.currentTimeMillis(),
-                                                        type = "daily_checkin"
-                                                    )
-                                                )
-                                            }
-
-                                            response
-                                        } finally { connection.disconnect() }
-                                    }
-                                }
-                                result.onSuccess { response ->
-                                    checkInDay = response.optInt("day", checkInDay).coerceIn(1, 7)
-                                    claimedToday = true
-                                }.onFailure {
-                                    claimedToday = false
-                                }
-                                checkInSubmitting = false
-                            }
-                        }
-                    },
-                    claimedToday = claimedToday || checkInSubmitting
-                )
             }
-        }
+        } // End of Main Column
+
+        // 🟢 BOTTOM NAV - Ab iske BAAD red zone aayega taaki overlay ho!
         Box(Modifier.align(Alignment.BottomCenter)) {
             HurryBottomNav(selectedTab, languageCode = languageCode, onTab = onTabSelected)
         }
-    }
+
+        // 🔴 RED DROP ZONE - EXACTLY AT THE BOTTOM-RIGHT CORNER (Overlapping the Bottom Bar perfectly)
+        if (keptRoom != null && keptRoomDragging) {
+            Box(
+                Modifier
+                    .align(Alignment.BottomEnd)
+                    .size(190.dp) // Perfect circular corner 
+                    .offset(x = 95.dp, y = 95.dp) // Half of size ensures it creates exactly a Quarter-Circle at the corner
+                    .background(Color(0xFFE53935), CircleShape),
+                contentAlignment = Alignment.TopStart
+            ) {
+                // Target icon properly positioned within the visible quadrant
+                Canvas(Modifier.padding(start = 38.dp, top = 38.dp).size(42.dp)) {
+                    drawCircle(Color.White, radius = size.width * 0.18f)
+                    drawCircle(Color.White, radius = size.width * 0.42f, style = Stroke(width = 3.dp.toPx()))
+                }
+            }
+        }
+
+        // Keep room dp & Bottom Image UI (Ise bhi yahan rakha hai taaki drag karte time yeh upar hi rahe)
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 12.dp, bottom = 38.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(0.2.dp)
+        ) {
+            if (keptRoom != null) {
+                val keptRoomMusic = rememberInfiniteTransition(label = "home-kept-room-music")
+                val keptRoomMusicPhase by keptRoomMusic.animateFloat(
+                    initialValue = 0f,
+                    targetValue = 1f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(durationMillis = 900, easing = LinearEasing),
+                        repeatMode = RepeatMode.Restart
+                    ),
+                    label = "home-kept-room-wave"
+                )
+                Box(
+                    Modifier
+                        .offset { IntOffset(keptRoomDrag.x.roundToInt(), keptRoomDrag.y.roundToInt()) }
+                        .size(60.dp)
+                        .border(2.dp, Color.White, CircleShape)
+                        .clip(CircleShape)
+                        .pointerInput(keptRoom.id) {
+                            detectDragGestures(
+                                onDragStart = { keptRoomDragging = true },
+                                onDragEnd = {
+                                    val exitThresholdY = with(density) { 50.dp.toPx() } 
+                                    val exitThresholdX = with(density) { 20.dp.toPx() }
+                                    val shouldExit = keptRoomDrag.y > exitThresholdY || (keptRoomDrag.y > 20f && keptRoomDrag.x > exitThresholdX)
+                                    
+                                    keptRoomDragging = false
+                                    if (shouldExit) onExitKeptRoom()
+                                    keptRoomDrag = Offset.Zero
+                                },
+                                onDragCancel = { keptRoomDragging = false; keptRoomDrag = Offset.Zero },
+                                onDrag = { change, amount ->
+                                    change.consume()
+                                    keptRoomDrag += amount
+                                }
+                            )
+                        }
+                        .clickable(enabled = !keptRoomDragging) { onOpenKeptRoom() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    AsyncImage(
+                        model = keptRoom.image,
+                        contentDescription = "Kept room",
+                        modifier = Modifier.fillMaxSize().clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                    Canvas(Modifier.fillMaxSize()) {
+                        val centerX = size.width / 2f
+                        val centerY = size.height / 2f
+                        val heights = listOf(0.30f, 0.48f, 0.36f)
+                        val offsets = listOf(-7f, 0f, 7f)
+                        heights.forEachIndexed { index, base ->
+                            val pulse = kotlin.math.abs(kotlin.math.sin((keptRoomMusicPhase * 2f * Math.PI) + index * 1.35f)).toFloat()
+                            val halfHeight = size.height * (base * (0.55f + pulse * 0.65f)) / 2f
+                            drawLine(
+                                color = Color.White,
+                                start = Offset(centerX + offsets[index].dp.toPx(), centerY - halfHeight),
+                                end = Offset(centerX + offsets[index].dp.toPx(), centerY + halfHeight),
+                                strokeWidth = 2.6.dp.toPx(),
+                                cap = StrokeCap.Round
+                            )
+                        }
+                    }
+                }
+            }
+
+            AsyncImage(
+                model = RAW + "IMG_20260916_002115.png",
+                contentDescription = "Right Corner Decoration",
+                modifier = Modifier
+                    .size(70.dp)
+                    .clickable(
+                        indication = null,
+                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+                    ) { showDailyCheckIn = true },
+                contentScale = ContentScale.Fit
+            )
+        }
+
+        // DailyCheckIn Modal bhi yahan aayega top overlay ke liye
+        DailyCheckInModal(
+            isOpen = showDailyCheckIn,
+            onClose = { showDailyCheckIn = false },
+            currentDay = checkInDay,
+            onSignIn = {
+                if (!checkInSubmitting && !claimedToday && checkInUserId.isNotBlank()) {
+                    checkInSubmitting = true
+                    checkInScope.launch {
+                        val result = runCatching {
+                            withContext(Dispatchers.IO) {
+                                val connection = (java.net.URL("https://zyora-server.onrender.com/api/daily-checkin").openConnection() as java.net.HttpURLConnection).apply {
+                                    requestMethod = "POST"
+                                    doOutput = true
+                                    connectTimeout = 12000
+                                    readTimeout = 12000
+                                    setRequestProperty("Content-Type", "application/json; charset=utf-8")
+                                }
+                                try {
+                                    val payload = org.json.JSONObject().put("userId", checkInUserId).toString()
+                                    connection.outputStream.use { it.write(payload.toByteArray(Charsets.UTF_8)) }
+                                    val code = connection.responseCode
+                                    val stream = if (code in 200..299) connection.inputStream else connection.errorStream
+                                    val responseText = stream.bufferedReader().use { it.readText() }
+                                    val response = org.json.JSONObject(responseText)
+                                    if (code !in 200..299 || !response.optBoolean("success")) {
+                                        error(response.optString("error", "Daily reward could not be claimed"))
+                                    }
+
+                                    val balance = response.optLong("balance", -1L)
+                                    if (balance >= 0L) runCatching {
+                                        val walletDao = WalletDatabase.get(context).walletDao()
+                                        val old = walletDao.getUserData() ?: UserDataEntity()
+                                        walletDao.saveUserData(old.copy(balance = balance))
+                                        val coins = response.optLong("coinsAwarded", 0L)
+                                        if (coins > 0L) walletDao.insertTransaction(
+                                            TransactionEntity(
+                                                title = "Daily Check-in",
+                                                amount = coins,
+                                                date = java.text.SimpleDateFormat("yyyy.MM.dd HH:mm", java.util.Locale.getDefault()).format(java.util.Date()),
+                                                timestamp = System.currentTimeMillis(),
+                                                type = "daily_checkin"
+                                            )
+                                        )
+                                    }
+
+                                    response
+                                } finally { connection.disconnect() }
+                            }
+                        }
+                        result.onSuccess { response ->
+                            checkInDay = response.optInt("day", checkInDay).coerceIn(1, 7)
+                            claimedToday = true
+                        }.onFailure {
+                            claimedToday = false
+                        }
+                        checkInSubmitting = false
+                    }
+                }
+            },
+            claimedToday = claimedToday || checkInSubmitting
+        )
+    } // 🔥 Outermost Box Ends Here
 }
 
 // ═══════════════════════════════════════════════════════
@@ -888,7 +882,6 @@ private fun RoomListCard(
         ) {
             Text(countryFlag(room.country), fontSize = 16.sp, maxLines = 1)
             
-            // 🔴 ROOM NAME MARQUEE EFFECT BSS
             val roomName = room.name.takeIf { it.isNotBlank() && !it.equals("null", ignoreCase = true) && !it.equals("undefined", ignoreCase = true) } ?: "Zyora_User"
             
             Text(
@@ -998,7 +991,6 @@ private fun HurryCategoryCard(
     }
 }
 
-// Bottom navigation kept in HomeScreen.kt as requested.
 @Composable
 fun HurryBottomNav(tab: HurryTab, languageCode: String = "en", onTab: (HurryTab) -> Unit) {
     Row(
