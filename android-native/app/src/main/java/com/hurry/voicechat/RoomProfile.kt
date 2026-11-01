@@ -310,8 +310,8 @@ fun RoomProfile(
                             AsyncImage(model = "file_0000000063b481fa89d3c7729265058b.png".fullUrl(), contentDescription = "Purple ID Badge", contentScale = ContentScale.Fit, modifier = Modifier.height(30.dp).widthIn(min = 22.dp, max = 35.dp).padding(end = 4.dp))
                             Text(accountId, color = Color.DarkGray, fontSize = 14.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(start = 4.dp))
                         } else if (isRedOfficialAccount) {
-                            Box(Modifier.height(22.dp).clip(RoundedCornerShape(4.dp)).background(Color(0xFFDC2626)).padding(horizontal = 7.dp), contentAlignment = Alignment.Center) { Text("ID", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold) }
-                            Text(accountId, color = Color(0xFFDC2626), fontSize = 14.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(start = 4.dp))
+                            AsyncImage(model = "file_0000000063b481fa89d3c7729265058b.png".fullUrl(), contentDescription = "Purple ID Badge", contentScale = ContentScale.Fit, modifier = Modifier.height(30.dp).widthIn(min = 22.dp, max = 35.dp).padding(end = 4.dp))
+                            Text(accountId, color = Color.DarkGray, fontSize = 14.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(start = 4.dp))
                         } else Text("ID: $accountId", color = Color.DarkGray, fontSize = 14.sp, fontWeight = FontWeight.Medium)
                         if (accountId != "N/A" && accountId != "User") {
                             IconButton(
