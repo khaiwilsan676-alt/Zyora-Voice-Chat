@@ -648,15 +648,24 @@ fun PublicProfileScreen(
         }
         Dialog(
             onDismissRequest = { showChat = false },
-            properties = DialogProperties(usePlatformDefaultWidth = false)
+            properties = DialogProperties(
+                usePlatformDefaultWidth = false,
+                decorFitsSystemWindows = false
+            )
         ) {
-            Box(Modifier.fillMaxSize().background(Color.White)) {
-                ChatScreen(
-                    currentUser = currentUser,
-                    targetUser = chatTarget,
-                    onClose = { showChat = false },
-                    onJoinRoom = onJoinRoom
-                )
+            androidx.compose.material3.Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = Color.White,
+                shape = RoundedCornerShape(0.dp)
+            ) {
+                Box(Modifier.fillMaxSize()) {
+                    ChatScreen(
+                        currentUser = currentUser,
+                        targetUser = chatTarget,
+                        onClose = { showChat = false },
+                        onJoinRoom = onJoinRoom
+                    )
+                }
             }
         }
     }
