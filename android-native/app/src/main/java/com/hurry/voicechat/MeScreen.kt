@@ -132,7 +132,7 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
                             ) {
                                 if (account in setOf("100002", "100003", "500001")) {
                                     AsyncImage(
-                                        model = RAW_ME + "IMG_20261101_120950.png",
+                                        model = RAW_ME + "IMG_20261101_125212.png",
                                         contentDescription = "Official ID",
                                         modifier = Modifier.height(22.dp).widthIn(max = 52.dp),
                                         contentScale = ContentScale.Fit
