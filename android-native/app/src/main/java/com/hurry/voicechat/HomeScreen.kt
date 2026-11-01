@@ -189,7 +189,7 @@ fun HomeScreen(
     val dao = remember {
         runCatching { HurryDatabase.get(context).roomDao() }.getOrNull()
     }
-    val roomSyncPrefs = remember { context.getSharedPreferences("native_room_sync", Context.MODEPRIVATE) }
+    val roomSyncPrefs = remember { context.getSharedPreferences("native_room_sync", Context.MODE_PRIVATE) }
 
     var rooms by remember { mutableStateOf(NativeRoomMemoryCache.rooms) }
     var selectedCountry by remember { mutableStateOf("all") }
@@ -551,24 +551,18 @@ fun HomeScreen(
                 }
 
                 // 🔴 NEW: RED DROP ZONE (Visible when Keep room dp is dragged)
-                if (keptRoom != null) {
-                    AnimatedVisibility(
-                        visible = keptRoomDragging,
-                        modifier = Modifier.align(Alignment.BottomEnd),
-                        enter = fadeIn(animationSpec = tween(200)),
-                        exit = fadeOut(animationSpec = tween(200))
+                if (keptRoom != null && keptRoomDragging) {
+                    Box(
+                        Modifier
+                            .align(Alignment.BottomEnd)
+                            .size(170.dp)
+                            .offset(x = 65.dp, y = 65.dp)
+                            .background(Color(0xFFE53935), CircleShape),
+                        contentAlignment = Alignment.TopStart
                     ) {
-                        Box(
-                            Modifier
-                                .size(170.dp)
-                                .offset(x = 65.dp, y = 65.dp)
-                                .background(Color(0xFFE53935), CircleShape),
-                            contentAlignment = Alignment.TopStart
-                        ) {
-                            Canvas(Modifier.padding(start = 42.dp, top = 42.dp).size(42.dp)) {
-                                drawCircle(Color.White, radius = size.width * 0.18f)
-                                drawCircle(Color.White, radius = size.width * 0.42f, style = Stroke(width = 3.dp.toPx()))
-                            }
+                        Canvas(Modifier.padding(start = 42.dp, top = 42.dp).size(42.dp)) {
+                            drawCircle(Color.White, radius = size.width * 0.18f)
+                            drawCircle(Color.White, radius = size.width * 0.42f, style = Stroke(width = 3.dp.toPx()))
                         }
                     }
                 }
