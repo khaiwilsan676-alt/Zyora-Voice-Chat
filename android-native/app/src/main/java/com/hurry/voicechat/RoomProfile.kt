@@ -307,10 +307,10 @@ fun RoomProfile(
                         horizontalArrangement = Arrangement.Center
                     ) {
                         if (isCoreOfficialAccount) {
-                            AsyncImage(model = "IMG_20261101_120950.png".fullUrl(), contentDescription = "Purple ID Badge", contentScale = ContentScale.Fit, modifier = Modifier.height(30.dp).widthIn(min = 22.dp, max = 35.dp).padding(end = 4.dp))
+                            AsyncImage(model = "IMG_20261101_125212.png".fullUrl(), contentDescription = "Purple ID Badge", contentScale = ContentScale.Fit, modifier = Modifier.height(30.dp).widthIn(min = 22.dp, max = 35.dp).padding(end = 4.dp))
                             Text(accountId, color = Color.DarkGray, fontSize = 14.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(start = 4.dp))
                         } else if (isRedOfficialAccount) {
-                            AsyncImage(model = "IMG_20261101_120950.png".fullUrl(), contentDescription = "Purple ID Badge", contentScale = ContentScale.Fit, modifier = Modifier.height(30.dp).widthIn(min = 22.dp, max = 35.dp).padding(end = 4.dp))
+                            AsyncImage(model = "IMG_20261101_125212.png".fullUrl(), contentDescription = "Purple ID Badge", contentScale = ContentScale.Fit, modifier = Modifier.height(30.dp).widthIn(min = 22.dp, max = 35.dp).padding(end = 4.dp))
                             Text(accountId, color = Color.DarkGray, fontSize = 14.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(start = 4.dp))
                         } else Text("ID: $accountId", color = Color.DarkGray, fontSize = 14.sp, fontWeight = FontWeight.Medium)
                         if (accountId != "N/A" && accountId != "User") {
