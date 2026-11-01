@@ -438,12 +438,9 @@ fun PublicProfileScreen(
 
                     // ID & Followers
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
-                        if (isCoreOfficial) {
+                        if (isCoreOfficial || isRedOfficial) {
                             AsyncImage(model = profileAsset("/file_0000000063b481fa89d3c7729265058b.png"), contentDescription = "Purple ID Badge", contentScale = ContentScale.Fit, modifier = Modifier.height(30.dp).widthIn(min = 22.dp, max = 35.dp).padding(end = 4.dp))
                             Text(displayAccNum, fontSize = 12.sp, color = Color.Gray)
-                        } else if (isRedOfficial) {
-                            Box(Modifier.height(22.dp).clip(RoundedCornerShape(4.dp)).background(Color(0xFFDC2626)).padding(horizontal = 7.dp), contentAlignment = Alignment.Center) { Text("ID", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold) }
-                            Text(displayAccNum, fontSize = 12.sp, color = Color(0xFFDC2626))
                         } else Text("ID: $displayAccNum", fontSize = 12.sp, color = Color.Gray)
 
                         IconButton(
