@@ -162,7 +162,7 @@ fun Fourgride(
     var deviceMusicTracks by remember { mutableStateOf<List<DeviceMusicItem>>(emptyList()) }
     var addedDeviceIds by remember { mutableStateOf<Set<String>>(emptySet()) }
     var deviceMusicLoading by remember { mutableStateOf(false) }
-    var musicDurations by remember { mutableStateOf>(emptyMap()) }
+    var musicDurations by remember { mutableStateOf<Map<String, Long>>(emptyMap()) }
 
     val audioPermission = if (Build.VERSION.SDK_INT >= 33)
         Manifest.permission.READ_MEDIA_AUDIO else Manifest.permission.READ_EXTERNAL_STORAGE
