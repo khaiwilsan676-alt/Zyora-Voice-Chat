@@ -207,7 +207,7 @@ fun PublicProfileScreen(
     
     val defaultAvatar = "/file_000000009aac81faa8564416680aba4e.png"
     val userPhotoRaw = selectedAvatarUri ?: targetUser?.photo?.takeIf { it.isNotBlank() } ?: targetUser?.image?.takeIf { it.isNotBlank() } ?: defaultAvatar
-    val userPhoto = profileAsset(userPhotoRaw)
+    val userPhoto = if (displayAccNum in setOf("100002", "100003", "500002")) profileAsset("/logo.png") else profileAsset(userPhotoRaw)
 
     val avatarPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         uri?.let { picked -> 
