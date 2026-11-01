@@ -14,6 +14,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import org.json.JSONObject
 import androidx.compose.ui.Alignment
@@ -42,15 +45,17 @@ fun ActiveUsers(
  if(!isOpen)return
  val context = LocalContext.current
  val database = remember(context) { NativeIndexDatabase(context) }
+ var countryByUser by remember { mutableStateOf<Map<String,String>>(emptyMap()) }
  LaunchedEffect(roomUsers, currentUser) {
-  (listOf(currentUser) + roomUsers).forEach { user ->
-   if (user.accountId.isNotBlank()) {
-    val cached = database.loadProfile(user.accountId) ?: JSONObject()
-    if (user.name.isNotBlank()) cached.put("name", user.name)
-    if (user.image.isNotBlank()) cached.put("image", user.image)
-    database.saveProfile(user.accountId, cached)
-   }
-  }
+  val profiles = (listOf(currentUser) + roomUsers).mapNotNull { user ->
+   if (user.accountId.isBlank()) return@mapNotNull null
+   val cached = database.loadProfile(user.accountId) ?: JSONObject()
+   if (user.name.isNotBlank()) cached.put("name", user.name)
+   if (user.image.isNotBlank()) cached.put("image", user.image)
+   database.saveProfile(user.accountId, cached)
+   user.accountId to sequenceOf("country","countryName","location").map { cached.optString(it,"").trim() }.firstOrNull { it.isNotBlank() && it!="null" }.orEmpty()
+  }.toMap()
+  countryByUser = profiles
  }
  Box(Modifier.fillMaxSize(),contentAlignment=Alignment.BottomCenter){
   Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=.30f)).clickable(onClick=onClose))
@@ -87,9 +92,16 @@ fun ActiveUsers(
          Text("OWNER",fontSize=8.sp,fontWeight=FontWeight.Bold,color=Color(0xFF93C5FD))
         }
        }
-       Text("ID: ${user.accountId}",fontSize=10.sp,color=Color.White.copy(alpha=.60f),maxLines=1)
+       Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(6.dp)){
+        val country = countryByUser[user.accountId].orEmpty()
+        if(country.isNotBlank()) Text(activeCountryFlag(country),fontSize=14.sp)
+        Box(Modifier.height(16.dp).width(36.dp),contentAlignment=Alignment.CenterEnd){
+         AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261028_004355.png",contentDescription="Level",
+          contentScale=ContentScale.FillBounds,modifier=Modifier.fillMaxSize())
+         Text("Lv.1",color=Color.White,fontSize=8.sp,fontWeight=FontWeight.Bold,modifier=Modifier.padding(end=5.dp))
+        }
+       }
       }
-      Box(Modifier.size(7.dp).clip(CircleShape).background(Color(0xFF22C55E)))
      }
     }
     if(visibleUsers.isEmpty()){
@@ -98,4 +110,22 @@ fun ActiveUsers(
    }
   }
  }
+}
+
+private fun activeCountryFlag(country: String): String {
+ val code = when(country.trim().lowercase()) {
+  "india","indian" -> "IN"
+  "united states","usa","us" -> "US"
+  "united kingdom","uk","britain" -> "GB"
+  "pakistan" -> "PK"
+  "bangladesh" -> "BD"
+  "nepal" -> "NP"
+  "sri lanka" -> "LK"
+  "uae","united arab emirates" -> "AE"
+  "saudi arabia" -> "SA"
+  "canada" -> "CA"
+  "australia" -> "AU"
+  else -> country.trim().uppercase().takeIf { it.length==2 } ?: return "🌐"
+ }
+ return code.map { String(Character.toChars(0x1F1E6 + it.code - 65)) }.joinToString("")
 }
