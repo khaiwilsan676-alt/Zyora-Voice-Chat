@@ -366,7 +366,10 @@ fun PublicProfileScreen(
                             Icon(Icons.Default.ArrowBack, "Back", tint = Color.White)
                         }
                         if (isOtherUser) {
-                            IconButton(onClick = { showActionSheet = true }) {
+                            IconButton(onClick = {
+                                showActionSheet = false
+                                showUserReport = true
+                            }) {
                                 LucidePublicProfileIcon(warning = true, modifier = Modifier.size(24.dp))
                             }
                         } else {
