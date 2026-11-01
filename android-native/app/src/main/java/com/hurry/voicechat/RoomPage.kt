@@ -911,7 +911,18 @@ fun RoomPage(
                                 }
                             }
                         }
-                        Text("ID:" + roomOwner.accountId.ifBlank { roomOwner.id.ifBlank { roomId } }, color = Color.White.copy(alpha = 0.9f), fontSize = 10.sp, modifier = Modifier.offset(y = (-3).dp))
+                        val roomOwnerAccountId = roomOwner.accountId.ifBlank { roomOwner.id.ifBlank { roomId } }
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp), modifier = Modifier.offset(y = (-3).dp)) {
+                            if (roomOwnerAccountId in setOf("100002", "100003", "500001")) {
+                                AsyncImage(
+                                    model = "https://zyora-voice-chat.vercel.app/file_0000000063b481fa89d3c7729265058b.png",
+                                    contentDescription = "ID",
+                                    contentScale = ContentScale.Fit,
+                                    modifier = Modifier.height(13.dp).widthIn(min = 12.dp, max = 18.dp)
+                                )
+                            }
+                            Text(roomOwnerAccountId, color = Color.White.copy(alpha = 0.9f), fontSize = 10.sp)
+                        }
                     }
                 }
                 Spacer(Modifier.weight(1f))
