@@ -187,6 +187,7 @@ fun NativeChatScreen(
     var showOptions by remember { mutableStateOf(false) }
     var showEmojiPicker by remember { mutableStateOf(false) }
     var replyText by remember { mutableStateOf<String?>(null) }
+    val messageListState = androidx.compose.foundation.lazy.rememberLazyListState()
     val officialIdForCache = when (name) {
         "Zyora Team" -> "hurry_team_official"
         "Zyora System" -> "hurry_system_official"
@@ -314,6 +315,10 @@ fun NativeChatScreen(
         }
     }
 
+    LaunchedEffect(messages.size) {
+        if (messages.isNotEmpty()) messageListState.animateScrollToItem(messages.lastIndex)
+    }
+
     // Receive owner-panel Zyora Team/System broadcasts live; request only messages newer than local cache.
     DisposableEffect(name) {
         val officialId = when (name) {
@@ -389,12 +394,12 @@ fun NativeChatScreen(
         }
 
         Column(Modifier.fillMaxSize()) {
-            // Same structure as the real Hurry chat header:
-            // blue-to-chat-background gradient, 12dp safe-area top, back + avatar + title.
+            // Clean real-app chat header with a consistent blue surface.
             Row(
                 Modifier.fillMaxWidth()
-                    .background(Brush.verticalGradient(listOf(Color(0xFF3B82F6), Color(0xFFF0F2F5))))
-                    .padding(top = (5f * LocalConfiguration.current.screenHeightDp / 100f).dp, start = 8.dp, end = 8.dp, bottom = 12.dp),
+                    .background(Brush.horizontalGradient(listOf(Color(0xFF2563EB), Color(0xFF3B82F6))))
+                    .statusBarsPadding()
+                    .padding(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(
@@ -404,7 +409,7 @@ fun NativeChatScreen(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
-                        tint = Color(0xFF1F2937),
+                        tint = Color.White,
                         modifier = Modifier.size(24.dp)
                     )
                 }
@@ -420,18 +425,18 @@ fun NativeChatScreen(
                         name,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF1F2937),
+                        color = Color.White,
                         maxLines = 1
                     )
                     if (!isOfficial) {
-                        Text("Offline", fontSize = 11.sp, color = Color(0xFF4B5563), fontWeight = FontWeight.Medium)
+                        Text("Offline", fontSize = 11.sp, color = Color.White.copy(alpha = 0.82f), fontWeight = FontWeight.Medium)
                     }
                 }
                 if (!isOfficial) {
                     Text(
                         "⋮",
                         fontSize = 28.sp,
-                        color = Color.Black,
+                        color = Color.White,
                         modifier = Modifier
                             .clickable { showOptions = true }
                             .padding(horizontal = 8.dp)
@@ -441,7 +446,8 @@ fun NativeChatScreen(
 
             // Real-chat style message surface: no card around the whole list.
             LazyColumn(
-                Modifier.weight(1f).fillMaxWidth().padding(horizontal = 12.dp),
+                state = messageListState,
+                modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 12.dp),
                 reverseLayout = false,
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 contentPadding = PaddingValues(top = 14.dp, bottom = 12.dp)
@@ -520,6 +526,7 @@ fun NativeChatScreen(
                         .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
                         .background(Color.White)
                         .navigationBarsPadding()
+                        .imePadding()
                 ) {
                     if (replyText != null) {
                         Row(
