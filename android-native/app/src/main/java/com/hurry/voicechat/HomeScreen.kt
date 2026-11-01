@@ -165,7 +165,8 @@ fun HomeScreen(
     onCreateMineRoom: () -> Unit = {},
     mineCreatedRoom: HurryRoom? = null,
     mineSelected: Boolean = false,
-    languageCode: String = "en"
+    languageCode: String = "en",
+    keptRoomContent: (@Composable () -> Unit)? = null
 ) {
     val mine = mineSelected
     val context = LocalContext.current
@@ -313,6 +314,7 @@ fun HomeScreen(
     // avoid repeatedly copying the growing list and triggering a full recomposition every 40ms.
     val roomRows = remember(filteredRooms) { filteredRooms.chunked(2) }
 
+    Box(Modifier.fillMaxSize()) {
     Column(
         Modifier.fillMaxSize()
             .background(Color(0xFFF5F5F5))
@@ -867,5 +869,7 @@ private fun HurryCategoryCard(
                 contentScale = ContentScale.FillWidth
             )
         }
+    }
+    keptRoomContent?.invoke()
     }
 }
