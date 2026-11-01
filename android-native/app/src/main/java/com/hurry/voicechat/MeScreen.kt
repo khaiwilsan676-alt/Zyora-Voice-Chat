@@ -70,6 +70,7 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
         ?: prefs.getString("accountId", "") ?: ""
     val account = savedAccount.ifBlank { nativeMeAccountNumber(uid) }
     val phone = prefs.getString("phone", "") ?: ""
+    val displayPhoto = if (account in setOf("100002", "100003", "500002")) "https://zyora-voice-chat.vercel.app/logo.png" else photo
 
     LaunchedEffect(uid, account) {
         if (uid.isBlank()) return@LaunchedEffect
@@ -111,8 +112,8 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
                     Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(80.dp), contentAlignment = Alignment.Center) {
-                            if (photo.isNotBlank()) {
-                                AsyncImage(photo, null, Modifier.fillMaxSize().clip(CircleShape), contentScale = ContentScale.Crop)
+                            if (displayPhoto.isNotBlank()) {
+                                AsyncImage(displayPhoto, null, Modifier.fillMaxSize().clip(CircleShape), contentScale = ContentScale.Crop)
                             } else {
                                 Box(Modifier.fillMaxSize().clip(CircleShape).background(Color(0xFF666666)), contentAlignment = Alignment.Center) {
                                     Text(name.take(1).uppercase(), color = Color.White, fontSize = 34.sp, fontWeight = FontWeight.Normal)
@@ -155,7 +156,7 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
                             if (phone.isNotBlank()) Text(phone, fontSize = 12.sp, color = Color(0xFF4B5563))
                         }
                     }
-                    Text("›", fontSize = 32.sp, color = Color(0xFF374151), modifier = Modifier.padding(top = 10.dp).clickable { onPublicProfile(RoomProfileUser(id = uid, uid = uid, accountId = account.ifBlank { uid }, name = name, image = photo, country = if (account in setOf("100002", "100003")) "Singapore" else "India", flag = if (account in setOf("100002", "100003")) "🇸🇬" else "🇮🇳")) })
+                    Text("›", fontSize = 32.sp, color = Color(0xFF374151), modifier = Modifier.padding(top = 10.dp).clickable { onPublicProfile(RoomProfileUser(id = uid, uid = uid, accountId = account.ifBlank { uid }, name = name, image = displayPhoto, country = if (account in setOf("100002", "100003")) "Singapore" else "India", flag = if (account in setOf("100002", "100003")) "🇸🇬" else "🇮🇳")) })
                 }
 
                 Spacer(Modifier.height(18.dp))
