@@ -462,6 +462,7 @@ fun RoomPage(
     var musicControllerMinimized by remember { mutableStateOf(false) }
     var isMusicPlaying by remember { mutableStateOf(false) }
     var musicVolume by remember { mutableFloatStateOf(1f) }
+    var showMusicVolumeView by remember { mutableStateOf(false) }
     var musicPlaylist by remember { mutableStateOf<List<NativeMusicTrack>>(emptyList()) }
     var currentTrackIndex by remember { mutableIntStateOf(0) }
     var musicCurrentTime by remember { mutableFloatStateOf(0f) }
@@ -1164,132 +1165,80 @@ Column(Modifier.align(Alignment.BottomStart).padding(bottom=LocalConfiguration.c
         RoomPageBlock {
 if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.isMusicPageOpen && MusicPlaybackState.wasPlayedOnMusicPage && MusicPlaybackState.musicPageBackPressed) {
             val track = miniMusicTrack!!
-            Box(
-                modifier = Modifier.align(Alignment.BottomCenter)
-                    .zIndex(10f)
-                    .padding(horizontal = 16.dp)
-                    .padding(bottom = (configuration.screenHeightDp * 0.08f).dp)
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(Color(0xE6000000))
-                    .border(1.dp, Color.White.copy(alpha = 0.10f), RoundedCornerShape(12.dp))
-                    .padding(12.dp)
-            ) {
+            Box(Modifier.align(Alignment.BottomCenter).zIndex(10f).padding(horizontal = 12.dp)
+                .padding(bottom = (configuration.screenHeightDp * 0.035f).dp).fillMaxWidth()
+                .clip(RoundedCornerShape(22.dp)).background(Color(0xF0222938))
+                .border(1.dp, Color.White.copy(alpha = 0.10f), RoundedCornerShape(22.dp))
+                .padding(horizontal = 16.dp, vertical = 14.dp)) {
                 Column(Modifier.fillMaxWidth()) {
-                    Box(Modifier.fillMaxWidth()) {
-                        Box(
-                            Modifier.align(Alignment.TopStart)
-                                .size(24.dp).clip(CircleShape)
-                                .background(Color.White.copy(alpha = 0.10f))
-                                .clickable { musicClose() },
-                            contentAlignment = Alignment.Center
-                        ) { Icon(Icons.Default.Close, "Close", tint = Color.White, modifier = Modifier.size(14.dp)) }
-
-                        Text(
-                            text = track.name,
-                            color = Color.White,
-                            fontSize = 13.sp,
-                            fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.align(Alignment.Center).fillMaxWidth().padding(horizontal = 32.dp)
-                        )
-
-                        Box(
-                            Modifier.align(Alignment.TopEnd)
-                                .size(24.dp).clip(CircleShape)
-                                .background(Color.White.copy(alpha = 0.10f))
-                                .clickable { musicControllerMinimized = true },
-                            contentAlignment = Alignment.Center
-                        ) { Icon(Icons.Default.KeyboardArrowDown, "Minimize", tint = Color.White, modifier = Modifier.size(16.dp)) }
-                    }
-
-                    Spacer(Modifier.height(8.dp))
-
-                    val progressFraction = if (musicDuration > 0f) (musicCurrentTime / musicDuration).coerceIn(0f, 1f) else 0f
-                    ThickBar(
-                        progress = progressFraction,
-                        height = 6.dp,
-                        activeColor = Color(0xFF3B82F6),
-                        inactiveColor = Color.White.copy(alpha = 0.15f),
-                        modifier = Modifier.fillMaxWidth(),
-                        onProgressChange = { newProgress ->
-                            if (musicDuration > 0f) {
-                                musicCurrentTime = newProgress * musicDuration
-                                runCatching {
-                                    appContext.startService(
-                                        Intent(appContext, RoomMusicService::class.java)
-                                            .setAction(RoomMusicService.ACTION_SEEK)
-                                            .putExtra(RoomMusicService.EXTRA_POSITION_MS, (musicCurrentTime * 1000f).toInt())
-                                    )
-                                }
+                    if (showMusicVolumeView) {
+                        Box(Modifier.fillMaxWidth().height(42.dp), contentAlignment = Alignment.Center) {
+                            IconButton(onClick = { showMusicVolumeView = false }, modifier = Modifier.align(Alignment.CenterStart)) {
+                                Icon(Icons.Default.ArrowBack, "Back", tint = Color.White, modifier = Modifier.size(30.dp))
+                            }
+                            Text("Volume", color = Color.White, fontSize = 23.sp, fontWeight = FontWeight.Medium)
+                        }
+                        Spacer(Modifier.height(48.dp))
+                        Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.VolumeMute, "Open music page", tint = Color.White,
+                                modifier = Modifier.size(34.dp).clickable {
+                                    showMusicVolumeView = false
+                                    musicControllerMinimized = true
+                                    MusicPlaybackState.isMusicPageOpen = true
+                                })
+                            Spacer(Modifier.width(22.dp))
+                            ThickBar(progress = musicVolume, height = 12.dp, activeColor = Color.White,
+                                inactiveColor = Color.White.copy(alpha = 0.42f), modifier = Modifier.weight(1f),
+                                onProgressChange = { value ->
+                                    musicVolume = value
+                                    runCatching { appContext.startService(Intent(appContext, RoomMusicService::class.java)
+                                        .setAction(RoomMusicService.ACTION_VOLUME).putExtra(RoomMusicService.EXTRA_VOLUME, value)) }
+                                })
+                            Spacer(Modifier.width(22.dp))
+                            Icon(Icons.Default.VolumeUp, "Volume up", tint = Color.White, modifier = Modifier.size(36.dp))
+                        }
+                        Spacer(Modifier.height(48.dp))
+                    } else {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            IconButton(onClick = { musicControllerMinimized = true }, modifier = Modifier.size(42.dp)) {
+                                Icon(Icons.Default.CloseFullscreen, "Minimize", tint = Color.White, modifier = Modifier.size(30.dp))
+                            }
+                            IconButton(onClick = { musicClose() }, modifier = Modifier.size(42.dp)) {
+                                Icon(Icons.Default.PowerSettingsNew, "Stop music", tint = Color.White, modifier = Modifier.size(34.dp))
                             }
                         }
-                    )
-                    Spacer(Modifier.height(2.dp))
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text(formatMusicTime(musicCurrentTime), color = Color.White.copy(alpha = 0.6f), fontSize = 9.sp)
-                        Text(formatMusicTime(musicDuration), color = Color.White.copy(alpha = 0.6f), fontSize = 9.sp)
-                    }
-
-                    Spacer(Modifier.height(4.dp))
-
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = { musicPrev() }, modifier = Modifier.size(36.dp)) {
-                            Icon(Icons.Default.SkipPrevious, "Prev", tint = Color.White, modifier = Modifier.size(22.dp))
-                        }
-                        Spacer(Modifier.width(16.dp))
-                        Box(
-                            Modifier.size(44.dp).clip(CircleShape)
-                                .background(Color.White.copy(alpha = 0.10f))
-                                .clickable { musicPlayPause() },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = if (isMusicPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                                contentDescription = if (isMusicPlaying) "Pause" else "Play",
-                                tint = Color.White,
-                                modifier = Modifier.size(26.dp)
-                            )
-                        }
-                        Spacer(Modifier.width(16.dp))
-                        IconButton(onClick = { musicNext() }, modifier = Modifier.size(36.dp)) {
-                            Icon(Icons.Default.SkipNext, "Next", tint = Color.White, modifier = Modifier.size(22.dp))
-                        }
-                    }
-
-                    Spacer(Modifier.height(4.dp))
-
-                    Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.VolumeUp, "Volume", tint = Color.White, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(8.dp))
-                        ThickBar(
-                            progress = musicVolume,
-                            height = 6.dp,
-                            activeColor = Color(0xFF3B82F6),
-                            inactiveColor = Color.White.copy(alpha = 0.15f),
-                            modifier = Modifier.weight(1f),
-                            onProgressChange = { newVolume ->
-                                musicVolume = newVolume
-                                runCatching {
-                                    appContext.startService(
-                                        Intent(appContext, RoomMusicService::class.java)
-                                            .setAction(RoomMusicService.ACTION_VOLUME)
-                                            .putExtra(RoomMusicService.EXTRA_VOLUME, newVolume)
-                                    )
+                        Spacer(Modifier.height(12.dp))
+                        Text(track.name, color = Color.White, fontSize = 18.sp, maxLines = 1,
+                            overflow = TextOverflow.Clip, modifier = Modifier.fillMaxWidth().basicMarquee(iterations = Int.MAX_VALUE))
+                        Spacer(Modifier.height(30.dp))
+                        val progressFraction = if (musicDuration > 0f) (musicCurrentTime / musicDuration).coerceIn(0f, 1f) else 0f
+                        ThickBar(progress = progressFraction, height = 8.dp, activeColor = Color.White,
+                            inactiveColor = Color.White.copy(alpha = 0.48f), modifier = Modifier.fillMaxWidth(),
+                            onProgressChange = { value ->
+                                if (musicDuration > 0f) {
+                                    musicCurrentTime = value * musicDuration
+                                    runCatching { appContext.startService(Intent(appContext, RoomMusicService::class.java)
+                                        .setAction(RoomMusicService.ACTION_SEEK)
+                                        .putExtra(RoomMusicService.EXTRA_POSITION_MS, (musicCurrentTime * 1000f).toInt())) }
                                 }
+                            })
+                        Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text(formatMusicTime(musicCurrentTime), color = Color.White.copy(alpha = .7f), fontSize = 12.sp)
+                            Text(formatMusicTime(musicDuration), color = Color.White.copy(alpha = .7f), fontSize = 12.sp)
+                        }
+                        Spacer(Modifier.height(30.dp))
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.QueueMusic, "Playlist", tint = Color.White, modifier = Modifier.size(34.dp))
+                            IconButton(onClick = { musicPrev() }) { Icon(Icons.Default.SkipPrevious, "Previous", tint = Color.White, modifier = Modifier.size(38.dp)) }
+                            Box(Modifier.size(68.dp).clip(CircleShape).background(Color.White).clickable { musicPlayPause() }, contentAlignment = Alignment.Center) {
+                                Icon(if (isMusicPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                    if (isMusicPlaying) "Pause" else "Play", tint = Color(0xFF202938), modifier = Modifier.size(44.dp))
                             }
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            "${(musicVolume * 100).toInt()}%",
-                            color = Color.White,
-                            fontSize = 10.sp,
-                            fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
-                            textAlign = TextAlign.End,
-                            modifier = Modifier.width(30.dp)
-                        )
+                            IconButton(onClick = { musicNext() }) { Icon(Icons.Default.SkipNext, "Next", tint = Color.White, modifier = Modifier.size(38.dp)) }
+                            Icon(Icons.Default.Repeat, "Repeat", tint = Color.White, modifier = Modifier.size(34.dp))
+                            Icon(Icons.Default.VolumeUp, "Volume", tint = Color.White,
+                                modifier = Modifier.size(34.dp).clickable { showMusicVolumeView = true })
+                        }
                     }
                 }
             }
