@@ -9,6 +9,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.basicMarquee
 
 import android.content.Context
 import androidx.compose.foundation.background
@@ -330,7 +331,6 @@ fun HomeScreen(
 
     Box(Modifier.fillMaxSize()) {
         
-        // --- ADDED: State variables hoisted exactly for Drag & Drop UI ---
         var keptRoomDrag by remember(keptRoom?.id) { mutableStateOf(Offset.Zero) }
         var keptRoomDragging by remember(keptRoom?.id) { mutableStateOf(false) }
         val density = androidx.compose.ui.platform.LocalDensity.current
@@ -550,24 +550,30 @@ fun HomeScreen(
                     }
                 }
 
-                // 🔴 NEW: RED DROP ZONE (Visible when Keep room dp is dragged)
-                if (keptRoom != null && keptRoomDragging) {
-                    Box(
-                        Modifier
-                            .align(Alignment.BottomEnd)
-                            .size(170.dp)
-                            .offset(x = 65.dp, y = 65.dp)
-                            .background(Color(0xFFE53935), CircleShape),
-                        contentAlignment = Alignment.TopStart
+                // 🔴 RED DROP ZONE - EK DAM CORNER SE CHIPKA HUA BSS
+                if (keptRoom != null) {
+                    AnimatedVisibility(
+                        visible = keptRoomDragging,
+                        modifier = Modifier.align(Alignment.BottomEnd), // Exact Bottom Right Corner
+                        enter = fadeIn(animationSpec = tween(200)),
+                        exit = fadeOut(animationSpec = tween(200))
                     ) {
-                        Canvas(Modifier.padding(start = 42.dp, top = 42.dp).size(42.dp)) {
-                            drawCircle(Color.White, radius = size.width * 0.18f)
-                            drawCircle(Color.White, radius = size.width * 0.42f, style = Stroke(width = 3.dp.toPx()))
+                        Box(
+                            Modifier
+                                .size(170.dp)
+                                .offset(x = 85.dp, y = 85.dp) // Exact calculation to make it a perfect quarter circle overlap
+                                .background(Color(0xFFE53935), CircleShape),
+                            contentAlignment = Alignment.TopStart
+                        ) {
+                            Canvas(Modifier.padding(start = 28.dp, top = 28.dp).size(42.dp)) {
+                                drawCircle(Color.White, radius = size.width * 0.18f)
+                                drawCircle(Color.White, radius = size.width * 0.42f, style = Stroke(width = 3.dp.toPx()))
+                            }
                         }
                     }
                 }
 
-                // 🔴 NEW: COLUMN FOR STRICT POSITIONING (Keep room dp on top, Daily image on bottom, EXACT 0.2.dp gap)
+                // Keep room dp & Bottom Image UI (0.2dp gap)
                 Column(
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
@@ -596,7 +602,7 @@ fun HomeScreen(
                                     detectDragGestures(
                                         onDragStart = { keptRoomDragging = true },
                                         onDragEnd = {
-                                            val exitThresholdY = with(density) { 50.dp.toPx() } // Exit if dropped near red zone
+                                            val exitThresholdY = with(density) { 50.dp.toPx() } 
                                             val exitThresholdX = with(density) { 20.dp.toPx() }
                                             val shouldExit = keptRoomDrag.y > exitThresholdY || (keptRoomDrag.y > 20f && keptRoomDrag.x > exitThresholdX)
                                             
@@ -640,7 +646,6 @@ fun HomeScreen(
                         }
                     }
 
-                    // Bottom Image (Original position mein fix rahegi unless clicked)
                     AsyncImage(
                         model = RAW + "IMG_20260916_002115.png",
                         contentDescription = "Right Corner Decoration",
@@ -799,6 +804,7 @@ private fun CountryPillRow(
 // ═══════════════════════════════════════════════════════
 // ROOM CARD
 // ═══════════════════════════════════════════════════════
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun RoomListCard(
     room: HurryRoom,
@@ -875,13 +881,19 @@ private fun RoomListCard(
             horizontalArrangement = Arrangement.spacedBy(1.dp)
         ) {
             Text(countryFlag(room.country), fontSize = 16.sp, maxLines = 1)
+            
+            // 🔴 ROOM NAME MARQUEE EFFECT BSS
+            val roomName = room.name.takeIf { it.isNotBlank() && !it.equals("null", ignoreCase = true) && !it.equals("undefined", ignoreCase = true) } ?: "Zyora_User"
+            
             Text(
-                room.name.takeIf { it.isNotBlank() && !it.equals("null", ignoreCase = true) && !it.equals("undefined", ignoreCase = true) } ?: "Zyora_User",
+                text = roomName,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Normal,
                 color = Color(0xFF202124),
                 maxLines = 1,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f).run {
+                    if (roomName.length > 16) this.basicMarquee(iterations = Int.MAX_VALUE, velocity = 25.dp) else this
+                }
             )
         }
     }
