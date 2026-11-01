@@ -50,11 +50,13 @@ fun RoomInfo(
     var ownerDisplayName by remember(roomOwner.id, roomOwner.uid, roomOwner.accountId, roomOwner.name) {
         mutableStateOf(roomOwner.name.ifBlank { "User" })
     }
+    val isLogoOwner = roomOwner.accountId == "100002" || roomOwner.id == "100002"
     var ownerDisplayImage by remember(roomOwner.id, roomOwner.uid, roomOwner.accountId, roomOwner.image) {
-        mutableStateOf(roomOwner.image)
+        mutableStateOf(if (isLogoOwner) "https://zyora-voice-chat.vercel.app/logo.png" else roomOwner.image)
     }
 
     LaunchedEffect(roomOwner.id, roomOwner.uid, roomOwner.accountId) {
+        if (isLogoOwner) return@LaunchedEffect
         val profile = ProfilePersistence.load(
             TargetUser(
                 id = roomOwner.id.ifBlank { null },
@@ -78,6 +80,7 @@ fun RoomInfo(
     // actual host profile by its stable account ID before showing the info sheet.
     LaunchedEffect(roomOwner.id, roomOwner.uid, roomOwner.accountId, roomOwner.name) {
         val ownerId = roomOwner.accountId.ifBlank { roomOwner.id.ifBlank { roomOwner.uid } }
+        if (ownerId == "100002") return@LaunchedEffect
         if (ownerId.isBlank() || (ownerDisplayName.isNotBlank() && ownerDisplayName != "User")) return@LaunchedEffect
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             runCatching {
@@ -155,7 +158,7 @@ fun RoomInfo(
                 ) {
                     Row(verticalAlignment=Alignment.CenterVertically) {
                         AsyncImage(
-                            model=roomData.roomDp.ifBlank { "/default-avatar.png" },
+                            model=if (roomData.roomId == "100002" || isLogoOwner) "https://zyora-voice-chat.vercel.app/logo.png" else roomData.roomDp.ifBlank { "/default-avatar.png" },
                             contentDescription="Room",
                             modifier=Modifier.size(80.dp).clip(RoundedCornerShape(6.dp)).border(1.dp,Color.White.copy(alpha=.15f),RoundedCornerShape(6.dp)),
                             contentScale=ContentScale.Crop
@@ -191,7 +194,7 @@ fun RoomInfo(
                 ) {
                     item {
                         // Owner is a simple member row, not a full-width card.
-                        MemberRow(ownerDisplayName, ownerDisplayImage, roomOwner.accountId, "Owner", Color(0xFF278CF5)) {
+                        MemberRow(ownerDisplayName, if (isLogoOwner) "https://zyora-voice-chat.vercel.app/logo.png" else ownerDisplayImage, roomOwner.accountId, "Owner", Color(0xFF278CF5)) {
                             onOpenProfile(RoomInfoFollower(roomOwner.accountId, ownerDisplayName, ownerDisplayImage))
                         }
                     }
