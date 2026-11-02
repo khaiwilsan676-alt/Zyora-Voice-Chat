@@ -757,12 +757,17 @@ fun RoomPage(
             val payload = args.firstOrNull() as? JSONObject
             if (payload != null && payload.optString("roomId") == roomId) {
                 val updatedMicMode = payload.optInt("micMode", roomMicMode)
-                if (updatedMicMode in listOf(5, 10, 15)) {
-                    mainHandler.post {
+                val hasAnnouncement = payload.has("announcement") || payload.has("message")
+                val updatedAnnouncement = if (payload.has("announcement")) payload.optString("announcement", "")
+                    else payload.optString("message", "")
+                mainHandler.post {
+                    if (updatedMicMode in listOf(5, 10, 15)) {
                         roomMicMode = updatedMicMode
                         appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE)
                             .edit().putInt("micMode_$roomId", updatedMicMode).apply()
                     }
+                    if (hasAnnouncement) announcement = updatedAnnouncement
+                    if (payload.has("roomName")) roomName = payload.optString("roomName", roomName)
                 }
             }
         }
