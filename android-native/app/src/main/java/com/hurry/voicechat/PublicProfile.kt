@@ -208,7 +208,7 @@ fun PublicProfileScreen(
     
     val defaultAvatar = "/file_000000009aac81faa8564416680aba4e.png"
     val userPhotoRaw = selectedAvatarUri ?: defaultAvatar
-    val userPhoto = if (displayAccNum in setOf("100002", "100003", "500002")) profileAsset("/logo.png") else profileAsset(userPhotoRaw)
+    val userPhoto = profileAsset(userPhotoRaw)
 
     val avatarPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         uri?.let { picked -> 
@@ -295,8 +295,15 @@ fun PublicProfileScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF1F2937))
+            .background(Color.White)
     ) {
+        // Keep the cover image visible in the narrow side gaps around the 12dp white profile panel.
+        AsyncImage(
+            model = coverPhotos.firstOrNull() ?: userPhoto,
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize()
+        )
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(bottom = if (isOtherUser) 100.dp else 40.dp)
