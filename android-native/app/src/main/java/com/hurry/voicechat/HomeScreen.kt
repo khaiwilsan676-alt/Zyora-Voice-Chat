@@ -204,6 +204,30 @@ fun HomeScreen(
         authPrefs.getString("accountId", null)?.takeIf { it.isNotBlank() }
             ?: authPrefs.getString("uid", "").orEmpty()
     }
+    var followingRooms by remember { mutableStateOf<List<HurryRoom>>(emptyList()) }
+    LaunchedEffect(checkInUserId, mine) {
+        if (!mine || checkInUserId.isBlank()) return@LaunchedEffect
+        followingRooms = withContext(Dispatchers.IO) {
+            runCatching {
+                val encoded = java.net.URLEncoder.encode(checkInUserId, "UTF-8")
+                val connection = (java.net.URL("https://zyora-server.onrender.com/api/room-follows?userId=$encoded").openConnection() as java.net.HttpURLConnection).apply {
+                    connectTimeout = 10000
+                    readTimeout = 10000
+                    setRequestProperty("Accept", "application/json")
+                }
+                try {
+                    if (connection.responseCode !in 200..299) error("Following rooms unavailable")
+                    val array = org.json.JSONObject(connection.inputStream.bufferedReader().use { it.readText() }).optJSONArray("follows") ?: org.json.JSONArray()
+                    (0 until array.length()).mapNotNull { index ->
+                        val item = array.optJSONObject(index) ?: return@mapNotNull null
+                        val id = item.optString("roomId").trim()
+                        if (id.isBlank()) return@mapNotNull null
+                        HurryRoom(id, item.optString("roomName").ifBlank { "Room" }, item.optString("roomImage"), country = item.optString("roomCountry").ifBlank { "🇮🇳" }, accountId = id)
+                    }.distinctBy { it.id }
+                } finally { connection.disconnect() }
+            }.getOrDefault(emptyList())
+        }
+    }
     val checkInScope = rememberCoroutineScope()
     var checkInDay by remember { mutableIntStateOf(1) }
     var claimedToday by remember { mutableStateOf(false) }
@@ -302,7 +326,7 @@ fun HomeScreen(
 
     if (mine) {
         Box(Modifier.fillMaxSize()) {
-            MineNativePage(onBack = onPopular, createdRoom = mineCreatedRoom, onCreateRoom = onCreateMineRoom, onSearch = onSearch, languageCode = languageCode)
+            MineNativePage(onBack = onPopular, createdRoom = mineCreatedRoom, followingRooms = followingRooms, onOpenRoom = onRoom, onCreateRoom = onCreateMineRoom, onSearch = onSearch, languageCode = languageCode)
             Box(Modifier.align(Alignment.BottomCenter)) {
                 HurryBottomNav(selectedTab, languageCode = languageCode, onTab = onTabSelected)
             }
@@ -806,7 +830,7 @@ private fun CountryPillRow(
 // ═══════════════════════════════════════════════════════
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
-private fun RoomListCard(
+fun RoomListCard(
     room: HurryRoom,
     onRoom: (HurryRoom) -> Unit,
     modifier: Modifier = Modifier
