@@ -642,9 +642,9 @@ app.put("/api/rooms", async (req, res) => {
       theme: incomingTheme || firstText(existingRoom.theme, existingRoom.roomTheme, existingRoom["Room Theme"]) || "forest-night",
       customTheme: incomingCustomTheme,
       themeImage: incomingCustomTheme,
-      micMode: data.micMode !== undefined && Number.isFinite(Number(data.micMode))
+      micMode: [5, 10, 15].includes(Number(data.micMode))
         ? Number(data.micMode)
-        : Number.isFinite(Number(existingRoom.micMode)) ? Number(existingRoom.micMode) : 15,
+        : [5, 10, 15].includes(Number(existingRoom.micMode)) ? Number(existingRoom.micMode) : 15,
       admin: incomingAdmins || [],
       isLocked: hasLockState ? Boolean(data.isLocked) : Boolean(existingRoom.isLocked),
       roomPassword: hasPassword ? (data.roomPassword || null) : (existingRoom.roomPassword || null),
@@ -2341,11 +2341,20 @@ io.on("connection", (socket) => {
     if (!socketIsInRoom(socket, roomId)) return;
     if (data.userId && !socketOwnsIdentity(socket, data.userId)) return;
 
+    const requestedMicMode = Number(data.micMode);
+    const normalizedData = {
+      ...data,
+      ...(Number.isFinite(requestedMicMode) && [5, 10, 15].includes(requestedMicMode)
+        ? { micMode: requestedMicMode }
+        : {})
+    };
     const locked = Boolean(data.isLocked);
     const ownerId = String(data.roomOwnerId || data.userId || socket.roomAccountId || socket.accountId || "");
     lockedRooms.set(roomId, { locked, ownerId, updatedAt: Date.now() });
 
-    io.to(`room:${roomId}`).emit("room_settings_updated", data);
+    // Settings are persisted by PUT /api/rooms; Socket.IO distributes confirmed
+    // values to all clients currently joined to this room.
+    io.to(`room:${roomId}`).emit("room_settings_updated", normalizedData);
 
     if (locked) {
       for (const client of io.sockets.sockets.values()) {
