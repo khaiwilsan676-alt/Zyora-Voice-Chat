@@ -794,20 +794,33 @@ fun MiniMusicControllerCard(
                                 }.padding(4.dp)
                             )
 
-                            Icon(
-                                imageVector = Icons.Default.RepeatOne,
-                                contentDescription = "Repeat one",
-                                tint = if (MusicPlaybackState.repeatOne) Color(0xFF3B82F6) else Color.White,
-                                modifier = Modifier.clickable {
-                                    val enabled = !MusicPlaybackState.repeatOne
-                                    MusicPlaybackState.repeatOne = enabled
-                                    context.startService(
-                                        Intent(context, RoomMusicService::class.java)
-                                            .setAction(RoomMusicService.ACTION_REPEAT_ONE)
-                                            .putExtra(RoomMusicService.EXTRA_REPEAT_ONE, enabled)
-                                    )
-                                }.padding(4.dp)
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .clickable {
+                                        val enabled = !MusicPlaybackState.repeatOne
+                                        MusicPlaybackState.repeatOne = enabled
+                                        context.startService(
+                                            Intent(context, RoomMusicService::class.java)
+                                                .setAction(RoomMusicService.ACTION_REPEAT_ONE)
+                                                .putExtra(RoomMusicService.EXTRA_REPEAT_ONE, enabled)
+                                        )
+                                    }
+                                    .padding(4.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Repeat,
+                                    contentDescription = "Repeat one",
+                                    tint = if (MusicPlaybackState.repeatOne) Color(0xFF3B82F6) else Color.White
+                                )
+                                Text(
+                                    text = "1",
+                                    color = if (MusicPlaybackState.repeatOne) Color(0xFF3B82F6) else Color.White,
+                                    fontSize = 8.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.align(Alignment.BottomEnd)
+                                )
+                            }
 
                             Icon(
                                 imageVector = Icons.Default.VolumeUp,
