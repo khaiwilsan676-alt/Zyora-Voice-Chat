@@ -80,12 +80,13 @@ fun SearchPage(onBack:()->Unit={},onOpenProfile:(RoomProfileUser)->Unit={},onOpe
     val searchCache = remember { mutableStateMapOf<String, List<SearchUserNative>>() }
     var requestId by remember { mutableIntStateOf(0) }
     
-    // History state
-    val searchHistory = remember { mutableStateListOf("100007", "100008", "100009", "100010", "100011") }
+    // History state - Dummy IDs hata diye, ab ye list khali se start hogi
+    val searchHistory = remember { mutableStateListOf<String>() }
 
     suspend fun performSearch(qInput:String, requestToken:Int) {
         val q=qInput.trim(); if(q.isBlank()) { results=emptyList(); hasSearched=false; searching=false; return }
         
+        // Add to history logic
         if (!searchHistory.contains(q)) {
             searchHistory.add(0, q)
         }
@@ -217,35 +218,37 @@ fun SearchPage(onBack:()->Unit={},onOpenProfile:(RoomProfileUser)->Unit={},onOpe
             Text("Cancel",modifier=Modifier.clickable{onBack()}.padding(vertical=8.dp),fontSize=14.sp,fontWeight=FontWeight.Medium,color=Color(0xFF4B5563))
         }
 
-        // History Section
-        if (query.isEmpty() && searchHistory.isNotEmpty()) {
+        // History Section - Ab History likha rahega aur cards empty se start honge
+        if (query.isEmpty()) {
             Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
                 Text("History", fontSize = 15.sp, color = Color(0xFF4B5563), fontWeight = FontWeight.Medium)
-                Spacer(Modifier.height(12.dp))
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    searchHistory.forEach { hist ->
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .border(1.dp, Color(0xFFF3F4F6), RoundedCornerShape(16.dp))
-                                .background(Color.White, RoundedCornerShape(16.dp))
-                                .clickable { query = hist }
-                                .padding(horizontal = 12.dp, vertical = 6.dp)
-                        ) {
-                            Text(hist, fontSize = 14.sp, color = Color(0xFF4B5563))
-                            Spacer(Modifier.width(8.dp))
-                            Box(
+                if (searchHistory.isNotEmpty()) {
+                    Spacer(Modifier.height(12.dp))
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        searchHistory.forEach { hist ->
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier
-                                    .size(16.dp)
-                                    .background(Color(0xFFE5E7EB), CircleShape)
-                                    .clickable { searchHistory.remove(hist) },
-                                contentAlignment = Alignment.Center
+                                    .border(1.dp, Color(0xFFF3F4F6), RoundedCornerShape(16.dp))
+                                    .background(Color.White, RoundedCornerShape(16.dp))
+                                    .clickable { query = hist }
+                                    .padding(horizontal = 12.dp, vertical = 6.dp)
                             ) {
-                                Icon(Icons.Default.Close, contentDescription = "Remove", tint = Color.White, modifier = Modifier.size(10.dp))
+                                Text(hist, fontSize = 14.sp, color = Color(0xFF4B5563))
+                                Spacer(Modifier.width(8.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .size(16.dp)
+                                        .background(Color(0xFFE5E7EB), CircleShape)
+                                        .clickable { searchHistory.remove(hist) },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(Icons.Default.Close, contentDescription = "Remove", tint = Color.White, modifier = Modifier.size(10.dp))
+                                }
                             }
                         }
                     }
@@ -273,13 +276,13 @@ fun SearchPage(onBack:()->Unit={},onOpenProfile:(RoomProfileUser)->Unit={},onOpe
         
         HorizontalDivider(color = Color(0xFFF3F4F6), thickness = 1.dp)
 
-        Box(Modifier.fillMaxSize().background(Color(0xFFF0F2F5)).padding(horizontal=16.dp)) {
+        // Maine yaha background Color(0xFFF0F2F5) ko hata kar Color.White kar diya hai
+        Box(Modifier.fillMaxSize().background(Color.White).padding(horizontal=16.dp)) {
             when {
                 searching -> Column(Modifier.fillMaxWidth().padding(top=76.dp),horizontalAlignment=Alignment.CenterHorizontally){Icon(Icons.Default.Search,contentDescription="Searching",tint=Color(0xFF6B7280),modifier=Modifier.size(30.dp));Spacer(Modifier.height(12.dp));Text("Searching...",fontSize=12.sp,fontWeight=FontWeight.SemiBold,color=Color(0xFF9CA3AF))}
                 hasSearched && results.isEmpty() -> Column(Modifier.fillMaxWidth().padding(top=76.dp),horizontalAlignment=Alignment.CenterHorizontally){Icon(Icons.Default.Search,null,tint=Color(0x669CA3AF),modifier=Modifier.size(48.dp));Spacer(Modifier.height(8.dp));Text("No result found",fontSize=14.sp,fontWeight=FontWeight.SemiBold,color=Color(0xFF6B7280));Text("Try a different ID",fontSize=12.sp,color=Color(0xFF9CA3AF),modifier=Modifier.padding(top=4.dp))}
                 
-                // USER REQUIREMENT: Yeh condition blank kardi hai taaki center me koi icon aur text na aaye jab ID search na ho rahi ho
-                !hasSearched -> { /* Kuch nahi dikhana hai */ }
+                !hasSearched -> { /* Completely blank, no text/icon */ }
                 
                 else -> if (tab == "Room") {
                     LazyVerticalGrid(
