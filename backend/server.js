@@ -1862,6 +1862,7 @@ io.on("connection", (socket) => {
         isNewRoomJoin = true;
 
         socket.roomId = room;
+        socket.roomOwnerId = requestedOwnerId;
         if (userId) socket.roomUserId = String(userId);
         socket.accountId = accId;
         socket.roomAccountId = accId;
@@ -2304,7 +2305,11 @@ io.on("connection", (socket) => {
     }
 
     if (action === "mute") {
-      if (current.isOccupied) {
+      // A user may only change the microphone state of their own occupied seat.
+      if (
+        current.isOccupied &&
+        String(current.user?.accountId || current.user?.userId || "") === userId
+      ) {
         seats.set(seatNumber, {
           ...current,
           isMuted: Boolean(data.isMuted),
@@ -2313,30 +2318,41 @@ io.on("connection", (socket) => {
     }
 
     if (action === "lock") {
-      seats.set(seatNumber, {
-        ...current,
-        isLocked: Boolean(data.isLocked),
-      });
+      // Seat locks are room-owner controls, not actions available to every member.
+      const isRoomOwner =
+        Boolean(socket.roomOwnerId) &&
+        socketOwnsIdentity(socket, String(socket.roomOwnerId));
+      if (isRoomOwner) {
+        seats.set(seatNumber, {
+          ...current,
+          isLocked: Boolean(data.isLocked),
+        });
+      }
     }
 
     if (action === "emoji") {
-      if (current.isOccupied) {
+      // Only the person occupying this seat may trigger its emoji/sticker.
+      if (
+        current.isOccupied &&
+        String(current.user?.accountId || current.user?.userId || "") === userId &&
+        typeof data.src === "string" &&
+        data.src.trim()
+      ) {
+        const emojiTimestamp = Number(data.timestamp || Date.now());
         seats.set(seatNumber, {
           ...current,
           gif: {
             src: data.src,
-            timestamp: Number(
-              data.timestamp || Date.now()
-            ),
+            timestamp: emojiTimestamp,
           },
         });
 
-        // Clear the emoji automatically after 5 seconds to sync across all clients
+        // A previous emoji timer must never clear a newer emoji on this seat.
         setTimeout(() => {
           const currentSeats = roomSeats.get(roomId);
           if (currentSeats) {
             const seat = currentSeats.get(seatNumber);
-            if (seat && seat.gif) {
+            if (seat?.gif && Number(seat.gif.timestamp) === emojiTimestamp) {
               currentSeats.set(seatNumber, {
                 ...seat,
                 gif: undefined,
