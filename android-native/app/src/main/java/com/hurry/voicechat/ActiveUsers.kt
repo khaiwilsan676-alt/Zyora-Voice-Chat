@@ -37,7 +37,6 @@ fun ActiveUsers(
  isOpen:Boolean,
  onClose:()->Unit,
  roomUsers:List<ActiveUserNative>,
- currentUser:ActiveUserNative,
  roomOwnerId:String,
  onOpenProfile:(ActiveUserNative)->Unit,
  onCopyUserId:(String)->Unit
@@ -46,8 +45,8 @@ fun ActiveUsers(
  val context = LocalContext.current
  val database = remember(context) { NativeIndexDatabase(context) }
  var countryByUser by remember { mutableStateOf<Map<String,String>>(emptyMap()) }
- LaunchedEffect(roomUsers, currentUser) {
-  val profiles = (listOf(currentUser) + roomUsers).mapNotNull { user ->
+ LaunchedEffect(roomUsers) {
+  val profiles = roomUsers.mapNotNull { user ->
    if (user.accountId.isBlank()) return@mapNotNull null
    val cached = database.loadProfile(user.accountId) ?: JSONObject()
    if (user.name.isNotBlank()) cached.put("name", user.name)
@@ -75,7 +74,7 @@ fun ActiveUsers(
     .background(Color(0xEB000000))
   ){
    Text("Active Users",modifier=Modifier.fillMaxWidth().padding(start=16.dp,end=16.dp,top=16.dp,bottom=8.dp),textAlign=TextAlign.Center,fontSize=16.sp,fontWeight=FontWeight.Bold,color=Color.White)
-   val visibleUsers = (roomUsers + currentUser)
+   val visibleUsers = roomUsers
     .filter { it.accountId.isNotBlank() }
     .distinctBy { it.accountId }
     .sortedWith(compareBy<ActiveUserNative> { if (it.accountId == roomOwnerId) 0 else 1 }.thenBy { it.name.lowercase() })
