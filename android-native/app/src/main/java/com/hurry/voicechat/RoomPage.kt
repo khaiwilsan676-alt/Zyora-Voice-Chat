@@ -2046,7 +2046,7 @@ private fun formatMusicTime(seconds: Float): String {
     Row(Modifier.fillMaxWidth().padding(vertical=2.dp),verticalAlignment=Alignment.Top,horizontalArrangement=Arrangement.Start){
         val cachedName = profileTags?.let { profile -> sequenceOf("name", "displayName", "userName").map { profile.optString(it, "") }.firstOrNull { it.isNotBlank() && it != "null" } }.orEmpty()
         val cachedImage = profileTags?.let { profile -> sequenceOf("image", "avatar", "profileImageUrl").map { profile.optString(it, "") }.firstOrNull { it.isNotBlank() && it != "null" } }.orEmpty()
-        FallbackAsyncImage(model=if (m.senderAccountId in setOf("100002", "100003", "500002")) "https://zyora-voice-chat.vercel.app/logo.png" else cachedImage.ifBlank { m.senderImage },contentDescription=cachedName.ifBlank { m.sender },modifier=Modifier.padding(top=2.dp).size(28.dp).clip(CircleShape).border(1.dp, Color.White.copy(alpha=.1f), CircleShape).clickable(onClick = onAvatarClick),contentScale=ContentScale.Crop)
+        FallbackAsyncImage(model=if (m.senderAccountId in setOf("100002", "100003", "500002")) "https://zyora-voice-chat.vercel.app/logo.png" else cachedImage.ifBlank { "https://zyora-server.onrender.com/default-avatar.png" },contentDescription=cachedName.ifBlank { m.sender },modifier=Modifier.padding(top=2.dp).size(28.dp).clip(CircleShape).border(1.dp, Color.White.copy(alpha=.1f), CircleShape).clickable(onClick = onAvatarClick),contentScale=ContentScale.Crop)
         
         Column(Modifier.padding(start=8.dp).fillMaxWidth(.75f),verticalArrangement=Arrangement.spacedBy(2.dp)){
             Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(3.dp)){
