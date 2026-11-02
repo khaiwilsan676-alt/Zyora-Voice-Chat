@@ -260,7 +260,7 @@ fun RoomSettingPage(
                             .ifBlank { u.optString("displayUserNumber").takeUnless { it == "null" }.orEmpty() }
                             .ifBlank { u.optString("uid").takeUnless { it == "null" }.orEmpty() }
                             .ifBlank { u.optString("id").takeUnless { it == "null" }.orEmpty() }
-                        if (id.isBlank()) null else NativeSettingMember(
+                        if (id.isBlank() || (q.all { it.isDigit() } && id != q)) null else NativeSettingMember(
                             id,
                             u.optString("name").takeUnless { it == "null" }.orEmpty()
                                 .ifBlank { u.optString("displayName").ifBlank { u.optString("userName", "User") } },
