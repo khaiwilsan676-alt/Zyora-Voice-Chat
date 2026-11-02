@@ -178,6 +178,7 @@ fun RoomSettingPage(
     initial: RoomSettingsDataNative = RoomSettingsDataNative(),
     roomOwnerId: String = "",
     currentUserId: String = "",
+    isDpOnlyEditor: Boolean = false,
     onBack: () -> Unit = {},
     onSave: (RoomSettingsDataNative) -> Unit = {}
 ) {
@@ -419,38 +420,41 @@ fun RoomSettingPage(
                     }
                 }
 
-                SettingRow("Room Name", state.roomName) { draft = state.roomName; sheet = "name" }
-                SettingRow("Room Announcement", state.announcement) { draft = state.announcement; sheet = "announcement" }
-                SettingRow("Theme", themeItems.firstOrNull { it.id == state.theme }?.name ?: "") { sheet = "theme" }
-                SettingRow("Admin", "${admins.size} Selected") { adminSearch = ""; sheet = "admin" }
-                SettingRow("Lock Room", if (state.isLocked) "Locked" else "", red = state.isLocked) {
-                    password = if (state.isLocked) state.roomPassword else ""; sheet = "lock"
-                }
-                
-                Box(Modifier.fillMaxWidth().padding(bottom = 20.dp)) {
-                    Row(
-                        Modifier.fillMaxWidth().padding(horizontal = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            "Mic Mode", Modifier.weight(1f),
-                            fontSize = 14.sp, fontWeight = FontWeight.Medium, color = gray600
-                        )
+                if (!isDpOnlyEditor) {
+                    SettingRow("Room Name", state.roomName) { draft = state.roomName; sheet = "name" }
+                    SettingRow("Room Announcement", state.announcement) { draft = state.announcement; sheet = "announcement" }
+                    SettingRow("Theme", themeItems.firstOrNull { it.id == state.theme }?.name ?: "") { sheet = "theme" }
+                    SettingRow("Admin", "${admins.size} Selected") { adminSearch = ""; sheet = "admin" }
+                    SettingRow("Lock Room", if (state.isLocked) "Locked" else "", red = state.isLocked) {
+                        password = if (state.isLocked) state.roomPassword else ""; sheet = "lock"
+                    }
+                    
+                    Box(Modifier.fillMaxWidth().padding(bottom = 20.dp)) {
                         Row(
-                            Modifier.clip(RoundedCornerShape(8.dp))
-                                .clickable { tempMicMode = state.micMode; sheet = "mic" }
-                                .padding(horizontal = 8.dp, vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                "Mic ${state.micMode}",
-                                fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = gray800
+                                "Mic Mode", Modifier.weight(1f),
+                                fontSize = 14.sp, fontWeight = FontWeight.Medium, color = gray600
                             )
-                            Icon(Icons.Default.ChevronRight, null, tint = gray400, modifier = Modifier.size(16.dp))
+                            Row(
+                                Modifier.clip(RoundedCornerShape(8.dp))
+                                    .clickable { tempMicMode = state.micMode; sheet = "mic" }
+                                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(
+                                    "Mic ${state.micMode}",
+                                    fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = gray800
+                                )
+                                Icon(Icons.Default.ChevronRight, null, tint = gray400, modifier = Modifier.size(16.dp))
+                            }
                         }
                     }
-                }
+    
+                    }
 
                 if (saveError.isNotBlank()) {
                     Text(saveError, color = red500, fontSize = 12.sp, modifier = Modifier.padding(vertical = 8.dp), textAlign = TextAlign.Center)
