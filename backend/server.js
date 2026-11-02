@@ -686,7 +686,12 @@ app.get("/api/room-follows", async (req, res) => {
   try {
     if (!db) return res.status(503).json({ error: "GitHub storage is not connected" });
     const userId = String(req.query.userId || "").trim();
-    if (!userId) return res.status(400).json({ error: "Missing userId" });
+    const roomId = String(req.query.roomId || "").trim();
+    if (roomId) {
+      const followers = await db.collection("roomFollows").find({ roomId }).sort({ followedAt: -1 }).limit(500).toArray();
+      return res.json({ followers: followers.map(({ _id, ...item }) => item) });
+    }
+    if (!userId) return res.status(400).json({ error: "Missing userId or roomId" });
     const follows = await db.collection("roomFollows").find({ userId }).sort({ followedAt: -1 }).limit(500).toArray();
     return res.json({ follows: follows.map(({ _id, ...item }) => item) });
   } catch (error) {
@@ -709,6 +714,7 @@ app.post("/api/room-follows", async (req, res) => {
       roomCountry: String(req.body?.roomCountry || room?.country || "🇮🇳"),
       followerName: String(req.body?.followerName || "User"),
       followerImage: String(req.body?.followerImage || ""),
+      followerCountry: String(req.body?.followerCountry || ""),
       followedAt: Date.now()
     };
     await db.collection("roomFollows").updateOne({ userId, roomId }, { $set: follow }, { upsert: true });
