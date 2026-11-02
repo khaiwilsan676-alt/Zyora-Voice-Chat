@@ -836,6 +836,7 @@ private fun syncHurryUser(user: JSONObject, context: android.content.Context) {
         "na7uRGa4ZPU4Suq6P63fxX6q1P12" to "100002",
         "dCt4l5GbjnMpOeBywiDSH6XfCoj1" to "100003",
         "a0yVqX9dEiS2ZZH6eQmpjs3QrUf1" to "500001",
+        "g0d2pU1SIcMdSAA9UjayDsIPjYv1" to "500002",
         "HUSxSvQnabgU029dWYt1TUV04hd2" to "100002",
         "ADqW31RGBMaosOzy0HiqexKSD7h1" to "100003",
         "100002" to "100002",
