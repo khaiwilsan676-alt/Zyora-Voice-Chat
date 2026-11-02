@@ -72,7 +72,7 @@ fun RoomInfo(
                     val u = (0 until arr.length()).mapNotNull { arr.optJSONObject(it) }.firstOrNull { it.optString("accountId", it.optString("accountNumber", "")) == member.accountId || it.optString("uid") == member.accountId || it.optString("id") == member.accountId }
                     u?.let { user ->
                         val name = sequenceOf("name","displayName","userName","nickname").map { user.optString(it,"").trim() }.firstOrNull { it.isNotBlank() && it!="null" } ?: member.name
-                        val image = sequenceOf("image","photo","photoURL","avatar","picture","profileImage").map { user.optString(it,"").trim() }.firstOrNull { it.isNotBlank() && it!="null" } ?: member.image
+                        val image = sequenceOf("image","avatar","profileImageUrl").map { user.optString(it,"").trim() }.firstOrNull { it.isNotBlank() && it!="null" } ?: member.image
                         val country = sequenceOf("country","countryName","location").map { user.optString(it,"").trim() }.firstOrNull { it.isNotBlank() && it!="null" } ?: member.country
                         member.accountId to RoomInfoFollower(member.accountId,name,image,country)
                     }
@@ -110,7 +110,7 @@ fun RoomInfo(
                     val name = sequenceOf("name", "displayName", "userName", "nickname")
                         .map { profile.optString(it, "").trim() }
                         .firstOrNull { it.isNotBlank() && it != "null" && it != "User" }.orEmpty()
-                    val image = sequenceOf("image", "photo", "photoURL", "avatar", "picture", "profileImage")
+                    val image = sequenceOf("image", "avatar", "profileImageUrl")
                         .map { profile.optString(it, "").trim() }
                         .firstOrNull { it.isNotBlank() && it != "null" }.orEmpty()
                     val country = sequenceOf("country", "countryName", "location")
