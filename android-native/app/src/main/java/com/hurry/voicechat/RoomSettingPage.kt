@@ -420,7 +420,6 @@ fun RoomSettingPage(
                     }
                 }
 
-                if (!isDpOnlyEditor) {
                     SettingRow("Room Name", state.roomName) { draft = state.roomName; sheet = "name" }
                     SettingRow("Room Announcement", state.announcement) { draft = state.announcement; sheet = "announcement" }
                     SettingRow("Theme", themeItems.firstOrNull { it.id == state.theme }?.name ?: "") { sheet = "theme" }
@@ -455,6 +454,8 @@ fun RoomSettingPage(
                     }
     
                     }
+
+
 
                 if (saveError.isNotBlank()) {
                     Text(saveError, color = red500, fontSize = 12.sp, modifier = Modifier.padding(vertical = 8.dp), textAlign = TextAlign.Center)
