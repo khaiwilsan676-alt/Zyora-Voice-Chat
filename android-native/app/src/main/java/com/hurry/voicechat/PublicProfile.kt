@@ -295,15 +295,8 @@ fun PublicProfileScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.White)
+            .background(Color(0xFF1F2937))
     ) {
-        // Keep the cover image visible in the narrow side gaps around the 12dp white profile panel.
-        AsyncImage(
-            model = coverPhotos.firstOrNull() ?: userPhoto,
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize()
-        )
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(bottom = if (isOtherUser) 100.dp else 40.dp)
