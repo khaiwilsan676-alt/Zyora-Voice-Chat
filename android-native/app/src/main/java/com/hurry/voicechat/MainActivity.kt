@@ -9,12 +9,17 @@ import androidx.compose.animation.core.tween
 import androidx.compose.ui.graphics.StrokeCap
 
 import android.content.Intent
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.net.Uri
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -57,6 +62,7 @@ import androidx.compose.foundation.shape.CircleShape
 import coil3.compose.AsyncImage
 import androidx.compose.ui.Alignment
 import androidx.core.content.FileProvider
+import androidx.core.content.ContextCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -224,6 +230,29 @@ private fun HurryLaunchScreen() {
 @Composable
 private fun HurryNativeRoot(onLogout: () -> Unit) {
     val context = LocalContext.current
+
+    // Ask for the app's media, camera and voice permissions together only after
+    // the authenticated user reaches the Home root (after first-time profile setup).
+    val homePermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { }
+    LaunchedEffect(Unit) {
+        val requiredPermissions = buildList {
+            add(Manifest.permission.CAMERA)
+            add(Manifest.permission.RECORD_AUDIO)
+            add(
+                if (Build.VERSION.SDK_INT >= 33) Manifest.permission.READ_MEDIA_AUDIO
+                else Manifest.permission.READ_EXTERNAL_STORAGE
+            )
+            if (Build.VERSION.SDK_INT >= 31) add(Manifest.permission.BLUETOOTH_CONNECT)
+        }
+        val missingPermissions = requiredPermissions.filter { permission ->
+            ContextCompat.checkSelfPermission(context, permission) != PackageManager.PERMISSION_GRANTED
+        }
+        if (missingPermissions.isNotEmpty()) {
+            homePermissionLauncher.launch(missingPermissions.toTypedArray())
+        }
+    }
     val roomCreateScope = rememberCoroutineScope()
     val authPrefs = remember { context.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE) }
     val languagePrefs = remember { context.getSharedPreferences("zyora_settings", android.content.Context.MODE_PRIVATE) }
