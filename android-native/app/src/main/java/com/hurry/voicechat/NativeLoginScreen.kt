@@ -886,10 +886,12 @@ private fun syncHurryUser(user: JSONObject, context: android.content.Context) {
         existingProfile.optString("Name").ifBlank { user.optString("displayName").ifBlank { emailName } }
     }
     // Firebase Google photo is authentication metadata only, never the Zyora app avatar.
-    // The app avatar comes only from the saved Zyora profile.
-    val image = if (officialNames.containsKey(uid)) HURRY_LOGO else existingProfile.optString("image").ifBlank {
-        existingProfile.optString("avatar").ifBlank { "/default-avatar.png" }
-    }
+    // Ignore legacy profile fields that were previously populated from Google's photoUrl.
+    val googlePhoto = user.optString("photoUrl").trim()
+    val savedImage = existingProfile.optString("image").trim().takeIf { it.isNotBlank() && it != googlePhoto && it != "/default-avatar.png" }
+    val savedAvatar = existingProfile.optString("avatar").trim().takeIf { it.isNotBlank() && it != googlePhoto && it != "/default-avatar.png" }
+    val image = if (accountId in setOf("100002", "100003", "500002") || officialNames.containsKey(uid)) HURRY_LOGO
+        else savedImage ?: savedAvatar ?: "/default-avatar.png"
     val country = existingProfile.optString("country").ifBlank {
         existingProfile.optString("Country").ifBlank { "🇮🇳" }
     }
