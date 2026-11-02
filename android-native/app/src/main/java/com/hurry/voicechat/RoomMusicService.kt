@@ -22,6 +22,7 @@ class RoomMusicService : Service() {
     private var player: MediaPlayer? = null
     private var currentUri: String? = null
     private var playbackVolume: Float = 1f
+    private var repeatOne: Boolean = false
 
     override fun onCreate() {
         super.onCreate()
@@ -55,10 +56,13 @@ class RoomMusicService : Service() {
                             )
                             setDataSource(this@RoomMusicService, Uri.parse(uri))
                             setVolume(playbackVolume, playbackVolume)
+                            isLooping = repeatOne
                             setOnCompletionListener {
-                                releasePlayer()
-                                stopForeground(STOP_FOREGROUND_REMOVE)
-                                stopSelf()
+                                if (!repeatOne) {
+                                    releasePlayer()
+                                    stopForeground(STOP_FOREGROUND_REMOVE)
+                                    stopSelf()
+                                }
                             }
                             setOnErrorListener { _, _, _ ->
                                 releasePlayer()
@@ -82,6 +86,10 @@ class RoomMusicService : Service() {
             ACTION_SEEK -> runCatching {
                 val position = intent.getIntExtra(EXTRA_POSITION_MS, 0).coerceAtLeast(0)
                 player?.let { active -> active.seekTo(position.coerceAtMost(active.duration.coerceAtLeast(0))) }
+            }
+            ACTION_REPEAT_ONE -> {
+                repeatOne = intent.getBooleanExtra(EXTRA_REPEAT_ONE, false)
+                runCatching { player?.isLooping = repeatOne }
             }
             ACTION_VOLUME -> runCatching {
                 playbackVolume = intent.getFloatExtra(EXTRA_VOLUME, 1f).coerceIn(0f, 1f)
@@ -146,10 +154,12 @@ class RoomMusicService : Service() {
         const val ACTION_STOP = "com.hurry.voicechat.roommusic.STOP"
         const val ACTION_SEEK = "com.hurry.voicechat.roommusic.SEEK"
         const val ACTION_VOLUME = "com.hurry.voicechat.roommusic.VOLUME"
+        const val ACTION_REPEAT_ONE = "com.hurry.voicechat.roommusic.REPEAT_ONE"
         const val EXTRA_URI = "track_uri"
         const val EXTRA_TITLE = "track_title"
         const val EXTRA_POSITION_MS = "position_ms"
         const val EXTRA_VOLUME = "volume"
+        const val EXTRA_REPEAT_ONE = "repeat_one"
         private const val CHANNEL_ID = "zyora_room_music"
         private const val NOTIFICATION_ID = 7301
     }
