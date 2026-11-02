@@ -191,7 +191,7 @@ fun PublicProfileScreen(
     var userBio by remember(profileCacheKey, cachedProfile, targetUser?.bio) { mutableStateOf(cachedProfile?.optString("bio")?.takeIf { it != "null" } ?: targetUser?.bio ?: "") }
     var userAge by remember(profileCacheKey, cachedProfile, targetUser?.age) { mutableIntStateOf(if (cachedProfile?.has("age") == true) cachedProfile.optInt("age", targetUser?.age ?: 0) else targetUser?.age ?: 0) }
     
-    // Keep profile details in index.db; GitHub storage remains the source for the latest name and DP.
+    // Keep profile details in index.db; MongoDB-backed media URL is the canonical DP source.
     var userGender by remember(profileCacheKey, cachedProfile, targetUser?.gender) { mutableStateOf(cachedProfile?.optString("gender")?.takeIf { it.isNotBlank() && it != "null" } ?: targetUser?.gender?.takeIf { it.isNotBlank() } ?: "Male") }
     
     var liveProfileTags by remember(profileCacheKey, cachedProfile) { mutableStateOf(cachedProfile) }
