@@ -217,7 +217,7 @@ fun RoomPage(
     } ?: currentUser.name.ifBlank { "User" }
     val roomDisplayImage = if (accountId in setOf("100002", "100003", "500002")) "https://zyora-voice-chat.vercel.app/logo.png" else cachedCurrentProfile?.let { profile ->
         sequenceOf("image", "avatar", "profileImageUrl").map { profile.optString(it, "") }.firstOrNull { it.isNotBlank() && it != "null" }
-    } ?: currentUser.image
+    } ?: "https://zyora-server.onrender.com/default-avatar.png"
     var copiedId by remember { mutableStateOf("") }
     var roomName by remember{mutableStateOf(roomOwner.name.ifBlank{"Room"})}
     var roomImage by remember{mutableStateOf(if (isLogoRoom) "https://zyora-voice-chat.vercel.app/logo.png" else roomOwner.image)}
