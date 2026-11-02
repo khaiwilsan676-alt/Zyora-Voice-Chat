@@ -2186,7 +2186,7 @@ io.on("connection", (socket) => {
       String(socket.roomUserId || "") === userId ||
       String(socket.userId || "") === userId;
 
-    if (!isValidRoomActionSocket(socket, roomId, userId) || !isRoomUser) {
+    if (!socketIsInRoom(socket, roomId) || !isRoomUser) {
       return;
     }
 
@@ -2277,9 +2277,11 @@ io.on("connection", (socket) => {
 
     if (action === "mute") {
       // A user may only change the microphone state of their own occupied seat.
+      const isRoomOwner = Boolean(socket.roomOwnerId) &&
+        socketOwnsIdentity(socket, String(socket.roomOwnerId));
       if (
         current.isOccupied &&
-        String(current.user?.accountId || current.user?.userId || "") === userId
+        (String(current.user?.accountId || current.user?.userId || "") === userId || isRoomOwner)
       ) {
         seats.set(seatNumber, {
           ...current,
