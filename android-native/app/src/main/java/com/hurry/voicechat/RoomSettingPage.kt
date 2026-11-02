@@ -178,7 +178,6 @@ fun RoomSettingPage(
     initial: RoomSettingsDataNative = RoomSettingsDataNative(),
     roomOwnerId: String = "",
     currentUserId: String = "",
-    isDpOnlyEditor: Boolean = false,
     onBack: () -> Unit = {},
     onSave: (RoomSettingsDataNative) -> Unit = {}
 ) {
@@ -453,8 +452,6 @@ fun RoomSettingPage(
                         }
                     }
     
-                    }
-
 
 
                 if (saveError.isNotBlank()) {
