@@ -1196,7 +1196,8 @@ Column(Modifier.align(Alignment.BottomStart).padding(bottom=LocalConfiguration.c
                         Row(Modifier.fillMaxWidth(0.80f).clip(RoundedCornerShape(topStart=50.dp,bottomStart=50.dp,topEnd=0.dp,bottomEnd=0.dp)).background(Brush.horizontalGradient(listOf(Color(0xCC2563EB),Color(0x802563EB),Color.Transparent))).padding(start=10.dp,end=10.dp,top=2.dp,bottom=2.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(6.dp)) {
                             FallbackAsyncImage(model=toast.image,contentDescription=toast.name,modifier=Modifier.size(24.dp).clip(CircleShape),contentScale=ContentScale.Crop)
                             Text(toast.name,color=Color.White,fontSize=13.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold,maxLines=1,modifier=Modifier.weight(1f, fill=false))
-                            Text("Enter the Room",color=Color.White,fontSize=12.sp,maxLines=1)                            if (toast.vehicleVideo.isNotBlank()) {
+                            Text("Enter the Room",color=Color.White,fontSize=12.sp,maxLines=1)
+                            if (toast.vehicleVideo.isNotBlank()) {
                                 val vehicleUrl = if (toast.vehicleVideo.startsWith("http", true)) toast.vehicleVideo else "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/" + toast.vehicleVideo
                                 val vehicleItemId = when {
                                     toast.vehicleVideo.contains("VID_20260905_095157_269_bsl.mp4", true) -> "v1"
