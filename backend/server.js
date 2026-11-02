@@ -1072,7 +1072,7 @@ app.post("/api/upload-image", async (req, res) => {
       $set: { ownerId: userId, folder, contentType: match[1], data: bytes.toString("base64"), size: bytes.length, updatedAt: Date.now() },
       $setOnInsert: { createdAt: Date.now() }
     }, { upsert: true });
-    const url = "https://zyora-server.onrender.com/api/profile-image?id=" + encodeURIComponent(mediaId);
+    const url = "https://zyora-server.onrender.com/api/profile-image?id=" + encodeURIComponent(mediaId) + "&v=" + Date.now();
     if (folder === "user-dp" && db) {
       const avatarFields = { image: url, avatar: url, photo: url, imageUrl: url, profileImageUrl: url, imageUpdatedAt: new Date().toISOString(), updatedAt: Date.now() };
       await db.collection("users").updateOne({ $or: [{ uid: userId }, { id: userId }, { appLongId: userId }, { accountId: userId }, { accountNumber: userId }, { displayUserNumber: userId }] },
