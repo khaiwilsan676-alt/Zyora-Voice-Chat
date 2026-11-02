@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -18,7 +19,7 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 
 @Composable
-fun MineNativePage(onBack: () -> Unit, createdRoom: HurryRoom? = null, onCreateRoom: () -> Unit = {}, onSearch: () -> Unit = {}, languageCode: String = "en") {
+fun MineNativePage(onBack: () -> Unit, createdRoom: HurryRoom? = null, followingRooms: List<HurryRoom> = emptyList(), onOpenRoom: (HurryRoom) -> Unit = {}, onCreateRoom: () -> Unit = {}, onSearch: () -> Unit = {}, languageCode: String = "en") {
     var recent by remember { mutableStateOf(false) }
     val card = Modifier.fillMaxWidth().height(112.dp)
     
@@ -131,10 +132,20 @@ fun MineNativePage(onBack: () -> Unit, createdRoom: HurryRoom? = null, onCreateR
                 }
             }
         }
-        item {
-            Column(Modifier.fillMaxWidth().padding(top=24.dp), horizontalAlignment=Alignment.CenterHorizontally) {
-                AsyncImage("https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/file_0000000047308211a02722299d1fda2e.png", null, Modifier.size(50.dp))
-                Text(nativeText(languageCode, "no_data"), color=Color(0xFF9CA3AF), fontSize=14.sp)
+        if (!recent && followingRooms.isNotEmpty()) {
+            items(followingRooms.chunked(2)) { pair ->
+                Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    RoomListCard(pair[0], onOpenRoom, Modifier.weight(1f))
+                    if (pair.size > 1) RoomListCard(pair[1], onOpenRoom, Modifier.weight(1f))
+                    else Spacer(Modifier.weight(1f))
+                }
+            }
+        } else {
+            item {
+                Column(Modifier.fillMaxWidth().padding(top=24.dp), horizontalAlignment=Alignment.CenterHorizontally) {
+                    AsyncImage("https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/file_0000000047308211a02722299d1fda2e.png", null, Modifier.size(50.dp))
+                    Text(nativeText(languageCode, "no_data"), color=Color(0xFF9CA3AF), fontSize=14.sp)
+                }
             }
         }
     }
