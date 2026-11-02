@@ -209,12 +209,12 @@ fun RoomSettingPage(
             runCatching {
                 val stableRoomId = roomOwnerId.ifBlank { currentUserId }
                 val permanentDp = if (ready.roomDp.startsWith("data:image/")) {
-                    ProfilePersistence.uploadDpToGitHub(ready.roomDp, "$stableRoomId-room", "room-dp")
-                        ?: error("Room DP upload failed. Please try again.")
+                    ProfilePersistence.uploadImageToMongoDB(ready.roomDp, "$stableRoomId-room", "room-dp")
+                        ?: error("Room DP upload failed. Check MongoDB image storage and try again.")
                 } else ready.roomDp
                 val permanentTheme = if (ready.customTheme.startsWith("data:image/")) {
-                    ProfilePersistence.uploadDpToGitHub(ready.customTheme, "$stableRoomId-theme", "room-theme")
-                        ?: error("Room theme upload failed. Please try again.")
+                    ProfilePersistence.uploadImageToMongoDB(ready.customTheme, "$stableRoomId-theme", "room-theme")
+                        ?: error("Room theme upload failed. Check MongoDB image storage and try again.")
                 } else ready.customTheme
                 val permanent = ready.copy(roomDp = permanentDp, customTheme = permanentTheme)
                 saveRoomSettingsRemote(roomOwnerId, currentUserId, permanent)
@@ -265,7 +265,7 @@ fun RoomSettingPage(
                             u.optString("name").takeUnless { it == "null" }.orEmpty()
                                 .ifBlank { u.optString("displayName").ifBlank { u.optString("userName", "User") } },
                             u.optString("image").takeUnless { it == "null" }.orEmpty()
-                                .ifBlank { u.optString("photoURL").ifBlank { u.optString("avatar", "") } }
+                                .ifBlank { u.optString("avatar").ifBlank { u.optString("profileImageUrl", "") } }
                         )
                     }
                 } finally { conn.disconnect() }
