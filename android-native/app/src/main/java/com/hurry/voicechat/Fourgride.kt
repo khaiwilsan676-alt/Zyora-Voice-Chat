@@ -551,8 +551,8 @@ fun MiniMusicControllerCard(
             modifier = modifier
                 .fillMaxWidth()
                 .height(160.dp)
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            shape = RoundedCornerShape(16.dp),
+                .padding(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 90.dp),
+            shape = RoundedCornerShape(10.dp),
             colors = CardDefaults.cardColors(containerColor = Color.Black),
             elevation = CardDefaults.cardElevation(8.dp)
         ) {
