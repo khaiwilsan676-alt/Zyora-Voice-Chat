@@ -47,8 +47,10 @@ fun RoomInfo(
 ) {
     if (!isOpen) return
     var tab by remember { mutableStateOf(0) }
-    var ownerDisplayName by remember(roomOwner.id, roomOwner.uid, roomOwner.accountId, roomOwner.name) {
-        mutableStateOf(roomOwner.name.ifBlank { "User" })
+    // roomOwner.name may be the ROOM title from discovery/kept-room data.
+    // Never use it as the host profile name; resolve the host by stable account ID.
+    var ownerDisplayName by remember(roomOwner.id, roomOwner.uid, roomOwner.accountId) {
+        mutableStateOf(if (roomOwner.accountId == "100002" || roomOwner.id == "100002") "Zyora" else "User")
     }
     val isLogoOwner = roomOwner.accountId == "100002" || roomOwner.id == "100002"
     var ownerDisplayImage by remember(roomOwner.id, roomOwner.uid, roomOwner.accountId, roomOwner.image) {
@@ -127,7 +129,7 @@ fun RoomInfo(
                     val user = (0 until users.length()).mapNotNull { users.optJSONObject(it) }.firstOrNull { item ->
                         item.optString("accountId", item.optString("accountNumber", item.optString("displayUserNumber", ""))) == ownerId ||
                             item.optString("uid") == ownerId || item.optString("id") == ownerId
-                    } ?: (0 until users.length()).firstNotNullOfOrNull { users.optJSONObject(it) }
+                    }
                     user?.let { profile ->
                         val name = sequenceOf("name", "displayName", "userName")
                             .map { profile.optString(it, "").trim() }
