@@ -82,34 +82,11 @@ fun RoomInfo(
         memberProfiles = loaded
     }
 
+    // Always resolve the host from the user's public profile by stable ID.
+    // roomOwner.name is populated from the room listing and can be the room title.
     LaunchedEffect(roomOwner.id, roomOwner.uid, roomOwner.accountId) {
-        if (isLogoOwner) return@LaunchedEffect
-        val profile = ProfilePersistence.load(
-            TargetUser(
-                id = roomOwner.id.ifBlank { null },
-                uid = roomOwner.uid.ifBlank { null },
-                accountId = roomOwner.accountId.ifBlank { null },
-                name = roomOwner.name,
-                photo = roomOwner.image,
-                image = roomOwner.image
-            )
-        ) ?: return@LaunchedEffect
-        profile.optString("name").takeIf { it.isNotBlank() && it != "null" }?.let {
-            ownerDisplayName = it
-        }
-        ownerCountry = sequenceOf("country","countryName","location").map { profile.optString(it,"").trim() }.firstOrNull { it.isNotBlank() && it!="null" }.orEmpty()
-        sequenceOf("image", "photo", "photoURL", "avatar", "picture")
-            .map { profile.optString(it, "") }
-            .firstOrNull { it.isNotBlank() && it != "null" }
-            ?.let { ownerDisplayImage = it }
-    }
-
-    // If the room payload only contains the placeholder "User", resolve the
-    // actual host profile by its stable account ID before showing the info sheet.
-    LaunchedEffect(roomOwner.id, roomOwner.uid, roomOwner.accountId, roomOwner.name) {
         val ownerId = roomOwner.accountId.ifBlank { roomOwner.id.ifBlank { roomOwner.uid } }
-        if (ownerId == "100002") return@LaunchedEffect
-        if (ownerId.isBlank() || (ownerDisplayName.isNotBlank() && ownerDisplayName != "User")) return@LaunchedEffect
+        if (isLogoOwner || ownerId.isBlank()) return@LaunchedEffect
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             runCatching {
                 val encoded = java.net.URLEncoder.encode(ownerId, "UTF-8")
@@ -126,21 +103,23 @@ fun RoomInfo(
                         root.optJSONArray("users") ?: root.optJSONArray("results")
                             ?: org.json.JSONArray().apply { root.optJSONObject("user")?.let { put(it) } }
                     }
-                    val user = (0 until users.length()).mapNotNull { users.optJSONObject(it) }.firstOrNull { item ->
+                    val profile = (0 until users.length()).mapNotNull { users.optJSONObject(it) }.firstOrNull { item ->
                         item.optString("accountId", item.optString("accountNumber", item.optString("displayUserNumber", ""))) == ownerId ||
                             item.optString("uid") == ownerId || item.optString("id") == ownerId
-                    }
-                    user?.let { profile ->
-                        val name = sequenceOf("name", "displayName", "userName")
-                            .map { profile.optString(it, "").trim() }
-                            .firstOrNull { it.isNotBlank() && it != "null" && it != "User" }.orEmpty()
-                        val image = sequenceOf("image", "photo", "photoURL", "avatar", "picture")
-                            .map { profile.optString(it, "").trim() }
-                            .firstOrNull { it.isNotBlank() && it != "null" }.orEmpty()
-                        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                            if (name.isNotBlank()) ownerDisplayName = name
-                            if (image.isNotBlank()) ownerDisplayImage = image
-                        }
+                    } ?: return@runCatching
+                    val name = sequenceOf("name", "displayName", "userName", "nickname")
+                        .map { profile.optString(it, "").trim() }
+                        .firstOrNull { it.isNotBlank() && it != "null" && it != "User" }.orEmpty()
+                    val image = sequenceOf("image", "photo", "photoURL", "avatar", "picture", "profileImage")
+                        .map { profile.optString(it, "").trim() }
+                        .firstOrNull { it.isNotBlank() && it != "null" }.orEmpty()
+                    val country = sequenceOf("country", "countryName", "location")
+                        .map { profile.optString(it, "").trim() }
+                        .firstOrNull { it.isNotBlank() && it != "null" }.orEmpty()
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                        if (name.isNotBlank()) ownerDisplayName = name
+                        if (image.isNotBlank()) ownerDisplayImage = image
+                        if (country.isNotBlank()) ownerCountry = country
                     }
                 } finally { connection.disconnect() }
             }
@@ -274,18 +253,24 @@ private fun MemberRow(
             modifier = Modifier.size(38.dp).clip(CircleShape),
             contentScale = ContentScale.Crop
         )
-        Text(name.ifBlank { "User" }, Modifier.padding(start = 11.dp).widthIn(max = 170.dp),
-            fontSize = 13.sp, fontWeight = FontWeight.Medium, color = Color.White, maxLines = 1)
-        if (role == "Owner") {
-            AsyncImage(model=ROOM_ADMIN_TAG, contentDescription="Owner", contentScale=ContentScale.Fit,
-                modifier=Modifier.padding(start=5.dp).height(19.dp).width(42.dp))
-        }
-        Spacer(Modifier.weight(1f))
-        if (country.isNotBlank()) Text(countryFlagEmoji(country), fontSize = 15.sp, modifier = Modifier.padding(end = 5.dp))
-        Box(Modifier.height(16.dp).width(36.dp), contentAlignment = Alignment.CenterEnd) {
-            AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261028_004355.png", contentDescription="Level",
-                contentScale=ContentScale.FillBounds, modifier=Modifier.fillMaxSize())
-            Text("Lv.1", color=Color.White, fontSize=8.sp, fontWeight=FontWeight.Bold, modifier=Modifier.padding(end=5.dp))
+        Column(Modifier.padding(start = 11.dp).weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(name.ifBlank { "User" }, fontSize = 13.sp, fontWeight = FontWeight.Medium,
+                    color = Color.White, maxLines = 1)
+                if (role == "Owner") {
+                    AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261027_235537.png",
+                        contentDescription="Owner", contentScale=ContentScale.Fit,
+                        modifier=Modifier.padding(start=5.dp).height(14.dp).widthIn(min=30.dp, max=42.dp))
+                }
+            }
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                if (country.isNotBlank()) Text(countryFlagEmoji(country), fontSize = 13.sp)
+                Box(Modifier.height(16.dp).width(36.dp), contentAlignment = Alignment.Center) {
+                    AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261028_004355.png",
+                        contentDescription="Level", contentScale=ContentScale.Fit, modifier=Modifier.fillMaxSize())
+                    Text("Lv.1", color=Color.White, fontSize=8.sp, fontWeight=FontWeight.Bold)
+                }
+            }
         }
     }
 }
