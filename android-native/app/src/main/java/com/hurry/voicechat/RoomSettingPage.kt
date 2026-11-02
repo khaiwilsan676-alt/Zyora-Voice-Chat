@@ -137,7 +137,7 @@ private suspend fun cropImageToDataUrl(context: Context, uri: android.net.Uri): 
     val square = Bitmap.createBitmap(original, x, y, side, side)
     val scaled = Bitmap.createScaledBitmap(square, 640, 640, true)
     val output = ByteArrayOutputStream()
-    scaled.compress(Bitmap.CompressFormat.JPEG, 90, output)
+    scaled.compress(Bitmap.CompressFormat.JPEG, 78, output)
     if (scaled !== square) scaled.recycle()
     if (square !== original) square.recycle()
     original.recycle()
@@ -217,12 +217,12 @@ fun RoomSettingPage(
                         ?: error("Room theme upload failed. Check MongoDB image storage and try again.")
                 } else ready.customTheme
                 val permanent = ready.copy(roomDp = permanentDp, customTheme = permanentTheme)
-                saveRoomSettingsRemote(roomOwnerId, currentUserId, permanent)
+                saveRoomSettingsRemote(stableRoomId, currentUserId, permanent)
                 context.getSharedPreferences("room_settings", Context.MODE_PRIVATE).edit()
-                    .putString("roomDp_$roomOwnerId", permanent.roomDp)
-                    .putInt("micMode_$roomOwnerId", permanent.micMode)
-                    .putString("theme_$roomOwnerId", permanent.theme)
-                    .putString("customTheme_$roomOwnerId", permanent.customTheme)
+                    .putString("roomDp_$stableRoomId", permanent.roomDp)
+                    .putInt("micMode_$stableRoomId", permanent.micMode)
+                    .putString("theme_$stableRoomId", permanent.theme)
+                    .putString("customTheme_$stableRoomId", permanent.customTheme)
                     .apply()
                 permanent
             }.onSuccess { permanent ->
