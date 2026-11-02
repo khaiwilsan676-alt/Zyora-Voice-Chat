@@ -2022,7 +2022,7 @@ private fun formatMusicTime(seconds: Float): String {
                     if (remote.has(key)) merged.put(key, remote.opt(key))
                 }
                 val remoteName = sequenceOf("name", "displayName", "userName").map { remote.optString(it, "") }.firstOrNull { it.isNotBlank() && it != "null" } ?: m.sender
-                val remoteImage = sequenceOf("image", "avatar", "profileImageUrl").map { remote.optString(it, "") }.firstOrNull { it.isNotBlank() && it != "null" } ?: m.senderImage
+                val remoteImage = sequenceOf("image", "avatar", "profileImageUrl").map { remote.optString(it, "") }.firstOrNull { it.isNotBlank() && it != "null" } ?: "https://zyora-server.onrender.com/default-avatar.png"
                 if (remoteName.isNotBlank()) merged.put("name", remoteName)
                 if (remoteImage.isNotBlank()) merged.put("image", remoteImage)
                 profileDb.saveProfile(m.senderAccountId, merged)
