@@ -777,6 +777,31 @@ fun RoomPage(
                 }
             }
         }
+        val roomFollowListener = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject
+            if (payload?.optString("roomId") == roomId) {
+                CoroutineScope(Dispatchers.IO).launch {
+                    val updated = runCatching {
+                        val encodedRoom = java.net.URLEncoder.encode(roomId, "UTF-8")
+                        val connection = (java.net.URL("https://zyora-server.onrender.com/api/room-follows?roomId=$encodedRoom").openConnection() as java.net.HttpURLConnection).apply {
+                            connectTimeout = 10000
+                            readTimeout = 10000
+                        }
+                        try {
+                            if (connection.responseCode !in 200..299) error("Room members unavailable")
+                            val array = JSONObject(connection.inputStream.bufferedReader().use { it.readText() }).optJSONArray("followers") ?: JSONArray()
+                            (0 until array.length()).mapNotNull { index ->
+                                val item = array.optJSONObject(index) ?: return@mapNotNull null
+                                val id = item.optString("userId").trim()
+                                if (id.isBlank()) return@mapNotNull null
+                                RoomInfoFollower(id, item.optString("followerName").ifBlank { "User" }, item.optString("followerImage"), item.optString("followerCountry"))
+                            }.distinctBy { it.accountId }
+                        } finally { connection.disconnect() }
+                    }.getOrDefault(emptyList())
+                    mainHandler.post { followedRoomUsers = updated }
+                }
+            }
+        }
         val settingsListener = Emitter.Listener { args ->
             val payload = args.firstOrNull() as? JSONObject
             if (payload != null && payload.optString("roomId") == roomId) {
@@ -855,6 +880,7 @@ fun RoomPage(
         roomSocket.on("room_chat_cleared",clearedListener)
         roomSocket.on("room_seats",seatListener)
         roomSocket.on("room_settings_updated",settingsListener)
+        roomSocket.on("room_follow_updated", roomFollowListener)
         roomSocket.on("lucky_bag_banner",luckyBagBannerListener)
         roomSocket.on("wallet_balance_updated",walletBalanceListener)
         roomSocket.on(Socket.EVENT_CONNECT,connectListener)
@@ -866,6 +892,7 @@ fun RoomPage(
             roomSocket.off("room_chat_cleared",clearedListener)
             roomSocket.off("room_seats",seatListener)
             roomSocket.off("room_settings_updated",settingsListener)
+            roomSocket.off("room_follow_updated", roomFollowListener)
             roomSocket.off("lucky_bag_banner",luckyBagBannerListener)
             roomSocket.off("wallet_balance_updated",walletBalanceListener)
             roomSocket.off(Socket.EVENT_CONNECT,connectListener)
