@@ -366,7 +366,7 @@ fun RoomPage(
                             val user = (0 until arr.length()).mapNotNull { arr.optJSONObject(it) }.firstOrNull { u ->
                                 u.optString("accountId", u.optString("accountNumber", u.optString("displayUserNumber", ""))) == adminId ||
                                     u.optString("uid") == adminId || u.optString("id") == adminId
-                            } ?: (0 until arr.length()).firstNotNullOfOrNull { arr.optJSONObject(it) }
+                            }
                             user?.let { u ->
                                 RoomInfoFollower(
                                     adminId,
