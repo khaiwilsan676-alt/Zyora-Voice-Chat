@@ -56,20 +56,21 @@ fun ActiveUsers(
     ProfilePersistence.load(TargetUser(uid=user.accountId,id=user.accountId,accountId=user.accountId,name=user.name,image=user.image))
    }.getOrNull()
    if (remote != null) {
-    listOf("country","countryName","location").forEach { key ->
-     val value = remote.optString(key,"").trim()
-     if (value.isNotBlank() && value!="null") cached.put(key,value)
-    }
+    val profileObjects = listOfNotNull(remote, remote.optJSONObject("profile"), remote.optJSONObject("publicProfile"), remote.optJSONObject("user"), remote.optJSONObject("data"))
+    val country = profileObjects.asSequence().flatMap { obj ->
+     sequenceOf("country","countryName","location","country_name").map { key -> obj.optString(key,"").trim() }
+    }.firstOrNull { it.isNotBlank() && it!="null" }.orEmpty()
+    if (country.isNotBlank()) cached.put("country", country)
    }
    database.saveProfile(user.accountId, cached)
-   user.accountId to sequenceOf("country","countryName","location").map { cached.optString(it,"").trim() }.firstOrNull { it.isNotBlank() && it!="null" }.orEmpty()
+   user.accountId to sequenceOf("country","countryName","location","country_name").map { cached.optString(it,"").trim() }.firstOrNull { it.isNotBlank() && it!="null" }.orEmpty()
   }.toMap()
   countryByUser = profiles
  }
  Box(Modifier.fillMaxSize(),contentAlignment=Alignment.BottomCenter){
   Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=.30f)).clickable(onClick=onClose))
   Column(
-   Modifier.fillMaxWidth().fillMaxHeight(.40f)
+   Modifier.fillMaxWidth().fillMaxHeight(.48f)
     .clip(RoundedCornerShape(topStart=15.dp,topEnd=15.dp))
     .background(Color(0xEB000000))
   ){
@@ -80,8 +81,8 @@ fun ActiveUsers(
     .sortedWith(compareBy<ActiveUserNative> { if (it.accountId == roomOwnerId) 0 else 1 }.thenBy { it.name.lowercase() })
    LazyColumn(
     Modifier.weight(1f).fillMaxWidth(),
-    contentPadding=PaddingValues(start=12.dp,end=12.dp,top=8.dp,bottom=16.dp),
-    verticalArrangement=Arrangement.spacedBy(12.dp)
+    contentPadding=PaddingValues(start=12.dp,end=12.dp,top=4.dp,bottom=12.dp),
+    verticalArrangement=Arrangement.spacedBy(8.dp)
    ){
     items(visibleUsers,key={it.accountId}){ user ->
      Row(
@@ -96,7 +97,7 @@ fun ActiveUsers(
       )
       Column(Modifier.weight(1f).padding(start=9.dp)){
        Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(5.dp)){
-        Text(user.name.ifBlank{"User"},fontSize=13.sp,fontWeight=FontWeight.SemiBold,color=Color.White,maxLines=1)
+        Text(user.name.ifBlank{"User"},modifier=Modifier.weight(1f),fontSize=13.sp,fontWeight=FontWeight.SemiBold,color=Color.White,maxLines=2,softWrap=true)
         if(user.accountId==roomOwnerId){
          AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261027_235537.png",contentDescription="Owner",contentScale=ContentScale.Fit,
           modifier=Modifier.height(19.dp).width(42.dp))
@@ -123,10 +124,12 @@ fun ActiveUsers(
 }
 
 private fun activeCountryFlag(country: String): String {
- val code = when(country.trim().lowercase()) {
+ val raw = country.trim()
+ if (raw.isNotEmpty() && raw.codePoints().toArray().all { it in 0x1F1E6..0x1F1FF }) return raw
+ val code = when(raw.lowercase()) {
   "india","indian" -> "IN"
-  "united states","usa","us" -> "US"
-  "united kingdom","uk","britain" -> "GB"
+  "united states","united states of america","usa","us" -> "US"
+  "united kingdom","uk","britain","england" -> "GB"
   "pakistan" -> "PK"
   "bangladesh" -> "BD"
   "nepal" -> "NP"
@@ -135,7 +138,7 @@ private fun activeCountryFlag(country: String): String {
   "saudi arabia" -> "SA"
   "canada" -> "CA"
   "australia" -> "AU"
-  else -> country.trim().uppercase().takeIf { it.length==2 } ?: return ""
+  else -> raw.uppercase().takeIf { it.length==2 } ?: return "🌐"
  }
  return code.map { String(Character.toChars(0x1F1E6 + it.code - 65)) }.joinToString("")
 }
