@@ -1808,6 +1808,9 @@ io.on("connection", (socket) => {
       cancelPendingSeatDisconnect(room, accId);
       if (userId) cancelPendingSeatDisconnect(room, String(userId));
 
+      // Only announce a genuinely new room entry, not reconnect/presence refreshes.
+      let isNewRoomJoin = false;
+
       // Prevent duplicate joins from increasing the live count.
       if (
         socket.roomId === room &&
@@ -1856,6 +1859,7 @@ io.on("connection", (socket) => {
         }
 
         socket.join(`room:${room}`);
+        isNewRoomJoin = true;
 
         socket.roomId = room;
         if (userId) socket.roomUserId = String(userId);
@@ -1948,6 +1952,25 @@ io.on("connection", (socket) => {
         } catch (error) {
           console.error("Room lock check failed:", error.message);
         }
+      }
+
+      // The server is the single source of truth for room-entry banners.
+      // Broadcast only after room membership and lock checks succeed.
+      if (isNewRoomJoin && socketIsInRoom(socket, room)) {
+        const entryTimestamp = Date.now();
+        const entryMessage = {
+          id: `${accId}-${entryTimestamp}`,
+          roomId: room,
+          senderId: accId,
+          senderAccountId: accId,
+          senderName: String(name || "User"),
+          senderAvatar: String(dp || ""),
+          senderImage: String(dp || ""),
+          text: "Enter the Room",
+          type: "join",
+          createdAt: entryTimestamp,
+        };
+        socket.to(`room:${room}`).emit("room_message", entryMessage);
       }
     }
   );
