@@ -216,7 +216,7 @@ fun RoomPage(
         sequenceOf("name", "displayName", "userName").map { profile.optString(it, "") }.firstOrNull { it.isNotBlank() && it != "null" }
     } ?: currentUser.name.ifBlank { "User" }
     val roomDisplayImage = if (accountId in setOf("100002", "100003", "500002")) "https://zyora-voice-chat.vercel.app/logo.png" else cachedCurrentProfile?.let { profile ->
-        sequenceOf("image", "photo", "photoURL", "avatar", "picture").map { profile.optString(it, "") }.firstOrNull { it.isNotBlank() && it != "null" }
+        sequenceOf("image", "avatar", "profileImageUrl").map { profile.optString(it, "") }.firstOrNull { it.isNotBlank() && it != "null" }
     } ?: currentUser.image
     var copiedId by remember { mutableStateOf("") }
     var roomName by remember{mutableStateOf(roomOwner.name.ifBlank{"Room"})}
@@ -373,7 +373,7 @@ fun RoomPage(
                                     u.optString("name").takeUnless { it == "null" }.orEmpty()
                                         .ifBlank { u.optString("displayName").ifBlank { u.optString("userName", "User") } },
                                     u.optString("image").takeUnless { it == "null" }.orEmpty()
-                                        .ifBlank { u.optString("photoURL").ifBlank { u.optString("avatar", "") } }
+                                        .ifBlank { u.optString("avatar").ifBlank { u.optString("profileImageUrl", "") } }
                                 )
                             }
                         } finally { conn.disconnect() }
@@ -680,7 +680,7 @@ fun RoomPage(
                 val remoteSender = payload.optString("senderName","").takeUnless { it == "null" }.orEmpty()
                 val remoteImage = payload.optString("senderAvatar",payload.optString("senderImage","")).takeUnless { it == "null" }.orEmpty()
                 val sender = remoteSender.ifBlank { cachedSender?.optString("name").orEmpty().ifBlank { "Unknown" } }
-                val image = remoteImage.ifBlank { cachedSender?.optString("image").orEmpty().ifBlank { cachedSender?.optString("photoURL").orEmpty() } }
+                val image = remoteImage.ifBlank { cachedSender?.optString("image").orEmpty().ifBlank { cachedSender?.optString("avatar").orEmpty() } }
                 if (senderId.isNotBlank() && (remoteSender.isNotBlank() || remoteImage.isNotBlank())) {
                     val updatedProfile = cachedSender ?: JSONObject()
                     if (remoteSender.isNotBlank()) updatedProfile.put("name", remoteSender)
@@ -2022,7 +2022,7 @@ private fun formatMusicTime(seconds: Float): String {
                     if (remote.has(key)) merged.put(key, remote.opt(key))
                 }
                 val remoteName = sequenceOf("name", "displayName", "userName").map { remote.optString(it, "") }.firstOrNull { it.isNotBlank() && it != "null" } ?: m.sender
-                val remoteImage = sequenceOf("image", "photo", "photoURL", "avatar", "picture").map { remote.optString(it, "") }.firstOrNull { it.isNotBlank() && it != "null" } ?: m.senderImage
+                val remoteImage = sequenceOf("image", "avatar", "profileImageUrl").map { remote.optString(it, "") }.firstOrNull { it.isNotBlank() && it != "null" } ?: m.senderImage
                 if (remoteName.isNotBlank()) merged.put("name", remoteName)
                 if (remoteImage.isNotBlank()) merged.put("image", remoteImage)
                 profileDb.saveProfile(m.senderAccountId, merged)
@@ -2045,7 +2045,7 @@ private fun formatMusicTime(seconds: Float): String {
     
     Row(Modifier.fillMaxWidth().padding(vertical=2.dp),verticalAlignment=Alignment.Top,horizontalArrangement=Arrangement.Start){
         val cachedName = profileTags?.let { profile -> sequenceOf("name", "displayName", "userName").map { profile.optString(it, "") }.firstOrNull { it.isNotBlank() && it != "null" } }.orEmpty()
-        val cachedImage = profileTags?.let { profile -> sequenceOf("image", "photo", "photoURL", "avatar", "picture").map { profile.optString(it, "") }.firstOrNull { it.isNotBlank() && it != "null" } }.orEmpty()
+        val cachedImage = profileTags?.let { profile -> sequenceOf("image", "avatar", "profileImageUrl").map { profile.optString(it, "") }.firstOrNull { it.isNotBlank() && it != "null" } }.orEmpty()
         FallbackAsyncImage(model=if (m.senderAccountId in setOf("100002", "100003", "500002")) "https://zyora-voice-chat.vercel.app/logo.png" else cachedImage.ifBlank { m.senderImage },contentDescription=cachedName.ifBlank { m.sender },modifier=Modifier.padding(top=2.dp).size(28.dp).clip(CircleShape).border(1.dp, Color.White.copy(alpha=.1f), CircleShape).clickable(onClick = onAvatarClick),contentScale=ContentScale.Crop)
         
         Column(Modifier.padding(start=8.dp).fillMaxWidth(.75f),verticalArrangement=Arrangement.spacedBy(2.dp)){
