@@ -115,7 +115,7 @@ fun RoomProfile(
     var loadedProfile by remember(profileCacheKeys) { mutableStateOf(cachedProfile) }
 
     var displayName by remember(user.uid, user.id, user.accountId, user.name, cachedProfile) { mutableStateOf(cachedProfile?.optString("name")?.takeIf { it.isNotBlank() && it != "null" } ?: user.name.ifBlank { "User" }) }
-    var displayImage by remember(user.uid, user.id, user.accountId, user.image, cachedProfile) { mutableStateOf(sequenceOf("image", "photo", "photoURL", "avatar", "picture").map { cachedProfile?.optString(it, "").orEmpty() }.firstOrNull { it.isNotBlank() && it != "null" } ?: user.image) }
+    var displayImage by remember(user.uid, user.id, user.accountId, user.image, cachedProfile) { mutableStateOf(sequenceOf("image", "avatar", "profileImageUrl").map { cachedProfile?.optString(it, "").orEmpty() }.firstOrNull { it.isNotBlank() && it != "null" } ?: user.image) }
     val displayProfileImage = if (user.accountId in setOf("100002", "100003", "500002") || user.id in setOf("100002", "100003", "500002")) "https://zyora-voice-chat.vercel.app/logo.png" else displayImage
     var displayGender by remember(user.uid, user.id, user.accountId, user.gender, cachedProfile) { mutableStateOf(cachedProfile?.optString("gender")?.takeIf { it.isNotBlank() && it != "null" } ?: user.gender) }
     var displayAge by remember(user.uid, user.id, user.accountId, user.age, cachedProfile) { mutableIntStateOf(if (cachedProfile?.has("age") == true) cachedProfile.optInt("age", user.age) else user.age) }
@@ -139,11 +139,11 @@ fun RoomProfile(
             val keys = remote.keys()
             while (keys.hasNext()) {
                 val key = keys.next()
-                if (key !in setOf("name", "displayName", "userName", "image", "photo", "photoURL", "avatar", "picture")) merged.put(key, remote.opt(key))
+                if (key !in setOf("name", "displayName", "userName", "image", "avatar", "profileImageUrl")) merged.put(key, remote.opt(key))
             }
         }
         remote?.let { latest ->
-            sequenceOf("name", "displayName", "userName", "nickname", "image", "photo", "photoURL", "avatar", "picture", "profileImage", "avatarUrl").forEach { key ->
+            sequenceOf("name", "displayName", "userName", "nickname", "image", "avatar", "profileImageUrl").forEach { key ->
                 val value = latest.optString(key, "").trim()
                 val isPlaceholderName = key in setOf("name", "displayName", "userName", "nickname") && value.equals("User", ignoreCase = true)
                 val isPlaceholderAvatar = key in setOf("image", "photo", "photoURL", "avatar", "picture", "profileImage", "avatarUrl") &&
