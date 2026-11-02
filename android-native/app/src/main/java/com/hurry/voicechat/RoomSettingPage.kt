@@ -56,7 +56,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil3.compose.AsyncImage
-import io.socket.client.IO
 import io.socket.emitter.Emitter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -171,20 +170,6 @@ private suspend fun saveRoomSettingsRemote(roomId: String, userId: String, data:
         }
     } finally { connection.disconnect() }
 
-    runCatching {
-        val socket = IO.socket(SETTINGS_API)
-        socket.connect()
-        val event = JSONObject()
-            .put("roomId", roomId).put("userId", userId).put("roomOwnerId", roomId)
-            .put("roomName", data.roomName).put("roomDp", data.roomDp)
-            .put("announcement", data.announcement).put("micMode", data.micMode)
-            .put("theme", data.theme).put("isLocked", data.isLocked)
-            .put("roomPassword", data.roomPassword).put("updatedAt", System.currentTimeMillis())
-        socket.emit("room_settings_update", event)
-        kotlinx.coroutines.delay(350)
-        socket.disconnect()
-        socket.close()
-    }
 }
 
 @Composable
