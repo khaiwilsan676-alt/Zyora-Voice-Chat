@@ -18,7 +18,7 @@ internal object ProfilePersistence {
     private const val API = "https://zyora-server.onrender.com"
 
 
-    suspend fun uploadDpToGitHub(dataUri: String, userId: String, folder: String = "user-dp"): String? = withContext(Dispatchers.IO) {
+    suspend fun uploadImageToMongoDB(dataUri: String, userId: String, folder: String = "user-dp"): String? = withContext(Dispatchers.IO) {
         if (!dataUri.startsWith("data:image/") || userId.isBlank()) return@withContext null
         val payload = JSONObject().put("userId", userId).put("folder", folder).put("imageData", dataUri).toString().toByteArray(Charsets.UTF_8)
         var endpoint = URL("$API/api/upload-image")
@@ -57,8 +57,8 @@ internal object ProfilePersistence {
                     throw IllegalStateException(message?.takeIf { it.isNotBlank() } ?: "Image upload failed (HTTP $status).")
                 }
                 val hostedUrl = JSONObject(response).optString("url")
-                return@withContext hostedUrl.takeIf { it.startsWith("$API/api/profile-image?path=") || it.startsWith("https://raw.githubusercontent.com/") }
-                    ?: throw IllegalStateException("Image uploaded but the server returned an invalid image URL.")
+                return@withContext hostedUrl.takeIf { it.startsWith("$API/api/profile-image?id=") }
+                    ?: throw IllegalStateException("MongoDB uploaded the image but returned an invalid image URL.")
             } finally {
                 connection.disconnect()
             }
