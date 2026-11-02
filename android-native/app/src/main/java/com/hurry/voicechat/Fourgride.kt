@@ -742,7 +742,7 @@ fun MiniMusicControllerCard(
                                         MusicPlaybackState.isPlaying = true
                                         MusicPlaybackState.currentTrack = prevTrack
                                     }
-                                }.padding(4.dp)
+                                }.size(24.dp)
                             )
 
                             Box(
@@ -791,11 +791,12 @@ fun MiniMusicControllerCard(
                                         MusicPlaybackState.isPlaying = true
                                         MusicPlaybackState.currentTrack = nextTrack
                                     }
-                                }.padding(4.dp)
+                                }.size(24.dp)
                             )
 
                             Box(
                                 modifier = Modifier
+                                    .size(24.dp)
                                     .clickable {
                                         val enabled = !MusicPlaybackState.repeatOne
                                         MusicPlaybackState.repeatOne = enabled
@@ -805,7 +806,7 @@ fun MiniMusicControllerCard(
                                                 .putExtra(RoomMusicService.EXTRA_REPEAT_ONE, enabled)
                                         )
                                     }
-                                    .padding(4.dp),
+                                    .size(24.dp),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
@@ -826,7 +827,7 @@ fun MiniMusicControllerCard(
                                 imageVector = Icons.Default.VolumeUp,
                                 contentDescription = "Volume",
                                 tint = Color.White,
-                                modifier = Modifier.clickable { showVolumeView = true }.padding(4.dp)
+                                modifier = Modifier.size(24.dp).clickable { showVolumeView = true }
                             )
                         }
                     }
