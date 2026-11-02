@@ -4,6 +4,7 @@ const express = require("express");
 const http = require("http");
 const cors = require("cors");
 const { Server } = require("socket.io");
+const { MongoClient } = require("mongodb");
 const { GitHubClient } = require("./github-document-db");
 const { redis, checkRedisConnection, setOnlineStatus, removeOnlineStatus, setSecondaryStatus, removeSecondaryStatus } = require("./redis");
 
@@ -65,6 +66,9 @@ const io = new Server(server, {
 
 const databaseClient = new GitHubClient();
 let db = null;
+let mediaMongoClient = null;
+let mediaDb = null;
+let mediaMongoConnecting = false;
 
 const crypto = require("node:crypto");
 function authSession() { return crypto.randomBytes(32).toString("base64url"); }
@@ -795,7 +799,7 @@ app.get("/api/users", async (req, res) => {
         displayUserNumber: numberId,
         name: user.name || user.displayName || user.userName || "User",
         email: user.email || user.gmail || user.emailPhone || "",
-        image: user.image || user.photo || user.photoURL || user.avatar || "/default-avatar.png",
+        image: user.image || user.avatar || user.profileImageUrl || "/default-avatar.png",
         country: user.country || "🇮🇳",
       };
     };
@@ -1028,130 +1032,71 @@ app.post("/api/users/unblock", async (req, res) => {
   }
 });
 
-// Profile media is stored in the same private GitHub data repository as user records.
-function profileMediaConfig() {
-  // Prefer dedicated media credentials/repository when configured. Database and
-  // media storage can live in different private repositories.
-  return {
-    token: String(process.env.GITHUB_UPLOAD_TOKEN || process.env.GITHUB_DATA_TOKEN || process.env.GITHUB_TOKEN || "").trim(),
-    repository: String(process.env.GITHUB_UPLOAD_REPOSITORY || process.env.GITHUB_DATA_REPOSITORY || "khaiwilsan676-alt/Zyora-Server").trim(),
-    branch: String(process.env.GITHUB_UPLOAD_BRANCH || process.env.GITHUB_DATA_BRANCH || "main").trim()
-  };
-}
+// Profile and room image bytes are stored in MongoDB, independent of GitHub tokens.
 const PROFILE_MEDIA_FOLDERS = new Set(["user-dp", "user-albums", "user-covers", "room-dp", "room-theme"]);
-const PROFILE_MEDIA_TYPES = {
-  "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif"
-};
+const PROFILE_MEDIA_TYPES = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif" };
+async function connectMediaMongo() {
+  if (mediaDb || mediaMongoConnecting) return mediaDb;
+  const uri = String(process.env.MONGODB_URI || process.env.MONGO_URL || "").trim();
+  if (!uri) return null;
+  mediaMongoConnecting = true;
+  try {
+    mediaMongoClient = new MongoClient(uri, { serverSelectionTimeoutMS: 10000, maxPoolSize: 5 });
+    await mediaMongoClient.connect();
+    const dbName = String(process.env.MONGODB_DB_NAME || "").trim();
+    mediaDb = dbName ? mediaMongoClient.db(dbName) : mediaMongoClient.db();
+    console.log("MongoDB profile media storage ready");
+    return mediaDb;
+  } catch (error) {
+    console.error("MongoDB media connection failed:", error.message);
+    mediaMongoClient = null; mediaDb = null;
+    return null;
+  } finally { mediaMongoConnecting = false; }
+}
 app.post("/api/upload-image", async (req, res) => {
   try {
-    const { token, repository, branch } = profileMediaConfig();
-    if (!token || !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository)) {
-      return res.status(503).json({ error: "GitHub profile image storage is not configured." });
-    }
+    const mongo = mediaDb || await connectMediaMongo();
+    if (!mongo) return res.status(503).json({ error: "MongoDB image storage is unavailable. Check MONGODB_URI on the server." });
     const userId = String(req.body?.userId || "").trim();
     const folderInput = String(req.body?.folder || "user-dp");
     const folder = PROFILE_MEDIA_FOLDERS.has(folderInput) ? folderInput : "user-dp";
     const dataUri = String(req.body?.imageData || "");
     const match = dataUri.match(/^data:(image\/(?:jpeg|png|webp|gif));base64,([A-Za-z0-9+/=]+)$/);
-    // Google/email UIDs contain ":"; hash the stable identity for a safe GitHub path segment.
     if (!userId || userId.length > 256) return res.status(400).json({ error: "A valid user ID is required." });
-    const storageId = crypto.createHash("sha256").update(userId).digest("hex").slice(0, 32);
     if (!match) return res.status(400).json({ error: "A valid image is required." });
-    const extension = PROFILE_MEDIA_TYPES[match[1]];
     const bytes = Buffer.from(match[2], "base64");
-    if (!extension || bytes.length <= 0 || bytes.length > 5 * 1024 * 1024) {
-      return res.status(413).json({ error: "Profile image must be 5 MB or smaller." });
+    if (!PROFILE_MEDIA_TYPES[match[1]] || bytes.length <= 0 || bytes.length > 5 * 1024 * 1024) return res.status(413).json({ error: "Image must be 5 MB or smaller." });
+    const identity = crypto.createHash("sha256").update(folder + ":" + userId).digest("hex");
+    const mediaId = folder + "-" + identity;
+    await mongo.collection("profileMedia").updateOne({ _id: mediaId }, {
+      $set: { ownerId: userId, folder, contentType: match[1], data: bytes.toString("base64"), size: bytes.length, updatedAt: Date.now() },
+      $setOnInsert: { createdAt: Date.now() }
+    }, { upsert: true });
+    const url = "https://zyora-server.onrender.com/api/profile-image?id=" + encodeURIComponent(mediaId);
+    if (folder === "user-dp" && db) {
+      const avatarFields = { image: url, avatar: url, photo: url, imageUrl: url, profileImageUrl: url, imageUpdatedAt: new Date().toISOString(), updatedAt: Date.now() };
+      await db.collection("users").updateOne({ $or: [{ uid: userId }, { id: userId }, { appLongId: userId }, { accountId: userId }, { accountNumber: userId }, { displayUserNumber: userId }] },
+        { $set: avatarFields, $setOnInsert: { uid: userId, id: userId, appLongId: userId, createdAt: Date.now() } }, { upsert: true });
     }
-    const prefix = folder === "user-dp" || folder === "room-dp" ? "dp" : folder === "user-albums" ? "album" : folder === "user-covers" ? "cover" : "theme";
-    const path = "public/" + folder + "/" + storageId + "/" + prefix + "-" + Date.now() + "." + extension;
-    const apiUrl = "https://api.github.com/repos/" + repository + "/contents/" + path.split("/").map(encodeURIComponent).join("/");
-    const upload = await fetch(apiUrl, {
-      method: "PUT",
-      headers: {
-        Accept: "application/vnd.github+json",
-        Authorization: "Bearer " + token,
-        "X-GitHub-Api-Version": "2022-11-28",
-        "Content-Type": "application/json",
-        "User-Agent": "Zyora-Profile-Media"
-      },
-      body: JSON.stringify({ message: "Upload " + folder + " image for " + userId, content: bytes.toString("base64"), branch })
-    });
-    const result = await upload.json().catch(() => ({}));
-    if (!upload.ok) {
-      console.error("Profile image GitHub upload failed:", upload.status, result.message || "");
-      const reason = String(result.message || "GitHub rejected the upload").slice(0, 180);
-      return res.status(502).json({
-        error: "GitHub image upload failed (HTTP " + upload.status + "): " + reason,
-        githubStatus: upload.status
-      });
-    }
-    const url = "https://zyora-server.onrender.com/api/profile-image?path=" + encodeURIComponent(path);
-
-    // A profile photo upload must also persist its GitHub URL in the canonical
-    // GitHub-backed user metadata. This runs before returning success, so the
-    // client never treats an uploaded-but-unlinked image as a completed upload.
-    if (folder === "user-dp") {
-      if (!db) {
-        return res.status(503).json({ error: "GitHub user metadata storage is not connected." });
-      }
-      await db.collection("users").updateOne(
-        { $or: [
-          { uid: userId }, { id: userId }, { appLongId: userId },
-          { accountId: userId }, { accountNumber: userId }, { displayUserNumber: userId }
-        ] },
-        {
-          $set: {
-            image: url,
-            avatar: url,
-            photo: url,
-            photoURL: url,
-            imageUrl: url,
-            profileImageUrl: url,
-            imageUpdatedAt: new Date().toISOString(),
-            updatedAt: Date.now()
-          },
-          $setOnInsert: {
-            uid: userId,
-            id: userId,
-            appLongId: userId,
-            createdAt: Date.now()
-          }
-        },
-        { upsert: true }
-      );
-    }
-
-    return res.json({ success: true, url, path, size: bytes.length, metadataSaved: folder === "user-dp" });
+    return res.json({ success: true, url, mediaId, size: bytes.length, storage: "mongodb" });
   } catch (error) {
-    console.error("POST /api/upload-image error:", error.message);
-    return res.status(502).json({ error: "Profile image upload is temporarily unavailable." });
+    console.error("POST /api/upload-image MongoDB error:", error.message);
+    return res.status(500).json({ error: "MongoDB image upload failed: " + String(error.message || "unknown error").slice(0, 140) });
   }
 });
 app.get("/api/profile-image", async (req, res) => {
   try {
-    const { token, repository, branch } = profileMediaConfig();
-    const path = String(req.query.path || "");
-    if (!token) return res.status(503).end();
-    if (!/^public\/(user-dp|user-albums|user-covers|room-dp|room-theme)\/[A-Za-z0-9_-]{1,100}\/[A-Za-z0-9_-]+\.(jpg|png|webp|gif)$/.test(path)) {
-      return res.status(400).end();
-    }
-    const apiUrl = "https://api.github.com/repos/" + repository + "/contents/" + path.split("/").map(encodeURIComponent).join("/") + "?ref=" + encodeURIComponent(branch);
-    const imageResponse = await fetch(apiUrl, {
-      headers: {
-        Accept: "application/vnd.github.raw",
-        Authorization: "Bearer " + token,
-        "X-GitHub-Api-Version": "2022-11-28",
-        "User-Agent": "Zyora-Profile-Media"
-      }
-    });
-    if (!imageResponse.ok) return res.status(imageResponse.status === 404 ? 404 : 502).end();
-    res.setHeader("Content-Type", imageResponse.headers.get("content-type") || "image/jpeg");
-    res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
-    return res.send(Buffer.from(await imageResponse.arrayBuffer()));
-  } catch (error) {
-    console.error("GET /api/profile-image error:", error.message);
-    return res.status(502).end();
-  }
+    const mongo = mediaDb || await connectMediaMongo();
+    const mediaId = String(req.query.id || "").trim();
+    if (!mongo || !mediaId) return res.status(404).end();
+    const item = await mongo.collection("profileMedia").findOne({ _id: mediaId });
+    if (!item?.data) return res.status(404).end();
+    const bytes = Buffer.from(item.data, "base64");
+    res.setHeader("Content-Type", item.contentType || "image/jpeg");
+    res.setHeader("Content-Length", bytes.length);
+    res.setHeader("Cache-Control", "public, max-age=300, stale-while-revalidate=600");
+    return res.send(bytes);
+  } catch (error) { console.error("GET /api/profile-image MongoDB error:", error.message); return res.status(500).end(); }
 });
 
 app.put("/api/users", async (req, res) => {
@@ -2955,6 +2900,7 @@ app.get("/health", (_req, res) => {
     service: "Zyora Backend",
     socket: "ready",
     database: db ? "github-database-connected" : "github-database-unavailable",
+    imageStorage: mediaDb ? "mongodb-connected" : (process.env.MONGODB_URI || process.env.MONGO_URL ? "mongodb-connecting" : "mongodb-uri-missing"),
   });
 });
 
@@ -2988,4 +2934,5 @@ function startGitHubRetryLoop() {
 server.listen(PORT, "0.0.0.0", () => {
   console.log(`Zyora Backend listening on port ${PORT}`);
   startGitHubRetryLoop();
+  void connectMediaMongo();
 });
