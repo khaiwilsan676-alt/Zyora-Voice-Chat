@@ -992,7 +992,7 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                                 val roomOwnerAccountId = roomOwner.accountId.ifBlank { roomOwner.id.ifBlank { roomId } }
                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp), modifier = Modifier.offset(y = (-3).dp)) {
                                     when (roomOwnerAccountId) {
-                                        "100002", "100003", "500001" -> {
+                                        "100002", "100003", "500001", "500002" -> {
                                             AsyncImage(
                                                 model = "https://zyora-voice-chat.vercel.app/IMG_20261101_125212.png",
                                                 contentDescription = "Purple ID Badge",
@@ -2041,14 +2041,15 @@ private fun formatMusicTime(seconds: Float): String {
     val isRoomOwnerMessage = m.senderAccountId == roomOwnerId
     val isCoreOfficial = m.senderAccountId == "100002" || m.senderAccountId == "100003"
     val isRedOfficial = m.senderAccountId == "500001"
+    val is500002Official = m.senderAccountId == "500002"
     
-    val officialHeadTag = isCoreOfficial || profileTags?.optBoolean("officialHeadTag", false) == true
-    val officialTag = isCoreOfficial || isRedOfficial || profileTags?.optBoolean("officialTag", false) == true
-    val adminTag = isCoreOfficial || profileTags?.optBoolean("adminTag", false) == true
-    val serviceTag = isCoreOfficial || profileTags?.optBoolean("serviceTag", false) == true || profileTags?.optBoolean("csTag", false) == true
-    val hostTag = isCoreOfficial || profileTags?.optBoolean("hostTag", false) == true || profileTags?.optBoolean("isHost", false) == true
-    val coinSellerTag = isCoreOfficial || profileTags?.optBoolean("coinSellerTag", false) == true || profileTags?.optBoolean("coinSeller", false) == true || profileTags?.optBoolean("sellerTag", false) == true
-    val showPurpleIdImage = isCoreOfficial || isRedOfficial
+    val officialHeadTag = !is500002Official && (isCoreOfficial || profileTags?.optBoolean("officialHeadTag", false) == true)
+    val officialTag = isCoreOfficial || isRedOfficial || is500002Official || profileTags?.optBoolean("officialTag", false) == true
+    val adminTag = !is500002Official && (isCoreOfficial || profileTags?.optBoolean("adminTag", false) == true)
+    val serviceTag = !is500002Official && (isCoreOfficial || profileTags?.optBoolean("serviceTag", false) == true || profileTags?.optBoolean("csTag", false) == true)
+    val hostTag = !is500002Official && (isCoreOfficial || profileTags?.optBoolean("hostTag", false) == true || profileTags?.optBoolean("isHost", false) == true)
+    val coinSellerTag = !is500002Official && (isCoreOfficial || profileTags?.optBoolean("coinSellerTag", false) == true || profileTags?.optBoolean("coinSeller", false) == true || profileTags?.optBoolean("sellerTag", false) == true)
+    val showPurpleIdImage = isCoreOfficial || isRedOfficial || is500002Official
     
     Row(Modifier.fillMaxWidth().padding(vertical=2.dp),verticalAlignment=Alignment.Top,horizontalArrangement=Arrangement.Start){
         val cachedName = profileTags?.let { profile -> sequenceOf("name", "displayName", "userName").map { profile.optString(it, "") }.firstOrNull { it.isNotBlank() && it != "null" } }.orEmpty()
@@ -2114,7 +2115,7 @@ private val Int.percentHeight: androidx.compose.ui.unit.Dp
 
 @Composable private fun MemberSheet(seat:NativeRoomSeat,onClose:()->Unit)=SimpleSheet("Member",onClose){
     FallbackAsyncImage(model=if (seat.accountId in setOf("100002", "100003", "500002")) "https://zyora-voice-chat.vercel.app/logo.png" else seat.userImage,contentDescription=null,modifier=Modifier.size(76.dp).clip(CircleShape),contentScale=ContentScale.Crop)
-    Text(seat.userName,color=Color.White,fontSize=17.sp);Text("ID: "+seat.accountId,color=Color.White.copy(.65f),fontSize=12.sp)
+    Text(seat.userName,color=Color.White,fontSize=17.sp);if (seat.accountId == "500002") { Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(3.dp)) { AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261101_125212.png",contentDescription="Purple ID Badge",contentScale=ContentScale.Fit,modifier=Modifier.height(18.dp).widthIn(max=28.dp)); Text(seat.accountId,color=Color.White.copy(.65f),fontSize=12.sp) } } else Text("ID: "+seat.accountId,color=Color.White.copy(.65f),fontSize=12.sp)
 }
 
 @Composable private fun GamesSheet(onClose:()->Unit,onWildParty:()->Unit,onFruitParty:()->Unit){
