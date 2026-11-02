@@ -167,8 +167,9 @@ fun RoomProfile(
     // Tag States
     val isCoreOfficialAccount = user.accountId == "100002" || user.accountId == "100003" || user.id == "100002" || user.id == "100003"
     val isRedOfficialAccount = user.accountId == "500001" || user.id == "500001"
+    val is500002OfficialAccount = user.accountId == "500002" || user.id == "500002"
     var adminTag by remember(user.adminTag, cachedProfile, isCoreOfficialAccount) { mutableStateOf(isCoreOfficialAccount || user.adminTag == true || cachedProfile?.optBoolean("adminTag", false) == true) }
-    var officialTag by remember(user.officialTag, cachedProfile, isCoreOfficialAccount, isRedOfficialAccount) { mutableStateOf(isCoreOfficialAccount || isRedOfficialAccount || user.officialTag == true || cachedProfile?.optBoolean("officialTag", false) == true) }
+    var officialTag by remember(user.officialTag, cachedProfile, isCoreOfficialAccount, isRedOfficialAccount, is500002OfficialAccount) { mutableStateOf(isCoreOfficialAccount || isRedOfficialAccount || is500002OfficialAccount || user.officialTag == true || cachedProfile?.optBoolean("officialTag", false) == true) }
     var officialHeadTag by remember(user.officialHeadTag, cachedProfile, isCoreOfficialAccount) { mutableStateOf(isCoreOfficialAccount || user.officialHeadTag == true || cachedProfile?.optBoolean("officialHeadTag", false) == true) }
     var serviceTag by remember(user.serviceTag, cachedProfile, isCoreOfficialAccount) { mutableStateOf(isCoreOfficialAccount || user.serviceTag == true || cachedProfile?.optBoolean("serviceTag", false) == true) }
     var coinSellerTag by remember(user.coinSellerTag, cachedProfile, isCoreOfficialAccount) { mutableStateOf(isCoreOfficialAccount || user.coinSellerTag == true || cachedProfile?.optBoolean("coinSellerTag", false) == true) }
@@ -307,7 +308,7 @@ fun RoomProfile(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center
                     ) {
-                        if (isCoreOfficialAccount) {
+                        if (isCoreOfficialAccount || is500002OfficialAccount) {
                             AsyncImage(model = "IMG_20261101_125212.png".fullUrl(), contentDescription = "Purple ID Badge", contentScale = ContentScale.Fit, modifier = Modifier.height(30.dp).widthIn(min = 22.dp, max = 35.dp).padding(end = 4.dp))
                             Text(accountId, color = Color.DarkGray, fontSize = 14.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(start = 4.dp))
                         } else if (isRedOfficialAccount) {
