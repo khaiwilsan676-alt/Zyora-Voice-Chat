@@ -67,6 +67,7 @@ object MusicPlaybackState {
     var wasPlayedOnMusicPage: Boolean by mutableStateOf(false)
     var musicPageBackPressed: Boolean by mutableStateOf(false)
     var playlist: List<NativeMusicTrack> by mutableStateOf(emptyList())
+    var repeatOne: Boolean by mutableStateOf(false)
 }
 
 data class NativeMusicTrack(val id: String, val name: String, val url: String, val duration: Long = 0L)
@@ -549,7 +550,7 @@ fun MiniMusicControllerCard(
         Card(
             modifier = modifier
                 .fillMaxWidth()
-                .height(150.dp)
+                .height(160.dp)
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(containerColor = Color.Black),
@@ -703,99 +704,118 @@ fun MiniMusicControllerCard(
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
-                            imageVector = Icons.Default.QueueMusic, 
-                            contentDescription = "Playlist", 
+                            imageVector = Icons.Default.QueueMusic,
+                            contentDescription = "Open music page",
                             tint = Color.White,
-                            modifier = Modifier.clickable { /* TBD */ }.padding(4.dp)
-                        )
-                        
-                        Icon(
-                            imageVector = Icons.Default.SkipPrevious, 
-                            contentDescription = "Previous", 
-                            tint = Color.White,
-                            modifier = Modifier.clickable {
-                                val playlist = MusicPlaybackState.playlist
-                                val currentIndex = playlist.indexOfFirst { it.url == track.url }
-                                if (currentIndex > 0) {
-                                    val prevTrack = playlist[currentIndex - 1]
-                                    val playIntent = Intent(context, RoomMusicService::class.java)
-                                        .setAction(RoomMusicService.ACTION_PLAY)
-                                        .putExtra(RoomMusicService.EXTRA_URI, prevTrack.url)
-                                        .putExtra(RoomMusicService.EXTRA_TITLE, prevTrack.name)
-                                    ContextCompat.startForegroundService(context, playIntent)
-                                    MusicPlaybackState.currentPlayingUri = prevTrack.url
-                                    MusicPlaybackState.isPlaying = true
-                                    MusicPlaybackState.currentTrack = prevTrack
-                                }
-                            }.padding(4.dp)
-                        )
-                        
-                        Box(
                             modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(Color.White)
                                 .clickable {
-                                    if (isPlaying) {
-                                        context.startService(Intent(context, RoomMusicService::class.java).setAction(RoomMusicService.ACTION_PAUSE))
-                                        MusicPlaybackState.isPlaying = false
-                                    } else {
-                                        val playIntent = Intent(context, RoomMusicService::class.java)
-                                            .setAction(RoomMusicService.ACTION_PLAY)
-                                            .putExtra(RoomMusicService.EXTRA_URI, track.url)
-                                            .putExtra(RoomMusicService.EXTRA_TITLE, track.name)
-                                        ContextCompat.startForegroundService(context, playIntent)
-                                        MusicPlaybackState.isPlaying = true
-                                    }
-                                },
-                            contentAlignment = Alignment.Center
+                                    MusicPlaybackState.isMusicPageOpen = true
+                                    onOpenMusicPage()
+                                }
+                                .padding(4.dp)
+                        )
+
+                        Spacer(modifier = Modifier.weight(1f))
+
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(0.2.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
-                                imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                                contentDescription = "Play/Pause",
-                                tint = Color.Black,
-                                modifier = Modifier.size(32.dp)
+                                imageVector = Icons.Default.SkipPrevious,
+                                contentDescription = "Previous",
+                                tint = Color.White,
+                                modifier = Modifier.clickable {
+                                    val playlist = MusicPlaybackState.playlist
+                                    val currentIndex = playlist.indexOfFirst { it.url == track.url }
+                                    if (currentIndex > 0) {
+                                        val prevTrack = playlist[currentIndex - 1]
+                                        val playIntent = Intent(context, RoomMusicService::class.java)
+                                            .setAction(RoomMusicService.ACTION_PLAY)
+                                            .putExtra(RoomMusicService.EXTRA_URI, prevTrack.url)
+                                            .putExtra(RoomMusicService.EXTRA_TITLE, prevTrack.name)
+                                        ContextCompat.startForegroundService(context, playIntent)
+                                        MusicPlaybackState.currentPlayingUri = prevTrack.url
+                                        MusicPlaybackState.isPlaying = true
+                                        MusicPlaybackState.currentTrack = prevTrack
+                                    }
+                                }.padding(4.dp)
+                            )
+
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.White, CircleShape)
+                                    .clickable {
+                                        if (isPlaying) {
+                                            context.startService(Intent(context, RoomMusicService::class.java).setAction(RoomMusicService.ACTION_PAUSE))
+                                            MusicPlaybackState.isPlaying = false
+                                        } else {
+                                            val playIntent = Intent(context, RoomMusicService::class.java)
+                                                .setAction(RoomMusicService.ACTION_PLAY)
+                                                .putExtra(RoomMusicService.EXTRA_URI, track.url)
+                                                .putExtra(RoomMusicService.EXTRA_TITLE, track.name)
+                                            ContextCompat.startForegroundService(context, playIntent)
+                                            MusicPlaybackState.isPlaying = true
+                                        }
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                    contentDescription = "Play/Pause",
+                                    tint = Color.Black,
+                                    modifier = Modifier.size(32.dp)
+                                )
+                            }
+
+                            Icon(
+                                imageVector = Icons.Default.SkipNext,
+                                contentDescription = "Next",
+                                tint = Color.White,
+                                modifier = Modifier.clickable {
+                                    val playlist = MusicPlaybackState.playlist
+                                    val currentIndex = playlist.indexOfFirst { it.url == track.url }
+                                    if (currentIndex != -1 && currentIndex < playlist.size - 1) {
+                                        val nextTrack = playlist[currentIndex + 1]
+                                        val playIntent = Intent(context, RoomMusicService::class.java)
+                                            .setAction(RoomMusicService.ACTION_PLAY)
+                                            .putExtra(RoomMusicService.EXTRA_URI, nextTrack.url)
+                                            .putExtra(RoomMusicService.EXTRA_TITLE, nextTrack.name)
+                                        ContextCompat.startForegroundService(context, playIntent)
+                                        MusicPlaybackState.currentPlayingUri = nextTrack.url
+                                        MusicPlaybackState.isPlaying = true
+                                        MusicPlaybackState.currentTrack = nextTrack
+                                    }
+                                }.padding(4.dp)
+                            )
+
+                            Icon(
+                                imageVector = Icons.Default.RepeatOne,
+                                contentDescription = "Repeat one",
+                                tint = if (MusicPlaybackState.repeatOne) Color(0xFF3B82F6) else Color.White,
+                                modifier = Modifier.clickable {
+                                    val enabled = !MusicPlaybackState.repeatOne
+                                    MusicPlaybackState.repeatOne = enabled
+                                    context.startService(
+                                        Intent(context, RoomMusicService::class.java)
+                                            .setAction(RoomMusicService.ACTION_REPEAT_ONE)
+                                            .putExtra(RoomMusicService.EXTRA_REPEAT_ONE, enabled)
+                                    )
+                                }.padding(4.dp)
+                            )
+
+                            Icon(
+                                imageVector = Icons.Default.VolumeUp,
+                                contentDescription = "Volume",
+                                tint = Color.White,
+                                modifier = Modifier.clickable { showVolumeView = true }.padding(4.dp)
                             )
                         }
-
-                        Icon(
-                            imageVector = Icons.Default.SkipNext, 
-                            contentDescription = "Next", 
-                            tint = Color.White,
-                            modifier = Modifier.clickable {
-                                val playlist = MusicPlaybackState.playlist
-                                val currentIndex = playlist.indexOfFirst { it.url == track.url }
-                                if (currentIndex != -1 && currentIndex < playlist.size - 1) {
-                                    val nextTrack = playlist[currentIndex + 1]
-                                    val playIntent = Intent(context, RoomMusicService::class.java)
-                                        .setAction(RoomMusicService.ACTION_PLAY)
-                                        .putExtra(RoomMusicService.EXTRA_URI, nextTrack.url)
-                                        .putExtra(RoomMusicService.EXTRA_TITLE, nextTrack.name)
-                                    ContextCompat.startForegroundService(context, playIntent)
-                                    MusicPlaybackState.currentPlayingUri = nextTrack.url
-                                    MusicPlaybackState.isPlaying = true
-                                    MusicPlaybackState.currentTrack = nextTrack
-                                }
-                            }.padding(4.dp)
-                        )
-
-                        Icon(
-                            imageVector = Icons.Default.Repeat, 
-                            contentDescription = "Repeat", 
-                            tint = Color.White,
-                            modifier = Modifier.clickable { /* TBD */ }.padding(4.dp)
-                        )
-
-                        Icon(
-                            imageVector = Icons.Default.VolumeUp, 
-                            contentDescription = "Volume", 
-                            tint = Color.White,
-                            modifier = Modifier.clickable { showVolumeView = true }.padding(4.dp) 
-                        )
                     }
                 }
             }
