@@ -188,8 +188,9 @@ fun RoomInfo(
                     }
                     Column {
                         Text("Host",fontSize=10.sp,fontWeight=FontWeight.Medium,color=Color.White.copy(alpha=.50f))
-                        Text(ownerDisplayName.ifBlank{"Unknown"},Modifier.padding(top=4.dp),
-                            fontSize=12.sp,fontWeight=FontWeight.Medium,color=Color.White)
+                        Text(ownerDisplayName.ifBlank{"Unknown"},Modifier.fillMaxWidth().padding(top=4.dp),
+                            fontSize=12.sp,fontWeight=FontWeight.Medium,color=Color.White,
+                            maxLines=2, softWrap=true)
                     }
                     Column {
                         Text("Announcement:",fontSize=12.sp,fontWeight=FontWeight.Medium,color=Color(0xFF9CA3AF))
@@ -255,8 +256,9 @@ private fun MemberRow(
         )
         Column(Modifier.padding(start = 11.dp).weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(name.ifBlank { "User" }, fontSize = 13.sp, fontWeight = FontWeight.Medium,
-                    color = Color.White, maxLines = 1)
+                Text(name.ifBlank { "User" }, modifier = Modifier.weight(1f),
+                    fontSize = 13.sp, fontWeight = FontWeight.Medium,
+                    color = Color.White, maxLines = 2, softWrap = true)
                 if (role == "Owner") {
                     AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261027_235537.png",
                         contentDescription="Owner", contentScale=ContentScale.Fit,
