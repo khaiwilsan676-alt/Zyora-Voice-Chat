@@ -60,10 +60,7 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
     }
     var photo by remember(uid, cachedProfile) {
         mutableStateOf(
-            sequenceOf("image", "avatar", "profileImageUrl").map { cachedProfile?.optString(it, "").orEmpty() }.firstOrNull { it.isNotBlank() && it != "null" }
-                ?: listOf("image", "avatar", "profileImageUrl")
-                .asSequence().mapNotNull { key -> prefs.getString(key, null)?.takeIf { it.isNotBlank() } }
-                .firstOrNull().orEmpty()
+            sequenceOf("image", "avatar", "profileImageUrl").map { cachedProfile?.optString(it, "").orEmpty() }.firstOrNull { it.isNotBlank() && it != "null" }.orEmpty()
         )
     }
     val savedAccount = prefs.getString("accountNumber", null)?.takeIf { it.isNotBlank() }
