@@ -1110,7 +1110,7 @@ app.get("/api/profile-image", async (req, res) => {
     const legacyImage = await fetch(legacyUrl, { headers: { Accept: "application/vnd.github.raw", Authorization: "Bearer " + legacyToken, "X-GitHub-Api-Version": "2022-11-28", "User-Agent": "Zyora-Legacy-Image-Read" } });
     if (!legacyImage.ok) return res.status(legacyImage.status === 404 ? 404 : 502).end();
     res.setHeader("Content-Type", legacyImage.headers.get("content-type") || "image/jpeg");
-    res.setHeader("Cache-Control", "public, max-age=300, stale-while-revalidate=600");
+    res.setHeader("Cache-Control", "public, max-age=604800, stale-while-revalidate=604800, immutable");
     return res.send(Buffer.from(await legacyImage.arrayBuffer()));
   } catch (error) { console.error("GET /api/profile-image MongoDB error:", error.message); return res.status(500).end(); }
 });
