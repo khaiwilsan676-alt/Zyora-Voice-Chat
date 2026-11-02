@@ -620,7 +620,11 @@ app.put("/api/rooms", async (req, res) => {
     const savedDp = firstText(existingRoom.dp, existingRoom.image, existingRoom.roomDp, existingRoom["Room dp"]);
     const incomingTheme = firstText(data.theme, data.roomTheme, data["Room Theme"]);
     const incomingCustomTheme = firstText(data.customTheme, data.themeImage, existingRoom.customTheme, existingRoom.themeImage);
-    const incomingMessage = firstText(data.message, data.announcement);
+    const hasIncomingMessage = Object.prototype.hasOwnProperty.call(data, "message")
+      || Object.prototype.hasOwnProperty.call(data, "announcement");
+    const incomingMessage = hasIncomingMessage
+      ? String(data.message !== undefined ? data.message : data.announcement ?? "").trim()
+      : firstText(existingRoom.message, existingRoom.announcement);
     const hasLockState = Object.prototype.hasOwnProperty.call(data, "isLocked");
     const hasPassword = Object.prototype.hasOwnProperty.call(data, "roomPassword");
     const incomingAdmins = Array.isArray(data.admin) ? data.admin
@@ -638,7 +642,7 @@ app.put("/api/rooms", async (req, res) => {
       image: incomingDp || savedDp || "/default-avatar.png",
       roomDp: incomingDp || savedDp || "/default-avatar.png",
       country: firstText(data.country, data.Country, existingRoom.country, existingRoom.Country) || "🇮🇳",
-      message: incomingMessage || firstText(existingRoom.message, existingRoom.announcement),
+      message: incomingMessage,
       theme: incomingTheme || firstText(existingRoom.theme, existingRoom.roomTheme, existingRoom["Room Theme"]) || "forest-night",
       customTheme: incomingCustomTheme,
       themeImage: incomingCustomTheme,
