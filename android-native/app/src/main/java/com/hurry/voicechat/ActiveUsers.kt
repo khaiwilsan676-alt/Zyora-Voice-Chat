@@ -52,6 +52,15 @@ fun ActiveUsers(
    val cached = database.loadProfile(user.accountId) ?: JSONObject()
    if (user.name.isNotBlank()) cached.put("name", user.name)
    if (user.image.isNotBlank()) cached.put("image", user.image)
+   val remote = runCatching {
+    ProfilePersistence.load(TargetUser(uid=user.accountId,id=user.accountId,accountId=user.accountId,name=user.name,image=user.image))
+   }.getOrNull()
+   if (remote != null) {
+    listOf("country","countryName","location").forEach { key ->
+     val value = remote.optString(key,"").trim()
+     if (value.isNotBlank() && value!="null") cached.put(key,value)
+    }
+   }
    database.saveProfile(user.accountId, cached)
    user.accountId to sequenceOf("country","countryName","location").map { cached.optString(it,"").trim() }.firstOrNull { it.isNotBlank() && it!="null" }.orEmpty()
   }.toMap()
@@ -89,7 +98,7 @@ fun ActiveUsers(
        Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(5.dp)){
         Text(user.name.ifBlank{"User"},fontSize=13.sp,fontWeight=FontWeight.SemiBold,color=Color.White,maxLines=1)
         if(user.accountId==roomOwnerId){
-         AsyncImage(model=ROOM_ADMIN_TAG,contentDescription="Owner",contentScale=ContentScale.Fit,
+         AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261027_235537.png",contentDescription="Owner",contentScale=ContentScale.Fit,
           modifier=Modifier.height(19.dp).width(42.dp))
         }
        }
@@ -126,7 +135,7 @@ private fun activeCountryFlag(country: String): String {
   "saudi arabia" -> "SA"
   "canada" -> "CA"
   "australia" -> "AU"
-  else -> country.trim().uppercase().takeIf { it.length==2 } ?: return "🌐"
+  else -> country.trim().uppercase().takeIf { it.length==2 } ?: return ""
  }
  return code.map { String(Character.toChars(0x1F1E6 + it.code - 65)) }.joinToString("")
 }
