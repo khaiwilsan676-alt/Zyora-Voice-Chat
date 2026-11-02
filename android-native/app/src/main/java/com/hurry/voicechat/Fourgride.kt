@@ -168,8 +168,8 @@ fun Fourgride(
     val audioPermission = if (Build.VERSION.SDK_INT >= 33)
         Manifest.permission.READ_MEDIA_AUDIO else Manifest.permission.READ_EXTERNAL_STORAGE
 
-    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
-        showDeviceMusic = true
+    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) showDeviceMusic = true
     }
     
     LaunchedEffect(showMusic) {
