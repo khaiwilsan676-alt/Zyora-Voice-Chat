@@ -238,7 +238,7 @@ fun PublicProfileScreen(
         remote?.let { latest ->
             // Normalize server aliases so a fresh install restores the same profile name and DP.
             val remoteName = sequenceOf("name", "displayName", "userName", "nickname").map { latest.optString(it, "").trim() }.firstOrNull { it.isNotBlank() && it != "null" && !it.equals("User", ignoreCase = true) }
-            val remoteAvatar = sequenceOf("image", "avatar", "profileImageUrl").map { latest.optString(it, "").trim() }.firstOrNull { it.isNotBlank() && it != "null" && !it.endsWith("/default-avatar.png") }
+            val remoteAvatar = sequenceOf("image", "avatar", "profileImageUrl").map { latest.optString(it, "").trim() }.firstOrNull { it.isNotBlank() && it != "null" }
             if (!remoteName.isNullOrBlank()) {
                 merged.put("name", remoteName)
                 merged.put("displayName", remoteName)
