@@ -198,12 +198,13 @@ fun PublicProfileScreen(
     val displayAccNum = targetUser?.displayAccountNumber?.takeIf { it.isNotBlank() } ?: targetUser?.accountId?.takeIf { it.isNotBlank() } ?: "—"
     val isCoreOfficial = displayAccNum == "100002" || displayAccNum == "100003"
     val isRedOfficial = displayAccNum == "500001"
-    val showOfficialHead = isCoreOfficial || targetUser?.officialHeadTag == true || liveProfileTags?.optBoolean("officialHeadTag", false) == true
-    val showOfficial = isCoreOfficial || isRedOfficial || targetUser?.officialTag == true || liveProfileTags?.optBoolean("officialTag", false) == true
-    val showAdmin = isCoreOfficial || targetUser?.adminTag == true || liveProfileTags?.optBoolean("adminTag", false) == true
-    val showService = isCoreOfficial || targetUser?.serviceTag == true || liveProfileTags?.optBoolean("serviceTag", false) == true || liveProfileTags?.optBoolean("csTag", false) == true
-    val showHost = isCoreOfficial || liveProfileTags?.optBoolean("hostTag", false) == true || liveProfileTags?.optBoolean("isHost", false) == true
-    val showCoinSeller = isCoreOfficial || targetUser?.coinSellerTag == true || liveProfileTags?.optBoolean("coinSellerTag", false) == true || liveProfileTags?.optBoolean("coinSeller", false) == true || liveProfileTags?.optBoolean("sellerTag", false) == true
+    val is500002Official = displayAccNum == "500002"
+    val showOfficialHead = !is500002Official && (isCoreOfficial || targetUser?.officialHeadTag == true || liveProfileTags?.optBoolean("officialHeadTag", false) == true)
+    val showOfficial = isCoreOfficial || isRedOfficial || is500002Official || targetUser?.officialTag == true || liveProfileTags?.optBoolean("officialTag", false) == true
+    val showAdmin = !is500002Official && (isCoreOfficial || targetUser?.adminTag == true || liveProfileTags?.optBoolean("adminTag", false) == true)
+    val showService = !is500002Official && (isCoreOfficial || targetUser?.serviceTag == true || liveProfileTags?.optBoolean("serviceTag", false) == true || liveProfileTags?.optBoolean("csTag", false) == true)
+    val showHost = !is500002Official && (isCoreOfficial || liveProfileTags?.optBoolean("hostTag", false) == true || liveProfileTags?.optBoolean("isHost", false) == true)
+    val showCoinSeller = !is500002Official && (isCoreOfficial || targetUser?.coinSellerTag == true || liveProfileTags?.optBoolean("coinSellerTag", false) == true || liveProfileTags?.optBoolean("coinSeller", false) == true || liveProfileTags?.optBoolean("sellerTag", false) == true)
     
     val defaultAvatar = "/file_000000009aac81faa8564416680aba4e.png"
     val userPhotoRaw = selectedAvatarUri ?: defaultAvatar
@@ -439,7 +440,7 @@ fun PublicProfileScreen(
 
                     // ID & Followers
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
-                        if (isCoreOfficial || isRedOfficial) {
+                        if (isCoreOfficial || isRedOfficial || is500002Official) {
                             AsyncImage(model = profileAsset("/IMG_20261101_125212.png"), contentDescription = "Purple ID Badge", contentScale = ContentScale.Fit, modifier = Modifier.height(30.dp).widthIn(min = 22.dp, max = 35.dp).padding(end = 4.dp))
                             Text(displayAccNum, fontSize = 12.sp, color = Color.Gray)
                         } else Text("ID: $displayAccNum", fontSize = 12.sp, color = Color.Gray)
@@ -919,7 +920,10 @@ fun PublicProfileScreen(
                             )
                             Column(modifier = Modifier.weight(1f).padding(start = 12.dp)) {
                                 Text(userName, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF202633), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                Text("ID: $displayAccNum", fontSize = 12.sp, color = Color(0xFF8992A0), modifier = Modifier.padding(top = 3.dp))
+                                if (displayAccNum == "500002") {
+                                    AsyncImage(model = profileAsset("/IMG_20261101_125212.png"), contentDescription = "Purple ID Badge", contentScale = ContentScale.Fit, modifier = Modifier.height(20.dp).widthIn(max = 30.dp))
+                                    Text(displayAccNum, fontSize = 12.sp, color = Color(0xFF8992A0), modifier = Modifier.padding(top = 3.dp))
+                                } else Text("ID: $displayAccNum", fontSize = 12.sp, color = Color(0xFF8992A0), modifier = Modifier.padding(top = 3.dp))
                             }
                             Icon(Icons.Default.Shield, contentDescription = null, tint = Color(0xFF237BEE), modifier = Modifier.size(22.dp))
                         }
