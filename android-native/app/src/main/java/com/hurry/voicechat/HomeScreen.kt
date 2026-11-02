@@ -578,7 +578,7 @@ fun HomeScreen(
         Column(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(end = 12.dp, bottom = 82.dp + (0.10f * LocalConfiguration.current.screenHeightDp).dp),
+                .padding(end = 12.dp, bottom = 150.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(0.2.dp)
         ) {
