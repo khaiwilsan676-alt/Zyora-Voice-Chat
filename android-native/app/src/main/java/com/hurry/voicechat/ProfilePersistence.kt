@@ -68,25 +68,25 @@ internal object ProfilePersistence {
 
     fun imageDataUri(context: Context, uri: Uri): String? = runCatching {
         val source = context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it) } ?: return null
-        val maxEdge = 1600
+        val maxEdge = 720
         val scale = minOf(1f, maxEdge.toFloat() / maxOf(source.width, source.height))
         var bitmap = if (scale < 1f) Bitmap.createScaledBitmap(source, (source.width * scale).toInt().coerceAtLeast(1), (source.height * scale).toInt().coerceAtLeast(1), true) else source
-        var quality = 84
+        var quality = 78
         var bytes = ByteArray(0)
         do {
             bytes = ByteArrayOutputStream().use { out ->
                 bitmap.compress(Bitmap.CompressFormat.JPEG, quality, out)
                 out.toByteArray()
             }
-            if (bytes.size <= 4_800 * 1024 || quality <= 48) break
-            quality -= 8
+            if (bytes.size <= 1_500 * 1024 || quality <= 60) break
+            quality -= 6
         } while (quality >= 48)
-        if (bytes.size > 4_800 * 1024 && bitmap !== source) {
+        if (bytes.size > 1_500 * 1024 && bitmap !== source) {
             bitmap.recycle()
-            val reducedScale = 1200f / maxOf(source.width, source.height)
+            val reducedScale = 640f / maxOf(source.width, source.height)
             bitmap = Bitmap.createScaledBitmap(source, (source.width * reducedScale).toInt().coerceAtLeast(1), (source.height * reducedScale).toInt().coerceAtLeast(1), true)
             bytes = ByteArrayOutputStream().use { out ->
-                bitmap.compress(Bitmap.CompressFormat.JPEG, 48, out)
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 60, out)
                 out.toByteArray()
             }
         }
