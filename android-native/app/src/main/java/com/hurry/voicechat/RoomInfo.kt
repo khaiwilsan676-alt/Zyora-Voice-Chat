@@ -276,7 +276,9 @@ private fun MemberRow(
 }
 
 private fun countryFlagEmoji(country: String): String {
-    val code = when (country.trim().lowercase()) {
+    val raw = country.trim()
+    if (raw.isNotEmpty() && raw.codePoints().toArray().all { it in 0x1F1E6..0x1F1FF }) return raw
+    val code = when (raw.lowercase()) {
         "india", "indian" -> "IN"
         "united states", "usa", "us" -> "US"
         "united kingdom", "uk", "britain" -> "GB"
