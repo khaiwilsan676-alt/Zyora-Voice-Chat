@@ -710,8 +710,8 @@ fun PublicProfileScreen(
                                         val ownerId = listOf(targetUser?.uid, targetUser?.id, targetUser?.accountId, targetUser?.displayAccountNumber)
                                             .firstOrNull { !it.isNullOrBlank() && it != "—" }.orEmpty()
                                         if (ownerId.isBlank()) error("Account ID is missing. Please sign in again.")
-                                        val hostedUrl = ProfilePersistence.uploadDpToGitHub(savedUri, ownerId)
-                                            ?: error("Photo upload failed. Check GitHub image storage and try again.")
+                                        val hostedUrl = ProfilePersistence.uploadImageToMongoDB(savedUri, ownerId)
+                                            ?: error("Photo upload failed. Check MongoDB image storage and try again.")
                                         val fields = mapOf("image" to hostedUrl, "photo" to hostedUrl, "avatar" to hostedUrl)
                                         if (!ProfilePersistence.save(targetUser, fields)) error("Photo uploaded but profile could not be saved. Please retry.")
                                         selectedAvatarUri = hostedUrl
