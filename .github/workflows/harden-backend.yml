@@ -96,6 +96,9 @@ jobs:
               # No new runtime dependency is required for the hardening above.
               bp.write_text(json.dumps(data, indent=2) + '\n')
 
+      - name: Refresh backend lockfile
+        run: npm install --package-lock-only --ignore-scripts --prefix backend
+
       - name: Validate syntax
         run: node --check backend/server.js
 
@@ -103,7 +106,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add backend/server.js backend/package.json
+          git add backend/server.js backend/package.json backend/package-lock.json
           if git diff --cached --quiet; then
             echo "No backend changes required"
             exit 0
