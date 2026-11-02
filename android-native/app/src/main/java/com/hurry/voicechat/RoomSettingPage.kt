@@ -606,10 +606,11 @@ fun RoomSettingPage(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         listOf(5, 10, 15).forEach { mode ->
+                            // Sirf yaha changes hue hain aapki nayi images ke hisaab se
                             val asset = when (mode) {
-                                5 -> RAW_SETTINGS + "Screenshot_2026-10-26-13-33-28-361_com.hawa.app.jpg"
-                                10 -> RAW_SETTINGS + "Screenshot_2026-10-26-13-33-19-325_com.hawa.app.jpg"
-                                else -> RAW_SETTINGS + "Screenshot_2026-10-26-13-33-08-252_com.hawa.app.jpg"
+                                5 -> RAW_SETTINGS + "IMG_20261102_124233.jpg"
+                                10 -> RAW_SETTINGS + "IMG_20261102_124251.jpg"
+                                else -> RAW_SETTINGS + "IMG_20261102_124300.jpg"
                             }
                             val selected = tempMicMode == mode
                             Column(
