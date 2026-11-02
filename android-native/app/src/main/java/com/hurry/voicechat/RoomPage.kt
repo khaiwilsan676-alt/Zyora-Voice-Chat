@@ -1239,7 +1239,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                     .padding(horizontal = 12.dp)
                     .padding(bottom = 50.dp)
                     .fillMaxWidth()
-                    .height(150.dp)
+                    .height(100.dp)
                     .clip(RoundedCornerShape(22.dp))
                     .background(Color.Black)
                     .padding(horizontal = 16.dp, vertical = 8.dp)
