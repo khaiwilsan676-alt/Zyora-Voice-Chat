@@ -146,7 +146,7 @@ fun RoomProfile(
             sequenceOf("name", "displayName", "userName", "nickname", "image", "avatar", "profileImageUrl").forEach { key ->
                 val value = latest.optString(key, "").trim()
                 val isPlaceholderName = key in setOf("name", "displayName", "userName", "nickname") && value.equals("User", ignoreCase = true)
-                val isPlaceholderAvatar = key in setOf("image", "photo", "photoURL", "avatar", "picture", "profileImage", "avatarUrl") &&
+                val isPlaceholderAvatar = key in setOf("image", "avatar", "profileImageUrl") &&
                     (value.endsWith("/default-avatar.png") || value == "default-avatar.png")
                 if (value.isNotBlank() && value != "null" && !isPlaceholderName && !isPlaceholderAvatar) merged.put(key, value)
             }
@@ -155,7 +155,7 @@ fun RoomProfile(
         loadedProfile = merged
         remote?.let { latest -> sequenceOf("name", "displayName", "userName", "nickname").map { latest.optString(it, "").trim() }.firstOrNull { it.isNotBlank() && it != "null" && !it.equals("User", ignoreCase = true) }?.let { displayName = it } }
         remote?.let { latest ->
-            sequenceOf("image", "photo", "photoURL", "avatar", "picture", "profileImage", "avatarUrl").map { latest.optString(it, "").trim() }
+            sequenceOf("image", "avatar", "profileImageUrl").map { latest.optString(it, "").trim() }
                 .firstOrNull { it.isNotBlank() && it != "null" && !it.endsWith("/default-avatar.png") && it != "default-avatar.png" }?.takeIf { it != displayImage }?.let { displayImage = it }
         }
         val stableDetails = cached ?: remote
