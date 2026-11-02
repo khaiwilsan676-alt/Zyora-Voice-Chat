@@ -718,6 +718,7 @@ app.post("/api/room-follows", async (req, res) => {
       followedAt: Date.now()
     };
     await db.collection("roomFollows").updateOne({ userId, roomId }, { $set: follow }, { upsert: true });
+    io.to(`room:${roomId}`).emit("room_follow_updated", { roomId, userId, action: "follow" });
     return res.json({ success: true, follow });
   } catch (error) {
     console.error("POST /api/room-follows error:", error);
@@ -732,6 +733,7 @@ app.delete("/api/room-follows", async (req, res) => {
     const roomId = String(req.query.roomId || "").trim();
     if (!userId || !roomId) return res.status(400).json({ error: "Missing userId or roomId" });
     await db.collection("roomFollows").deleteOne({ userId, roomId });
+    io.to(`room:${roomId}`).emit("room_follow_updated", { roomId, userId, action: "unfollow" });
     return res.json({ success: true });
   } catch (error) {
     console.error("DELETE /api/room-follows error:", error);
