@@ -24,7 +24,7 @@ class ZyoraApplication : Application(), SingletonImageLoader.Factory {
             .diskCache {
                 DiskCache.Builder()
                     .directory(cacheDir.resolve("zyora_image_cache").absolutePath.toPath())
-                    .maxSizeBytes(96L * 1024L * 1024L)
+                    .maxSizeBytes(256L * 1024L * 1024L)
                     .build()
             }
             .build()
