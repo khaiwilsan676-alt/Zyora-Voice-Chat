@@ -470,7 +470,7 @@ app.get("/api/rooms/image", async (req, res) => {
     const match = value.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.*)$/s);
     if (!match) return res.status(415).end();
     res.setHeader('Content-Type', match[1]);
-    res.setHeader('Cache-Control', 'public, max-age=86400, immutable');
+    res.setHeader('Cache-Control', 'public, max-age=604800, stale-while-revalidate=604800, immutable');
     return res.send(Buffer.from(match[2], 'base64'));
   } catch (error) {
     console.error("GET /api/rooms/image error:", error);
@@ -529,7 +529,8 @@ app.get("/api/rooms", async (req, res) => {
       if (roomImage.startsWith('data:image/')) {
         const base = `${req.protocol}://${req.get('host')}`;
         const id = encodeURIComponent(String(safeRoom.accountId || safeRoom.id || roomId));
-        safeRoom.dp = `${base}/api/rooms/image?roomId=${id}`;
+        const version = encodeURIComponent(String(safeRoom.updatedAt || safeRoom.imageUpdatedAt || safeRoom.createdAt || 1));
+        safeRoom.dp = `${base}/api/rooms/image?roomId=${id}&v=${version}`;
         safeRoom.image = safeRoom.dp;
         safeRoom.roomDp = safeRoom.dp;
       }
@@ -568,7 +569,8 @@ app.get("/api/rooms", async (req, res) => {
       const roomImage = String(safeRoom.dp || safeRoom.image || safeRoom.roomDp || safeRoom["Room dp"] || '').trim();
       if (roomImage.startsWith('data:image/')) {
         const id = encodeURIComponent(String(safeRoom.accountId || safeRoom.id || safeRoom.roomId || ''));
-        safeRoom.dp = `${base}/api/rooms/image?roomId=${id}`;
+        const version = encodeURIComponent(String(safeRoom.updatedAt || safeRoom.imageUpdatedAt || safeRoom.createdAt || 1));
+        safeRoom.dp = `${base}/api/rooms/image?roomId=${id}&v=${version}`;
         safeRoom.image = safeRoom.dp;
       }
       return safeRoom;
@@ -1094,7 +1096,7 @@ app.get("/api/profile-image", async (req, res) => {
       const bytes = Buffer.from(item.data, "base64");
       res.setHeader("Content-Type", item.contentType || "image/jpeg");
       res.setHeader("Content-Length", bytes.length);
-      res.setHeader("Cache-Control", "public, max-age=300, stale-while-revalidate=600");
+      res.setHeader("Cache-Control", "public, max-age=604800, stale-while-revalidate=604800, immutable");
       return res.send(bytes);
     }
     // Read-only compatibility for previously uploaded GitHub images. All new
