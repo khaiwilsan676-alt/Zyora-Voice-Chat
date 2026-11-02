@@ -1088,14 +1088,28 @@ app.get("/api/profile-image", async (req, res) => {
   try {
     const mongo = mediaDb || await connectMediaMongo();
     const mediaId = String(req.query.id || "").trim();
-    if (!mongo || !mediaId) return res.status(404).end();
-    const item = await mongo.collection("profileMedia").findOne({ _id: mediaId });
-    if (!item?.data) return res.status(404).end();
-    const bytes = Buffer.from(item.data, "base64");
-    res.setHeader("Content-Type", item.contentType || "image/jpeg");
-    res.setHeader("Content-Length", bytes.length);
+    if (mongo && mediaId) {
+      const item = await mongo.collection("profileMedia").findOne({ _id: mediaId });
+      if (!item?.data) return res.status(404).end();
+      const bytes = Buffer.from(item.data, "base64");
+      res.setHeader("Content-Type", item.contentType || "image/jpeg");
+      res.setHeader("Content-Length", bytes.length);
+      res.setHeader("Cache-Control", "public, max-age=300, stale-while-revalidate=600");
+      return res.send(bytes);
+    }
+    // Read-only compatibility for previously uploaded GitHub images. All new
+    // uploads are written exclusively to MongoDB by /api/upload-image.
+    const legacyPath = String(req.query.path || "");
+    const legacyToken = String(process.env.GITHUB_UPLOAD_TOKEN || process.env.GITHUB_DATA_TOKEN || process.env.GITHUB_TOKEN || "").trim();
+    const legacyRepo = String(process.env.GITHUB_UPLOAD_REPOSITORY || process.env.GITHUB_DATA_REPOSITORY || "khaiwilsan676-alt/Zyora-Server").trim();
+    const legacyBranch = String(process.env.GITHUB_UPLOAD_BRANCH || process.env.GITHUB_DATA_BRANCH || "main").trim();
+    if (!legacyToken || !/^[\w.-]+\/[\w.-]+$/.test(legacyRepo) || !/^public\/(user-dp|user-albums|user-covers|room-dp|room-theme)\/[A-Za-z0-9_-]{1,100}\/[A-Za-z0-9_-]+\.(jpg|png|webp|gif)$/.test(legacyPath)) return res.status(404).end();
+    const legacyUrl = "https://api.github.com/repos/" + legacyRepo + "/contents/" + legacyPath.split("/").map(encodeURIComponent).join("/") + "?ref=" + encodeURIComponent(legacyBranch);
+    const legacyImage = await fetch(legacyUrl, { headers: { Accept: "application/vnd.github.raw", Authorization: "Bearer " + legacyToken, "X-GitHub-Api-Version": "2022-11-28", "User-Agent": "Zyora-Legacy-Image-Read" } });
+    if (!legacyImage.ok) return res.status(legacyImage.status === 404 ? 404 : 502).end();
+    res.setHeader("Content-Type", legacyImage.headers.get("content-type") || "image/jpeg");
     res.setHeader("Cache-Control", "public, max-age=300, stale-while-revalidate=600");
-    return res.send(bytes);
+    return res.send(Buffer.from(await legacyImage.arrayBuffer()));
   } catch (error) { console.error("GET /api/profile-image MongoDB error:", error.message); return res.status(500).end(); }
 });
 
