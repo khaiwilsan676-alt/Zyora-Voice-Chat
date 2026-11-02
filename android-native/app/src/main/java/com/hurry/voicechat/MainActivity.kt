@@ -237,6 +237,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                 id = authPrefs.getString("${mineRoomKey}_id", userId).orEmpty(),
                 name = authPrefs.getString("${mineRoomKey}_name", "Room").orEmpty(),
                 image = authPrefs.getString("${mineRoomKey}_image", "").orEmpty(),
+                announcement = authPrefs.getString("${mineRoomKey}_announcement", "").orEmpty(),
                 country = authPrefs.getString("${mineRoomKey}_country", "🇮🇳").orEmpty(),
                 accountId = authPrefs.getString("${mineRoomKey}_account_id", userId).orEmpty()
             ) else null
