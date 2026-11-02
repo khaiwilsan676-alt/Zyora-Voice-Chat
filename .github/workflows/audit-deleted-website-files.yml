@@ -1,0 +1,43 @@
+name: Audit Deleted Website Files
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout complete history
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: List deleted paths outside protected folders
+        shell: bash
+        run: |
+          set -euo pipefail
+          : > deleted-website-paths.txt
+          git log --all --diff-filter=D --name-only --format= |
+            while IFS= read -r path; do
+              [ -n "$path" ] || continue
+              case "$path" in
+                android-native/*|public/*|.git/*) continue ;;
+              esac
+              if [ ! -e "$path" ]; then
+                printf '%s\n' "$path" >> deleted-website-paths.txt
+              fi
+            done
+          sort -u -o deleted-website-paths.txt deleted-website-paths.txt
+          echo "Found $(wc -l < deleted-website-paths.txt) deleted paths outside protected folders."
+          cat deleted-website-paths.txt
+
+      - name: Upload audit list
+        uses: actions/upload-artifact@v4
+        with:
+          name: deleted-website-paths
+          path: deleted-website-paths.txt
+          if-no-files-found: error
