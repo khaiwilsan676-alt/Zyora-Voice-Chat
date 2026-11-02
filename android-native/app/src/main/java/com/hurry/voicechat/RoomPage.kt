@@ -753,6 +753,19 @@ fun RoomPage(
                 }
             }
         }
+        val settingsListener = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject
+            if (payload != null && payload.optString("roomId") == roomId) {
+                val updatedMicMode = payload.optInt("micMode", roomMicMode)
+                if (updatedMicMode in listOf(5, 10, 15)) {
+                    mainHandler.post {
+                        roomMicMode = updatedMicMode
+                        appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE)
+                            .edit().putInt("micMode_$roomId", updatedMicMode).apply()
+                    }
+                }
+            }
+        }
         var joinMessageSent = false
         val connectListener = Emitter.Listener {
             val profileDb = NativeIndexDatabase(appContext)
@@ -814,6 +827,7 @@ fun RoomPage(
         roomSocket.on("room_message",messageListener)
         roomSocket.on("room_chat_cleared",clearedListener)
         roomSocket.on("room_seats",seatListener)
+        roomSocket.on("room_settings_updated",settingsListener)
         roomSocket.on("lucky_bag_banner",luckyBagBannerListener)
         roomSocket.on("wallet_balance_updated",walletBalanceListener)
         roomSocket.on(Socket.EVENT_CONNECT,connectListener)
@@ -824,6 +838,7 @@ fun RoomPage(
             roomSocket.off("room_message",messageListener)
             roomSocket.off("room_chat_cleared",clearedListener)
             roomSocket.off("room_seats",seatListener)
+            roomSocket.off("room_settings_updated",settingsListener)
             roomSocket.off("lucky_bag_banner",luckyBagBannerListener)
             roomSocket.off("wallet_balance_updated",walletBalanceListener)
             roomSocket.off(Socket.EVENT_CONNECT,connectListener)
@@ -1331,6 +1346,12 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
         if(showSettings) RoomSettingPage(initial = RoomSettingsDataNative(roomName=roomName,roomDp=roomImage,announcement=announcement,micMode=roomMicMode,theme=roomTheme,isLocked=locked,roomPassword=roomPassword,admin=roomAdminIds,customTheme=appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).getString("customTheme_$roomId", "").orEmpty()),roomOwnerId=roomId,currentUserId=accountId,onBack={showSettings=false},onSave={saved->
             roomName=saved.roomName;roomImage=if (isLogoRoom) "https://zyora-voice-chat.vercel.app/logo.png" else saved.roomDp;announcement=saved.announcement;roomMicMode=saved.micMode;roomTheme=saved.theme;roomCustomThemeUrl=saved.customTheme;roomAdminIds=saved.admin;locked=saved.isLocked;roomPassword=saved.roomPassword;showSettings=false
             appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).edit().putInt("micMode_$roomId", saved.micMode).putString("theme_$roomId", saved.theme).putString("customTheme_$roomId", saved.customTheme).apply()
+            roomSocketRef.value?.takeIf { it.connected() }?.emit("room_settings_update", JSONObject()
+                .put("roomId", roomId).put("userId", accountId).put("roomOwnerId", roomId)
+                .put("micMode", saved.micMode).put("roomName", saved.roomName).put("roomDp", saved.roomDp)
+                .put("announcement", saved.announcement).put("theme", saved.theme)
+                .put("isLocked", saved.isLocked).put("roomPassword", saved.roomPassword)
+                .put("updatedAt", System.currentTimeMillis()))
         })
         if(showGift) GiftPicker(
             open = true,
