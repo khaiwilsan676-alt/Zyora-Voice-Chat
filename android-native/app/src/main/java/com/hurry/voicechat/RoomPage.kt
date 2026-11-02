@@ -421,6 +421,30 @@ fun RoomPage(
         }
     }
     var followed by remember{mutableStateOf(false)}
+    var followedRoomUsers by remember(roomId) { mutableStateOf<List<RoomInfoFollower>>(emptyList()) }
+    LaunchedEffect(roomId) {
+        followedRoomUsers = withContext(Dispatchers.IO) {
+            runCatching {
+                val encodedRoom = java.net.URLEncoder.encode(roomId, "UTF-8")
+                val connection = (java.net.URL("https://zyora-server.onrender.com/api/room-follows?roomId=$encodedRoom").openConnection() as java.net.HttpURLConnection).apply {
+                    connectTimeout = 10000
+                    readTimeout = 10000
+                    setRequestProperty("Accept", "application/json")
+                }
+                try {
+                    if (connection.responseCode !in 200..299) error("Room members unavailable")
+                    val root = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
+                    val array = root.optJSONArray("followers") ?: JSONArray()
+                    (0 until array.length()).mapNotNull { index ->
+                        val item = array.optJSONObject(index) ?: return@mapNotNull null
+                        val id = item.optString("userId").trim()
+                        if (id.isBlank()) return@mapNotNull null
+                        RoomInfoFollower(id, item.optString("followerName").ifBlank { "User" }, item.optString("followerImage"), item.optString("followerCountry"))
+                    }.distinctBy { it.accountId }
+                } finally { connection.disconnect() }
+            }.getOrDefault(emptyList())
+        }
+    }
     LaunchedEffect(roomId, accountId) {
         if (accountId.isBlank() || accountId == "guest") return@LaunchedEffect
         followed = withContext(Dispatchers.IO) {
@@ -927,6 +951,7 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                                                             .put("roomCountry", roomOwner.country)
                                                             .put("followerName", roomDisplayName)
                                                             .put("followerImage", roomDisplayImage)
+                                                            .put("followerCountry", cachedCurrentProfile?.optString("country").orEmpty().ifBlank { appContext.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE).getString("country", "").orEmpty() })
                                                         conn.outputStream.use { it.write(payload.toString().toByteArray(Charsets.UTF_8)) }
                                                     }
                                                     conn.responseCode
@@ -1342,10 +1367,10 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
         )
         
         val activeRoomUsers = backendRoomUsers.toList()
-        val roomFollowers = seats.filter { it.occupied && it.accountId.isNotBlank() && it.accountId != roomOwner.accountId && it.accountId != roomOwner.id }.map { RoomInfoFollower(it.accountId,it.userName,it.userImage) }
+        val roomFollowers = followedRoomUsers.filter { it.accountId != roomOwner.accountId && it.accountId != roomOwner.id }
         if(showStore) StorePage(onBack={showStore=false}, initialView=storeInitialView, userId=accountId.ifBlank{roomOwner.accountId.ifBlank{roomOwner.id}})
-        if(showInfo) RoomInfo(isOpen=true,onClose={showInfo=false},isRoomOwner=accountId==roomOwner.accountId.ifBlank{roomOwner.id},roomOwner=RoomInfoOwner(id=roomOwner.id,uid=roomOwner.uid,accountId=roomOwner.accountId.ifBlank{roomOwner.id},name=roomOwner.name,image=if (isLogoRoom) "https://zyora-voice-chat.vercel.app/logo.png" else roomOwner.image),roomData=RoomInfoData(roomName,roomImage,announcement,roomId),roomFollowers=roomFollowers,roomAdmins=roomAdminUsers,onOpenProfile={ follower -> seats.firstOrNull{it.accountId==follower.accountId}?.let{selectedSeat=it.number};showInfo=false },onCopyId={ id -> clipboard.setText(AnnotatedString(id));copiedId=id },copied=copiedId==roomId)
-        if(showActiveUsers) ActiveUsers(isOpen=true,onClose={showActiveUsers=false},roomUsers=activeRoomUsers,currentUser=ActiveUserNative(accountId,roomDisplayName,roomDisplayImage),roomOwnerId=roomOwner.accountId.ifBlank{roomOwner.id},onOpenProfile={ user -> seats.firstOrNull{it.accountId==user.accountId}?.let{selectedSeat=it.number};showActiveUsers=false },onCopyUserId={ id -> clipboard.setText(AnnotatedString(id));copiedId=id })
+        if(showInfo) RoomInfo(isOpen=true,onClose={showInfo=false},isRoomOwner=accountId==roomOwner.accountId.ifBlank{roomOwner.id},roomOwner=RoomInfoOwner(id=roomOwner.id,uid=roomOwner.uid,accountId=roomOwner.accountId.ifBlank{roomOwner.id},name=roomOwner.name,image=if (isLogoRoom) "https://zyora-voice-chat.vercel.app/logo.png" else roomOwner.image),roomData=RoomInfoData(roomName,roomImage,announcement,roomId),roomFollowers=roomFollowers,roomAdmins=roomAdminUsers,onOpenProfile={ follower -> selectedChatProfile=NativeRoomMessage("member-profile-" + follower.accountId,"",follower.name,follower.image,follower.accountId);showInfo=false },onCopyId={ id -> clipboard.setText(AnnotatedString(id));copiedId=id },copied=copiedId==roomId)
+        if(showActiveUsers) ActiveUsers(isOpen=true,onClose={showActiveUsers=false},roomUsers=activeRoomUsers,currentUser=ActiveUserNative(accountId,roomDisplayName,roomDisplayImage),roomOwnerId=roomOwner.accountId.ifBlank{roomOwner.id},onOpenProfile={ user -> selectedChatProfile=NativeRoomMessage("active-profile-" + user.accountId,"",user.name,user.image,user.accountId);showActiveUsers=false },onCopyUserId={ id -> clipboard.setText(AnnotatedString(id));copiedId=id })
         if(showSettings) RoomSettingPage(initial = RoomSettingsDataNative(roomName=roomName,roomDp=roomImage,announcement=announcement,micMode=roomMicMode,theme=roomTheme,isLocked=locked,roomPassword=roomPassword,admin=roomAdminIds,customTheme=appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).getString("customTheme_$roomId", "").orEmpty()),roomOwnerId=roomId,currentUserId=accountId,onBack={showSettings=false},onSave={saved->
             roomName=saved.roomName;roomImage=if (isLogoRoom) "https://zyora-voice-chat.vercel.app/logo.png" else saved.roomDp;announcement=saved.announcement;roomMicMode=saved.micMode;roomTheme=saved.theme;roomCustomThemeUrl=saved.customTheme;roomAdminIds=saved.admin;locked=saved.isLocked;roomPassword=saved.roomPassword;showSettings=false
             appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).edit().putInt("micMode_$roomId", saved.micMode).putString("theme_$roomId", saved.theme).putString("customTheme_$roomId", saved.customTheme).apply()
