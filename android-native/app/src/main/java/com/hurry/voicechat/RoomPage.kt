@@ -220,7 +220,7 @@ fun RoomPage(
     } ?: "https://zyora-server.onrender.com/default-avatar.png"
     var copiedId by remember { mutableStateOf("") }
     var roomName by remember{mutableStateOf(roomOwner.name.ifBlank{"Room"})}
-    var roomImage by remember{mutableStateOf(if (isLogoRoom) "https://zyora-voice-chat.vercel.app/logo.png" else roomOwner.image)}
+    var roomImage by remember{mutableStateOf(roomOwner.image)}
     var announcement by remember{mutableStateOf("")}
     var roomAdminIds by remember(roomId) { mutableStateOf<List<String>>(emptyList()) }
     var locked by remember(roomId) { mutableStateOf(false) }
@@ -260,7 +260,7 @@ fun RoomPage(
                             .orEmpty()
                         withContext(Dispatchers.Main) {
                             roomName = saved.optString("name", saved.optString("roomName", roomName)).ifBlank { roomName }
-                            if (!isLogoRoom && savedDp.isNotBlank()) roomImage = savedDp
+                            if (savedDp.isNotBlank()) roomImage = savedDp
                             announcement = saved.optString("message", saved.optString("announcement", announcement))
                             roomTheme = savedTheme
                             roomMicMode = saved.optInt("micMode", roomMicMode)
@@ -1407,8 +1407,8 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
         if(showStore) StorePage(onBack={showStore=false}, initialView=storeInitialView, userId=accountId.ifBlank{roomOwner.accountId.ifBlank{roomOwner.id}})
         if(showInfo) RoomInfo(isOpen=true,onClose={showInfo=false},isRoomOwner=accountId==roomOwner.accountId.ifBlank{roomOwner.id},roomOwner=RoomInfoOwner(id=roomOwner.id,uid=roomOwner.uid,accountId=roomOwner.accountId.ifBlank{roomOwner.id},name=roomOwner.name,image=if (isLogoRoom) "https://zyora-voice-chat.vercel.app/logo.png" else roomOwner.image),roomData=RoomInfoData(roomName,roomImage,announcement,roomId),roomFollowers=roomFollowers,roomAdmins=roomAdminUsers,onOpenProfile={ follower -> selectedChatProfile=NativeRoomMessage("member-profile-" + follower.accountId,"",follower.name,follower.image,follower.accountId);showInfo=false },onCopyId={ id -> clipboard.setText(AnnotatedString(id));copiedId=id },copied=copiedId==roomId)
         if(showActiveUsers) ActiveUsers(isOpen=true,onClose={showActiveUsers=false},roomUsers=activeRoomUsers,roomOwnerId=roomOwner.accountId.ifBlank{roomOwner.id},onOpenProfile={ user -> selectedChatProfile=NativeRoomMessage("active-profile-" + user.accountId,"",user.name,user.image,user.accountId);showActiveUsers=false },onCopyUserId={ id -> clipboard.setText(AnnotatedString(id));copiedId=id })
-        if(showSettings) RoomSettingPage(initial = RoomSettingsDataNative(roomName=roomName,roomDp=roomImage,announcement=announcement,micMode=roomMicMode,theme=roomTheme,isLocked=locked,roomPassword=roomPassword,admin=roomAdminIds,customTheme=appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).getString("customTheme_$roomId", "").orEmpty()),roomOwnerId=roomId,currentUserId=accountId,isDpOnlyEditor=accountId in setOf("100002", "100003", "500001", "500002", "500003", "500004", "500005", "700001", "700002", "700003") && accountId!=roomOwner.accountId.ifBlank{roomOwner.id},onBack={showSettings=false},onSave={saved->
-            roomName=saved.roomName;roomImage=if (isLogoRoom) "https://zyora-voice-chat.vercel.app/logo.png" else saved.roomDp;announcement=saved.announcement;roomMicMode=saved.micMode;roomTheme=saved.theme;roomCustomThemeUrl=saved.customTheme;roomAdminIds=saved.admin;locked=saved.isLocked;roomPassword=saved.roomPassword;showSettings=false
+        if(showSettings) RoomSettingPage(initial = RoomSettingsDataNative(roomName=roomName,roomDp=roomImage,announcement=announcement,micMode=roomMicMode,theme=roomTheme,isLocked=locked,roomPassword=roomPassword,admin=roomAdminIds,customTheme=appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).getString("customTheme_$roomId", "").orEmpty()),roomOwnerId=roomId,currentUserId=accountId,onBack={showSettings=false},onSave={saved->
+            roomName=saved.roomName;roomImage=saved.roomDp;announcement=saved.announcement;roomMicMode=saved.micMode;roomTheme=saved.theme;roomCustomThemeUrl=saved.customTheme;roomAdminIds=saved.admin;locked=saved.isLocked;roomPassword=saved.roomPassword;showSettings=false
             appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).edit().putInt("micMode_$roomId", saved.micMode).putString("theme_$roomId", saved.theme).putString("customTheme_$roomId", saved.customTheme).apply()
             roomSocketRef.value?.takeIf { it.connected() }?.emit("room_settings_update", JSONObject()
                 .put("roomId", roomId).put("userId", accountId).put("roomOwnerId", roomId)
