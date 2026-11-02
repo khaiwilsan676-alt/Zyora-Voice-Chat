@@ -786,7 +786,6 @@ fun RoomPage(
                 val joinId = "$accountId-$joinCreatedAt"
                 val joinName = roomDisplayName.ifBlank { "User" }
                 val joinImage = roomDisplayImage.ifBlank { "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/default-avatar.png" }
-                val joinMessage = JSONObject().put("id",joinId).put("roomId",roomId).put("senderId",accountId).put("senderAccountId",accountId).put("senderName",joinName).put("senderAvatar",joinImage).put("text","Enter the Room").put("type","join").put("createdAt",joinCreatedAt)
                 val nativeJoin = NativeRoomMessage(joinId,"Enter the Room",joinName,joinImage,accountId,joinCreatedAt,"join")
                 mainHandler.post {
                     if (messages.none { it.id == joinId }) messages.add(nativeJoin)
@@ -823,7 +822,6 @@ fun RoomPage(
                         }
                     }
                 }
-                roomSocket.emit("room_message",joinMessage)
             }
             roomSocket.emit("room_presence_request",JSONObject().put("roomId",roomId))
             roomSocket.emit("room_seats_request",JSONObject().put("roomId",roomId))
