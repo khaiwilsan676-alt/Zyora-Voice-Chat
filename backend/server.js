@@ -951,7 +951,7 @@ app.get("/api/follows", async (req, res) => {
       byId.set(id, {
         id,
         name: user.name || user.displayName || user.userName || "User",
-        image: user.image || user.photo || user.photoURL || "/default-avatar.png",
+        image: user.image || user.avatar || user.profileImageUrl || "/default-avatar.png",
         accountId: String(user.accountId || ""),
       });
     }
