@@ -164,8 +164,8 @@ fun PublicProfileScreen(
         mutableStateOf(ProfilePersistence.stringList(cachedProfile?.optString("coverPhotos", "")).ifEmpty { cachedProfile?.optString("coverPhoto")?.takeIf { it.isNotBlank() && it != "null" }?.let { listOf(it) } ?: targetUser?.coverPhoto?.takeIf { it.isNotBlank() }?.let { listOf(it) } ?: emptyList() }.map { profileAsset(it) })
     }
     var albumImages by remember(profileCacheKey, cachedProfile) { mutableStateOf(ProfilePersistence.stringList(cachedProfile?.optString("albumImages", ""))) }
-    var selectedAvatarUri by remember(targetUser?.photo, targetUser?.image, cachedProfile) {
-        mutableStateOf<String?>(sequenceOf("image", "photo", "photoURL", "avatar", "picture").map { cachedProfile?.optString(it, "").orEmpty() }.firstOrNull { it.isNotBlank() && it != "null" } ?: targetUser?.photo?.takeIf { it.isNotBlank() } ?: targetUser?.image?.takeIf { it.isNotBlank() })
+    var selectedAvatarUri by remember(profileCacheKey, cachedProfile) {
+        mutableStateOf<String?>(sequenceOf("image", "avatar", "profileImageUrl").map { cachedProfile?.optString(it, "").orEmpty() }.firstOrNull { it.isNotBlank() && it != "null" })
     }
     var ownedFrames by remember { mutableStateOf(listOf<String>()) } // Dummy for UI
     var receivedGifts by remember { mutableStateOf(listOf<String>()) } // Dummy for UI
@@ -206,7 +206,7 @@ fun PublicProfileScreen(
     val showCoinSeller = isCoreOfficial || targetUser?.coinSellerTag == true || liveProfileTags?.optBoolean("coinSellerTag", false) == true || liveProfileTags?.optBoolean("coinSeller", false) == true || liveProfileTags?.optBoolean("sellerTag", false) == true
     
     val defaultAvatar = "/file_000000009aac81faa8564416680aba4e.png"
-    val userPhotoRaw = selectedAvatarUri ?: targetUser?.photo?.takeIf { it.isNotBlank() } ?: targetUser?.image?.takeIf { it.isNotBlank() } ?: defaultAvatar
+    val userPhotoRaw = selectedAvatarUri ?: defaultAvatar
     val userPhoto = if (displayAccNum in setOf("100002", "100003", "500002")) profileAsset("/logo.png") else profileAsset(userPhotoRaw)
 
     val avatarPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
@@ -238,7 +238,7 @@ fun PublicProfileScreen(
         remote?.let { latest ->
             // Normalize server aliases so a fresh install restores the same profile name and DP.
             val remoteName = sequenceOf("name", "displayName", "userName", "nickname").map { latest.optString(it, "").trim() }.firstOrNull { it.isNotBlank() && it != "null" && !it.equals("User", ignoreCase = true) }
-            val remoteAvatar = sequenceOf("image", "photo", "photoURL", "avatar", "picture", "profileImage", "avatarUrl").map { latest.optString(it, "").trim() }.firstOrNull { it.isNotBlank() && it != "null" && !it.endsWith("/default-avatar.png") }
+            val remoteAvatar = sequenceOf("image", "avatar", "profileImageUrl").map { latest.optString(it, "").trim() }.firstOrNull { it.isNotBlank() && it != "null" && !it.endsWith("/default-avatar.png") }
             if (!remoteName.isNullOrBlank()) {
                 merged.put("name", remoteName)
                 merged.put("displayName", remoteName)
@@ -266,7 +266,7 @@ fun PublicProfileScreen(
 
         merged.optString("name").takeIf { it.isNotBlank() && it != "null" }?.let { userName = it }
         
-        val savedAvatar = sequenceOf("image", "photo", "photoURL", "avatar", "picture").map { merged.optString(it, "") }.firstOrNull { it.isNotBlank() && it != "null" }
+        val savedAvatar = sequenceOf("image", "avatar", "profileImageUrl").map { merged.optString(it, "") }.firstOrNull { it.isNotBlank() && it != "null" }
         if (!savedAvatar.isNullOrBlank() && savedAvatar != selectedAvatarUri) selectedAvatarUri = savedAvatar
 
         merged.optString("bio").let { userBio = if (it != "null") it else "" }
