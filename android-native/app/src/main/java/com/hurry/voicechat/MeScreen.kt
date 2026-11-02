@@ -60,8 +60,8 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
     }
     var photo by remember(uid, cachedProfile) {
         mutableStateOf(
-            sequenceOf("image", "photo", "photoURL", "avatar", "picture").map { cachedProfile?.optString(it, "").orEmpty() }.firstOrNull { it.isNotBlank() && it != "null" }
-                ?: listOf("photo", "image", "avatar", "photoUrl", "picture", "userPhoto")
+            sequenceOf("image", "avatar", "profileImageUrl").map { cachedProfile?.optString(it, "").orEmpty() }.firstOrNull { it.isNotBlank() && it != "null" }
+                ?: listOf("image", "avatar", "profileImageUrl")
                 .asSequence().mapNotNull { key -> prefs.getString(key, null)?.takeIf { it.isNotBlank() } }
                 .firstOrNull().orEmpty()
         )
@@ -79,7 +79,7 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
         ) ?: return@LaunchedEffect
         NativeIndexDatabase(context).saveProfile(uid, profile)
         profile.optString("name").takeIf { it.isNotBlank() && it != "null" && it.lowercase() !in listOf("guest", "user", "undefined") && it != name }?.let { name = it }
-        sequenceOf("image", "photo", "photoURL", "avatar", "picture")
+        sequenceOf("image", "avatar", "profileImageUrl")
             .map { profile.optString(it, "") }
             .firstOrNull { it.isNotBlank() && it != "null" }
             ?.takeIf { it != photo }
