@@ -123,7 +123,10 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
                         }
                         Spacer(Modifier.width(16.dp))
                         Column {
-                            Text(name, fontSize = 24.sp, fontWeight = FontWeight.Normal, color = Color(0xFF111827))
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                                Text(name, fontSize = 24.sp, fontWeight = FontWeight.Normal, color = Color(0xFF111827))
+                                if (account == "500002") AsyncImage(model = RAW_ME + "IMG_20261027_102250.png", contentDescription = "Official", modifier = Modifier.height(20.dp).widthIn(max = 56.dp), contentScale = ContentScale.Fit)
+                            }
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(5.dp)
