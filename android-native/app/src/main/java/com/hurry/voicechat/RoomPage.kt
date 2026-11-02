@@ -597,8 +597,7 @@ fun RoomPage(
         MusicPlaybackState.isPlaying = false
         musicPlaylist = emptyList()
         musicCurrentTime = 0f
-        musicDuration = 0f
-    }
+        musicDuration = 0f    }
 
     BackHandler(enabled = true) {
         when {
@@ -1197,8 +1196,7 @@ Column(Modifier.align(Alignment.BottomStart).padding(bottom=LocalConfiguration.c
                         Row(Modifier.fillMaxWidth(0.80f).clip(RoundedCornerShape(topStart=50.dp,bottomStart=50.dp,topEnd=0.dp,bottomEnd=0.dp)).background(Brush.horizontalGradient(listOf(Color(0xCC2563EB),Color(0x802563EB),Color.Transparent))).padding(start=10.dp,end=10.dp,top=2.dp,bottom=2.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(6.dp)) {
                             FallbackAsyncImage(model=toast.image,contentDescription=toast.name,modifier=Modifier.size(24.dp).clip(CircleShape),contentScale=ContentScale.Crop)
                             Text(toast.name,color=Color.White,fontSize=13.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold,maxLines=1,modifier=Modifier.weight(1f, fill=false))
-                            Text("Enter the Room",color=Color.White,fontSize=12.sp,maxLines=1)
-                            if (toast.vehicleVideo.isNotBlank()) {
+                            Text("Enter the Room",color=Color.White,fontSize=12.sp,maxLines=1)                            if (toast.vehicleVideo.isNotBlank()) {
                                 val vehicleUrl = if (toast.vehicleVideo.startsWith("http", true)) toast.vehicleVideo else "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/" + toast.vehicleVideo
                                 val vehicleItemId = when {
                                     toast.vehicleVideo.contains("VID_20260905_095157_269_bsl.mp4", true) -> "v1"
@@ -1235,28 +1233,34 @@ Column(Modifier.align(Alignment.BottomStart).padding(bottom=LocalConfiguration.c
         RoomPageBlock {
 if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.isMusicPageOpen && MusicPlaybackState.wasPlayedOnMusicPage && MusicPlaybackState.musicPageBackPressed) {
             val track = miniMusicTrack!!
-            Box(Modifier.align(Alignment.BottomCenter).zIndex(10f).padding(horizontal = 12.dp)
-                .padding(bottom = (configuration.screenHeightDp * 0.035f).dp).fillMaxWidth()
-                .clip(RoundedCornerShape(22.dp)).background(Color.Black)
-                
-                .padding(horizontal = 16.dp, vertical = 10.dp)) {
-                Column(Modifier.fillMaxWidth()) {
+            Box(
+                Modifier.align(Alignment.BottomCenter)
+                    .zIndex(10f)
+                    .padding(horizontal = 12.dp)
+                    .padding(bottom = 50.dp)
+                    .fillMaxWidth()
+                    .height(150.dp)
+                    .clip(RoundedCornerShape(22.dp))
+                    .background(Color.Black)
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                Column(Modifier.fillMaxSize()) {
                     if (showMusicVolumeView) {
                         Box(Modifier.fillMaxWidth().height(30.dp), contentAlignment = Alignment.Center) {
-                            IconButton(onClick = { showMusicVolumeView = false }, modifier = Modifier.align(Alignment.CenterStart)) {
-                                Icon(Icons.Default.ArrowBack, "Back", tint = Color.White, modifier = Modifier.size(21.dp))
+                            IconButton(onClick = { showMusicVolumeView = false }, modifier = Modifier.align(Alignment.CenterStart).size(30.dp)) {
+                                Icon(Icons.Default.ArrowBack, "Back", tint = Color.White, modifier = Modifier.size(18.dp))
                             }
-                            Text("Volume", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Normal)
+                            Text("Volume", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Normal)
                         }
-                        Spacer(Modifier.height(34.dp))
+                        Spacer(Modifier.height(28.dp))
                         Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.VolumeMute, "Open music page", tint = Color.White,
-                                modifier = Modifier.size(24.dp).clickable {
+                                modifier = Modifier.size(21.dp).clickable {
                                     showMusicVolumeView = false
                                     musicControllerMinimized = true
                                     MusicPlaybackState.isMusicPageOpen = true
                                 })
-                            Spacer(Modifier.width(15.dp))
+                            Spacer(Modifier.width(12.dp))
                             ThickBar(progress = musicVolume, height = 6.dp, activeColor = Color.White,
                                 inactiveColor = Color.White.copy(alpha = 0.42f), modifier = Modifier.weight(1f),
                                 onProgressChange = { value ->
@@ -1264,25 +1268,25 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                                     runCatching { appContext.startService(Intent(appContext, RoomMusicService::class.java)
                                         .setAction(RoomMusicService.ACTION_VOLUME).putExtra(RoomMusicService.EXTRA_VOLUME, value)) }
                                 })
-                            Spacer(Modifier.width(15.dp))
-                            Icon(Icons.Default.VolumeUp, "Volume up", tint = Color.White, modifier = Modifier.size(25.dp))
+                            Spacer(Modifier.width(12.dp))
+                            Icon(Icons.Default.VolumeUp, "Volume up", tint = Color.White, modifier = Modifier.size(22.dp))
                         }
-                        Spacer(Modifier.height(34.dp))
+                        Spacer(Modifier.height(28.dp))
                     } else {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            IconButton(onClick = { musicControllerMinimized = true }, modifier = Modifier.size(42.dp)) {
-                                Icon(Icons.Default.CloseFullscreen, "Minimize", tint = Color.White, modifier = Modifier.size(21.dp))
+                            IconButton(onClick = { musicControllerMinimized = true }, modifier = Modifier.size(30.dp)) {
+                                Icon(Icons.Default.CloseFullscreen, "Minimize", tint = Color.White, modifier = Modifier.size(17.dp))
                             }
-                            IconButton(onClick = { musicClose() }, modifier = Modifier.size(42.dp)) {
-                                Icon(Icons.Default.PowerSettingsNew, "Stop music", tint = Color.White, modifier = Modifier.size(34.dp))
+                            IconButton(onClick = { musicClose() }, modifier = Modifier.size(30.dp)) {
+                                Icon(Icons.Default.PowerSettingsNew, "Stop music", tint = Color.White, modifier = Modifier.size(22.dp))
                             }
                         }
-                        Spacer(Modifier.height(8.dp))
-                        Text(track.name, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Normal, maxLines = 1,
+                        Spacer(Modifier.height(3.dp))
+                        Text(track.name, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Normal, maxLines = 1,
                             overflow = TextOverflow.Clip, modifier = Modifier.fillMaxWidth().basicMarquee(iterations = Int.MAX_VALUE))
-                        Spacer(Modifier.height(21.dp))
+                        Spacer(Modifier.height(5.dp))
                         val progressFraction = if (musicDuration > 0f) (musicCurrentTime / musicDuration).coerceIn(0f, 1f) else 0f
-                        ThickBar(progress = progressFraction, height = 6.dp, activeColor = Color.White,
+                        ThickBar(progress = progressFraction, height = 5.dp, activeColor = Color.White,
                             inactiveColor = Color.White.copy(alpha = 0.48f), modifier = Modifier.fillMaxWidth(),
                             onProgressChange = { value ->
                                 if (musicDuration > 0f) {
@@ -1292,29 +1296,32 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                                         .putExtra(RoomMusicService.EXTRA_POSITION_MS, (musicCurrentTime * 1000f).toInt())) }
                                 }
                             })
-                        Row(Modifier.fillMaxWidth().padding(top = 3.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text(formatMusicTime(musicCurrentTime), color = Color.White.copy(alpha = .7f), fontSize = 10.sp, fontWeight = FontWeight.Normal)
-                            Text(formatMusicTime(musicDuration), color = Color.White.copy(alpha = .7f), fontSize = 10.sp, fontWeight = FontWeight.Normal)
+                        Row(Modifier.fillMaxWidth().padding(top = 2.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text(formatMusicTime(musicCurrentTime), color = Color.White.copy(alpha = .7f), fontSize = 9.sp, fontWeight = FontWeight.Normal)
+                            Text(formatMusicTime(musicDuration), color = Color.White.copy(alpha = .7f), fontSize = 9.sp, fontWeight = FontWeight.Normal)
                         }
-                        Spacer(Modifier.height(21.dp))
+                        Spacer(Modifier.height(5.dp))
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.QueueMusic, "Playlist", tint = Color.White, modifier = Modifier.size(34.dp))
-                            IconButton(onClick = { musicPrev() }) { Icon(Icons.Default.SkipPrevious, "Previous", tint = Color.White, modifier = Modifier.size(27.dp)) }
-                            Box(Modifier.size(48.dp).clip(CircleShape).background(Color.White).clickable { musicPlayPause() }, contentAlignment = Alignment.Center) {
-                                Icon(if (isMusicPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                                    if (isMusicPlaying) "Pause" else "Play", tint = Color(0xFF202938), modifier = Modifier.size(31.dp))
+                            Icon(Icons.Default.QueueMusic, "Playlist", tint = Color.White, modifier = Modifier.size(22.dp))
+                            IconButton(onClick = { musicPrev() }, modifier = Modifier.size(30.dp)) {
+                                Icon(Icons.Default.SkipPrevious, "Previous", tint = Color.White, modifier = Modifier.size(21.dp))
                             }
-                            IconButton(onClick = { musicNext() }) { Icon(Icons.Default.SkipNext, "Next", tint = Color.White, modifier = Modifier.size(27.dp)) }
-                            Icon(Icons.Default.Repeat, "Repeat", tint = Color.White, modifier = Modifier.size(34.dp))
+                            Box(Modifier.size(34.dp).clip(CircleShape).background(Color.White).clickable { musicPlayPause() }, contentAlignment = Alignment.Center) {
+                                Icon(if (isMusicPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                    if (isMusicPlaying) "Pause" else "Play", tint = Color(0xFF202938), modifier = Modifier.size(22.dp))
+                            }
+                            IconButton(onClick = { musicNext() }, modifier = Modifier.size(30.dp)) {
+                                Icon(Icons.Default.SkipNext, "Next", tint = Color.White, modifier = Modifier.size(21.dp))
+                            }
+                            Icon(Icons.Default.Repeat, "Repeat", tint = Color.White, modifier = Modifier.size(22.dp))
                             Icon(Icons.Default.VolumeUp, "Volume", tint = Color.White,
-                                modifier = Modifier.size(24.dp).clickable { showMusicVolumeView = true })
+                                modifier = Modifier.size(21.dp).clickable { showMusicVolumeView = true })
                         }
                     }
                 }
             }
         }
         }
-        
         if(showExitMenu) RoomExitMenu(
             onKeep={keepingRoomForMini=true;showExitMenu=false;onKeepRoom(roomName,roomImage,roomId)},
             onExit={showExitMenu=false;onClose()},
@@ -1797,8 +1804,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                         drawPath(redPath, redBrush)
                     }
 
-                    Box(Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp).fillMaxWidth(0.85f).height(62.dp).clip(RoundedCornerShape(50)).background(Color(0xFFFF304D)).border(3.dp, Color(0xFFFFDC73), RoundedCornerShape(50)).padding(5.dp).clip(RoundedCornerShape(50)).background(Brush.verticalGradient(listOf(Color(0xFFFFF2B9), Color(0xFFFFD28A), Color(0xFFFFAC45), Color(0xFFFFE8A0)))).border(3.dp, Color(0xFFFFF0AD), RoundedCornerShape(50)).clickable {
-                        showLuckyBagClaimedCard = false
+                    Box(Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp).fillMaxWidth(0.85f).height(62.dp).clip(RoundedCornerShape(50)).background(Color(0xFFFF304D)).border(3.dp, Color(0xFFFFDC73), RoundedCornerShape(50)).padding(5.dp).clip(RoundedCornerShape(50)).background(Brush.verticalGradient(listOf(Color(0xFFFFF2B9), Color(0xFFFFD28A), Color(0xFFFFAC45), Color(0xFFFFE8A0)))).border(3.dp, Color(0xFFFFF0AD), RoundedCornerShape(50)).clickable {                        showLuckyBagClaimedCard = false
                     }, contentAlignment = Alignment.Center) {
                         Text("Confirm", color = Color(0xFF9A4F1C), fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
                     }
