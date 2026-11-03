@@ -1646,27 +1646,31 @@ io.on("connection", (socket) => {
       rooms: getGlobalRoomPresence(),
     });
 
-    // Messages queued in Redis while this account was offline are delivered
-    // into the recipient's local index.db as soon as its socket reconnects.
+    // Replay for both registered identities; de-duplicate messages queued under aliases.
     if (redis) {
       try {
-        const queueKey = `private_messages:pending:${String(userId)}`;
-        const pending = await redis.lrange(queueKey, 0, -1);
-        if (Array.isArray(pending) && pending.length) {
+        const identities = [...new Set([String(userId), accountId ? String(accountId) : ""].filter(Boolean))];
+        const pendingById = new Map();
+        for (const identity of identities) {
+          const queueKey = `private_messages:pending:${identity}`;
+          const pending = await redis.lrange(queueKey, 0, -1);
+          if (!Array.isArray(pending) || !pending.length) continue;
           await redis.del(queueKey);
           for (const item of pending) {
             try {
               const message = typeof item === "string" ? JSON.parse(item) : item;
-              if (message && message.id) socket.emit("private_message", message);
+              if (message && message.id) pendingById.set(String(message.id), message);
             } catch (error) {
               console.warn("Skipping invalid queued private message:", error.message);
             }
           }
         }
+        for (const message of pendingById.values()) socket.emit("private_message", message);
       } catch (error) {
         console.error("Could not flush pending private messages:", error.message);
       }
     }
+
   });
 
   const handleGameWinner = async (gameName, payload = {}) => {
@@ -2484,6 +2488,7 @@ io.on("connection", (socket) => {
     const normalizedMessage = {
       id: String(message.id || `${message.senderId}_${Date.now()}`),
       senderId: String(message.senderId),
+      senderAccountId: String(socket.accountId || message.senderAccountId || message.senderId),
       receiverId,
       receiverAccountId,
       senderName: message.senderName || message.otherUserName || "User",
@@ -2510,9 +2515,12 @@ io.on("connection", (socket) => {
       }
     } else if (redis) {
       try {
-        const queueKey = `private_messages:pending:${receiverId}`;
-        await redis.rpush(queueKey, JSON.stringify(normalizedMessage));
-        await redis.expire(queueKey, 60 * 60 * 24 * 7);
+        const identities = [...new Set([receiverId, receiverAccountId].filter(Boolean))];
+        for (const identity of identities) {
+          const queueKey = `private_messages:pending:${identity}`;
+          await redis.rpush(queueKey, JSON.stringify(normalizedMessage));
+          await redis.expire(queueKey, 60 * 60 * 24 * 7);
+        }
       } catch (error) {
         console.error("Could not queue offline private message:", error.message);
       }
