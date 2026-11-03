@@ -2042,7 +2042,7 @@ private fun formatMusicTime(seconds: Float): String {
     val isRoomOwnerMessage = m.senderAccountId == roomOwnerId
     val isCoreOfficial = m.senderAccountId == "100002" || m.senderAccountId == "100003"
     val isRedOfficial = m.senderAccountId == "500001"
-    val is500002Official = m.senderAccountId in setOf("500002")
+    val is500002Official = m.senderAccountId in setOf("500002", "500003")
     
     val officialHeadTag = !is500002Official && (isCoreOfficial || profileTags?.optBoolean("officialHeadTag", false) == true)
     val officialTag = isCoreOfficial || isRedOfficial || is500002Official || profileTags?.optBoolean("officialTag", false) == true
