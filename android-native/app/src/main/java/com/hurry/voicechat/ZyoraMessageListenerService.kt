@@ -37,10 +37,11 @@ class ZyoraMessageListenerService : Service() {
         val auth = getSharedPreferences("hurry_auth", Context.MODE_PRIVATE)
         val user = getSharedPreferences("hurry_user", Context.MODE_PRIVATE)
         activeUid = auth.getString("uid", "").orEmpty()
-        activeAccountId = auth.getString("accountId", null)
-            ?: user.getString("accountId", null)
-            ?: user.getString("userId", activeUid)
-            ?: activeUid
+        activeAccountId = auth.getString("accountId", "").orEmpty().ifBlank {
+            user.getString("accountId", "").orEmpty().ifBlank {
+                user.getString("userId", activeUid).orEmpty().ifBlank { activeUid }
+            }
+        }
         if (activeUid.isBlank() && activeAccountId.isBlank()) {
             stopSelf()
             return START_NOT_STICKY
