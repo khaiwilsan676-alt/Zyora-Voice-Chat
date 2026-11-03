@@ -550,8 +550,8 @@ fun MiniMusicControllerCard(
         Card(
             modifier = modifier
                 .fillMaxWidth()
-                .height(160.dp)
-                .padding(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 90.dp),
+                .padding(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 90.dp)
+                .height(160.dp),
             shape = RoundedCornerShape(10.dp),
             colors = CardDefaults.cardColors(containerColor = Color.Black),
             elevation = CardDefaults.cardElevation(8.dp)
@@ -749,7 +749,7 @@ fun MiniMusicControllerCard(
                                 modifier = Modifier
                                     .size(40.dp)
                                     .clip(CircleShape)
-                                    .background(Color.White, CircleShape)
+                                    .background(Color.White)
                                     .clickable {
                                         if (isPlaying) {
                                             context.startService(Intent(context, RoomMusicService::class.java).setAction(RoomMusicService.ACTION_PAUSE))
@@ -805,6 +805,23 @@ fun MiniMusicControllerCard(
                                                 .setAction(RoomMusicService.ACTION_REPEAT_ONE)
                                                 .putExtra(RoomMusicService.EXTRA_REPEAT_ONE, enabled)
                                         )
+                                        if (enabled) {
+                                            context.startService(
+                                                Intent(context, RoomMusicService::class.java)
+                                                    .setAction(RoomMusicService.ACTION_SEEK)
+                                                    .putExtra(RoomMusicService.EXTRA_POSITION_MS, 0)
+                                            )
+                                            if (!MusicPlaybackState.isPlaying) {
+                                                ContextCompat.startForegroundService(
+                                                    context,
+                                                    Intent(context, RoomMusicService::class.java)
+                                                        .setAction(RoomMusicService.ACTION_PLAY)
+                                                        .putExtra(RoomMusicService.EXTRA_URI, track.url)
+                                                        .putExtra(RoomMusicService.EXTRA_TITLE, track.name)
+                                                )
+                                                MusicPlaybackState.isPlaying = true
+                                            }
+                                        }
                                     }
                                     .size(24.dp),
                                 contentAlignment = Alignment.Center
@@ -814,13 +831,15 @@ fun MiniMusicControllerCard(
                                     contentDescription = "Repeat one",
                                     tint = if (MusicPlaybackState.repeatOne) Color(0xFF3B82F6) else Color.White
                                 )
-                                Text(
-                                    text = "1",
-                                    color = if (MusicPlaybackState.repeatOne) Color(0xFF3B82F6) else Color.White,
-                                    fontSize = 8.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.align(Alignment.BottomEnd)
-                                )
+                                if (MusicPlaybackState.repeatOne) {
+                                    Text(
+                                        text = "1",
+                                        color = Color(0xFF3B82F6),
+                                        fontSize = 8.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.align(Alignment.BottomEnd)
+                                    )
+                                }
                             }
 
                             Icon(
