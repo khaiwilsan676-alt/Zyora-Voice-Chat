@@ -439,14 +439,14 @@ fun RoomProfile(
                         onClick = { showReports = true },
                         modifier = Modifier.align(Alignment.TopStart).padding(top = 52.dp, start = 8.dp)
                     ) {
-                        LucidePublicProfileIcon(warning = true, modifier = Modifier.size(24.dp))
+                        LucidePublicProfileIcon(warning = true, tint = Color.Black, modifier = Modifier.size(24.dp))
                     }
 
                     IconButton(
                         onClick = { onMention(displayName.ifBlank { user.name }, sequenceOf(user.accountId, user.id, user.uid).firstOrNull { !it.isNullOrBlank() }.orEmpty()) },
                         modifier = Modifier.align(Alignment.TopEnd).padding(top = 52.dp, end = 8.dp)
                     ) {
-                        Icon(Icons.Default.AlternateEmail, contentDescription = "Mention", tint = Color.DarkGray)
+                        Icon(Icons.Default.AlternateEmail, contentDescription = "Mention", tint = Color.Black)
                     }
                 }
             }
