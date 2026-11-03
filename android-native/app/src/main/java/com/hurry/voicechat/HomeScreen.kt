@@ -273,49 +273,27 @@ fun HomeScreen(
 
 
     LaunchedEffect(Unit) {
-        if (NativeRoomMemoryCache.rooms == null) {
-            val cached = if (dao != null) {
-                runCatching { withContext(Dispatchers.IO) { dao.getAll() } }.getOrDefault(emptyList())
-            } else emptyList()
-            if (cached.isNotEmpty()) {
-                val cachedRooms = cached.map {
-                    HurryRoom(
-                        id = it.id,
-                        name = it.name,
-                        country = it.country,
-                        image = it.image,
-                        accountId = it.accountId
-                    )
-                }
-                NativeRoomMemoryCache.rooms = cachedRooms
-                rooms = cachedRooms
-            }
-        } else {
-            rooms = NativeRoomMemoryCache.rooms
-        }
+        // Do not render an old local room snapshot as if it were current.
+        // A full MongoDB snapshot is required so deleted rooms disappear.
+        rooms = emptyList()
+        NativeRoomMemoryCache.rooms = null
 
-        val now = System.currentTimeMillis()
-        if (!NativeRoomMemoryCache.refreshInFlight &&
-            (NativeRoomMemoryCache.lastRefreshAt == 0L || now - NativeRoomMemoryCache.lastRefreshAt >= 30_000L)
-        ) {
+        if (!NativeRoomMemoryCache.refreshInFlight) {
             NativeRoomMemoryCache.refreshInFlight = true
             try {
-                val since = roomSyncPrefs.getLong("last_server_updated_at", 0L)
-                val update = runCatching { HurryApi.roomsUpdatedSince(since) }.getOrNull()
+                val update = runCatching { HurryApi.roomsUpdatedSince(0L) }.getOrNull()
                 NativeRoomMemoryCache.lastRefreshAt = System.currentTimeMillis()
                 if (update != null) {
-                    val fresh = update.rooms
-                    val previous = NativeRoomMemoryCache.rooms ?: rooms ?: emptyList()
-                    val merged = if (since == 0L) fresh else (fresh + previous).distinctBy { it.id }
-                    if (fresh.isNotEmpty() || since == 0L) {
-                        NativeRoomMemoryCache.rooms = merged
-                        rooms = merged
-                        if (dao != null) {
-                            runCatching {
-                                withContext(Dispatchers.IO) {
-                                    dao.clearAll()
+                    val fresh = update.rooms.distinctBy { it.id }
+                    NativeRoomMemoryCache.rooms = fresh
+                    rooms = fresh
+                    if (dao != null) {
+                        runCatching {
+                            withContext(Dispatchers.IO) {
+                                dao.clearAll()
+                                if (fresh.isNotEmpty()) {
                                     dao.insertAll(
-                                        merged.map {
+                                        fresh.map {
                                             RoomEntity(
                                                 id = it.id,
                                                 name = it.name,
@@ -333,8 +311,12 @@ fun HomeScreen(
                     if (update.serverTime > 0L) {
                         roomSyncPrefs.edit().putLong("last_server_updated_at", update.serverTime).apply()
                     }
-                } else if (rooms == null) {
+                } else {
+                    // Fail closed: never keep showing cached rooms when the server
+                    // cannot confirm that those room records still exist.
+                    NativeRoomMemoryCache.rooms = emptyList()
                     rooms = emptyList()
+                    if (dao != null) runCatching { withContext(Dispatchers.IO) { dao.clearAll() } }
                 }
             } finally {
                 NativeRoomMemoryCache.refreshInFlight = false
