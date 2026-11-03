@@ -2101,7 +2101,7 @@ private fun formatMusicTime(seconds: Float): String {
     }
 }
 
-@Composable private fun NativeMessage(m:NativeRoomMessage, roomOwnerId: String, onAvatarClick: () -> Unit = {}){
+@Composable private fun NativeMessage(m:NativeRoomMessage, roomOwnerId: String, onAvatarClick: () -> Unit = {}, onMentionClick: (NativeMention) -> Unit = {}){
     val context = LocalContext.current
     val profileDb = remember(context) { NativeIndexDatabase(context) }
     var profileTags by remember(m.senderAccountId) { mutableStateOf(profileDb.loadProfile(m.senderAccountId)) }
@@ -2180,7 +2180,7 @@ private fun formatMusicTime(seconds: Float): String {
                     val annotated = androidx.compose.ui.text.buildAnnotatedString {
                         var cursor = 0
                         val matches = m.mentions.mapNotNull { mention ->
-                            val start = m.text.indexOf("@${mention.name}", cursor)
+                            val start = m.text.indexOf("@${mention.name}")
                             if (start >= 0) Triple(start, start + mention.name.length + 1, mention) else null
                         }.sortedBy { it.first }
                         matches.forEach { (start, end, mention) ->
