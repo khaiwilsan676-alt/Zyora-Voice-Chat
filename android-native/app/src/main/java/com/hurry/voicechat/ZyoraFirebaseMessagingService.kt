@@ -5,6 +5,8 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -54,6 +56,17 @@ class ZyoraFirebaseMessagingService : FirebaseMessagingService() {
         showMessageNotification()
     }
 
+    private fun appLogoBitmap(): Bitmap? = runCatching {
+        val drawable = packageManager.getApplicationIcon(packageName)
+        val width = drawable.intrinsicWidth.coerceAtLeast(1)
+        val height = drawable.intrinsicHeight.coerceAtLeast(1)
+        Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888).also { bitmap ->
+            val canvas = Canvas(bitmap)
+            drawable.setBounds(0, 0, canvas.width, canvas.height)
+            drawable.draw(canvas)
+        }
+    }.getOrNull()
+
     private fun showMessageNotification() {
         val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -79,6 +92,7 @@ class ZyoraFirebaseMessagingService : FirebaseMessagingService() {
         )
         val notification = NotificationCompat.Builder(this, ZYORA_MESSAGE_CHANNEL)
             .setSmallIcon(R.drawable.ic_stat_zyora)
+            .setLargeIcon(appLogoBitmap())
             .setContentTitle("Zyora")
             .setContentText("You have message from Zyora")
             .setStyle(NotificationCompat.BigTextStyle().bigText("You have message from Zyora"))
