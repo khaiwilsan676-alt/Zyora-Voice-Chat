@@ -46,7 +46,7 @@ import kotlinx.coroutines.launch
 import kotlin.math.abs
 
 @Composable
-private fun LucidePublicProfileIcon(
+fun LucidePublicProfileIcon(
     warning: Boolean,
     modifier: Modifier = Modifier,
     tint: Color = Color.White
