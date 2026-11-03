@@ -9,6 +9,7 @@ import io.socket.emitter.Emitter
 import org.json.JSONObject
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -17,9 +18,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Send
-import androidx.compose.material.icons.filled.SentimentSatisfiedAlt
+import androidx.compose.material.icons.outlined.Image
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -33,19 +33,19 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 
 private const val RAW_MSG = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/"
+private val HurryMuted = Color(0xFF6B7280)
 
 private data class MessagePreview(val uid: String, val name: String, val image: String, val message: String, val time: String = "")
 
-// Yeh function tumhare SVG ko Compose Icon mein convert karne ke liye hai
 @OptIn(ExperimentalGraphicsApi::class)
 @Composable
 fun rememberVerifiedChatIcon(): ImageVector {
@@ -86,6 +86,38 @@ fun rememberVerifiedChatIcon(): ImageVector {
     }
 }
 
+@OptIn(ExperimentalGraphicsApi::class)
+@Composable
+fun rememberVoiceWaveIcon(): ImageVector {
+    return remember {
+        ImageVector.Builder("VoiceWave", 24.dp, 24.dp, 24f, 24f).apply {
+            path(stroke = SolidColor(Color.Black), strokeLineWidth = 2.5f, strokeLineCap = StrokeCap.Round) {
+                moveTo(5f, 10f); lineTo(5f, 14f)
+                moveTo(9f, 7f); lineTo(9f, 17f)
+                moveTo(13f, 4f); lineTo(13f, 20f)
+                moveTo(17f, 7f); lineTo(17f, 17f)
+                moveTo(21f, 10f); lineTo(21f, 14f)
+            }
+        }.build()
+    }
+}
+
+@OptIn(ExperimentalGraphicsApi::class)
+@Composable
+fun rememberKeyboardIcon(): ImageVector {
+    return remember {
+        ImageVector.Builder("Keyboard", 24.dp, 24.dp, 24f, 24f).apply {
+            path(stroke = SolidColor(Color.Black), strokeLineWidth = 1.5f, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
+                moveTo(3f, 7f); lineTo(21f, 7f); lineTo(21f, 17f); lineTo(3f, 17f); close()
+                moveTo(7f, 11f); lineTo(8f, 11f)
+                moveTo(11f, 11f); lineTo(12f, 11f)
+                moveTo(15f, 11f); lineTo(16f, 11f)
+                moveTo(7f, 14f); lineTo(17f, 14f)
+            }
+        }.build()
+    }
+}
+
 @Composable
 fun MessageScreen(onChat: (String, String, String) -> Unit, embeddedSheet: Boolean = false, onBack: () -> Unit = {}) {
     val chats = remember {
@@ -108,20 +140,18 @@ fun MessageScreen(onChat: (String, String, String) -> Unit, embeddedSheet: Boole
                 Modifier.fillMaxWidth().background(
                     Brush.verticalGradient(
                         0.0f to Color(0xFF3B82F6),
-                        0.3f to Color(0xFF3B82F6), // Blue color thora aur increase kiya yahan
+                        0.3f to Color(0xFF3B82F6),
                         0.75f to Color(0xFFF1F1F1),
                         1.0f to Color(0xFFF1F1F1)
                     )
                 ).statusBarsPadding().padding(top = 12.dp, bottom = 12.dp)
             ) {
-                // Heading ko ekdam Middle mein set kiya
                 Text(
                     "Message",
                     Modifier.align(Alignment.Center),
                     color = Color.Black, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold
                 )
                 
-                // Right side corner mein custom SVG icon add kiya
                 Icon(
                     imageVector = rememberVerifiedChatIcon(),
                     contentDescription = "Custom Icon",
@@ -185,8 +215,13 @@ fun NativeChatScreen(
 
     var text by remember { mutableStateOf("") }
     var showOptions by remember { mutableStateOf(false) }
-    var showEmojiPicker by remember { mutableStateOf(false) }
     var replyText by remember { mutableStateOf<String?>(null) }
+    
+    // Voice Mode States
+    var isVoiceMode by remember { mutableStateOf(false) }
+    var isRecording by remember { mutableStateOf(false) }
+    var recordStartTime by remember { mutableLongStateOf(0L) }
+
     val messageListState = androidx.compose.foundation.lazy.rememberLazyListState()
     val officialIdForCache = when (name) {
         "Zyora Team" -> "hurry_team_official"
@@ -196,6 +231,7 @@ fun NativeChatScreen(
     val cacheKey = "official_chat_cache_${officialIdForCache ?: name}"
     val indexDb = remember { NativeIndexDatabase(context) }
     val localConversationKey = "chat_${currentUserId}_${receiverId.ifBlank { officialIdForCache ?: name }}"
+    
     val messages = remember(name, receiverId, currentUserId) {
         mutableStateListOf<Pair<Boolean, String>>().apply {
             val dbCache = indexDb.loadChat(localConversationKey)
@@ -229,7 +265,6 @@ fun NativeChatScreen(
         indexDb.saveChat(localConversationKey, array.toString())
     }
 
-    // Persist each official message locally; cached history renders immediately on reopen.
     fun cacheOfficialMessage(payload: JSONObject, officialId: String) {
         if (payload.optString("senderId") != officialId) return
         val value = payload.optString("text").ifBlank {
@@ -254,7 +289,6 @@ fun NativeChatScreen(
         }
     }
 
-    // Real-time one-to-one chat: register identity, load conversation history, and receive new messages.
     DisposableEffect(receiverId, currentUserId, name) {
         if (isOfficial || receiverId.isBlank() || currentUserId.isBlank()) return@DisposableEffect onDispose { }
         val opts = IO.Options().apply {
@@ -319,7 +353,6 @@ fun NativeChatScreen(
         if (messages.isNotEmpty()) messageListState.animateScrollToItem(messages.lastIndex)
     }
 
-    // Receive owner-panel Zyora Team/System broadcasts live; request only messages newer than local cache.
     DisposableEffect(name) {
         val officialId = when (name) {
             "Zyora Team" -> "hurry_team_official"
@@ -379,7 +412,14 @@ fun NativeChatScreen(
         }
     }
 
-    Box(Modifier.fillMaxSize().background(Color(0xFFF0F2F5))) {
+    Box(Modifier.fillMaxSize().background(
+        Brush.verticalGradient(
+            0.0f to Color(0xFF3B82F6),
+            0.2f to Color(0xFF3B82F6),
+            0.35f to Color(0xFFF0F2F5),
+            1.0f to Color(0xFFF0F2F5)
+        )
+    )) {
         if (isOfficial) {
             AsyncImage(
                 model = RAW_MSG + "file_00000000777481f588df50d28908ce63.png",
@@ -394,10 +434,8 @@ fun NativeChatScreen(
         }
 
         Column(Modifier.fillMaxSize()) {
-            // Clean real-app chat header with a consistent blue surface.
             Row(
                 Modifier.fillMaxWidth()
-                    .background(Brush.horizontalGradient(listOf(Color(0xFF2563EB), Color(0xFF3B82F6))))
                     .statusBarsPadding()
                     .padding(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 10.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -433,18 +471,42 @@ fun NativeChatScreen(
                     }
                 }
                 if (!isOfficial) {
-                    Text(
-                        "⋮",
-                        fontSize = 28.sp,
-                        color = Color.White,
-                        modifier = Modifier
-                            .clickable { showOptions = true }
-                            .padding(horizontal = 8.dp)
-                    )
+                    Box {
+                        Text(
+                            "⋮",
+                            fontSize = 28.sp,
+                            color = Color.White,
+                            modifier = Modifier
+                                .clickable { showOptions = true }
+                                .padding(horizontal = 8.dp)
+                        )
+                        
+                        DropdownMenu(
+                            expanded = showOptions,
+                            onDismissRequest = { showOptions = false },
+                            modifier = Modifier.background(Color.White)
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Block", color = Color.Black, fontSize = 15.sp) },
+                                onClick = { showOptions = false }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Report", color = Color.Black, fontSize = 15.sp) },
+                                onClick = { showOptions = false }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Clear Chat", color = Color.Black, fontSize = 15.sp) },
+                                onClick = { messages.clear(); showOptions = false }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Delete Messages", color = Color.Black, fontSize = 15.sp) },
+                                onClick = { showOptions = false }
+                            )
+                        }
+                    }
                 }
             }
 
-            // Real-chat style message surface: no card around the whole list.
             LazyColumn(
                 state = messageListState,
                 modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 12.dp),
@@ -454,6 +516,10 @@ fun NativeChatScreen(
             ) {
                 items(messages) { item ->
                     val mine = item.first
+                    
+                    val isVoiceNote = item.second.startsWith("VOICE::")
+                    val messageText = if (isVoiceNote) item.second.removePrefix("VOICE::") else item.second
+
                     Row(
                         Modifier.fillMaxWidth(),
                         horizontalArrangement = if (mine) Arrangement.End else Arrangement.Start,
@@ -478,21 +544,63 @@ fun NativeChatScreen(
                                     RoundedCornerShape(18.dp, 18.dp, 18.dp, 4.dp),
                                 shadowElevation = 0.dp
                             ) {
-                                Column(Modifier.widthIn(max = 290.dp).padding(horizontal = 13.dp, vertical = 9.dp)) {
-                                    if (replyText != null && mine) {
-                                        Text(
-                                            replyText!!,
-                                            color = Color(0xFFCBD5E1),
-                                            fontSize = 10.sp,
-                                            maxLines = 1
+                                if (isVoiceNote) {
+                                    Row(
+                                        modifier = Modifier
+                                            .widthIn(min = 100.dp, max = 220.dp)
+                                            .clickable { /* Yahan Voice Play Karne Ka Logic Laga Dena */ }
+                                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            imageVector = rememberVoiceWaveIcon(),
+                                            contentDescription = "Play Voice Note",
+                                            tint = if (mine) Color.White else Color(0xFF1F2937),
+                                            modifier = Modifier.size(18.dp)
                                         )
-                                        Spacer(Modifier.height(3.dp))
+                                        Spacer(Modifier.width(8.dp))
+                                        
+                                        Row(
+                                            Modifier.weight(1f),
+                                            horizontalArrangement = Arrangement.SpaceEvenly,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            listOf(0.4f, 0.8f, 1f, 0.6f, 0.4f).forEach { heightFraction ->
+                                                Box(
+                                                    modifier = Modifier
+                                                        .width(2.5.dp)
+                                                        .height(14.dp * heightFraction)
+                                                        .clip(CircleShape)
+                                                        .background(if (mine) Color.White.copy(alpha = 0.7f) else Color.Gray.copy(alpha = 0.7f))
+                                                )
+                                            }
+                                        }
+                                        
+                                        Spacer(Modifier.width(8.dp))
+                                        Text(
+                                            text = "$messageText\"",
+                                            color = if (mine) Color.White else Color(0xFF1F2937),
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Medium
+                                        )
                                     }
-                                    Text(
-                                        item.second,
-                                        color = if (mine) Color.White else Color(0xFF1F2937),
-                                        fontSize = 14.sp
-                                    )
+                                } else {
+                                    Column(Modifier.widthIn(max = 290.dp).padding(horizontal = 13.dp, vertical = 9.dp)) {
+                                        if (replyText != null && mine) {
+                                            Text(
+                                                replyText!!,
+                                                color = Color(0xFFCBD5E1),
+                                                fontSize = 10.sp,
+                                                maxLines = 1
+                                            )
+                                            Spacer(Modifier.height(3.dp))
+                                        }
+                                        Text(
+                                            messageText,
+                                            color = if (mine) Color.White else Color(0xFF1F2937),
+                                            fontSize = 14.sp
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -519,11 +627,9 @@ fun NativeChatScreen(
                 }
             }
 
-            // Real app input bar: image + emoji + rounded input + send icon.
             if (!isOfficial) {
                 Column(
                     Modifier.fillMaxWidth()
-                        .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
                         .background(Color.White)
                         .navigationBarsPadding()
                         .imePadding()
@@ -549,133 +655,149 @@ fun NativeChatScreen(
                             .padding(horizontal = 16.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        
+                        // MAGIC BUTTON: Switch between Audio Mode and Text Mode
+                        if (isVoiceMode) {
+                            IconButton(onClick = { isVoiceMode = false }, modifier = Modifier.size(28.dp)) {
+                                Icon(rememberKeyboardIcon(), contentDescription = "Keyboard", tint = Color(0xFF6B7280), modifier = Modifier.size(26.dp))
+                            }
+                        } else {
+                            IconButton(onClick = { isVoiceMode = true }, modifier = Modifier.size(28.dp)) {
+                                Icon(rememberVoiceWaveIcon(), contentDescription = "Voice", tint = Color(0xFF6B7280), modifier = Modifier.size(26.dp))
+                            }
+                        }
+                        
+                        Spacer(Modifier.width(10.dp))
+                        
+                        // Image Icon (Dono modes mein same rahega)
                         IconButton(
                             onClick = { },
                             enabled = false,
-                            modifier = Modifier.size(24.dp)
+                            modifier = Modifier.size(28.dp)
                         ) {
-                            Icon(Icons.Default.Image, contentDescription = "Image", tint = Color(0xFF6B7280), modifier = Modifier.size(24.dp))
+                            Icon(Icons.Outlined.Image, contentDescription = "Image", tint = Color(0xFF6B7280), modifier = Modifier.size(26.dp))
                         }
-                        Spacer(Modifier.width(8.dp))
-                        IconButton(
-                            onClick = { showEmojiPicker = !showEmojiPicker },
-                            modifier = Modifier.size(24.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.SentimentSatisfiedAlt,
-                                contentDescription = "Emoji",
-                                tint = if (showEmojiPicker) Color(0xFF3B82F6) else Color(0xFF6B7280),
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
-                        Spacer(Modifier.width(8.dp))
+                        Spacer(Modifier.width(10.dp))
 
-                        Box(Modifier.weight(1f)) {
-                            Row(
-                                Modifier.fillMaxWidth()
-                                    .clip(CircleShape)
-                                    .background(Color(0xFFF3F4F6))
-                                    .padding(start = 16.dp, end = 9.dp, top = 2.dp, bottom = 2.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                androidx.compose.foundation.text.BasicTextField(
-                                    value = text,
-                                    onValueChange = { text = it },
-                                    singleLine = true,
-                                    textStyle = androidx.compose.ui.text.TextStyle(
-                                        color = Color.Black,
-                                        fontSize = 14.sp
-                                    ),
-                                    modifier = Modifier.weight(1f).padding(vertical = 9.dp),
-                                    decorationBox = { inner ->
-                                        if (text.isEmpty()) Text("Type a message...", color = Color(0xFF8A8F98), fontSize = 14.sp)
-                                        inner()
-                                    }
-                                )
-                                IconButton(
-                                    onClick = {
-                                        if (text.isNotBlank()) {
-                                            val outgoingText = text.trim()
-                                            messages.add(true to outgoingText)
-                                            val outgoing = JSONObject()
-                                                .put("id", "${currentUserId}_${System.currentTimeMillis()}")
-                                                .put("senderId", currentUserId)
-                                                .put("receiverId", receiverId)
-                                                .put("senderName", currentName)
-                                                .put("senderPhoto", currentPhoto)
-                                                .put("receiverName", name)
-                                                .put("receiverPhoto", image)
-                                                .put("text", outgoingText)
-                                                .put("type", "message")
-                                                .put("timestamp", System.currentTimeMillis())
-                                            if (!isOfficial && receiverId.isNotBlank() && currentUserId.isNotBlank()) {
-                                                directSocket?.emit("private_message", outgoing)
+                        if (isVoiceMode) {
+                            // HOLD TO TALK BUTTON (Emoji icon hata diya, sirf Box bacha hai)
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(48.dp)
+                                    .clip(RoundedCornerShape(24.dp))
+                                    .background(if (isRecording) Color(0xFFD1D5DB) else Color(0xFFF3F4F6))
+                                    .pointerInput(Unit) {
+                                        detectTapGestures(
+                                            onPress = {
+                                                // HOLD START
+                                                isRecording = true
+                                                recordStartTime = System.currentTimeMillis()
+                                                
+                                                tryAwaitRelease() // Wait until user removes the finger
+                                                
+                                                // HOLD LEAVE / SEND
+                                                isRecording = false
+                                                val durationSec = ((System.currentTimeMillis() - recordStartTime) / 1000).coerceAtLeast(1)
+                                                
+                                                val outgoingText = "VOICE::$durationSec"
+                                                messages.add(true to outgoingText)
+                                                
+                                                val outgoing = JSONObject()
+                                                    .put("id", "${currentUserId}_${System.currentTimeMillis()}")
+                                                    .put("senderId", currentUserId)
+                                                    .put("receiverId", receiverId)
+                                                    .put("senderName", currentName)
+                                                    .put("senderPhoto", currentPhoto)
+                                                    .put("receiverName", name)
+                                                    .put("receiverPhoto", image)
+                                                    .put("text", outgoingText)
+                                                    .put("type", "voice")
+                                                    .put("timestamp", System.currentTimeMillis())
+                                                
+                                                if (!isOfficial && receiverId.isNotBlank() && currentUserId.isNotBlank()) {
+                                                    directSocket?.emit("private_message", outgoing)
+                                                }
                                             }
-                                            text = ""
-                                            showEmojiPicker = false
-                                            replyText = null
-                                        }
+                                        )
                                     },
-                                    enabled = text.isNotBlank(),
-                                    modifier = Modifier.size(28.dp)
-                                ) {
-                                    Icon(
-                                        Icons.Default.Send,
-                                        contentDescription = "Send",
-                                        tint = if (text.isBlank()) Color(0xFFD1D5DB) else Color(0xFF3B82F6),
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                }
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = if (isRecording) "Release to Send" else "Hold to Talk",
+                                    color = Color(0xFF1F2937),
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
                             }
-                        }
-                    }
 
-                    if (showEmojiPicker) {
-                        val emojis = listOf("😀","😂","🤣","🥺","😍","🥰","😘","😊","😉","😎","🤩","🥳","😒","😞","😢","😭","😡","🤬","😱","😴","🤔","🤭","❤️","🔥","✨","💯","👍","👏","🙌","💪")
-                        Column(
-                            Modifier.fillMaxWidth()
-                                .height(230.dp)
-                                .background(Color(0xFFF1F3F5))
-                                .padding(8.dp)
-                        ) {
-                            emojis.chunked(8).forEach { row ->
-                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                                    row.forEach { emoji ->
-                                        Text(emoji, fontSize = 25.sp, modifier = Modifier.clickable { text += emoji }.padding(5.dp))
+                        } else {
+                            // NORMAL TEXT FIELD BOX
+                            Box(Modifier.weight(1f)) {
+                                Row(
+                                    Modifier.fillMaxWidth()
+                                        .height(48.dp)
+                                        .clip(RoundedCornerShape(24.dp))
+                                        .background(Color(0xFFF3F4F6))
+                                        .padding(start = 16.dp, end = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    androidx.compose.foundation.text.BasicTextField(
+                                        value = text,
+                                        onValueChange = { text = it },
+                                        singleLine = true,
+                                        textStyle = androidx.compose.ui.text.TextStyle(
+                                            color = Color.Black,
+                                            fontSize = 15.sp
+                                        ),
+                                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                                        decorationBox = { inner ->
+                                            Box(contentAlignment = Alignment.CenterStart, modifier = Modifier.fillMaxSize()) {
+                                                if (text.isEmpty()) Text("Type a message...", color = Color(0xFF8A8F98), fontSize = 15.sp)
+                                                inner()
+                                            }
+                                        }
+                                    )
+                                    
+                                    val isTextBlank = text.isBlank()
+                                    Box(
+                                        modifier = Modifier
+                                            .size(36.dp)
+                                            .clip(CircleShape)
+                                            .background(if (isTextBlank) Color(0xFF9CA3AF) else Color(0xFF3B82F6))
+                                            .clickable(enabled = !isTextBlank) {
+                                                val outgoingText = text.trim()
+                                                messages.add(true to outgoingText)
+                                                val outgoing = JSONObject()
+                                                    .put("id", "${currentUserId}_${System.currentTimeMillis()}")
+                                                    .put("senderId", currentUserId)
+                                                    .put("receiverId", receiverId)
+                                                    .put("senderName", currentName)
+                                                    .put("senderPhoto", currentPhoto)
+                                                    .put("receiverName", name)
+                                                    .put("receiverPhoto", image)
+                                                    .put("text", outgoingText)
+                                                    .put("type", "message")
+                                                    .put("timestamp", System.currentTimeMillis())
+                                                if (!isOfficial && receiverId.isNotBlank() && currentUserId.isNotBlank()) {
+                                                    directSocket?.emit("private_message", outgoing)
+                                                }
+                                                text = ""
+                                                replyText = null
+                                            },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Send,
+                                            contentDescription = "Send",
+                                            tint = Color.White,
+                                            modifier = Modifier.size(18.dp).padding(start = 2.dp)
+                                        )
                                     }
                                 }
                             }
                         }
                     }
-                }
-            }
-        }
-
-        if (showOptions) {
-            Box(
-                Modifier.fillMaxSize().background(Color.Black.copy(alpha = .45f)).clickable { showOptions = false },
-                contentAlignment = Alignment.BottomCenter
-            ) {
-                Column(
-                    Modifier.fillMaxWidth()
-                        .height(280.dp)
-                        .clip(RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp))
-                        .background(Color.Black)
-                        .padding(horizontal = 16.dp, vertical = 12.dp)
-                        .clickable(enabled = false) {},
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text("Report", color = Color.White, fontSize = 16.sp, modifier = Modifier.padding(vertical = 12.dp).clickable { showOptions = false })
-                    Text("Clear Chat", color = Color.White, fontSize = 16.sp, modifier = Modifier.padding(vertical = 12.dp).clickable {
-                        messages.clear(); showOptions = false
-                    })
-                    Text("Delete Messages", color = Color.White, fontSize = 16.sp, modifier = Modifier.padding(vertical = 12.dp).clickable { showOptions = false })
-                    Text("Block", color = Color.White, fontSize = 16.sp, modifier = Modifier.padding(vertical = 12.dp).clickable { showOptions = false })
-                    Spacer(Modifier.weight(1f))
-                    Box(
-                        Modifier.fillMaxWidth().height(48.dp).clip(RoundedCornerShape(12.dp)).background(Color(0xFF3B82F6)).clickable { showOptions = false },
-                        contentAlignment = Alignment.Center
-                    ) { Text("Cancel", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Normal) }
                 }
             }
         }
