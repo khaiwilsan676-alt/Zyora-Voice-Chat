@@ -260,6 +260,7 @@ fun MessageScreen(onChat: (String, String, String) -> Unit, embeddedSheet: Boole
                     history.put(JSONObject().put("id", messageId).put("mine", false).put("text", body))
                     indexDb.saveChat(chatKey, history.toString())
                 }
+                if (!alreadySaved) showZyoraLocalMessageNotification(context)
                 updateConversationPreview(peerId, payload.optString("senderName", "User"), payload.optString("senderPhoto", ""), previewBody, payload.optLong("timestamp", System.currentTimeMillis()))
             }
         }
