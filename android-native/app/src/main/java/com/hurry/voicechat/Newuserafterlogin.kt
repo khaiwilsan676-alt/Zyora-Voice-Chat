@@ -47,7 +47,7 @@ fun Newuserafterlogin(onBack: () -> Unit, onComplete: () -> Unit) {
     val scope = rememberCoroutineScope()
     var nickname by remember { mutableStateOf(prefs.getString("name", "").orEmpty()) }
     var birthday by remember { mutableStateOf(prefs.getString("birthday", "").orEmpty()) }
-    var country by remember { mutableStateOf(prefs.getString("countryName", "India").orEmpty().ifBlank { "India" }) }
+    var country by remember { mutableStateOf(prefs.getString("countryName", "").orEmpty()) }
     var gender by remember { mutableStateOf(prefs.getString("gender", "").orEmpty()) }
     var avatar by remember { mutableStateOf(prefs.getString("image", "").orEmpty()) }
     var selectedUri by remember { mutableStateOf<Uri?>(null) }
@@ -240,7 +240,7 @@ fun Newuserafterlogin(onBack: () -> Unit, onComplete: () -> Unit) {
                     expanded = countryMenu,
                     onExpandedChange = { countryMenu = it }
                 ) {
-                    val currentCountry = countries.find { it.name == country } ?: countries.first()
+                    val currentCountry = countries.find { it.name == country }
                     
                     Row(
                         Modifier
@@ -251,11 +251,11 @@ fun Newuserafterlogin(onBack: () -> Unit, onComplete: () -> Unit) {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(currentCountry.flag, fontSize = 20.sp)
+                            Text(currentCountry?.flag ?: "🌐", fontSize = 20.sp)
                             Spacer(Modifier.width(8.dp))
-                            Text(currentCountry.name, color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                            Text(currentCountry?.name ?: "Select country", color = if (currentCountry == null) Color.Gray else Color.Black, fontSize = 16.sp, fontWeight = FontWeight.Medium)
                         }
-                        Text(currentCountry.dialCode, color = Color(0xFFBBBBBB), fontSize = 14.sp)
+                        Text(currentCountry?.dialCode ?: "", color = Color(0xFFBBBBBB), fontSize = 14.sp)
                     }
                     
                     ExposedDropdownMenu(
@@ -365,6 +365,7 @@ fun Newuserafterlogin(onBack: () -> Unit, onComplete: () -> Unit) {
                     if (nickname.isBlank()) { error = "Please enter your nickname"; return@Button }
                     if (birthday.isBlank()) { error = "Please choose your birthday"; return@Button }
                     if (gender.isBlank()) { error = "Please choose Male or Female"; return@Button }
+                    if (country.isBlank()) { error = "Please select your country"; return@Button }
                     scope.launch {
                         saving = true; error = ""
                         try {
@@ -377,7 +378,7 @@ fun Newuserafterlogin(onBack: () -> Unit, onComplete: () -> Unit) {
                                 }
                             }
                             
-                            val selectedCountryData = countries.find { it.name == country } ?: countries.last()
+                            val selectedCountryData = countries.find { it.name == country } ?: throw IllegalStateException("Please select your country")
                             
                             val birthParts = birthday.split("-").map { it.toInt() }
                             val birthCalendar = Calendar.getInstance().apply {
@@ -398,7 +399,7 @@ fun Newuserafterlogin(onBack: () -> Unit, onComplete: () -> Unit) {
                                 .put("name", nickname.trim()).put("displayName", nickname.trim())
                                 .put("email", prefs.getString("email", "").orEmpty())
                                 .put("image", finalAvatar).put("avatar", finalAvatar).put("photo", finalAvatar)
-                                .put("country", selectedCountryData.flag).put("countryName", selectedCountryData.name).put("countryCode", selectedCountryData.code)
+                                .put("country", selectedCountryData.name).put("countryName", selectedCountryData.name).put("countryCode", selectedCountryData.code)
                                 .put("birthday", birthday).put("age", age).put("gender", gender)
                             
                             withContext(Dispatchers.IO) {
@@ -428,8 +429,9 @@ fun Newuserafterlogin(onBack: () -> Unit, onComplete: () -> Unit) {
                                 .putString("name", nickname.trim())
                                 .putString("image", finalAvatar)
                                 .putString("photo", finalAvatar)
-                                .putString("country", selectedCountryData.flag)
+                                .putString("country", selectedCountryData.name)
                                 .putString("countryName", selectedCountryData.name)
+                                .putString("countryCode", selectedCountryData.code)
                                 .putString("birthday", birthday)
                                 .putString("gender", gender)
                                 .putInt("age", age)
