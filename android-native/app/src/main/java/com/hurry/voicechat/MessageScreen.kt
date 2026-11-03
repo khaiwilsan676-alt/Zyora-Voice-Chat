@@ -9,6 +9,7 @@ import io.socket.emitter.Emitter
 import org.json.JSONObject
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -18,6 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.runtime.*
@@ -36,10 +38,13 @@ import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import kotlinx.coroutines.launch
 
 private const val RAW_MSG = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/"
 private val HurryMuted = Color(0xFF6B7280)
@@ -118,12 +123,87 @@ fun rememberKeyboardIcon(): ImageVector {
     }
 }
 
+// Ye naya function Swipe-to-Delete logic ke liye hai
+@Composable
+fun SwipeRevealItem(
+    isOfficial: Boolean,
+    onDelete: () -> Unit,
+    content: @Composable () -> Unit
+) {
+    if (isOfficial) {
+        content()
+        return
+    }
+
+    val coroutineScope = rememberCoroutineScope()
+    val offsetX = remember { androidx.compose.animation.core.Animatable(0f) }
+    val density = LocalDensity.current
+    val actionWidth = 90.dp
+    val actionWidthPx = with(density) { actionWidth.toPx() }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color(0xFFEF4444)) // Red Delete Background
+    ) {
+        // Background Delete Button
+        Box(
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .width(actionWidth)
+                .fillMaxHeight()
+                .clickable { onDelete() },
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.White)
+                Spacer(Modifier.height(4.dp))
+                Text("Delete", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+            }
+        }
+
+        // Foreground Message Content
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .offset { IntOffset(offsetX.value.toInt(), 0) }
+                .background(Color(0xFFF1F1F1))
+                .pointerInput(Unit) {
+                    detectHorizontalDragGestures(
+                        onDragEnd = {
+                            coroutineScope.launch {
+                                // Agar half se jyada swipe kiya to pura khul jayega, warna wapas band
+                                if (offsetX.value < -actionWidthPx / 2) {
+                                    offsetX.animateTo(-actionWidthPx)
+                                } else {
+                                    offsetX.animateTo(0f)
+                                }
+                            }
+                        }
+                    ) { change, dragAmount ->
+                        change.consume()
+                        coroutineScope.launch {
+                            offsetX.snapTo((offsetX.value + dragAmount).coerceIn(-actionWidthPx, 0f))
+                        }
+                    }
+                }
+        ) {
+            content()
+        }
+    }
+}
+
 @Composable
 fun MessageScreen(onChat: (String, String, String) -> Unit, embeddedSheet: Boolean = false, onBack: () -> Unit = {}) {
+    // Ab ye list MutableState hai taaki hum delete karein to UI update ho
     val chats = remember {
-        listOf(
+        mutableStateListOf(
             MessagePreview("hurry_team_official", "Zyora Team", RAW_MSG + "logo.png", ""),
-            MessagePreview("hurry_system_official", "Zyora System", RAW_MSG + "file_00000000a66881f8aa9e15d2fe2b9a0c.png", "")
+            MessagePreview("hurry_system_official", "Zyora System", RAW_MSG + "file_00000000a66881f8aa9e15d2fe2b9a0c.png", ""),
+            // Ek dummy user add kiya hai taaki tum direct delete test kar sako, isko baad me hata dena
         )
     }
 
@@ -165,8 +245,14 @@ fun MessageScreen(onChat: (String, String, String) -> Unit, embeddedSheet: Boole
         }
 
         LazyColumn(Modifier.fillMaxSize().background(Color(0xFFF1F1F1)).padding(bottom = 8.dp)) {
-            items(chats) { chat ->
-                MessageRow(chat) { onChat(chat.uid, chat.name, chat.image) }
+            items(chats, key = { it.uid }) { chat ->
+                // Yahan SwipeRevealItem wrap kiya hai row ke upar
+                SwipeRevealItem(
+                    isOfficial = (chat.uid == "hurry_team_official" || chat.uid == "hurry_system_official"),
+                    onDelete = { chats.remove(chat) }
+                ) {
+                    MessageRow(chat) { onChat(chat.uid, chat.name, chat.image) }
+                }
             }
         }
     }
