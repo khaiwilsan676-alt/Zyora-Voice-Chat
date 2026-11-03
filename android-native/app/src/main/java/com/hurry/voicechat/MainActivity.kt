@@ -378,8 +378,35 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
         })
         val incoming = io.socket.emitter.Emitter.Listener { args ->
             val payload = args.firstOrNull() as? JSONObject ?: return@Listener
-            if (payload.optString("receiverId") == messageIdentity && payload.optString("senderId") != userId) {
+            val peerId = payload.optString("senderId")
+            if (payload.optString("receiverId") == messageIdentity && peerId != messageIdentity) {
+                val isVoice = payload.optString("type") == "voice"
+                val storedText = if (isVoice) {
+                    VoiceMessageStore.saveIncoming(context, payload) ?: "VOICE::${payload.optLong("durationSec", 1)}"
+                } else payload.optString("text").ifBlank { if (payload.optString("type") == "image") "📷 Image" else "" }
+                val previewText = if (isVoice) "🎤 Voice message" else storedText
                 Handler(Looper.getMainLooper()).post {
+                    val database = NativeIndexDatabase(context)
+                    val chatKey = "chat_${messageIdentity}_$peerId"
+                    val history = runCatching { org.json.JSONArray(database.loadChat(chatKey) ?: "[]") }.getOrDefault(org.json.JSONArray())
+                    val messageId = payload.optString("id")
+                    val duplicate = messageId.isNotBlank() && (0 until history.length()).any { index ->
+                        history.optJSONObject(index)?.optString("id") == messageId
+                    }
+                    if (!duplicate && storedText.isNotBlank()) {
+                        history.put(JSONObject().put("id", messageId).put("mine", false).put("text", storedText))
+                        database.saveChat(chatKey, history.toString())
+                    }
+                    val timestamp = payload.optLong("timestamp", System.currentTimeMillis())
+                    val time = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()).format(java.util.Date(timestamp))
+                    val peerPreview = JSONObject()
+                        .put("peerId", peerId)
+                        .put("peerName", payload.optString("senderName", "User"))
+                        .put("peerPhoto", payload.optString("senderPhoto", ""))
+                        .put("lastMessage", previewText)
+                        .put("timestamp", timestamp)
+                        .put("time", time)
+                    database.saveConversation("conversation_${messageIdentity}_$peerId", peerId, peerPreview)
                     unreadMessageCount += 1
                     unreadPrefs.edit().putInt("unread_$messageIdentity", unreadMessageCount).apply()
                 }
