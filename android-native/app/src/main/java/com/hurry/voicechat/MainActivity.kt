@@ -373,7 +373,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
     }
     var homeMine by remember { mutableStateOf(false) }
     var keptRoom by rememberSaveable(
-        saver = Saver<HurryRoom?, List<String>>(
+        stateSaver = Saver<HurryRoom?, List<String>>(
             save = { room ->
                 if (room == null) emptyList()
                 else listOf(
