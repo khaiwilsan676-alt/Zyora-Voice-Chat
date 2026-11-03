@@ -224,7 +224,7 @@ fun PublicProfileScreen(
     
     val followers = targetUser?.followers ?: 0
     var location by remember(profileCacheKey, cachedProfile, targetUser?.country, targetUser?.location) {
-        mutableStateOf(sequenceOf(cachedProfile?.optString("country", ""), cachedProfile?.optString("countryName", ""), targetUser?.country, targetUser?.location).map { it?.trim().orEmpty() }.firstOrNull { it.isNotBlank() && it != "null" }.orEmpty())
+        mutableStateOf(sequenceOf(cachedProfile?.optString("country", ""), cachedProfile?.optString("countryName", ""), cachedProfile?.optString("countryCode", ""), cachedProfile?.optString("country_code", ""), targetUser?.country, targetUser?.countryCode, targetUser?.location).map { it?.trim().orEmpty() }.firstOrNull { it.isNotBlank() && it != "null" }.orEmpty())
     }
     val flag = location.takeIf { it.isNotBlank() }?.let { countryFlag(it) }.orEmpty()
 
