@@ -832,7 +832,10 @@ fun PublicProfileScreen(
     if (isOtherUser && showUserReport) {
         Dialog(
             onDismissRequest = { showUserReport = false },
-            properties = DialogProperties(usePlatformDefaultWidth = false)
+            properties = DialogProperties(
+                usePlatformDefaultWidth = false,
+                decorFitsSystemWindows = false
+            )
         ) {
             var reportCategory by remember { mutableStateOf("") }
             var reportDescription by remember { mutableStateOf("") }
