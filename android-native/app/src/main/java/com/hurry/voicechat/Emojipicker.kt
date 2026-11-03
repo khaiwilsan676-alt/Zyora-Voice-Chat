@@ -204,7 +204,9 @@ fun TransparentSeatVideoPlayer(
         modifier = modifier.fillMaxSize(),
         factory = { ctx ->
             ChromaKeyVideoView(ctx) { surface ->
-                player.setVideoSurface(surface)
+                android.os.Handler(android.os.Looper.getMainLooper()).post {
+                    player.setVideoSurface(surface)
+                }
             }.also { videoView.value = it }
         },
         update = { view -> videoView.value = view }
