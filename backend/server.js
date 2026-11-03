@@ -2492,6 +2492,15 @@ io.on("connection", (socket) => {
 
     // Relay only; message history is persisted locally on each native client in index.db.
     // Do not save private chat contents in GitHub storage.
+    if (redis) {
+      try {
+        const pendingKey = `private:pending:${receiverId}`;
+        await redis.rpush(pendingKey, JSON.stringify(normalizedMessage));
+        await redis.expire(pendingKey, 60 * 60 * 24 * 30);
+      } catch (error) {
+        console.warn("Private-message Redis queue write failed:", error.message);
+      }
+    }
     io.to(`user:${receiverId}`).emit(
       "private_message",
       normalizedMessage
