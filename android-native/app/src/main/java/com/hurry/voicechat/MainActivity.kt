@@ -469,7 +469,13 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                                 languageCode = languageCode,
                                 selectedTab = tab,
                                 unreadMessageCount = unreadMessageCount,
-                                onTabSelected = { tab = it },
+                                onTabSelected = { selected ->
+                                    if (selected == HurryTab.MESSAGE) {
+                                        unreadMessageCount = 0
+                                        unreadPrefs.edit().putInt("unread_$messageIdentity", 0).apply()
+                                    }
+                                    tab = selected
+                                },
                                 onRoom = { openedRoom = it },
                                 onMine = { homeMine = true },
                                 onPopular = { homeMine = false },
