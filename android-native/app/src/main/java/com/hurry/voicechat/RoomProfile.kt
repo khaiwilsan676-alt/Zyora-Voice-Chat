@@ -43,8 +43,9 @@ data class RoomUser(
     val image: String = "",
     val gender: String = "",
     val age: Int = 0,
-    val country: String = "India",
-    val flag: String = "🇮🇳",
+    val country: String = "",
+    val countryCode: String = "",
+    val flag: String = "",
     val bio: String = "",
     val followers: Int = 0,
     val isFollowing: Boolean = false,
@@ -122,6 +123,7 @@ fun RoomProfile(
     var displayGender by remember(user.uid, user.id, user.accountId, user.gender, cachedProfile) { mutableStateOf(cachedProfile?.optString("gender")?.takeIf { it.isNotBlank() && it != "null" } ?: user.gender) }
     var displayAge by remember(user.uid, user.id, user.accountId, user.age, cachedProfile) { mutableIntStateOf(if (cachedProfile?.has("age") == true) cachedProfile.optInt("age", user.age) else user.age) }
     var displayBio by remember(user.uid, user.id, user.accountId, user.bio, cachedProfile) { mutableStateOf(cachedProfile?.optString("bio")?.takeIf { it != "null" } ?: user.bio) }
+    var displayCountry by remember(user.uid, user.id, user.accountId, user.country, cachedProfile) { mutableStateOf(sequenceOf(cachedProfile?.optString("country", ""), cachedProfile?.optString("countryName", ""), user.country, user.countryCode).map { it?.trim().orEmpty() }.firstOrNull { it.isNotBlank() && it != "null" }.orEmpty()) }
 
     LaunchedEffect(user.uid, user.id, user.accountId, profileCacheKeys) {
         val profileDb = NativeIndexDatabase(context)
@@ -131,7 +133,7 @@ fun RoomProfile(
         val remote = ProfilePersistence.load(TargetUser(
             id = user.id, uid = user.uid, accountId = user.accountId,
             name = user.name, photo = user.image, image = user.image,
-            gender = user.gender, age = user.age, bio = user.bio
+            gender = user.gender, age = user.age, bio = user.bio, country = user.country, countryCode = user.countryCode
         ))
         if (cached == null && remote == null) return@LaunchedEffect
 
@@ -145,7 +147,7 @@ fun RoomProfile(
             }
         }
         remote?.let { latest ->
-            sequenceOf("name", "displayName", "userName", "nickname", "image", "avatar", "profileImageUrl").forEach { key ->
+            sequenceOf("name", "displayName", "userName", "nickname", "image", "avatar", "profileImageUrl", "country", "countryName", "countryCode", "country_code", "nationality", "location").forEach { key ->
                 val value = latest.optString(key, "").trim()
                 val isPlaceholderName = key in setOf("name", "displayName", "userName", "nickname") && value.equals("User", ignoreCase = true)
                 val isPlaceholderAvatar = key in setOf("image", "avatar", "profileImageUrl") &&
@@ -160,7 +162,8 @@ fun RoomProfile(
             sequenceOf("image", "avatar", "profileImageUrl").map { latest.optString(it, "").trim() }
                 .firstOrNull { it.isNotBlank() && it != "null" }?.takeIf { it != displayImage }?.let { displayImage = it }
         }
-        val stableDetails = cached ?: remote
+        sequenceOf("country", "countryName", "countryCode", "country_code", "nationality", "location").map { merged.optString(it, "").trim() }.firstOrNull { it.isNotBlank() && it != "null" }?.let { displayCountry = it }
+        val stableDetails = merged
         stableDetails?.optString("gender")?.takeIf { it.isNotBlank() && it != "null" }?.let { displayGender = it }
         if (stableDetails?.has("age") == true) displayAge = stableDetails.optInt("age", displayAge)
         stableDetails?.optString("bio")?.takeIf { it != "null" }?.let { displayBio = it }
@@ -338,7 +341,7 @@ fun RoomProfile(
                         
                         Text(" | ", color = Color.LightGray, modifier = Modifier.padding(horizontal = 4.dp))
                         
-                        Text(user.flag, fontSize = 16.sp)
+                        if (displayCountry.isNotBlank()) Text(countryFlag(displayCountry), fontSize = 16.sp)
                     }
 
                     // Action Buttons (Leave Seat OR Social Actions)
