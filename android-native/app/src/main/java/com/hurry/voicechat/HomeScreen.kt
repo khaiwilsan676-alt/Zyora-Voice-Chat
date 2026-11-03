@@ -203,7 +203,8 @@ fun HomeScreen(
     onOpenKeptRoom: () -> Unit = {},
     onExitKeptRoom: () -> Unit = {},
     selectedTab: HurryTab = HurryTab.HOME,
-    onTabSelected: (HurryTab) -> Unit = {}
+    onTabSelected: (HurryTab) -> Unit = {},
+    unreadMessageCount: Int = 0
 ) {
     val mine = mineSelected
     val context = LocalContext.current
@@ -345,7 +346,7 @@ fun HomeScreen(
         Box(Modifier.fillMaxSize()) {
             MineNativePage(onBack = onPopular, createdRoom = mineCreatedRoom, followingRooms = followingRooms, onOpenRoom = onRoom, onCreateRoom = onCreateMineRoom, onSearch = onSearch, languageCode = languageCode)
             Box(Modifier.align(Alignment.BottomCenter)) {
-                HurryBottomNav(selectedTab, languageCode = languageCode, onTab = onTabSelected)
+                HurryBottomNav(selectedTab, languageCode = languageCode, unreadMessageCount = unreadMessageCount, onTab = onTabSelected)
             }
         }
         return
@@ -594,7 +595,7 @@ fun HomeScreen(
 
         // 🟢 BOTTOM NAV - Ab iske BAAD red zone aayega taaki overlay ho!
         Box(Modifier.align(Alignment.BottomCenter)) {
-            HurryBottomNav(selectedTab, languageCode = languageCode, onTab = onTabSelected)
+            HurryBottomNav(selectedTab, languageCode = languageCode, unreadMessageCount = unreadMessageCount, onTab = onTabSelected)
         }
 
         // 🔴 RED DROP ZONE - EXACTLY AT THE BOTTOM-RIGHT CORNER (Overlapping the Bottom Bar perfectly)
@@ -1033,7 +1034,7 @@ private fun HurryCategoryCard(
 }
 
 @Composable
-fun HurryBottomNav(tab: HurryTab, languageCode: String = "en", onTab: (HurryTab) -> Unit) {
+fun HurryBottomNav(tab: HurryTab, languageCode: String = "en", unreadMessageCount: Int = 0, onTab: (HurryTab) -> Unit) {
     Row(
         Modifier
             .fillMaxWidth()
@@ -1068,7 +1069,19 @@ private fun NavItem(
         verticalArrangement = Arrangement.spacedBy(1.dp)
     ) {
         if (which == HurryTab.MESSAGE) {
-            HurryMessageIcon(active = which == selected, modifier = Modifier.size(30.dp))
+            Box(Modifier.size(30.dp)) {
+                HurryMessageIcon(active = which == selected, modifier = Modifier.size(30.dp).align(Alignment.Center))
+                if (unreadMessageCount > 0) {
+                    Box(
+                        Modifier.align(Alignment.TopEnd).offset(x = 3.dp, y = (-2).dp)
+                            .sizeIn(minWidth = 16.dp, minHeight = 16.dp)
+                            .clip(CircleShape).background(Color(0xFFEF4444)).padding(horizontal = 4.dp, vertical = 1.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(unreadMessageCount.coerceAtMost(99).toString(), color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                    }
+                }
+            }
         } else Canvas(Modifier.size(30.dp)) {
             val s = size.minDimension / 36f
             val active = which == selected
