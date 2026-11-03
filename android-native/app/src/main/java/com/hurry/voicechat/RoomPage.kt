@@ -209,9 +209,15 @@ fun RoomPage(
         if (serverBalance != null) roomWalletBalance = serverBalance
     }
     val currentProfileKeys = listOf(currentUser.uid, currentUser.id, currentUser.accountId, accountId).filter { it.isNotBlank() }.distinct()
-    val cachedCurrentProfile = remember(currentProfileKeys) {
-        val profileDb = NativeIndexDatabase(appContext)
-        currentProfileKeys.firstNotNullOfOrNull { profileDb.loadProfile(it) }
+    var cachedCurrentProfile by remember(currentProfileKeys) { mutableStateOf<JSONObject?>(null) }
+    LaunchedEffect(currentProfileKeys) {
+        val cached = withContext(Dispatchers.IO) {
+            val profileDb = NativeIndexDatabase(appContext)
+            currentProfileKeys.firstNotNullOfOrNull { key ->
+                runCatching { profileDb.loadProfile(key) }.getOrNull()
+            }
+        }
+        cachedCurrentProfile = cached
     }
     val roomDisplayName = cachedCurrentProfile?.let { profile ->
         sequenceOf("name", "displayName", "userName").map { profile.optString(it, "") }.firstOrNull { it.isNotBlank() && it != "null" }
