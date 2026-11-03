@@ -155,7 +155,7 @@ fun SearchPage(onBack:()->Unit={},onOpenProfile:(RoomProfileUser)->Unit={},onOpe
                         list.add(SearchUserNative(id.ifBlank{acc},acc,
                             u.optString("name").takeUnless{it=="null"}.orEmpty().ifBlank{u.optString("displayName").ifBlank{u.optString("userName","User")}},
                             sequenceOf("countryName", "country", "countryCode").map { u.optString(it, "").trim() }.firstOrNull { it.isNotBlank() && it != "null" }.orEmpty(),
-                            u.optString("image").takeUnless{it=="null"}.orEmpty().ifBlank{u.optString("avatar").ifBlank{u.optString("profileImageUrl","")}},
+                            sequenceOf("image","photo","photoURL","photoUrl","avatar","avatarUrl","profileImageUrl","profileImage","profile_image").map { key -> u.optString(key, "").trim() }.firstOrNull { it.isNotBlank() && it != "null" } ?: "",
                             u.optString("bio","")))
                     }
                     list
