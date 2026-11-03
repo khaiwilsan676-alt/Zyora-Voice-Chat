@@ -81,7 +81,7 @@ class ZyoraMessageListenerService : Service() {
             .setOngoing(true)
             .setContentIntent(openApp)
             .build()
-        if (Build.VERSION.SDK_INT >= 35) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             startForeground(7000, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_REMOTE_MESSAGING)
         } else {
             startForeground(7000, notification)
