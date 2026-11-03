@@ -1571,6 +1571,16 @@ fun PublicProfile(
     onMessage: () -> Unit = {},
     currentUserId: String = ""
 ) {
+    val context = LocalContext.current
+    val authPrefs = remember(context) { context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE) }
+    val signedInIds = remember(currentUserId, authPrefs) {
+        setOf(
+            currentUserId,
+            authPrefs.getString("uid", "").orEmpty(),
+            authPrefs.getString("accountId", "").orEmpty(),
+            authPrefs.getString("id", "").orEmpty()
+        ).map { it.trim() }.filter { it.isNotBlank() && it != "—" }.toSet()
+    }
     val target = remember(user) {
         val accountNumber = user.accountId?.takeIf { it.isNotBlank() } ?: user.id
         val isSingaporeOfficial = accountNumber == "100002" || accountNumber == "100003"
@@ -1598,12 +1608,11 @@ fun PublicProfile(
             premiumTag = user.premiumTag
         )
     }
+    val isOwnProfile = listOf(user.uid, user.id, user.accountId)
+        .filterNotNull().map { it.trim() }.any { it.isNotBlank() && it in signedInIds }
     PublicProfileScreen(
         onBack = onBack,
-        isOtherUser = !(
-            !currentUserId.isBlank() &&
-            (user.uid == currentUserId || user.id == currentUserId || user.accountId == currentUserId)
-        ),
+        isOtherUser = !isOwnProfile,
         targetUser = target
     )
 }
