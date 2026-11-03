@@ -59,12 +59,6 @@ class ZyoraMessageListenerService : Service() {
                     setShowBadge(false)
                 }
             )
-            manager.createNotificationChannel(
-                NotificationChannel("zyora_local_messages", "Zyora messages", NotificationManager.IMPORTANCE_HIGH).apply {
-                    description = "Notifications for new Zyora messages"
-                    enableVibration(true)
-                }
-            )
         }
     }
 
@@ -77,7 +71,7 @@ class ZyoraMessageListenerService : Service() {
         val notification: Notification = NotificationCompat.Builder(this, "zyora_message_listener")
             .setSmallIcon(R.drawable.ic_stat_zyora)
             .setContentTitle("Zyora")
-            .setContentText("Message alerts are active")
+            .setContentText("Zyora is running")
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setOngoing(true)
             .setContentIntent(openApp)
@@ -147,11 +141,6 @@ class ZyoraMessageListenerService : Service() {
             .put("time", SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(timestamp)))
         database.saveConversation("conversation_${identity}_$peerId", peerId, preview)
 
-        val seenPrefs = getSharedPreferences("zyora_notified_messages", Context.MODE_PRIVATE)
-        if (!seenPrefs.getBoolean(messageId, false)) {
-            seenPrefs.edit().putBoolean(messageId, true).apply()
-            showZyoraLocalMessageNotification(this)
-        }
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
