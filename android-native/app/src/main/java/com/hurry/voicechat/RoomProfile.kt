@@ -434,7 +434,7 @@ fun RoomProfile(
                         onClick = { showReports = true },
                         modifier = Modifier.align(Alignment.TopStart).padding(top = 52.dp, start = 8.dp)
                     ) {
-                        Icon(Icons.Default.Warning, contentDescription = "Report", tint = Color.DarkGray)
+                        LucidePublicProfileIcon(warning = true, modifier = Modifier.size(24.dp))
                     }
 
                     IconButton(
