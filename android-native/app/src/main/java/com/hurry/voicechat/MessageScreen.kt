@@ -275,10 +275,20 @@ fun MessageScreen(onChat: (String, String, String) -> Unit, embeddedSheet: Boole
                 updateConversationPreview(peerId, payload.optString("senderName", "User"), payload.optString("senderPhoto", ""), previewBody, payload.optLong("timestamp", System.currentTimeMillis()))
             }
         }
+        val sent = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
+            val peerId = payload.optString("receiverAccountId").ifBlank { payload.optString("receiverId") }
+            val preview = payload.optString("previewText").ifBlank { payload.optString("text") }
+            val shown = if (payload.optString("type") == "voice") "🎤 Voice message" else preview.ifBlank { if (payload.optString("type") == "image") "📷 Image" else "" }
+            mainHandler.post {
+                updateConversationPreview(peerId, payload.optString("receiverName", "User"), payload.optString("receiverPhoto", ""), shown, payload.optLong("timestamp", System.currentTimeMillis()))
+            }
+        }
         socket.on("private_message", incoming)
+        socket.on("private_message_sent", sent)
         socket.on(Socket.EVENT_CONNECT) { socket.emit("register", JSONObject().put("userId", currentAuthUid).put("accountId", currentUserId)) }
         socket.connect()
-        onDispose { socket.off("private_message", incoming); socket.disconnect(); socket.close() }
+        onDispose { socket.off("private_message", incoming); socket.off("private_message_sent", sent); socket.disconnect(); socket.close() }
     }
     Column(Modifier.fillMaxSize().background(Color(0xFFF1F1F1))) {
         if (embeddedSheet) {
@@ -380,6 +390,7 @@ fun NativeChatScreen(
     val currentAccountId = currentAccountIdOverride.ifBlank { authPrefs.getString("accountId", prefs.getString("accountId", currentUserId)).orEmpty() }.ifBlank { currentUserId }
     val isOfficial = name == "Zyora Team" || name == "Zyora System"
     var directSocket by remember(receiverId, currentUserId) { mutableStateOf<Socket?>(null) }
+    var chatRegistered by remember(receiverId, currentUserId) { mutableStateOf(false) }
 
     var text by remember { mutableStateOf("") }
     var showOptions by remember { mutableStateOf(false) }
@@ -520,19 +531,28 @@ fun NativeChatScreen(
                 }
             }
         }
-        chatSocket.on("private_message", incoming)
-        chatSocket.on("private_message_history", history)
-        chatSocket.on(Socket.EVENT_CONNECT) {
-            chatSocket.emit("register", JSONObject().put("userId", currentUserId).put("accountId", currentAccountId))
+        val registrationReady = Emitter.Listener {
+            mainHandler.post { chatRegistered = true }
             chatSocket.emit("private_message_history_request", JSONObject()
                 .put("userId", currentUserId)
+                .put("accountId", currentAccountId)
                 .put("otherUserId", receiverId)
-                .put("chatId", listOf(currentUserId, receiverId).sorted().joinToString("_")))
+                .put("otherAccountId", receiverId)
+                .put("chatId", listOf(currentAccountId, receiverId).sorted().joinToString("_")))
+        }
+        chatSocket.on("private_message", incoming)
+        chatSocket.on("private_message_history", history)
+        chatSocket.on("registration_ready", registrationReady)
+        chatSocket.on(Socket.EVENT_CONNECT) {
+            mainHandler.post { chatRegistered = false }
+            chatSocket.emit("register", JSONObject().put("userId", currentUserId).put("accountId", currentAccountId))
         }
         chatSocket.connect()
         onDispose {
             chatSocket.off("private_message", incoming)
             chatSocket.off("private_message_history", history)
+            chatSocket.off("registration_ready", registrationReady)
+            chatRegistered = false
             directSocket = null
             chatSocket.disconnect()
             chatSocket.close()
@@ -1011,6 +1031,12 @@ fun NativeChatScreen(
                                                 val released = tryAwaitRelease()
                                                 val recorded = finishVoiceRecording()
                                                 if (released && recorded != null) {
+                                                    val activeSocket = directSocket
+                                                    if (!chatRegistered || activeSocket == null || !activeSocket.connected()) {
+                                                        activeSocket?.connect()
+                                                        recorded.first.delete()
+                                                        return@detectTapGestures
+                                                    }
                                                     val (audioFile, durationSec) = recorded
                                                     val messageId = "${currentUserId}_${System.currentTimeMillis()}"
                                                     val localVoice = VoiceMessageStore.localMarker(messageId, durationSec)
@@ -1087,6 +1113,11 @@ fun NativeChatScreen(
                                             .clip(CircleShape)
                                             .background(if (isTextBlank) Color(0xFF9CA3AF) else Color(0xFF3B82F6))
                                             .clickable(enabled = !isTextBlank) {
+                                                val activeSocket = directSocket
+                                                if (!chatRegistered || activeSocket == null || !activeSocket.connected()) {
+                                                    activeSocket?.connect()
+                                                    return@clickable
+                                                }
                                                 val outgoingText = text.trim()
                                                 messages.add(true to outgoingText)
                                                 saveConversationPreview(receiverId, name, image, outgoingText, System.currentTimeMillis())
