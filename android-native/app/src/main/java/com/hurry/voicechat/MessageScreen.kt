@@ -63,6 +63,16 @@ import java.util.Locale
 private const val RAW_MSG = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/"
 private data class MessagePreview(val uid: String, val name: String, val image: String, val message: String, val time: String = "")
 
+private fun resolveChatAvatar(value: String): String {
+    val image = value.trim()
+    if (image.isBlank() || image == "null" || image == "/default-avatar.png") {
+        return RAW_MSG + "default-avatar.png"
+    }
+    if (image.startsWith("http://") || image.startsWith("https://") ||
+        image.startsWith("data:") || image.startsWith("content:") || image.startsWith("file:")) return image
+    return "https://zyora-server.onrender.com/" + image.trimStart('/')
+}
+
 @OptIn(ExperimentalGraphicsApi::class)
 @Composable
 fun rememberVerifiedChatIcon(): ImageVector {
@@ -330,7 +340,7 @@ private fun MessageRow(chat: MessagePreview, onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         AsyncImage(
-            model = chat.image.ifBlank { RAW_MSG + "default-avatar.png" }, contentDescription = chat.name,
+            model = resolveChatAvatar(chat.image), contentDescription = chat.name,
             modifier = Modifier.size(56.dp).clip(CircleShape),
             contentScale = ContentScale.Crop
         )
@@ -748,7 +758,7 @@ fun NativeChatScreen(
                     )
                 }
                 AsyncImage(
-                    model = image.ifBlank { RAW_MSG + "default-avatar.png" },
+                    model = resolveChatAvatar(image),
                     contentDescription = name,
                     modifier = Modifier.size(40.dp).clip(CircleShape),
                     contentScale = ContentScale.Crop
