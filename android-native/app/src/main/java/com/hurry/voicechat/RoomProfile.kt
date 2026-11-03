@@ -116,7 +116,7 @@ fun RoomProfile(
 
     var displayName by remember(user.uid, user.id, user.accountId, user.name, cachedProfile) { mutableStateOf(cachedProfile?.optString("name")?.takeIf { it.isNotBlank() && it != "null" } ?: user.name.ifBlank { "User" }) }
     var displayImage by remember(user.uid, user.id, user.accountId, user.image, cachedProfile) { mutableStateOf(sequenceOf("image", "avatar", "profileImageUrl").map { cachedProfile?.optString(it, "").orEmpty() }.firstOrNull { it.isNotBlank() && it != "null" } ?: user.image) }
-    val displayProfileImage = if (user.accountId in setOf("100002", "100003", "500002", "500003") || user.id in setOf("100002", "100003", "500002", "500003")) "https://zyora-voice-chat.vercel.app/logo.png" else displayImage
+    val displayProfileImage = if (user.accountId in setOf("100002", "100003", "500002") || user.id in setOf("100002", "100003", "500002")) "https://zyora-voice-chat.vercel.app/logo.png" else displayImage
     var displayGender by remember(user.uid, user.id, user.accountId, user.gender, cachedProfile) { mutableStateOf(cachedProfile?.optString("gender")?.takeIf { it.isNotBlank() && it != "null" } ?: user.gender) }
     var displayAge by remember(user.uid, user.id, user.accountId, user.age, cachedProfile) { mutableIntStateOf(if (cachedProfile?.has("age") == true) cachedProfile.optInt("age", user.age) else user.age) }
     var displayBio by remember(user.uid, user.id, user.accountId, user.bio, cachedProfile) { mutableStateOf(cachedProfile?.optString("bio")?.takeIf { it != "null" } ?: user.bio) }
@@ -167,7 +167,7 @@ fun RoomProfile(
     // Tag States
     val isCoreOfficialAccount = user.accountId == "100002" || user.accountId == "100003" || user.id == "100002" || user.id == "100003"
     val isRedOfficialAccount = user.accountId == "500001" || user.id == "500001"
-    val is500002OfficialAccount = user.accountId in setOf("500002", "500003") || user.id in setOf("500002", "500003")
+    val is500002OfficialAccount = user.accountId in setOf("500002") || user.id in setOf("500002")
     var adminTag by remember(user.adminTag, cachedProfile, isCoreOfficialAccount) { mutableStateOf(isCoreOfficialAccount || user.adminTag == true || cachedProfile?.optBoolean("adminTag", false) == true) }
     var officialTag by remember(user.officialTag, cachedProfile, isCoreOfficialAccount, isRedOfficialAccount, is500002OfficialAccount) { mutableStateOf(isCoreOfficialAccount || isRedOfficialAccount || is500002OfficialAccount || user.officialTag == true || cachedProfile?.optBoolean("officialTag", false) == true) }
     var officialHeadTag by remember(user.officialHeadTag, cachedProfile, isCoreOfficialAccount) { mutableStateOf(isCoreOfficialAccount || user.officialHeadTag == true || cachedProfile?.optBoolean("officialHeadTag", false) == true) }
