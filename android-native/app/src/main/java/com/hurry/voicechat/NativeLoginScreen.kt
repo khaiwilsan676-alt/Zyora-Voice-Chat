@@ -126,6 +126,43 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
         }
     }
 
+    fun submitEmailAuth(create: Boolean) {
+        if (loading) return
+        scope.launch {
+            loading = true
+            error = ""
+            try {
+                if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches()) {
+                    throw IllegalArgumentException("Please enter a valid email.")
+                }
+                if (password.length < 6) {
+                    throw IllegalArgumentException("Password must be at least 6 characters long.")
+                }
+                val user = withContext(Dispatchers.IO) {
+                    backendEmailAuth(context, email.trim(), password, create)
+                }
+                withContext(Dispatchers.IO) { syncHurryUser(user, context) }
+                val authPrefs = context.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE)
+                authPrefs.edit()
+                    .putString("uid", user.optString("localId"))
+                    .putString("email", user.optString("email", email.trim()))
+                    .putString("idToken", user.optString("idToken"))
+                    .apply()
+                if (create) {
+                    authPrefs.edit()
+                        .putBoolean("needsProfileSetup", true)
+                        .putBoolean("profileSetupComplete", false)
+                        .apply()
+                }
+                onLoginSuccess()
+            } catch (t: Throwable) {
+                error = authErrorText(t.message ?: "Authentication failed. Please try again.")
+            } finally {
+                loading = false
+            }
+        }
+    }
+
     Box(Modifier.fillMaxSize().background(Color(0xFF111827))) {
         val backgroundPlayer = remember(context) {
             ExoPlayer.Builder(context).build().apply {
@@ -498,63 +535,38 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
                 Spacer(Modifier.height(18.dp))
                 AsyncImage(model = HURRY_LOGO, contentDescription = "Zyora", modifier = Modifier.size(64.dp).clip(RoundedCornerShape(16.dp)))
                 Spacer(Modifier.height(12.dp))
-                Text(if (page == "signup") "Create Account" else "Welcome Back!", color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Bold)
-                Text(if (page == "signup") "Sign up to get started" else "Sign in to your account", color = Color.White.copy(alpha = .75f), fontSize = 14.sp, modifier = Modifier.padding(top = 4.dp, bottom = 24.dp))
+                Text("Welcome to Zyora", color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Bold)
+                Text("Log in or create your account", color = Color.White.copy(alpha = .75f), fontSize = 14.sp, modifier = Modifier.padding(top = 4.dp, bottom = 24.dp))
                 if (error.isNotBlank()) {
                     Text(error, color = Color.White, fontSize = 13.sp, modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Color(0x66EF4444)).padding(12.dp))
                     Spacer(Modifier.height(12.dp))
                 }
                 AuthField("E-mail Address", email, { email = it }, "Enter your email", false, KeyboardType.Email)
                 Spacer(Modifier.height(16.dp))
-                AuthField("Password", password, { password = it }, if (page == "signup") "Create a password (min 6 characters)" else "Enter your password", !showPassword, KeyboardType.Password,
+                AuthField("Password", password, { password = it }, "Enter your password", !showPassword, KeyboardType.Password,
                     trailing = if (showPassword) "Hide" else "Show",
                     onTrailing = { showPassword = !showPassword })
                 Spacer(Modifier.height(22.dp))
                 Button(
-                    onClick = {
-                        scope.launch {
-                            loading = true
-                            error = ""
-                            try {
-                                if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches()) throw IllegalArgumentException("Please enter a valid email.")
-                                if (password.length < 6) throw IllegalArgumentException("Password must be at least 6 characters long.")
-                                val user = withContext(Dispatchers.IO) { backendEmailAuth(context, email.trim(), password, page == "signup") }
-                                withContext(Dispatchers.IO) { syncHurryUser(user, context) }
-                                val authPrefs = context.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE)
-                                authPrefs.edit()
-                                    .putString("uid", user.optString("localId"))
-                                    .putString("email", user.optString("email", email.trim()))
-                                    .putString("idToken", user.optString("idToken"))
-                                    .apply()
-                                if (page == "signup") {
-                                    authPrefs.edit()
-                                        .putBoolean("needsProfileSetup", true)
-                                        .putBoolean("profileSetupComplete", false)
-                                        .apply()
-                                }
-                                onLoginSuccess()
-                            } catch (t: Throwable) {
-                                error = authErrorText(t.message ?: "Authentication failed. Please try again.")
-                            } finally {
-                                loading = false
-                            }
-                        }
-                    },
+                    onClick = { submitEmailAuth(false) },
                     enabled = !loading && email.isNotBlank() && password.isNotBlank(),
                     modifier = Modifier.fillMaxWidth().height(52.dp),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color(0xFF2563EB), disabledContainerColor = Color.White.copy(alpha = .4f))
                 ) {
                     if (loading) CircularProgressIndicator(Modifier.size(20.dp), color = Color(0xFF2563EB), strokeWidth = 2.dp)
-                    else Text(if (page == "signup") "Sign Up" else "Login", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                    else Text("Log in", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                 }
-                Spacer(Modifier.height(18.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(if (page == "signup") "Already have an account? " else "Don't have an account? ", color = Color.White.copy(alpha = .8f), fontSize = 14.sp)
-                    Text(if (page == "signup") "Login" else "Sign Up", color = Color(0xFF93C5FD), fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.clickable {
-                        page = if (page == "signup") "login" else "signup"
-                        password = ""; error = ""
-                    })
+                Spacer(Modifier.height(12.dp))
+                OutlinedButton(
+                    onClick = { submitEmailAuth(true) },
+                    enabled = !loading && email.isNotBlank() && password.isNotBlank(),
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = .8f)),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White, disabledContentColor = Color.White.copy(alpha = .4f))
+                ) {
+                    Text("Sign up", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                 }
                 Spacer(Modifier.height(28.dp))
             }
@@ -740,7 +752,7 @@ private suspend fun googleBackendSignIn(context: android.content.Context): JSONO
         )
         val firebaseUser = result.user ?: throw IllegalStateException("Firebase did not return a Google account.")
         val firebaseToken = Tasks.await(
-            firebaseUser.getIdToken(true),
+            firebaseUser.getIdToken(false),
             60,
             java.util.concurrent.TimeUnit.SECONDS
         ).token ?: throw IllegalStateException("Could not obtain Firebase sign-in token.")
