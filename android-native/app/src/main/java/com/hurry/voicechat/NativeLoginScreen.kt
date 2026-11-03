@@ -306,6 +306,8 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
                                     if (!android.util.Patterns.EMAIL_ADDRESS.matcher(loginEmail).matches()) {
                                         throw IllegalArgumentException("Enter a valid Zyora Account ID.")
                                     }
+                                    // Start a clean Firebase session so the previous official account cannot leak into this login.
+                                    FirebaseAuth.getInstance().signOut()
                                     val user = withContext(Dispatchers.IO) { backendEmailAuth(context, loginEmail, password, false) }
                                     withContext(Dispatchers.IO) { syncHurryUser(user, context) }
                                     
@@ -809,9 +811,22 @@ private fun lookupAccountEmail(accountId: String): String {
         val response = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
         val root = runCatching { JSONObject(response) }.getOrElse { JSONObject() }
         if (code !in 200..299) throw IllegalArgumentException("Zyora Account ID not found.")
-        val profile = root.optJSONObject("user")
-            ?: root.optJSONArray("users")?.optJSONObject(0)
-            ?: throw IllegalArgumentException("Zyora Account ID not found.")
+        // The API can return several exact/legacy matches. Select the profile
+        // whose public ID matches instead of blindly trusting the first result.
+        val candidates = buildList {
+            root.optJSONObject("user")?.let(::add)
+            val users = root.optJSONArray("users")
+            if (users != null) {
+                for (index in 0 until users.length()) {
+                    users.optJSONObject(index)?.let(::add)
+                }
+            }
+        }
+        val profile = candidates.firstOrNull { candidate ->
+            sequenceOf("accountId", "accountNumber", "displayUserNumber", "Account Number")
+                .map { candidate.optString(it, "").trim() }
+                .any { it == normalizedId }
+        } ?: throw IllegalArgumentException("Zyora Account ID not found.")
         val returnedId = sequenceOf("accountId", "accountNumber", "displayUserNumber", "Account Number")
             .map { profile.optString(it, "").trim() }
             .firstOrNull { it.isNotBlank() && it != "null" }
