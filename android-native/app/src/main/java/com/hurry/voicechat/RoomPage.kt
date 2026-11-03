@@ -167,7 +167,7 @@ private fun ThickBar(
     }
 }
 
-data class RoomPageOwner(val id:String="",val uid:String="",val accountId:String="",val name:String="Room",val image:String="",val country:String="🇮🇳")
+data class RoomPageOwner(val id:String="",val uid:String="",val accountId:String="",val name:String="Room",val image:String="",val country:String="")
 data class RoomPageCurrentUser(val id:String="",val uid:String="",val accountId:String="",val name:String="User",val image:String="")
 data class NativeRoomSeat(val number:Int,val occupied:Boolean=false,val locked:Boolean=false,val muted:Boolean=false,val speaking:Boolean=false,val userName:String="",val userImage:String="",val accountId:String="",val gifSrc:String="",val gifTimestamp:Long=0L)
 data class NativeRoomMessage(val id:String,val text:String,val sender:String,val senderImage:String,val senderAccountId:String="",val timestamp:Long=System.currentTimeMillis(),val type:String="message")
@@ -2163,7 +2163,7 @@ private fun roomCountryFlag(country: String): String {
         value.contains("usa", true) || value.contains("united states", true) || value.contains("🇺🇸") -> "🇺🇸"
         value.contains("south africa", true) || value.contains("🇿🇦") -> "🇿🇦"
         value.contains("turkey", true) || value.contains("türkiye", true) || value.contains("🇹🇷") -> "🇹🇷"
-        value.isBlank() -> "🇮🇳"
-        else -> country
+        value.isBlank() -> ""
+        else -> countryFlag(value)
     }
 }
