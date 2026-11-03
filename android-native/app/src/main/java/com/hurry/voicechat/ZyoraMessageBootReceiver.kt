@@ -11,10 +11,11 @@ class ZyoraMessageBootReceiver : BroadcastReceiver() {
         val auth = context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE)
         val user = context.getSharedPreferences("hurry_user", Context.MODE_PRIVATE)
         val uid = auth.getString("uid", "").orEmpty()
-        val accountId = auth.getString("accountId", null)
-            ?: user.getString("accountId", null)
-            ?: user.getString("userId", uid)
-            ?: uid
+        val accountId = auth.getString("accountId", "").orEmpty().ifBlank {
+            user.getString("accountId", "").orEmpty().ifBlank {
+                user.getString("userId", uid).orEmpty().ifBlank { uid }
+            }
+        }
         if (uid.isBlank() && accountId.isBlank()) return
         val service = Intent(context, ZyoraMessageListenerService::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) context.startForegroundService(service)
