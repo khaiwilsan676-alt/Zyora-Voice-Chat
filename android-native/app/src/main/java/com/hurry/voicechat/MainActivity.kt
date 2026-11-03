@@ -356,7 +356,11 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
         }
     }
     var tab by remember { mutableStateOf(HurryTab.HOME) }
-    val messageIdentity = remember(userId) { authPrefs.getString("accountId", userId).orEmpty().ifBlank { userId } }
+    val messageIdentity = remember(userId) {
+        context.getSharedPreferences("hurry_user", android.content.Context.MODE_PRIVATE).let { messagePrefs ->
+            messagePrefs.getString("accountId", messagePrefs.getString("userId", messagePrefs.getString("uid", userId))).orEmpty().ifBlank { userId }
+        }
+    }
     val unreadPrefs = remember { context.getSharedPreferences("zyora_unread_messages", android.content.Context.MODE_PRIVATE) }
     var unreadMessageCount by remember(messageIdentity) { mutableIntStateOf(unreadPrefs.getInt("unread_$messageIdentity", 0).coerceAtLeast(0)) }
     LaunchedEffect(messageIdentity) { unreadMessageCount = unreadPrefs.getInt("unread_$messageIdentity", 0).coerceAtLeast(0) }
