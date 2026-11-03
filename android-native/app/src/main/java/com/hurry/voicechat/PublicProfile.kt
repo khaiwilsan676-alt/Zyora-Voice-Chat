@@ -223,8 +223,10 @@ fun PublicProfileScreen(
     }
     
     val followers = targetUser?.followers ?: 0
-    val flag = targetUser?.flag ?: "🇮🇳"
-    val location = targetUser?.location ?: "India"
+    var location by remember(profileCacheKey, cachedProfile, targetUser?.country, targetUser?.location) {
+        mutableStateOf(sequenceOf(cachedProfile?.optString("country", ""), cachedProfile?.optString("countryName", ""), targetUser?.country, targetUser?.location).map { it?.trim().orEmpty() }.firstOrNull { it.isNotBlank() && it != "null" }.orEmpty())
+    }
+    val flag = location.takeIf { it.isNotBlank() }?.let { countryFlag(it) }.orEmpty()
 
     LaunchedEffect(targetUser?.uid, targetUser?.id, targetUser?.accountId, profileCacheKey) {
         val cache = NativeIndexDatabase(context)
@@ -248,7 +250,7 @@ fun PublicProfileScreen(
                 merged.put("image", remoteAvatar)
                 merged.put("photo", remoteAvatar)
             }
-            val keysToSync = listOf("coverPhotos", "coverPhoto", "albumImages", "bio", "age", "gender", "officialHeadTag", "officialTag", "adminTag", "serviceTag", "csTag", "hostTag", "isHost", "coinSellerTag", "coinSeller", "sellerTag")
+            val keysToSync = listOf("coverPhotos", "coverPhoto", "albumImages", "bio", "age", "gender", "country", "countryName", "countryCode", "country_code", "nationality", "location", "officialHeadTag", "officialTag", "adminTag", "serviceTag", "csTag", "hostTag", "isHost", "coinSellerTag", "coinSeller", "sellerTag")
             keysToSync.forEach { key ->
                 if (latest.has(key)) {
                     val value = latest.optString(key, "")
@@ -272,6 +274,7 @@ fun PublicProfileScreen(
         merged.optString("bio").let { userBio = if (it != "null") it else "" }
         if (merged.has("age")) userAge = merged.optInt("age", userAge)
         merged.optString("gender").takeIf { it.isNotBlank() && it != "null" }?.let { userGender = it }
+        sequenceOf("country", "countryName", "countryCode", "country_code", "nationality", "location").map { merged.optString(it, "").trim() }.firstOrNull { it.isNotBlank() && it != "null" }?.let { location = it }
         
         val albums = ProfilePersistence.stringList(merged.optString("albumImages", ""))
         albumImages = albums
@@ -1595,7 +1598,6 @@ fun PublicProfile(
     }
     val target = remember(user) {
         val accountNumber = user.accountId?.takeIf { it.isNotBlank() } ?: user.id
-        val isSingaporeOfficial = accountNumber == "100002" || accountNumber == "100003"
         TargetUser(
             id = user.id,
             uid = user.uid,
@@ -1608,9 +1610,10 @@ fun PublicProfile(
             age = user.age,
             followers = user.followers,
             bio = user.bio,
-            location = if (isSingaporeOfficial) "Singapore" else user.country,
-            country = if (isSingaporeOfficial) "Singapore" else user.country,
-            flag = if (isSingaporeOfficial) "🇸🇬" else user.flag,
+            location = user.country,
+            country = user.country,
+            countryCode = user.countryCode,
+            flag = user.country?.takeIf { it.isNotBlank() }?.let { countryFlag(it) }.orEmpty(),
             officialHeadTag = user.officialHeadTag,
             officialTag = user.officialTag,
             adminTag = user.adminTag,
