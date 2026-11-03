@@ -357,11 +357,12 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
         }
     }
     var tab by remember { mutableStateOf(HurryTab.HOME) }
+    val messageIdentity = remember(userId) { authPrefs.getString("accountId", userId).orEmpty().ifBlank { userId } }
     val unreadPrefs = remember { context.getSharedPreferences("zyora_unread_messages", android.content.Context.MODE_PRIVATE) }
-    var unreadMessageCount by remember(userId) { mutableIntStateOf(unreadPrefs.getInt("unread_$userId", 0).coerceAtLeast(0)) }
-    LaunchedEffect(userId) { unreadMessageCount = unreadPrefs.getInt("unread_$userId", 0).coerceAtLeast(0) }
-    DisposableEffect(userId, tab) {
-        if (userId.isBlank() || tab == HurryTab.MESSAGE) return@DisposableEffect onDispose { }
+    var unreadMessageCount by remember(messageIdentity) { mutableIntStateOf(unreadPrefs.getInt("unread_$messageIdentity", 0).coerceAtLeast(0)) }
+    LaunchedEffect(messageIdentity) { unreadMessageCount = unreadPrefs.getInt("unread_$messageIdentity", 0).coerceAtLeast(0) }
+    DisposableEffect(messageIdentity, tab) {
+        if (messageIdentity.isBlank() || tab == HurryTab.MESSAGE) return@DisposableEffect onDispose { }
         val socket = IO.socket("https://zyora-server.onrender.com", IO.Options().apply {
             transports = arrayOf("websocket")
             reconnection = true
@@ -369,15 +370,15 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
         })
         val incoming = io.socket.emitter.Emitter.Listener { args ->
             val payload = args.firstOrNull() as? JSONObject ?: return@Listener
-            if (payload.optString("receiverId") == userId && payload.optString("senderId") != userId) {
+            if (payload.optString("receiverId") == messageIdentity && payload.optString("senderId") != userId) {
                 Handler(Looper.getMainLooper()).post {
                     unreadMessageCount += 1
-                    unreadPrefs.edit().putInt("unread_$userId", unreadMessageCount).apply()
+                    unreadPrefs.edit().putInt("unread_$messageIdentity", unreadMessageCount).apply()
                 }
             }
         }
         socket.on("private_message", incoming)
-        socket.on(Socket.EVENT_CONNECT) { socket.emit("register", JSONObject().put("userId", userId).put("accountId", userId)) }
+        socket.on(Socket.EVENT_CONNECT) { socket.emit("register", JSONObject().put("userId", messageIdentity).put("accountId", messageIdentity)) }
         socket.connect()
         onDispose { socket.off("private_message", incoming); socket.disconnect(); socket.close() }
     }
@@ -579,7 +580,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                     Box(Modifier.fillMaxSize()) {
                         Box(Modifier.align(Alignment.BottomCenter)) {
                             HurryBottomNav(tab, languageCode = languageCode, unreadMessageCount = unreadMessageCount, onTab = { selected ->
-                                if (selected == HurryTab.MESSAGE) { unreadMessageCount = 0; unreadPrefs.edit().putInt("unread_$userId", 0).apply() }
+                                if (selected == HurryTab.MESSAGE) { unreadMessageCount = 0; unreadPrefs.edit().putInt("unread_$messageIdentity", 0).apply() }
                                 tab = selected
                                 if (selected != HurryTab.ME) openedMePage = null
                                 if (selected == HurryTab.HOME) homeMine = false
