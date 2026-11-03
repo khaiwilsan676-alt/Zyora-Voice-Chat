@@ -1075,9 +1075,9 @@ private fun NavItem(
                 if (unreadMessageCount > 0) {
                     Box(
                         Modifier.align(Alignment.TopEnd).offset(x = 3.dp, y = (-2).dp)
-                            .size(18.dp)
+                            .size(20.dp)
                             .clip(CircleShape)
-                            .background(Color(0xFFEF4444)),
+                            .background(Color.Red),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
