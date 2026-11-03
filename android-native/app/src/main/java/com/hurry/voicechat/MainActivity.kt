@@ -378,7 +378,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
         })
         val incoming = io.socket.emitter.Emitter.Listener { args ->
             val payload = args.firstOrNull() as? JSONObject ?: return@Listener
-            val peerId = payload.optString("senderId")
+            val peerId = payload.optString("senderAccountId").ifBlank { payload.optString("senderId") }
             if (payload.optString("receiverId") == messageIdentity && peerId != messageIdentity) {
                 val isVoice = payload.optString("type") == "voice"
                 val storedText = if (isVoice) {
