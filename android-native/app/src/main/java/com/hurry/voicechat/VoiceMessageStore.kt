@@ -7,19 +7,17 @@ import java.io.File
 import java.io.FileOutputStream
 
 internal object VoiceMessageStore {
-    private const val PREFIX = "VOICEFILE::"
+    private const val PREFIX = "VOICEDB::"
 
-    fun localMarker(file: File, durationSeconds: Long): String =
-        "$PREFIX${file.absolutePath}::${durationSeconds.coerceAtLeast(1)}"
+    fun localMarker(messageId: String, durationSeconds: Long): String =
+        "$PREFIX$messageId::${durationSeconds.coerceAtLeast(1)}"
 
     fun isVoice(value: String): Boolean =
         value.startsWith(PREFIX) || value.startsWith("VOICE::")
 
     fun localPath(value: String): String? {
         if (!value.startsWith(PREFIX)) return null
-        val end = value.lastIndexOf("::")
-        if (end <= PREFIX.length) return null
-        return value.substring(PREFIX.length, end).takeIf { it.isNotBlank() }
+        return null
     }
 
     fun durationSeconds(value: String): Long {
@@ -49,7 +47,7 @@ internal object VoiceMessageStore {
             val safeId = messageId.replace(Regex("[^A-Za-z0-9_-]"), "_").take(80)
             val file = File(directory, "voice_${safeId}.m4a")
             FileOutputStream(file).use { it.write(bytes) }
-            localMarker(file, duration)
+            localMarker(messageId, duration)
         }.getOrNull()
     }
 
@@ -57,5 +55,18 @@ internal object VoiceMessageStore {
         val bytes = file.readBytes()
         NativeIndexDatabase(context).saveVoiceNote(messageId, peerId, bytes, durationSeconds)
         return Base64.encodeToString(bytes, Base64.NO_WRAP)
+    }
+
+    fun playableFile(context: Context, marker: String): File? {
+        if (!marker.startsWith(PREFIX)) return localPath(marker)?.let(::File)?.takeIf { it.exists() }
+        val messageId = marker.removePrefix(PREFIX).substringBeforeLast("::")
+        if (messageId.isBlank()) return null
+        return runCatching {
+            val bytes = NativeIndexDatabase(context).loadVoiceNote(messageId) ?: return null
+            val directory = File(context.cacheDir, "voice_playback").apply { mkdirs() }
+            File(directory, "play_${messageId.hashCode()}.m4a").apply {
+                writeBytes(bytes)
+            }
+        }.getOrNull()
     }
 }
