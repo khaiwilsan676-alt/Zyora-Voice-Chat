@@ -899,6 +899,7 @@ fun NativeChatScreen(
                                             .clickable(enabled = !isTextBlank) {
                                                 val outgoingText = text.trim()
                                                 messages.add(true to outgoingText)
+                                                saveConversationPreview(receiverId, name, image, outgoingText, System.currentTimeMillis())
                                                 val outgoing = JSONObject()
                                                     .put("id", "${currentUserId}_${System.currentTimeMillis()}")
                                                     .put("senderId", currentUserId)
