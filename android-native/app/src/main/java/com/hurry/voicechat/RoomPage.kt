@@ -1886,7 +1886,7 @@ private fun RoomChatMessages(
                                             if (isRoomOwnerMessage) {
                                                 AsyncImage(model = "https://zyora-voice-chat.vercel.app/IMG_20261027_235537.png", contentDescription = "Owner", contentScale = ContentScale.Fit, modifier = Modifier.height(16.dp))
                                             }
-                                            val hasPublicProfileIdImage = message.senderAccountId in setOf("100002", "100003", "500001", "500002")
+                                            val hasPublicProfileIdImage = message.senderAccountId in setOf("100002", "100003", "500001", "500002", "500003", "500004")
                                             if (hasPublicProfileIdImage) {
                                                 AsyncImage(model = "https://zyora-voice-chat.vercel.app/IMG_20261101_125212.png", contentDescription = "Purple ID", contentScale = ContentScale.Fit, modifier = Modifier.height(16.dp).widthIn(min = 14.dp, max = 22.dp))
                                             }
@@ -2042,7 +2042,7 @@ private fun formatMusicTime(seconds: Float): String {
     val isRoomOwnerMessage = m.senderAccountId == roomOwnerId
     val isCoreOfficial = m.senderAccountId == "100002" || m.senderAccountId == "100003"
     val isRedOfficial = m.senderAccountId == "500001"
-    val is500002Official = m.senderAccountId in setOf("500002", "500003")
+    val is500002Official = m.senderAccountId in setOf("500002", "500003", "500004")
     
     val officialHeadTag = !is500002Official && (isCoreOfficial || profileTags?.optBoolean("officialHeadTag", false) == true)
     val officialTag = isCoreOfficial || isRedOfficial || is500002Official || profileTags?.optBoolean("officialTag", false) == true
@@ -2116,7 +2116,7 @@ private val Int.percentHeight: androidx.compose.ui.unit.Dp
 
 @Composable private fun MemberSheet(seat:NativeRoomSeat,onClose:()->Unit)=SimpleSheet("Member",onClose){
     FallbackAsyncImage(model=if (seat.accountId in setOf("100002", "100003", "500002")) "https://zyora-voice-chat.vercel.app/logo.png" else seat.userImage,contentDescription=null,modifier=Modifier.size(76.dp).clip(CircleShape),contentScale=ContentScale.Crop)
-    Text(seat.userName,color=Color.White,fontSize=17.sp);if (seat.accountId in setOf("500002")) { Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(3.dp)) { AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261101_125212.png",contentDescription="Purple ID Badge",contentScale=ContentScale.Fit,modifier=Modifier.height(18.dp).widthIn(max=28.dp)); Text(seat.accountId,color=Color.White.copy(.65f),fontSize=12.sp) } } else Text("ID: "+seat.accountId,color=Color.White.copy(.65f),fontSize=12.sp)
+    Text(seat.userName,color=Color.White,fontSize=17.sp);if (seat.accountId in setOf("500002", "500003", "500004")) { Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(3.dp)) { AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261101_125212.png",contentDescription="Purple ID Badge",contentScale=ContentScale.Fit,modifier=Modifier.height(18.dp).widthIn(max=28.dp)); Text(seat.accountId,color=Color.White.copy(.65f),fontSize=12.sp) } } else Text("ID: "+seat.accountId,color=Color.White.copy(.65f),fontSize=12.sp)
 }
 
 @Composable private fun GamesSheet(onClose:()->Unit,onWildParty:()->Unit,onFruitParty:()->Unit){
