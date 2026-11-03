@@ -385,6 +385,12 @@ fun PublicProfileScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
+                        // Clip the white surface at the item layer too, so LazyColumn cannot
+                        // paint square white corners over the rounded profile panel.
+                        .graphicsLayer {
+                            shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)
+                            clip = true
+                        }
                         .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
                         .background(Color.White)
                         .padding(horizontal = 16.dp, vertical = 16.dp)
