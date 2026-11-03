@@ -464,6 +464,7 @@ fun RoomPage(
     var localVoiceSpeaking by remember { mutableStateOf(false) }
     var publicMsgOff by remember{mutableStateOf(false)}
     var showChat by remember{mutableStateOf(false)}
+    val latestShowChat by rememberUpdatedState(showChat)
     var showMessageSheet by remember{mutableStateOf(false)}
     var selectedOfficialChat by remember { mutableStateOf<Triple<String, String, String>?>(null) }
     var showMenu by remember{mutableStateOf(false)}
@@ -670,7 +671,10 @@ fun RoomPage(
         else if (imeVisible) keyboardShownForChat = true
         else if (keyboardShownForChat) { showChat = false; keyboardShownForChat = false }
     }
-    LaunchedEffect(showChat) {
+    LaunchedEffect(showChat, roomSocketRef.value) {
+        roomSocketRef.value?.takeIf { it.connected() }?.emit(
+            "room_chat_view", JSONObject().put("roomId", roomId).put("userId", accountId).put("active", showChat)
+        )
         if (showChat) {
             kotlinx.coroutines.delay(120)
             runCatching { chatFocusRequester.requestFocus() }
@@ -865,6 +869,7 @@ fun RoomPage(
             currentProfileKeys.forEach { profileDb.saveProfile(it, currentProfile) }
             val joinPayload = JSONObject().put("roomId",roomId).put("userId",currentUser.uid.ifBlank{currentUser.id.ifBlank{accountId}}).put("accountId",accountId).put("roomOwnerId",roomOwner.uid.ifBlank{roomOwner.id.ifBlank{roomOwner.accountId.ifBlank{roomId}}}).put("name",roomDisplayName).put("dp",roomDisplayImage)
             roomSocket.emit("room_join",joinPayload)
+            if (latestShowChat) roomSocket.emit("room_chat_view", JSONObject().put("roomId", roomId).put("userId", accountId).put("active", true))
             if (!joinMessageSent && accountId != "guest") {
                 joinMessageSent = true
                 val joinCreatedAt = System.currentTimeMillis()
@@ -913,6 +918,7 @@ fun RoomPage(
         }
         roomSocket.on("room_presence",presenceListener)
         roomSocket.on("room_message",messageListener)
+        roomSocket.on("room_chat_message",messageListener)
         roomSocket.on("room_chat_cleared",clearedListener)
         roomSocket.on("room_seats",seatListener)
         roomSocket.on("room_settings_updated",settingsListener)
@@ -922,7 +928,10 @@ fun RoomPage(
         roomSocket.on(Socket.EVENT_CONNECT,connectListener)
         roomSocket.connect()
         onDispose {
-            if (!keepingRoomForMini) roomSocket.emit("room_leave",JSONObject().put("roomId",roomId).put("userId",accountId).put("accountId",accountId))
+            if (!keepingRoomForMini) {
+                roomSocket.emit("room_chat_view", JSONObject().put("roomId", roomId).put("userId", accountId).put("active", false))
+                roomSocket.emit("room_leave",JSONObject().put("roomId",roomId).put("userId",accountId).put("accountId",accountId))
+            }
             roomSocket.off("room_presence",presenceListener)
             roomSocket.off("room_message",messageListener)
             roomSocket.off("room_chat_cleared",clearedListener)
