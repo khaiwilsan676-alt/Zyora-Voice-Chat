@@ -646,12 +646,14 @@ fun PublicProfileScreen(
     if (isOtherUser && showChat) {
         val authPrefs = context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE)
         val chatPrefs = context.getSharedPreferences("hurry_user", Context.MODE_PRIVATE)
-        val currentUserId = chatPrefs.getString("accountId", "").orEmpty()
+        val currentUserId = authPrefs.getString("uid", "").orEmpty()
             .ifBlank { chatPrefs.getString("uid", "").orEmpty() }
-            .ifBlank { authPrefs.getString("accountId", "").orEmpty().ifBlank { authPrefs.getString("uid", "").orEmpty() } }
-        val receiverId = targetUser?.uid?.takeIf { it.isNotBlank() }
+        val currentAccountId = authPrefs.getString("accountId", "").orEmpty()
+            .ifBlank { chatPrefs.getString("accountId", "").orEmpty() }
+            .ifBlank { currentUserId }
+        val receiverId = targetUser?.accountId?.takeIf { it.isNotBlank() }
             ?: targetUser?.id?.takeIf { it.isNotBlank() }
-            ?: targetUser?.accountId.orEmpty()
+            ?: targetUser?.uid.orEmpty()
 
         // Reuse the exact native one-to-one chat screen opened from the room profile.
         NativeChatScreen(
@@ -659,6 +661,7 @@ fun PublicProfileScreen(
             image = userPhoto,
             receiverId = receiverId,
             currentUserId = currentUserId,
+            currentAccountIdOverride = currentAccountId,
             onBack = { showChat = false }
         )
     }
