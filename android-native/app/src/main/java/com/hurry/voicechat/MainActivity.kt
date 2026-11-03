@@ -68,6 +68,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
 import org.json.JSONObject
+import com.google.firebase.auth.FirebaseAuth
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
@@ -523,12 +524,16 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                                 "SVIP" -> SvipPage(onBack = { openedMePage = null })
                                 "Language Setting" -> LanguagePage(selectedLanguage = languageCode, onLanguageSelected = { code -> languageCode = code; languagePrefs.edit().putString("appLanguage", code).apply() }, onBack = { openedMePage = null })
                                 "Settings" -> SettingsPage(languageCode = languageCode, onBack = { openedMePage = null }, onLogout = {
+                                    // Fully end the previous Firebase session and clear cached auth identity.
+                                    FirebaseAuth.getInstance().signOut()
                                     authPrefs.edit()
                                         .remove("uid")
                                         .remove("name")
                                         .remove("phone")
                                         .remove("image")
                                         .remove("accountId")
+                                        .remove("email")
+                                        .remove("idToken")
                                         .apply()
                                     openedMePage = null
                                     onLogout()
