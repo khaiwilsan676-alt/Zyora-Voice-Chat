@@ -73,7 +73,7 @@ fun RoomInfo(
                     u?.let { user ->
                         val name = sequenceOf("name","displayName","userName","nickname").map { user.optString(it,"").trim() }.firstOrNull { it.isNotBlank() && it!="null" } ?: member.name
                         val image = sequenceOf("image","avatar","profileImageUrl").map { user.optString(it,"").trim() }.firstOrNull { it.isNotBlank() && it!="null" } ?: member.image
-                        val country = sequenceOf("country","countryName","location").map { user.optString(it,"").trim() }.firstOrNull { it.isNotBlank() && it!="null" } ?: member.country
+                        val country = sequenceOf("country","countryName","countryCode","country_code","countryFlag","nationality","location").map { user.optString(it,"").trim() }.firstOrNull { it.isNotBlank() && it!="null" } ?: member.country
                         member.accountId to RoomInfoFollower(member.accountId,name,image,country)
                     }
                 } finally { conn.disconnect() }
@@ -113,7 +113,7 @@ fun RoomInfo(
                     val image = sequenceOf("image", "avatar", "profileImageUrl")
                         .map { profile.optString(it, "").trim() }
                         .firstOrNull { it.isNotBlank() && it != "null" }.orEmpty()
-                    val country = sequenceOf("country", "countryName", "location")
+                    val country = sequenceOf("country", "countryName", "countryCode", "country_code", "countryFlag", "nationality", "location")
                         .map { profile.optString(it, "").trim() }
                         .firstOrNull { it.isNotBlank() && it != "null" }.orEmpty()
                     kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
@@ -209,17 +209,8 @@ fun RoomInfo(
                             onOpenProfile(RoomInfoFollower(roomOwner.accountId, ownerDisplayName, ownerDisplayImage, ownerCountry))
                         }
                     }
-                    items(roomAdmins.filter { admin ->
-                        admin.accountId.isNotBlank() &&
-                            admin.accountId != roomOwner.accountId &&
-                            roomFollowers.none { it.accountId == admin.accountId }
-                    }, key = { "admin-${it.accountId}" }) { admin ->
-                        val profile = memberProfiles[admin.accountId] ?: admin
-                        MemberRow(profile.name, profile.image, profile.accountId, "House", profile.country) {
-                            onOpenProfile(profile)
-                        }
-                    }
-                    items(roomFollowers.filter { it.accountId != roomOwner.accountId && roomAdmins.none { a -> a.accountId == it.accountId } }, key = { "member-${it.accountId}" }) { f ->
+                    // Only room followers appear in the Members list.
+                    items(roomFollowers.filter { it.accountId.isNotBlank() && it.accountId != roomOwner.accountId }, key = { "member-${it.accountId}" }) { f ->
                         val profile = memberProfiles[f.accountId] ?: f
                         MemberRow(profile.name, profile.image, profile.accountId, "", profile.country) { onOpenProfile(profile) }
                     }
@@ -256,7 +247,7 @@ private fun MemberRow(
         )
         Column(Modifier.padding(start = 11.dp).weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(name.ifBlank { "User" }, modifier = Modifier.weight(1f),
+                Text(name.ifBlank { "User" },
                     fontSize = 13.sp, fontWeight = FontWeight.Medium,
                     color = Color.White, maxLines = 2, softWrap = true)
                 if (role == "Owner") {
@@ -266,7 +257,9 @@ private fun MemberRow(
                 }
             }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                if (country.isNotBlank()) Text(countryFlagEmoji(country), fontSize = 13.sp)
+                Box(Modifier.size(width = 18.dp, height = 16.dp), contentAlignment = Alignment.Center) {
+                    if (country.isNotBlank()) Text(countryFlagEmoji(country), fontSize = 13.sp)
+                }
                 Box(Modifier.height(16.dp).width(36.dp), contentAlignment = Alignment.Center) {
                     AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261028_004355.png",
                         contentDescription="Level", contentScale=ContentScale.Fit, modifier=Modifier.fillMaxSize())
