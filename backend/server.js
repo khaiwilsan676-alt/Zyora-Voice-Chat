@@ -769,6 +769,16 @@ app.get("/api/users", async (req, res) => {
 
     const users = db.collection("users");
 
+    // Official IDs remain resolvable even when legacy profile rows lack accountId.
+    const OFFICIAL_UID_BY_ACCOUNT_ID = {
+      "500002": "g0d2pU1SIcMdSAA9UjayDsIPjYv1",
+      "500003": "nB0zGbJu5yf7ZeHMt5pnMIhzjGB3",
+      "500004": "i8uHx21ZMOSL8tR2Gim14bDJ36E3",
+    };
+    const OFFICIAL_ACCOUNT_ID_BY_UID = Object.fromEntries(
+      Object.entries(OFFICIAL_UID_BY_ACCOUNT_ID).map(([account, officialUid]) => [officialUid, account])
+    );
+
     const normalizeUser = (user) => {
       const id = String(
         user.id || user.uid || user.appLongId || user._id || ""
@@ -781,9 +791,11 @@ app.get("/api/users", async (req, res) => {
         user["Account ID"] ||
         user.displayAccountNumber ||
         user.displayUserNumber ||
+        OFFICIAL_ACCOUNT_ID_BY_UID[id] ||
         ""
       );
 
+      if (OFFICIAL_ACCOUNT_ID_BY_UID[id]) numberId = OFFICIAL_ACCOUNT_ID_BY_UID[id];
       if (!numberId || numberId === id) {
         let hash = 0;
         for (let i = 0; i < id.length; i++) {
@@ -814,9 +826,11 @@ app.get("/api/users", async (req, res) => {
       // The UI only accepts numeric IDs, so avoid expensive regex scans when possible.
       const numericQ = /^\d+$/.test(q) ? Number(q) : null;
       if (numericQ !== null) {
+        const officialUid = OFFICIAL_UID_BY_ACCOUNT_ID[q];
         const exactConditions = [
           { accountId: q }, { accountNumber: q }, { "Account Number": q }, { "Account ID": q },
           { displayAccountNumber: q }, { displayUserNumber: q }, { uid: q }, { id: q }, { appLongId: q },
+          ...(officialUid ? [{ uid: officialUid }, { id: officialUid }, { appLongId: officialUid }] : []),
           { accountId: numericQ }, { accountNumber: numericQ }, { "Account ID": numericQ },
           { displayAccountNumber: numericQ }, { displayUserNumber: numericQ }, { uid: q }, { id: q }
         ];
