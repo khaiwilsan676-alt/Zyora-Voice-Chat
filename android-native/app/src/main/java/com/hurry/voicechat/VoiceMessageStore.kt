@@ -41,14 +41,21 @@ internal object VoiceMessageStore {
         return runCatching {
             val bytes = Base64.decode(encoded, Base64.DEFAULT)
             require(bytes.isNotEmpty() && bytes.size <= 700_000)
+            val messageId = payload.optString("id").ifBlank { "voice_${System.currentTimeMillis()}" }
+            val peerId = payload.optString("senderAccountId").ifBlank { payload.optString("senderId") }
+            val duration = payload.optLong("durationSec", 1).coerceIn(1L, 90L)
+            NativeIndexDatabase(context).saveVoiceNote(messageId, peerId, bytes, duration)
             val directory = File(context.filesDir, "voice_notes").apply { mkdirs() }
-            val safeId = payload.optString("id").replace(Regex("[^A-Za-z0-9_-]"), "_").take(80)
-                .ifBlank { System.currentTimeMillis().toString() }
+            val safeId = messageId.replace(Regex("[^A-Za-z0-9_-]"), "_").take(80)
             val file = File(directory, "voice_${safeId}.m4a")
             FileOutputStream(file).use { it.write(bytes) }
-            localMarker(file, payload.optLong("durationSec", 1))
+            localMarker(file, duration)
         }.getOrNull()
     }
 
-    fun encode(file: File): String = Base64.encodeToString(file.readBytes(), Base64.NO_WRAP)
+    fun persistOutgoing(context: Context, messageId: String, peerId: String, file: File, durationSeconds: Long): String {
+        val bytes = file.readBytes()
+        NativeIndexDatabase(context).saveVoiceNote(messageId, peerId, bytes, durationSeconds)
+        return Base64.encodeToString(bytes, Base64.NO_WRAP)
+    }
 }
