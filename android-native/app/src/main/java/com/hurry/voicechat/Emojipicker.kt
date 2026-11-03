@@ -185,49 +185,37 @@ fun TransparentSeatVideoPlayer(
     onVideoFinished: () -> Unit = {}
 ) {
     val context = LocalContext.current
-
-    val exoPlayer = remember {
+    val latestOnFinished by rememberUpdatedState(onVideoFinished)
+    val player = remember(context, videoUrl) {
         ExoPlayer.Builder(context).build().apply {
             setMediaItem(MediaItem.fromUri(videoUrl))
             prepare()
             playWhenReady = true
-            
             addListener(object : Player.Listener {
                 override fun onPlaybackStateChanged(playbackState: Int) {
-                    if (playbackState == Player.STATE_ENDED) {
-                        onVideoFinished()
-                    }
+                    if (playbackState == Player.STATE_ENDED) latestOnFinished()
                 }
             })
         }
     }
-
-    DisposableEffect(Unit) {
-        onDispose {
-            exoPlayer.release()
-        }
-    }
+    var videoView by remember { mutableStateOf<ChromaKeyVideoView?>(null) }
 
     AndroidView(
         modifier = modifier.fillMaxSize(),
         factory = { ctx ->
-            PlayerView(ctx).apply {
-                player = exoPlayer
-                useController = false
-                
-                setBackgroundColor(android.graphics.Color.TRANSPARENT)
-                setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)
-                
-                layoutParams = FrameLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.MATCH_PARENT
-                )
-
-                (this.videoSurfaceView as? SurfaceView)?.apply {
-                    setZOrderOnTop(true)
-                    holder.setFormat(PixelFormat.TRANSPARENT)
-                }
-            }
-        }
+            ChromaKeyVideoView(ctx) { surface ->
+                player.setVideoSurface(surface)
+            }.also { videoView = it }
+        },
+        update = { view -> videoView = view }
     )
+
+    DisposableEffect(player, videoView) {
+        onDispose {
+            player.clearVideoSurface()
+            player.release()
+            videoView?.release()
+            videoView = null
+        }
+    }
 }
