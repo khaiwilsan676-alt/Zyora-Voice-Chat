@@ -264,6 +264,13 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
     val languagePrefs = remember { context.getSharedPreferences("zyora_settings", android.content.Context.MODE_PRIVATE) }
     var languageCode by remember { mutableStateOf(languagePrefs.getString("appLanguage", "en") ?: "en") }
     val userId = remember { authPrefs.getString("uid", "").orEmpty() }
+    LaunchedEffect(userId) {
+        if (userId.isNotBlank()) {
+            val serviceIntent = Intent(context, ZyoraMessageListenerService::class.java)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) context.startForegroundService(serviceIntent)
+            else context.startService(serviceIntent)
+        }
+    }
     // Isolate the local Mine-room cache by Firebase UID when multiple Google accounts use one device.
     val mineRoomKey = "mine_room_${userId}"
     var mineCreatedRoom by remember {
@@ -393,7 +400,6 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                         history.put(JSONObject().put("id", messageId).put("mine", false).put("text", storedText))
                         database.saveChat(chatKey, history.toString())
                     }
-                    if (!duplicate) showZyoraLocalMessageNotification(context)
                     val timestamp = payload.optLong("timestamp", System.currentTimeMillis())
                     val time = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()).format(java.util.Date(timestamp))
                     val peerPreview = JSONObject()
@@ -404,8 +410,12 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                         .put("timestamp", timestamp)
                         .put("time", time)
                     database.saveConversation("conversation_${messageIdentity}_$peerId", peerId, peerPreview)
-                    unreadMessageCount += 1
-                    unreadPrefs.edit().putInt("unread_$messageIdentity", unreadMessageCount).apply()
+                    if (!duplicate) {
+                        unreadMessageCount = unreadPrefs.getInt("unread_$messageIdentity", 0) + 1
+                        unreadPrefs.edit().putInt("unread_$messageIdentity", unreadMessageCount).apply()
+                    } else {
+                        unreadMessageCount = unreadPrefs.getInt("unread_$messageIdentity", unreadMessageCount)
+                    }
                 }
             }
         }
@@ -594,6 +604,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                                 "Language Setting" -> LanguagePage(selectedLanguage = languageCode, onLanguageSelected = { code -> languageCode = code; languagePrefs.edit().putString("appLanguage", code).apply() }, onBack = { openedMePage = null })
                                 "Settings" -> SettingsPage(languageCode = languageCode, onBack = { openedMePage = null }, onLogout = {
                                     // Fully end the previous Firebase session and clear cached auth identity.
+                                    context.stopService(Intent(context, ZyoraMessageListenerService::class.java))
                                     FirebaseAuth.getInstance().signOut()
                                     authPrefs.edit()
                                         .remove("uid")
