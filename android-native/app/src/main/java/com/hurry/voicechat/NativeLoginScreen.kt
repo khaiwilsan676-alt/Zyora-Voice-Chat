@@ -163,7 +163,7 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
                     throw IllegalArgumentException("Password must be at least 6 characters long.")
                 }
                 if (create) {
-                    val existingDeviceAccount = withContext(Dispatchers.IO) { getDeviceRegistration(context) }
+                    val existingDeviceAccount = withContext(Dispatchers.IO) { getDeviceRegistration(context, "Email/Password") }
                     if (existingDeviceAccount.optBoolean("registered", false)) {
                         registeredDeviceAccountId = existingDeviceAccount.optString("registeredAccountId")
                         registeredDeviceEmail = existingDeviceAccount.optString("registeredEmail")
@@ -734,10 +734,16 @@ private fun AuthField(
     }
 }
 
-private fun getDeviceRegistration(context: android.content.Context): JSONObject {
+private fun getDeviceRegistration(
+    context: android.content.Context,
+    registerMethod: String = "Google"
+): JSONObject {
     val deviceId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID).orEmpty()
     if (deviceId.isBlank()) throw IllegalStateException("Could not verify this device.")
-    return postAuthJson("/api/auth/device-registration", JSONObject().put("deviceId", deviceId))
+    return postAuthJson(
+        "/api/auth/device-registration",
+        JSONObject().put("deviceId", deviceId).put("registerMethod", registerMethod)
+    )
 }
 
 private fun verifyDeviceGoogleAccount(
