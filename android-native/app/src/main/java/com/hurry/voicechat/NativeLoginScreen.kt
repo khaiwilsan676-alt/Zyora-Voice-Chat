@@ -5,6 +5,12 @@ import android.net.Uri
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.datasource.DefaultDataSource
+import androidx.media3.datasource.cache.CacheDataSource
+import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
+import androidx.media3.datasource.cache.SimpleCache
+import androidx.media3.database.StandaloneDatabaseProvider
+import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import androidx.compose.foundation.background
@@ -65,11 +71,27 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
+import java.io.File
 
 private const val HURRY_API_BASE = "https://zyora-server.onrender.com"
 private const val HURRY_VIDEO = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/VID_20261031_074114_256_bsl~2.mp4"
 private const val HURRY_LOGO = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/logo.png"
 private const val GOOGLE_LOADING_IMAGE = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261031_215612.png"
+private object ZyoraLoginVideoCache {
+    @Volatile private var instance: SimpleCache? = null
+
+    fun get(context: android.content.Context): SimpleCache {
+        instance?.let { return it }
+        return synchronized(this) {
+            instance ?: SimpleCache(
+                File(context.cacheDir, "zyora-login-video"),
+                LeastRecentlyUsedCacheEvictor(40L * 1024L * 1024L),
+                StandaloneDatabaseProvider(context.applicationContext)
+            ).also { instance = it }
+        }
+    }
+}
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -166,7 +188,14 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
     Box(Modifier.fillMaxSize().background(Color(0xFF111827))) {
         val backgroundPlayer = remember(context) {
             ExoPlayer.Builder(context).build().apply {
-                setMediaItem(MediaItem.fromUri(Uri.parse(HURRY_VIDEO)))
+                val mediaItem = MediaItem.fromUri(Uri.parse(HURRY_VIDEO))
+                val cacheDataSource = CacheDataSource.Factory()
+                    .setCache(ZyoraLoginVideoCache.get(context))
+                    .setUpstreamDataSourceFactory(DefaultDataSource.Factory(context))
+                    .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
+                setMediaSource(
+                    ProgressiveMediaSource.Factory(cacheDataSource).createMediaSource(mediaItem)
+                )
                 repeatMode = Player.REPEAT_MODE_ONE
                 volume = 0f
                 playWhenReady = true
