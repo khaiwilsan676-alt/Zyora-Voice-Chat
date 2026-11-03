@@ -46,9 +46,13 @@ internal fun registerZyoraPushToken(context: Context, accountId: String) {
 class ZyoraFirebaseMessagingService : FirebaseMessagingService() {
     override fun onNewToken(token: String) {
         super.onNewToken(token)
-        val prefs = getSharedPreferences("hurry_user", Context.MODE_PRIVATE)
-        val accountId = prefs.getString("accountId", prefs.getString("userId", prefs.getString("uid", ""))).orEmpty()
-        if (accountId.isNotBlank()) registerZyoraPushToken(this, accountId)
+        val authPrefs = getSharedPreferences("hurry_auth", Context.MODE_PRIVATE)
+        val userPrefs = getSharedPreferences("hurry_user", Context.MODE_PRIVATE)
+        val accountId = authPrefs.getString("accountId", null)
+            ?: userPrefs.getString("accountId", null)
+            ?: authPrefs.getString("uid", null)
+            ?: userPrefs.getString("userId", userPrefs.getString("uid", ""))
+        if (!accountId.isNullOrBlank()) registerZyoraPushToken(this, accountId)
     }
 
     override fun onCreate() {
