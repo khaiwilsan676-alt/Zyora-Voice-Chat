@@ -3,7 +3,7 @@ package com.hurry.voicechat
 import android.content.Context
 import android.graphics.PixelFormat
 import android.graphics.SurfaceTexture
-import.opengl.GLES11Ext
+import android.opengl.GLES11Ext
 import android.opengl.GLES20
 import android.opengl.GLSurfaceView
 import android.view.Surface
