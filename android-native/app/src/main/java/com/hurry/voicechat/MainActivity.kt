@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.material3.Text
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.layout.Row
@@ -582,9 +583,14 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                 }
             }
             if (keptRoom != null && tab != HurryTab.HOME && openedRoom == null && openedChat == null && openedPublicProfile == null && !openedRoomSupport && !openedSearch) {
-                KeptRoomTabOverlay(room = keptRoom!!) {
-                    openedRoom = keptRoom
-                }
+                KeptRoomTabOverlay(
+                    room = keptRoom!!,
+                    onOpen = { openedRoom = keptRoom },
+                    onExit = {
+                        keptRoom = null
+                        authPrefs.edit().remove("kept_room_data").apply()
+                    }
+                )
             }
             LuckyBagNotificationSlider(
                 currentUserId = userId,
@@ -637,7 +643,20 @@ private fun MeNativeSubPage(title: String, onBack: () -> Unit) {
 
 
 @Composable
-private fun KeptRoomTabOverlay(room: HurryRoom, onOpen: () -> Unit) {
+private fun KeptRoomTabOverlay(room: HurryRoom, onOpen: () -> Unit, onExit: () -> Unit) {
+    var dragOffset by remember(room.id) { mutableStateOf(Offset.Zero) }
+    var isDragging by remember(room.id) { mutableStateOf(false) }
+    val density = LocalDensity.current
+    val music = rememberInfiniteTransition(label = "kept-room-tab-music")
+    val phase by music.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 900, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "kept-room-tab-wave"
+    )
     Box(
         Modifier
             .fillMaxSize()
@@ -646,17 +665,54 @@ private fun KeptRoomTabOverlay(room: HurryRoom, onOpen: () -> Unit) {
     ) {
         Box(
             Modifier
+                .offset { IntOffset(dragOffset.x.roundToInt(), dragOffset.y.roundToInt()) }
                 .size(60.dp)
                 .border(2.dp, Color.White, CircleShape)
                 .clip(CircleShape)
-                .clickable(onClick = onOpen)
+                .pointerInput(room.id) {
+                    detectDragGestures(
+                        onDragStart = { isDragging = true },
+                        onDragEnd = {
+                            val exitY = with(density) { 50.dp.toPx() }
+                            val exitX = with(density) { 20.dp.toPx() }
+                            val shouldExit = dragOffset.y > exitY || (dragOffset.y > 20f && dragOffset.x > exitX)
+                            isDragging = false
+                            dragOffset = Offset.Zero
+                            if (shouldExit) onExit()
+                        },
+                        onDragCancel = { isDragging = false; dragOffset = Offset.Zero },
+                        onDrag = { change, amount ->
+                            change.consume()
+                            dragOffset += amount
+                        }
+                    )
+                }
+                .clickable(enabled = !isDragging, onClick = onOpen),
+            contentAlignment = Alignment.Center
         ) {
             AsyncImage(
-                model = room.image.ifBlank { "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/default-avatar.png" },
+                model = room.image.ifBlank { "https://zyora-voice-chat.vercel.app/default-avatar.png" },
                 contentDescription = "Kept room",
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.fillMaxSize().clip(CircleShape),
                 contentScale = ContentScale.Crop
             )
+            Canvas(Modifier.fillMaxSize()) {
+                val centerX = size.width / 2f
+                val centerY = size.height / 2f
+                val heights = listOf(0.30f, 0.48f, 0.36f)
+                val offsets = listOf(-7f, 0f, 7f)
+                heights.forEachIndexed { index, base ->
+                    val pulse = kotlin.math.abs(kotlin.math.sin((phase * 2f * Math.PI) + index * 1.35f)).toFloat()
+                    val halfHeight = size.height * (base * (0.55f + pulse * 0.65f)) / 2f
+                    drawLine(
+                        color = Color.White,
+                        start = Offset(centerX + offsets[index].dp.toPx(), centerY - halfHeight),
+                        end = Offset(centerX + offsets[index].dp.toPx(), centerY + halfHeight),
+                        strokeWidth = 2.6.dp.toPx(),
+                        cap = androidx.compose.ui.graphics.StrokeCap.Round
+                    )
+                }
+            }
         }
     }
 }
