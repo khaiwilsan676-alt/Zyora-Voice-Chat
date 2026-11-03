@@ -223,12 +223,14 @@ private fun nativeMeAccountNumber(uid: String): String {
     val special = when (uid) {
         "HUSxCrossnabgU029dWYt1TUV04hd2" -> "100002"
         "ADqW31RGBMaosOzy0HiqexKSD7h1" -> "100003"
+        "nB0zGbJu5yf7ZeHMt5pnMIhzjGB3" -> "500003"
+        "i8uHx21ZMOSL8tR2Gim14bDJ36E3" -> "500004"
         "100002" -> "100002"
         "100003" -> "100003"
         else -> null
     }
     if (special != null) return special
-    if (uid in setOf("500001", "500002", "500004", "500005", "700001", "700002", "700003")) return uid
+    if (uid in setOf("500001", "500002", "500003", "500004", "500005", "700001", "700002", "700003")) return uid
     return (10000000L + kotlin.math.abs(uid.hashCode().toLong()) % 90000000L).toString()
 }
 
