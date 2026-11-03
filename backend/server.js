@@ -2258,11 +2258,13 @@ io.on("connection", (socket) => {
     }
 
     if (action === "leave") {
-      // Only the socket currently occupying this seat may release it.
+      // The authenticated account may leave its own seat from any active
+      // session. Socket IDs can change after reconnect; they must not block
+      // an intentional leave. The room membership + identity checks above
+      // still prevent another account from releasing this seat.
       if (
         current.isOccupied &&
-        (!current.socketId || String(current.socketId) === String(socket.id)) &&
-        String(current.user?.accountId || "") === userId
+        String(current.user?.accountId || current.user?.userId || "") === userId
       ) {
         seats.set(seatNumber, {
           ...current,
