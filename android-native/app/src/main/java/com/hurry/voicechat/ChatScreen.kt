@@ -1,6 +1,7 @@
 package com.hurry.voicechat
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -8,11 +9,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import java.text.SimpleDateFormat
@@ -22,6 +25,7 @@ private val ChatNavy = Color(0xFF172536)
 private val ChatBlue = Color(0xFF2878E8)
 private val ChatCanvas = Color(0xFFF5F7FA)
 private val ChatText = Color(0xFF182230)
+private val TopBarGreyBlueMix = Color(0xFF4A5C6D) 
 
 data class NativeChatMessage(
     val id: String,
@@ -52,7 +56,7 @@ fun ChatScreen(
     Column(Modifier.fillMaxSize().background(ChatCanvas)) {
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            color = ChatNavy,
+            color = TopBarGreyBlueMix,
             shadowElevation = 4.dp
         ) {
             Row(
@@ -96,26 +100,35 @@ fun ChatScreen(
                 IconButton(onClick = { menuExpanded = true }) {
                     Icon(Icons.Default.MoreVert, contentDescription = "More options", tint = Color.White)
                 }
+                
                 DropdownMenu(
                     expanded = menuExpanded,
                     onDismissRequest = { menuExpanded = false },
                     modifier = Modifier.background(Color.White)
                 ) {
                     DropdownMenuItem(
-                        text = { Text(if (blocked) "Unblock" else "Block") },
-                        leadingIcon = { Icon(Icons.Default.Block, contentDescription = null) },
-                        onClick = { blocked = !blocked; menuExpanded = false }
+                        text = { 
+                            Text(
+                                text = if (blocked) "Unblock" else "Block",
+                                color = Color.Black
+                            ) 
+                        },
+                        onClick = { 
+                            blocked = !blocked 
+                            menuExpanded = false 
+                        }
                     )
                     DropdownMenuItem(
-                        text = { Text("Report") },
-                        leadingIcon = { Icon(Icons.Default.Flag, contentDescription = null) },
-                        onClick = { menuExpanded = false; showReport = true }
-                    )
-                    HorizontalDivider()
-                    DropdownMenuItem(
-                        text = { Text("Clear chat") },
-                        leadingIcon = { Icon(Icons.Default.DeleteOutline, contentDescription = null) },
-                        onClick = { menuExpanded = false; showClearConfirm = true }
+                        text = { 
+                            Text(
+                                text = "Report",
+                                color = Color.Black
+                            ) 
+                        },
+                        onClick = { 
+                            menuExpanded = false 
+                            showReport = true 
+                        }
                     )
                 }
             }
@@ -167,9 +180,11 @@ fun ChatScreen(
             }
         }
 
+        // Yahan Surface ka shape RectangleShape kar diya taaki pure bar me koi curve na rahe
         Surface(
             modifier = Modifier.fillMaxWidth().imePadding().navigationBarsPadding(),
             color = Color.White,
+            shape = RectangleShape,
             shadowElevation = 8.dp
         ) {
             Row(
@@ -177,10 +192,22 @@ fun ChatScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(7.dp)
             ) {
+                
+                IconButton(onClick = { /* Handle image selection */ }) {
+                    Icon(
+                        imageVector = Icons.Outlined.Image, 
+                        contentDescription = "Image", 
+                        tint = Color(0xFF8993A0)
+                    )
+                }
+
+                // TextField ki height fix (52.dp) kardi hai aur Send button ko trailingIcon me daal diya hai
                 TextField(
                     value = input,
                     onValueChange = { input = it },
-                    modifier = Modifier.weight(1f).defaultMinSize(minHeight = 50.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(52.dp), // Fix height lagayi hai taaki patla na ho
                     placeholder = { Text("Message", color = Color(0xFF8993A0)) },
                     singleLine = true,
                     shape = RoundedCornerShape(26.dp),
@@ -194,29 +221,36 @@ fun ChatScreen(
                         cursorColor = ChatBlue,
                         focusedTextColor = ChatText,
                         unfocusedTextColor = ChatText
-                    )
-                )
-                FilledIconButton(
-                    onClick = {
-                        if (input.isNotBlank() && !blocked) {
-                            messages = messages + NativeChatMessage(
-                                UUID.randomUUID().toString(), input.trim(), "me"
+                    ),
+                    trailingIcon = {
+                        val isInputValid = input.isNotBlank() && !blocked
+                        Box(
+                            modifier = Modifier
+                                .padding(end = 6.dp)
+                                .size(40.dp) // Blue circle card size
+                                .background(
+                                    color = if (isInputValid) ChatBlue else Color(0xFFB8C5D4), // Text hai toh blue, nahi toh grey
+                                    shape = CircleShape
+                                )
+                                .clickable(enabled = isInputValid) {
+                                    messages = messages + NativeChatMessage(
+                                        UUID.randomUUID().toString(), input.trim(), "me"
+                                    )
+                                    input = ""
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Send,
+                                contentDescription = "Send message",
+                                tint = Color.White, // Icon color white fix rakha hai
+                                modifier = Modifier
+                                    .size(20.dp)
+                                    .padding(start = 3.dp) // Send icon ko theek se center karne ke liye
                             )
-                            input = ""
                         }
-                    },
-                    enabled = !blocked && input.isNotBlank(),
-                    modifier = Modifier.size(48.dp),
-                    shape = CircleShape,
-                    colors = IconButtonDefaults.filledIconButtonColors(
-                        containerColor = ChatBlue,
-                        contentColor = Color.White,
-                        disabledContainerColor = Color(0xFFB8C5D4),
-                        disabledContentColor = Color.White
-                    )
-                ) {
-                    Icon(Icons.Default.Send, contentDescription = "Send message")
-                }
+                    }
+                )
             }
         }
     }
