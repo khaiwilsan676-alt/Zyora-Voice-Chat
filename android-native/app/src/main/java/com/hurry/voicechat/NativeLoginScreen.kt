@@ -107,6 +107,7 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
     var showDeviceRegisteredDialog by remember { mutableStateOf(false) }
     var registeredDeviceAccountId by remember { mutableStateOf("") }
     var registeredDeviceEmail by remember { mutableStateOf("") }
+    var registeredDeviceMethod by remember { mutableStateOf("Google") }
     var error by remember { mutableStateOf("") }
     var showPrivacyPolicy by remember { mutableStateOf(false) }
     val legacyGoogleLauncher = rememberLauncherForActivityResult(
@@ -160,8 +161,29 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
                 if (password.length < 6) {
                     throw IllegalArgumentException("Password must be at least 6 characters long.")
                 }
+                if (create) {
+                    val existingDeviceAccount = withContext(Dispatchers.IO) { getDeviceRegistration(context) }
+                    if (existingDeviceAccount.optBoolean("registered", false)) {
+                        registeredDeviceAccountId = existingDeviceAccount.optString("registeredAccountId")
+                        registeredDeviceEmail = existingDeviceAccount.optString("registeredEmail")
+                        registeredDeviceMethod = existingDeviceAccount.optString("registeredMethod", "Google")
+                        showDeviceRegisteredDialog = true
+                        return@launch
+                    }
+                }
                 val user = withContext(Dispatchers.IO) {
                     backendEmailAuth(context, email.trim(), password, create)
+                }
+                val deviceLock = withContext(Dispatchers.IO) {
+                    verifyDeviceGoogleAccount(user, context, "Email/Password")
+                }
+                if (!deviceLock.optBoolean("allowed", false)) {
+                    registeredDeviceAccountId = deviceLock.optString("registeredAccountId")
+                    registeredDeviceEmail = deviceLock.optString("registeredEmail")
+                    registeredDeviceMethod = deviceLock.optString("registeredMethod", "Google")
+                    showDeviceRegisteredDialog = true
+                    FirebaseAuth.getInstance().signOut()
+                    return@launch
                 }
                 withContext(Dispatchers.IO) { syncHurryUser(user, context) }
                 val authPrefs = context.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE)
@@ -626,7 +648,7 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
                     Text("Your Device has a Registered account (ID: " + registeredDeviceAccountId.ifBlank { "USER ID" } + ")",
                         color = Color.White, fontSize = 14.sp, lineHeight = 20.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
                     Spacer(Modifier.height(8.dp))
-                    Text("Register Method: Google (" + registeredDeviceEmail.ifBlank { "Google Email" } + ")",
+                    Text("Register Method: " + registeredDeviceMethod + " (" + registeredDeviceEmail.ifBlank { "Registered Email" } + ")",
                         color = Color.White, fontSize = 14.sp, lineHeight = 20.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
                     Spacer(Modifier.height(18.dp))
                     Button(
@@ -710,15 +732,26 @@ private fun AuthField(
     }
 }
 
-private fun verifyDeviceGoogleAccount(user: JSONObject, context: android.content.Context): JSONObject {
+private fun getDeviceRegistration(context: android.content.Context): JSONObject {
+    val deviceId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID).orEmpty()
+    if (deviceId.isBlank()) throw IllegalStateException("Could not verify this device.")
+    return postAuthJson("/api/auth/device-registration", JSONObject().put("deviceId", deviceId))
+}
+
+private fun verifyDeviceGoogleAccount(
+    user: JSONObject,
+    context: android.content.Context,
+    registerMethod: String = "Google"
+): JSONObject {
     val deviceId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID).orEmpty()
     val uid = user.optString("localId").trim()
-    if (deviceId.isBlank() || uid.isBlank()) throw IllegalStateException("Could not verify this device's Google account.")
+    if (deviceId.isBlank() || uid.isBlank()) throw IllegalStateException("Could not verify this device's registered account.")
     val payload = JSONObject()
         .put("deviceId", deviceId)
         .put("uid", uid)
         .put("email", user.optString("email"))
         .put("accountId", user.optString("accountId"))
+        .put("registerMethod", registerMethod)
     return postAuthJson("/api/auth/device-google-lock", payload)
 }
 
