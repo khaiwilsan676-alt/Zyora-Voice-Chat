@@ -61,8 +61,6 @@ import java.util.Date
 import java.util.Locale
 
 private const val RAW_MSG = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/"
-private val HurryMuted = Color(0xFF6B7280)
-
 private data class MessagePreview(val uid: String, val name: String, val image: String, val message: String, val time: String = "")
 
 @OptIn(ExperimentalGraphicsApi::class)
