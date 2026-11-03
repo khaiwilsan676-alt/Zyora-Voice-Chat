@@ -150,19 +150,20 @@ private val countryPills = listOf(
 fun countryFlag(country: String): String {
     val value = country.trim()
     if (value.isBlank()) return ""
-    if (value.codePointCount(0, value.length) >= 2 && value.any { it in '\uD83C'..'\uD83C' }) {
-        if (value.contains("🇮🇳") || value.contains("🇸🇬") || value.contains("🇵🇰") || value.contains("🇺🇸") || value.contains("🇿🇦") || value.contains("🇹🇷")) return value.take(2)
+    val codePoints = value.codePoints().toArray()
+    if (codePoints.size >= 2 && codePoints[0] in 0x1F1E6..0x1F1FF && codePoints[1] in 0x1F1E6..0x1F1FF) {
+        return String(Character.toChars(codePoints[0])) + String(Character.toChars(codePoints[1]))
     }
     val isoCodes = java.util.Locale.getISOCountries()
     val code = if (value.length == 2 && value.uppercase() in isoCodes) {
         value.uppercase()
     } else {
-        isoCodes.firstOrNull { code ->
-            java.util.Locale("", code).displayCountry.equals(value, ignoreCase = true)
+        isoCodes.firstOrNull { candidate ->
+            java.util.Locale("", candidate).displayCountry.equals(value, ignoreCase = true)
         }
     } ?: return ""
     return buildString {
-        code.uppercase().forEach { ch -> appendCodePoint(0x1F1E6 + (ch - 'A')) }
+        code.forEach { ch -> appendCodePoint(0x1F1E6 + (ch.uppercaseChar() - 'A')) }
     }
 }
 
