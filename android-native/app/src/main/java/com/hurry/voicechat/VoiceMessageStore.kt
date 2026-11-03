@@ -8,20 +8,23 @@ import java.io.FileOutputStream
 
 internal object VoiceMessageStore {
     private const val PREFIX = "VOICEDB::"
+    private const val LEGACY_PREFIX = "VOICEFILE::"
 
     fun localMarker(messageId: String, durationSeconds: Long): String =
         "$PREFIX$messageId::${durationSeconds.coerceAtLeast(1)}"
 
     fun isVoice(value: String): Boolean =
-        value.startsWith(PREFIX) || value.startsWith("VOICE::")
+        value.startsWith(PREFIX) || value.startsWith(LEGACY_PREFIX) || value.startsWith("VOICE::")
 
     fun localPath(value: String): String? {
-        if (!value.startsWith(PREFIX)) return null
-        return null
+        if (!value.startsWith(LEGACY_PREFIX)) return null
+        val end = value.lastIndexOf("::")
+        if (end <= LEGACY_PREFIX.length) return null
+        return value.substring(LEGACY_PREFIX.length, end).takeIf { it.isNotBlank() }
     }
 
     fun durationSeconds(value: String): Long {
-        if (value.startsWith(PREFIX)) {
+        if (value.startsWith(PREFIX) || value.startsWith(LEGACY_PREFIX)) {
             return value.substringAfterLast("::").toLongOrNull()?.coerceAtLeast(1) ?: 1
         }
         return value.removePrefix("VOICE::").toLongOrNull()?.coerceAtLeast(1) ?: 1
