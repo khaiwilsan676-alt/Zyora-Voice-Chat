@@ -201,7 +201,27 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
                 }
                 onLoginSuccess()
             } catch (t: Throwable) {
-                error = authErrorText(t.message ?: "Authentication failed. Please try again.")
+                val authMessage = (t.message ?: "").lowercase()
+                if (create && (authMessage.contains("already in use") ||
+                        authMessage.contains("email-already-in-use") ||
+                        authMessage.contains("email_exists"))) {
+                    runCatching {
+                        withContext(Dispatchers.IO) { lookupRegisteredEmailAccount(context, email.trim()) }
+                    }.onSuccess { registered ->
+                        if (registered.optBoolean("registered", false)) {
+                            registeredDeviceAccountId = registered.optString("accountId")
+                            registeredDeviceEmail = registered.optString("email", email.trim())
+                            registeredDeviceMethod = "Email/Password"
+                            showDeviceRegisteredDialog = true
+                        } else {
+                            error = authErrorText(t.message ?: "This email is already registered. Please log in.")
+                        }
+                    }.onFailure {
+                        error = authErrorText(t.message ?: "This email is already registered. Please log in.")
+                    }
+                } else {
+                    error = authErrorText(t.message ?: "Authentication failed. Please try again.")
+                }
             } finally {
                 loading = false
             }
@@ -732,6 +752,19 @@ private fun AuthField(
             }
         }
     }
+}
+
+private fun lookupRegisteredEmailAccount(
+    context: android.content.Context,
+    email: String
+): JSONObject {
+    if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+        throw IllegalArgumentException("Please enter a valid email.")
+    }
+    return postAuthJson(
+        "/api/auth/registered-email",
+        JSONObject().put("email", email.trim().lowercase())
+    )
 }
 
 private fun getDeviceRegistration(
