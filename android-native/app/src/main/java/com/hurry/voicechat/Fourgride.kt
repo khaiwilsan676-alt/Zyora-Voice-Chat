@@ -128,6 +128,7 @@ fun Fourgride(
     onMusicPlaybackChanged: ((NativeMusicTrack, Boolean) -> Unit)? = null,
     onMusicMinimize: ((NativeMusicTrack?) -> Unit)? = null,
     onMusicPlaylistChanged: ((List<NativeMusicTrack>) -> Unit)? = null,
+    openMusicPageRequest: Boolean = false,
     onOpenStore: ((String) -> Unit)? = null,
     luckyBagSenderId: String = "",
     luckyBagSenderName: String = "User",
@@ -174,6 +175,10 @@ fun Fourgride(
     
     LaunchedEffect(showMusic) {
         MusicPlaybackState.isMusicPageOpen = showMusic
+    }
+
+    LaunchedEffect(openMusicPageRequest) {
+        if (openMusicPageRequest) showMusic = true
     }
 
     LaunchedEffect(musicTracks) {
