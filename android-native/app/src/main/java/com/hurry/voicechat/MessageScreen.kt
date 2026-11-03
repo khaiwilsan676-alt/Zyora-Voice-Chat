@@ -243,7 +243,7 @@ fun MessageScreen(onChat: (String, String, String) -> Unit, embeddedSheet: Boole
         val incoming = Emitter.Listener { args ->
             val payload = args.firstOrNull() as? JSONObject ?: return@Listener
             if (payload.optString("receiverId") != currentUserId) return@Listener
-            val peerId = payload.optString("senderId")
+            val peerId = payload.optString("senderAccountId").ifBlank { payload.optString("senderId") }
             val isVoice = payload.optString("type") == "voice"
             val body = if (isVoice) {
                 VoiceMessageStore.saveIncoming(context, payload) ?: "VOICE::${payload.optLong("durationSec", 1)}"
@@ -381,7 +381,7 @@ fun NativeChatScreen(
     }
     val cacheKey = "official_chat_cache_${officialIdForCache ?: name}"
     val indexDb = remember { NativeIndexDatabase(context) }
-    val localConversationKey = "chat_${currentUserId}_${receiverId.ifBlank { officialIdForCache ?: name }}"
+    val localConversationKey = "chat_${currentAccountId}_${receiverId.ifBlank { officialIdForCache ?: name }}"
     fun saveConversationPreview(peerId: String, peerName: String, peerPhoto: String, lastMessage: String, timestamp: Long) {
         if (peerId.isBlank() || currentUserId.isBlank() || peerId == currentUserId) return
         val time = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(timestamp))
@@ -461,17 +461,18 @@ fun NativeChatScreen(
         val incoming = Emitter.Listener { args ->
             val payload = args.firstOrNull() as? JSONObject ?: return@Listener
             val sender = payload.optString("senderId")
+            val senderAccountId = payload.optString("senderAccountId").ifBlank { sender }
             val receiver = payload.optString("receiverId")
-            if ((sender == receiverId && receiver == currentUserId) ||
+            if ((senderAccountId == receiverId && (receiver == currentAccountId || receiver == currentUserId)) ||
                 (sender == currentUserId && receiver == receiverId)) {
                 val isVoice = payload.optString("type") == "voice"
                 val value = if (isVoice) {
                     VoiceMessageStore.saveIncoming(context, payload) ?: "VOICE::${payload.optLong("durationSec", 1)}"
                 } else payload.optString("text")
                 if (value.isNotBlank()) mainHandler.post {
-                    val mine = sender == currentUserId
+                    val mine = sender == currentUserId || senderAccountId == currentAccountId
                     messages.add(mine to value)
-                    val peerId = if (mine) receiverId else sender
+                    val peerId = if (mine) receiverId else senderAccountId
                     val peerName = if (mine) name else payload.optString("senderName", name)
                     val peerPhoto = if (mine) image else payload.optString("senderPhoto", image)
                     val preview = if (isVoice) "🎤 Voice message" else value
@@ -993,6 +994,7 @@ fun NativeChatScreen(
                                                         .put("id", messageId)
                                                         .put("senderId", currentUserId)
                                                         .put("receiverId", receiverId)
+                                                    .put("receiverAccountId", receiverId)
                                                         .put("senderName", currentName)
                                                         .put("senderPhoto", currentPhoto)
                                                         .put("receiverName", name)
@@ -1062,6 +1064,7 @@ fun NativeChatScreen(
                                                     .put("id", "${currentUserId}_${System.currentTimeMillis()}")
                                                     .put("senderId", currentUserId)
                                                     .put("receiverId", receiverId)
+                                                    .put("receiverAccountId", receiverId)
                                                     .put("senderName", currentName)
                                                     .put("senderPhoto", currentPhoto)
                                                     .put("receiverName", name)
