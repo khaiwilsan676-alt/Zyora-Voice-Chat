@@ -20,10 +20,14 @@ import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.concurrent.Executors
 
 class ZyoraMessageListenerService : Service() {
     private var socket: Socket? = null
-    private val mainHandler = Handler(Looper.getMainLooper())
+    // Socket callbacks must never decode audio, parse message history, or write SQLite on the UI thread.
+    private val messageIo = Executors.newSingleThreadExecutor { runnable ->
+        Thread(runnable, "zyora-message-io").apply { isDaemon = true }
+    }
     private var activeUid = ""
     private var activeAccountId = ""
 
@@ -104,7 +108,7 @@ class ZyoraMessageListenerService : Service() {
             val receiverIds = setOf(activeUid, activeAccountId).filter { it.isNotBlank() }.toSet()
             if (payload.optString("receiverId") !in receiverIds &&
                 payload.optString("receiverAccountId") !in receiverIds) return@on
-            mainHandler.post { handleIncomingMessage(payload) }
+            messageIo.execute { handleIncomingMessage(payload) }
         }
         client.connect()
     }
@@ -151,6 +155,7 @@ class ZyoraMessageListenerService : Service() {
     override fun onDestroy() {
         socket?.let { it.off(); it.disconnect(); it.close() }
         socket = null
+        messageIo.shutdownNow()
         super.onDestroy()
     }
 
