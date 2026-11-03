@@ -61,8 +61,13 @@ fun ActiveUsers(
     }.firstOrNull { it.isNotBlank() && it!="null" }.orEmpty()
     if (country.isNotBlank()) cached.put("country", country)
    }
+   val cachedObjects = listOfNotNull(cached, cached.optJSONObject("profile"), cached.optJSONObject("publicProfile"), cached.optJSONObject("user"), cached.optJSONObject("data"))
+   val country = cachedObjects.asSequence().flatMap { obj ->
+    sequenceOf("country","countryName","location","country_name").map { key -> obj.optString(key,"").trim() }
+   }.firstOrNull { it.isNotBlank() && it!="null" }.orEmpty()
+   if (country.isNotBlank()) cached.put("country", country)
    database.saveProfile(user.accountId, cached)
-   user.accountId to sequenceOf("country","countryName","location","country_name").map { cached.optString(it,"").trim() }.firstOrNull { it.isNotBlank() && it!="null" }.orEmpty()
+   user.accountId to country
   }.toMap()
   countryByUser = profiles
  }
@@ -96,7 +101,7 @@ fun ActiveUsers(
       )
       Column(Modifier.weight(1f).padding(start=9.dp)){
        Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(5.dp)){
-        Text(user.name.ifBlank{"User"},modifier=Modifier.weight(1f),fontSize=13.sp,fontWeight=FontWeight.SemiBold,color=Color.White,maxLines=2,softWrap=true)
+        Text(user.name.ifBlank{"User"},fontSize=13.sp,fontWeight=FontWeight.SemiBold,color=Color.White,maxLines=1,softWrap=false,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
         if(user.accountId==roomOwnerId){
          AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261027_235537.png",contentDescription="Owner",contentScale=ContentScale.Fit,
           modifier=Modifier.height(19.dp).width(42.dp))
