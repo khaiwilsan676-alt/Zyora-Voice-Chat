@@ -13,13 +13,13 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <application
-        <meta-data android:name="com.google.firebase.messaging.default_notification_channel_id" android:value="zyora_messages" />
-        <meta-data android:name="com.google.firebase.messaging.default_notification_icon" android:resource="@drawable/ic_stat_zyora" />
         android:name=".ZyoraApplication"
         android:theme="@style/Theme.Hurry"
         android:label="Zyora"
         android:icon="@drawable/hurry_logo"
         android:roundIcon="@drawable/hurry_logo">
+        <meta-data android:name="com.google.firebase.messaging.default_notification_channel_id" android:value="zyora_messages" />
+        <meta-data android:name="com.google.firebase.messaging.default_notification_icon" android:resource="@drawable/ic_stat_zyora" />
         <service
             android:name=".RoomMusicService"
             android:exported="false"
