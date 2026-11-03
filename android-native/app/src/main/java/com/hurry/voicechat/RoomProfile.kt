@@ -443,7 +443,7 @@ fun RoomProfile(
                     }
 
                     IconButton(
-                        onClick = { onMention(displayName.ifBlank { user.name }, user.accountId ?: user.id ?: user.uid.orEmpty()) },
+                        onClick = { onMention(displayName.ifBlank { user.name }, sequenceOf(user.accountId, user.id, user.uid).firstOrNull { !it.isNullOrBlank() }.orEmpty()) },
                         modifier = Modifier.align(Alignment.TopEnd).padding(top = 52.dp, end = 8.dp)
                     ) {
                         Icon(Icons.Default.AlternateEmail, contentDescription = "Mention", tint = Color.DarkGray)
