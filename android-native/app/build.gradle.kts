@@ -63,7 +63,6 @@ kotlin {
 dependencies {
     implementation(platform("com.google.firebase:firebase-bom:34.4.0"))
     implementation("com.google.firebase:firebase-auth")
-    implementation("com.google.firebase:firebase-messaging")
     implementation("com.google.android.gms:play-services-tasks:18.3.2")
     implementation("com.google.android.gms:play-services-auth:21.3.0")
     implementation(platform("androidx.compose:compose-bom:2025.09.00"))
