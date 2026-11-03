@@ -28,6 +28,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.runtime.*
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -145,7 +147,7 @@ fun rememberKeyboardIcon(): ImageVector {
     }
 }
 
-// Ye naya function Swipe-to-Delete logic ke liye hai
+// Swipe-to-Delete logic
 @Composable
 fun SwipeRevealItem(
     isOfficial: Boolean,
@@ -168,7 +170,6 @@ fun SwipeRevealItem(
             .fillMaxWidth()
             .background(Color(0xFFEF4444)) // Red Delete Background
     ) {
-        // Background Delete Button
         Box(
             modifier = Modifier
                 .align(Alignment.CenterEnd)
@@ -187,7 +188,6 @@ fun SwipeRevealItem(
             }
         }
 
-        // Foreground Message Content
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -197,7 +197,6 @@ fun SwipeRevealItem(
                     detectHorizontalDragGestures(
                         onDragEnd = {
                             coroutineScope.launch {
-                                // Agar half se jyada swipe kiya to pura khul jayega, warna wapas band
                                 if (offsetX.value < -actionWidthPx / 2) {
                                     offsetX.animateTo(-actionWidthPx)
                                 } else {
@@ -362,7 +361,6 @@ fun MessageScreen(onChat: (String, String, String) -> Unit, embeddedSheet: Boole
 
         LazyColumn(Modifier.fillMaxSize().background(Color(0xFFF1F1F1)).padding(bottom = 8.dp)) {
             items(chats, key = { it.uid }) { chat ->
-                // Yahan SwipeRevealItem wrap kiya hai row ke upar
                 SwipeRevealItem(
                     isOfficial = (chat.uid == "hurry_team_official" || chat.uid == "hurry_system_official"),
                     onDelete = { chats.remove(chat) }
@@ -392,7 +390,7 @@ private fun MessageRow(chat: MessagePreview, onClick: () -> Unit) {
             Text(chat.name, color = Color(0xFF1F2937), fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
             if (chat.message.isNotEmpty()) {
                 Spacer(Modifier.height(3.dp))
-                Text(chat.message, color = HurryMuted, fontSize = 14.sp, maxLines = 1)
+                Text(chat.message, color = Color(0xFF6B7280), fontSize = 14.sp, maxLines = 1)
             }
         }
         if (chat.time.isNotEmpty()) Text(chat.time, color = Color(0xFF999999), fontSize = 12.sp)
@@ -428,6 +426,9 @@ fun NativeChatScreen(
     var text by remember { mutableStateOf("") }
     var showOptions by remember { mutableStateOf(false) }
     var replyText by remember { mutableStateOf<String?>(null) }
+    
+    // Nayi State "Beware of scams" banner ko hide/show karne ke liye
+    var showScamBanner by remember { mutableStateOf(true) }
     
     // Voice Mode States
     var isVoiceMode by remember { mutableStateOf(false) }
@@ -791,8 +792,8 @@ fun NativeChatScreen(
     Box(Modifier.fillMaxSize().background(
         Brush.verticalGradient(
             0.0f to Color(0xFF3B82F6),
-            0.05f to Color(0xFF3B82F6),
-            0.20f to Color(0xFFF0F2F5),
+            0.03f to Color(0xFF3B82F6), 
+            0.08f to Color(0xFFF0F2F5), 
             1.0f to Color(0xFFF0F2F5)
         )
     )) {
@@ -810,48 +811,55 @@ fun NativeChatScreen(
         }
 
         Column(Modifier.fillMaxSize()) {
-            Row(
+            
+            Box(
                 Modifier.fillMaxWidth()
                     .statusBarsPadding()
-                    .padding(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 10.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .padding(top = 8.dp, bottom = 10.dp)
             ) {
                 IconButton(
                     onClick = onBack,
-                    modifier = Modifier.size(40.dp)
+                    modifier = Modifier.align(Alignment.CenterStart).padding(start = 4.dp).size(40.dp)
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
-                        tint = Color.White,
+                        tint = Color.Black, 
                         modifier = Modifier.size(24.dp)
                     )
                 }
-                AsyncImage(
-                    model = resolveChatAvatar(image),
-                    contentDescription = name,
-                    modifier = Modifier.size(40.dp).clip(CircleShape),
-                    contentScale = ContentScale.Crop
-                )
-                Spacer(Modifier.width(10.dp))
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
+                
+                Column(
+                    modifier = Modifier.align(Alignment.Center),
+                    horizontalAlignment = Alignment.CenterHorizontally 
+                ) {
                     Text(
                         name,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White,
+                        color = Color.Black, 
                         maxLines = 1
                     )
                     if (!isOfficial) {
-                        Text("Offline", fontSize = 11.sp, color = Color.White.copy(alpha = 0.82f), fontWeight = FontWeight.Medium)
+                        Text(
+                            "Offline", 
+                            fontSize = 11.sp, 
+                            color = Color.DarkGray, 
+                            fontWeight = FontWeight.Medium
+                        )
                     }
                 }
+                
                 if (!isOfficial) {
-                    Box {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .padding(end = 12.dp) 
+                    ) {
                         Text(
                             "⋮",
                             fontSize = 28.sp,
-                            color = Color.White,
+                            color = Color.Black, 
                             modifier = Modifier
                                 .clickable { showOptions = true }
                                 .padding(horizontal = 8.dp)
@@ -882,6 +890,90 @@ fun NativeChatScreen(
                     }
                 }
             }
+
+            // YE RAHA NAYA CODE: Yahan maine dono Pattiya (Banners) laga di hain (BLUE COLOR MEIN)
+            if (!isOfficial) {
+                // 1. Beware of scams wali patti (Light Blue)
+                if (showScamBanner) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Color(0xFFDBEAFE)) // Light Blue bg
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Info, 
+                            contentDescription = "Warning",
+                            tint = Color(0xFF1D4ED8), // Dark Blue Icon
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Protect your info. Beware of scams.",
+                            color = Color(0xFF1D4ED8), // Dark Blue Text
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close",
+                            tint = Color(0xFF1D4ED8),
+                            modifier = Modifier
+                                .size(18.dp)
+                                .clickable { showScamBanner = false }
+                        )
+                    }
+                }
+
+                // 2. In Room wali patti (Solid Blue)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                        .clip(RoundedCornerShape(24.dp))
+                        .background(Color(0xFF3B82F6)) // Solid Blue bg
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "I'm chatting and play games in\nvoice room, join me~",
+                        color = Color.White,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        lineHeight = 18.sp,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(Color.White)
+                            .clickable { /* Handle Join Room Action here */ }
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Naya chhota icon jo image ke bars ki tarah dikhta hai
+                        Row(
+                            modifier = Modifier.padding(end = 4.dp),
+                            verticalAlignment = Alignment.Bottom,
+                            horizontalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            Box(Modifier.width(2.dp).height(6.dp).background(Color(0xFF3B82F6), CircleShape))
+                            Box(Modifier.width(2.dp).height(10.dp).background(Color(0xFF3B82F6), CircleShape))
+                            Box(Modifier.width(2.dp).height(8.dp).background(Color(0xFF3B82F6), CircleShape))
+                        }
+                        Text(
+                            text = "In Room",
+                            color = Color(0xFF3B82F6),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+            // NAYA CODE KHATAM
 
             LazyColumn(
                 state = messageListState,
@@ -1056,7 +1148,7 @@ fun NativeChatScreen(
                         Spacer(Modifier.width(10.dp))
 
                         if (isVoiceMode) {
-                            // HOLD TO TALK BUTTON (Emoji icon hata diya, sirf Box bacha hai)
+                            // HOLD TO TALK BUTTON
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
