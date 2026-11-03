@@ -778,6 +778,8 @@ app.get("/api/users", async (req, res) => {
         user.accountId ||
         user.accountNumber ||
         user["Account Number"] ||
+        user["Account ID"] ||
+        user.displayAccountNumber ||
         user.displayUserNumber ||
         ""
       );
@@ -800,7 +802,7 @@ app.get("/api/users", async (req, res) => {
         accountNumber: numberId,
         displayUserNumber: numberId,
         name: user.name || user.displayName || user.userName || "User",
-        email: user.email || user.gmail || user.emailPhone || "",
+        email: user.email || user.gmail || user.emailPhone || user.emailAddress || user.Email || "",
         image: user.image || user.avatar || user.profileImageUrl || "/default-avatar.png",
         country: user.country || "🇮🇳",
       };
@@ -813,10 +815,10 @@ app.get("/api/users", async (req, res) => {
       const numericQ = /^\d+$/.test(q) ? Number(q) : null;
       if (numericQ !== null) {
         const exactConditions = [
-          { accountId: q }, { accountNumber: q }, { "Account Number": q },
-          { displayUserNumber: q }, { uid: q }, { id: q }, { appLongId: q },
-          { accountId: numericQ }, { accountNumber: numericQ },
-          { displayUserNumber: numericQ }, { uid: q }, { id: q }
+          { accountId: q }, { accountNumber: q }, { "Account Number": q }, { "Account ID": q },
+          { displayAccountNumber: q }, { displayUserNumber: q }, { uid: q }, { id: q }, { appLongId: q },
+          { accountId: numericQ }, { accountNumber: numericQ }, { "Account ID": numericQ },
+          { displayAccountNumber: numericQ }, { displayUserNumber: numericQ }, { uid: q }, { id: q }
         ];
         const exactMatches = await users.find({ $or: exactConditions }).limit(20).toArray();
         if (exactMatches.length) {
@@ -838,6 +840,8 @@ app.get("/api/users", async (req, res) => {
         { accountId: q },
         { accountNumber: q },
         { "Account Number": q },
+        { "Account ID": q },
+        { displayAccountNumber: q },
         { displayUserNumber: q },
         { uid: q },
         { id: q },
