@@ -219,6 +219,83 @@ fun SwipeRevealItem(
 }
 
 @Composable
+fun PrivateMessageInboxSync() {
+    val context = LocalContext.current
+    val authPrefs = remember { context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE) }
+    val userPrefs = remember { context.getSharedPreferences("hurry_user", Context.MODE_PRIVATE) }
+    val authUid = authPrefs.getString("uid", "").orEmpty().ifBlank { userPrefs.getString("uid", "").orEmpty() }
+    val accountId = authPrefs.getString("accountId", "").orEmpty()
+        .ifBlank { userPrefs.getString("accountId", userPrefs.getString("userId", authUid)).orEmpty() }
+        .ifBlank { authUid }
+    val indexDb = remember { NativeIndexDatabase(context) }
+    DisposableEffect(authUid, accountId) {
+        if (authUid.isBlank() || accountId.isBlank()) return@DisposableEffect onDispose { }
+        val options = IO.Options().apply { transports = arrayOf("websocket"); reconnection = true; reconnectionAttempts = Int.MAX_VALUE }
+        val socket = IO.socket("https://zyora-server.onrender.com", options)
+        val mainHandler = Handler(Looper.getMainLooper())
+        val incoming = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
+            val receiverIds = setOf(authUid, accountId)
+            if (payload.optString("receiverId") !in receiverIds && payload.optString("receiverAccountId") !in receiverIds) return@Listener
+            val peerId = payload.optString("senderAccountId").ifBlank { payload.optString("senderId") }
+            if (peerId.isBlank()) return@Listener
+            val messageId = payload.optString("id")
+            val isVoice = payload.optString("type") == "voice"
+            val body = if (isVoice) VoiceMessageStore.saveIncoming(context, payload) ?: ("VOICE::" + payload.optLong("durationSec", 1))
+                else payload.optString("text").ifBlank { if (payload.optString("type") == "image") "📷 Image" else "" }
+            val preview = if (isVoice) "🎤 Voice message" else body
+            mainHandler.post {
+                runCatching {
+                    val chatKey = "chat_" + accountId + "_" + peerId
+                    val history = org.json.JSONArray(indexDb.loadChat(chatKey) ?: "[]")
+                    val alreadySaved = (0 until history.length()).any { i ->
+                        messageId.isNotBlank() && history.optJSONObject(i)?.optString("id") == messageId
+                    }
+                    if (!alreadySaved) {
+                        history.put(JSONObject().put("id", messageId).put("mine", false).put("text", body))
+                        indexDb.saveChat(chatKey, history.toString())
+                        val unreadPrefs = context.getSharedPreferences("zyora_unread_messages", Context.MODE_PRIVATE)
+                        val unreadKey = "unread_" + accountId
+                        unreadPrefs.edit().putInt(unreadKey, unreadPrefs.getInt(unreadKey, 0) + 1).apply()
+                    }
+                    val timestamp = payload.optLong("timestamp", System.currentTimeMillis())
+                    val time = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(timestamp))
+                    val saved = JSONObject().put("peerId", peerId).put("peerName", payload.optString("senderName", "User"))
+                        .put("peerPhoto", payload.optString("senderPhoto", "")).put("lastMessage", preview)
+                        .put("timestamp", timestamp).put("time", time)
+                    indexDb.saveConversation("conversation_" + accountId + "_" + peerId, peerId, saved)
+                    if (messageId.isNotBlank()) socket.emit("private_message_received", JSONObject().put("id", messageId))
+                }.onFailure { android.util.Log.e("ZyoraInboxSync", "Could not persist incoming message", it) }
+            }
+        }
+        val sent = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
+            val peerId = payload.optString("receiverAccountId").ifBlank { payload.optString("receiverId") }
+            if (peerId.isBlank()) return@Listener
+            val body = payload.optString("previewText").ifBlank { payload.optString("text") }
+            val preview = if (payload.optString("type") == "voice") "🎤 Voice message"
+                else body.ifBlank { if (payload.optString("type") == "image") "📷 Image" else "" }
+            mainHandler.post {
+                val timestamp = payload.optLong("timestamp", System.currentTimeMillis())
+                val time = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(timestamp))
+                val saved = JSONObject().put("peerId", peerId).put("peerName", payload.optString("receiverName", "User"))
+                    .put("peerPhoto", payload.optString("receiverPhoto", "")).put("lastMessage", preview)
+                    .put("timestamp", timestamp).put("time", time)
+                indexDb.saveConversation("conversation_" + accountId + "_" + peerId, peerId, saved)
+            }
+        }
+        socket.on("private_message", incoming)
+        socket.on("private_message_sent", sent)
+        socket.on(Socket.EVENT_CONNECT) { socket.emit("register", JSONObject().put("userId", authUid).put("accountId", accountId)) }
+        socket.connect()
+        onDispose {
+            socket.off("private_message", incoming); socket.off("private_message_sent", sent)
+            socket.disconnect(); socket.close()
+        }
+    }
+}
+
+@Composable
 fun MessageScreen(onChat: (String, String, String) -> Unit, embeddedSheet: Boolean = false, onBack: () -> Unit = {}) {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("hurry_user", Context.MODE_PRIVATE) }
@@ -245,51 +322,7 @@ fun MessageScreen(onChat: (String, String, String) -> Unit, embeddedSheet: Boole
         if (existing >= 0) chats.removeAt(existing)
         chats.add(2.coerceAtMost(chats.size), MessagePreview(peerId, peerName.ifBlank { "User" }, peerPhoto, lastMessage, time))
     }
-    DisposableEffect(currentUserId) {
-        if (currentUserId.isBlank()) return@DisposableEffect onDispose { }
-        val options = IO.Options().apply { transports = arrayOf("websocket"); reconnection = true; reconnectionAttempts = Int.MAX_VALUE }
-        val socket = IO.socket("https://zyora-server.onrender.com", options)
-        val mainHandler = Handler(Looper.getMainLooper())
-        val incoming = Emitter.Listener { args ->
-            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
-            val receiverIds = setOf(currentUserId, currentAuthUid).filter { it.isNotBlank() }
-            if (payload.optString("receiverId") !in receiverIds &&
-                payload.optString("receiverAccountId") !in receiverIds) return@Listener
-            val peerId = payload.optString("senderAccountId").ifBlank { payload.optString("senderId") }
-            val isVoice = payload.optString("type") == "voice"
-            val body = if (isVoice) {
-                VoiceMessageStore.saveIncoming(context, payload) ?: "VOICE::${payload.optLong("durationSec", 1)}"
-            } else payload.optString("text").ifBlank { if (payload.optString("type") == "image") "📷 Image" else "" }
-            val previewBody = if (isVoice) "🎤 Voice message" else body
-            mainHandler.post {
-                val chatKey = "chat_${currentUserId}_$peerId"
-                val history = runCatching { org.json.JSONArray(indexDb.loadChat(chatKey) ?: "[]") }.getOrDefault(org.json.JSONArray())
-                val messageId = payload.optString("id")
-                val alreadySaved = (0 until history.length()).any { index ->
-                    history.optJSONObject(index)?.optString("id") == messageId && messageId.isNotBlank()
-                }
-                if (!alreadySaved) {
-                    history.put(JSONObject().put("id", messageId).put("mine", false).put("text", body))
-                    indexDb.saveChat(chatKey, history.toString())
-                }
-                updateConversationPreview(peerId, payload.optString("senderName", "User"), payload.optString("senderPhoto", ""), previewBody, payload.optLong("timestamp", System.currentTimeMillis()))
-            }
-        }
-        val sent = Emitter.Listener { args ->
-            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
-            val peerId = payload.optString("receiverAccountId").ifBlank { payload.optString("receiverId") }
-            val preview = payload.optString("previewText").ifBlank { payload.optString("text") }
-            val shown = if (payload.optString("type") == "voice") "🎤 Voice message" else preview.ifBlank { if (payload.optString("type") == "image") "📷 Image" else "" }
-            mainHandler.post {
-                updateConversationPreview(peerId, payload.optString("receiverName", "User"), payload.optString("receiverPhoto", ""), shown, payload.optLong("timestamp", System.currentTimeMillis()))
-            }
-        }
-        socket.on("private_message", incoming)
-        socket.on("private_message_sent", sent)
-        socket.on(Socket.EVENT_CONNECT) { socket.emit("register", JSONObject().put("userId", currentAuthUid).put("accountId", currentUserId)) }
-        socket.connect()
-        onDispose { socket.off("private_message", incoming); socket.off("private_message_sent", sent); socket.disconnect(); socket.close() }
-    }
+
     Column(Modifier.fillMaxSize().background(Color(0xFFF1F1F1))) {
         if (embeddedSheet) {
             Box(Modifier.fillMaxWidth().height(54.dp).background(Color(0xFFF1F1F1))) {
