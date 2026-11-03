@@ -50,7 +50,7 @@ private class ChromaKeyRenderer(
         -1f, -1f, 1f, -1f, -1f, 1f, 1f, 1f
     ))
     private val texCoords = floatBuffer(floatArrayOf(
-        0f, 1f, 1f, 1f, 0f, 0f, 1f, 0f
+        0f, 0f, 1f, 0f, 0f, 1f, 1f, 1f
     ))
 
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
