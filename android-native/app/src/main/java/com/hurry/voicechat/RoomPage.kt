@@ -1420,7 +1420,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                 showOfficialAnnouncement = false
                 val clearerName = roomDisplayName.ifBlank { "User" }
                 clearedBy = clearerName
-                roomSocketRef.value?.takeIf { it.connected() }?.emit("room_clear_chat",JSONObject().put("roomId",roomId).put("userId",accountId).put("userName",clearerName).put("timestamp",System.currentTimeMillis()))
+                roomSocketRef.value?.emit("room_clear_chat",JSONObject().put("roomId",roomId).put("userId",accountId).put("userName",clearerName).put("timestamp",System.currentTimeMillis()))
                 showMenu=false
             },
             publicMsgOff=publicMsgOff,
