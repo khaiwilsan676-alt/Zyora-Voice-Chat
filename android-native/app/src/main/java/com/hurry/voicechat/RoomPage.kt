@@ -490,6 +490,7 @@ fun RoomPage(
     var musicVolume by remember { mutableFloatStateOf(1f) }
     var repeatOneEnabled by remember { mutableStateOf(false) }
     var showMusicVolumeView by remember { mutableStateOf(false) }
+    var openMusicPageFromController by remember { mutableStateOf(false) }
     var musicPlaylist by remember { mutableStateOf<List<NativeMusicTrack>>(emptyList()) }
     var currentTrackIndex by remember { mutableIntStateOf(0) }
     var musicCurrentTime by remember { mutableFloatStateOf(0f) }
@@ -1384,7 +1385,8 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                             Icon(Icons.Default.QueueMusic, "Open Music page", tint = Color.White,
                                 modifier = Modifier.size(25.dp).clickable {
                                     musicControllerMinimized = true
-                                    MusicPlaybackState.isMusicPageOpen = true
+                                    openMusicPageFromController = true
+                                    showMenu = true
                                 })
                         }
                     }
@@ -1398,6 +1400,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
             onDismiss={showExitMenu=false}
         )
         if(showMenu) Fourgride(
+            openMusicPageRequest = openMusicPageFromController,
             onClose={showMenu=false},
             onClearChat={
                 messages.clear()
@@ -1440,6 +1443,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                 MusicPlaybackState.isPlaying = playing
             },
             onMusicMinimize={ track ->
+                openMusicPageFromController = false
                 if (track != null) {
                     miniMusicTrack = track
                     MusicPlaybackState.musicPageBackPressed = MusicPlaybackState.wasPlayedOnMusicPage && MusicPlaybackState.isPlaying
