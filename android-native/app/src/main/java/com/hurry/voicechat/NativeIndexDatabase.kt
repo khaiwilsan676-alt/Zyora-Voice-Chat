@@ -6,13 +6,19 @@ import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import org.json.JSONObject
 
-internal class NativeIndexDatabase(context: Context) : SQLiteOpenHelper(context.applicationContext, "index.db", null, 2) {
+internal class NativeIndexDatabase(context: Context) : SQLiteOpenHelper(context.applicationContext, "index.db", null, 3) {
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL("CREATE TABLE IF NOT EXISTS chat_cache (chat_key TEXT PRIMARY KEY NOT NULL, payload TEXT NOT NULL, updated_at INTEGER NOT NULL)")
         db.execSQL("CREATE TABLE IF NOT EXISTS profile_cache (profile_key TEXT PRIMARY KEY NOT NULL, payload TEXT NOT NULL, updated_at INTEGER NOT NULL)")
+        db.execSQL("CREATE TABLE IF NOT EXISTS private_messages (conversation_key TEXT NOT NULL, message_id TEXT NOT NULL, payload TEXT NOT NULL, created_at INTEGER NOT NULL, PRIMARY KEY(conversation_key, message_id))")
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_private_messages_time ON private_messages(conversation_key, created_at)")
     }
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
         if (oldVersion < 2) db.execSQL("CREATE TABLE IF NOT EXISTS profile_cache (profile_key TEXT PRIMARY KEY NOT NULL, payload TEXT NOT NULL, updated_at INTEGER NOT NULL)")
+        if (oldVersion < 3) {
+            db.execSQL("CREATE TABLE IF NOT EXISTS private_messages (conversation_key TEXT NOT NULL, message_id TEXT NOT NULL, payload TEXT NOT NULL, created_at INTEGER NOT NULL, PRIMARY KEY(conversation_key, message_id))")
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_private_messages_time ON private_messages(conversation_key, created_at)")
+        }
     }
     fun saveChat(key: String, payload: String) {
         val values = ContentValues()
@@ -25,6 +31,22 @@ internal class NativeIndexDatabase(context: Context) : SQLiteOpenHelper(context.
         readableDatabase.query("chat_cache", arrayOf("payload"), "chat_key=?", arrayOf(key), null, null, null).use { cursor ->
             return if (cursor.moveToFirst()) cursor.getString(0) else null
         }
+    }
+    fun savePrivateMessage(conversationKey: String, messageId: String, payload: JSONObject) {
+        if (conversationKey.isBlank() || messageId.isBlank()) return
+        val values = ContentValues().apply {
+            put("conversation_key", conversationKey); put("message_id", messageId)
+            put("payload", payload.toString()); put("created_at", payload.optLong("timestamp", System.currentTimeMillis()))
+        }
+        writableDatabase.insertWithOnConflict("private_messages", null, values, SQLiteDatabase.CONFLICT_IGNORE)
+    }
+    fun loadPrivateMessages(conversationKey: String): List<JSONObject> {
+        if (conversationKey.isBlank()) return emptyList()
+        val result = mutableListOf<JSONObject>()
+        readableDatabase.query("private_messages", arrayOf("payload"), "conversation_key=?", arrayOf(conversationKey), null, null, "created_at ASC").use { cursor ->
+            while (cursor.moveToNext()) runCatching { JSONObject(cursor.getString(0)) }.getOrNull()?.let(result::add)
+        }
+        return result
     }
     fun saveProfile(key: String, payload: JSONObject) {
         if (key.isBlank()) return
