@@ -505,11 +505,16 @@ fun RoomPage(
             if (musicDuration > 0f) {
                 if (musicCurrentTime < musicDuration) {
                     musicCurrentTime = (musicCurrentTime + 1f).coerceAtMost(musicDuration)
+                } else if (repeatOneEnabled) {
+                    // MediaPlayer is already looping the same track; keep the UI timer on that track.
+                    musicCurrentTime = 0f
                 } else if (musicPlaylist.isNotEmpty()) {
                     currentTrackIndex = (currentTrackIndex + 1) % musicPlaylist.size
                     val nextTrack = musicPlaylist[currentTrackIndex]
                     miniMusicTrack = nextTrack
                     musicCurrentTime = 0f
+                    MusicPlaybackState.currentPlayingUri = nextTrack.url
+                    MusicPlaybackState.currentTrack = nextTrack
                     runCatching {
                         val intent = Intent(appContext, RoomMusicService::class.java)
                             .setAction(RoomMusicService.ACTION_PLAY)
@@ -517,6 +522,9 @@ fun RoomPage(
                             .putExtra(RoomMusicService.EXTRA_TITLE, nextTrack.name)
                         ContextCompat.startForegroundService(appContext, intent)
                     }
+                } else {
+                    isMusicPlaying = false
+                    MusicPlaybackState.isPlaying = false
                 }
             }
         }
@@ -1346,15 +1354,30 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                                 IconButton(onClick = { musicPrev() }, modifier = Modifier.size(30.dp)) {
                                     Icon(Icons.Default.SkipPrevious, "Previous", tint = Color.White, modifier = Modifier.size(21.dp))
                                 }
-                                Box(Modifier.size(34.dp).clip(CircleShape).background(Color.White).clickable { musicPlayPause() }, contentAlignment = Alignment.Center) {
+                                Box(Modifier.size(40.dp).clip(CircleShape).background(Color.White).clickable { musicPlayPause() }, contentAlignment = Alignment.Center) {
                                     Icon(if (isMusicPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                                         if (isMusicPlaying) "Pause" else "Play", tint = Color(0xFF202938), modifier = Modifier.size(22.dp))
                                 }
                                 IconButton(onClick = { musicNext() }, modifier = Modifier.size(30.dp)) {
                                     Icon(Icons.Default.SkipNext, "Next", tint = Color.White, modifier = Modifier.size(21.dp))
                                 }
-                                Box(Modifier.size(22.dp).clickable { musicReplayOne() }, contentAlignment = Alignment.Center) {
-                                    Icon(Icons.Default.RepeatOne, "Replay current song", tint = Color.White, modifier = Modifier.size(22.dp))
+                                Box(
+                                    Modifier.size(24.dp).clickable { musicReplayOne() },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        Icons.Default.RepeatOne,
+                                        "Repeat current song",
+                                        tint = if (repeatOneEnabled) Color(0xFF3B82F6) else Color.White,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                    Text(
+                                        "1",
+                                        color = if (repeatOneEnabled) Color(0xFF3B82F6) else Color.White,
+                                        fontSize = 8.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.align(Alignment.BottomEnd)
+                                    )
                                 }
                                 Icon(
                                     Icons.Default.VolumeUp,
