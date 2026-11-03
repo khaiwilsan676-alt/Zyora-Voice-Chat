@@ -837,7 +837,7 @@ fun NativeChatScreen(
                                     Row(
                                         modifier = Modifier
                                             .widthIn(min = 100.dp, max = 220.dp)
-                                            .clickable { VoiceMessageStore.localPath(item.second)?.let(::playVoiceNote) }
+                                            .clickable { VoiceMessageStore.playableFile(context, item.second)?.absolutePath?.let(::playVoiceNote) }
                                             .padding(horizontal = 14.dp, vertical = 10.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
@@ -989,7 +989,7 @@ fun NativeChatScreen(
                                                 if (released && recorded != null) {
                                                     val (audioFile, durationSec) = recorded
                                                     val messageId = "${currentUserId}_${System.currentTimeMillis()}"
-                                                    val localVoice = VoiceMessageStore.localMarker(audioFile, durationSec)
+                                                    val localVoice = VoiceMessageStore.localMarker(messageId, durationSec)
                                                     val audioBase64 = VoiceMessageStore.persistOutgoing(context, messageId, receiverId, audioFile, durationSec)
                                                     messages.add(true to localVoice)
                                                     saveConversationPreview(receiverId, name, image, "🎤 Voice message", System.currentTimeMillis())
