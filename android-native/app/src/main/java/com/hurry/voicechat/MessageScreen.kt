@@ -709,8 +709,8 @@ fun NativeChatScreen(
     Box(Modifier.fillMaxSize().background(
         Brush.verticalGradient(
             0.0f to Color(0xFF3B82F6),
-            0.2f to Color(0xFF3B82F6),
-            0.35f to Color(0xFFF0F2F5),
+            0.05f to Color(0xFF3B82F6),
+            0.20f to Color(0xFFF0F2F5),
             1.0f to Color(0xFFF0F2F5)
         )
     )) {
