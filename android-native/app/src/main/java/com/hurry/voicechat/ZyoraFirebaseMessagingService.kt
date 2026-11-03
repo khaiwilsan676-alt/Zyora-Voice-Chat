@@ -51,6 +51,27 @@ class ZyoraFirebaseMessagingService : FirebaseMessagingService() {
         if (accountId.isNotBlank()) registerZyoraPushToken(this, accountId)
     }
 
+    override fun onCreate() {
+        super.onCreate()
+        createMessageChannel()
+    }
+
+    private fun createMessageChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            manager.createNotificationChannel(
+                NotificationChannel(
+                    ZYORA_MESSAGE_CHANNEL,
+                    "Zyora messages",
+                    NotificationManager.IMPORTANCE_HIGH
+                ).apply {
+                    description = "Notifications for new Zyora messages"
+                    enableVibration(true)
+                }
+            )
+        }
+    }
+
     override fun onMessageReceived(message: RemoteMessage) {
         super.onMessageReceived(message)
         showMessageNotification()
@@ -68,19 +89,7 @@ class ZyoraFirebaseMessagingService : FirebaseMessagingService() {
     }.getOrNull()
 
     private fun showMessageNotification() {
-        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            manager.createNotificationChannel(
-                NotificationChannel(
-                    ZYORA_MESSAGE_CHANNEL,
-                    "Zyora messages",
-                    NotificationManager.IMPORTANCE_HIGH
-                ).apply {
-                    description = "Notifications for new Zyora messages"
-                    enableVibration(true)
-                }
-            )
-        }
+        createMessageChannel()
         val launchIntent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
         }
