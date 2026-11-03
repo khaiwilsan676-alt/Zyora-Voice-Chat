@@ -198,7 +198,7 @@ fun PublicProfileScreen(
     val displayAccNum = targetUser?.displayAccountNumber?.takeIf { it.isNotBlank() } ?: targetUser?.accountId?.takeIf { it.isNotBlank() } ?: "—"
     val isCoreOfficial = displayAccNum == "100002" || displayAccNum == "100003"
     val isRedOfficial = displayAccNum == "500001"
-    val is500002Official = displayAccNum in setOf("500002", "500003")
+    val is500002Official = displayAccNum in setOf("500002", "500003", "500004")
     val showOfficialHead = !is500002Official && (isCoreOfficial || targetUser?.officialHeadTag == true || liveProfileTags?.optBoolean("officialHeadTag", false) == true)
     val showOfficial = isCoreOfficial || isRedOfficial || is500002Official || targetUser?.officialTag == true || liveProfileTags?.optBoolean("officialTag", false) == true
     val showAdmin = !is500002Official && (isCoreOfficial || targetUser?.adminTag == true || liveProfileTags?.optBoolean("adminTag", false) == true)
@@ -926,7 +926,7 @@ fun PublicProfileScreen(
                             )
                             Column(modifier = Modifier.weight(1f).padding(start = 12.dp)) {
                                 Text(userName, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF202633), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                if (displayAccNum in setOf("500002", "500003")) {
+                                if (displayAccNum in setOf("500002", "500003", "500004")) {
                                     AsyncImage(model = profileAsset("/IMG_20261101_125212.png"), contentDescription = "Purple ID Badge", contentScale = ContentScale.Fit, modifier = Modifier.height(20.dp).widthIn(max = 30.dp))
                                     Text(displayAccNum, fontSize = 12.sp, color = Color(0xFF8992A0), modifier = Modifier.padding(top = 3.dp))
                                 } else Text("ID: $displayAccNum", fontSize = 12.sp, color = Color(0xFF8992A0), modifier = Modifier.padding(top = 3.dp))
