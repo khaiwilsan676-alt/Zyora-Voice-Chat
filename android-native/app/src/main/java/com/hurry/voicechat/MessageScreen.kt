@@ -1,6 +1,13 @@
 package com.hurry.voicechat
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
+import android.media.AudioAttributes
+import android.media.AudioManager
+import android.media.MediaPlayer
+import android.media.MediaRecorder
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import io.socket.client.IO
@@ -23,6 +30,9 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.runtime.*
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -45,6 +55,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.launch
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -233,7 +244,11 @@ fun MessageScreen(onChat: (String, String, String) -> Unit, embeddedSheet: Boole
             val payload = args.firstOrNull() as? JSONObject ?: return@Listener
             if (payload.optString("receiverId") != currentUserId) return@Listener
             val peerId = payload.optString("senderId")
-            val body = payload.optString("text").ifBlank { if (payload.optString("type") == "image") "📷 Image" else "Voice message" }
+            val isVoice = payload.optString("type") == "voice"
+            val body = if (isVoice) {
+                VoiceMessageStore.saveIncoming(context, payload) ?: "VOICE::${payload.optLong("durationSec", 1)}"
+            } else payload.optString("text").ifBlank { if (payload.optString("type") == "image") "📷 Image" else "" }
+            val previewBody = if (isVoice) "🎤 Voice message" else body
             mainHandler.post {
                 val chatKey = "chat_${currentUserId}_$peerId"
                 val history = runCatching { org.json.JSONArray(indexDb.loadChat(chatKey) ?: "[]") }.getOrDefault(org.json.JSONArray())
@@ -245,7 +260,7 @@ fun MessageScreen(onChat: (String, String, String) -> Unit, embeddedSheet: Boole
                     history.put(JSONObject().put("id", messageId).put("mine", false).put("text", body))
                     indexDb.saveChat(chatKey, history.toString())
                 }
-                updateConversationPreview(peerId, payload.optString("senderName", "User"), payload.optString("senderPhoto", ""), body, payload.optLong("timestamp", System.currentTimeMillis()))
+                updateConversationPreview(peerId, payload.optString("senderName", "User"), payload.optString("senderPhoto", ""), previewBody, payload.optLong("timestamp", System.currentTimeMillis()))
             }
         }
         socket.on("private_message", incoming)
@@ -353,6 +368,10 @@ fun NativeChatScreen(
     var isVoiceMode by remember { mutableStateOf(false) }
     var isRecording by remember { mutableStateOf(false) }
     var recordStartTime by remember { mutableLongStateOf(0L) }
+    var mediaRecorder by remember { mutableStateOf<MediaRecorder?>(null) }
+    var recordedVoiceFile by remember { mutableStateOf<File?>(null) }
+    var voicePlayer by remember { mutableStateOf<MediaPlayer?>(null) }
+    val audioPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
     val messageListState = androidx.compose.foundation.lazy.rememberLazyListState()
     val officialIdForCache = when (name) {
@@ -445,14 +464,18 @@ fun NativeChatScreen(
             val receiver = payload.optString("receiverId")
             if ((sender == receiverId && receiver == currentUserId) ||
                 (sender == currentUserId && receiver == receiverId)) {
-                val value = payload.optString("text")
+                val isVoice = payload.optString("type") == "voice"
+                val value = if (isVoice) {
+                    VoiceMessageStore.saveIncoming(context, payload) ?: "VOICE::${payload.optLong("durationSec", 1)}"
+                } else payload.optString("text")
                 if (value.isNotBlank()) mainHandler.post {
                     val mine = sender == currentUserId
                     messages.add(mine to value)
                     val peerId = if (mine) receiverId else sender
                     val peerName = if (mine) name else payload.optString("senderName", name)
                     val peerPhoto = if (mine) image else payload.optString("senderPhoto", image)
-                    saveConversationPreview(peerId, peerName, peerPhoto, value, payload.optLong("timestamp", System.currentTimeMillis()))
+                    val preview = if (isVoice) "🎤 Voice message" else value
+                    saveConversationPreview(peerId, peerName, peerPhoto, preview, payload.optLong("timestamp", System.currentTimeMillis()))
                 }
             }
         }
@@ -488,6 +511,127 @@ fun NativeChatScreen(
             directSocket = null
             chatSocket.disconnect()
             chatSocket.close()
+        }
+    }
+
+    fun configureVoiceAudioRoute() {
+        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
+        runCatching {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                val bluetoothDevice = audioManager.availableCommunicationDevices.firstOrNull {
+                    it.type == android.media.AudioDeviceInfo.TYPE_BLUETOOTH_SCO ||
+                        it.type == android.media.AudioDeviceInfo.TYPE_BLE_HEADSET
+                }
+                if (bluetoothDevice != null) audioManager.setCommunicationDevice(bluetoothDevice)
+            } else {
+                @Suppress("DEPRECATION")
+                if (audioManager.isBluetoothScoAvailableOffCall) {
+                    audioManager.startBluetoothSco()
+                    audioManager.isBluetoothScoOn = true
+                }
+            }
+        }
+    }
+
+    fun resetVoiceAudioRoute() {
+        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        runCatching {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) audioManager.clearCommunicationDevice()
+            else {
+                @Suppress("DEPRECATION")
+                audioManager.stopBluetoothSco()
+            }
+            audioManager.mode = AudioManager.MODE_NORMAL
+        }
+    }
+
+    @Suppress("DEPRECATION")
+    fun createVoiceRecorder(): MediaRecorder =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) MediaRecorder(context) else MediaRecorder()
+
+    fun startVoiceRecording(): Boolean {
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) return false
+        return runCatching {
+            val directory = File(context.filesDir, "voice_notes").apply { mkdirs() }
+            val file = File(directory, "voice_${System.currentTimeMillis()}.m4a")
+            configureVoiceAudioRoute()
+            val recorder = createVoiceRecorder()
+            recorder.setAudioSource(MediaRecorder.AudioSource.VOICE_COMMUNICATION)
+            recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
+            recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+            recorder.setAudioEncodingBitRate(32000)
+            recorder.setAudioSamplingRate(22050)
+            recorder.setMaxDuration(90000)
+            recorder.setMaxFileSize(700000)
+            recorder.setOutputFile(file.absolutePath)
+            recorder.prepare()
+            recorder.start()
+            mediaRecorder = recorder
+            recordedVoiceFile = file
+            recordStartTime = System.currentTimeMillis()
+            isRecording = true
+            true
+        }.getOrElse {
+            runCatching { mediaRecorder?.release() }
+            mediaRecorder = null
+            isRecording = false
+            resetVoiceAudioRoute()
+            false
+        }
+    }
+
+    fun finishVoiceRecording(): Pair<File, Long>? {
+        val recorder = mediaRecorder ?: return null
+        val file = recordedVoiceFile
+        val duration = ((System.currentTimeMillis() - recordStartTime) / 1000L).coerceAtLeast(1L)
+        val saved = runCatching { recorder.stop(); true }.getOrDefault(false)
+        runCatching { recorder.reset(); recorder.release() }
+        mediaRecorder = null
+        recordedVoiceFile = null
+        isRecording = false
+        resetVoiceAudioRoute()
+        return if (saved && file != null && file.exists() && file.length() > 512L) file to duration else {
+            file?.delete()
+            null
+        }
+    }
+
+    fun playVoiceNote(path: String) {
+        runCatching {
+            voicePlayer?.stop()
+            voicePlayer?.release()
+            voicePlayer = null
+            configureVoiceAudioRoute()
+            val player = MediaPlayer()
+            voicePlayer = player
+            player.setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                    .build()
+            )
+            player.setDataSource(path)
+            player.setOnCompletionListener {
+                it.release()
+                if (voicePlayer === it) voicePlayer = null
+                resetVoiceAudioRoute()
+            }
+            player.prepare()
+            player.start()
+        }.onFailure {
+            runCatching { voicePlayer?.release() }
+            voicePlayer = null
+            resetVoiceAudioRoute()
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            runCatching { mediaRecorder?.stop() }
+            runCatching { mediaRecorder?.release() }
+            runCatching { voicePlayer?.release() }
+            resetVoiceAudioRoute()
         }
     }
 
@@ -659,8 +803,8 @@ fun NativeChatScreen(
                 items(messages) { item ->
                     val mine = item.first
                     
-                    val isVoiceNote = item.second.startsWith("VOICE::")
-                    val messageText = if (isVoiceNote) item.second.removePrefix("VOICE::") else item.second
+                    val isVoiceNote = VoiceMessageStore.isVoice(item.second)
+                    val messageText = if (isVoiceNote) VoiceMessageStore.displayDuration(item.second) else item.second
 
                     Row(
                         Modifier.fillMaxWidth(),
@@ -690,7 +834,7 @@ fun NativeChatScreen(
                                     Row(
                                         modifier = Modifier
                                             .widthIn(min = 100.dp, max = 220.dp)
-                                            .clickable { /* Yahan Voice Play Karne Ka Logic Laga Dena */ }
+                                            .clickable { VoiceMessageStore.localPath(item.second)?.let(::playVoiceNote) }
                                             .padding(horizontal = 14.dp, vertical = 10.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
@@ -832,34 +976,36 @@ fun NativeChatScreen(
                                     .pointerInput(Unit) {
                                         detectTapGestures(
                                             onPress = {
-                                                // HOLD START
-                                                isRecording = true
-                                                recordStartTime = System.currentTimeMillis()
-                                                
-                                                tryAwaitRelease() // Wait until user removes the finger
-                                                
-                                                // HOLD LEAVE / SEND
-                                                isRecording = false
-                                                val durationSec = ((System.currentTimeMillis() - recordStartTime) / 1000).coerceAtLeast(1)
-                                                
-                                                val outgoingText = "VOICE::$durationSec"
-                                                messages.add(true to outgoingText)
-                                                saveConversationPreview(receiverId, name, image, outgoingText, System.currentTimeMillis())
-                                                
-                                                val outgoing = JSONObject()
-                                                    .put("id", "${currentUserId}_${System.currentTimeMillis()}")
-                                                    .put("senderId", currentUserId)
-                                                    .put("receiverId", receiverId)
-                                                    .put("senderName", currentName)
-                                                    .put("senderPhoto", currentPhoto)
-                                                    .put("receiverName", name)
-                                                    .put("receiverPhoto", image)
-                                                    .put("text", outgoingText)
-                                                    .put("type", "voice")
-                                                    .put("timestamp", System.currentTimeMillis())
-                                                
-                                                if (!isOfficial && receiverId.isNotBlank() && currentUserId.isNotBlank()) {
-                                                    directSocket?.emit("private_message", outgoing)
+                                                if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+                                                    audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                                                    return@detectTapGestures
+                                                }
+                                                if (!startVoiceRecording()) return@detectTapGestures
+                                                val released = tryAwaitRelease()
+                                                val recorded = finishVoiceRecording()
+                                                if (released && recorded != null) {
+                                                    val (audioFile, durationSec) = recorded
+                                                    val messageId = "${currentUserId}_${System.currentTimeMillis()}"
+                                                    val localVoice = VoiceMessageStore.localMarker(audioFile, durationSec)
+                                                    messages.add(true to localVoice)
+                                                    saveConversationPreview(receiverId, name, image, "🎤 Voice message", System.currentTimeMillis())
+                                                    val outgoing = JSONObject()
+                                                        .put("id", messageId)
+                                                        .put("senderId", currentUserId)
+                                                        .put("receiverId", receiverId)
+                                                        .put("senderName", currentName)
+                                                        .put("senderPhoto", currentPhoto)
+                                                        .put("receiverName", name)
+                                                        .put("receiverPhoto", image)
+                                                        .put("text", "VOICE::$durationSec")
+                                                        .put("type", "voice")
+                                                        .put("audioMimeType", "audio/mp4")
+                                                        .put("audioBase64", VoiceMessageStore.encode(audioFile))
+                                                        .put("durationSec", durationSec)
+                                                        .put("timestamp", System.currentTimeMillis())
+                                                    if (!isOfficial && receiverId.isNotBlank() && currentUserId.isNotBlank()) {
+                                                        directSocket?.emit("private_message", outgoing)
+                                                    }
                                                 }
                                             }
                                         )
