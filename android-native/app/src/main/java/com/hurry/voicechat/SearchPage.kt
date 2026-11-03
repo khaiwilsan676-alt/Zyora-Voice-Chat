@@ -148,13 +148,13 @@ fun SearchPage(onBack:()->Unit={},onOpenProfile:(RoomProfileUser)->Unit={},onOpe
                             }
                             if (roomId.isBlank() || !seen.add(roomId)) continue
                             if (!roomId.contains(q,true) && !roomAccountId.contains(q,true) && !roomName.contains(q,true)) continue
-                            list.add(SearchUserNative(roomId,roomAccountId,roomName,u.optString("country","🇮🇳"),roomImage,"",true,u.optBoolean("isLocked",false)))
+                            list.add(SearchUserNative(roomId,roomAccountId,roomName,sequenceOf("countryName", "country", "countryCode").map { u.optString(it, "").trim() }.firstOrNull { it.isNotBlank() && it != "null" }.orEmpty(),roomImage,"",true,u.optBoolean("isLocked",false)))
                             continue
                         }
                         if(acc.isBlank() || !seen.add(acc)) continue
                         list.add(SearchUserNative(id.ifBlank{acc},acc,
                             u.optString("name").takeUnless{it=="null"}.orEmpty().ifBlank{u.optString("displayName").ifBlank{u.optString("userName","User")}},
-                            u.optString("country","🇮🇳"),
+                            sequenceOf("countryName", "country", "countryCode").map { u.optString(it, "").trim() }.firstOrNull { it.isNotBlank() && it != "null" }.orEmpty(),
                             u.optString("image").takeUnless{it=="null"}.orEmpty().ifBlank{u.optString("avatar").ifBlank{u.optString("profileImageUrl","")}},
                             u.optString("bio","")))
                     }
