@@ -671,6 +671,8 @@ fun RoomPage(
         else if (imeVisible) keyboardShownForChat = true
         else if (keyboardShownForChat) { showChat = false; keyboardShownForChat = false }
     }
+    val roomSocketRef=remember{mutableStateOf<io.socket.client.Socket?>(null)}
+
     LaunchedEffect(showChat, roomSocketRef.value) {
         roomSocketRef.value?.takeIf { it.connected() }?.emit(
             "room_chat_view", JSONObject().put("roomId", roomId).put("userId", accountId).put("active", showChat)
@@ -686,7 +688,6 @@ fun RoomPage(
 
     val messages=remember{mutableStateListOf<NativeRoomMessage>()}
     val entryToasts=remember{mutableStateListOf<NativeEntryToast>()}
-    val roomSocketRef=remember{mutableStateOf<io.socket.client.Socket?>(null)}
     val seats=remember{mutableStateListOf<NativeRoomSeat>().apply{for(i in 1..15)add(NativeRoomSeat(i))}}
     val backendRoomUsers=remember{mutableStateListOf<ActiveUserNative>()}
 
