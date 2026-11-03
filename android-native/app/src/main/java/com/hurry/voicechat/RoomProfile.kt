@@ -167,7 +167,7 @@ fun RoomProfile(
     // Tag States
     val isCoreOfficialAccount = user.accountId == "100002" || user.accountId == "100003" || user.id == "100002" || user.id == "100003"
     val isRedOfficialAccount = user.accountId == "500001" || user.id == "500001"
-    val is500002OfficialAccount = user.accountId in setOf("500002") || user.id in setOf("500002")
+    val is500002OfficialAccount = user.accountId in setOf("500002", "500003") || user.id in setOf("500002", "500003")
     var adminTag by remember(user.adminTag, cachedProfile, isCoreOfficialAccount) { mutableStateOf(isCoreOfficialAccount || user.adminTag == true || cachedProfile?.optBoolean("adminTag", false) == true) }
     var officialTag by remember(user.officialTag, cachedProfile, isCoreOfficialAccount, isRedOfficialAccount, is500002OfficialAccount) { mutableStateOf(isCoreOfficialAccount || isRedOfficialAccount || is500002OfficialAccount || user.officialTag == true || cachedProfile?.optBoolean("officialTag", false) == true) }
     var officialHeadTag by remember(user.officialHeadTag, cachedProfile, isCoreOfficialAccount) { mutableStateOf(isCoreOfficialAccount || user.officialHeadTag == true || cachedProfile?.optBoolean("officialHeadTag", false) == true) }
