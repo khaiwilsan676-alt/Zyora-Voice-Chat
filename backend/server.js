@@ -1841,6 +1841,8 @@ io.on("connection", (socket) => {
         if (userId) socket.roomUserId = String(userId);
         socket.accountId = accId;
         socket.roomAccountId = accId;
+        // roomUsers is keyed by the app account ID, which may differ from Firebase UID.
+        socket.roomPresenceKey = accId;
 
         addUserToRoom(room, accId, {
           name: name || "User",
@@ -2119,9 +2121,10 @@ io.on("connection", (socket) => {
       if (requestedId && !socketOwnsIdentity(socket, requestedId)) return;
 
       const id = String(
+        socket.roomPresenceKey ||
+        socket.roomAccountId ||
         accountId ||
         userId ||
-        socket.roomAccountId ||
         socket.accountId ||
         socket.roomUserId ||
         socket.userId ||
@@ -2147,6 +2150,7 @@ io.on("connection", (socket) => {
         socket.roomId = null;
         socket.roomUserId = null;
         socket.roomAccountId = null;
+        socket.roomPresenceKey = null;
       }
 
       emitGlobalRoomPresence();
@@ -2629,7 +2633,11 @@ io.on("connection", (socket) => {
 
   socket.on("disconnect", () => {
     const room = socket.roomId;
+    // roomUsers is keyed by accountId, not necessarily the Firebase UID in roomUserId.
     const userId =
+      socket.roomPresenceKey ||
+      socket.roomAccountId ||
+      socket.accountId ||
       socket.roomUserId ||
       socket.userId;
 
