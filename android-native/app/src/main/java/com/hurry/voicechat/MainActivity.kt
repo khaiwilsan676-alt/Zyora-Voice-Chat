@@ -268,7 +268,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                 name = authPrefs.getString("${mineRoomKey}_name", "Room").orEmpty(),
                 image = authPrefs.getString("${mineRoomKey}_image", "").orEmpty(),
                 announcement = authPrefs.getString("${mineRoomKey}_announcement", "").orEmpty(),
-                country = authPrefs.getString("${mineRoomKey}_country", "🇮🇳").orEmpty(),
+                country = authPrefs.getString("${mineRoomKey}_country", "").orEmpty(),
                 accountId = authPrefs.getString("${mineRoomKey}_account_id", userId).orEmpty()
             ) else null
         )
@@ -293,7 +293,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                                 name = saved.optString("name", saved.optString("roomName", "Room")).ifBlank { "Room" },
                                 image = saved.optString("dp", saved.optString("image", saved.optString("roomDp", ""))),
                                 announcement = saved.optString("message", saved.optString("announcement", "")),
-                                country = saved.optString("country", "🇮🇳"),
+                                country = sequenceOf("countryName", "country", "countryCode").map { saved.optString(it, "").trim() }.firstOrNull { it.isNotBlank() && it != "null" }.orEmpty(),
                                 locked = saved.optBoolean("isLocked", false),
                                 accountId = saved.optString("accountId", stableOwnerId)
                             )
@@ -416,7 +416,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                             id = roomId.ifBlank { active?.id.orEmpty() },
                             name = roomName.ifBlank { active?.name ?: "Room" },
                             image = roomImage.ifBlank { active?.image.orEmpty() },
-                            country = active?.country ?: "🇮🇳",
+                            country = active?.country.orEmpty(),
                             accountId = active?.accountId?.ifBlank { active.id } ?: roomId
                         )
                         keptRoom = miniRoom
@@ -455,7 +455,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                                         id = stableOwnerId.ifBlank { "mine-room" },
                                         name = "Room",
                                         image = authPrefs.getString("image", "").orEmpty().ifBlank { "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/default-avatar.png" },
-                                        country = authPrefs.getString("country", "🇮🇳").orEmpty(),
+                                        country = authPrefs.getString("country", "").orEmpty(),
                                         accountId = stableOwnerId.ifBlank { userId }
                                     ).also {
                                         authPrefs.edit()
@@ -564,7 +564,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                         id = roomId,
                         name = roomName.ifBlank { "Room" },
                         image = "",
-                        country = "🇮🇳",
+                        country = "",
                         accountId = roomId
                     )
                 }
