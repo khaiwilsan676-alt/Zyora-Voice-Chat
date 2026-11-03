@@ -45,6 +45,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 private const val RAW_MSG = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/"
 private val HurryMuted = Color(0xFF6B7280)
@@ -198,15 +201,46 @@ fun SwipeRevealItem(
 
 @Composable
 fun MessageScreen(onChat: (String, String, String) -> Unit, embeddedSheet: Boolean = false, onBack: () -> Unit = {}) {
-    // Ab ye list MutableState hai taaki hum delete karein to UI update ho
+    val context = LocalContext.current
+    val prefs = remember { context.getSharedPreferences("hurry_user", Context.MODE_PRIVATE) }
+    val currentUserId = prefs.getString("accountId", prefs.getString("userId", "")).orEmpty().ifBlank { prefs.getString("uid", "").orEmpty() }
+    val indexDb = remember { NativeIndexDatabase(context) }
     val chats = remember {
-        mutableStateListOf(
-            MessagePreview("hurry_team_official", "Zyora Team", RAW_MSG + "logo.png", ""),
-            MessagePreview("hurry_system_official", "Zyora System", RAW_MSG + "file_00000000a66881f8aa9e15d2fe2b9a0c.png", ""),
-            // Ek dummy user add kiya hai taaki tum direct delete test kar sako, isko baad me hata dena
-        )
+        mutableStateListOf<MessagePreview>().apply {
+            add(MessagePreview("hurry_team_official", "Zyora Team", RAW_MSG + "logo.png", ""))
+            add(MessagePreview("hurry_system_official", "Zyora System", RAW_MSG + "file_00000000a66881f8aa9e15d2fe2b9a0c.png", ""))
+            if (currentUserId.isNotBlank()) indexDb.loadConversations("conversation_${currentUserId}_").forEach { saved ->
+                val peerId = saved.optString("peerId")
+                if (peerId.isNotBlank() && none { it.uid == peerId }) add(MessagePreview(peerId, saved.optString("peerName", "User"), saved.optString("peerPhoto", ""), saved.optString("lastMessage", ""), saved.optString("time", "")))
+            }
+        }
     }
-
+    fun updateConversationPreview(peerId: String, peerName: String, peerPhoto: String, lastMessage: String, timestamp: Long) {
+        if (peerId.isBlank() || peerId == currentUserId) return
+        val time = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(timestamp))
+        val saved = JSONObject().put("peerId", peerId).put("peerName", peerName).put("peerPhoto", peerPhoto).put("lastMessage", lastMessage).put("timestamp", timestamp).put("time", time)
+        indexDb.saveConversation("conversation_${currentUserId}_$peerId", peerId, saved)
+        val existing = chats.indexOfFirst { it.uid == peerId }
+        if (existing >= 0) chats.removeAt(existing)
+        chats.add(2.coerceAtMost(chats.size), MessagePreview(peerId, peerName.ifBlank { "User" }, peerPhoto, lastMessage, time))
+    }
+    DisposableEffect(currentUserId) {
+        if (currentUserId.isBlank()) return@DisposableEffect onDispose { }
+        val options = IO.Options().apply { transports = arrayOf("websocket"); reconnection = true; reconnectionAttempts = Int.MAX_VALUE }
+        val socket = IO.socket("https://zyora-server.onrender.com", options)
+        val mainHandler = Handler(Looper.getMainLooper())
+        val incoming = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
+            if (payload.optString("receiverId") != currentUserId) return@Listener
+            val peerId = payload.optString("senderId")
+            val body = payload.optString("text").ifBlank { if (payload.optString("type") == "image") "📷 Image" else "Voice message" }
+            mainHandler.post { updateConversationPreview(peerId, payload.optString("senderName", "User"), payload.optString("senderPhoto", ""), body, payload.optLong("timestamp", System.currentTimeMillis())) }
+        }
+        socket.on("private_message", incoming)
+        socket.on(Socket.EVENT_CONNECT) { socket.emit("register", JSONObject().put("userId", currentUserId).put("accountId", currentUserId)) }
+        socket.connect()
+        onDispose { socket.off("private_message", incoming); socket.disconnect(); socket.close() }
+    }
     Column(Modifier.fillMaxSize().background(Color(0xFFF1F1F1))) {
         if (embeddedSheet) {
             Box(Modifier.fillMaxWidth().height(54.dp).background(Color(0xFFF1F1F1))) {
@@ -317,6 +351,12 @@ fun NativeChatScreen(
     val cacheKey = "official_chat_cache_${officialIdForCache ?: name}"
     val indexDb = remember { NativeIndexDatabase(context) }
     val localConversationKey = "chat_${currentUserId}_${receiverId.ifBlank { officialIdForCache ?: name }}"
+    fun saveConversationPreview(peerId: String, peerName: String, peerPhoto: String, lastMessage: String, timestamp: Long) {
+        if (peerId.isBlank() || currentUserId.isBlank() || peerId == currentUserId) return
+        val time = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(timestamp))
+        val preview = JSONObject().put("peerId", peerId).put("peerName", peerName.ifBlank { "User" }).put("peerPhoto", peerPhoto).put("lastMessage", lastMessage).put("timestamp", timestamp).put("time", time)
+        indexDb.saveConversation("conversation_${currentUserId}_$peerId", peerId, preview)
+    }
     
     val messages = remember(name, receiverId, currentUserId) {
         mutableStateListOf<Pair<Boolean, String>>().apply {
@@ -397,6 +437,10 @@ fun NativeChatScreen(
                 if (value.isNotBlank()) mainHandler.post {
                     val mine = sender == currentUserId
                     messages.add(mine to value)
+                    val peerId = if (mine) receiverId else sender
+                    val peerName = if (mine) name else payload.optString("senderName", name)
+                    val peerPhoto = if (mine) image else payload.optString("senderPhoto", image)
+                    saveConversationPreview(peerId, peerName, peerPhoto, value, payload.optLong("timestamp", System.currentTimeMillis()))
                 }
             }
         }
@@ -788,6 +832,7 @@ fun NativeChatScreen(
                                                 
                                                 val outgoingText = "VOICE::$durationSec"
                                                 messages.add(true to outgoingText)
+                                                saveConversationPreview(receiverId, name, image, outgoingText, System.currentTimeMillis())
                                                 
                                                 val outgoing = JSONObject()
                                                     .put("id", "${currentUserId}_${System.currentTimeMillis()}")
