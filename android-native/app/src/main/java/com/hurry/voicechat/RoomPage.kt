@@ -935,6 +935,7 @@ fun RoomPage(
             }
             roomSocket.off("room_presence",presenceListener)
             roomSocket.off("room_message",messageListener)
+            roomSocket.off("room_chat_message",messageListener)
             roomSocket.off("room_chat_cleared",clearedListener)
             roomSocket.off("room_seats",seatListener)
             roomSocket.off("room_settings_updated",settingsListener)
