@@ -371,58 +371,15 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
     }
     val unreadPrefs = remember { context.getSharedPreferences("zyora_unread_messages", android.content.Context.MODE_PRIVATE) }
     var unreadMessageCount by remember(messageIdentity) { mutableIntStateOf(unreadPrefs.getInt("unread_$messageIdentity", 0).coerceAtLeast(0)) }
-    LaunchedEffect(messageIdentity) { unreadMessageCount = unreadPrefs.getInt("unread_$messageIdentity", 0).coerceAtLeast(0) }
-    DisposableEffect(messageIdentity, tab) {
-        if (messageIdentity.isBlank() || tab == HurryTab.MESSAGE) return@DisposableEffect onDispose { }
-        val socket = IO.socket("https://zyora-server.onrender.com", IO.Options().apply {
-            transports = arrayOf("websocket")
-            reconnection = true
-            reconnectionAttempts = Int.MAX_VALUE
-        })
-        val incoming = io.socket.emitter.Emitter.Listener { args ->
-            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
-            val peerId = payload.optString("senderAccountId").ifBlank { payload.optString("senderId") }
-            if (payload.optString("receiverId") == messageIdentity && peerId != messageIdentity) {
-                val isVoice = payload.optString("type") == "voice"
-                val storedText = if (isVoice) {
-                    VoiceMessageStore.saveIncoming(context, payload) ?: "VOICE::${payload.optLong("durationSec", 1)}"
-                } else payload.optString("text").ifBlank { if (payload.optString("type") == "image") "📷 Image" else "" }
-                val previewText = if (isVoice) "🎤 Voice message" else storedText
-                Handler(Looper.getMainLooper()).post {
-                    val database = NativeIndexDatabase(context)
-                    val chatKey = "chat_${messageIdentity}_$peerId"
-                    val history = runCatching { org.json.JSONArray(database.loadChat(chatKey) ?: "[]") }.getOrDefault(org.json.JSONArray())
-                    val messageId = payload.optString("id")
-                    val duplicate = messageId.isNotBlank() && (0 until history.length()).any { index ->
-                        history.optJSONObject(index)?.optString("id") == messageId
-                    }
-                    if (!duplicate && storedText.isNotBlank()) {
-                        history.put(JSONObject().put("id", messageId).put("mine", false).put("text", storedText))
-                        database.saveChat(chatKey, history.toString())
-                    }
-                    val timestamp = payload.optLong("timestamp", System.currentTimeMillis())
-                    val time = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()).format(java.util.Date(timestamp))
-                    val peerPreview = JSONObject()
-                        .put("peerId", peerId)
-                        .put("peerName", payload.optString("senderName", "User"))
-                        .put("peerPhoto", payload.optString("senderPhoto", ""))
-                        .put("lastMessage", previewText)
-                        .put("timestamp", timestamp)
-                        .put("time", time)
-                    database.saveConversation("conversation_${messageIdentity}_$peerId", peerId, peerPreview)
-                    if (!duplicate) {
-                        unreadMessageCount = unreadPrefs.getInt("unread_$messageIdentity", 0) + 1
-                        unreadPrefs.edit().putInt("unread_$messageIdentity", unreadMessageCount).apply()
-                    } else {
-                        unreadMessageCount = unreadPrefs.getInt("unread_$messageIdentity", unreadMessageCount)
-                    }
-                }
+    DisposableEffect(messageIdentity) {
+        val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == "unread_$messageIdentity") {
+                unreadMessageCount = unreadPrefs.getInt(key, 0).coerceAtLeast(0)
             }
         }
-        socket.on("private_message", incoming)
-        socket.on(Socket.EVENT_CONNECT) { socket.emit("register", JSONObject().put("userId", messageIdentity).put("accountId", messageIdentity)) }
-        socket.connect()
-        onDispose { socket.off("private_message", incoming); socket.disconnect(); socket.close() }
+        unreadPrefs.registerOnSharedPreferenceChangeListener(listener)
+        unreadMessageCount = unreadPrefs.getInt("unread_$messageIdentity", 0).coerceAtLeast(0)
+        onDispose { unreadPrefs.unregisterOnSharedPreferenceChangeListener(listener) }
     }
     var homeMine by remember { mutableStateOf(false) }
     var keptRoom by remember {
