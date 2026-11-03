@@ -1045,7 +1045,7 @@ fun HurryBottomNav(tab: HurryTab, languageCode: String = "en", unreadMessageCoun
         verticalAlignment = Alignment.CenterVertically
     ) {
         NavItem(HurryTab.HOME, tab, onTab, nativeText(languageCode, "home"))
-        NavItem(HurryTab.MESSAGE, tab, onTab, nativeText(languageCode, "message"))
+        NavItem(HurryTab.MESSAGE, tab, onTab, nativeText(languageCode, "message"), unreadMessageCount)
         NavItem(HurryTab.ME, tab, onTab, nativeText(languageCode, "me"))
     }
 }
@@ -1055,7 +1055,8 @@ private fun NavItem(
     which: HurryTab,
     selected: HurryTab,
     onTab: (HurryTab) -> Unit,
-    label: String
+    label: String,
+    unreadMessageCount: Int = 0
 ) {
     Column(
         Modifier
