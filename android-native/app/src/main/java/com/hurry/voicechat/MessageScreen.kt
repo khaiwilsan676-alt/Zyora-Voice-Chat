@@ -213,8 +213,8 @@ fun MessageScreen(onChat: (String, String, String) -> Unit, embeddedSheet: Boole
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("hurry_user", Context.MODE_PRIVATE) }
     val authPrefs = remember { context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE) }
-    val currentUserId = prefs.getString("accountId", prefs.getString("userId", "")).orEmpty().ifBlank { prefs.getString("uid", "").orEmpty() }
-    val currentAuthUid = authPrefs.getString("uid", "").orEmpty().ifBlank { currentUserId }
+    val currentAuthUid = authPrefs.getString("uid", "").orEmpty().ifBlank { prefs.getString("uid", "").orEmpty() }
+    val currentUserId = authPrefs.getString("accountId", "").orEmpty().ifBlank { prefs.getString("accountId", prefs.getString("userId", currentAuthUid)).orEmpty() }.ifBlank { currentAuthUid }
     val indexDb = remember { NativeIndexDatabase(context) }
     val chats = remember {
         mutableStateListOf<MessagePreview>().apply {
@@ -330,7 +330,7 @@ private fun MessageRow(chat: MessagePreview, onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         AsyncImage(
-            model = chat.image, contentDescription = chat.name,
+            model = chat.image.ifBlank { RAW_MSG + "default-avatar.png" }, contentDescription = chat.name,
             modifier = Modifier.size(56.dp).clip(CircleShape),
             contentScale = ContentScale.Crop
         )
@@ -352,13 +352,15 @@ fun NativeChatScreen(
     image: String,
     receiverId: String = "",
     currentUserId: String = "",
+    currentAccountIdOverride: String = "",
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("hurry_user", Context.MODE_PRIVATE) }
-    val currentPhoto = prefs.getString("photo", prefs.getString("image", "")) ?: ""
-    val currentName = prefs.getString("name", "")?.takeIf { it.isNotBlank() } ?: "Zyora User"
-    val currentAccountId = prefs.getString("accountId", currentUserId).orEmpty().ifBlank { currentUserId }
+    val authPrefs = remember { context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE) }
+    val currentPhoto = prefs.getString("photo", prefs.getString("image", authPrefs.getString("image", ""))) ?: ""
+    val currentName = prefs.getString("name", authPrefs.getString("name", ""))?.takeIf { it.isNotBlank() } ?: "Zyora User"
+    val currentAccountId = currentAccountIdOverride.ifBlank { authPrefs.getString("accountId", prefs.getString("accountId", currentUserId)).orEmpty() }.ifBlank { currentUserId }
     val isOfficial = name == "Zyora Team" || name == "Zyora System"
     var directSocket by remember(receiverId, currentUserId) { mutableStateOf<Socket?>(null) }
 
@@ -492,7 +494,7 @@ fun NativeChatScreen(
             for (index in 0 until arr.length()) {
                 val msg = arr.optJSONObject(index) ?: continue
                 val value = msg.optString("text")
-                if (value.isNotBlank()) loaded.add((msg.optString("senderId") == currentUserId) to value)
+                if (value.isNotBlank()) loaded.add((msg.optString("senderId") == currentUserId || msg.optString("senderAccountId") == currentAccountId) to value)
             }
             if (loaded.isNotEmpty()) {
                 mainHandler.post {
@@ -746,7 +748,7 @@ fun NativeChatScreen(
                     )
                 }
                 AsyncImage(
-                    model = image,
+                    model = image.ifBlank { RAW_MSG + "default-avatar.png" },
                     contentDescription = name,
                     modifier = Modifier.size(40.dp).clip(CircleShape),
                     contentScale = ContentScale.Crop
