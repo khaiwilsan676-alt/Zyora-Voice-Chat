@@ -170,7 +170,8 @@ private fun ThickBar(
 data class RoomPageOwner(val id:String="",val uid:String="",val accountId:String="",val name:String="Room",val image:String="",val country:String="")
 data class RoomPageCurrentUser(val id:String="",val uid:String="",val accountId:String="",val name:String="User",val image:String="")
 data class NativeRoomSeat(val number:Int,val occupied:Boolean=false,val locked:Boolean=false,val muted:Boolean=false,val speaking:Boolean=false,val userName:String="",val userImage:String="",val accountId:String="",val gifSrc:String="",val gifTimestamp:Long=0L)
-data class NativeRoomMessage(val id:String,val text:String,val sender:String,val senderImage:String,val senderAccountId:String="",val timestamp:Long=System.currentTimeMillis(),val type:String="message")
+data class NativeMention(val accountId: String, val name: String)
+data class NativeRoomMessage(val id:String,val text:String,val sender:String,val senderImage:String,val senderAccountId:String="",val timestamp:Long=System.currentTimeMillis(),val type:String="message",val mentions: List<NativeMention> = emptyList())
 data class NativeEntryToast(val id:String,val name:String,val image:String,val vehicleVideo:String="")
 
 @Composable
@@ -494,6 +495,7 @@ fun RoomPage(
     var musicDuration by remember { mutableFloatStateOf(0f) }
 
     var input by remember{mutableStateOf("")}
+    var pendingMentions by remember { mutableStateOf<List<NativeMention>>(emptyList()) }
     val chatFocusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
     val imeVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
@@ -719,7 +721,9 @@ fun RoomPage(
                     if (remoteImage.isNotBlank()) updatedProfile.put("image", remoteImage)
                     profileDb.saveProfile(senderId, updatedProfile)
                 }
-                val message=NativeRoomMessage(id,payload.optString("text",""),sender,image,senderId,payload.optLong("createdAt",System.currentTimeMillis()),type)
+                val mentionJson = payload.optJSONArray("mentions") ?: JSONArray()
+                val parsedMentions = (0 until mentionJson.length()).mapNotNull { index -> mentionJson.optJSONObject(index)?.let { mention -> val targetId = mention.optString("accountId").trim(); val targetName = mention.optString("name").trim(); if (targetId.isNotBlank() && targetName.isNotBlank()) NativeMention(targetId, targetName) else null } }
+                val message=NativeRoomMessage(id,payload.optString("text",""),sender,image,senderId,payload.optLong("createdAt",System.currentTimeMillis()),type,parsedMentions)
                 mainHandler.post {
                     if(messages.none{it.id==message.id}) messages.add(message)
                     if(type=="join" && entryToasts.none{it.id==id}) {
@@ -1137,7 +1141,8 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                         clearedBy = clearedBy,
                         announcement = announcement,
                         roomOwnerId = roomOwner.accountId.ifBlank { roomOwner.id },
-                        onSelectMessage = { selectedChatProfile = it }
+                        onSelectMessage = { selectedChatProfile = it },
+                        onSelectMention = { mention -> selectedChatProfile = NativeRoomMessage("mention-profile-${mention.accountId}", "", mention.name, "", mention.accountId) }
                     )
                 }
                 
@@ -1145,7 +1150,7 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                     Row(Modifier.fillMaxWidth().background(Color.White).padding(horizontal=10.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
                         IconButton(onClick={showEmoji=!showEmoji},modifier=Modifier.size(38.dp)){Image(painterResource(R.drawable.ic_hurry_chat_image),contentDescription="Attach image",modifier=Modifier.size(26.dp))}
                         androidx.compose.foundation.text.BasicTextField(value=input,onValueChange={input=it},modifier=Modifier.weight(1f).focusRequester(chatFocusRequester).padding(vertical=10.dp),singleLine=true,textStyle=androidx.compose.ui.text.TextStyle(color=Color.Black,fontSize=15.sp),cursorBrush=SolidColor(Color.Blue),decorationBox={innerTextField -> Box { if(input.isEmpty()) Text("Type a message...",color=Color.Gray,fontSize=15.sp); innerTextField() }})
-                        IconButton(onClick={if(input.isNotBlank()){val text=input.trim();val createdAt=System.currentTimeMillis();val messageId="$accountId-$createdAt";val outgoing=NativeRoomMessage(messageId,text,roomDisplayName,roomDisplayImage,accountId,createdAt,"message");messages.add(outgoing);roomSocketRef.value?.takeIf{it.connected()}?.emit("room_message",JSONObject().put("id",messageId).put("roomId",roomId).put("senderId",accountId).put("senderAccountId",accountId).put("senderName",roomDisplayName).put("senderAvatar",roomDisplayImage).put("senderImage",roomDisplayImage).put("text",text).put("type","message").put("createdAt",createdAt));input=""}},modifier=Modifier.size(38.dp)){Icon(Icons.Default.Send,null,tint=Color(0xFF3B82F6),modifier=Modifier.size(26.dp))}
+                        IconButton(onClick={if(input.isNotBlank()){val text=input.trim();val createdAt=System.currentTimeMillis();val messageId="$accountId-$createdAt";val mentions = pendingMentions.filter { text.contains("@${it.name}") };val outgoing=NativeRoomMessage(messageId,text,roomDisplayName,roomDisplayImage,accountId,createdAt,"message",mentions);messages.add(outgoing);val mentionsJson=JSONArray().apply { mentions.forEach { put(JSONObject().put("accountId",it.accountId).put("name",it.name)) } };roomSocketRef.value?.takeIf{it.connected()}?.emit("room_message",JSONObject().put("id",messageId).put("roomId",roomId).put("senderId",accountId).put("senderAccountId",accountId).put("senderName",roomDisplayName).put("senderAvatar",roomDisplayImage).put("senderImage",roomDisplayImage).put("text",text).put("mentions",mentionsJson).put("type","message").put("createdAt",createdAt));input="";pendingMentions=emptyList()}},modifier=Modifier.size(38.dp)){Icon(Icons.Default.Send,null,tint=Color(0xFF3B82F6),modifier=Modifier.size(26.dp))}
                     }
                 } else {
                     Row(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal=8.dp, vertical=6.dp).height(44.dp),verticalAlignment=Alignment.CenterVertically){
@@ -1532,7 +1537,13 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                 isRoomOwner = profileId == roomOwner.accountId.ifBlank { roomOwner.id },
                 onClose = { selectedChatProfile = null },
                 onCopyId = { if (profileId.isNotBlank()) clipboard.setText(AnnotatedString(profileId)) },
-                onMention = { name -> input = "@$name "; showChat = true; selectedChatProfile = null },
+                onMention = { name, targetId ->
+                    val cleanName = name.trim().ifBlank { "User" }
+                    input = if (input.isBlank()) "@$cleanName " else input.trimEnd() + " @$cleanName "
+                    if (targetId.isNotBlank()) pendingMentions = (pendingMentions.filterNot { it.accountId == targetId } + NativeMention(targetId, cleanName))
+                    showChat = true
+                    selectedChatProfile = null
+                },
                 onFollow = { if (profileId.isNotBlank()) onFollowToggle(profileId, true) },
                 onMessage = {
                     if (profileId.isNotBlank() && profileId != accountId) {
@@ -1626,6 +1637,13 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                 isCurrentUser = profileSeat.accountId == accountId,
                 isRoomOwner = profileSeat.accountId == roomOwner.accountId.ifBlank { roomOwner.id },
                 onClose = { selectedSeat = 0 },
+                onMention = { name, targetId ->
+                    val cleanName = name.trim().ifBlank { "User" }
+                    input = if (input.isBlank()) "@$cleanName " else input.trimEnd() + " @$cleanName "
+                    if (targetId.isNotBlank()) pendingMentions = (pendingMentions.filterNot { it.accountId == targetId } + NativeMention(targetId, cleanName))
+                    showChat = true
+                    selectedSeat = 0
+                },
                 onCopyId = {
                     clipboard.setText(AnnotatedString(profileSeat.accountId))
                     copiedId = profileSeat.accountId
@@ -1899,7 +1917,8 @@ private fun RoomChatMessages(
     clearedBy: String,
     announcement: String,
     roomOwnerId: String,
-    onSelectMessage: (NativeRoomMessage) -> Unit
+    onSelectMessage: (NativeRoomMessage) -> Unit,
+    onSelectMention: (NativeMention) -> Unit = {}
 ) {
     LazyColumn(
         state = state,
@@ -1966,7 +1985,7 @@ private fun RoomChatMessages(
                                         }
                                         Text("Enter the Room",color=Color.White,fontSize=12.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Medium, modifier=Modifier.padding(start=2.dp).clickable { onSelectMessage(message) })
                                     }
-                                } else NativeMessage(message, roomOwnerId = roomOwnerId, onAvatarClick = { onSelectMessage(message) })
+                                } else NativeMessage(message, roomOwnerId = roomOwnerId, onAvatarClick = { onSelectMessage(message) }, onMentionClick = onSelectMention)
                             }
                         }
 }
@@ -2155,7 +2174,36 @@ private fun formatMusicTime(seconds: Float): String {
                 }
             }
             Box(Modifier.align(Alignment.Start).clip(RoundedCornerShape(topStart=2.dp,topEnd=12.dp,bottomStart=12.dp,bottomEnd=12.dp)).background(Color.Black.copy(alpha=.40f)).border(0.5.dp,Color.White.copy(alpha=.15f),RoundedCornerShape(topStart=2.dp,topEnd=12.dp,bottomStart=12.dp,bottomEnd=12.dp)).padding(horizontal=10.dp,vertical=8.dp)){
-                Text(m.text,color=Color.White,fontSize=13.sp,lineHeight=18.sp,softWrap=true)
+                if (m.mentions.isEmpty()) {
+                    Text(m.text,color=Color.White,fontSize=13.sp,lineHeight=18.sp,softWrap=true)
+                } else {
+                    val annotated = androidx.compose.ui.text.buildAnnotatedString {
+                        var cursor = 0
+                        val matches = m.mentions.mapNotNull { mention ->
+                            val start = m.text.indexOf("@${mention.name}", cursor)
+                            if (start >= 0) Triple(start, start + mention.name.length + 1, mention) else null
+                        }.sortedBy { it.first }
+                        matches.forEach { (start, end, mention) ->
+                            if (start < cursor) return@forEach
+                            append(m.text.substring(cursor, start))
+                            pushStringAnnotation(tag = "room-mention", annotation = mention.accountId)
+                            pushStyle(androidx.compose.ui.text.SpanStyle(color = Color(0xFFE2C67D), fontWeight = FontWeight.SemiBold))
+                            append(m.text.substring(start, end))
+                            pop()
+                            pop()
+                            cursor = end
+                        }
+                        if (cursor < m.text.length) append(m.text.substring(cursor))
+                    }
+                    androidx.compose.foundation.text.ClickableText(
+                        text = annotated,
+                        style = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 13.sp, lineHeight = 18.sp),
+                        onClick = { offset ->
+                            val account = annotated.getStringAnnotations("room-mention", offset, offset).firstOrNull()?.item
+                            m.mentions.firstOrNull { it.accountId == account }?.let(onMentionClick)
+                        }
+                    )
+                }
             }
         }
     }
