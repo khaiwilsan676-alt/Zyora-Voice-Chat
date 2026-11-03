@@ -68,6 +68,7 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
     val account = savedAccount.ifBlank { nativeMeAccountNumber(uid) }
     val phone = prefs.getString("phone", "") ?: ""
     val displayPhoto = photo
+    var profileCountry by remember(uid, cachedProfile) { mutableStateOf(sequenceOf(cachedProfile?.optString("country", ""), cachedProfile?.optString("countryName", ""), cachedProfile?.optString("countryCode", "")).map { it?.trim().orEmpty() }.firstOrNull { it.isNotBlank() && it != "null" }.orEmpty()) }
 
     LaunchedEffect(uid, account) {
         if (uid.isBlank()) return@LaunchedEffect
@@ -75,6 +76,7 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
             TargetUser(id = uid, uid = uid, accountId = account, displayAccountNumber = account)
         ) ?: return@LaunchedEffect
         NativeIndexDatabase(context).saveProfile(uid, profile)
+        sequenceOf("country", "countryName", "countryCode", "country_code", "nationality", "location").map { profile.optString(it, "").trim() }.firstOrNull { it.isNotBlank() && it != "null" }?.let { profileCountry = it }
         profile.optString("name").takeIf { it.isNotBlank() && it != "null" && it.lowercase() !in listOf("guest", "user", "undefined") && it != name }?.let { name = it }
         sequenceOf("image", "avatar", "profileImageUrl")
             .map { profile.optString(it, "") }
@@ -153,7 +155,7 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
                             if (phone.isNotBlank()) Text(phone, fontSize = 12.sp, color = Color(0xFF4B5563))
                         }
                     }
-                    Text("›", fontSize = 32.sp, color = Color(0xFF374151), modifier = Modifier.padding(top = 10.dp).clickable { onPublicProfile(RoomProfileUser(id = uid, uid = uid, accountId = account.ifBlank { uid }, name = name, image = displayPhoto, country = if (account in setOf("100002", "100003")) "Singapore" else "India", flag = if (account in setOf("100002", "100003")) "🇸🇬" else "🇮🇳")) })
+                    Text("›", fontSize = 32.sp, color = Color(0xFF374151), modifier = Modifier.padding(top = 10.dp).clickable { onPublicProfile(RoomProfileUser(id = uid, uid = uid, accountId = account.ifBlank { uid }, name = name, image = displayPhoto, country = profileCountry, flag = profileCountry.takeIf { it.isNotBlank() }?.let { countryFlag(it) }.orEmpty())) })
                 }
 
                 Spacer(Modifier.height(18.dp))
