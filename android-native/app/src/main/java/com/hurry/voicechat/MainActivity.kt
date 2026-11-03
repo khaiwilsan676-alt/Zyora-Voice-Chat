@@ -341,7 +341,8 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                                 .remove("${mineRoomKey}_dp")
                                 .apply()
                             withContext(Dispatchers.Main) { mineCreatedRoom = null }
-                        }                    } finally { connection.disconnect() }
+                        }
+                    } finally { connection.disconnect() }
                 }
             }
         }
