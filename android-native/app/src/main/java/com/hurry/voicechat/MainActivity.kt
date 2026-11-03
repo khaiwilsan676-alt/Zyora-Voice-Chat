@@ -14,6 +14,8 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.net.Uri
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -69,6 +71,9 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 import com.google.firebase.auth.FirebaseAuth
+import io.socket.client.IO
+import io.socket.client.Socket
+import org.json.JSONObject
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
@@ -352,6 +357,30 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
         }
     }
     var tab by remember { mutableStateOf(HurryTab.HOME) }
+    val unreadPrefs = remember { context.getSharedPreferences("zyora_unread_messages", android.content.Context.MODE_PRIVATE) }
+    var unreadMessageCount by remember(userId) { mutableIntStateOf(unreadPrefs.getInt("unread_$userId", 0).coerceAtLeast(0)) }
+    LaunchedEffect(userId) { unreadMessageCount = unreadPrefs.getInt("unread_$userId", 0).coerceAtLeast(0) }
+    DisposableEffect(userId, tab) {
+        if (userId.isBlank() || tab == HurryTab.MESSAGE) return@DisposableEffect onDispose { }
+        val socket = IO.socket("https://zyora-server.onrender.com", IO.Options().apply {
+            transports = arrayOf("websocket")
+            reconnection = true
+            reconnectionAttempts = Int.MAX_VALUE
+        })
+        val incoming = io.socket.emitter.Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
+            if (payload.optString("receiverId") == userId && payload.optString("senderId") != userId) {
+                Handler(Looper.getMainLooper()).post {
+                    unreadMessageCount += 1
+                    unreadPrefs.edit().putInt("unread_$userId", unreadMessageCount).apply()
+                }
+            }
+        }
+        socket.on("private_message", incoming)
+        socket.on(Socket.EVENT_CONNECT) { socket.emit("register", JSONObject().put("userId", userId).put("accountId", userId)) }
+        socket.connect()
+        onDispose { socket.off("private_message", incoming); socket.disconnect(); socket.close() }
+    }
     var homeMine by remember { mutableStateOf(false) }
     var keptRoom by remember {
         authPrefs.edit().remove("kept_room_data").apply()
@@ -439,6 +468,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                             HurryTab.HOME -> HomeScreen(
                                 languageCode = languageCode,
                                 selectedTab = tab,
+                                unreadMessageCount = unreadMessageCount,
                                 onTabSelected = { tab = it },
                                 onRoom = { openedRoom = it },
                                 onMine = { homeMine = true },
@@ -548,7 +578,8 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                 if (tab != HurryTab.HOME && openedMePage == null) {
                     Box(Modifier.fillMaxSize()) {
                         Box(Modifier.align(Alignment.BottomCenter)) {
-                            HurryBottomNav(tab, languageCode = languageCode, onTab = { selected ->
+                            HurryBottomNav(tab, languageCode = languageCode, unreadMessageCount = unreadMessageCount, onTab = { selected ->
+                                if (selected == HurryTab.MESSAGE) { unreadMessageCount = 0; unreadPrefs.edit().putInt("unread_$userId", 0).apply() }
                                 tab = selected
                                 if (selected != HurryTab.ME) openedMePage = null
                                 if (selected == HurryTab.HOME) homeMine = false
