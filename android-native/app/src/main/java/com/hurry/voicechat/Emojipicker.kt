@@ -198,24 +198,24 @@ fun TransparentSeatVideoPlayer(
             })
         }
     }
-    var videoView by remember { mutableStateOf<ChromaKeyVideoView?>(null) }
+    val videoView = remember { mutableStateOf<ChromaKeyVideoView?>(null) }
 
     AndroidView(
         modifier = modifier.fillMaxSize(),
         factory = { ctx ->
             ChromaKeyVideoView(ctx) { surface ->
                 player.setVideoSurface(surface)
-            }.also { videoView = it }
+            }.also { videoView.value = it }
         },
-        update = { view -> videoView = view }
+        update = { view -> videoView.value = view }
     )
 
-    DisposableEffect(player, videoView) {
+    DisposableEffect(player) {
         onDispose {
             player.clearVideoSurface()
             player.release()
-            videoView?.release()
-            videoView = null
+            videoView.value?.release()
+            videoView.value = null
         }
     }
 }
