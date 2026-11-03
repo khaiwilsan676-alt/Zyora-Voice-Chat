@@ -165,7 +165,7 @@ fun RoomInfo(
                 ) {
                     Row(verticalAlignment=Alignment.CenterVertically) {
                         AsyncImage(
-                            model=if (roomData.roomId == "100002" || isLogoOwner) "https://zyora-voice-chat.vercel.app/logo.png" else roomData.roomDp.ifBlank { "/default-avatar.png" },
+                            model=roomData.roomDp.ifBlank { "/default-avatar.png" },
                             contentDescription="Room",
                             modifier=Modifier.size(80.dp).clip(RoundedCornerShape(6.dp)).border(1.dp,Color.White.copy(alpha=.15f),RoundedCornerShape(6.dp)),
                             contentScale=ContentScale.Crop
