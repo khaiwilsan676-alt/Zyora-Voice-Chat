@@ -992,7 +992,7 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                                 val roomOwnerAccountId = roomOwner.accountId.ifBlank { roomOwner.id.ifBlank { roomId } }
                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp), modifier = Modifier.offset(y = (-3).dp)) {
                                     when (roomOwnerAccountId) {
-                                        "100002", "100003", "500001", "500002" -> {
+                                        "100002", "100003", "500001", "500002", "500003" -> {
                                             AsyncImage(
                                                 model = "https://zyora-voice-chat.vercel.app/IMG_20261101_125212.png",
                                                 contentDescription = "Purple ID Badge",
@@ -2116,7 +2116,7 @@ private val Int.percentHeight: androidx.compose.ui.unit.Dp
 
 @Composable private fun MemberSheet(seat:NativeRoomSeat,onClose:()->Unit)=SimpleSheet("Member",onClose){
     FallbackAsyncImage(model=if (seat.accountId in setOf("100002", "100003", "500002", "500003")) "https://zyora-voice-chat.vercel.app/logo.png" else seat.userImage,contentDescription=null,modifier=Modifier.size(76.dp).clip(CircleShape),contentScale=ContentScale.Crop)
-    Text(seat.userName,color=Color.White,fontSize=17.sp);if (seat.accountId in setOf("500002", "500003"), "500003") { Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(3.dp)) { AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261101_125212.png",contentDescription="Purple ID Badge",contentScale=ContentScale.Fit,modifier=Modifier.height(18.dp).widthIn(max=28.dp)); Text(seat.accountId,color=Color.White.copy(.65f),fontSize=12.sp) } } else Text("ID: "+seat.accountId,color=Color.White.copy(.65f),fontSize=12.sp)
+    Text(seat.userName,color=Color.White,fontSize=17.sp);if (seat.accountId in setOf("500002", "500003")) { Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(3.dp)) { AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261101_125212.png",contentDescription="Purple ID Badge",contentScale=ContentScale.Fit,modifier=Modifier.height(18.dp).widthIn(max=28.dp)); Text(seat.accountId,color=Color.White.copy(.65f),fontSize=12.sp) } } else Text("ID: "+seat.accountId,color=Color.White.copy(.65f),fontSize=12.sp)
 }
 
 @Composable private fun GamesSheet(onClose:()->Unit,onWildParty:()->Unit,onFruitParty:()->Unit){
