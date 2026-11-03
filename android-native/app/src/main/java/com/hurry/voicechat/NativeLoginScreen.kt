@@ -908,8 +908,9 @@ private fun syncHurryUser(user: JSONObject, context: android.content.Context) {
     val googlePhoto = user.optString("photoUrl").trim()
     val savedImage = existingProfile.optString("image").trim().takeIf { it.isNotBlank() && it != googlePhoto && it != "/default-avatar.png" }
     val savedAvatar = existingProfile.optString("avatar").trim().takeIf { it.isNotBlank() && it != googlePhoto && it != "/default-avatar.png" }
-    val image = if (accountId in setOf("100002", "100003", "500002") || officialNames.containsKey(uid)) HURRY_LOGO
-        else savedImage ?: savedAvatar ?: "/default-avatar.png"
+    // Official IDs 500002/500003/500004 use the same editable profile avatar
+    // pipeline as regular users; never force the logo over their saved DP.
+    val image = savedImage ?: savedAvatar ?: "/default-avatar.png"
     val country = existingProfile.optString("country").ifBlank {
         existingProfile.optString("Country").ifBlank { "🇮🇳" }
     }
