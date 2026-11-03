@@ -823,16 +823,16 @@ private fun lookupAccountEmail(accountId: String): String {
             }
         }
         val profile = candidates.firstOrNull { candidate ->
-            sequenceOf("accountId", "accountNumber", "displayUserNumber", "Account Number")
+            sequenceOf("accountId", "accountNumber", "displayAccountNumber", "displayUserNumber", "Account Number", "Account ID")
                 .map { candidate.optString(it, "").trim() }
                 .any { it == normalizedId }
         } ?: throw IllegalArgumentException("Zyora Account ID not found.")
-        val returnedId = sequenceOf("accountId", "accountNumber", "displayUserNumber", "Account Number")
+        val returnedId = sequenceOf("accountId", "accountNumber", "displayAccountNumber", "displayUserNumber", "Account Number", "Account ID")
             .map { profile.optString(it, "").trim() }
             .firstOrNull { it.isNotBlank() && it != "null" }
             .orEmpty()
         if (returnedId != normalizedId) throw IllegalArgumentException("Zyora Account ID verification failed.")
-        return sequenceOf("email", "gmail", "emailPhone")
+        return sequenceOf("email", "gmail", "emailPhone", "emailAddress", "Email")
             .map { profile.optString(it, "").trim() }
             .firstOrNull { it.contains("@") }
             ?: throw IllegalArgumentException("This Zyora account has no linked email. Contact Zyora Support.")
