@@ -57,13 +57,13 @@ fun ActiveUsers(
    if (remote != null) {
     val profileObjects = listOfNotNull(remote, remote.optJSONObject("profile"), remote.optJSONObject("publicProfile"), remote.optJSONObject("user"), remote.optJSONObject("data"))
     val country = profileObjects.asSequence().flatMap { obj ->
-     sequenceOf("country","countryName","location","country_name").map { key -> obj.optString(key,"").trim() }
+     sequenceOf("countryName","country","Country","countryCode","country_code","location","country_name","nationality").map { key -> obj.optString(key,"").trim() }
     }.firstOrNull { it.isNotBlank() && it!="null" }.orEmpty()
     if (country.isNotBlank()) cached.put("country", country)
    }
    val cachedObjects = listOfNotNull(cached, cached.optJSONObject("profile"), cached.optJSONObject("publicProfile"), cached.optJSONObject("user"), cached.optJSONObject("data"))
    val country = cachedObjects.asSequence().flatMap { obj ->
-    sequenceOf("country","countryName","location","country_name").map { key -> obj.optString(key,"").trim() }
+    sequenceOf("countryName","country","Country","countryCode","country_code","location","country_name","nationality").map { key -> obj.optString(key,"").trim() }
    }.firstOrNull { it.isNotBlank() && it!="null" }.orEmpty()
    if (country.isNotBlank()) cached.put("country", country)
    database.saveProfile(user.accountId, cached)
@@ -132,20 +132,26 @@ fun ActiveUsers(
 
 private fun activeCountryFlag(country: String): String {
  val raw = country.trim()
- if (raw.isNotEmpty() && raw.codePoints().toArray().all { it in 0x1F1E6..0x1F1FF }) return raw
- val code = when(raw.lowercase()) {
-  "india","indian" -> "IN"
-  "united states","united states of america","usa","us" -> "US"
-  "united kingdom","uk","britain","england" -> "GB"
-  "pakistan" -> "PK"
-  "bangladesh" -> "BD"
-  "nepal" -> "NP"
-  "sri lanka" -> "LK"
-  "uae","united arab emirates" -> "AE"
-  "saudi arabia" -> "SA"
-  "canada" -> "CA"
-  "australia" -> "AU"
-  else -> raw.uppercase().takeIf { it.length==2 } ?: return "🌐"
+ if (raw.isBlank()) return ""
+ val regionalIndicators = raw.codePoints().toArray().filter { it in 0x1F1E6..0x1F1FF }
+ if (regionalIndicators.size >= 2) {
+  return String(Character.toChars(regionalIndicators[0])) + String(Character.toChars(regionalIndicators[1]))
  }
+ val normalized = raw.substringBefore("(").trim().lowercase()
+ val aliases = mapOf(
+  "india" to "IN", "indian" to "IN",
+  "united states" to "US", "united states of america" to "US", "usa" to "US", "us" to "US",
+  "united kingdom" to "GB", "uk" to "GB", "britain" to "GB", "england" to "GB",
+  "pakistan" to "PK", "bangladesh" to "BD", "nepal" to "NP", "sri lanka" to "LK",
+  "uae" to "AE", "united arab emirates" to "AE", "saudi arabia" to "SA",
+  "canada" to "CA", "australia" to "AU", "turkey" to "TR", "türkiye" to "TR",
+  "other" to ""
+ )
+ val iso = java.util.Locale.getISOCountries().toSet()
+ val code = aliases[normalized]
+  ?: raw.uppercase().takeIf { it.length == 2 && it in iso }
+  ?: java.util.Locale.getISOCountries().firstOrNull { java.util.Locale("", it).displayCountry.equals(normalized, ignoreCase = true) }
+  ?: return ""
+ if (code.isBlank()) return ""
  return code.map { String(Character.toChars(0x1F1E6 + it.code - 65)) }.joinToString("")
 }
