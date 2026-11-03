@@ -988,6 +988,7 @@ fun NativeChatScreen(
                                                     val (audioFile, durationSec) = recorded
                                                     val messageId = "${currentUserId}_${System.currentTimeMillis()}"
                                                     val localVoice = VoiceMessageStore.localMarker(audioFile, durationSec)
+                                                    val audioBase64 = VoiceMessageStore.persistOutgoing(context, messageId, receiverId, audioFile, durationSec)
                                                     messages.add(true to localVoice)
                                                     saveConversationPreview(receiverId, name, image, "🎤 Voice message", System.currentTimeMillis())
                                                     val outgoing = JSONObject()
@@ -1002,7 +1003,7 @@ fun NativeChatScreen(
                                                         .put("text", "VOICE::$durationSec")
                                                         .put("type", "voice")
                                                         .put("audioMimeType", "audio/mp4")
-                                                        .put("audioBase64", VoiceMessageStore.encode(audioFile))
+                                                        .put("audioBase64", audioBase64)
                                                         .put("durationSec", durationSec)
                                                         .put("timestamp", System.currentTimeMillis())
                                                     if (!isOfficial && receiverId.isNotBlank() && currentUserId.isNotBlank()) {
