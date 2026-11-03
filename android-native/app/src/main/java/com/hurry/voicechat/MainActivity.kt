@@ -35,6 +35,8 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -370,10 +372,29 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
         onDispose { unreadPrefs.unregisterOnSharedPreferenceChangeListener(listener) }
     }
     var homeMine by remember { mutableStateOf(false) }
-    var keptRoom by remember {
-        authPrefs.edit().remove("kept_room_data").apply()
-        mutableStateOf<HurryRoom?>(null)
-    }
+    var keptRoom by rememberSaveable(
+        saver = Saver<HurryRoom?, List<String>>(
+            save = { room ->
+                if (room == null) emptyList()
+                else listOf(
+                    room.id, room.name, room.image, room.announcement,
+                    room.country, room.locked.toString(), room.accountId
+                )
+            },
+            restore = { saved ->
+                if (saved.size < 7) null
+                else HurryRoom(
+                    id = saved[0],
+                    name = saved[1],
+                    image = saved[2],
+                    announcement = saved[3],
+                    country = saved[4],
+                    locked = saved[5].toBoolean(),
+                    accountId = saved[6]
+                )
+            }
+        )
+    ) { mutableStateOf<HurryRoom?>(null) }
     var openedRoom by remember { mutableStateOf<HurryRoom?>(null) }
     var openedChat by remember { mutableStateOf<Triple<String, String, String>?>(null) }
     var openedMePage by remember { mutableStateOf<String?>(null) }
