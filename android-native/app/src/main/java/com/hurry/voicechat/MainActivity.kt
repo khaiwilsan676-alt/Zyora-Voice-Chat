@@ -401,7 +401,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
     HurryTheme {
         Box(Modifier.fillMaxSize().navigationBarsPadding()) {
             if (openedPublicProfile != null) {
-                PublicProfile(user=openedPublicProfile!!,onBack={openedPublicProfile=null},onMessage={ val profile = openedPublicProfile!!; val receiverId = profile.uid?.takeIf { it.isNotBlank() } ?: profile.id?.takeIf { it.isNotBlank() } ?: profile.accountId.orEmpty(); if (receiverId.isNotBlank() && receiverId != userId) { openedChat = Triple(receiverId, profile.name, profile.image); openedPublicProfile = null } },currentUserId=userId)
+                PublicProfile(user=openedPublicProfile!!,onBack={openedPublicProfile=null},onMessage={ val profile = openedPublicProfile!!; val receiverId = profile.accountId?.takeIf { it.isNotBlank() } ?: profile.id?.takeIf { it.isNotBlank() } ?: profile.uid.orEmpty(); if (receiverId.isNotBlank() && receiverId != userId) { openedChat = Triple(receiverId, profile.name, profile.image); openedPublicProfile = null } },currentUserId=userId)
             } else if (openedRoomSupport) {
                 RoomSupport(onBack = { openedRoomSupport = false })
             } else if (openedSearch) {
@@ -446,7 +446,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                 InviteFriends(onBack = { openedInvite = false })
             } else if (openedChat != null) {
                 val chat = openedChat!!
-                NativeChatScreen(name = chat.second, image = chat.third, receiverId = chat.first, currentUserId = userId, onBack = { openedChat = null })
+                NativeChatScreen(name = chat.second, image = chat.third, receiverId = chat.first, currentUserId = userId, currentAccountIdOverride = authPrefs.getString("accountId", userId).orEmpty().ifBlank { userId }, onBack = { openedChat = null })
             } else {
                 Column(Modifier.fillMaxSize()) {
                     Box(Modifier.weight(1f)) {
@@ -581,6 +581,11 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                     }
                 }
             }
+            if (keptRoom != null && tab != HurryTab.HOME && openedRoom == null && openedChat == null && openedPublicProfile == null && !openedRoomSupport && !openedSearch) {
+                KeptRoomTabOverlay(room = keptRoom!!) {
+                    openedRoom = keptRoom
+                }
+            }
             LuckyBagNotificationSlider(
                 currentUserId = userId,
                 onGoToRoom = { roomId, roomName ->
@@ -626,6 +631,32 @@ private fun MeNativeSubPage(title: String, onBack: () -> Unit) {
                     Text("No $title yet", fontSize = 14.sp, color = Color(0xFF9CA3AF))
                 }
             }
+        }
+    }
+}
+
+
+@Composable
+private fun KeptRoomTabOverlay(room: HurryRoom, onOpen: () -> Unit) {
+    Box(
+        Modifier
+            .fillMaxSize()
+            .padding(end = 12.dp, bottom = 150.dp),
+        contentAlignment = Alignment.BottomEnd
+    ) {
+        Box(
+            Modifier
+                .size(60.dp)
+                .border(2.dp, Color.White, CircleShape)
+                .clip(CircleShape)
+                .clickable(onClick = onOpen)
+        ) {
+            AsyncImage(
+                model = room.image.ifBlank { "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/default-avatar.png" },
+                contentDescription = "Kept room",
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
         }
     }
 }
