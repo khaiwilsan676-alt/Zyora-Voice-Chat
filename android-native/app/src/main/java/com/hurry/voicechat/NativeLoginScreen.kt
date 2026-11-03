@@ -837,6 +837,7 @@ private fun syncHurryUser(user: JSONObject, context: android.content.Context) {
         "dCt4l5GbjnMpOeBywiDSH6XfCoj1" to "100003",
         "a0yVqX9dEiS2ZZH6eQmpjs3QrUf1" to "500001",
         "g0d2pU1SIcMdSAA9UjayDsIPjYv1" to "500002",
+        "nB0zGbJu5yf7ZeHMt5pnMIhzjGB3" to "500003",
         "HUSxSvQnabgU029dWYt1TUV04hd2" to "100002",
         "ADqW31RGBMaosOzy0HiqexKSD7h1" to "100003",
         "100002" to "100002",
@@ -891,7 +892,7 @@ private fun syncHurryUser(user: JSONObject, context: android.content.Context) {
     val googlePhoto = user.optString("photoUrl").trim()
     val savedImage = existingProfile.optString("image").trim().takeIf { it.isNotBlank() && it != googlePhoto && it != "/default-avatar.png" }
     val savedAvatar = existingProfile.optString("avatar").trim().takeIf { it.isNotBlank() && it != googlePhoto && it != "/default-avatar.png" }
-    val image = if (accountId in setOf("100002", "100003", "500002") || officialNames.containsKey(uid)) HURRY_LOGO
+    val image = if (accountId in setOf("100002", "100003", "500002", "500003") || officialNames.containsKey(uid)) HURRY_LOGO
         else savedImage ?: savedAvatar ?: "/default-avatar.png"
     val country = existingProfile.optString("country").ifBlank {
         existingProfile.optString("Country").ifBlank { "🇮🇳" }
