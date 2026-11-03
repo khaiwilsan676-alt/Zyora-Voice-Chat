@@ -264,7 +264,7 @@ fun RoomSettingPage(
                             id,
                             u.optString("name").takeUnless { it == "null" }.orEmpty()
                                 .ifBlank { u.optString("displayName").ifBlank { u.optString("userName", "User") } },
-                            if (id in setOf("100002", "100003", "500002")) "https://zyora-voice-chat.vercel.app/logo.png" else u.optString("image").takeUnless { it == "null" }.orEmpty()
+                            if (id in setOf("100002", "100003", "500002", "500003")) "https://zyora-voice-chat.vercel.app/logo.png" else u.optString("image").takeUnless { it == "null" }.orEmpty()
                                 .ifBlank { u.optString("avatar").ifBlank { u.optString("profileImageUrl", "") } }
                         )
                     }
