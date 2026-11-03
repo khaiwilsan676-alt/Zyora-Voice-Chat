@@ -109,7 +109,10 @@ fun ActiveUsers(
        }
        Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(6.dp)){
         val country = countryByUser[user.accountId].orEmpty()
-        if(country.isNotBlank()) Text(activeCountryFlag(country),fontSize=14.sp)
+        // Keep the flag slot reserved so Lv.1 never shifts when a profile has no country.
+        Box(Modifier.width(18.dp).height(18.dp),contentAlignment=Alignment.Center) {
+         if(country.isNotBlank()) Text(activeCountryFlag(country),fontSize=14.sp)
+        }
         Box(Modifier.height(16.dp).width(36.dp),contentAlignment=Alignment.CenterEnd){
          AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261028_004355.png",contentDescription="Level",
           contentScale=ContentScale.FillBounds,modifier=Modifier.fillMaxSize())
