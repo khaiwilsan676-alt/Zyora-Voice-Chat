@@ -285,7 +285,7 @@ private fun countryFlagEmoji(country: String): String {
         "saudi arabia" -> "SA"
         "canada" -> "CA"
         "australia" -> "AU"
-        else -> country.trim().uppercase().takeIf { it.length == 2 } ?: return "🌐"
+        else -> country.trim().uppercase().takeIf { it.length == 2 } ?: return ""
     }
     return code.map { String(Character.toChars(0x1F1E6 + it.code - 65)) }.joinToString("")
 }
