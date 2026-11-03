@@ -1623,7 +1623,7 @@ app.get("/", (_req, res) => {
 io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
 
-  socket.on("register", (payload) => {
+  socket.on("register", async (payload) => {
     const userId =
       typeof payload === "object"
         ? payload.userId || payload.uid || payload.id
@@ -1645,6 +1645,28 @@ io.on("connection", (socket) => {
     socket.emit("global_room_presence", {
       rooms: getGlobalRoomPresence(),
     });
+
+    // Messages queued in Redis while this account was offline are delivered
+    // into the recipient's local index.db as soon as its socket reconnects.
+    if (redis) {
+      try {
+        const queueKey = `private_messages:pending:${String(userId)}`;
+        const pending = await redis.lrange(queueKey, 0, -1);
+        if (Array.isArray(pending) && pending.length) {
+          await redis.del(queueKey);
+          for (const item of pending) {
+            try {
+              const message = typeof item === "string" ? JSON.parse(item) : item;
+              if (message && message.id) socket.emit("private_message", message);
+            } catch (error) {
+              console.warn("Skipping invalid queued private message:", error.message);
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Could not flush pending private messages:", error.message);
+      }
+    }
   });
 
   const handleGameWinner = async (gameName, payload = {}) => {
@@ -2476,21 +2498,27 @@ io.on("connection", (socket) => {
       timestamp: Number(message.timestamp || Date.now()),
     };
 
-    // Relay only; message history is persisted locally on each native client in index.db.
-    // Do not save private chat contents in GitHub storage.
-    io.to(`user:${receiverId}`).emit(
-      "private_message",
-      normalizedMessage
-    );
-    // Live-only event updates the Owner panel private-message monitor.
-    io.emit("private_message_monitor", normalizedMessage);
-
-    if (receiverAccountId && receiverAccountId !== receiverId) {
-      io.to(`user:${receiverAccountId}`).emit(
-        "private_message",
-        normalizedMessage
-      );
+    // Deliver live over Socket.IO. If the recipient is offline, keep a short-lived
+    // Redis delivery queue; the recipient saves the delivered message into index.db.
+    const targetRooms = [`user:${receiverId}`];
+    if (receiverAccountId && receiverAccountId !== receiverId) targetRooms.push(`user:${receiverAccountId}`);
+    const connectedRecipients = await io.in(targetRooms).fetchSockets();
+    if (connectedRecipients.length) {
+      io.to(`user:${receiverId}`).emit("private_message", normalizedMessage);
+      if (receiverAccountId && receiverAccountId !== receiverId) {
+        io.to(`user:${receiverAccountId}`).emit("private_message", normalizedMessage);
+      }
+    } else if (redis) {
+      try {
+        const queueKey = `private_messages:pending:${receiverId}`;
+        await redis.rpush(queueKey, JSON.stringify(normalizedMessage));
+        await redis.expire(queueKey, 60 * 60 * 24 * 7);
+      } catch (error) {
+        console.error("Could not queue offline private message:", error.message);
+      }
     }
+    // Live event updates the Owner panel private-message monitor.
+    io.emit("private_message_monitor", normalizedMessage);
   });
 
   socket.on("private_message_history_request", (data = {}) => {
