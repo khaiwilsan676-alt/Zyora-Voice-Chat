@@ -102,7 +102,7 @@ fun RoomProfile(
     onClose: () -> Unit,
     onCopyId: () -> Unit = {},
     onLeaveSeat: () -> Unit = {},
-    onMention: (String) -> Unit = {},
+    onMention: (String, String) -> Unit = { _, _ -> },
     onFollow: () -> Unit = {},
     onMessage: () -> Unit = {},
     onThirdAction: () -> Unit = {},
@@ -443,7 +443,7 @@ fun RoomProfile(
                     }
 
                     IconButton(
-                        onClick = { onMention(user.name) },
+                        onClick = { onMention(displayName.ifBlank { user.name }, user.accountId ?: user.id ?: user.uid.orEmpty()) },
                         modifier = Modifier.align(Alignment.TopEnd).padding(top = 52.dp, end = 8.dp)
                     ) {
                         Icon(Icons.Default.AlternateEmail, contentDescription = "Mention", tint = Color.DarkGray)
