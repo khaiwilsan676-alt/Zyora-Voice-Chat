@@ -1075,11 +1075,18 @@ private fun NavItem(
                 if (unreadMessageCount > 0) {
                     Box(
                         Modifier.align(Alignment.TopEnd).offset(x = 3.dp, y = (-2).dp)
-                            .sizeIn(minWidth = 16.dp, minHeight = 16.dp)
-                            .clip(CircleShape).background(Color(0xFFEF4444)).padding(horizontal = 4.dp, vertical = 1.dp),
+                            .size(18.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFFEF4444)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(unreadMessageCount.coerceAtMost(99).toString(), color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                        Text(
+                            if (unreadMessageCount > 9) "9+" else unreadMessageCount.toString(),
+                            color = Color.White,
+                            fontSize = 8.sp,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1
+                        )
                     }
                 }
             }
