@@ -1641,6 +1641,20 @@ io.on("connection", (socket) => {
       socket,
       accountId ? String(accountId) : null
     );
+    if (redis) {
+      (async () => {
+        const key = `private:pending:${String(userId)}`;
+        try {
+          const pending = await redis.lrange(key, 0, -1);
+          for (const raw of pending || []) {
+            const message = typeof raw === "string" ? JSON.parse(raw) : raw;
+            if (message && message.id) socket.emit("private_message", message);
+          }
+        } catch (error) {
+          console.warn("Private-message Redis replay skipped:", error.message);
+        }
+      })();
+    }
 
     socket.emit("global_room_presence", {
       rooms: getGlobalRoomPresence(),
@@ -2490,6 +2504,23 @@ io.on("connection", (socket) => {
         "private_message",
         normalizedMessage
       );
+    }
+  });
+
+  socket.on("private_message_delivery_ack", async (data = {}) => {
+    const userId = String(data.userId || "");
+    const messageId = String(data.messageId || "");
+    if (!userId || !messageId || !socketOwnsIdentity(socket, userId) || !redis) return;
+    try {
+      const key = `private:pending:${userId}`;
+      const pending = await redis.lrange(key, 0, -1);
+      for (const raw of pending || []) {
+        let item;
+        try { item = typeof raw === "string" ? JSON.parse(raw) : raw; } catch (_) { continue; }
+        if (String(item?.id || "") === messageId) await redis.lrem(key, 1, raw);
+      }
+    } catch (error) {
+      console.warn("Private-message delivery acknowledgement failed:", error.message);
     }
   });
 
