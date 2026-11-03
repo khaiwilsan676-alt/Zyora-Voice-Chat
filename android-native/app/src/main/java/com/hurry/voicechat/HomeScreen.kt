@@ -150,10 +150,12 @@ private val countryPills = listOf(
 fun countryFlag(country: String): String {
     val value = country.trim()
     if (value.isBlank()) return ""
-    val codePoints = value.codePoints().toArray()
-    if (codePoints.size >= 2 && codePoints[0] in 0x1F1E6..0x1F1FF && codePoints[1] in 0x1F1E6..0x1F1FF) {
-        return String(Character.toChars(codePoints[0])) + String(Character.toChars(codePoints[1]))
-    }
+    if (value.length >= 4 &&
+        Character.isHighSurrogate(value[0]) && Character.isLowSurrogate(value[1]) &&
+        Character.isHighSurrogate(value[2]) && Character.isLowSurrogate(value[3]) &&
+        Character.codePointAt(value, 0) in 0x1F1E6..0x1F1FF &&
+        Character.codePointAt(value, 2) in 0x1F1E6..0x1F1FF
+    ) return value.substring(0, 4)
     val isoCodes = java.util.Locale.getISOCountries()
     val code = if (value.length == 2 && value.uppercase() in isoCodes) {
         value.uppercase()
