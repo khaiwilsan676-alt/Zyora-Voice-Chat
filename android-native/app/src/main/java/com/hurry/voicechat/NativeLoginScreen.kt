@@ -911,9 +911,10 @@ private fun syncHurryUser(user: JSONObject, context: android.content.Context) {
     // Official IDs 500002/500003/500004 use the same editable profile avatar
     // pipeline as regular users; never force the logo over their saved DP.
     val image = savedImage ?: savedAvatar ?: "/default-avatar.png"
-    val country = existingProfile.optString("country").ifBlank {
-        existingProfile.optString("Country").ifBlank { "🇮🇳" }
-    }
+    val country = sequenceOf("countryName", "country", "Country", "countryCode", "country_code")
+        .map { existingProfile.optString(it, "").trim() }
+        .firstOrNull { it.isNotBlank() && it != "null" && it != "undefined" }
+        .orEmpty()
     val deviceId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID).orEmpty()
 
     val isBanned = runCatching {
@@ -945,7 +946,7 @@ private fun syncHurryUser(user: JSONObject, context: android.content.Context) {
         .put("gmail", email.ifBlank { existingProfile.optString("gmail") })
         .put("image", image).put("avatar", image)
         .put("accountId", accountId).put("accountNumber", accountId)
-        .put("country", country).put("deviceId", deviceId)
+        .put("country", country).put("countryName", existingProfile.optString("countryName", country)).put("countryCode", existingProfile.optString("countryCode", "")).put("deviceId", deviceId)
     val keys = existingProfile.keys()
     while (keys.hasNext()) {
         val key = keys.next()
