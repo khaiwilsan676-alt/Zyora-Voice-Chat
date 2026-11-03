@@ -2465,76 +2465,112 @@ io.on("connection", (socket) => {
     });
   });
 
-  socket.on("private_message", async (message) => {
+  socket.on("private_message", async (message = {}) => {
     if (!message?.senderId || !message?.receiverId) return;
     if (!socketOwnsIdentity(socket, message.senderId)) return;
 
+    const senderId = String(message.senderId);
+    const senderAccountId = String(message.senderAccountId || socket.accountId || senderId);
     const receiverId = String(message.receiverId);
+    const receiverAccountId = String(message.receiverAccountId || receiverId);
+    const type = String(message.type || "message");
+    const text = String(message.text || "");
+    if (!text && type !== "image" && type !== "voice") return;
 
-    // Check if the receiver has blocked the sender
     if (db) {
       const blockRecord = await db.collection("blocks").findOne({
-        blockerId: receiverId,
-        blockedId: String(message.senderId)
+        blockerId: receiverAccountId,
+        blockedId: senderAccountId
       });
-      if (blockRecord) {
-        // Drop the message silently if blocked
-        return;
-      }
+      if (blockRecord) return;
     }
 
-    const receiverAccountId = message.receiverAccountId ? String(message.receiverAccountId) : null;
-
     const normalizedMessage = {
-      id: String(message.id || `${message.senderId}_${Date.now()}`),
-      senderId: String(message.senderId),
-      senderAccountId: String(socket.accountId || message.senderAccountId || message.senderId),
-      receiverId,
-      receiverAccountId,
-      senderName: message.senderName || message.otherUserName || "User",
-      senderPhoto: message.senderPhoto || message.otherUserPhoto || "/default-avatar.png",
-      receiverName: message.receiverName || "User",
-      receiverPhoto: message.receiverPhoto || "/default-avatar.png",
-      text: String(message.text || ""),
-      type: message.type || "message",
+      id: String(message.id || `${senderId}_${Date.now()}`),
+      senderId, senderAccountId, receiverId, receiverAccountId,
+      senderName: String(message.senderName || message.otherUserName || "User"),
+      senderPhoto: String(message.senderPhoto || message.otherUserPhoto || "/default-avatar.png"),
+      receiverName: String(message.receiverName || "User"),
+      receiverPhoto: String(message.receiverPhoto || "/default-avatar.png"),
+      text, type,
       imageUrl: message.imageUrl || undefined,
+      audioMimeType: message.audioMimeType || undefined,
+      audioBase64: message.audioBase64 || undefined,
+      durationSec: Number(message.durationSec || 0),
       roomData: message.roomData || undefined,
       replyTo: message.replyTo || null,
       timestamp: Number(message.timestamp || Date.now()),
     };
 
-    // Deliver live over Socket.IO. If the recipient is offline, keep a short-lived
-    // Redis delivery queue; the recipient saves the delivered message into index.db.
-    const targetRooms = [`user:${receiverId}`];
-    if (receiverAccountId && receiverAccountId !== receiverId) targetRooms.push(`user:${receiverAccountId}`);
+    // Keep permanent private-message history in MongoDB, not device-only storage.
+    try {
+      const mongo = mediaDb || await connectMediaMongo();
+      if (mongo) {
+        await mongo.collection("privateMessages").updateOne(
+          { id: normalizedMessage.id },
+          { $setOnInsert: normalizedMessage },
+          { upsert: true }
+        );
+      } else {
+        console.error("Private message MongoDB storage is unavailable");
+      }
+    } catch (error) {
+      console.error("Private message MongoDB save failed:", error.message);
+    }
+
+    const targetIds = [...new Set([receiverId, receiverAccountId].filter(Boolean))];
+    const targetRooms = targetIds.map((id) => `user:${id}`);
     const connectedRecipients = await io.in(targetRooms).fetchSockets();
     if (connectedRecipients.length) {
-      io.to(`user:${receiverId}`).emit("private_message", normalizedMessage);
-      if (receiverAccountId && receiverAccountId !== receiverId) {
-        io.to(`user:${receiverAccountId}`).emit("private_message", normalizedMessage);
-      }
+      // Socket.IO room-array union prevents duplicate delivery to clients
+      // registered under both their Firebase UID and stable Zyora account ID.
+      io.to(targetRooms).emit("private_message", normalizedMessage);
     } else if (redis) {
       try {
-        const identities = [...new Set([receiverId, receiverAccountId].filter(Boolean))];
-        for (const identity of identities) {
-          const queueKey = `private_messages:pending:${identity}`;
-          await redis.rpush(queueKey, JSON.stringify(normalizedMessage));
-          await redis.expire(queueKey, 60 * 60 * 24 * 7);
-        }
+        const queueKey = `private_messages:pending:${receiverAccountId || receiverId}`;
+        await redis.rpush(queueKey, JSON.stringify(normalizedMessage));
+        await redis.expire(queueKey, 60 * 60 * 24 * 7);
       } catch (error) {
         console.error("Could not queue offline private message:", error.message);
       }
     }
-    // Live event updates the Owner panel private-message monitor.
     io.emit("private_message_monitor", normalizedMessage);
   });
 
-  socket.on("private_message_history_request", (data = {}) => {
-    // No GitHub storage history: clients use their local index.db cache.
-    socket.emit("private_message_history", {
-      chatId: data.chatId || "",
-      messages: [],
-    });
+  socket.on("private_message_history_request", async (data = {}) => {
+    const currentIds = [...new Set([
+      String(socket.userId || ""), String(socket.accountId || ""),
+      String(data.userId || ""), String(data.accountId || "")
+    ].filter(Boolean))];
+    const peerIds = [...new Set([
+      String(data.otherUserId || ""), String(data.otherAccountId || "")
+    ].filter(Boolean))];
+    if (!currentIds.length || !peerIds.length || !socket.isPresenceRegistered) {
+      socket.emit("private_message_history", { chatId: data.chatId || "", messages: [] });
+      return;
+    }
+    try {
+      const mongo = mediaDb || await connectMediaMongo();
+      if (!mongo) {
+        socket.emit("private_message_history", { chatId: data.chatId || "", messages: [], storageUnavailable: true });
+        return;
+      }
+      const messages = await mongo.collection("privateMessages").find({
+        $or: [
+          { senderId: { $in: currentIds }, receiverId: { $in: peerIds } },
+          { senderAccountId: { $in: currentIds }, receiverAccountId: { $in: peerIds } },
+          { senderId: { $in: peerIds }, receiverId: { $in: currentIds } },
+          { senderAccountId: { $in: peerIds }, receiverAccountId: { $in: currentIds } }
+        ]
+      }).sort({ timestamp: 1 }).limit(500).toArray();
+      socket.emit("private_message_history", {
+        chatId: data.chatId || "",
+        messages: messages.map(({ _id, ...message }) => message)
+      });
+    } catch (error) {
+      console.error("Private message history load failed:", error.message);
+      socket.emit("private_message_history", { chatId: data.chatId || "", messages: [], error: "history_unavailable" });
+    }
   });
 
   socket.on("private_message_clear", (data = {}) => {
