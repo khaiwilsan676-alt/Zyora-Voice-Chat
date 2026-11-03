@@ -234,7 +234,19 @@ fun MessageScreen(onChat: (String, String, String) -> Unit, embeddedSheet: Boole
             if (payload.optString("receiverId") != currentUserId) return@Listener
             val peerId = payload.optString("senderId")
             val body = payload.optString("text").ifBlank { if (payload.optString("type") == "image") "📷 Image" else "Voice message" }
-            mainHandler.post { updateConversationPreview(peerId, payload.optString("senderName", "User"), payload.optString("senderPhoto", ""), body, payload.optLong("timestamp", System.currentTimeMillis())) }
+            mainHandler.post {
+                val chatKey = "chat_${currentUserId}_$peerId"
+                val history = runCatching { org.json.JSONArray(indexDb.loadChat(chatKey) ?: "[]") }.getOrDefault(org.json.JSONArray())
+                val messageId = payload.optString("id")
+                val alreadySaved = (0 until history.length()).any { index ->
+                    history.optJSONObject(index)?.optString("id") == messageId && messageId.isNotBlank()
+                }
+                if (!alreadySaved) {
+                    history.put(JSONObject().put("id", messageId).put("mine", false).put("text", body))
+                    indexDb.saveChat(chatKey, history.toString())
+                }
+                updateConversationPreview(peerId, payload.optString("senderName", "User"), payload.optString("senderPhoto", ""), body, payload.optLong("timestamp", System.currentTimeMillis()))
+            }
         }
         socket.on("private_message", incoming)
         socket.on(Socket.EVENT_CONNECT) { socket.emit("register", JSONObject().put("userId", currentUserId).put("accountId", currentUserId)) }
