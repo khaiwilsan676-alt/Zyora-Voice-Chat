@@ -992,7 +992,7 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                                 val roomOwnerAccountId = roomOwner.accountId.ifBlank { roomOwner.id.ifBlank { roomId } }
                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp), modifier = Modifier.offset(y = (-3).dp)) {
                                     when (roomOwnerAccountId) {
-                                        "100002", "100003", "500001", "500002" -> {
+                                        "100002", "100003", "500001", "500002", "500003", "500004" -> {
                                             AsyncImage(
                                                 model = "https://zyora-voice-chat.vercel.app/IMG_20261101_125212.png",
                                                 contentDescription = "Purple ID Badge",
