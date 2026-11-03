@@ -1886,7 +1886,7 @@ private fun RoomChatMessages(
                                             if (isRoomOwnerMessage) {
                                                 AsyncImage(model = "https://zyora-voice-chat.vercel.app/IMG_20261027_235537.png", contentDescription = "Owner", contentScale = ContentScale.Fit, modifier = Modifier.height(16.dp))
                                             }
-                                            val hasPublicProfileIdImage = message.senderAccountId in setOf("100002", "100003", "500001")
+                                            val hasPublicProfileIdImage = message.senderAccountId in setOf("100002", "100003", "500001", "500002")
                                             if (hasPublicProfileIdImage) {
                                                 AsyncImage(model = "https://zyora-voice-chat.vercel.app/IMG_20261101_125212.png", contentDescription = "Purple ID", contentScale = ContentScale.Fit, modifier = Modifier.height(16.dp).widthIn(min = 14.dp, max = 22.dp))
                                             }
