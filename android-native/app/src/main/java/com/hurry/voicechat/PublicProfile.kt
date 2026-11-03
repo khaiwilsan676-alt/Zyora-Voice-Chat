@@ -645,44 +645,22 @@ fun PublicProfileScreen(
 
     if (isOtherUser && showChat) {
         val authPrefs = context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE)
-        val currentUser = remember {
-            HurryUser(
-                id = authPrefs.getString("uid", "").orEmpty().ifBlank { authPrefs.getString("accountId", "").orEmpty() },
-                name = authPrefs.getString("name", "User").orEmpty(),
-                image = authPrefs.getString("image", "").orEmpty().ifBlank { authPrefs.getString("photo", "").orEmpty() }
-            )
-        }
-        val chatTarget = remember(targetUser) {
-            HurryUser(
-                id = targetUser?.uid?.takeIf { it.isNotBlank() }
-                    ?: targetUser?.id?.takeIf { it.isNotBlank() }
-                    ?: targetUser?.accountId.orEmpty(),
-                name = userName,
-                image = userPhoto
-            )
-        }
-        Dialog(
-            onDismissRequest = { showChat = false },
-            properties = DialogProperties(
-                usePlatformDefaultWidth = false,
-                decorFitsSystemWindows = false
-            )
-        ) {
-            androidx.compose.material3.Surface(
-                modifier = Modifier.fillMaxSize(),
-                color = Color.White,
-                shape = RoundedCornerShape(0.dp)
-            ) {
-                Box(Modifier.fillMaxSize()) {
-                    ChatScreen(
-                        currentUser = currentUser,
-                        targetUser = chatTarget,
-                        onClose = { showChat = false },
-                        onJoinRoom = onJoinRoom
-                    )
-                }
-            }
-        }
+        val chatPrefs = context.getSharedPreferences("hurry_user", Context.MODE_PRIVATE)
+        val currentUserId = chatPrefs.getString("accountId", "").orEmpty()
+            .ifBlank { chatPrefs.getString("uid", "").orEmpty() }
+            .ifBlank { authPrefs.getString("accountId", "").orEmpty().ifBlank { authPrefs.getString("uid", "").orEmpty() } }
+        val receiverId = targetUser?.uid?.takeIf { it.isNotBlank() }
+            ?: targetUser?.id?.takeIf { it.isNotBlank() }
+            ?: targetUser?.accountId.orEmpty()
+
+        // Reuse the exact native one-to-one chat screen opened from the room profile.
+        NativeChatScreen(
+            name = userName,
+            image = userPhoto,
+            receiverId = receiverId,
+            currentUserId = currentUserId,
+            onBack = { showChat = false }
+        )
     }
 
     // --- OVERLAYS & BOTTOM SHEETS ---
