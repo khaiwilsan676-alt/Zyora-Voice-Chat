@@ -1013,7 +1013,7 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                                 Image(painterResource(R.drawable.ic_hurry_people),contentDescription="Active users",modifier=Modifier.size(16.dp))
                                 Text(backendRoomUsers.size.toString(),color=Color.White,fontSize=12.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold)
                             }
-                            val isOfficialRoomDpEditor = accountId in setOf("100002", "100003", "500001", "500002", "500004", "500005", "700001", "700002", "700003")
+                            val isOfficialRoomDpEditor = accountId in setOf("100002", "100003", "500001", "500002", "500003", "500004", "500005", "700001", "700002", "700003")
                             if(accountId==roomOwner.accountId.ifBlank{roomOwner.id} || isOfficialRoomDpEditor) {
                                 Box(Modifier.size(32.dp).clip(CircleShape).background(Color.Black.copy(alpha=.30f)).clickable{showSettings=true},contentAlignment=Alignment.Center){Image(painterResource(R.drawable.ic_hurry_settings),contentDescription="Room settings",modifier=Modifier.size(18.dp))}
                             }
