@@ -139,6 +139,7 @@ class MainActivity : ComponentActivity() {
                     }
                 )
             } else {
+                PrivateMessageInboxSync()
                 HurryNativeRoot(onLogout = { authenticated = false })
             }
         }
