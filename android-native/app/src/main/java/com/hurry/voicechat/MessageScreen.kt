@@ -1009,6 +1009,8 @@ fun NativeChatScreen(
                                                     if (!isOfficial && receiverId.isNotBlank() && currentUserId.isNotBlank()) {
                                                         directSocket?.emit("private_message", outgoing)
                                                     }
+                                                } else {
+                                                    recorded?.first?.delete()
                                                 }
                                             }
                                         )
