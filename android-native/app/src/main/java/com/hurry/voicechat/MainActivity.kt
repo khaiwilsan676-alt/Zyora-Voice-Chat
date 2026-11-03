@@ -264,10 +264,6 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
     val languagePrefs = remember { context.getSharedPreferences("zyora_settings", android.content.Context.MODE_PRIVATE) }
     var languageCode by remember { mutableStateOf(languagePrefs.getString("appLanguage", "en") ?: "en") }
     val userId = remember { authPrefs.getString("uid", "").orEmpty() }
-    LaunchedEffect(userId) {
-        val accountId = authPrefs.getString("accountId", userId).orEmpty().ifBlank { userId }
-        if (accountId.isNotBlank()) registerZyoraPushToken(context, accountId)
-    }
     // Isolate the local Mine-room cache by Firebase UID when multiple Google accounts use one device.
     val mineRoomKey = "mine_room_${userId}"
     var mineCreatedRoom by remember {
@@ -397,6 +393,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                         history.put(JSONObject().put("id", messageId).put("mine", false).put("text", storedText))
                         database.saveChat(chatKey, history.toString())
                     }
+                    if (!duplicate) showZyoraLocalMessageNotification(context)
                     val timestamp = payload.optLong("timestamp", System.currentTimeMillis())
                     val time = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()).format(java.util.Date(timestamp))
                     val peerPreview = JSONObject()
