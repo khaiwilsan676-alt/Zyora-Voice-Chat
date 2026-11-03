@@ -126,6 +126,7 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
                     if (!deviceLock.optBoolean("allowed", false)) {
                         registeredDeviceAccountId = deviceLock.optString("registeredAccountId")
                         registeredDeviceEmail = deviceLock.optString("registeredEmail")
+                        registeredDeviceMethod = deviceLock.optString("registeredMethod", "Google")
                         showDeviceRegisteredDialog = true
                         FirebaseAuth.getInstance().signOut()
                         return@launch
@@ -449,6 +450,7 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
                                 if (!deviceLock.optBoolean("allowed", false)) {
                                     registeredDeviceAccountId = deviceLock.optString("registeredAccountId")
                                     registeredDeviceEmail = deviceLock.optString("registeredEmail")
+                                    registeredDeviceMethod = deviceLock.optString("registeredMethod", "Google")
                                     showDeviceRegisteredDialog = true
                                     FirebaseAuth.getInstance().signOut()
                                     return@launch
