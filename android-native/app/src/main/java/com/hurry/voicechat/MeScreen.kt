@@ -67,7 +67,7 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
         ?: prefs.getString("accountId", "") ?: ""
     val account = savedAccount.ifBlank { nativeMeAccountNumber(uid) }
     val phone = prefs.getString("phone", "") ?: ""
-    val displayPhoto = if (account in setOf("100002", "100003", "500002")) "https://zyora-voice-chat.vercel.app/logo.png" else photo
+    val displayPhoto = photo
 
     LaunchedEffect(uid, account) {
         if (uid.isBlank()) return@LaunchedEffect
