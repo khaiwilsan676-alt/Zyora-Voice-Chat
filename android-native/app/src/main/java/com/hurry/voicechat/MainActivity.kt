@@ -327,38 +327,21 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                                     .apply()
                                 mineCreatedRoom = serverRoom
                             }
-                        } else if (mineCreatedRoom != null) {
-                            // Migrate a previously created local room to the permanent server record.
-                            val local = mineCreatedRoom!!
-                            val payload = JSONObject()
-                                .put("accountId", local.accountId.ifBlank { stableOwnerId })
-                                .put("roomId", local.id)
-                                .put("id", local.id)
-                                .put("name", local.name)
-                                .put("roomName", local.name)
-                                .put("dp", local.image)
-                                .put("roomDp", local.image)
-                                .put("country", local.country)
-                                .put("message", local.announcement)
-                                .put("announcement", local.announcement)
-                                .put("theme", authPrefs.getString("room_theme_${local.id}", "forest-night"))
-                                .put("customTheme", authPrefs.getString("room_custom_theme_${local.id}", ""))
-                                .put("themeImage", authPrefs.getString("room_custom_theme_${local.id}", ""))
-                                .put("micMode", authPrefs.getInt("room_mic_mode_${local.id}", 10))
-                                .put("isLocked", authPrefs.getBoolean("room_locked_${local.id}", local.locked))
-                                .put("roomPassword", authPrefs.getString("room_password_${local.id}", ""))
-                            val save = (URL("https://zyora-server.onrender.com/api/rooms").openConnection() as HttpURLConnection).apply {
-                                requestMethod = "PUT"
-                                connectTimeout = 10000
-                                readTimeout = 10000
-                                doOutput = true
-                                setRequestProperty("Content-Type", "application/json")
-                            }
-                            save.outputStream.use { it.write(payload.toString().toByteArray(Charsets.UTF_8)) }
-                            runCatching { save.inputStream.close() }
-                            save.disconnect()
-                        }
-                    } finally { connection.disconnect() }
+                        } else if (connection.responseCode == 404) {
+                            // A 404 from MongoDB is authoritative: this room was deleted.
+                            // Clear its device cache and never migrate/re-upload it.
+                            authPrefs.edit()
+                                .putBoolean("${mineRoomKey}_created", false)
+                                .remove("${mineRoomKey}_id")
+                                .remove("${mineRoomKey}_name")
+                                .remove("${mineRoomKey}_image")
+                                .remove("${mineRoomKey}_country")
+                                .remove("${mineRoomKey}_account_id")
+                                .remove("${mineRoomKey}_announcement")
+                                .remove("${mineRoomKey}_dp")
+                                .apply()
+                            withContext(Dispatchers.Main) { mineCreatedRoom = null }
+                        }                    } finally { connection.disconnect() }
                 }
             }
         }
