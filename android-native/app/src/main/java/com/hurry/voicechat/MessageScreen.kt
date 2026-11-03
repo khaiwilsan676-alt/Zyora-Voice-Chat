@@ -368,8 +368,15 @@ fun NativeChatScreen(
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("hurry_user", Context.MODE_PRIVATE) }
     val authPrefs = remember { context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE) }
-    val currentPhoto = prefs.getString("photo", prefs.getString("image", authPrefs.getString("image", ""))) ?: ""
-    val currentName = prefs.getString("name", authPrefs.getString("name", ""))?.takeIf { it.isNotBlank() } ?: "Zyora User"
+    val currentPhoto = sequenceOf(
+        prefs.getString("photo", "").orEmpty(),
+        prefs.getString("image", "").orEmpty(),
+        authPrefs.getString("image", "").orEmpty()
+    ).firstOrNull { it.isNotBlank() && it != "null" }.orEmpty()
+    val currentName = sequenceOf(
+        prefs.getString("name", "").orEmpty(),
+        authPrefs.getString("name", "").orEmpty()
+    ).firstOrNull { it.isNotBlank() && it != "null" } ?: "Zyora User"
     val currentAccountId = currentAccountIdOverride.ifBlank { authPrefs.getString("accountId", prefs.getString("accountId", currentUserId)).orEmpty() }.ifBlank { currentUserId }
     val isOfficial = name == "Zyora Team" || name == "Zyora System"
     var directSocket by remember(receiverId, currentUserId) { mutableStateOf<Socket?>(null) }
