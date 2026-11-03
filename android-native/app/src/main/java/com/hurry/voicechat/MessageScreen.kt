@@ -212,7 +212,9 @@ fun SwipeRevealItem(
 fun MessageScreen(onChat: (String, String, String) -> Unit, embeddedSheet: Boolean = false, onBack: () -> Unit = {}) {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("hurry_user", Context.MODE_PRIVATE) }
+    val authPrefs = remember { context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE) }
     val currentUserId = prefs.getString("accountId", prefs.getString("userId", "")).orEmpty().ifBlank { prefs.getString("uid", "").orEmpty() }
+    val currentAuthUid = authPrefs.getString("uid", "").orEmpty().ifBlank { currentUserId }
     val indexDb = remember { NativeIndexDatabase(context) }
     val chats = remember {
         mutableStateListOf<MessagePreview>().apply {
@@ -240,7 +242,7 @@ fun MessageScreen(onChat: (String, String, String) -> Unit, embeddedSheet: Boole
         val mainHandler = Handler(Looper.getMainLooper())
         val incoming = Emitter.Listener { args ->
             val payload = args.firstOrNull() as? JSONObject ?: return@Listener
-            if (payload.optString("receiverId") != currentUserId) return@Listener
+            if (payload.optString("receiverId") != currentUserId && payload.optString("receiverAccountId") != currentUserId) return@Listener
             val peerId = payload.optString("senderAccountId").ifBlank { payload.optString("senderId") }
             val isVoice = payload.optString("type") == "voice"
             val body = if (isVoice) {
@@ -262,7 +264,7 @@ fun MessageScreen(onChat: (String, String, String) -> Unit, embeddedSheet: Boole
             }
         }
         socket.on("private_message", incoming)
-        socket.on(Socket.EVENT_CONNECT) { socket.emit("register", JSONObject().put("userId", currentUserId).put("accountId", currentUserId)) }
+        socket.on(Socket.EVENT_CONNECT) { socket.emit("register", JSONObject().put("userId", currentAuthUid).put("accountId", currentUserId)) }
         socket.connect()
         onDispose { socket.off("private_message", incoming); socket.disconnect(); socket.close() }
     }
@@ -381,10 +383,10 @@ fun NativeChatScreen(
     val indexDb = remember { NativeIndexDatabase(context) }
     val localConversationKey = "chat_${currentAccountId}_${receiverId.ifBlank { officialIdForCache ?: name }}"
     fun saveConversationPreview(peerId: String, peerName: String, peerPhoto: String, lastMessage: String, timestamp: Long) {
-        if (peerId.isBlank() || currentUserId.isBlank() || peerId == currentUserId) return
+        if (peerId.isBlank() || currentAccountId.isBlank() || peerId == currentAccountId) return
         val time = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(timestamp))
         val preview = JSONObject().put("peerId", peerId).put("peerName", peerName.ifBlank { "User" }).put("peerPhoto", peerPhoto).put("lastMessage", lastMessage).put("timestamp", timestamp).put("time", time)
-        indexDb.saveConversation("conversation_${currentUserId}_$peerId", peerId, preview)
+        indexDb.saveConversation("conversation_${currentAccountId}_$peerId", peerId, preview)
     }
     
     val messages = remember(name, receiverId, currentUserId) {
@@ -461,8 +463,11 @@ fun NativeChatScreen(
             val sender = payload.optString("senderId")
             val senderAccountId = payload.optString("senderAccountId").ifBlank { sender }
             val receiver = payload.optString("receiverId")
-            if ((senderAccountId == receiverId && (receiver == currentAccountId || receiver == currentUserId)) ||
-                (sender == currentUserId && receiver == receiverId)) {
+            val receiverAccount = payload.optString("receiverAccountId")
+            val addressedToMe = receiver == currentAccountId || receiver == currentUserId ||
+                receiverAccount == currentAccountId || receiverAccount == currentUserId
+            val fromPeer = senderAccountId == receiverId || sender == receiverId
+            if (fromPeer && addressedToMe) {
                 val isVoice = payload.optString("type") == "voice"
                 val value = if (isVoice) {
                     VoiceMessageStore.saveIncoming(context, payload) ?: "VOICE::${payload.optLong("durationSec", 1)}"
