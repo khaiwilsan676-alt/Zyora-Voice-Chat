@@ -5,7 +5,7 @@ data class HurryRoom(
     val name: String,
     val image: String,
     val announcement: String = "",
-    val country: String = "🇮🇳",
+    val country: String = "",
     val locked: Boolean = false,
     val accountId: String = ""
 )
