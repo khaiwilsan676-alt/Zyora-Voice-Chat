@@ -486,6 +486,7 @@ fun RoomPage(
     var musicControllerMinimized by remember { mutableStateOf(false) }
     var isMusicPlaying by remember { mutableStateOf(false) }
     var musicVolume by remember { mutableFloatStateOf(1f) }
+    var repeatOneEnabled by remember { mutableStateOf(false) }
     var showMusicVolumeView by remember { mutableStateOf(false) }
     var musicPlaylist by remember { mutableStateOf<List<NativeMusicTrack>>(emptyList()) }
     var currentTrackIndex by remember { mutableIntStateOf(0) }
@@ -584,6 +585,30 @@ fun RoomPage(
                 .putExtra(RoomMusicService.EXTRA_TITLE, prevTrack.name))
         }
         isMusicPlaying = true
+    }
+
+    fun musicReplayOne() {
+        val track = miniMusicTrack ?: return
+        repeatOneEnabled = !repeatOneEnabled
+        runCatching {
+            appContext.startService(Intent(appContext, RoomMusicService::class.java)
+                .setAction(RoomMusicService.ACTION_REPEAT_ONE)
+                .putExtra(RoomMusicService.EXTRA_REPEAT_ONE, repeatOneEnabled))
+            appContext.startService(Intent(appContext, RoomMusicService::class.java)
+                .setAction(RoomMusicService.ACTION_SEEK)
+                .putExtra(RoomMusicService.EXTRA_POSITION_MS, 0))
+            musicCurrentTime = 0f
+            if (!isMusicPlaying) {
+                ContextCompat.startForegroundService(appContext, Intent(appContext, RoomMusicService::class.java)
+                    .setAction(RoomMusicService.ACTION_PLAY)
+                    .putExtra(RoomMusicService.EXTRA_URI, track.url)
+                    .putExtra(RoomMusicService.EXTRA_TITLE, track.name))
+                isMusicPlaying = true
+                MusicPlaybackState.currentPlayingUri = track.url
+                MusicPlaybackState.currentTrack = track
+                MusicPlaybackState.isPlaying = true
+            }
+        }
     }
 
     fun musicClose() {
@@ -1241,7 +1266,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                     .padding(horizontal = 12.dp)
                     .padding(bottom = 80.dp)
                     .fillMaxWidth()
-                    .height(130.dp)
+                    .height(160.dp)
                     .clip(RoundedCornerShape(22.dp))
                     .background(Color.Black)
                     .padding(horizontal = 16.dp, vertical = 8.dp)
@@ -1303,21 +1328,41 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                             Text(formatMusicTime(musicDuration), color = Color.White.copy(alpha = .7f), fontSize = 9.sp, fontWeight = FontWeight.Normal)
                         }
                         Spacer(Modifier.height(5.dp))
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.QueueMusic, "Playlist", tint = Color.White, modifier = Modifier.size(22.dp))
-                            IconButton(onClick = { musicPrev() }, modifier = Modifier.size(30.dp)) {
-                                Icon(Icons.Default.SkipPrevious, "Previous", tint = Color.White, modifier = Modifier.size(21.dp))
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Default.QueueMusic,
+                                "Open Music page",
+                                tint = Color.White,
+                                modifier = Modifier.size(22.dp).clickable {
+                                    musicControllerMinimized = true
+                                    MusicPlaybackState.isMusicPageOpen = true
+                                }
+                            )
+                            Spacer(Modifier.weight(1f))
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(0.2.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                IconButton(onClick = { musicPrev() }, modifier = Modifier.size(30.dp)) {
+                                    Icon(Icons.Default.SkipPrevious, "Previous", tint = Color.White, modifier = Modifier.size(21.dp))
+                                }
+                                Box(Modifier.size(34.dp).clip(CircleShape).background(Color.White).clickable { musicPlayPause() }, contentAlignment = Alignment.Center) {
+                                    Icon(if (isMusicPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                        if (isMusicPlaying) "Pause" else "Play", tint = Color(0xFF202938), modifier = Modifier.size(22.dp))
+                                }
+                                IconButton(onClick = { musicNext() }, modifier = Modifier.size(30.dp)) {
+                                    Icon(Icons.Default.SkipNext, "Next", tint = Color.White, modifier = Modifier.size(21.dp))
+                                }
+                                Box(Modifier.size(22.dp).clickable { musicReplayOne() }, contentAlignment = Alignment.Center) {
+                                    Icon(Icons.Default.RepeatOne, "Replay current song", tint = Color.White, modifier = Modifier.size(22.dp))
+                                }
+                                Icon(
+                                    Icons.Default.VolumeUp,
+                                    "Volume",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(21.dp).clickable { showMusicVolumeView = true }
+                                )
                             }
-                            Box(Modifier.size(34.dp).clip(CircleShape).background(Color.White).clickable { musicPlayPause() }, contentAlignment = Alignment.Center) {
-                                Icon(if (isMusicPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                                    if (isMusicPlaying) "Pause" else "Play", tint = Color(0xFF202938), modifier = Modifier.size(22.dp))
-                            }
-                            IconButton(onClick = { musicNext() }, modifier = Modifier.size(30.dp)) {
-                                Icon(Icons.Default.SkipNext, "Next", tint = Color.White, modifier = Modifier.size(21.dp))
-                            }
-                            Icon(Icons.Default.Repeat, "Repeat", tint = Color.White, modifier = Modifier.size(22.dp))
-                            Icon(Icons.Default.VolumeUp, "Volume", tint = Color.White,
-                                modifier = Modifier.size(21.dp).clickable { showMusicVolumeView = true })
                         }
                     }
                 }
