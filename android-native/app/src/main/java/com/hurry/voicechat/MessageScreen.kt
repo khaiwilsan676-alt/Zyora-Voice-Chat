@@ -553,11 +553,13 @@ fun NativeChatScreen(
 
     fun startVoiceRecording(): Boolean {
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) return false
+        var createdRecorder: MediaRecorder? = null
         return runCatching {
             val directory = File(context.filesDir, "voice_notes").apply { mkdirs() }
             val file = File(directory, "voice_${System.currentTimeMillis()}.m4a")
             configureVoiceAudioRoute()
             val recorder = createVoiceRecorder()
+            createdRecorder = recorder
             recorder.setAudioSource(MediaRecorder.AudioSource.VOICE_COMMUNICATION)
             recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
             recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
@@ -574,7 +576,7 @@ fun NativeChatScreen(
             isRecording = true
             true
         }.getOrElse {
-            runCatching { mediaRecorder?.release() }
+            runCatching { createdRecorder?.release() }
             mediaRecorder = null
             isRecording = false
             resetVoiceAudioRoute()
