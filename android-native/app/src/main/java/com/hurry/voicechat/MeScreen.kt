@@ -67,7 +67,7 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
         ?: prefs.getString("accountId", "") ?: ""
     val account = savedAccount.ifBlank { nativeMeAccountNumber(uid) }
     val phone = prefs.getString("phone", "") ?: ""
-    val displayPhoto = if (account in setOf("100002", "100003", "500002", "500003")) "https://zyora-voice-chat.vercel.app/logo.png" else photo
+    val displayPhoto = if (account in setOf("100002", "100003", "500002")) "https://zyora-voice-chat.vercel.app/logo.png" else photo
 
     LaunchedEffect(uid, account) {
         if (uid.isBlank()) return@LaunchedEffect
@@ -128,7 +128,7 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(5.dp)
                             ) {
-                                if (account in setOf("100002", "100003", "500001", "500002", "500003")) {
+                                if (account in setOf("100002", "100003", "500001", "500002")) {
                                     AsyncImage(
                                         model = RAW_ME + "IMG_20261101_125212.png",
                                         contentDescription = "Official ID",
@@ -228,7 +228,7 @@ private fun nativeMeAccountNumber(uid: String): String {
         else -> null
     }
     if (special != null) return special
-    if (uid in setOf("500001", "500002", "500003", "500004", "500005", "700001", "700002", "700003")) return uid
+    if (uid in setOf("500001", "500002", "500004", "500005", "700001", "700002", "700003")) return uid
     return (10000000L + kotlin.math.abs(uid.hashCode().toLong()) % 90000000L).toString()
 }
 
