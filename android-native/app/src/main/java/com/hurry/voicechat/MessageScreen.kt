@@ -340,7 +340,7 @@ private fun MessageRow(chat: MessagePreview, onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         AsyncImage(
-            model = resolveChatAvatar(chat.image), contentDescription = chat.name,
+            model = resolveChatAvatar(chat.image.ifBlank { RAW_MSG + "default-avatar.png" }), contentDescription = chat.name,
             modifier = Modifier.size(56.dp).clip(CircleShape),
             contentScale = ContentScale.Crop
         )
@@ -1013,6 +1013,7 @@ fun NativeChatScreen(
                                                     val outgoing = JSONObject()
                                                         .put("id", messageId)
                                                         .put("senderId", currentUserId)
+                                                        .put("senderAccountId", currentAccountId)
                                                         .put("receiverId", receiverId)
                                                     .put("receiverAccountId", receiverId)
                                                         .put("senderName", currentName)
@@ -1085,6 +1086,7 @@ fun NativeChatScreen(
                                                 val outgoing = JSONObject()
                                                     .put("id", "${currentUserId}_${System.currentTimeMillis()}")
                                                     .put("senderId", currentUserId)
+                                                    .put("senderAccountId", currentAccountId)
                                                     .put("receiverId", receiverId)
                                                     .put("receiverAccountId", receiverId)
                                                     .put("senderName", currentName)
