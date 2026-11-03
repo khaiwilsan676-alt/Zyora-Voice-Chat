@@ -185,7 +185,7 @@ fun RoomPage(
 ) {
     val roomId=roomOwner.id.ifBlank{roomOwner.accountId.ifBlank{roomOwner.uid.ifBlank{"default-room"}}}
     val roomOwnerAccountId = roomOwner.accountId.ifBlank { roomOwner.id }
-    val isLogoRoom = roomOwnerAccountId in setOf("100002", "100003", "500002", "500003")
+    val isLogoRoom = roomOwnerAccountId in setOf("100002", "100003", "500002")
     val accountId=currentUser.accountId.ifBlank{currentUser.uid.ifBlank{currentUser.id.ifBlank{"guest"}}}
     val clipboard = LocalClipboardManager.current
     val appContext = LocalContext.current
@@ -215,7 +215,7 @@ fun RoomPage(
     val roomDisplayName = cachedCurrentProfile?.let { profile ->
         sequenceOf("name", "displayName", "userName").map { profile.optString(it, "") }.firstOrNull { it.isNotBlank() && it != "null" }
     } ?: currentUser.name.ifBlank { "User" }
-    val roomDisplayImage = if (accountId in setOf("100002", "100003", "500002", "500003")) "https://zyora-voice-chat.vercel.app/logo.png" else cachedCurrentProfile?.let { profile ->
+    val roomDisplayImage = if (accountId in setOf("100002", "100003", "500002")) "https://zyora-voice-chat.vercel.app/logo.png" else cachedCurrentProfile?.let { profile ->
         sequenceOf("image", "avatar", "profileImageUrl").map { profile.optString(it, "") }.firstOrNull { it.isNotBlank() && it != "null" }
     } ?: "https://zyora-server.onrender.com/default-avatar.png"
     var copiedId by remember { mutableStateOf("") }
@@ -767,7 +767,7 @@ fun RoomPage(
                     val seat = seatsJson.optJSONObject(index) ?: continue
                     val user = seat.optJSONObject("user")
                     val gif = seat.optJSONObject("gif")
-                    parsed.add(NativeRoomSeat(number=seat.optInt("number",index+1),occupied=seat.optBoolean("isOccupied",user != null),locked=seat.optBoolean("isLocked",false),muted=seat.optBoolean("isMuted",false),speaking=seat.optBoolean("isSpeaking",false),userName=if (user == null) "" else user.optString("name","User"),userImage=if (user == null) "" else if (user.optString("accountId",user.optString("userId","")) in setOf("100002", "100003", "500002", "500003")) "https://zyora-voice-chat.vercel.app/logo.png" else user.optString("image","").takeIf { it.isNotBlank() && it != "null" } ?: user.optString("dp","").takeIf { it.isNotBlank() && it != "null" } ?: user.optString("avatarUrl","").takeIf { it.isNotBlank() && it != "null" } ?: user.optString("profileImage","").takeIf { it.isNotBlank() && it != "null" } ?: "",accountId=if (user == null) "" else user.optString("accountId",user.optString("userId","")),gifSrc=gif?.optString("src","") ?: "",gifTimestamp=gif?.optLong("timestamp",0L) ?: 0L))
+                    parsed.add(NativeRoomSeat(number=seat.optInt("number",index+1),occupied=seat.optBoolean("isOccupied",user != null),locked=seat.optBoolean("isLocked",false),muted=seat.optBoolean("isMuted",false),speaking=seat.optBoolean("isSpeaking",false),userName=if (user == null) "" else user.optString("name","User"),userImage=if (user == null) "" else if (user.optString("accountId",user.optString("userId","")) in setOf("100002", "100003", "500002")) "https://zyora-voice-chat.vercel.app/logo.png" else user.optString("image","").takeIf { it.isNotBlank() && it != "null" } ?: user.optString("dp","").takeIf { it.isNotBlank() && it != "null" } ?: user.optString("avatarUrl","").takeIf { it.isNotBlank() && it != "null" } ?: user.optString("profileImage","").takeIf { it.isNotBlank() && it != "null" } ?: "",accountId=if (user == null) "" else user.optString("accountId",user.optString("userId","")),gifSrc=gif?.optString("src","") ?: "",gifTimestamp=gif?.optLong("timestamp",0L) ?: 0L))
                 }
                 mainHandler.post {
                     val byNumber = parsed.associateBy { it.number }
@@ -992,7 +992,7 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                                 val roomOwnerAccountId = roomOwner.accountId.ifBlank { roomOwner.id.ifBlank { roomId } }
                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp), modifier = Modifier.offset(y = (-3).dp)) {
                                     when (roomOwnerAccountId) {
-                                        "100002", "100003", "500001", "500002", "500003" -> {
+                                        "100002", "100003", "500001", "500002" -> {
                                             AsyncImage(
                                                 model = "https://zyora-voice-chat.vercel.app/IMG_20261101_125212.png",
                                                 contentDescription = "Purple ID Badge",
@@ -1013,7 +1013,7 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                                 Image(painterResource(R.drawable.ic_hurry_people),contentDescription="Active users",modifier=Modifier.size(16.dp))
                                 Text(backendRoomUsers.size.toString(),color=Color.White,fontSize=12.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold)
                             }
-                            val isOfficialRoomDpEditor = accountId in setOf("100002", "100003", "500001", "500002", "500003", "500004", "500005", "700001", "700002", "700003")
+                            val isOfficialRoomDpEditor = accountId in setOf("100002", "100003", "500001", "500002", "500004", "500005", "700001", "700002", "700003")
                             if(accountId==roomOwner.accountId.ifBlank{roomOwner.id} || isOfficialRoomDpEditor) {
                                 Box(Modifier.size(32.dp).clip(CircleShape).background(Color.Black.copy(alpha=.30f)).clickable{showSettings=true},contentAlignment=Alignment.Center){Image(painterResource(R.drawable.ic_hurry_settings),contentDescription="Room settings",modifier=Modifier.size(18.dp))}
                             }
@@ -1879,14 +1879,14 @@ private fun RoomChatMessages(
                                 if(message.type=="join") {
                                     Column(Modifier.padding(vertical=2.dp).wrapContentWidth().clip(RoundedCornerShape(8.dp)).background(Color.Black.copy(alpha=.30f)).padding(horizontal=12.dp,vertical=4.dp),horizontalAlignment=Alignment.Start,verticalArrangement=Arrangement.spacedBy(2.dp)){
                                         Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp), modifier=Modifier.clickable { onSelectMessage(message) }){
-                                            FallbackAsyncImage(model=if (message.senderAccountId in setOf("100002", "100003", "500002", "500003")) "https://zyora-voice-chat.vercel.app/logo.png" else message.senderImage,contentDescription=message.sender,modifier=Modifier.size(24.dp).clip(CircleShape),contentScale=ContentScale.Crop)
+                                            FallbackAsyncImage(model=if (message.senderAccountId in setOf("100002", "100003", "500002")) "https://zyora-voice-chat.vercel.app/logo.png" else message.senderImage,contentDescription=message.sender,modifier=Modifier.size(24.dp).clip(CircleShape),contentScale=ContentScale.Crop)
                                             Text(message.sender,color=Color.White.copy(alpha=.95f),fontSize=12.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold)
                                             
                                             val isRoomOwnerMessage = message.senderAccountId == roomOwnerId
                                             if (isRoomOwnerMessage) {
                                                 AsyncImage(model = "https://zyora-voice-chat.vercel.app/IMG_20261027_235537.png", contentDescription = "Owner", contentScale = ContentScale.Fit, modifier = Modifier.height(16.dp))
                                             }
-                                            val hasPublicProfileIdImage = message.senderAccountId in setOf("100002", "100003", "500001", "500002", "500003")
+                                            val hasPublicProfileIdImage = message.senderAccountId in setOf("100002", "100003", "500001", "500002")
                                             if (hasPublicProfileIdImage) {
                                                 AsyncImage(model = "https://zyora-voice-chat.vercel.app/IMG_20261101_125212.png", contentDescription = "Purple ID", contentScale = ContentScale.Fit, modifier = Modifier.height(16.dp).widthIn(min = 14.dp, max = 22.dp))
                                             }
@@ -1982,7 +1982,7 @@ private fun formatMusicTime(seconds: Float): String {
             Box(Modifier.fillMaxSize(.91f),contentAlignment=Alignment.Center){
                 if(seat.locked) AsyncImage(model=raw+"file_0000000015a48211b000ee447a786f7c.png",contentDescription="Locked seat",modifier=Modifier.fillMaxSize(.62f),contentScale=ContentScale.Fit)
                 else if(seat.occupied) {
-                    FallbackAsyncImage(model=if (seat.accountId in setOf("100002", "100003", "500002", "500003")) "https://zyora-voice-chat.vercel.app/logo.png" else seat.userImage,contentDescription=seat.userName,modifier=Modifier.fillMaxSize().clip(CircleShape),contentScale=ContentScale.Crop)
+                    FallbackAsyncImage(model=if (seat.accountId in setOf("100002", "100003", "500002")) "https://zyora-voice-chat.vercel.app/logo.png" else seat.userImage,contentDescription=seat.userName,modifier=Modifier.fillMaxSize().clip(CircleShape),contentScale=ContentScale.Crop)
                     NativeAvatarFrameOverlay(userId=seat.accountId,modifier=Modifier.fillMaxSize())
                 } else AsyncImage(model=raw+"file_000000003e7482309b7f6e7f2a922160.png",contentDescription="Empty seat",modifier=Modifier.fillMaxSize(.65f),contentScale=ContentScale.Fit)
             }
@@ -2042,7 +2042,7 @@ private fun formatMusicTime(seconds: Float): String {
     val isRoomOwnerMessage = m.senderAccountId == roomOwnerId
     val isCoreOfficial = m.senderAccountId == "100002" || m.senderAccountId == "100003"
     val isRedOfficial = m.senderAccountId == "500001"
-    val is500002Official = m.senderAccountId in setOf("500002", "500003")
+    val is500002Official = m.senderAccountId in setOf("500002")
     
     val officialHeadTag = !is500002Official && (isCoreOfficial || profileTags?.optBoolean("officialHeadTag", false) == true)
     val officialTag = isCoreOfficial || isRedOfficial || is500002Official || profileTags?.optBoolean("officialTag", false) == true
@@ -2055,7 +2055,7 @@ private fun formatMusicTime(seconds: Float): String {
     Row(Modifier.fillMaxWidth().padding(vertical=2.dp),verticalAlignment=Alignment.Top,horizontalArrangement=Arrangement.Start){
         val cachedName = profileTags?.let { profile -> sequenceOf("name", "displayName", "userName").map { profile.optString(it, "") }.firstOrNull { it.isNotBlank() && it != "null" } }.orEmpty()
         val cachedImage = profileTags?.let { profile -> sequenceOf("image", "avatar", "profileImageUrl").map { profile.optString(it, "") }.firstOrNull { it.isNotBlank() && it != "null" } }.orEmpty()
-        FallbackAsyncImage(model=if (m.senderAccountId in setOf("100002", "100003", "500002", "500003")) "https://zyora-voice-chat.vercel.app/logo.png" else cachedImage.ifBlank { "https://zyora-server.onrender.com/default-avatar.png" },contentDescription=cachedName.ifBlank { m.sender },modifier=Modifier.padding(top=2.dp).size(28.dp).clip(CircleShape).border(1.dp, Color.White.copy(alpha=.1f), CircleShape).clickable(onClick = onAvatarClick),contentScale=ContentScale.Crop)
+        FallbackAsyncImage(model=if (m.senderAccountId in setOf("100002", "100003", "500002")) "https://zyora-voice-chat.vercel.app/logo.png" else cachedImage.ifBlank { "https://zyora-server.onrender.com/default-avatar.png" },contentDescription=cachedName.ifBlank { m.sender },modifier=Modifier.padding(top=2.dp).size(28.dp).clip(CircleShape).border(1.dp, Color.White.copy(alpha=.1f), CircleShape).clickable(onClick = onAvatarClick),contentScale=ContentScale.Crop)
         
         Column(Modifier.padding(start=8.dp).fillMaxWidth(.75f),verticalArrangement=Arrangement.spacedBy(2.dp)){
             Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(3.dp)){
@@ -2115,8 +2115,8 @@ private val Int.percentHeight: androidx.compose.ui.unit.Dp
     @Composable get() = androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp.dp * this / 100
 
 @Composable private fun MemberSheet(seat:NativeRoomSeat,onClose:()->Unit)=SimpleSheet("Member",onClose){
-    FallbackAsyncImage(model=if (seat.accountId in setOf("100002", "100003", "500002", "500003")) "https://zyora-voice-chat.vercel.app/logo.png" else seat.userImage,contentDescription=null,modifier=Modifier.size(76.dp).clip(CircleShape),contentScale=ContentScale.Crop)
-    Text(seat.userName,color=Color.White,fontSize=17.sp);if (seat.accountId in setOf("500002", "500003")) { Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(3.dp)) { AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261101_125212.png",contentDescription="Purple ID Badge",contentScale=ContentScale.Fit,modifier=Modifier.height(18.dp).widthIn(max=28.dp)); Text(seat.accountId,color=Color.White.copy(.65f),fontSize=12.sp) } } else Text("ID: "+seat.accountId,color=Color.White.copy(.65f),fontSize=12.sp)
+    FallbackAsyncImage(model=if (seat.accountId in setOf("100002", "100003", "500002")) "https://zyora-voice-chat.vercel.app/logo.png" else seat.userImage,contentDescription=null,modifier=Modifier.size(76.dp).clip(CircleShape),contentScale=ContentScale.Crop)
+    Text(seat.userName,color=Color.White,fontSize=17.sp);if (seat.accountId in setOf("500002")) { Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(3.dp)) { AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261101_125212.png",contentDescription="Purple ID Badge",contentScale=ContentScale.Fit,modifier=Modifier.height(18.dp).widthIn(max=28.dp)); Text(seat.accountId,color=Color.White.copy(.65f),fontSize=12.sp) } } else Text("ID: "+seat.accountId,color=Color.White.copy(.65f),fontSize=12.sp)
 }
 
 @Composable private fun GamesSheet(onClose:()->Unit,onWildParty:()->Unit,onFruitParty:()->Unit){
