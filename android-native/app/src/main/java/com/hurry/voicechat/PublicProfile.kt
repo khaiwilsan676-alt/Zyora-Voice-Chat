@@ -938,7 +938,7 @@ fun PublicProfileScreen(
                                     Text(displayAccNum, fontSize = 12.sp, color = Color(0xFF8992A0), modifier = Modifier.padding(top = 3.dp))
                                 } else Text("ID: $displayAccNum", fontSize = 12.sp, color = Color(0xFF8992A0), modifier = Modifier.padding(top = 3.dp))
                             }
-                            Icon(Icons.Default.Shield, contentDescription = null, tint = Color(0xFF237BEE), modifier = Modifier.size(22.dp))
+                            LucidePublicProfileIcon(warning = true, tint = Color(0xFF237BEE), modifier = Modifier.size(22.dp))
                         }
 
                         Text(
