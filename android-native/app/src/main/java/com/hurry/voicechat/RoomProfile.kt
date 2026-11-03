@@ -123,7 +123,7 @@ fun RoomProfile(
     var displayGender by remember(user.uid, user.id, user.accountId, user.gender, cachedProfile) { mutableStateOf(cachedProfile?.optString("gender")?.takeIf { it.isNotBlank() && it != "null" } ?: user.gender) }
     var displayAge by remember(user.uid, user.id, user.accountId, user.age, cachedProfile) { mutableIntStateOf(if (cachedProfile?.has("age") == true) cachedProfile.optInt("age", user.age) else user.age) }
     var displayBio by remember(user.uid, user.id, user.accountId, user.bio, cachedProfile) { mutableStateOf(cachedProfile?.optString("bio")?.takeIf { it != "null" } ?: user.bio) }
-    var displayCountry by remember(user.uid, user.id, user.accountId, user.country, cachedProfile) { mutableStateOf(sequenceOf(cachedProfile?.optString("country", ""), cachedProfile?.optString("countryName", ""), user.country, user.countryCode).map { it?.trim().orEmpty() }.firstOrNull { it.isNotBlank() && it != "null" }.orEmpty()) }
+    var displayCountry by remember(user.uid, user.id, user.accountId, user.country, cachedProfile) { mutableStateOf(sequenceOf(cachedProfile?.optString("countryName", ""), cachedProfile?.optString("country", ""), cachedProfile?.optString("countryCode", ""), cachedProfile?.optString("country_code", ""), user.country, user.countryCode).map { it?.trim().orEmpty() }.firstOrNull { it.isNotBlank() && it != "null" }.orEmpty()) }
 
     LaunchedEffect(user.uid, user.id, user.accountId, profileCacheKeys) {
         val profileDb = NativeIndexDatabase(context)
