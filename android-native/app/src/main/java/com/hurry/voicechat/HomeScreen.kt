@@ -156,8 +156,16 @@ fun countryFlag(country: String): String {
         Character.codePointAt(value, 0) in 0x1F1E6..0x1F1FF &&
         Character.codePointAt(value, 2) in 0x1F1E6..0x1F1FF
     ) return value.substring(0, 4)
+    val aliases = mapOf(
+        "usa" to "US", "us" to "US", "uk" to "GB", "u.k." to "GB",
+        "uae" to "AE", "south korea" to "KR", "north korea" to "KP",
+        "russia" to "RU", "turkey" to "TR", "türkiye" to "TR",
+        "iran" to "IR", "syria" to "SY", "bolivia" to "BO",
+        "venezuela" to "VE", "taiwan" to "TW"
+    )
     val isoCodes = java.util.Locale.getISOCountries()
-    val code = if (value.length == 2 && value.uppercase() in isoCodes) {
+    val normalized = value.lowercase()
+    val code = aliases[normalized] ?: if (value.length == 2 && value.uppercase() in isoCodes) {
         value.uppercase()
     } else {
         isoCodes.firstOrNull { candidate ->
