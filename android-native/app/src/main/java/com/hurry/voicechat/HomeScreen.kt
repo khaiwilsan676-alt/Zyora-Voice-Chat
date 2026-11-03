@@ -273,27 +273,26 @@ fun HomeScreen(
 
 
     LaunchedEffect(Unit) {
-        // Do not render an old local room snapshot as if it were current.
-        // A full MongoDB snapshot is required so deleted rooms disappear.
+        // Keep the room list reconciled with the authoritative MongoDB snapshot.
+        // Never merge old local entries back into a fresh response.
         rooms = emptyList()
         NativeRoomMemoryCache.rooms = null
-
-        if (!NativeRoomMemoryCache.refreshInFlight) {
-            NativeRoomMemoryCache.refreshInFlight = true
-            try {
-                val update = runCatching { HurryApi.roomsUpdatedSince(0L) }.getOrNull()
-                NativeRoomMemoryCache.lastRefreshAt = System.currentTimeMillis()
-                if (update != null) {
-                    val fresh = update.rooms.distinctBy { it.id }
-                    NativeRoomMemoryCache.rooms = fresh
-                    rooms = fresh
-                    if (dao != null) {
-                        runCatching {
-                            withContext(Dispatchers.IO) {
-                                dao.clearAll()
-                                if (fresh.isNotEmpty()) {
-                                    dao.insertAll(
-                                        fresh.map {
+        while (true) {
+            if (!NativeRoomMemoryCache.refreshInFlight) {
+                NativeRoomMemoryCache.refreshInFlight = true
+                try {
+                    val update = runCatching { HurryApi.roomsUpdatedSince(0L) }.getOrNull()
+                    NativeRoomMemoryCache.lastRefreshAt = System.currentTimeMillis()
+                    if (update != null) {
+                        val fresh = update.rooms.distinctBy { it.id }
+                        NativeRoomMemoryCache.rooms = fresh
+                        rooms = fresh
+                        if (dao != null) {
+                            runCatching {
+                                withContext(Dispatchers.IO) {
+                                    dao.clearAll()
+                                    if (fresh.isNotEmpty()) {
+                                        dao.insertAll(fresh.map {
                                             RoomEntity(
                                                 id = it.id,
                                                 name = it.name,
@@ -302,25 +301,25 @@ fun HomeScreen(
                                                 accountId = it.accountId,
                                                 createdAt = System.currentTimeMillis()
                                             )
-                                        }
-                                    )
+                                        })
+                                    }
                                 }
                             }
                         }
+                        if (update.serverTime > 0L) {
+                            roomSyncPrefs.edit().putLong("last_server_updated_at", update.serverTime).apply()
+                        }
+                    } else {
+                        // Fail closed: an unconfirmed cached room must not remain visible.
+                        NativeRoomMemoryCache.rooms = emptyList()
+                        rooms = emptyList()
+                        if (dao != null) runCatching { withContext(Dispatchers.IO) { dao.clearAll() } }
                     }
-                    if (update.serverTime > 0L) {
-                        roomSyncPrefs.edit().putLong("last_server_updated_at", update.serverTime).apply()
-                    }
-                } else {
-                    // Fail closed: never keep showing cached rooms when the server
-                    // cannot confirm that those room records still exist.
-                    NativeRoomMemoryCache.rooms = emptyList()
-                    rooms = emptyList()
-                    if (dao != null) runCatching { withContext(Dispatchers.IO) { dao.clearAll() } }
+                } finally {
+                    NativeRoomMemoryCache.refreshInFlight = false
                 }
-            } finally {
-                NativeRoomMemoryCache.refreshInFlight = false
             }
+            kotlinx.coroutines.delay(15_000L)
         }
     }
 
