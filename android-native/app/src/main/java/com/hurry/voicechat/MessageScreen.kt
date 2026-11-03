@@ -242,7 +242,9 @@ fun MessageScreen(onChat: (String, String, String) -> Unit, embeddedSheet: Boole
         val mainHandler = Handler(Looper.getMainLooper())
         val incoming = Emitter.Listener { args ->
             val payload = args.firstOrNull() as? JSONObject ?: return@Listener
-            if (payload.optString("receiverId") != currentUserId && payload.optString("receiverAccountId") != currentUserId) return@Listener
+            val receiverIds = setOf(currentUserId, currentAuthUid).filter { it.isNotBlank() }
+            if (payload.optString("receiverId") !in receiverIds &&
+                payload.optString("receiverAccountId") !in receiverIds) return@Listener
             val peerId = payload.optString("senderAccountId").ifBlank { payload.optString("senderId") }
             val isVoice = payload.optString("type") == "voice"
             val body = if (isVoice) {
