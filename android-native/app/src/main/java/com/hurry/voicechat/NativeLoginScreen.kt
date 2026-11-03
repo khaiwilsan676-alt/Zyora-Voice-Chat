@@ -886,7 +886,7 @@ private fun syncHurryUser(user: JSONObject, context: android.content.Context) {
     }
 
     val existingProfile = runCatching {
-        val get = (URL("$HURRY_API_BASE/api/users?uid=${java.net.URLEncoder.encode(uid, "UTF-8")}").openConnection() as HttpURLConnection).apply {
+        val get = (URL("$HURRY_API_BASE/api/users?uid=${java.net.URLEncoder.encode(uid, "UTF-8")}&compact=true").openConnection() as HttpURLConnection).apply {
             requestMethod = "GET"; connectTimeout = 10000; readTimeout = 10000
             setRequestProperty("Accept", "application/json")
         }
@@ -959,11 +959,8 @@ private fun syncHurryUser(user: JSONObject, context: android.content.Context) {
         .put("image", image).put("avatar", image)
         .put("accountId", accountId).put("accountNumber", accountId)
         .put("country", country).put("countryName", existingProfile.optString("countryName", country)).put("countryCode", existingProfile.optString("countryCode", "")).put("deviceId", deviceId)
-    val keys = existingProfile.keys()
-    while (keys.hasNext()) {
-        val key = keys.next()
-        if (!profile.has(key)) profile.put(key, existingProfile.opt(key))
-    }
+    // The server merges this compact identity patch into the existing MongoDB
+    // profile, so large album/cover fields never need to travel through login.
     val save = (URL("$HURRY_API_BASE/api/users").openConnection() as HttpURLConnection).apply {
         requestMethod = "PUT"; connectTimeout = 12000; readTimeout = 12000; doOutput = true
         setRequestProperty("Content-Type", "application/json")
