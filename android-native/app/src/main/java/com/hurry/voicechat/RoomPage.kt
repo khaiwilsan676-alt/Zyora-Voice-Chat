@@ -1288,11 +1288,11 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                 Modifier.align(Alignment.BottomCenter)
                     .zIndex(10f)
                     .padding(horizontal = 12.dp)
-                    .padding(bottom = 80.dp)
+                    .padding(bottom = 60.dp)
                     .fillMaxWidth()
                     .height(160.dp)
-                    .clip(RoundedCornerShape(22.dp))
-                    .background(Color.Black)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color(0xFF171D1B))
                     .padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
                 Column(Modifier.fillMaxSize()) {
@@ -1325,11 +1325,11 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                         Spacer(Modifier.height(28.dp))
                     } else {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            IconButton(onClick = { musicControllerMinimized = true }, modifier = Modifier.size(30.dp)) {
-                                Icon(Icons.Default.CloseFullscreen, "Minimize", tint = Color.White, modifier = Modifier.size(17.dp))
+                            IconButton(onClick = { musicClose() }, modifier = Modifier.size(34.dp)) {
+                                Icon(Icons.Default.PowerSettingsNew, "Stop music", tint = Color.White, modifier = Modifier.size(25.dp))
                             }
-                            IconButton(onClick = { musicClose() }, modifier = Modifier.size(30.dp)) {
-                                Icon(Icons.Default.PowerSettingsNew, "Stop music", tint = Color.White, modifier = Modifier.size(22.dp))
+                            IconButton(onClick = { musicControllerMinimized = true }, modifier = Modifier.size(34.dp)) {
+                                Icon(Icons.Default.CloseFullscreen, "Minimize", tint = Color.White, modifier = Modifier.size(22.dp))
                             }
                         }
                         Spacer(Modifier.height(3.dp))
@@ -1352,56 +1352,40 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                             Text(formatMusicTime(musicDuration), color = Color.White.copy(alpha = .7f), fontSize = 9.sp, fontWeight = FontWeight.Normal)
                         }
                         Spacer(Modifier.height(5.dp))
-                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Default.QueueMusic,
-                                "Open Music page",
-                                tint = Color.White,
-                                modifier = Modifier.size(22.dp).clickable {
-                                    musicControllerMinimized = true
-                                    MusicPlaybackState.isMusicPageOpen = true
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Icon(Icons.Default.VolumeUp, "Volume", tint = Color.White, modifier = Modifier.size(21.dp))
+                            ThickBar(
+                                progress = musicVolume,
+                                height = 5.dp,
+                                activeColor = Color(0xFF10B981),
+                                inactiveColor = Color.White.copy(alpha = 0.20f),
+                                modifier = Modifier.weight(1f),
+                                onProgressChange = { value ->
+                                    musicVolume = value
+                                    runCatching {
+                                        appContext.startService(Intent(appContext, RoomMusicService::class.java)
+                                            .setAction(RoomMusicService.ACTION_VOLUME)
+                                            .putExtra(RoomMusicService.EXTRA_VOLUME, value))
+                                    }
                                 }
                             )
-                            Spacer(Modifier.weight(1f))
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(0.2.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                IconButton(onClick = { musicPrev() }, modifier = Modifier.size(30.dp)) {
-                                    Icon(Icons.Default.SkipPrevious, "Previous", tint = Color.White, modifier = Modifier.size(21.dp))
-                                }
-                                Box(Modifier.size(40.dp).clip(CircleShape).background(Color.White).clickable { musicPlayPause() }, contentAlignment = Alignment.Center) {
-                                    Icon(if (isMusicPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                                        if (isMusicPlaying) "Pause" else "Play", tint = Color(0xFF202938), modifier = Modifier.size(22.dp))
-                                }
-                                IconButton(onClick = { musicNext() }, modifier = Modifier.size(30.dp)) {
-                                    Icon(Icons.Default.SkipNext, "Next", tint = Color.White, modifier = Modifier.size(21.dp))
-                                }
-                                Box(
-                                    Modifier.size(24.dp).clickable { musicReplayOne() },
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        Icons.Default.RepeatOne,
-                                        "Repeat current song",
-                                        tint = if (repeatOneEnabled) Color(0xFF3B82F6) else Color.White,
-                                        modifier = Modifier.size(22.dp)
-                                    )
-                                    Text(
-                                        "1",
-                                        color = if (repeatOneEnabled) Color(0xFF3B82F6) else Color.White,
-                                        fontSize = 8.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        modifier = Modifier.align(Alignment.BottomEnd)
-                                    )
-                                }
-                                Icon(
-                                    Icons.Default.VolumeUp,
-                                    "Volume",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(21.dp).clickable { showMusicVolumeView = true }
-                                )
+                            Box(Modifier.size(42.dp).clip(CircleShape).background(Color.White).clickable { musicPlayPause() }, contentAlignment = Alignment.Center) {
+                                Icon(if (isMusicPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                    if (isMusicPlaying) "Pause" else "Play", tint = Color(0xFF202938), modifier = Modifier.size(25.dp))
                             }
+                            IconButton(onClick = { musicNext() }, modifier = Modifier.size(34.dp)) {
+                                Icon(Icons.Default.SkipNext, "Next", tint = Color.White, modifier = Modifier.size(27.dp))
+                            }
+                            Box(Modifier.size(30.dp).clickable { musicReplayOne() }, contentAlignment = Alignment.Center) {
+                                Icon(Icons.Default.RepeatOne, "Repeat current song",
+                                    tint = if (repeatOneEnabled) Color(0xFF3B82F6) else Color.White,
+                                    modifier = Modifier.size(25.dp))
+                            }
+                            Icon(Icons.Default.QueueMusic, "Open Music page", tint = Color.White,
+                                modifier = Modifier.size(25.dp).clickable {
+                                    musicControllerMinimized = true
+                                    MusicPlaybackState.isMusicPageOpen = true
+                                })
                         }
                     }
                 }
