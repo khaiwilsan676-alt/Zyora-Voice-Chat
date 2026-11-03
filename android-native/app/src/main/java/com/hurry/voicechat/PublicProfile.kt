@@ -45,7 +45,6 @@ import coil3.compose.AsyncImage
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
-
 @Composable
 private fun LucidePublicProfileIcon(
     warning: Boolean,
@@ -295,7 +294,7 @@ fun PublicProfileScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF1F2937))
+            .background(Color.White) // 🔥 Tatti color removed, pure white set here
     ) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
@@ -335,7 +334,7 @@ fun PublicProfileScreen(
                         }
                     }
 
-                    // Avatar DP Circle M background image k ouper hi overlap (Corner left side m -16.dp position)
+                    // Avatar DP Circle M background image k ouper hi overlap
                     AsyncImage(
                         model = userPhoto,
                         contentDescription = "Avatar",
@@ -343,17 +342,17 @@ fun PublicProfileScreen(
                         modifier = Modifier
                             .align(Alignment.BottomStart)
                             .padding(start = 16.dp)
-                            .offset(y = (-16).dp) // -16.dp position
+                            .offset(y = (-20).dp) // 🔥 Changed to -20.dp
                             .size(86.dp)
                             .clip(CircleShape) // Bina kisi card and border k
                     )
                     NativeAvatarFrameOverlay(
                         userId = targetUser?.accountId?.takeIf { it.isNotBlank() } ?: targetUser?.uid?.takeIf { it.isNotBlank() } ?: targetUser?.id.orEmpty(),
-                        modifier = Modifier.align(Alignment.BottomStart).padding(start = 16.dp).offset(y = (-16).dp).size(86.dp)
+                        modifier = Modifier.align(Alignment.BottomStart).padding(start = 16.dp).offset(y = (-20).dp).size(86.dp) // 🔥 Changed to -20.dp
                     )
                     NativeAvatarFrameOverlay(
                         userId = targetUser?.accountId?.takeIf { it.isNotBlank() } ?: targetUser?.uid?.takeIf { it.isNotBlank() } ?: targetUser?.id.orEmpty(),
-                        modifier = Modifier.align(Alignment.BottomStart).padding(start = 16.dp).offset(y = (-16).dp).size(86.dp)
+                        modifier = Modifier.align(Alignment.BottomStart).padding(start = 16.dp).offset(y = (-20).dp).size(86.dp) // 🔥 Changed to -20.dp
                     )
 
                     // Top Bar
@@ -385,6 +384,7 @@ fun PublicProfileScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .offset(y = (-12).dp) // 🔥 2% Overlap added here to show white box curves clearly
                         // Clip the white surface at the item layer too, so LazyColumn cannot
                         // paint square white corners over the rounded profile panel.
                         .graphicsLayer {
@@ -412,7 +412,7 @@ fun PublicProfileScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            Text(displayName, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                            Text(displayName, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.Black) // 🔥 Name text size changed to 18.sp
                             
                             // GENDER BOX (Fully Rounded & Smaller)
                             Box(
@@ -516,7 +516,11 @@ fun PublicProfileScreen(
 
             // 3. Grids Section (Albums, Vehicles, Medals, Frames, Gifts)
             item {
-                Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
+                Column(modifier = Modifier
+                    .fillMaxWidth()
+                    .offset(y = (-12).dp) // 🔥 Same overlap applied so no gap remains
+                    .padding(horizontal = 20.dp, vertical = 8.dp)
+                ) {
                     
                     // Albums
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
