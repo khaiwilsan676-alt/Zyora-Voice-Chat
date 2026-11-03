@@ -18,8 +18,6 @@
         android:label="Zyora"
         android:icon="@drawable/hurry_logo"
         android:roundIcon="@drawable/hurry_logo">
-        <meta-data android:name="com.google.firebase.messaging.default_notification_channel_id" android:value="zyora_messages" />
-        <meta-data android:name="com.google.firebase.messaging.default_notification_icon" android:resource="@drawable/ic_stat_zyora" />
         <service
             android:name=".RoomMusicService"
             android:exported="false"
@@ -33,13 +31,6 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
-        <service
-            android:name=".ZyoraFirebaseMessagingService"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="com.google.firebase.MESSAGING_EVENT" />
-            </intent-filter>
-        </service>
         <activity
             android:name=".MainActivity"
             android:screenOrientation="portrait"
