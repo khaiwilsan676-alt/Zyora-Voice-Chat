@@ -446,10 +446,17 @@ fun NativeChatScreen(
             }
         }
     }
-    LaunchedEffect(messages.size, localConversationKey) {
+    val messageIds = remember(name, receiverId, currentUserId) {
+        mutableStateListOf<String>().apply {
+            val saved = runCatching { org.json.JSONArray(indexDb.loadChat(localConversationKey) ?: "[]") }.getOrDefault(org.json.JSONArray())
+            for (index in 0 until saved.length()) add(saved.optJSONObject(index)?.optString("id").orEmpty())
+            while (size < messages.size) add("")
+        }
+    }
+    LaunchedEffect(messages.size, messageIds.size, localConversationKey) {
         val array = org.json.JSONArray()
-        messages.forEach { (mine, value) ->
-            array.put(JSONObject().put("mine", mine).put("text", value))
+        messages.forEachIndexed { index, (mine, value) ->
+            array.put(JSONObject().put("id", messageIds.getOrNull(index).orEmpty()).put("mine", mine).put("text", value))
         }
         indexDb.saveChat(localConversationKey, array.toString())
     }
@@ -506,7 +513,10 @@ fun NativeChatScreen(
                 } else payload.optString("text")
                 if (value.isNotBlank()) mainHandler.post {
                     val mine = sender == currentUserId || senderAccountId == currentAccountId
+                    val messageId = payload.optString("id")
+                    if (messageId.isNotBlank() && messageIds.contains(messageId)) return@post
                     messages.add(mine to value)
+                    messageIds.add(messageId)
                     val peerId = if (mine) receiverId else senderAccountId
                     val peerName = if (mine) name else payload.optString("senderName", name)
                     val peerPhoto = if (mine) image else payload.optString("senderPhoto", image)
@@ -1042,6 +1052,7 @@ fun NativeChatScreen(
                                                     val localVoice = VoiceMessageStore.localMarker(messageId, durationSec)
                                                     val audioBase64 = VoiceMessageStore.persistOutgoing(context, messageId, receiverId, audioFile, durationSec)
                                                     messages.add(true to localVoice)
+                                                    messageIds.add(messageId)
                                                     saveConversationPreview(receiverId, name, image, "🎤 Voice message", System.currentTimeMillis())
                                                     val outgoing = JSONObject()
                                                         .put("id", messageId)
@@ -1119,10 +1130,12 @@ fun NativeChatScreen(
                                                     return@clickable
                                                 }
                                                 val outgoingText = text.trim()
+                                                val outgoingId = "${currentUserId}_${System.currentTimeMillis()}"
                                                 messages.add(true to outgoingText)
+                                                messageIds.add(outgoingId)
                                                 saveConversationPreview(receiverId, name, image, outgoingText, System.currentTimeMillis())
                                                 val outgoing = JSONObject()
-                                                    .put("id", "${currentUserId}_${System.currentTimeMillis()}")
+                                                    .put("id", outgoingId)
                                                     .put("senderId", currentUserId)
                                                     .put("senderAccountId", currentAccountId)
                                                     .put("receiverId", receiverId)
