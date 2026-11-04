@@ -2210,7 +2210,7 @@ io.on("connection", (socket) => {
       : Array.isArray(audio) && audio.length > 0 && audio.length <= 4096;
     if (!validAudio) return;
     // socket.to excludes the sender, preventing local self-monitoring.
-    socket.to(`room:${room}`).emit("room_voice_chunk", { roomId: room, userId: accountId, audio });
+    socket.to(`room:${room}`).emit("room_voice_chunk", { roomId: room, userId: accountId }, audio);
   });
 
   socket.on("room_voice_activity", (data = {}) => {
