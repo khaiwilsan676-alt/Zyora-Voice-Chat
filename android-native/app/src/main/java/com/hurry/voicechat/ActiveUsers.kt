@@ -29,7 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 
-data class ActiveUserNative(val accountId:String,val name:String,val image:String)
+data class ActiveUserNative(val accountId:String,val name:String,val image:String,val country:String="")
 
 @Composable
 fun ActiveUsers(
@@ -49,7 +49,7 @@ fun ActiveUsers(
     if (user.accountId.isBlank()) return@mapNotNull null
     val country = runCatching {
      // Use the same Room Profile country resolver as the Room Info Members list.
-     loadRoomProfileCountry(context, user.accountId, user.name, user.image)
+     loadRoomProfileCountry(context, user.accountId, user.name, user.image, user.country)
     }.getOrDefault("")
     user.accountId to country
    }.toMap()
