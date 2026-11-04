@@ -57,7 +57,7 @@ fun ActiveUsers(
    if (remote != null) {
     val profileObjects = listOfNotNull(remote, remote.optJSONObject("profile"), remote.optJSONObject("publicProfile"), remote.optJSONObject("user"), remote.optJSONObject("data"))
     val country = profileObjects.asSequence().flatMap { obj ->
-     sequenceOf("countryName","country","Country","countryCode","country_code","location","country_name","nationality").map { key -> obj.optString(key,"").trim() }
+     sequenceOf("flag","countryName","country","Country","countryCode","country_code","location","country_name","nationality").map { key -> obj.optString(key,"").trim() }
     }.firstOrNull { it.isNotBlank() && it!="null" }.orEmpty()
     if (country.isNotBlank()) cached.put("country", country)
    }
@@ -111,7 +111,7 @@ fun ActiveUsers(
         val country = countryByUser[user.accountId].orEmpty()
         // Keep the flag slot reserved so Lv.1 never shifts when a profile has no country.
         Box(Modifier.width(18.dp).height(18.dp),contentAlignment=Alignment.Center) {
-         if(country.isNotBlank()) Text(activeCountryFlag(country),fontSize=14.sp)
+         if(country.isNotBlank()) Text(roomProfileCountryFlag(country),fontSize=14.sp)
         }
         Box(Modifier.height(16.dp).width(36.dp),contentAlignment=Alignment.CenterEnd){
          AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261028_004355.png",contentDescription="Level",
@@ -130,7 +130,7 @@ fun ActiveUsers(
  }
 }
 
-private fun activeCountryFlag(country: String): String {
+fun roomProfileCountryFlag(country: String): String {
  val raw = country.trim()
  if (raw.isBlank()) return ""
  val regionalIndicators = raw.codePoints().toArray().filter { it in 0x1F1E6..0x1F1FF }
