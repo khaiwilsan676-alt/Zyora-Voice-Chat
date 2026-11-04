@@ -430,7 +430,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
     HurryTheme {
         Box(Modifier.fillMaxSize().navigationBarsPadding()) {
             if (openedPublicProfile != null) {
-                PublicProfile(user=openedPublicProfile!!,onBack={openedPublicProfile=null},onMessage={ val profile = openedPublicProfile!!; val receiverId = profile.accountId?.takeIf { it.isNotBlank() } ?: profile.id?.takeIf { it.isNotBlank() } ?: profile.uid.orEmpty(); if (receiverId.isNotBlank() && receiverId != userId) { openedChat = Triple(receiverId, profile.name, profile.image); openedPublicProfile = null } },currentUserId=userId)
+                PublicProfile(user=openedPublicProfile!!,onBack={openedPublicProfile=null},onMessage={ val profile = openedPublicProfile!!; val receiverId = profile.accountId?.takeIf { it.isNotBlank() } ?: profile.id?.takeIf { it.isNotBlank() } ?: profile.uid.orEmpty(); if (receiverId.isNotBlank() && receiverId != userId) { openedChat = Triple(receiverId, profile.name, profile.image); openedPublicProfile = null } },currentUserId=userId,onJoinRoom={ targetRoomId -> openedPublicProfile=null; openedRoom=HurryRoom(id=targetRoomId,name="Room",image="",country="",accountId=targetRoomId) })
             } else if (openedRoomSupport) {
                 RoomSupport(onBack = { openedRoomSupport = false })
             } else if (openedSearch) {
@@ -476,7 +476,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                 InviteFriends(onBack = { openedInvite = false })
             } else if (openedChat != null) {
                 val chat = openedChat!!
-                NativeChatScreen(name = chat.second, image = chat.third, receiverId = chat.first, currentUserId = userId, currentAccountIdOverride = authPrefs.getString("accountId", userId).orEmpty().ifBlank { userId }, onBack = { openedChat = null })
+                NativeChatScreen(name = chat.second, image = chat.third, receiverId = chat.first, currentUserId = userId, currentAccountIdOverride = authPrefs.getString("accountId", userId).orEmpty().ifBlank { userId }, onBack = { openedChat = null }, onJoinRoom = { targetRoomId -> openedChat=null; openedRoom=HurryRoom(id=targetRoomId,name="Room",image="",country="",accountId=targetRoomId) })
             } else {
                 Column(Modifier.fillMaxSize()) {
                     Box(Modifier.weight(1f)) {
