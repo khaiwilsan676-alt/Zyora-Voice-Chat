@@ -1113,21 +1113,21 @@ fun NativeChatScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .background(Color(0xFFDBEAFE)) 
-                            // Padding reduced from 5.dp to 2.dp (height patli kar di gayi hai)
-                            .padding(horizontal = 16.dp, vertical = 2.dp),
+                            // Padding reduced for thinner height
+                            .padding(horizontal = 16.dp, vertical = 1.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
                             imageVector = Icons.Default.Info, 
                             contentDescription = "Warning",
                             tint = Color(0xFF1D4ED8), 
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(14.dp)
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = "Protect your info. Beware of scams.",
                             color = Color(0xFF1D4ED8), 
-                            fontSize = 13.sp,
+                            fontSize = 11.sp, // Text chota kar diya
                             fontWeight = FontWeight.Medium,
                             modifier = Modifier.weight(1f)
                         )
@@ -1136,7 +1136,7 @@ fun NativeChatScreen(
                             contentDescription = "Close",
                             tint = Color(0xFF1D4ED8),
                             modifier = Modifier
-                                .size(18.dp)
+                                .size(16.dp)
                                 .clickable { showScamBanner = false }
                         )
                     }
@@ -1146,30 +1146,39 @@ fun NativeChatScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        // Outer padding reduced from 8.dp to 4.dp
-                        .padding(horizontal = 12.dp, vertical = 4.dp)
-                        .clip(RoundedCornerShape(24.dp))
+                        .padding(horizontal = 11.dp, vertical = 2.dp) // Outer padding thori kam kar di
+                        .clip(RoundedCornerShape(25.dp))
                         .background(Color(0xFF3B82F6))
                         .clickable { onJoinRoom(peerRoomId) }
-                        // Inner padding reduced from 10.dp to 6.dp (banner patla kar diya gaya hai)
-                        .padding(horizontal = 16.dp, vertical = 6.dp),
+                        .padding(horizontal = 12.dp, vertical = 4.dp), // Banner height decreased
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "I'm chatting and play games in\nvoice room, join me~",
-                        color = Color.White,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium,
-                        lineHeight = 18.sp,
-                        modifier = Modifier.weight(1f)
+                    // Added user avatar in left corner without border
+                    AsyncImage(
+                        model = image, // Peer (samne wale) user ka image
+                        contentDescription = name,
+                        modifier = Modifier
+                            .size(34.dp)
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop
                     )
                     Spacer(modifier = Modifier.width(8.dp))
+
+                    Text(
+                        text = "I'm chatting and playing games in\nvoice room, join me~",
+                        color = Color.White,
+                        fontSize = 12.sp, // Text chota kar diya
+                        fontWeight = FontWeight.Medium,
+                        lineHeight = 16.sp, // Line height adjust kar diya
+                        modifier = Modifier.weight(1f)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
                     Row(
                         modifier = Modifier
                             .clip(RoundedCornerShape(16.dp))
                             .background(Color.White)
                             .clickable { onJoinRoom(peerRoomId) }
-                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                            .padding(horizontal = 10.dp, vertical = 4.dp), // Pill height decreased
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Row(
@@ -1184,7 +1193,7 @@ fun NativeChatScreen(
                         Text(
                             text = "In Room",
                             color = Color(0xFF3B82F6),
-                            fontSize = 13.sp,
+                            fontSize = 11.sp, // Thora chota kar diya taaki proportional lage
                             fontWeight = FontWeight.Bold
                         )
                     }
