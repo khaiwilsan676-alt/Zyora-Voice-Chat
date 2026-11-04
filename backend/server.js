@@ -378,45 +378,28 @@ function markUserOnline(userId, socket, accountId = null) {
 
   const id = String(userId);
   const account = accountId ? String(accountId) : null;
+  const presenceIds = socket.presenceIds instanceof Set ? socket.presenceIds : new Set();
 
-  if (
-    socket.userId === id &&
-    socket.accountId === account &&
-    socket.isPresenceRegistered
-  ) {
-    return;
-  }
-
-  socket.userId = id;
-  socket.accountId = account;
-  socket.isPresenceRegistered = true;
-
-  socket.presenceIds = new Set([id]);
-
-  if (account) {
-    socket.presenceIds.add(account);
-  }
-
-  socket.presenceIds.forEach((presenceId) => {
-    socket.join(`user:${presenceId}`);
-
+  // Register each identity at most once per socket. Repeated register /
+  // presence_online events must not orphan the previous Redis key or count.
+  const requestedIds = new Set([id, account].filter(Boolean));
+  requestedIds.forEach((presenceId) => {
+    if (presenceIds.has(presenceId)) return;
+    presenceIds.add(presenceId);
+    socket.join('user:' + presenceId);
     const count = onlineUsers.get(presenceId) || 0;
     onlineUsers.set(presenceId, count + 1);
-
-    if (count === 0) {
-      socket.broadcast.emit("user_online", presenceId);
-    }
-
-    // Sync to Redis asynchronously (fire and forget)
+    if (count === 0) socket.broadcast.emit('user_online', presenceId);
     setOnlineStatus(presenceId);
     setSecondaryStatus(presenceId);
   });
 
-  socket.emit("presence_status", {
-    userId: id,
-    accountId: account,
-    online: true,
-  });
+  socket.userId = id;
+  // Keep global presence identity separate from room membership's accountId.
+  socket.presenceAccountId = account;
+  socket.presenceIds = presenceIds;
+  socket.isPresenceRegistered = true;
+  socket.emit('presence_status', { userId: id, accountId: account, online: true });
 }
 
 function markUserOffline(socket) {
@@ -431,7 +414,7 @@ function markUserOffline(socket) {
     new Set(
       [
         socket.userId,
-        socket.accountId,
+        socket.presenceAccountId,
       ].filter(Boolean)
     );
 
