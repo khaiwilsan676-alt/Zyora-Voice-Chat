@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.media.AudioAttributes
+import android.media.audiofx.AcousticEchoCanceler
 import android.media.AudioFormat
 import android.media.AudioManager
 import android.os.Build
@@ -68,7 +69,7 @@ fun JitsiRoomAudio(
         }
     }
 
-    DisposableEffect(context, roomId, roomSocket, canSpeak, hasMicPermission) {
+    DisposableEffect(context, roomId, roomSocket, canSpeak, hasMicPermission, hasBluetoothPermission) {
         if (roomSocket == null) return@DisposableEffect onDispose { }
         val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
         val oldMode = audioManager.mode
@@ -97,6 +98,7 @@ fun JitsiRoomAudio(
         val alive = AtomicBoolean(true)
         val recording = AtomicBoolean(false)
         var recorder: AudioRecord? = null
+        var echoCanceler: AcousticEchoCanceler? = null
         var player: AudioTrack? = null
         var captureThread: Thread? = null
 
@@ -105,6 +107,8 @@ fun JitsiRoomAudio(
             runCatching { recorder?.stop() }
             captureThread?.join(350)
             captureThread = null
+            runCatching { echoCanceler?.release() }
+            echoCanceler = null
             runCatching { recorder?.release() }
             recorder = null
             onSpeakingChanged(false)
@@ -132,6 +136,11 @@ fun JitsiRoomAudio(
                 return
             }
             recorder = created
+            if (AcousticEchoCanceler.isAvailable()) {
+                echoCanceler = runCatching {
+                    AcousticEchoCanceler.create(created.audioSessionId)?.also { it.enabled = true }
+                }.getOrNull()
+            }
             recording.set(true)
             runCatching { created.startRecording() }.onFailure {
                 recording.set(false)
