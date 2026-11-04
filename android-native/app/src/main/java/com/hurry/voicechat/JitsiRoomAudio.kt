@@ -170,21 +170,60 @@ fun JitsiRoomAudio(
                 failCaptureStart()
                 return
             }
-            onSpeakingChanged(true)
+            onSpeakingChanged(false)
             captureThread = thread(name = "ZyoraRoomMic", isDaemon = true) {
                 val frame = ByteArray(ROOM_VOICE_FRAME_BYTES)
                 var filled = 0
+                var speechFrames = 0
+                var silenceFrames = 0
+                var voiceActive = false
                 while (alive.get() && recording.get()) {
                     val count = runCatching { created.read(frame, filled, frame.size - filled) }.getOrDefault(-1)
                     if (count > 0) {
                         filled += count
                         if (filled == frame.size) {
-                            if (recording.get() && roomSocket.connected()) {
-                                runCatching {
-                                    roomSocket.emit(
-                                        "room_voice_chunk",
-                                        JSONObject().put("roomId", roomId).put("audio", frame.copyOf())
-                                    )
+                            if (recording.get()) {
+                                var squareSum = 0L
+                                var sampleIndex = 0
+                                while (sampleIndex < frame.size) {
+                                    val sample = ((frame[sampleIndex + 1].toInt() shl 8) or
+                                        (frame[sampleIndex].toInt() and 0xFF)).toShort().toInt()
+                                    squareSum += sample.toLong() * sample.toLong()
+                                    sampleIndex += 2
+                                }
+                                val meanSquare = squareSum / (frame.size / 2)
+                                val voiceDetected = meanSquare > 400L * 400L
+                                if (voiceDetected) {
+                                    speechFrames += 1
+                                    silenceFrames = 0
+                                    if (!voiceActive && speechFrames >= 2) {
+                                        voiceActive = true
+                                        if (roomSocket.connected()) {
+                                            roomSocket.emit("room_voice_activity", JSONObject().put("roomId", roomId).put("speaking", true))
+                                        }
+                                        Handler(Looper.getMainLooper()).post { onSpeakingChanged(true) }
+                                    }
+                                } else {
+                                    speechFrames = 0
+                                    if (voiceActive) {
+                                        silenceFrames += 1
+                                        if (silenceFrames >= 12) {
+                                            voiceActive = false
+                                            silenceFrames = 0
+                                            if (roomSocket.connected()) {
+                                                roomSocket.emit("room_voice_activity", JSONObject().put("roomId", roomId).put("speaking", false))
+                                            }
+                                            Handler(Looper.getMainLooper()).post { onSpeakingChanged(false) }
+                                        }
+                                    }
+                                }
+                                if (roomSocket.connected()) {
+                                    runCatching {
+                                        roomSocket.emit(
+                                            "room_voice_chunk",
+                                            JSONObject().put("roomId", roomId).put("audio", frame.copyOf())
+                                        )
+                                    }
                                 }
                             }
                             filled = 0
