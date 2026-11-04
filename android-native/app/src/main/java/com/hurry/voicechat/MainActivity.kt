@@ -439,6 +439,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                         country = openedRoom!!.country
                     ),
                     currentUser = RoomPageCurrentUser(id = userId, uid = userId, accountId = authPrefs.getString("accountId", userId).orEmpty(), name = authPrefs.getString("name", "User").orEmpty(), image = authPrefs.getString("image", "").orEmpty()),
+                    onOpenPublicProfile = { profile -> openedPublicProfile = profile },
                     onBack = { openedRoom = null },
                     onRoomSupport = { openedRoomSupport = true },
                     onClose = {
