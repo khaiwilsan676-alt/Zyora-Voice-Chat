@@ -1753,7 +1753,8 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                                 showMessageSheet = false
                             },
                             embeddedSheet=true,
-                            onBack={ showMessageSheet=false }
+                            onBack={ showMessageSheet=false },
+                            onJoinRoom=onJoinRoom
                         )
                     }
                 }
