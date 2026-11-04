@@ -53,7 +53,7 @@ fun JitsiRoomAudio(
         if (canSpeak && !hasMicPermission) permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
     }
 
-    DisposableEffect(context, roomId, roomSocket) {
+    DisposableEffect(context, roomId, roomSocket, canSpeak, hasMicPermission) {
         if (roomSocket == null) return@DisposableEffect onDispose { }
         val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
         val oldMode = audioManager.mode
@@ -165,10 +165,11 @@ fun JitsiRoomAudio(
 
         roomSocket.on("room_voice_permission", permissionListener)
         roomSocket.on("room_voice_chunk", chunkListener)
-        roomSocket.on(Socket.EVENT_DISCONNECT) {
+        val disconnectListener = Emitter.Listener {
             stopCapture()
             runCatching { player?.pause(); player?.flush() }
         }
+        roomSocket.on(Socket.EVENT_DISCONNECT, disconnectListener)
 
         if (canSpeak && hasMicPermission && roomSocket.connected()) {
             roomSocket.emit("room_voice_start", JSONObject().put("roomId", roomId))
@@ -179,6 +180,7 @@ fun JitsiRoomAudio(
             roomSocket.emit("room_voice_stop", JSONObject().put("roomId", roomId))
             roomSocket.off("room_voice_permission", permissionListener)
             roomSocket.off("room_voice_chunk", chunkListener)
+            roomSocket.off(Socket.EVENT_DISCONNECT, disconnectListener)
             stopCapture()
             runCatching { player?.stop(); player?.release() }
             player = null
