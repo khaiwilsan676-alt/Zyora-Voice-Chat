@@ -64,66 +64,47 @@ fun RoomInfo(
     LaunchedEffect(roomFollowers.map { it.accountId }, roomAdmins.map { it.accountId }) {
         val all = (roomFollowers + roomAdmins).distinctBy { it.accountId }.filter { it.accountId.isNotBlank() }
         val loaded = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            all.mapNotNull { member -> runCatching {
-                val encoded = java.net.URLEncoder.encode(member.accountId, "UTF-8")
-                val conn = (java.net.URL("https://zyora-server.onrender.com/api/users?search=" + encoded + "&accountId=" + encoded + "&q=" + encoded).openConnection() as java.net.HttpURLConnection).apply { connectTimeout=5000; readTimeout=5000 }
-                try {
-                    if (conn.responseCode !in 200..299) return@runCatching null
-                    val raw = conn.inputStream.bufferedReader().use { it.readText() }.trim()
-                    val arr = if (raw.startsWith("[")) org.json.JSONArray(raw) else org.json.JSONObject(raw).let { root -> root.optJSONArray("users") ?: root.optJSONArray("results") ?: org.json.JSONArray().apply { root.optJSONObject("user")?.let { put(it) } } }
-                    val u = (0 until arr.length()).mapNotNull { arr.optJSONObject(it) }.firstOrNull { it.optString("accountId", it.optString("accountNumber", "")) == member.accountId || it.optString("uid") == member.accountId || it.optString("id") == member.accountId }
-                    u?.let { user ->
-                        val name = sequenceOf("name","displayName","userName","nickname").map { user.optString(it,"").trim() }.firstOrNull { it.isNotBlank() && it!="null" } ?: member.name
-                        val image = sequenceOf("image","avatar","profileImageUrl").map { user.optString(it,"").trim() }.firstOrNull { it.isNotBlank() && it!="null" } ?: member.image
-                        val country = sequenceOf("country","countryName","countryCode","country_code","countryFlag","nationality","location").map { user.optString(it,"").trim() }.firstOrNull { it.isNotBlank() && it!="null" } ?: member.country
-                        member.accountId to RoomInfoFollower(member.accountId,name,image,loadRoomProfileCountry(context, member.accountId, name, image, country))
-                    }
-                } finally { conn.disconnect() }
-            }.getOrNull() }.toMap()
+            all.associate { member ->
+                val roomProfileCountry = runCatching {
+                    // Read the same Room Profile country field used by the Room Profile sheet.
+                    loadRoomProfileCountry(context, member.accountId, member.name, member.image)
+                }.getOrDefault("")
+                member.accountId to member.copy(country = roomProfileCountry)
+            }
         }
         memberProfiles = loaded
     }
 
-    // Always resolve the host from the user's public profile by stable ID.
-    // roomOwner.name is populated from the room listing and can be the room title.
-    LaunchedEffect(roomOwner.id, roomOwner.uid, roomOwner.accountId) {
+    // Resolve host display details by stable ID; country always comes from Room Profile.
+    LaunchedEffect(roomOwner.id, roomOwner.uid, roomOwner.accountId, roomOwner.name, roomOwner.image) {
         val ownerId = roomOwner.accountId.ifBlank { roomOwner.id.ifBlank { roomOwner.uid } }
-        if (isLogoOwner || ownerId.isBlank()) return@LaunchedEffect
+        if (ownerId.isBlank()) return@LaunchedEffect
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            runCatching {
-                val encoded = java.net.URLEncoder.encode(ownerId, "UTF-8")
-                val connection = (java.net.URL("https://zyora-server.onrender.com/api/users?search=$encoded&accountId=$encoded&q=$encoded").openConnection() as java.net.HttpURLConnection).apply {
-                    connectTimeout = 7000
-                    readTimeout = 7000
-                    setRequestProperty("Accept", "application/json")
+            val profile = runCatching {
+                ProfilePersistence.load(TargetUser(
+                    id = ownerId, uid = ownerId, accountId = ownerId,
+                    name = roomOwner.name, image = roomOwner.image
+                ))
+            }.getOrNull()
+            val country = runCatching {
+                loadRoomProfileCountry(context, ownerId, roomOwner.name, roomOwner.image)
+            }.getOrDefault("")
+            val name = profile?.let { p ->
+                sequenceOf("name", "displayName", "userName", "nickname")
+                    .map { p.optString(it, "").trim() }
+                    .firstOrNull { it.isNotBlank() && it != "null" && !it.equals("User", true) }
+            }.orEmpty()
+            val image = profile?.let { p ->
+                sequenceOf("image", "avatar", "profileImageUrl")
+                    .map { p.optString(it, "").trim() }
+                    .firstOrNull { it.isNotBlank() && it != "null" }
+            }.orEmpty()
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                if (!isLogoOwner) {
+                    if (name.isNotBlank()) ownerDisplayName = name
+                    if (image.isNotBlank()) ownerDisplayImage = image
                 }
-                try {
-                    if (connection.responseCode !in 200..299) return@runCatching
-                    val raw = connection.inputStream.bufferedReader().use { it.readText() }.trim()
-                    val users = if (raw.startsWith("[")) org.json.JSONArray(raw) else {
-                        val root = org.json.JSONObject(raw)
-                        root.optJSONArray("users") ?: root.optJSONArray("results")
-                            ?: org.json.JSONArray().apply { root.optJSONObject("user")?.let { put(it) } }
-                    }
-                    val profile = (0 until users.length()).mapNotNull { users.optJSONObject(it) }.firstOrNull { item ->
-                        item.optString("accountId", item.optString("accountNumber", item.optString("displayUserNumber", ""))) == ownerId ||
-                            item.optString("uid") == ownerId || item.optString("id") == ownerId
-                    } ?: return@runCatching
-                    val name = sequenceOf("name", "displayName", "userName", "nickname")
-                        .map { profile.optString(it, "").trim() }
-                        .firstOrNull { it.isNotBlank() && it != "null" && it != "User" }.orEmpty()
-                    val image = sequenceOf("image", "avatar", "profileImageUrl")
-                        .map { profile.optString(it, "").trim() }
-                        .firstOrNull { it.isNotBlank() && it != "null" }.orEmpty()
-                    val country = sequenceOf("country", "countryName", "countryCode", "country_code", "countryFlag", "nationality", "location")
-                        .map { profile.optString(it, "").trim() }
-                        .firstOrNull { it.isNotBlank() && it != "null" }.orEmpty()
-                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                        if (name.isNotBlank()) ownerDisplayName = name
-                        if (image.isNotBlank()) ownerDisplayImage = image
-                        if (country.isNotBlank()) ownerCountry = loadRoomProfileCountry(context, ownerId, name, image, country)
-                    }
-                } finally { connection.disconnect() }
+                ownerCountry = country
             }
         }
     }
