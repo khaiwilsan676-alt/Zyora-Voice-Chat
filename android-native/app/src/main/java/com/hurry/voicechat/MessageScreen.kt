@@ -262,31 +262,6 @@ fun PrivateMessageInboxSync() {
         val options = IO.Options().apply { transports = arrayOf("websocket"); reconnection = true; reconnectionAttempts = Int.MAX_VALUE }
         val socket = IO.socket("https://zyora-server.onrender.com", options)
         val mainHandler = Handler(Looper.getMainLooper())
-        val peerPresenceListener = Emitter.Listener { args ->
-            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
-            if (payload.optString("userId") == receiverId || payload.optString("accountId") == receiverId) {
-                mainHandler.post { peerOnline = payload.optBoolean("online", false) }
-            }
-        }
-        val peerOnlineListener = Emitter.Listener { args ->
-            if (args.firstOrNull()?.toString() == receiverId) mainHandler.post { peerOnline = true }
-        }
-        val peerOfflineListener = Emitter.Listener { args ->
-            if (args.firstOrNull()?.toString() == receiverId) mainHandler.post { peerOnline = false }
-        }
-        val roomStatusListener = Emitter.Listener { args ->
-            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
-            if (payload.optString("accountId", payload.optString("userId")) == receiverId) {
-                mainHandler.post { peerRoomId = if (payload.optBoolean("inRoom", false)) payload.optString("roomId") else "" }
-            }
-        }
-        chatSocket.on("presence_status", peerPresenceListener)
-        chatSocket.on("user_online", peerOnlineListener)
-        chatSocket.on("user_offline", peerOfflineListener)
-        chatSocket.on("user_room_status", roomStatusListener)
-        chatSocket.on("user_room_status_updated", roomStatusListener)
-        chatSocket.emit("check_presence", receiverId)
-        chatSocket.emit("user_room_status_request", JSONObject().put("userId", receiverId).put("accountId", receiverId))
         val incoming = Emitter.Listener { args ->
             val payload = args.firstOrNull() as? JSONObject ?: return@Listener
             val receiverIds = setOf(authUid, accountId)
@@ -730,6 +705,31 @@ fun NativeChatScreen(
         val chatSocket = IO.socket("https://zyora-server.onrender.com", opts)
         directSocket = chatSocket
         val mainHandler = Handler(Looper.getMainLooper())
+        val peerPresenceListener = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
+            if (payload.optString("userId") == receiverId || payload.optString("accountId") == receiverId) {
+                mainHandler.post { peerOnline = payload.optBoolean("online", false) }
+            }
+        }
+        val peerOnlineListener = Emitter.Listener { args ->
+            if (args.firstOrNull()?.toString() == receiverId) mainHandler.post { peerOnline = true }
+        }
+        val peerOfflineListener = Emitter.Listener { args ->
+            if (args.firstOrNull()?.toString() == receiverId) mainHandler.post { peerOnline = false }
+        }
+        val roomStatusListener = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
+            if (payload.optString("accountId", payload.optString("userId")) == receiverId) {
+                mainHandler.post { peerRoomId = if (payload.optBoolean("inRoom", false)) payload.optString("roomId") else "" }
+            }
+        }
+        chatSocket.on("presence_status", peerPresenceListener)
+        chatSocket.on("user_online", peerOnlineListener)
+        chatSocket.on("user_offline", peerOfflineListener)
+        chatSocket.on("user_room_status", roomStatusListener)
+        chatSocket.on("user_room_status_updated", roomStatusListener)
+        chatSocket.emit("check_presence", receiverId)
+        chatSocket.emit("user_room_status_request", JSONObject().put("userId", receiverId).put("accountId", receiverId))
         val incoming = Emitter.Listener { args ->
             val payload = args.firstOrNull() as? JSONObject ?: return@Listener
             val sender = payload.optString("senderId")
