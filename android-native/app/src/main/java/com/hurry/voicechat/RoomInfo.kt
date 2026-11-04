@@ -26,6 +26,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
 import coil3.compose.AsyncImage
 
 data class RoomInfoOwner(val id:String="",val uid:String="",val accountId:String="",val name:String,val image:String)
@@ -46,6 +47,7 @@ fun RoomInfo(
     copied:Boolean=false
 ) {
     if (!isOpen) return
+    val context = LocalContext.current
     var tab by remember { mutableStateOf(0) }
     // roomOwner.name may be the ROOM title from discovery/kept-room data.
     // Never use it as the host profile name; resolve the host by stable account ID.
@@ -74,7 +76,7 @@ fun RoomInfo(
                         val name = sequenceOf("name","displayName","userName","nickname").map { user.optString(it,"").trim() }.firstOrNull { it.isNotBlank() && it!="null" } ?: member.name
                         val image = sequenceOf("image","avatar","profileImageUrl").map { user.optString(it,"").trim() }.firstOrNull { it.isNotBlank() && it!="null" } ?: member.image
                         val country = sequenceOf("country","countryName","countryCode","country_code","countryFlag","nationality","location").map { user.optString(it,"").trim() }.firstOrNull { it.isNotBlank() && it!="null" } ?: member.country
-                        member.accountId to RoomInfoFollower(member.accountId,name,image,country)
+                        member.accountId to RoomInfoFollower(member.accountId,name,image,loadRoomProfileCountry(context, member.accountId, name, image, country))
                     }
                 } finally { conn.disconnect() }
             }.getOrNull() }.toMap()
@@ -119,7 +121,7 @@ fun RoomInfo(
                     kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                         if (name.isNotBlank()) ownerDisplayName = name
                         if (image.isNotBlank()) ownerDisplayImage = image
-                        if (country.isNotBlank()) ownerCountry = country
+                        if (country.isNotBlank()) ownerCountry = loadRoomProfileCountry(context, ownerId, name, image, country)
                     }
                 } finally { connection.disconnect() }
             }
@@ -258,7 +260,7 @@ private fun MemberRow(
             }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                 Box(Modifier.size(width = 18.dp, height = 16.dp), contentAlignment = Alignment.Center) {
-                    if (country.isNotBlank()) Text(countryFlagEmoji(country), fontSize = 13.sp)
+                    if (country.isNotBlank()) Text(roomProfileCountryFlag(country), fontSize = 13.sp)
                 }
                 Box(Modifier.height(16.dp).width(36.dp), contentAlignment = Alignment.Center) {
                     AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261028_004355.png",
