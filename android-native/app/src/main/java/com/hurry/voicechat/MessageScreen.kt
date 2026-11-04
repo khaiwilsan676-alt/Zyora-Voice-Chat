@@ -1509,18 +1509,16 @@ fun NativeChatScreen(
         }
     }
     if (showReportPage) {
-        PublicProfileScreen(
-            onBack = { showReportPage = false },
-            isOtherUser = true,
-            targetUser = TargetUser(
+        RoomProfile(
+            user = RoomUser(
                 id = receiverId,
                 uid = receiverId,
-                name = name,
-                displayAccountNumber = receiverId,
                 accountId = receiverId,
-                photo = image,
+                name = name,
                 image = image
             ),
+            isCurrentUser = false,
+            onClose = { showReportPage = false },
             initialReportOpen = true
         )
     }
