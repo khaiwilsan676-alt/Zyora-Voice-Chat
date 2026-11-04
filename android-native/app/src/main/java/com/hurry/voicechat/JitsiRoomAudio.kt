@@ -113,7 +113,9 @@ fun JitsiRoomAudio(
         var player: AudioTrack? = null
         val playerLock = Any()
         var playbackThread: Thread? = null
-        val playbackQueue = ArrayBlockingQueue<ByteArray>(50)
+        // 20 ms PCM frames: six packets cap stale playback to about 120 ms
+        // instead of allowing nearly one second of delayed voice to accumulate.
+        val playbackQueue = ArrayBlockingQueue<ByteArray>(6)
         var captureThread: Thread? = null
         var musicRelayThread: Thread? = null
         var musicWatcherThread: Thread? = null
