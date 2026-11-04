@@ -272,8 +272,18 @@ fun JitsiRoomAudio(
         val chunkListener = Emitter.Listener { args ->
             val data = args.firstOrNull() as? JSONObject ?: return@Listener
             if (data.optString("roomId") != roomId || !alive.get()) return@Listener
-            val bytes = data.opt("audio") as? ByteArray ?: return@Listener
-            if (bytes.isEmpty() || bytes.size > 4096) return@Listener
+            // JSONObject serializes Kotlin ByteArray payloads as JSON number arrays.
+            // Accept both Socket.IO binary buffers and JSON arrays so relayed mic/music
+            // packets are decoded consistently on every Android client.
+            val rawAudio = data.opt("audio")
+            val bytes = when (rawAudio) {
+                is ByteArray -> rawAudio
+                is org.json.JSONArray -> ByteArray(rawAudio.length()) { index ->
+                    rawAudio.optInt(index, 0).coerceIn(0, 255).toByte()
+                }
+                else -> return@Listener
+            }
+            if (bytes.isEmpty() || bytes.size > 4096 || bytes.size % 2 != 0) return@Listener
             val output = player ?: run {
                 val minOut = AudioTrack.getMinBufferSize(
                     ROOM_VOICE_SAMPLE_RATE,
