@@ -43,6 +43,7 @@ fun SettingsPage(
     var showPrivacyPolicy by remember { mutableStateOf(false) }
     var showDeleteAccount by remember { mutableStateOf(false) }
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
+    var showLogoutConfirmDialog by remember { mutableStateOf(false) }
 
     // Dialog logic - Center Popup
     if (showDeleteConfirmDialog) {
@@ -99,6 +100,51 @@ fun SettingsPage(
                                 .clickable { 
                                     showDeleteConfirmDialog = false
                                     // Add logic for account deletion here
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("Confirm", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = Color.White)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (showLogoutConfirmDialog) {
+        Dialog(onDismissRequest = { showLogoutConfirmDialog = false }) {
+            Card(
+                shape = RoundedCornerShape(6.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(horizontal = 22.dp, vertical = 24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text("Logout", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        "Are you sure? do you want to logout your Account",
+                        fontSize = 15.sp, color = Color(0xFF4B5563),
+                        textAlign = TextAlign.Center, lineHeight = 22.sp
+                    )
+                    Spacer(Modifier.height(24.dp))
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Box(
+                            Modifier.weight(1f).height(44.dp)
+                                .background(Color(0xFFE5E7EB), RoundedCornerShape(6.dp))
+                                .clickable { showLogoutConfirmDialog = false },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("Cancel", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = Color(0xFF4B5563))
+                        }
+                        Box(
+                            Modifier.weight(1f).height(44.dp)
+                                .background(LogoutRed, RoundedCornerShape(6.dp))
+                                .clickable {
+                                    showLogoutConfirmDialog = false
+                                    onLogout()
                                 },
                             contentAlignment = Alignment.Center
                         ) {
@@ -331,7 +377,7 @@ fun SettingsPage(
             Modifier
                 .fillMaxWidth()
                 .background(Color.White)
-                .clickable { onLogout() }
+                .clickable { showLogoutConfirmDialog = true }
                 .padding(vertical = 18.dp), 
             contentAlignment = Alignment.Center
         ) {
