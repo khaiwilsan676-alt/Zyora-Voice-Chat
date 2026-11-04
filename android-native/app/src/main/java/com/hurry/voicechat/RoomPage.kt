@@ -861,6 +861,23 @@ fun RoomPage(
                 }
             }
         }
+        val voiceSpeakerListener = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject
+            if (payload != null && payload.optString("roomId") == roomId) {
+                val speakingUserId = payload.optString("userId").trim()
+                if (speakingUserId.isNotBlank()) {
+                    val isSpeakingNow = payload.optBoolean("speaking", false)
+                    mainHandler.post {
+                        for (index in seats.indices) {
+                            val seat = seats[index]
+                            if (seat.accountId == speakingUserId) {
+                                seats[index] = seat.copy(speaking = isSpeakingNow && !seat.muted)
+                            }
+                        }
+                    }
+                }
+            }
+        }
         val roomFollowListener = Emitter.Listener { args ->
             val payload = args.firstOrNull() as? JSONObject
             if (payload?.optString("roomId") == roomId) {
@@ -965,6 +982,7 @@ fun RoomPage(
         roomSocket.on("room_chat_message",messageListener)
         roomSocket.on("room_chat_cleared",clearedListener)
         roomSocket.on("room_seats",seatListener)
+        roomSocket.on("room_voice_speaker",voiceSpeakerListener)
         roomSocket.on("room_settings_updated",settingsListener)
         roomSocket.on("room_follow_updated", roomFollowListener)
         roomSocket.on("lucky_bag_banner",luckyBagBannerListener)
@@ -981,6 +999,7 @@ fun RoomPage(
             roomSocket.off("room_chat_message",messageListener)
             roomSocket.off("room_chat_cleared",clearedListener)
             roomSocket.off("room_seats",seatListener)
+            roomSocket.off("room_voice_speaker",voiceSpeakerListener)
             roomSocket.off("room_settings_updated",settingsListener)
             roomSocket.off("room_follow_updated", roomFollowListener)
             roomSocket.off("lucky_bag_banner",luckyBagBannerListener)
@@ -2109,9 +2128,22 @@ private fun formatMusicTime(seconds: Float): String {
                 val center=Offset(size.width/2f,size.height/2f)
                 drawCircle(color=if(blue) Color(0xFF55C6F3).copy(alpha=.25f) else Color(0xFF9CA3AF).copy(alpha=.25f),radius=radius+size.minDimension*7.5f/512f,center=center,style=Stroke(width=size.minDimension*15f/512f))
                 if (isSpeaking) {
-                    val pulseRadius = size.minDimension * (0.45f + waveProgress * 0.42f)
-                    drawCircle(color = Color(0xFF168CFF).copy(alpha = 0.65f * (1f - waveProgress)), radius = pulseRadius, center = center, style = Stroke(width = size.minDimension * 0.055f))
-                    drawCircle(color = Color(0xFF45B7FF).copy(alpha = 0.42f * (1f - waveProgress)), radius = pulseRadius * 0.78f, center = center, style = Stroke(width = size.minDimension * 0.035f))
+                    // Staggered blue rings stay visible around the avatar edge.
+                    val firstRadius = size.minDimension * (0.43f + waveProgress * 0.07f)
+                    val secondProgress = (waveProgress + 0.5f) % 1f
+                    val secondRadius = size.minDimension * (0.43f + secondProgress * 0.07f)
+                    drawCircle(
+                        color = Color(0xFF168CFF).copy(alpha = 0.82f * (1f - waveProgress)),
+                        radius = firstRadius,
+                        center = center,
+                        style = Stroke(width = size.minDimension * 0.045f)
+                    )
+                    drawCircle(
+                        color = Color(0xFF45B7FF).copy(alpha = 0.72f * (1f - secondProgress)),
+                        radius = secondRadius,
+                        center = center,
+                        style = Stroke(width = size.minDimension * 0.035f)
+                    )
                 }
                 drawCircle(brush=ringBrush,radius=radius,center=center,style=Stroke(width=size.minDimension*10f/512f))
                 val shine = Brush.horizontalGradient(colors=listOf(Color.White.copy(alpha=0f),Color.White.copy(alpha=.75f),Color.White.copy(alpha=.95f),Color.White.copy(alpha=0f)),startX=0f,endX=size.width)
