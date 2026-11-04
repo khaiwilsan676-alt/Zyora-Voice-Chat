@@ -14,7 +14,9 @@ import io.socket.client.IO
 import io.socket.client.Socket
 import io.socket.emitter.Emitter
 import org.json.JSONObject
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -63,7 +65,9 @@ import java.util.Date
 import java.util.Locale
 
 private const val RAW_MSG = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/"
-private data class MessagePreview(val uid: String, val name: String, val image: String, val message: String, val time: String = "")
+
+// Added unreadCount to track new messages
+private data class MessagePreview(val uid: String, val name: String, val image: String, val message: String, val time: String = "", val unreadCount: Int = 0)
 
 private fun resolveChatAvatar(value: String): String {
     val image = value.trim()
@@ -144,6 +148,21 @@ fun rememberKeyboardIcon(): ImageVector {
                 moveTo(7f, 14f); lineTo(17f, 14f)
             }
         }.build()
+    }
+}
+
+// Chota Music Track Animation component Pill icon ke liye
+@Composable
+fun SmallMusicEqualizer() {
+    val infiniteTransition = rememberInfiniteTransition(label = "small_eq")
+    val bar1 by infiniteTransition.animateFloat(initialValue = 3f, targetValue = 7f, animationSpec = infiniteRepeatable(tween(400), RepeatMode.Reverse), label = "b1")
+    val bar2 by infiniteTransition.animateFloat(initialValue = 7f, targetValue = 3f, animationSpec = infiniteRepeatable(tween(500), RepeatMode.Reverse), label = "b2")
+    val bar3 by infiniteTransition.animateFloat(initialValue = 4f, targetValue = 6f, animationSpec = infiniteRepeatable(tween(600), RepeatMode.Reverse), label = "b3")
+
+    Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(1.5.dp)) {
+        Box(Modifier.width(1.5.dp).height(bar1.dp).background(Color.White, CircleShape))
+        Box(Modifier.width(1.5.dp).height(bar2.dp).background(Color.White, CircleShape))
+        Box(Modifier.width(1.5.dp).height(bar3.dp).background(Color.White, CircleShape))
     }
 }
 
@@ -253,8 +272,10 @@ fun PrivateMessageInboxSync() {
                     if (!alreadySaved) {
                         history.put(JSONObject().put("id", messageId).put("mine", false).put("text", body))
                         indexDb.saveChat(chatKey, history.toString())
+                        
+                        // User-specific unread count logic update
                         val unreadPrefs = context.getSharedPreferences("zyora_unread_messages", Context.MODE_PRIVATE)
-                        val unreadKey = "unread_" + accountId
+                        val unreadKey = "unread_" + accountId + "_" + peerId
                         unreadPrefs.edit().putInt(unreadKey, unreadPrefs.getInt(unreadKey, 0) + 1).apply()
                     }
                     val timestamp = payload.optLong("timestamp", System.currentTimeMillis())
@@ -299,6 +320,8 @@ fun MessageScreen(onChat: (String, String, String) -> Unit, embeddedSheet: Boole
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("hurry_user", Context.MODE_PRIVATE) }
     val authPrefs = remember { context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE) }
+    val unreadPrefs = remember { context.getSharedPreferences("zyora_unread_messages", Context.MODE_PRIVATE) }
+    
     val currentAuthUid = authPrefs.getString("uid", "").orEmpty().ifBlank { prefs.getString("uid", "").orEmpty() }
     val currentUserId = authPrefs.getString("accountId", "").orEmpty().ifBlank { prefs.getString("accountId", prefs.getString("userId", currentAuthUid)).orEmpty() }.ifBlank { currentAuthUid }
     val indexDb = remember { NativeIndexDatabase(context) }
@@ -308,7 +331,8 @@ fun MessageScreen(onChat: (String, String, String) -> Unit, embeddedSheet: Boole
             add(MessagePreview("hurry_system_official", "Zyora System", RAW_MSG + "file_00000000a66881f8aa9e15d2fe2b9a0c.png", ""))
             if (currentUserId.isNotBlank()) indexDb.loadConversations("conversation_${currentUserId}_").forEach { saved ->
                 val peerId = saved.optString("peerId")
-                if (peerId.isNotBlank() && none { it.uid == peerId }) add(MessagePreview(peerId, saved.optString("peerName", "User"), saved.optString("peerPhoto", ""), saved.optString("lastMessage", ""), saved.optString("time", "")))
+                val unread = unreadPrefs.getInt("unread_${currentUserId}_${peerId}", 0) // Fetch unread messages
+                if (peerId.isNotBlank() && none { it.uid == peerId }) add(MessagePreview(peerId, saved.optString("peerName", "User"), saved.optString("peerPhoto", ""), saved.optString("lastMessage", ""), saved.optString("time", ""), unread))
             }
         }
     }
@@ -317,9 +341,12 @@ fun MessageScreen(onChat: (String, String, String) -> Unit, embeddedSheet: Boole
         val time = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(timestamp))
         val saved = JSONObject().put("peerId", peerId).put("peerName", peerName).put("peerPhoto", peerPhoto).put("lastMessage", lastMessage).put("timestamp", timestamp).put("time", time)
         indexDb.saveConversation("conversation_${currentUserId}_$peerId", peerId, saved)
+        
+        val unread = unreadPrefs.getInt("unread_${currentUserId}_${peerId}", 0)
+        
         val existing = chats.indexOfFirst { it.uid == peerId }
         if (existing >= 0) chats.removeAt(existing)
-        chats.add(2.coerceAtMost(chats.size), MessagePreview(peerId, peerName.ifBlank { "User" }, peerPhoto, lastMessage, time))
+        chats.add(2.coerceAtMost(chats.size), MessagePreview(peerId, peerName.ifBlank { "User" }, peerPhoto, lastMessage, time, unread))
     }
 
     Column(Modifier.fillMaxSize().background(Color(0xFFF1F1F1))) {
@@ -380,12 +407,33 @@ private fun MessageRow(chat: MessagePreview, onClick: () -> Unit) {
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        AsyncImage(
-            model = resolveChatAvatar(chat.image.ifBlank { RAW_MSG + "default-avatar.png" }), contentDescription = chat.name,
-            modifier = Modifier.size(56.dp).clip(CircleShape),
-            contentScale = ContentScale.Crop
-        )
-        Spacer(Modifier.width(8.dp))
+        
+        // Avatar + Blue Border + Bottom Music Pill Icon
+        Box(contentAlignment = Alignment.BottomCenter) {
+            AsyncImage(
+                model = resolveChatAvatar(chat.image.ifBlank { RAW_MSG + "default-avatar.png" }), contentDescription = chat.name,
+                modifier = Modifier
+                    .size(56.dp)
+                    .border(2.dp, Color(0xFF3B82F6), CircleShape) // Added Blue Border here
+                    .clip(CircleShape),
+                contentScale = ContentScale.Crop
+            )
+            
+            // Music Pill Icon at bottom center
+            Box(
+                modifier = Modifier
+                    .offset(y = 4.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Color(0xFF3B82F6))
+                    .padding(horizontal = 6.dp, vertical = 3.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                SmallMusicEqualizer() // Using small equalizer component
+            }
+        }
+        
+        Spacer(Modifier.width(12.dp)) // Thoda space adjust kiya avatar ke baad Pill ke reason se
+        
         Column(Modifier.weight(1f)) {
             Text(chat.name, color = Color(0xFF1F2937), fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
             if (chat.message.isNotEmpty()) {
@@ -393,7 +441,31 @@ private fun MessageRow(chat: MessagePreview, onClick: () -> Unit) {
                 Text(chat.message, color = Color(0xFF6B7280), fontSize = 14.sp, maxLines = 1)
             }
         }
-        if (chat.time.isNotEmpty()) Text(chat.time, color = Color(0xFF999999), fontSize = 12.sp)
+        
+        // Time & Unread Badge (Red circle, time se theek pehle)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (chat.unreadCount > 0) {
+                Box(
+                    modifier = Modifier
+                        .defaultMinSize(minWidth = 18.dp)
+                        .height(18.dp)
+                        .background(Color.Red, CircleShape)
+                        .padding(horizontal = 5.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = if (chat.unreadCount > 99) "99+" else chat.unreadCount.toString(),
+                        color = Color.White,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                Spacer(Modifier.width(6.dp))
+            }
+            if (chat.time.isNotEmpty()) {
+                Text(chat.time, color = Color(0xFF999999), fontSize = 12.sp)
+            }
+        }
     }
 }
 
@@ -427,7 +499,7 @@ fun NativeChatScreen(
     var showOptions by remember { mutableStateOf(false) }
     var replyText by remember { mutableStateOf<String?>(null) }
     
-    // Nayi State "Beware of scams" banner ko hide/show karne ke liye
+    // Scam banner hide/show
     var showScamBanner by remember { mutableStateOf(true) }
     
     // Voice Mode States
@@ -439,6 +511,33 @@ fun NativeChatScreen(
     var voicePlayer by remember { mutableStateOf<MediaPlayer?>(null) }
     val audioPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
+    // Equalizer Animation State
+    val infiniteTransition = rememberInfiniteTransition(label = "equalizer")
+    val bar1Height by infiniteTransition.animateFloat(
+        initialValue = 4f,
+        targetValue = 12f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(400, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ), label = "bar1"
+    )
+    val bar2Height by infiniteTransition.animateFloat(
+        initialValue = 12f,
+        targetValue = 4f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(500, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ), label = "bar2"
+    )
+    val bar3Height by infiniteTransition.animateFloat(
+        initialValue = 6f,
+        targetValue = 10f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(600, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ), label = "bar3"
+    )
+
     val messageListState = androidx.compose.foundation.lazy.rememberLazyListState()
     val officialIdForCache = when (name) {
         "Zyora Team" -> "hurry_team_official"
@@ -448,6 +547,15 @@ fun NativeChatScreen(
     val cacheKey = "official_chat_cache_${officialIdForCache ?: name}"
     val indexDb = remember { NativeIndexDatabase(context) }
     val localConversationKey = "chat_${currentAccountId}_${receiverId.ifBlank { officialIdForCache ?: name }}"
+    
+    // Yaha unread count reset karne ki ninja technique lagai gayi hai (Jaise hi tum chat khologe count gayaab)
+    LaunchedEffect(receiverId, currentAccountId) {
+        if (receiverId.isNotBlank() && currentAccountId.isNotBlank()) {
+            val unreadPrefs = context.getSharedPreferences("zyora_unread_messages", Context.MODE_PRIVATE)
+            unreadPrefs.edit().putInt("unread_${currentAccountId}_${receiverId}", 0).apply()
+        }
+    }
+
     fun saveConversationPreview(peerId: String, peerName: String, peerPhoto: String, lastMessage: String, timestamp: Long) {
         if (peerId.isBlank() || currentAccountId.isBlank() || peerId == currentAccountId) return
         val time = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(timestamp))
@@ -556,6 +664,10 @@ fun NativeChatScreen(
                     val peerPhoto = if (mine) image else payload.optString("senderPhoto", image)
                     val preview = if (isVoice) "🎤 Voice message" else value
                     saveConversationPreview(peerId, peerName, peerPhoto, preview, payload.optLong("timestamp", System.currentTimeMillis()))
+                    
+                    // Since we are inside the chat, keep unread zero
+                    val unreadPrefs = context.getSharedPreferences("zyora_unread_messages", Context.MODE_PRIVATE)
+                    unreadPrefs.edit().putInt("unread_${currentAccountId}_${peerId}", 0).apply()
                 }
             }
         }
@@ -815,7 +927,7 @@ fun NativeChatScreen(
             Box(
                 Modifier.fillMaxWidth()
                     .statusBarsPadding()
-                    .padding(top = 8.dp, bottom = 10.dp)
+                    .padding(top = 8.dp, bottom = 4.dp) 
             ) {
                 IconButton(
                     onClick = onBack,
@@ -878,40 +990,30 @@ fun NativeChatScreen(
                                 text = { Text("Report", color = Color.Black, fontSize = 15.sp) },
                                 onClick = { showOptions = false }
                             )
-                            DropdownMenuItem(
-                                text = { Text("Clear Chat", color = Color.Black, fontSize = 15.sp) },
-                                onClick = { messages.clear(); showOptions = false }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Delete Messages", color = Color.Black, fontSize = 15.sp) },
-                                onClick = { showOptions = false }
-                            )
                         }
                     }
                 }
             }
 
-            // YE RAHA NAYA CODE: Yahan maine dono Pattiya (Banners) laga di hain (BLUE COLOR MEIN)
             if (!isOfficial) {
-                // 1. Beware of scams wali patti (Light Blue)
                 if (showScamBanner) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(Color(0xFFDBEAFE)) // Light Blue bg
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                            .background(Color(0xFFDBEAFE)) 
+                            .padding(horizontal = 16.dp, vertical = 5.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
                             imageVector = Icons.Default.Info, 
                             contentDescription = "Warning",
-                            tint = Color(0xFF1D4ED8), // Dark Blue Icon
+                            tint = Color(0xFF1D4ED8), 
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = "Protect your info. Beware of scams.",
-                            color = Color(0xFF1D4ED8), // Dark Blue Text
+                            color = Color(0xFF1D4ED8), 
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Medium,
                             modifier = Modifier.weight(1f)
@@ -927,13 +1029,12 @@ fun NativeChatScreen(
                     }
                 }
 
-                // 2. In Room wali patti (Solid Blue)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 12.dp, vertical = 8.dp)
                         .clip(RoundedCornerShape(24.dp))
-                        .background(Color(0xFF3B82F6)) // Solid Blue bg
+                        .background(Color(0xFF3B82F6)) 
                         .padding(horizontal = 16.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -954,15 +1055,14 @@ fun NativeChatScreen(
                             .padding(horizontal = 12.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Naya chhota icon jo image ke bars ki tarah dikhta hai
                         Row(
                             modifier = Modifier.padding(end = 4.dp),
                             verticalAlignment = Alignment.Bottom,
                             horizontalArrangement = Arrangement.spacedBy(2.dp)
                         ) {
-                            Box(Modifier.width(2.dp).height(6.dp).background(Color(0xFF3B82F6), CircleShape))
-                            Box(Modifier.width(2.dp).height(10.dp).background(Color(0xFF3B82F6), CircleShape))
-                            Box(Modifier.width(2.dp).height(8.dp).background(Color(0xFF3B82F6), CircleShape))
+                            Box(Modifier.width(2.dp).height(bar1Height.dp).background(Color(0xFF3B82F6), CircleShape))
+                            Box(Modifier.width(2.dp).height(bar2Height.dp).background(Color(0xFF3B82F6), CircleShape))
+                            Box(Modifier.width(2.dp).height(bar3Height.dp).background(Color(0xFF3B82F6), CircleShape))
                         }
                         Text(
                             text = "In Room",
@@ -973,7 +1073,6 @@ fun NativeChatScreen(
                     }
                 }
             }
-            // NAYA CODE KHATAM
 
             LazyColumn(
                 state = messageListState,
@@ -1124,7 +1223,6 @@ fun NativeChatScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         
-                        // MAGIC BUTTON: Switch between Audio Mode and Text Mode
                         if (isVoiceMode) {
                             IconButton(onClick = { isVoiceMode = false }, modifier = Modifier.size(28.dp)) {
                                 Icon(rememberKeyboardIcon(), contentDescription = "Keyboard", tint = Color(0xFF6B7280), modifier = Modifier.size(26.dp))
@@ -1137,7 +1235,6 @@ fun NativeChatScreen(
                         
                         Spacer(Modifier.width(10.dp))
                         
-                        // Image Icon (Dono modes mein same rahega)
                         IconButton(
                             onClick = { },
                             enabled = false,
@@ -1148,7 +1245,6 @@ fun NativeChatScreen(
                         Spacer(Modifier.width(10.dp))
 
                         if (isVoiceMode) {
-                            // HOLD TO TALK BUTTON
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
@@ -1215,7 +1311,6 @@ fun NativeChatScreen(
                             }
 
                         } else {
-                            // NORMAL TEXT FIELD BOX
                             Box(Modifier.weight(1f)) {
                                 Row(
                                     Modifier.fillMaxWidth()
