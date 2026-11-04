@@ -368,7 +368,13 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
             }
         }
         unreadPrefs.registerOnSharedPreferenceChangeListener(listener)
-        unreadMessageCount = unreadPrefs.getInt("unread_$messageIdentity", 0).coerceAtLeast(0)
+        val unreadPrefix = "unread_${messageIdentity}_"
+        val totalUnread = unreadPrefs.all.entries
+            .asSequence()
+            .filter { it.key.startsWith(unreadPrefix) }
+            .sumOf { (it.value as? Int ?: 0).coerceAtLeast(0) }
+        unreadPrefs.edit().putInt("unread_$messageIdentity", totalUnread).apply()
+        unreadMessageCount = totalUnread
         onDispose { unreadPrefs.unregisterOnSharedPreferenceChangeListener(listener) }
     }
     var homeMine by remember { mutableStateOf(false) }
