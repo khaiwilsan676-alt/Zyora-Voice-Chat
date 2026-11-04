@@ -308,6 +308,8 @@ fun JitsiRoomAudio(
         roomSocket.on("room_voice_permission", permissionListener)
         roomSocket.on("room_voice_chunk", chunkListener)
         val disconnectListener = Emitter.Listener {
+            voiceAllowed.set(false)
+            stopMusicRelay()
             stopCapture()
             runCatching { player?.pause(); player?.flush() }
         }
@@ -423,6 +425,8 @@ private fun relayDecodedMusic(
             } else if (outputIndex >= 0) {
                 val output = codec.getOutputBuffer(outputIndex)
                 if (output != null && info.size > 0 && (info.flags and MediaCodec.BUFFER_FLAG_CODEC_CONFIG) == 0) {
+                    output.position(info.offset)
+                    output.limit(info.offset + info.size)
                     output.order(ByteOrder.LITTLE_ENDIAN)
                     val sourceFrames = info.size / (channels * 2)
                     val targetFrames = ((sourceFrames.toLong() * 16000L) / sampleRate.coerceAtLeast(1)).toInt()
