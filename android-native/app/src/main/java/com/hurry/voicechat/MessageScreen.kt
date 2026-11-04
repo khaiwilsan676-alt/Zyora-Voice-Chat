@@ -578,7 +578,7 @@ fun NativeChatScreen(
     var voicePlayer by remember { mutableStateOf<MediaPlayer?>(null) }
     var playingVoicePath by remember { mutableStateOf<String?>(null) }
     var voiceCountdownSeconds by remember { mutableLongStateOf(0L) }
-    val audioPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
+    val audioPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { }
 
     // Equalizer Animation State
     val infiniteTransition = rememberInfiniteTransition(label = "equalizer")
@@ -1280,7 +1280,12 @@ fun NativeChatScreen(
                                     Row(
                                         modifier = Modifier
                                             .widthIn(min = 100.dp, max = 220.dp)
-                                            .clickable { voiceFilePath?.let(::playVoiceNote) }
+                                            .clickable {
+                                    val needsBluetoothPermission = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+                                        ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED
+                                    if (needsBluetoothPermission) audioPermissionLauncher.launch(arrayOf(Manifest.permission.BLUETOOTH_CONNECT))
+                                    else voiceFilePath?.let(::playVoiceNote)
+                                }
                                             .padding(horizontal = 14.dp, vertical = 10.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
@@ -1419,8 +1424,17 @@ fun NativeChatScreen(
                                     .pointerInput(Unit) {
                                         detectTapGestures(
                                             onPress = {
-                                                if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-                                                    audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                                                val missingVoicePermissions = buildList {
+                                                    if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+                                                        add(Manifest.permission.RECORD_AUDIO)
+                                                    }
+                                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+                                                        ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                                                        add(Manifest.permission.BLUETOOTH_CONNECT)
+                                                    }
+                                                }
+                                                if (missingVoicePermissions.isNotEmpty()) {
+                                                    audioPermissionLauncher.launch(missingVoicePermissions.toTypedArray())
                                                     return@detectTapGestures
                                                 }
                                                 if (!startVoiceRecording()) return@detectTapGestures
