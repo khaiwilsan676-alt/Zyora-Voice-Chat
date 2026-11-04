@@ -727,7 +727,15 @@ fun RoomPage(
     val backendRoomUsers=remember{mutableStateListOf<ActiveUserNative>()}
 
     DisposableEffect(roomId,accountId,roomDisplayName,roomDisplayImage,roomOwner.id,roomOwner.accountId) {
-        val roomSocket = IO.socket("https://zyora-server.onrender.com")
+        val roomSocketOptions = IO.Options().apply {
+            transports = arrayOf("websocket")
+            reconnection = true
+            reconnectionAttempts = Int.MAX_VALUE
+            reconnectionDelay = 1000
+            reconnectionDelayMax = 30000
+            timeout = 20000
+        }
+        val roomSocket = IO.socket("https://zyora-server.onrender.com", roomSocketOptions)
         roomSocketRef.value=roomSocket
         val mainHandler = Handler(Looper.getMainLooper())
         val presenceListener = Emitter.Listener { args ->
