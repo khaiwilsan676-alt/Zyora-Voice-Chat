@@ -213,7 +213,9 @@ fun HomeScreen(
     }
     val roomSyncPrefs = remember { context.getSharedPreferences("native_room_sync", Context.MODE_PRIVATE) }
 
-    var rooms by remember { mutableStateOf(NativeRoomMemoryCache.rooms) }
+    // Observe the shared snapshot itself; a copied local state becomes stale when
+    // HomeScreen is disposed/recreated while another instance finishes a refresh.
+    val rooms = NativeRoomMemoryCache.rooms
     var selectedCountry by remember { mutableStateOf("all") }
     var showDailyCheckIn by remember { mutableStateOf(false) }
 
@@ -273,45 +275,66 @@ fun HomeScreen(
 
 
     LaunchedEffect(Unit) {
-        // Keep the process-wide room snapshot while HomeScreen is disposed during tab navigation.
-        // A temporary network failure is not an authoritative empty-room response.
+        // Warm the shared snapshot from Room DB before network completes. This makes
+        // cards immediately available after tab navigation and cold app starts.
+        if (NativeRoomMemoryCache.rooms == null && dao != null) {
+            val cached = runCatching {
+                withContext(Dispatchers.IO) { dao.getAll() }
+            }.getOrDefault(emptyList()).map { entity ->
+                HurryRoom(
+                    id = entity.id,
+                    name = entity.name,
+                    image = entity.image,
+                    country = entity.country,
+                    locked = entity.isLocked,
+                    accountId = entity.accountId
+                )
+            }
+            if (NativeRoomMemoryCache.rooms == null && cached.isNotEmpty()) {
+                NativeRoomMemoryCache.rooms = cached
+            }
+        }
+
+        // One process-wide refresh at a time. Other HomeScreen instances wait briefly
+        // for it instead of sleeping 15 seconds with a stale local copy.
         while (true) {
-            if (!NativeRoomMemoryCache.refreshInFlight) {
-                NativeRoomMemoryCache.refreshInFlight = true
-                try {
-                    val update = HurryApi.roomsUpdatedSince(0L)
-                    if (update != null) {
-                        val fresh = update.rooms.distinctBy { it.id }
-                        NativeRoomMemoryCache.rooms = fresh
-                        rooms = fresh
-                        NativeRoomMemoryCache.lastRefreshAt = System.currentTimeMillis()
-                        if (dao != null) {
-                            runCatching {
-                                withContext(Dispatchers.IO) {
-                                    dao.clearAll()
-                                    if (fresh.isNotEmpty()) {
-                                        dao.insertAll(fresh.map {
-                                            RoomEntity(
-                                                id = it.id,
-                                                name = it.name,
-                                                country = it.country,
-                                                image = it.image,
-                                                accountId = it.accountId,
-                                                createdAt = System.currentTimeMillis()
-                                            )
-                                        })
-                                    }
+            if (NativeRoomMemoryCache.refreshInFlight) {
+                kotlinx.coroutines.delay(300L)
+                continue
+            }
+            NativeRoomMemoryCache.refreshInFlight = true
+            try {
+                val update = HurryApi.roomsUpdatedSince(0L)
+                if (update != null) {
+                    val fresh = update.rooms.distinctBy { it.id }
+                    NativeRoomMemoryCache.rooms = fresh
+                    NativeRoomMemoryCache.lastRefreshAt = System.currentTimeMillis()
+                    if (dao != null) {
+                        runCatching {
+                            withContext(Dispatchers.IO) {
+                                dao.clearAll()
+                                if (fresh.isNotEmpty()) {
+                                    dao.insertAll(fresh.map {
+                                        RoomEntity(
+                                            id = it.id,
+                                            name = it.name,
+                                            country = it.country,
+                                            image = it.image,
+                                            accountId = it.accountId,
+                                            createdAt = System.currentTimeMillis()
+                                        )
+                                    })
                                 }
                             }
                         }
-                        if (update.serverTime > 0L) {
-                            roomSyncPrefs.edit().putLong("last_server_updated_at", update.serverTime).apply()
-                        }
                     }
-                    // If the request fails, retain the last confirmed list and cache.
-                } finally {
-                    NativeRoomMemoryCache.refreshInFlight = false
+                    if (update.serverTime > 0L) {
+                        roomSyncPrefs.edit().putLong("last_server_updated_at", update.serverTime).apply()
+                    }
                 }
+                // A failed/timeout request never replaces a confirmed snapshot with [].
+            } finally {
+                NativeRoomMemoryCache.refreshInFlight = false
             }
             kotlinx.coroutines.delay(15_000L)
         }
