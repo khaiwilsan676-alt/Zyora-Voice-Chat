@@ -1847,7 +1847,7 @@ io.on("connection", (socket) => {
             socket.roomUserId ||
             socket.userId;
 
-          if (oldRoom !== room) {
+          if (oldRoom !== room || String(oldUser || '') !== accId) {
             socket.leave(`room:${oldRoom}`);
 
             clearUserSeatGracefully(oldRoom, oldUser, 0);
