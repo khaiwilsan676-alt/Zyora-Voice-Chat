@@ -13,6 +13,11 @@ import android.os.Looper
 import android.media.AudioRecord
 import android.media.AudioTrack
 import android.media.MediaRecorder
+import android.media.MediaCodec
+import android.media.MediaExtractor
+import android.media.MediaFormat
+import android.net.Uri
+import java.nio.ByteOrder
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.size
@@ -22,6 +27,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -43,9 +49,13 @@ fun JitsiRoomAudio(
     userName: String,
     canSpeak: Boolean,
     roomSocket: Socket?,
+    musicUri: String? = null,
+    musicPlaying: Boolean = false,
     onSpeakingChanged: (Boolean) -> Unit = {}
 ) {
     val context = LocalContext.current
+    val latestMusicUri by rememberUpdatedState(musicUri)
+    val latestMusicPlaying by rememberUpdatedState(musicPlaying)
     var hasMicPermission by remember {
         mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED)
     }
@@ -80,10 +90,39 @@ fun JitsiRoomAudio(
 
         val alive = AtomicBoolean(true)
         val recording = AtomicBoolean(false)
+        val voiceAllowed = AtomicBoolean(false)
         var recorder: AudioRecord? = null
         var echoCanceler: AcousticEchoCanceler? = null
         var player: AudioTrack? = null
         var captureThread: Thread? = null
+        var musicRelayThread: Thread? = null
+        var musicWatcherThread: Thread? = null
+        val musicRelayRunning = AtomicBoolean(false)
+        var activeMusicUri: String? = null
+        var finishedMusicUri: String? = null
+
+        fun stopMusicRelay() {
+            musicRelayRunning.set(false)
+            musicRelayThread?.interrupt()
+            musicRelayThread?.join(300)
+            musicRelayThread = null
+            activeMusicUri = null
+        }
+
+        fun startMusicRelay(uri: String) {
+            if (!alive.get() || !voiceAllowed.get() || !canSpeak || uri.isBlank() || musicRelayRunning.get()) return
+            musicRelayRunning.set(true)
+            activeMusicUri = uri
+            musicRelayThread = thread(name = "ZyoraRoomMusicRelay", isDaemon = true) {
+                try {
+                    relayDecodedMusic(context, uri, roomSocket, roomId, musicRelayRunning)
+                } finally {
+                    musicRelayRunning.set(false)
+                    finishedMusicUri = uri
+                    activeMusicUri = null
+                }
+            }
+        }
 
         fun stopCapture() {
             recording.set(false)
@@ -223,7 +262,12 @@ fun JitsiRoomAudio(
         val permissionListener = Emitter.Listener { args ->
             val data = args.firstOrNull() as? JSONObject ?: return@Listener
             if (data.optString("roomId") != roomId) return@Listener
-            if (data.optBoolean("allowed", false)) startCapture() else stopCapture()
+            val allowed = data.optBoolean("allowed", false) && canSpeak
+            voiceAllowed.set(allowed)
+            if (allowed) startCapture() else {
+                stopMusicRelay()
+                stopCapture()
+            }
         }
         val chunkListener = Emitter.Listener { args ->
             val data = args.firstOrNull() as? JSONObject ?: return@Listener
@@ -275,12 +319,32 @@ fun JitsiRoomAudio(
             }
         }
         roomSocket.on(Socket.EVENT_CONNECT, connectListener)
+
+        musicWatcherThread = thread(name = "ZyoraRoomMusicWatch", isDaemon = true) {
+            while (alive.get()) {
+                val uri = latestMusicUri?.takeIf { it.isNotBlank() }
+                val shouldRelay = voiceAllowed.get() && canSpeak && latestMusicPlaying && uri != null
+                if (!shouldRelay) {
+                    if (musicRelayRunning.get()) stopMusicRelay()
+                    if (!latestMusicPlaying || uri == null) finishedMusicUri = null
+                } else if (uri != activeMusicUri && uri != finishedMusicUri) {
+                    if (musicRelayRunning.get()) stopMusicRelay()
+                    startMusicRelay(uri!!)
+                }
+                try { Thread.sleep(100) } catch (_: InterruptedException) { }
+            }
+            stopMusicRelay()
+        }
         if (canSpeak && hasMicPermission && roomSocket.connected()) {
             roomSocket.emit("room_voice_start", JSONObject().put("roomId", roomId))
         }
 
         onDispose {
             alive.set(false)
+            voiceAllowed.set(false)
+            musicWatcherThread?.interrupt()
+            musicWatcherThread?.join(300)
+            stopMusicRelay()
             roomSocket.emit("room_voice_stop", JSONObject().put("roomId", roomId))
             roomSocket.off("room_voice_permission", permissionListener)
             roomSocket.off("room_voice_chunk", chunkListener)
@@ -294,4 +358,107 @@ fun JitsiRoomAudio(
         }
     }
 
+}
+
+/** Decode the selected local track to real-time 16 kHz mono PCM and send it through
+ * the same room_voice_chunk relay. Local MediaPlayer playback remains independent.
+ */
+private fun relayDecodedMusic(
+    context: Context,
+    uri: String,
+    socket: Socket,
+    roomId: String,
+    running: AtomicBoolean
+) {
+    val extractor = MediaExtractor()
+    var codec: MediaCodec? = null
+    try {
+        extractor.setDataSource(context, Uri.parse(uri), null)
+        var trackIndex = -1
+        var format: MediaFormat? = null
+        for (i in 0 until extractor.trackCount) {
+            val candidate = extractor.getTrackFormat(i)
+            if (candidate.getString(MediaFormat.KEY_MIME)?.startsWith("audio/") == true) {
+                trackIndex = i
+                format = candidate
+                break
+            }
+        }
+        if (trackIndex < 0 || format == null) return
+        extractor.selectTrack(trackIndex)
+        codec = MediaCodec.createDecoderByType(format.getString(MediaFormat.KEY_MIME)!!)
+        codec.configure(format, null, null, 0)
+        codec.start()
+
+        var inputDone = false
+        var outputDone = false
+        var sampleRate = format.getInteger(MediaFormat.KEY_SAMPLE_RATE)
+        var channels = format.getInteger(MediaFormat.KEY_CHANNEL_COUNT).coerceAtLeast(1)
+        val packet = ByteArray(ROOM_VOICE_FRAME_BYTES)
+        var packetSize = 0
+        var nextFrameAt = System.nanoTime()
+
+        while (running.get() && !outputDone) {
+            if (!inputDone) {
+                val inputIndex = codec.dequeueInputBuffer(10_000)
+                if (inputIndex >= 0) {
+                    val input = codec.getInputBuffer(inputIndex) ?: continue
+                    val sampleSize = extractor.readSampleData(input, 0)
+                    if (sampleSize < 0) {
+                        codec.queueInputBuffer(inputIndex, 0, 0, 0L, MediaCodec.BUFFER_FLAG_END_OF_STREAM)
+                        inputDone = true
+                    } else {
+                        codec.queueInputBuffer(inputIndex, 0, sampleSize, extractor.sampleTime, 0)
+                        extractor.advance()
+                    }
+                }
+            }
+
+            val info = MediaCodec.BufferInfo()
+            val outputIndex = codec.dequeueOutputBuffer(info, 10_000)
+            if (outputIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
+                val outputFormat = codec.outputFormat
+                sampleRate = outputFormat.getInteger(MediaFormat.KEY_SAMPLE_RATE)
+                channels = outputFormat.getInteger(MediaFormat.KEY_CHANNEL_COUNT).coerceAtLeast(1)
+            } else if (outputIndex >= 0) {
+                val output = codec.getOutputBuffer(outputIndex)
+                if (output != null && info.size > 0 && (info.flags and MediaCodec.BUFFER_FLAG_CODEC_CONFIG) == 0) {
+                    output.order(ByteOrder.LITTLE_ENDIAN)
+                    val sourceFrames = info.size / (channels * 2)
+                    val targetFrames = ((sourceFrames.toLong() * 16000L) / sampleRate.coerceAtLeast(1)).toInt()
+                    for (target in 0 until targetFrames) {
+                        if (!running.get()) break
+                        val sourceFrame = ((target.toLong() * sampleRate) / 16000L).toInt().coerceAtMost(sourceFrames - 1)
+                        var mixed = 0
+                        for (channel in 0 until channels) {
+                            mixed += output.getShort(info.offset + sourceFrame * channels * 2 + channel * 2).toInt() / channels
+                        }
+                        val sample = mixed.coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort().toInt()
+                        packet[packetSize++] = (sample and 0xFF).toByte()
+                        packet[packetSize++] = ((sample shr 8) and 0xFF).toByte()
+                        if (packetSize == packet.size) {
+                            if (socket.connected() && running.get()) {
+                                socket.emit("room_voice_chunk", JSONObject().put("roomId", roomId).put("audio", packet.copyOf()))
+                            }
+                            nextFrameAt += 20_000_000L
+                            val waitNanos = nextFrameAt - System.nanoTime()
+                            if (waitNanos > 0) {
+                                try { Thread.sleep(waitNanos / 1_000_000L, (waitNanos % 1_000_000L).toInt()) }
+                                catch (_: InterruptedException) { }
+                            } else nextFrameAt = System.nanoTime()
+                            packetSize = 0
+                        }
+                    }
+                }
+                outputDone = (info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0
+                codec.releaseOutputBuffer(outputIndex, false)
+            }
+        }
+    } catch (_: Exception) {
+        // Local playback is unaffected if this device cannot decode/share the selected file.
+    } finally {
+        runCatching { codec?.stop() }
+        runCatching { codec?.release() }
+        runCatching { extractor.release() }
+    }
 }
