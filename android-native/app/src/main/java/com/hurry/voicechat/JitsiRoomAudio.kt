@@ -316,7 +316,10 @@ fun JitsiRoomAudio(
         roomSocket.on(Socket.EVENT_DISCONNECT, disconnectListener)
 
         val connectListener = Emitter.Listener {
-            if (canSpeak && hasMicPermission && alive.get()) {
+            // Server authorization is seat-based. Do not gate the room audio session
+            // on RECORD_AUDIO: local music sharing must still work if mic permission
+            // is denied; startCapture() independently checks that permission.
+            if (canSpeak && alive.get()) {
                 roomSocket.emit("room_voice_start", JSONObject().put("roomId", roomId))
             }
         }
@@ -337,7 +340,7 @@ fun JitsiRoomAudio(
             }
             stopMusicRelay()
         }
-        if (canSpeak && hasMicPermission && roomSocket.connected()) {
+        if (canSpeak && roomSocket.connected()) {
             roomSocket.emit("room_voice_start", JSONObject().put("roomId", roomId))
         }
 
@@ -388,6 +391,9 @@ private fun relayDecodedMusic(
         }
         if (trackIndex < 0 || format == null) return
         extractor.selectTrack(trackIndex)
+        // Request the exact PCM format expected by the room's 16-bit mono packet
+        // protocol, rather than relying on a device decoder's default PCM encoding.
+        format.setInteger(MediaFormat.KEY_PCM_ENCODING, AudioFormat.ENCODING_PCM_16BIT)
         codec = MediaCodec.createDecoderByType(format.getString(MediaFormat.KEY_MIME)!!)
         codec.configure(format, null, null, 0)
         codec.start()
@@ -398,6 +404,7 @@ private fun relayDecodedMusic(
         var channels = format.getInteger(MediaFormat.KEY_CHANNEL_COUNT).coerceAtLeast(1)
         val packet = ByteArray(ROOM_VOICE_FRAME_BYTES)
         var packetSize = 0
+        var resamplePosition = 0.0
         var nextFrameAt = System.nanoTime()
 
         while (running.get() && !outputDone) {
@@ -429,10 +436,9 @@ private fun relayDecodedMusic(
                     output.limit(info.offset + info.size)
                     output.order(ByteOrder.LITTLE_ENDIAN)
                     val sourceFrames = info.size / (channels * 2)
-                    val targetFrames = ((sourceFrames.toLong() * 16000L) / sampleRate.coerceAtLeast(1)).toInt()
-                    for (target in 0 until targetFrames) {
-                        if (!running.get()) break
-                        val sourceFrame = ((target.toLong() * sampleRate) / 16000L).toInt().coerceAtMost(sourceFrames - 1)
+                    val step = sampleRate.coerceAtLeast(1).toDouble() / 16000.0
+                    while (resamplePosition < sourceFrames && running.get()) {
+                        val sourceFrame = resamplePosition.toInt().coerceIn(0, sourceFrames - 1)
                         var mixed = 0
                         for (channel in 0 until channels) {
                             mixed += output.getShort(info.offset + sourceFrame * channels * 2 + channel * 2).toInt() / channels
@@ -440,6 +446,7 @@ private fun relayDecodedMusic(
                         val sample = mixed.coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort().toInt()
                         packet[packetSize++] = (sample and 0xFF).toByte()
                         packet[packetSize++] = ((sample shr 8) and 0xFF).toByte()
+                        resamplePosition += step
                         if (packetSize == packet.size) {
                             if (socket.connected() && running.get()) {
                                 socket.emit("room_voice_chunk", JSONObject().put("roomId", roomId).put("audio", packet.copyOf()))
@@ -453,6 +460,9 @@ private fun relayDecodedMusic(
                             packetSize = 0
                         }
                     }
+                    // Carry fractional resampling position into the next decoded buffer
+                    // to prevent gradual timing drift on 44.1/48 kHz source tracks.
+                    resamplePosition -= sourceFrames
                 }
                 outputDone = (info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0
                 codec.releaseOutputBuffer(outputIndex, false)
