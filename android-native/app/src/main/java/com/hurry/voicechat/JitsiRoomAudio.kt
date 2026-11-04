@@ -8,6 +8,8 @@ import android.media.audiofx.AcousticEchoCanceler
 import android.media.AudioFormat
 import android.media.AudioManager
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.media.AudioRecord
 import android.media.AudioTrack
 import android.media.MediaRecorder
@@ -187,7 +189,17 @@ fun JitsiRoomAudio(
                             }
                             filled = 0
                         }
-                    } else if (count < 0) break
+                    } else if (count < 0) {
+                        if (recording.compareAndSet(true, false)) {
+                            if (roomSocket.connected()) {
+                                roomSocket.emit("room_voice_stop", JSONObject().put("roomId", roomId))
+                            }
+                            Handler(Looper.getMainLooper()).post { onSpeakingChanged(false) }
+                        }
+                        break
+                    } else {
+                        Thread.yield()
+                    }
                 }
             }
         }
