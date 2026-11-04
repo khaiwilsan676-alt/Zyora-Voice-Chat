@@ -479,7 +479,7 @@ fun RoomPage(
     }
     DisposableEffect(accountId, roomUnreadPrefs) {
         val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { prefs, key ->
-            if (key == "unread_$accountId" || key?.startsWith("unread_${accountId}_") == true) {
+            if (key?.startsWith("unread_${accountId}_") == true) {
                 val prefix = "unread_${accountId}_"
                 val total = prefs.all.entries.asSequence()
                     .filter { it.key.startsWith(prefix) }
