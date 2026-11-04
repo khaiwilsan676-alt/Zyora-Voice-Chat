@@ -1,5 +1,9 @@
 package com.hurry.voicechat
 
+import android.os.Handler
+import android.os.Looper
+import io.socket.client.Ack
+import io.socket.client.IO
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -79,7 +83,16 @@ fun SearchPage(onBack:()->Unit={},onOpenProfile:(RoomProfileUser)->Unit={},onOpe
     var hasSearched by remember { mutableStateOf(false) }
     val searchCache = remember { mutableStateMapOf<String, List<SearchUserNative>>() }
     var requestId by remember { mutableIntStateOf(0) }
-    
+    val searchHandler = remember { Handler(Looper.getMainLooper()) }
+    val searchSocket = remember { runCatching { IO.socket("https://zyora-server.onrender.com") }.getOrNull() }
+    DisposableEffect(searchSocket) {
+        searchSocket?.connect()
+        onDispose {
+            searchSocket?.disconnect()
+            searchSocket?.close()
+        }
+    }
+
     // History state - Dummy IDs hata diye, ab ye list khali se start hogi
     val searchHistory = remember { mutableStateListOf<String>() }
 
@@ -96,6 +109,50 @@ fun SearchPage(onBack:()->Unit={},onOpenProfile:(RoomProfileUser)->Unit={},onOpe
             if (requestToken == requestId) { results=cached; hasSearched=true; searching=false }
             return
         }
+
+        // User lookup is Socket.IO-only. Keep the existing results UI, but
+        // never show a loading state while the server/Redis responds.
+        if (tab == "User") {
+            if (requestToken == requestId) {
+                results = emptyList()
+                hasSearched = true
+                searching = false
+            }
+            val socket = searchSocket ?: return
+            socket.emit("search_users", JSONObject().put("query", q), Ack { args ->
+                val response = args.firstOrNull() as? JSONObject ?: JSONObject()
+                val arr = response.optJSONArray("users") ?: JSONArray()
+                val list = ArrayList<SearchUserNative>(arr.length())
+                val seen = HashSet<String>()
+                for (i in 0 until arr.length()) {
+                    val u = arr.optJSONObject(i) ?: continue
+                    val id = u.optString("id").takeUnless { it == "null" }.orEmpty()
+                        .ifBlank { u.optString("uid").takeUnless { it == "null" }.orEmpty() }
+                    val account = u.optString("accountId").takeUnless { it == "null" }.orEmpty()
+                    if (id.isBlank() || account.isBlank() || !seen.add(account)) continue
+                    list.add(
+                        SearchUserNative(
+                            id = id,
+                            accountId = account,
+                            name = u.optString("name").takeUnless { it == "null" }.orEmpty().ifBlank { "User" },
+                            country = u.optString("country").takeUnless { it == "null" }.orEmpty(),
+                            image = u.optString("image").takeUnless { it == "null" }.orEmpty(),
+                            bio = u.optString("bio").takeUnless { it == "null" }.orEmpty()
+                        )
+                    )
+                }
+                searchHandler.post {
+                    if (requestToken == requestId) {
+                        searchCache[cacheKey] = list
+                        results = list
+                        hasSearched = true
+                        searching = false
+                    }
+                }
+            })
+            return
+        }
+
         if (requestToken == requestId) { searching=true; hasSearched=true }
         val fetched=withContext(Dispatchers.IO) {
             runCatching {
@@ -174,7 +231,7 @@ fun SearchPage(onBack:()->Unit={},onOpenProfile:(RoomProfileUser)->Unit={},onOpe
         val q = query.trim()
         if (q.isBlank()) { results=emptyList(); hasSearched=false; searching=false; return@LaunchedEffect }
         searchCache["$tab:$q"]?.let { results=it; hasSearched=true; searching=false; return@LaunchedEffect }
-        delay(180)
+        if (tab == "Room") delay(180)
         performSearch(q, token)
     }
 
