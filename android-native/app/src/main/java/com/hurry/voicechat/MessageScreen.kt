@@ -576,6 +576,8 @@ fun NativeChatScreen(
     var mediaRecorder by remember { mutableStateOf<MediaRecorder?>(null) }
     var recordedVoiceFile by remember { mutableStateOf<File?>(null) }
     var voicePlayer by remember { mutableStateOf<MediaPlayer?>(null) }
+    var playingVoicePath by remember { mutableStateOf<String?>(null) }
+    var voiceCountdownSeconds by remember { mutableLongStateOf(0L) }
     val audioPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
     // Equalizer Animation State
@@ -916,9 +918,10 @@ fun NativeChatScreen(
             voicePlayer?.stop()
             voicePlayer?.release()
             voicePlayer = null
-            // Voice-note playback uses the normal media stream/speaker volume, never call volume.
             val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
             audioManager.mode = AudioManager.MODE_NORMAL
+            @Suppress("DEPRECATION")
+            audioManager.isSpeakerphoneOn = false
             val player = MediaPlayer()
             voicePlayer = player
             player.setAudioAttributes(
@@ -931,14 +934,36 @@ fun NativeChatScreen(
             player.setOnCompletionListener {
                 it.release()
                 if (voicePlayer === it) voicePlayer = null
+                playingVoicePath = null
+                voiceCountdownSeconds = 0L
                 resetVoiceAudioRoute()
             }
             player.prepare()
+            val bluetoothOutput = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS).firstOrNull {
+                it.type == android.media.AudioDeviceInfo.TYPE_BLUETOOTH_A2DP ||
+                    it.type == android.media.AudioDeviceInfo.TYPE_BLUETOOTH_SCO ||
+                    (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && it.type == android.media.AudioDeviceInfo.TYPE_BLE_HEADSET)
+            }
+            if (bluetoothOutput != null) player.setPreferredDevice(bluetoothOutput)
+            playingVoicePath = path
+            voiceCountdownSeconds = ((player.duration + 999) / 1000).toLong().coerceAtLeast(1L)
             player.start()
         }.onFailure {
             runCatching { voicePlayer?.release() }
             voicePlayer = null
+            playingVoicePath = null
+            voiceCountdownSeconds = 0L
             resetVoiceAudioRoute()
+        }
+    }
+
+    LaunchedEffect(playingVoicePath) {
+        while (playingVoicePath != null) {
+            val player = voicePlayer ?: break
+            if (!runCatching { player.isPlaying }.getOrDefault(false)) break
+            voiceCountdownSeconds = ((player.duration - player.currentPosition).coerceAtLeast(0) + 999L)
+                .div(1000L).coerceAtLeast(0L)
+            kotlinx.coroutines.delay(200)
         }
     }
 
@@ -1215,6 +1240,10 @@ fun NativeChatScreen(
                     
                     val isVoiceNote = VoiceMessageStore.isVoice(item.second)
                     val messageText = if (isVoiceNote) VoiceMessageStore.displayDuration(item.second) else item.second
+                    val voiceFilePath = if (isVoiceNote) VoiceMessageStore.playableFile(context, item.second)?.absolutePath else null
+                    val voiceTimeText = if (voiceFilePath != null && playingVoicePath == voiceFilePath) {
+                        "%d:%02d".format(voiceCountdownSeconds / 60L, voiceCountdownSeconds % 60L)
+                    } else messageText
 
                     Row(
                         Modifier.fillMaxWidth(),
@@ -1244,7 +1273,7 @@ fun NativeChatScreen(
                                     Row(
                                         modifier = Modifier
                                             .widthIn(min = 100.dp, max = 220.dp)
-                                            .clickable { VoiceMessageStore.playableFile(context, item.second)?.absolutePath?.let(::playVoiceNote) }
+                                            .clickable { voiceFilePath?.let(::playVoiceNote) }
                                             .padding(horizontal = 14.dp, vertical = 10.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
@@ -1274,7 +1303,7 @@ fun NativeChatScreen(
                                         
                                         Spacer(Modifier.width(8.dp))
                                         Text(
-                                            text = "$messageText\"",
+                                            text = "$voiceTimeText\"",
                                             color = if (mine) Color.White else Color(0xFF1F2937),
                                             fontSize = 13.sp,
                                             fontWeight = FontWeight.Medium
