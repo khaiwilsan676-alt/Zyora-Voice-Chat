@@ -451,6 +451,42 @@ function getGlobalRoomPresence() {
   );
 }
 
+// Room presence is derived only from live roomUsers entries. This is also
+// queried by profiles/chats so their room indicators cannot rely on stale UI state.
+function findUserRoomStatus(...identities) {
+  const wanted = new Set(identities.map((value) => String(value || "").trim()).filter(Boolean));
+  if (!wanted.size) return { inRoom: false, roomId: "" };
+
+  for (const [roomId, users] of roomUsers.entries()) {
+    for (const [key, user] of users.entries()) {
+      const candidates = [
+        key,
+        user?.userId,
+        user?.accountId,
+      ].map((value) => String(value || "").trim());
+      if (candidates.some((value) => wanted.has(value))) {
+        return {
+          inRoom: true,
+          roomId: String(roomId),
+          userId: String(user?.userId || key),
+          accountId: String(user?.accountId || key),
+        };
+      }
+    }
+  }
+  return { inRoom: false, roomId: "" };
+}
+
+function emitUserRoomStatus(userId, accountId = "") {
+  const status = findUserRoomStatus(userId, accountId);
+  io.emit("user_room_status_updated", {
+    userId: String(userId || status.userId || ""),
+    accountId: String(accountId || status.accountId || userId || ""),
+    inRoom: status.inRoom,
+    roomId: status.inRoom ? status.roomId : "",
+  });
+}
+
 
 // ==================== USERS API ====================
 
@@ -1772,6 +1808,22 @@ io.on("connection", (socket) => {
     });
   });
 
+  socket.on("user_room_status_request", (payload = {}) => {
+    const userId = typeof payload === "object"
+      ? String(payload.userId || payload.uid || payload.id || "")
+      : String(payload || "");
+    const accountId = typeof payload === "object"
+      ? String(payload.accountId || "")
+      : "";
+    const status = findUserRoomStatus(userId, accountId);
+    socket.emit("user_room_status", {
+      userId: userId || status.userId || "",
+      accountId: accountId || status.accountId || userId || "",
+      inRoom: status.inRoom,
+      roomId: status.inRoom ? status.roomId : "",
+    });
+  });
+
   socket.on(
     "room_presence_request",
     ({ roomId } = {}) => {
@@ -1998,6 +2050,11 @@ io.on("connection", (socket) => {
         } catch (error) {
           console.error("Room lock check failed:", error.message);
         }
+      }
+
+      // Broadcast canonical room status only after membership and lock checks succeed.
+      if (socketIsInRoom(socket, room)) {
+        emitUserRoomStatus(socket.roomUserId || accId, accId);
       }
 
       // The server is the single source of truth for room-entry banners.
@@ -2278,6 +2335,7 @@ io.on("connection", (socket) => {
 
       emitRoomPresence(room);
 
+      const loginId = String(socket.roomUserId || userId || id);
       if (socket.roomId === room) {
         socket.roomId = null;
         socket.roomUserId = null;
@@ -2286,6 +2344,7 @@ io.on("connection", (socket) => {
       }
 
       emitGlobalRoomPresence();
+      emitUserRoomStatus(loginId, id);
     }
   );
 
@@ -2840,6 +2899,7 @@ io.on("connection", (socket) => {
         });
 
       emitRoomPresence(room);
+      emitUserRoomStatus(socket.roomUserId || userId, socket.roomAccountId || userId);
     }
 
     markUserOffline(socket);
