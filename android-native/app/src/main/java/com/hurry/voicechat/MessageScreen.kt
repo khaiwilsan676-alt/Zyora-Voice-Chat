@@ -401,6 +401,9 @@ fun MessageScreen(onChat: (String, String, String) -> Unit, embeddedSheet: Boole
 
 @Composable
 private fun MessageRow(chat: MessagePreview, onClick: () -> Unit) {
+    // Check lagaya taaki official pe border ya pill naa aaye
+    val isOfficial = chat.uid == "hurry_team_official" || chat.uid == "hurry_system_official"
+
     Row(
         Modifier.fillMaxWidth()
             .clickable(onClick = onClick)
@@ -408,31 +411,34 @@ private fun MessageRow(chat: MessagePreview, onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         
-        // Avatar + Blue Border + Bottom Music Pill Icon
+        // Avatar + Blue Border + Bottom Music Pill Icon (Sirf normal user ke liye)
         Box(contentAlignment = Alignment.BottomCenter) {
             AsyncImage(
                 model = resolveChatAvatar(chat.image.ifBlank { RAW_MSG + "default-avatar.png" }), contentDescription = chat.name,
                 modifier = Modifier
                     .size(56.dp)
-                    .border(2.dp, Color(0xFF3B82F6), CircleShape) // Added Blue Border here
+                    // Conditional border (Agar official nahi hai, tabhi border apply hoga)
+                    .then(if (!isOfficial) Modifier.border(2.dp, Color(0xFF3B82F6), CircleShape) else Modifier)
                     .clip(CircleShape),
                 contentScale = ContentScale.Crop
             )
             
-            // Music Pill Icon at bottom center
-            Box(
-                modifier = Modifier
-                    .offset(y = 4.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Color(0xFF3B82F6))
-                    .padding(horizontal = 6.dp, vertical = 3.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                SmallMusicEqualizer() // Using small equalizer component
+            // Music Pill Icon at bottom center (Sirf normal user ke liye)
+            if (!isOfficial) {
+                Box(
+                    modifier = Modifier
+                        .offset(y = 4.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color(0xFF3B82F6))
+                        .padding(horizontal = 6.dp, vertical = 3.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    SmallMusicEqualizer() 
+                }
             }
         }
         
-        Spacer(Modifier.width(12.dp)) // Thoda space adjust kiya avatar ke baad Pill ke reason se
+        Spacer(Modifier.width(12.dp)) 
         
         Column(Modifier.weight(1f)) {
             Text(chat.name, color = Color(0xFF1F2937), fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
@@ -457,7 +463,13 @@ private fun MessageRow(chat: MessagePreview, onClick: () -> Unit) {
                         text = if (chat.unreadCount > 99) "99+" else chat.unreadCount.toString(),
                         color = Color.White,
                         fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        style = androidx.compose.ui.text.TextStyle(
+                            platformStyle = androidx.compose.ui.text.PlatformTextStyle(
+                                includeFontPadding = false
+                            )
+                        )
                     )
                 }
                 Spacer(Modifier.width(6.dp))
@@ -1001,7 +1013,8 @@ fun NativeChatScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .background(Color(0xFFDBEAFE)) 
-                            .padding(horizontal = 16.dp, vertical = 5.dp),
+                            // Padding reduced from 5.dp to 2.dp (height patli kar di gayi hai)
+                            .padding(horizontal = 16.dp, vertical = 2.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
@@ -1032,10 +1045,12 @@ fun NativeChatScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                        // Outer padding reduced from 8.dp to 4.dp
+                        .padding(horizontal = 12.dp, vertical = 4.dp)
                         .clip(RoundedCornerShape(24.dp))
                         .background(Color(0xFF3B82F6)) 
-                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                        // Inner padding reduced from 10.dp to 6.dp (banner patla kar diya gaya hai)
+                        .padding(horizontal = 16.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
