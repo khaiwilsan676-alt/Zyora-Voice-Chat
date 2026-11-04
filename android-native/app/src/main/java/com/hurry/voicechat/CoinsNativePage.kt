@@ -167,8 +167,18 @@ private data class WalletAgentSeller(
     val name: String,
     val image: String,
     val online: Boolean,
-    val coins: Long
+    val coins: Long,
+    val dealLast30Days: String,
+    val paymentMethod: String,
+    val whatsapp: String
 )
+
+private fun JSONObject.firstAgentValue(vararg keys: String): String =
+    keys.firstNotNullOfOrNull { key ->
+        if (!has(key) || isNull(key)) null else opt(key)?.toString()?.trim()?.takeIf {
+            it.isNotBlank() && it != "null" && it != "undefined"
+        }
+    }.orEmpty()
 
 private suspend fun fetchWalletAgentSellers(): List<WalletAgentSeller> = withContext(Dispatchers.IO) {
     runCatching {
@@ -181,18 +191,22 @@ private suspend fun fetchWalletAgentSellers(): List<WalletAgentSeller> = withCon
             JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
         } finally { connection.disconnect() }
         val users = response.optJSONArray("users") ?: return@runCatching emptyList()
+        val allowedSellerIds = setOf("100002", "100003")
         val rows = (0 until users.length()).mapNotNull { index ->
             val user = users.optJSONObject(index) ?: return@mapNotNull null
             val uid = user.optString("uid").ifBlank { user.optString("id") }
             val account = user.optString("accountId").ifBlank { user.optString("accountNumber") }
-            if (uid.isBlank() || account.isBlank()) return@mapNotNull null
+            if (uid.isBlank() || account !in allowedSellerIds) return@mapNotNull null
             WalletAgentSeller(
                 uid = uid,
                 accountId = account,
                 name = user.optString("name").ifBlank { "User" },
                 image = user.optString("image").ifBlank { "https://zyora-voice-chat.vercel.app/default-avatar.png" },
                 online = user.optBoolean("isOnline", false),
-                coins = 0L
+                coins = 0L,
+                dealLast30Days = user.firstAgentValue("dealLast30Days", "last30DaysDeal", "dealOfLast30Days", "monthlyDeal"),
+                paymentMethod = user.firstAgentValue("paymentMethod", "payment_method", "sellerPaymentMethod"),
+                whatsapp = user.firstAgentValue("whatsapp", "whatsApp", "whatsappNumber", "whatsAppNumber", "phoneNumber")
             )
         }
         coroutineScope {
@@ -588,13 +602,16 @@ private fun DiamondsContent(
 
 @Composable
 private fun AgentContent(onChat: (String, String, String) -> Unit) {
+    val context = LocalContext.current
     var sellers by remember { mutableStateOf<List<WalletAgentSeller>>(emptyList()) }
     var onlineById by remember { mutableStateOf<Map<String, Boolean>>(emptyMap()) }
     var loaded by remember { mutableStateOf(false) }
+
     LaunchedEffect(Unit) {
-        sellers = fetchWalletAgentSellers()
+        sellers = fetchWalletAgentSellers().filter { it.accountId == "100002" || it.accountId == "100003" }
         loaded = true
     }
+
     DisposableEffect(sellers) {
         if (sellers.isEmpty()) return@DisposableEffect onDispose { }
         val socket = runCatching {
@@ -606,6 +623,7 @@ private fun AgentContent(onChat: (String, String, String) -> Unit) {
                 reconnectionDelayMax = 5000
             })
         }.getOrNull() ?: return@DisposableEffect onDispose { }
+
         val statusListener = Emitter.Listener { args ->
             val payload = args.firstOrNull() as? JSONObject ?: return@Listener
             val id = payload.optString("userId")
@@ -644,44 +662,109 @@ private fun AgentContent(onChat: (String, String, String) -> Unit) {
             socket.close()
         }
     }
-    Column(Modifier.fillMaxWidth().padding(top = 16.dp, start = 12.dp, end = 12.dp)) {
+
+    Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         sellers.forEach { seller ->
-            Row(
-                Modifier.fillMaxWidth().padding(vertical = 9.dp),
-                verticalAlignment = Alignment.CenterVertically
+            val isOnline = onlineById[seller.uid] ?: onlineById[seller.accountId] ?: seller.online
+            Column(
+                Modifier.fillMaxWidth()
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(Color.White)
+                    .padding(horizontal = 18.dp, vertical = 18.dp)
             ) {
-                Box(
-                    Modifier.size(48.dp).clip(RoundedCornerShape(50)).border(2.dp, Color.White, RoundedCornerShape(50)),
-                    contentAlignment = Alignment.Center
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(76.dp), contentAlignment = Alignment.BottomCenter) {
+                        AsyncImage(
+                            model = seller.image,
+                            contentDescription = seller.name,
+                            modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(50)),
+                            contentScale = ContentScale.Crop
+                        )
+                        Text(
+                            if (isOnline) "online" else "offline",
+                            Modifier.padding(bottom = 0.dp)
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(if (isOnline) Color(0xFF16A66A) else Color(0xFF9CA3AF))
+                                .padding(horizontal = 9.dp, vertical = 3.dp),
+                            fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Medium
+                        )
+                    }
+                    Column(Modifier.weight(1f).padding(start = 14.dp)) {
+                        Text(seller.name, fontSize = 19.sp, fontWeight = FontWeight.Bold, color = Color(0xFF111827), maxLines = 1)
+                        Row(
+                            Modifier.padding(top = 7.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(7.dp)
+                        ) {
+                            Text("Deal of last 30 days:", fontSize = 13.sp, color = Color(0xFF7B8492), maxLines = 1)
+                            AsyncImage(
+                                model = RAW_WALLET + "file_00000000e56882119c217d508b6733dc.png",
+                                contentDescription = "Coins",
+                                modifier = Modifier.size(19.dp),
+                                contentScale = ContentScale.Fit
+                            )
+                            Text(
+                                seller.dealLast30Days.ifBlank { "—" },
+                                fontSize = 14.sp, color = Color(0xFF7B8492), maxLines = 1
+                            )
+                        }
+                    }
+                    Box(
+                        Modifier.size(58.dp).clip(RoundedCornerShape(50)).background(Color(0xFF08B879))
+                            .clickable { onChat(seller.uid, seller.name, seller.image) },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        androidx.compose.foundation.Canvas(Modifier.size(36.dp)) {
+                            val scale = size.width / 48f
+                            val bubble = androidx.compose.ui.graphics.Path().apply {
+                                moveTo(10f * scale, 9f * scale)
+                                quadraticTo(10f * scale, 5f * scale, 15f * scale, 5f * scale)
+                                lineTo(34f * scale, 5f * scale)
+                                quadraticTo(39f * scale, 5f * scale, 39f * scale, 10f * scale)
+                                lineTo(39f * scale, 27f * scale)
+                                quadraticTo(39f * scale, 32f * scale, 34f * scale, 32f * scale)
+                                lineTo(23f * scale, 32f * scale)
+                                lineTo(15f * scale, 39f * scale)
+                                lineTo(16f * scale, 32f * scale)
+                                quadraticTo(10f * scale, 31f * scale, 10f * scale, 26f * scale)
+                                close()
+                            }
+                            drawPath(bubble, Color.White)
+                            listOf(19f, 25f, 31f).forEach { x ->
+                                drawCircle(Color(0xFF08B879), radius = 1.8f * scale,
+                                    center = androidx.compose.ui.geometry.Offset(x * scale, 19f * scale))
+                            }
+                        }
+                    }
+                }
+
+                Row(
+                    Modifier.fillMaxWidth().padding(top = 24.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    AsyncImage(
-                        model = seller.image,
-                        contentDescription = seller.name,
-                        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(50)),
-                        contentScale = ContentScale.Crop
-                    )
+                    Text("Payment method:", fontSize = 17.sp, color = Color(0xFF344054))
+                    Spacer(Modifier.weight(1f))
+                    Text(seller.paymentMethod.ifBlank { "—" }, fontSize = 14.sp, color = Color(0xFF344054), fontWeight = FontWeight.SemiBold)
                 }
-                Column(Modifier.weight(1f).padding(start = 10.dp)) {
-                    Text(seller.name, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color(0xFF111827), maxLines = 1)
-                    Text("ID: ${seller.accountId}", fontSize = 12.sp, color = Color(0xFF6B7280))
-                    Text(
-                        if (onlineById[seller.uid] ?: onlineById[seller.accountId] ?: seller.online) "Online" else "Offline",
-                        fontSize = 11.sp,
-                        color = if (onlineById[seller.uid] ?: onlineById[seller.accountId] ?: seller.online) Color(0xFF16A34A) else Color(0xFF9CA3AF)
-                    )
+                Row(
+                    Modifier.fillMaxWidth().padding(top = 18.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Whatsapp:", fontSize = 17.sp, color = Color(0xFF344054))
+                    Spacer(Modifier.weight(1f))
+                    Text(seller.whatsapp.ifBlank { "—" }, fontSize = 16.sp, color = Color(0xFF344054), maxLines = 1)
+                    if (seller.whatsapp.isNotBlank()) {
+                        Text(
+                            "▣",
+                            Modifier.padding(start = 8.dp).clickable {
+                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                                clipboard.setPrimaryClip(android.content.ClipData.newPlainText("WhatsApp", seller.whatsapp))
+                            },
+                            fontSize = 20.sp, color = Color(0xFF98A2B3)
+                        )
+                    }
                 }
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                    AsyncImage(
-                        model = RAW_WALLET + "file_00000000e56882119c217d508b6733dc.png",
-                        contentDescription = "Coins",
-                        modifier = Modifier.size(18.dp),
-                        contentScale = ContentScale.Fit
-                    )
-                    Text(seller.coins.toString(), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF374151))
-                }
-                ChatIcon(onClick = { onChat(seller.uid, seller.name, seller.image) })
             }
-            Divider(color = Color(0xFFE5E7EB), thickness = 0.6.dp)
         }
         if (loaded && sellers.isEmpty()) {
             Text("No sellers available", Modifier.fillMaxWidth().padding(vertical = 28.dp),
