@@ -107,15 +107,21 @@ fun JitsiRoomAudio(
             onSpeakingChanged(true)
             captureThread = thread(name = "ZyoraRoomMic", isDaemon = true) {
                 val frame = ByteArray(ROOM_VOICE_FRAME_BYTES)
+                var filled = 0
                 while (alive.get() && recording.get()) {
-                    val count = runCatching { created.read(frame, 0, frame.size) }.getOrDefault(-1)
-                    if (count > 0 && recording.get() && roomSocket.connected()) {
-                        val chunk = if (count == frame.size) frame.copyOf() else frame.copyOf(count)
-                        runCatching {
-                            roomSocket.emit(
-                                "room_voice_chunk",
-                                JSONObject().put("roomId", roomId).put("audio", chunk)
-                            )
+                    val count = runCatching { created.read(frame, filled, frame.size - filled) }.getOrDefault(-1)
+                    if (count > 0) {
+                        filled += count
+                        if (filled == frame.size) {
+                            if (recording.get() && roomSocket.connected()) {
+                                runCatching {
+                                    roomSocket.emit(
+                                        "room_voice_chunk",
+                                        JSONObject().put("roomId", roomId).put("audio", frame.copyOf())
+                                    )
+                                }
+                            }
+                            filled = 0
                         }
                     } else if (count < 0) break
                 }
@@ -171,6 +177,12 @@ fun JitsiRoomAudio(
         }
         roomSocket.on(Socket.EVENT_DISCONNECT, disconnectListener)
 
+        val connectListener = Emitter.Listener {
+            if (canSpeak && hasMicPermission && alive.get()) {
+                roomSocket.emit("room_voice_start", JSONObject().put("roomId", roomId))
+            }
+        }
+        roomSocket.on(Socket.EVENT_CONNECT, connectListener)
         if (canSpeak && hasMicPermission && roomSocket.connected()) {
             roomSocket.emit("room_voice_start", JSONObject().put("roomId", roomId))
         }
@@ -181,6 +193,7 @@ fun JitsiRoomAudio(
             roomSocket.off("room_voice_permission", permissionListener)
             roomSocket.off("room_voice_chunk", chunkListener)
             roomSocket.off(Socket.EVENT_DISCONNECT, disconnectListener)
+            roomSocket.off(Socket.EVENT_CONNECT, connectListener)
             stopCapture()
             runCatching { player?.stop(); player?.release() }
             player = null
@@ -188,14 +201,4 @@ fun JitsiRoomAudio(
         }
     }
 
-    LaunchedEffect(canSpeak, hasMicPermission, roomSocket, roomId) {
-        if (roomSocket?.connected() == true) {
-            if (canSpeak && hasMicPermission) {
-                roomSocket.emit("room_voice_start", JSONObject().put("roomId", roomId))
-            } else {
-                roomSocket.emit("room_voice_stop", JSONObject().put("roomId", roomId))
-                onSpeakingChanged(false)
-            }
-        }
-    }
 }
