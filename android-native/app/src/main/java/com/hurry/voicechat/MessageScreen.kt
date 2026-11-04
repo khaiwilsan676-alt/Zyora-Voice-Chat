@@ -67,7 +67,7 @@ import java.util.Locale
 private const val RAW_MSG = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/"
 
 // Added unreadCount to track new messages
-private data class MessagePreview(val uid: String, val name: String, val image: String, val message: String, val time: String = "", val unreadCount: Int = 0)
+private data class MessagePreview(val uid: String, val name: String, val image: String, val message: String, val time: String = "", val unreadCount: Int = 0, val isInRoom: Boolean = false, val roomId: String = "")
 
 private fun refreshTotalUnreadCount(context: Context, accountId: String) {
     if (accountId.isBlank()) return
@@ -262,6 +262,31 @@ fun PrivateMessageInboxSync() {
         val options = IO.Options().apply { transports = arrayOf("websocket"); reconnection = true; reconnectionAttempts = Int.MAX_VALUE }
         val socket = IO.socket("https://zyora-server.onrender.com", options)
         val mainHandler = Handler(Looper.getMainLooper())
+        val peerPresenceListener = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
+            if (payload.optString("userId") == receiverId || payload.optString("accountId") == receiverId) {
+                mainHandler.post { peerOnline = payload.optBoolean("online", false) }
+            }
+        }
+        val peerOnlineListener = Emitter.Listener { args ->
+            if (args.firstOrNull()?.toString() == receiverId) mainHandler.post { peerOnline = true }
+        }
+        val peerOfflineListener = Emitter.Listener { args ->
+            if (args.firstOrNull()?.toString() == receiverId) mainHandler.post { peerOnline = false }
+        }
+        val roomStatusListener = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
+            if (payload.optString("accountId", payload.optString("userId")) == receiverId) {
+                mainHandler.post { peerRoomId = if (payload.optBoolean("inRoom", false)) payload.optString("roomId") else "" }
+            }
+        }
+        chatSocket.on("presence_status", peerPresenceListener)
+        chatSocket.on("user_online", peerOnlineListener)
+        chatSocket.on("user_offline", peerOfflineListener)
+        chatSocket.on("user_room_status", roomStatusListener)
+        chatSocket.on("user_room_status_updated", roomStatusListener)
+        chatSocket.emit("check_presence", receiverId)
+        chatSocket.emit("user_room_status_request", JSONObject().put("userId", receiverId).put("accountId", receiverId))
         val incoming = Emitter.Listener { args ->
             val payload = args.firstOrNull() as? JSONObject ?: return@Listener
             val receiverIds = setOf(authUid, accountId)
@@ -348,6 +373,42 @@ fun MessageScreen(onChat: (String, String, String) -> Unit, embeddedSheet: Boole
             }
         }
     }
+    DisposableEffect(currentUserId, chats.size) {
+        if (currentUserId.isBlank()) return@DisposableEffect onDispose { }
+        val presenceSocket = IO.socket("https://zyora-server.onrender.com", IO.Options().apply {
+            transports = arrayOf("websocket")
+            reconnection = true
+            reconnectionAttempts = Int.MAX_VALUE
+        })
+        fun applyRoomStatus(payload: JSONObject?) {
+            if (payload == null) return
+            val peerId = payload.optString("accountId", payload.optString("userId")).trim()
+            if (peerId.isBlank()) return
+            val index = chats.indexOfFirst { it.uid == peerId }
+            if (index >= 0) {
+                val old = chats[index]
+                val inRoom = payload.optBoolean("inRoom", false) && payload.optString("roomId").isNotBlank()
+                chats[index] = old.copy(isInRoom = inRoom, roomId = if (inRoom) payload.optString("roomId") else "")
+            }
+        }
+        val statusListener = Emitter.Listener { args -> applyRoomStatus(args.firstOrNull() as? JSONObject) }
+        val updateListener = Emitter.Listener { args -> applyRoomStatus(args.firstOrNull() as? JSONObject) }
+        presenceSocket.on("user_room_status", statusListener)
+        presenceSocket.on("user_room_status_updated", updateListener)
+        presenceSocket.on(Socket.EVENT_CONNECT) {
+            chats.filter { it.uid.isNotBlank() && !it.uid.startsWith("hurry_") }.forEach { chat ->
+                presenceSocket.emit("user_room_status_request", JSONObject().put("userId", chat.uid).put("accountId", chat.uid))
+            }
+        }
+        presenceSocket.connect()
+        onDispose {
+            presenceSocket.off("user_room_status", statusListener)
+            presenceSocket.off("user_room_status_updated", updateListener)
+            presenceSocket.disconnect()
+            presenceSocket.close()
+        }
+    }
+
     fun updateConversationPreview(peerId: String, peerName: String, peerPhoto: String, lastMessage: String, timestamp: Long) {
         if (peerId.isBlank() || peerId == currentUserId) return
         val time = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(timestamp))
@@ -430,13 +491,13 @@ private fun MessageRow(chat: MessagePreview, onClick: () -> Unit) {
                 modifier = Modifier
                     .size(56.dp)
                     // Conditional border (Agar official nahi hai, tabhi border apply hoga)
-                    .then(if (!isOfficial) Modifier.border(2.dp, Color(0xFF3B82F6), CircleShape) else Modifier)
+                    .then(if (!isOfficial && chat.isInRoom) Modifier.border(2.dp, Color(0xFF3B82F6), CircleShape) else Modifier)
                     .clip(CircleShape),
                 contentScale = ContentScale.Crop
             )
             
             // Music Pill Icon at bottom center (Sirf normal user ke liye)
-            if (!isOfficial) {
+            if (!isOfficial && chat.isInRoom) {
                 Box(
                     modifier = Modifier
                         .offset(y = 4.dp)
@@ -500,7 +561,8 @@ fun NativeChatScreen(
     receiverId: String = "",
     currentUserId: String = "",
     currentAccountIdOverride: String = "",
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onJoinRoom: (String) -> Unit = {}
 ) {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("hurry_user", Context.MODE_PRIVATE) }
@@ -518,6 +580,8 @@ fun NativeChatScreen(
     val isOfficial = name == "Zyora Team" || name == "Zyora System"
     var directSocket by remember(receiverId, currentUserId) { mutableStateOf<Socket?>(null) }
     var chatRegistered by remember(receiverId, currentUserId) { mutableStateOf(false) }
+    var peerOnline by remember(receiverId) { mutableStateOf(false) }
+    var peerRoomId by remember(receiverId) { mutableStateOf("") }
 
     var text by remember { mutableStateOf("") }
     var showOptions by remember { mutableStateOf(false) }
@@ -738,9 +802,16 @@ fun NativeChatScreen(
         chatSocket.on(Socket.EVENT_CONNECT) {
             mainHandler.post { chatRegistered = false }
             chatSocket.emit("register", JSONObject().put("userId", currentUserId).put("accountId", currentAccountId))
+            chatSocket.emit("check_presence", receiverId)
+            chatSocket.emit("user_room_status_request", JSONObject().put("userId", receiverId).put("accountId", receiverId))
         }
         chatSocket.connect()
         onDispose {
+            chatSocket.off("presence_status", peerPresenceListener)
+            chatSocket.off("user_online", peerOnlineListener)
+            chatSocket.off("user_offline", peerOfflineListener)
+            chatSocket.off("user_room_status", roomStatusListener)
+            chatSocket.off("user_room_status_updated", roomStatusListener)
             chatSocket.off("private_message", incoming)
             chatSocket.off("private_message_history", history)
             chatSocket.off("registration_ready", registrationReady)
@@ -992,9 +1063,9 @@ fun NativeChatScreen(
                     )
                     if (!isOfficial) {
                         Text(
-                            "Offline", 
+                            if (peerOnline) "Online" else "Offline", 
                             fontSize = 11.sp, 
-                            color = Color.DarkGray, 
+                            color = if (peerOnline) Color(0xFF16A34A) else Color.DarkGray, 
                             fontWeight = FontWeight.Medium
                         )
                     }
@@ -1033,6 +1104,22 @@ fun NativeChatScreen(
                 }
             }
 
+            if (!isOfficial && peerRoomId.isNotBlank()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)
+                        .clip(RoundedCornerShape(24.dp)).background(Color(0xFF3B82F6))
+                        .clickable { onJoinRoom(peerRoomId) }.padding(horizontal = 16.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("I'm chatting and play games in\\nvoice room, join me~", color = Color.White,
+                        fontSize = 14.sp, fontWeight = FontWeight.Medium, lineHeight = 18.sp,
+                        modifier = Modifier.weight(1f))
+                    Spacer(Modifier.width(8.dp))
+                    Text("In Room", color = Color(0xFF3B82F6), fontSize = 13.sp, fontWeight = FontWeight.Bold,
+                        modifier = Modifier.clip(RoundedCornerShape(16.dp)).background(Color.White)
+                            .clickable { onJoinRoom(peerRoomId) }.padding(horizontal = 12.dp, vertical = 6.dp))
+                }
+            }
             if (!isOfficial) {
                 if (showScamBanner) {
                     Row(
