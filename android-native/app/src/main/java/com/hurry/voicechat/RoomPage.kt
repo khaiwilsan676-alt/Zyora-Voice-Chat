@@ -183,7 +183,8 @@ fun RoomPage(
     onBack:()->Unit=onClose,
     onKeepRoom:(String,String,String)->Unit={_,_,_->},
     onFollowToggle:(String,Boolean)->Unit={_,_->},
-    onRoomSupport:()->Unit={}
+    onRoomSupport:()->Unit={},
+    onJoinRoom:(String)->Unit={}
 ) {
     val roomId=roomOwner.id.ifBlank{roomOwner.accountId.ifBlank{roomOwner.uid.ifBlank{"default-room"}}}
     val roomOwnerAccountId = roomOwner.accountId.ifBlank { roomOwner.id }
