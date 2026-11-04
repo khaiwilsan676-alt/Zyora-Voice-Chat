@@ -516,7 +516,6 @@ private fun ToolToggle(enabled: Boolean) {
         Box(Modifier.size(12.dp).clip(RoundedCornerShape(50)).background(Color.White))
     }
 }
-
 @Composable
 private fun ToolCell(
     modifier: Modifier,
@@ -558,7 +557,7 @@ fun MiniMusicControllerCard(
                 .padding(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 90.dp)
                 .height(160.dp),
             shape = RoundedCornerShape(10.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.Black),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF000000)),
             elevation = CardDefaults.cardElevation(8.dp)
         ) {
             if (showVolumeView) {
@@ -597,7 +596,7 @@ fun MiniMusicControllerCard(
                         Box(
                             modifier = Modifier
                                 .weight(1f)
-                                .height(8.dp) 
+                                .height(12.dp)
                                 .clip(RoundedCornerShape(50))
                                 .background(Color.Gray.copy(alpha = 0.5f)) 
                                 .pointerInput(Unit) {
