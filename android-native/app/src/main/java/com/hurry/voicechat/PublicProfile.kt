@@ -149,6 +149,7 @@ fun PublicProfileScreen(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val targetPresenceId = targetUser?.accountId?.takeIf { it.isNotBlank() } ?: targetUser?.id.orEmpty()
+    val targetPresenceIds = remember(targetUser) { setOf(targetUser?.accountId.orEmpty(), targetUser?.id.orEmpty(), targetUser?.uid.orEmpty()).filter { it.isNotBlank() }.toSet() }
     var liveRoomId by remember(targetPresenceId) { mutableStateOf("") }
     DisposableEffect(targetPresenceId) {
         if (targetPresenceId.isBlank()) return@DisposableEffect onDispose { }
@@ -160,7 +161,10 @@ fun PublicProfileScreen(
         val statusListener = Emitter.Listener { args ->
             val payload = args.firstOrNull() as? JSONObject ?: return@Listener
             val id = payload.optString("accountId", payload.optString("userId"))
-            if (id == targetPresenceId) liveRoomId = if (payload.optBoolean("inRoom", false)) payload.optString("roomId") else ""
+            val loginId = payload.optString("userId")
+            if (id in targetPresenceIds || loginId in targetPresenceIds) {
+                liveRoomId = if (payload.optBoolean("inRoom", false)) payload.optString("roomId") else ""
+            }
         }
         presenceSocket.on("user_room_status", statusListener)
         presenceSocket.on("user_room_status_updated", statusListener)
