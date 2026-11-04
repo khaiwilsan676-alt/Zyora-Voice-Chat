@@ -130,6 +130,18 @@ app.post("/api/auth/google", async (req, res) => {
 
 const onlineUsers = new Map();
 
+// Keep Redis presence leases alive only while the server has live sockets.
+// Short TTLs self-heal after an abrupt app/process termination.
+const presenceLeaseRefresh = setInterval(() => {
+  for (const [userId, socketCount] of onlineUsers.entries()) {
+    if (socketCount > 0) {
+      setOnlineStatus(userId);
+      setSecondaryStatus(userId);
+    }
+  }
+}, 20000);
+if (typeof presenceLeaseRefresh.unref === "function") presenceLeaseRefresh.unref();
+
 const memoryRoundWinners = {
   fruitparty: { round: -1, winners: [] },
   wildparty: { round: -1, winners: [] }
