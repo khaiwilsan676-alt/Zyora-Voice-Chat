@@ -352,7 +352,9 @@ fun JitsiRoomAudio(
                                     .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
                                     .build()
                             )
-                            .setBufferSizeInBytes(maxOf(minOut * 3, ROOM_VOICE_FRAME_BYTES * 12))
+                            // Keep AudioTrack's device minimum, but avoid a needlessly deep
+                            // output buffer that adds latency on top of the jitter queue.
+                            .setBufferSizeInBytes(maxOf(minOut * 2, ROOM_VOICE_FRAME_BYTES * 8))
                             .setTransferMode(AudioTrack.MODE_STREAM)
                             .build()
                             .takeIf { it.state == AudioTrack.STATE_INITIALIZED }
