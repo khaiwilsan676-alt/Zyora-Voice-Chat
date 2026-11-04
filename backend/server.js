@@ -2171,6 +2171,66 @@ io.on("connection", (socket) => {
     }
   });
 
+  // Room voice: all room members listen; only an occupied, unmuted seat may publish.
+  socket.on("room_voice_start", ({ roomId } = {}) => {
+    const room = String(roomId || "");
+    if (!room || !socketIsInRoom(socket, room)) return;
+    const accountId = String(socket.roomAccountId || socket.accountId || "");
+    const hasSeat = getRoomSeats(room).some((seat) =>
+      seat?.isOccupied && !seat?.isMuted &&
+      String(seat?.user?.accountId || seat?.user?.userId || "") === accountId
+    );
+    socket.roomVoiceActive = hasSeat;
+    socket.roomVoiceRoomId = hasSeat ? room : null;
+    socket.emit("room_voice_permission", { roomId: room, allowed: hasSeat });
+  });
+
+  socket.on("room_voice_chunk", (data = {}) => {
+    const room = String(data.roomId || "");
+    if (!room || !socket.roomVoiceActive || socket.roomVoiceRoomId !== room ||
+        !socketIsInRoom(socket, room)) return;
+    const accountId = String(socket.roomAccountId || socket.accountId || "");
+    const hasSeat = getRoomSeats(room).some((seat) =>
+      seat?.isOccupied && !seat?.isMuted &&
+      String(seat?.user?.accountId || seat?.user?.userId || "") === accountId
+    );
+    if (!hasSeat) {
+      socket.roomVoiceActive = false;
+      socket.roomVoiceRoomId = null;
+      socket.emit("room_voice_permission", { roomId: room, allowed: false });
+      socket.to(`room:${room}`).emit("room_voice_speaker", { roomId: room, userId: accountId, speaking: false });
+      return;
+    }
+    const audio = data.audio;
+    const validAudio = Buffer.isBuffer(audio) ? audio.length > 0 && audio.length <= 4096
+      : Array.isArray(audio) && audio.length > 0 && audio.length <= 4096;
+    if (!validAudio) return;
+    // socket.to excludes the sender, preventing local self-monitoring.
+    socket.to(`room:${room}`).emit("room_voice_chunk", { roomId: room, userId: accountId, audio });
+  });
+
+  socket.on("room_voice_activity", (data = {}) => {
+    const room = String(data.roomId || "");
+    if (!room || !socket.roomVoiceActive || socket.roomVoiceRoomId !== room ||
+        !socketIsInRoom(socket, room)) return;
+    const accountId = String(socket.roomAccountId || socket.accountId || "");
+    socket.to(`room:${room}`).emit("room_voice_speaker", {
+      roomId: room, userId: accountId, speaking: Boolean(data.speaking)
+    });
+  });
+
+  socket.on("room_voice_stop", ({ roomId } = {}) => {
+    const room = String(roomId || socket.roomVoiceRoomId || "");
+    if (socket.roomVoiceRoomId && room === socket.roomVoiceRoomId) {
+      const accountId = String(socket.roomAccountId || socket.accountId || "");
+      socket.roomVoiceActive = false;
+      socket.roomVoiceRoomId = null;
+      if (socketIsInRoom(socket, room)) {
+        socket.to(`room:${room}`).emit("room_voice_speaker", { roomId: room, userId: accountId, speaking: false });
+      }
+    }
+  });
+
   socket.on(
     "room_leave",
     ({ roomId, userId, accountId } = {}) => {
