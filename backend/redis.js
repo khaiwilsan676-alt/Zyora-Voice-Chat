@@ -47,7 +47,7 @@ async function checkRedisConnection() {
 async function setOnlineStatus(userId) {
   if (!redis) return;
   try {
-    await redis.set(`user:online:${userId}`, "1", { ex: 3600 });
+    await redis.set(`user:online:${userId}`, "1", { ex: 45 });
   } catch (error) {
     console.error(`Failed to set online status for user ${userId} in Redis 1:`, error.message);
   }
