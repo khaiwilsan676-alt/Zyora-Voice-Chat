@@ -7,6 +7,8 @@ import android.opengl.GLES11Ext
 import android.opengl.GLES20
 import android.opengl.GLSurfaceView
 import android.view.Surface
+import android.os.Handler
+import android.os.Looper
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.FloatBuffer
@@ -29,12 +31,12 @@ class ChromaKeyVideoView(
         setZOrderOnTop(true)
         holder.setFormat(PixelFormat.TRANSLUCENT)
         setRenderer(videoRenderer)
-        renderMode = RENDERMODE_CONTINUOUSLY
+        renderMode = RENDERMODE_WHEN_DIRTY
     }
 
     fun release() {
-        onPause()
         queueEvent { videoRenderer.release() }
+        onPause()
     }
 }
 
@@ -89,8 +91,10 @@ private class ChromaKeyRenderer(
         GLES20.glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE)
 
         surfaceTexture = SurfaceTexture(textureId).also { texture ->
+            texture.setOnFrameAvailableListener { requestRender() }
             outputSurface = Surface(texture)
-            onSurfaceReady(outputSurface!!)
+            val readySurface = outputSurface!!
+            Handler(Looper.getMainLooper()).post { onSurfaceReady(readySurface) }
         }
         GLES20.glClearColor(0f, 0f, 0f, 0f)
         GLES20.glEnable(GLES20.GL_BLEND)
