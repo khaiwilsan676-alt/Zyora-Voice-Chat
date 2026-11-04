@@ -585,6 +585,7 @@ fun NativeChatScreen(
 
     var text by remember { mutableStateOf("") }
     var showOptions by remember { mutableStateOf(false) }
+    var showReportPage by remember { mutableStateOf(false) }
     var replyText by remember { mutableStateOf<String?>(null) }
     
     // Scam banner hide/show
@@ -1097,7 +1098,7 @@ fun NativeChatScreen(
                             )
                             DropdownMenuItem(
                                 text = { Text("Report", color = Color.Black, fontSize = 15.sp) },
-                                onClick = { showOptions = false }
+                                onClick = { showOptions = false; showReportPage = true }
                             )
                         }
                     }
@@ -1504,5 +1505,21 @@ fun NativeChatScreen(
                 }
             }
         }
+    }
+    if (showReportPage) {
+        PublicProfileScreen(
+            onBack = { showReportPage = false },
+            isOtherUser = true,
+            targetUser = TargetUser(
+                id = receiverId,
+                uid = receiverId,
+                name = name,
+                displayAccountNumber = receiverId,
+                accountId = receiverId,
+                photo = image,
+                image = image
+            ),
+            initialReportOpen = true
+        )
     }
 }
