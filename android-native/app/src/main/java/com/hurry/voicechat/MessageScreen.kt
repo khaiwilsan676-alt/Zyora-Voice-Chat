@@ -539,7 +539,8 @@ fun NativeChatScreen(
     currentUserId: String = "",
     currentAccountIdOverride: String = "",
     onBack: () -> Unit,
-    onJoinRoom: (String) -> Unit = {}
+    onJoinRoom: (String) -> Unit = {},
+    onOpenPublicProfile: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("hurry_user", Context.MODE_PRIVATE) }
@@ -1062,7 +1063,8 @@ fun NativeChatScreen(
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.Black, 
-                        maxLines = 1
+                        maxLines = 1,
+                        modifier = Modifier.clickable { onOpenPublicProfile() }
                     )
                     if (!isOfficial) {
                         Text(
