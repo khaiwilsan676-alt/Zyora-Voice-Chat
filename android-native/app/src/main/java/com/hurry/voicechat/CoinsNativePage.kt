@@ -26,6 +26,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import io.socket.client.IO
+import io.socket.emitter.Emitter
 
 import androidx.room.*
 import kotlinx.coroutines.Dispatchers
@@ -196,9 +198,13 @@ private suspend fun fetchWalletAgentSellers(): List<WalletAgentSeller> = withCon
         coroutineScope {
             rows.map { seller ->
                 async {
-                    val wallet = fetchCanonicalWallet(seller.uid)
-                        ?: if (seller.accountId != seller.uid) fetchCanonicalWallet(seller.accountId) else null
-                    seller.copy(coins = wallet?.optLong("balance", 0L)?.coerceAtLeast(0L) ?: 0L)
+                    // Resolve both immutable UID and public account ID to the canonical
+                    // users.coins record. Never trust an empty alias as the real balance.
+                    val byUid = fetchCanonicalWallet(seller.uid)?.optLong("balance", 0L)?.coerceAtLeast(0L)
+                    val byAccount = if (seller.accountId != seller.uid) {
+                        fetchCanonicalWallet(seller.accountId)?.optLong("balance", 0L)?.coerceAtLeast(0L)
+                    } else null
+                    seller.copy(coins = maxOf(byUid ?: 0L, byAccount ?: 0L))
                 }
             }.map { it.await() }
         }
@@ -583,10 +589,60 @@ private fun DiamondsContent(
 @Composable
 private fun AgentContent(onChat: (String, String, String) -> Unit) {
     var sellers by remember { mutableStateOf<List<WalletAgentSeller>>(emptyList()) }
+    var onlineById by remember { mutableStateOf<Map<String, Boolean>>(emptyMap()) }
     var loaded by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         sellers = fetchWalletAgentSellers()
         loaded = true
+    }
+    DisposableEffect(sellers) {
+        if (sellers.isEmpty()) return@DisposableEffect onDispose { }
+        val socket = runCatching {
+            IO.socket("https://zyora-server.onrender.com", IO.Options().apply {
+                transports = arrayOf("websocket")
+                reconnection = true
+                reconnectionAttempts = Int.MAX_VALUE
+                reconnectionDelay = 1000
+                reconnectionDelayMax = 5000
+            })
+        }.getOrNull() ?: return@DisposableEffect onDispose { }
+        val statusListener = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
+            val id = payload.optString("userId")
+            val account = payload.optString("accountId")
+            val online = payload.optBoolean("online", false)
+            sellers.filter { it.uid == id || it.accountId == id || it.uid == account || it.accountId == account }
+                .forEach { seller ->
+                    onlineById = onlineById + (seller.uid to online) + (seller.accountId to online)
+                }
+        }
+        val onlineListener = Emitter.Listener { args ->
+            val id = args.firstOrNull()?.toString().orEmpty()
+            sellers.filter { it.uid == id || it.accountId == id }.forEach { seller ->
+                onlineById = onlineById + (seller.uid to true) + (seller.accountId to true)
+            }
+        }
+        val offlineListener = Emitter.Listener { args ->
+            val id = args.firstOrNull()?.toString().orEmpty()
+            sellers.filter { it.uid == id || it.accountId == id }.forEach { seller ->
+                onlineById = onlineById + (seller.uid to false) + (seller.accountId to false)
+            }
+        }
+        socket.on("presence_status", statusListener)
+        socket.on("user_online", onlineListener)
+        socket.on("user_offline", offlineListener)
+        socket.connect()
+        sellers.forEach { seller ->
+            socket.emit("check_presence", seller.uid)
+            socket.emit("check_presence", seller.accountId)
+        }
+        onDispose {
+            socket.off("presence_status", statusListener)
+            socket.off("user_online", onlineListener)
+            socket.off("user_offline", offlineListener)
+            socket.disconnect()
+            socket.close()
+        }
     }
     Column(Modifier.fillMaxWidth().padding(top = 16.dp, start = 12.dp, end = 12.dp)) {
         sellers.forEach { seller ->
@@ -609,9 +665,9 @@ private fun AgentContent(onChat: (String, String, String) -> Unit) {
                     Text(seller.name, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color(0xFF111827), maxLines = 1)
                     Text("ID: ${seller.accountId}", fontSize = 12.sp, color = Color(0xFF6B7280))
                     Text(
-                        if (seller.online) "Online" else "Offline",
+                        if (onlineById[seller.uid] ?: onlineById[seller.accountId] ?: seller.online) "Online" else "Offline",
                         fontSize = 11.sp,
-                        color = if (seller.online) Color(0xFF16A34A) else Color(0xFF9CA3AF)
+                        color = if (onlineById[seller.uid] ?: onlineById[seller.accountId] ?: seller.online) Color(0xFF16A34A) else Color(0xFF9CA3AF)
                     )
                 }
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
