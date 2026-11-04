@@ -423,20 +423,20 @@ fun PublicProfileScreen(
                         modifier = Modifier
                             .align(Alignment.TopEnd)
                             .padding(top = 105.dp)
-                            .clip(RoundedCornerShape(topStart = 20.dp, bottomStart = 20.dp))
+                            .clip(RoundedCornerShape(topStart = 18.dp, bottomStart = 18.dp))
                             .background(Color(0xFF3B82F6))
                             .clickable { onJoinRoom(liveRoomId) }
-                            .padding(start = 11.dp, end = 12.dp, top = 6.dp, bottom = 6.dp)
+                            .padding(start = 10.dp, end = 10.dp, top = 5.dp, bottom = 5.dp)
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            horizontalArrangement = Arrangement.spacedBy(5.dp)
                         ) {
-                            InRoomAnimatedEqualizerIcon(modifier = Modifier.size(14.dp))
+                            InRoomAnimatedEqualizerIcon(modifier = Modifier.size(13.dp))
                             Text(
                                 text = "In room",
                                 color = Color.White,
-                                fontSize = 13.sp,
+                                fontSize = 12.sp,
                                 fontWeight = FontWeight.SemiBold
                             )
                         }
