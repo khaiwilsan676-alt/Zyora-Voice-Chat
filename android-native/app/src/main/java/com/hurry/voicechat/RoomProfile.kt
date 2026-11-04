@@ -495,8 +495,8 @@ fun RoomProfile(
         UserReport(
             targetName = displayName,
             targetImage = displayProfileImage,
-            targetId = accountId.toString(),
-            idBadgeImage = if (accountId.toString() in setOf("500002", "500003", "500004")) "IMG_20261101_125212.png".fullUrl() else null,
+            targetId = user.accountId.orEmpty().ifBlank { user.uid.orEmpty().ifBlank { user.id.orEmpty() } },
+            idBadgeImage = if (user.accountId.orEmpty().ifBlank { user.uid.orEmpty().ifBlank { user.id.orEmpty() } } in setOf("500002", "500003", "500004")) "IMG_20261101_125212.png".fullUrl() else null,
             onDismiss = { showReports = false }
         )
     }
