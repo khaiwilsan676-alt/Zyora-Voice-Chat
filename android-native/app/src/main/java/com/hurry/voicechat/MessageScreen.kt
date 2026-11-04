@@ -874,6 +874,12 @@ fun NativeChatScreen(
             val recorder = createVoiceRecorder()
             createdRecorder = recorder
             recorder.setAudioSource(MediaRecorder.AudioSource.VOICE_COMMUNICATION)
+            val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            val bluetoothInput = audioManager.getDevices(AudioManager.GET_DEVICES_INPUTS).firstOrNull {
+                it.type == android.media.AudioDeviceInfo.TYPE_BLUETOOTH_SCO ||
+                    (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && it.type == android.media.AudioDeviceInfo.TYPE_BLE_HEADSET)
+            }
+            if (bluetoothInput != null) recorder.setPreferredDevice(bluetoothInput)
             recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
             recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
             recorder.setAudioEncodingBitRate(32000)
