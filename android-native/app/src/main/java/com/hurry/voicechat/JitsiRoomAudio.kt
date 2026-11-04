@@ -118,6 +118,14 @@ fun JitsiRoomAudio(
             onSpeakingChanged(false)
         }
 
+        fun failCaptureStart() {
+            recording.set(false)
+            onSpeakingChanged(false)
+            if (roomSocket.connected()) {
+                roomSocket.emit("room_voice_stop", JSONObject().put("roomId", roomId))
+            }
+        }
+
         fun startCapture() {
             if (!alive.get() || !hasMicPermission || !canSpeak || recording.get()) return
             val minBuffer = AudioRecord.getMinBufferSize(
@@ -125,7 +133,10 @@ fun JitsiRoomAudio(
                 AudioFormat.CHANNEL_IN_MONO,
                 AudioFormat.ENCODING_PCM_16BIT
             )
-            if (minBuffer <= 0) return
+            if (minBuffer <= 0) {
+                failCaptureStart()
+                return
+            }
             val created = runCatching {
                 AudioRecord(
                     MediaRecorder.AudioSource.VOICE_COMMUNICATION,
@@ -134,9 +145,13 @@ fun JitsiRoomAudio(
                     AudioFormat.ENCODING_PCM_16BIT,
                     maxOf(minBuffer * 2, ROOM_VOICE_FRAME_BYTES * 4)
                 )
-            }.getOrNull() ?: return
+            }.getOrNull() ?: run {
+                failCaptureStart()
+                return
+            }
             if (created.state != AudioRecord.STATE_INITIALIZED) {
                 created.release()
+                failCaptureStart()
                 return
             }
             recorder = created
@@ -150,6 +165,7 @@ fun JitsiRoomAudio(
                 recording.set(false)
                 created.release()
                 recorder = null
+                failCaptureStart()
                 return
             }
             onSpeakingChanged(true)
