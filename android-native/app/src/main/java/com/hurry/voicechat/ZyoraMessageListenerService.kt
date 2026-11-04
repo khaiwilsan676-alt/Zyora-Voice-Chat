@@ -148,7 +148,16 @@ class ZyoraMessageListenerService : Service() {
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
-        // START_STICKY keeps this service running when Zyora is swiped from Recents.
+        // Swiping Zyora away is an explicit app-close action: release the
+        // background Socket.IO connection so the server marks this account offline.
+        socket?.let { client ->
+            client.off()
+            client.disconnect()
+            client.close()
+        }
+        socket = null
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf()
         super.onTaskRemoved(rootIntent)
     }
 
