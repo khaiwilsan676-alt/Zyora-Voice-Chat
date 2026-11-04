@@ -729,7 +729,8 @@ fun PublicProfileScreen(
             receiverId = receiverId,
             currentUserId = currentUserId,
             currentAccountIdOverride = currentAccountId,
-            onBack = { showChat = false }
+            onBack = { showChat = false },
+            onOpenPublicProfile = { showChat = false }
         )
     }
 
