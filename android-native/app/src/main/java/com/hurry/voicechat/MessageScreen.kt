@@ -328,7 +328,7 @@ fun PrivateMessageInboxSync() {
 }
 
 @Composable
-fun MessageScreen(onChat: (String, String, String) -> Unit, embeddedSheet: Boolean = false, onBack: () -> Unit = {}) {
+fun MessageScreen(onChat: (String, String, String) -> Unit, embeddedSheet: Boolean = false, onBack: () -> Unit = {}, onJoinRoom: (String) -> Unit = {}) {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("hurry_user", Context.MODE_PRIVATE) }
     val authPrefs = remember { context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE) }
@@ -440,7 +440,7 @@ fun MessageScreen(onChat: (String, String, String) -> Unit, embeddedSheet: Boole
                     isOfficial = (chat.uid == "hurry_team_official" || chat.uid == "hurry_system_official"),
                     onDelete = { chats.remove(chat) }
                 ) {
-                    MessageRow(chat, onClick = { onChat(chat.uid, chat.name, chat.image) }, onJoinRoom = { roomId -> onChatRoomFromMessage(roomId) })
+                    MessageRow(chat, onClick = { onChat(chat.uid, chat.name, chat.image) }, onJoinRoom = onJoinRoom)
                 }
             }
         }
