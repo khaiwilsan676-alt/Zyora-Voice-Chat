@@ -94,6 +94,20 @@ fun JitsiRoomAudio(
         val alive = AtomicBoolean(true)
         val recording = AtomicBoolean(false)
         val voiceAllowed = AtomicBoolean(false)
+        val retryPending = AtomicBoolean(false)
+        val retryHandler = Handler(Looper.getMainLooper())
+        fun requestVoicePermission() {
+            if (alive.get() && latestCanSpeak && roomSocket.connected()) {
+                roomSocket.emit("room_voice_start", JSONObject().put("roomId", roomId))
+            }
+        }
+        fun scheduleVoiceRetry(delayMs: Long = 700L) {
+            if (!alive.get() || !latestCanSpeak || !retryPending.compareAndSet(false, true)) return
+            retryHandler.postDelayed({
+                retryPending.set(false)
+                if (alive.get() && latestCanSpeak && !voiceAllowed.get()) requestVoicePermission()
+            }, delayMs)
+        }
         var recorder: AudioRecord? = null
         var echoCanceler: AcousticEchoCanceler? = null
         var player: AudioTrack? = null
@@ -147,6 +161,8 @@ fun JitsiRoomAudio(
             if (roomSocket.connected()) {
                 roomSocket.emit("room_voice_stop", JSONObject().put("roomId", roomId))
             }
+            // Recover from transient AudioRecord initialization/route failures.
+            scheduleVoiceRetry(900L)
         }
 
         fun startCapture() {
@@ -283,9 +299,14 @@ fun JitsiRoomAudio(
             if (data.optString("roomId") != roomId) return@Listener
             val allowed = data.optBoolean("allowed", false) && latestCanSpeak
             voiceAllowed.set(allowed)
-            if (allowed) startCapture() else {
+            if (allowed) {
+                retryPending.set(false)
+                startCapture()
+            } else {
                 stopMusicRelay()
                 stopCapture()
+                // Retry transient seat-state/permission races while still unmuted.
+                scheduleVoiceRetry(500L)
             }
         }
         val chunkListener = Emitter.Listener { args ->
@@ -371,7 +392,7 @@ fun JitsiRoomAudio(
             // on RECORD_AUDIO: local music sharing must still work if mic permission
             // is denied; startCapture() independently checks that permission.
             if (latestCanSpeak && alive.get()) {
-                roomSocket.emit("room_voice_start", JSONObject().put("roomId", roomId))
+                requestVoicePermission()
             }
         }
         roomSocket.on(Socket.EVENT_CONNECT, connectListener)
@@ -391,7 +412,7 @@ fun JitsiRoomAudio(
                             roomSocket.emit("room_voice_stop", JSONObject().put("roomId", roomId))
                         }
                     } else if (roomSocket.connected()) {
-                        roomSocket.emit("room_voice_start", JSONObject().put("roomId", roomId))
+                        requestVoicePermission()
                     }
                 }
                 try { Thread.sleep(50) } catch (_: InterruptedException) { }
@@ -413,13 +434,13 @@ fun JitsiRoomAudio(
             }
             stopMusicRelay()
         }
-        if (latestCanSpeak && roomSocket.connected()) {
-            roomSocket.emit("room_voice_start", JSONObject().put("roomId", roomId))
-        }
+        requestVoicePermission()
 
         onDispose {
             alive.set(false)
             voiceAllowed.set(false)
+            retryHandler.removeCallbacksAndMessages(null)
+            retryPending.set(false)
             micMuteWatcherThread.interrupt()
             micMuteWatcherThread.join(300)
             musicWatcherThread?.interrupt()
