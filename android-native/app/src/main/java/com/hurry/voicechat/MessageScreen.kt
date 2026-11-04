@@ -875,11 +875,6 @@ fun NativeChatScreen(
             createdRecorder = recorder
             recorder.setAudioSource(MediaRecorder.AudioSource.VOICE_COMMUNICATION)
             val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-            val bluetoothInput = audioManager.getDevices(AudioManager.GET_DEVICES_INPUTS).firstOrNull {
-                it.type == android.media.AudioDeviceInfo.TYPE_BLUETOOTH_SCO ||
-                    (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && it.type == android.media.AudioDeviceInfo.TYPE_BLE_HEADSET)
-            }
-            if (bluetoothInput != null) recorder.setPreferredDevice(bluetoothInput)
             recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
             recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
             recorder.setAudioEncodingBitRate(32000)
@@ -888,6 +883,12 @@ fun NativeChatScreen(
             recorder.setMaxFileSize(700000)
             recorder.setOutputFile(file.absolutePath)
             recorder.prepare()
+            // Route the prepared recorder to the actual Bluetooth microphone input.
+            val bluetoothInput = audioManager.getDevices(AudioManager.GET_DEVICES_INPUTS).firstOrNull {
+                it.type == android.media.AudioDeviceInfo.TYPE_BLUETOOTH_SCO ||
+                    (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && it.type == android.media.AudioDeviceInfo.TYPE_BLE_HEADSET)
+            }
+            if (bluetoothInput != null) recorder.setPreferredDevice(bluetoothInput)
             recorder.start()
             mediaRecorder = recorder
             recordedVoiceFile = file
@@ -937,6 +938,12 @@ fun NativeChatScreen(
                     .build()
             )
             player.setDataSource(path)
+            val bluetoothOutput = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS).firstOrNull {
+                it.type == android.media.AudioDeviceInfo.TYPE_BLUETOOTH_A2DP ||
+                    it.type == android.media.AudioDeviceInfo.TYPE_BLUETOOTH_SCO ||
+                    (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && it.type == android.media.AudioDeviceInfo.TYPE_BLE_HEADSET)
+            }
+            if (bluetoothOutput != null) player.setPreferredDevice(bluetoothOutput)
             player.setOnCompletionListener {
                 it.release()
                 if (voicePlayer === it) voicePlayer = null
@@ -945,12 +952,6 @@ fun NativeChatScreen(
                 resetVoiceAudioRoute()
             }
             player.prepare()
-            val bluetoothOutput = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS).firstOrNull {
-                it.type == android.media.AudioDeviceInfo.TYPE_BLUETOOTH_A2DP ||
-                    it.type == android.media.AudioDeviceInfo.TYPE_BLUETOOTH_SCO ||
-                    (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && it.type == android.media.AudioDeviceInfo.TYPE_BLE_HEADSET)
-            }
-            if (bluetoothOutput != null) player.setPreferredDevice(bluetoothOutput)
             playingVoicePath = path
             voiceCountdownSeconds = ((player.duration + 999) / 1000).toLong().coerceAtLeast(1L)
             player.start()
