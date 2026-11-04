@@ -1526,4 +1526,5 @@ fun NativeChatScreen(
             targetId = receiverId,
             onDismiss = { showReportPage = false }
         )
-    }}
+    }
+}
