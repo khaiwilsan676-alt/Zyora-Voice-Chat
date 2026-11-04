@@ -300,10 +300,11 @@ function addUserToRoom(roomId, userId, userData = {}) {
       "/default-avatar.png";
     existing.email = userData.email || existing.email || "";
     if (userData.accountId) existing.accountId = String(userData.accountId);
+    if (userData.userId) existing.userId = String(userData.userId);
   } else {
     users.set(id, {
       count: 1,
-      userId: id,
+      userId: String(userData.userId || id),
       accountId: String(userData.accountId || id),
       name: userData.name || "User",
       image: userData.image || "/default-avatar.png",
@@ -1970,6 +1971,7 @@ io.on("connection", (socket) => {
             dp ||
             "/default-avatar.png",
           email: email || "",
+          userId: userId ? String(userId) : accId,
           accountId: accId,
         });
 
