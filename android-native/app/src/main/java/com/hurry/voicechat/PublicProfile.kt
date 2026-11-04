@@ -382,7 +382,7 @@ fun PublicProfileScreen(
                         modifier = Modifier
                             .align(Alignment.BottomStart)
                             .padding(start = 16.dp)
-                            .offset(y = (-20).dp) // 🔥 Changed to -20.dp
+                            .offset(y = (-25).dp) // 🔥 Changed to -20.dp
                             .size(86.dp)
                             .clip(CircleShape) // Bina kisi card and border k
                     )
@@ -422,11 +422,11 @@ fun PublicProfileScreen(
                     Box(
                         modifier = Modifier
                             .align(Alignment.TopEnd)
-                            .padding(top = 90.dp)
+                            .padding(top = 105.dp)
                             .clip(RoundedCornerShape(topStart = 20.dp, bottomStart = 20.dp))
                             .background(Color(0xFF3B82F6))
                             .clickable { onJoinRoom(liveRoomId) }
-                            .padding(start = 14.dp, end = 16.dp, top = 8.dp, bottom = 8.dp)
+                            .padding(start = 11.dp, end = 12.dp, top = 6.dp, bottom = 6.dp)
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -436,7 +436,7 @@ fun PublicProfileScreen(
                             Text(
                                 text = "In room",
                                 color = Color.White,
-                                fontSize = 14.sp,
+                                fontSize = 13.sp,
                                 fontWeight = FontWeight.SemiBold
                             )
                         }
