@@ -255,6 +255,19 @@ fun JitsiRoomAudio(
                                 roomSocket.emit("room_voice_stop", JSONObject().put("roomId", roomId))
                             }
                             Handler(Looper.getMainLooper()).post { onSpeakingChanged(false) }
+                            // Recover from transient AudioRecord dead-object / route errors.
+                            // Release the failed recorder before recreating it; never spin retry
+                            // loops while the room is disconnected or mic permission is absent.
+                            runCatching { created.stop() }
+                            runCatching { created.release() }
+                            if (recorder === created) recorder = null
+                            runCatching { echoCanceler?.release() }
+                            echoCanceler = null
+                            Handler(Looper.getMainLooper()).postDelayed({
+                                if (alive.get() && voiceAllowed.get() && canSpeak &&
+                                    hasMicPermission && !recording.get() && roomSocket.connected()
+                                ) startCapture()
+                            }, 1000)
                         }
                         break
                     } else {
