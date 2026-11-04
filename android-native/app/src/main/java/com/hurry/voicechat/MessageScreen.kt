@@ -373,7 +373,7 @@ fun MessageScreen(onChat: (String, String, String) -> Unit, embeddedSheet: Boole
             }
         }
     }
-    DisposableEffect(currentUserId, chats.size) {
+    DisposableEffect(currentUserId, chats.map { it.uid }) {
         if (currentUserId.isBlank()) return@DisposableEffect onDispose { }
         val presenceSocket = IO.socket("https://zyora-server.onrender.com", IO.Options().apply {
             transports = arrayOf("websocket")
@@ -465,7 +465,7 @@ fun MessageScreen(onChat: (String, String, String) -> Unit, embeddedSheet: Boole
                     isOfficial = (chat.uid == "hurry_team_official" || chat.uid == "hurry_system_official"),
                     onDelete = { chats.remove(chat) }
                 ) {
-                    MessageRow(chat) { onChat(chat.uid, chat.name, chat.image) }
+                    MessageRow(chat, onClick = { onChat(chat.uid, chat.name, chat.image) }, onJoinRoom = { roomId -> onChatRoomFromMessage(roomId) })
                 }
             }
         }
@@ -473,7 +473,7 @@ fun MessageScreen(onChat: (String, String, String) -> Unit, embeddedSheet: Boole
 }
 
 @Composable
-private fun MessageRow(chat: MessagePreview, onClick: () -> Unit) {
+private fun MessageRow(chat: MessagePreview, onClick: () -> Unit, onJoinRoom: (String) -> Unit) {
     // Check lagaya taaki official pe border ya pill naa aaye
     val isOfficial = chat.uid == "hurry_team_official" || chat.uid == "hurry_system_official"
 
@@ -485,7 +485,7 @@ private fun MessageRow(chat: MessagePreview, onClick: () -> Unit) {
     ) {
         
         // Avatar + Blue Border + Bottom Music Pill Icon (Sirf normal user ke liye)
-        Box(contentAlignment = Alignment.BottomCenter) {
+        Box(contentAlignment = Alignment.BottomCenter, modifier = Modifier.clickable(enabled = chat.isInRoom) { onJoinRoom(chat.roomId) }) {
             AsyncImage(
                 model = resolveChatAvatar(chat.image.ifBlank { RAW_MSG + "default-avatar.png" }), contentDescription = chat.name,
                 modifier = Modifier
@@ -503,6 +503,7 @@ private fun MessageRow(chat: MessagePreview, onClick: () -> Unit) {
                         .offset(y = 4.dp)
                         .clip(RoundedCornerShape(8.dp))
                         .background(Color(0xFF3B82F6))
+                        .clickable { onJoinRoom(chat.roomId) }
                         .padding(horizontal = 6.dp, vertical = 3.dp),
                     contentAlignment = Alignment.Center
                 ) {
