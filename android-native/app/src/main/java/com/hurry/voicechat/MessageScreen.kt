@@ -69,6 +69,17 @@ private const val RAW_MSG = "https://raw.githubusercontent.com/khaiwilsan676-alt
 // Added unreadCount to track new messages
 private data class MessagePreview(val uid: String, val name: String, val image: String, val message: String, val time: String = "", val unreadCount: Int = 0)
 
+private fun refreshTotalUnreadCount(context: Context, accountId: String) {
+    if (accountId.isBlank()) return
+    val unreadPrefs = context.getSharedPreferences("zyora_unread_messages", Context.MODE_PRIVATE)
+    val prefix = "unread_${accountId}_"
+    val total = unreadPrefs.all.entries
+        .asSequence()
+        .filter { it.key.startsWith(prefix) }
+        .sumOf { (it.value as? Int ?: 0).coerceAtLeast(0) }
+    unreadPrefs.edit().putInt("unread_${accountId}", total).apply()
+}
+
 private fun resolveChatAvatar(value: String): String {
     val image = value.trim()
     if (image.isBlank() || image == "null" || image == "/default-avatar.png") {
@@ -277,6 +288,7 @@ fun PrivateMessageInboxSync() {
                         val unreadPrefs = context.getSharedPreferences("zyora_unread_messages", Context.MODE_PRIVATE)
                         val unreadKey = "unread_" + accountId + "_" + peerId
                         unreadPrefs.edit().putInt(unreadKey, unreadPrefs.getInt(unreadKey, 0) + 1).apply()
+                        refreshTotalUnreadCount(context, accountId)
                     }
                     val timestamp = payload.optLong("timestamp", System.currentTimeMillis())
                     val time = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(timestamp))
@@ -565,6 +577,7 @@ fun NativeChatScreen(
         if (receiverId.isNotBlank() && currentAccountId.isNotBlank()) {
             val unreadPrefs = context.getSharedPreferences("zyora_unread_messages", Context.MODE_PRIVATE)
             unreadPrefs.edit().putInt("unread_${currentAccountId}_${receiverId}", 0).apply()
+            refreshTotalUnreadCount(context, currentAccountId)
         }
     }
 
@@ -680,6 +693,7 @@ fun NativeChatScreen(
                     // Since we are inside the chat, keep unread zero
                     val unreadPrefs = context.getSharedPreferences("zyora_unread_messages", Context.MODE_PRIVATE)
                     unreadPrefs.edit().putInt("unread_${currentAccountId}_${peerId}", 0).apply()
+                    refreshTotalUnreadCount(context, currentAccountId)
                 }
             }
         }
@@ -687,15 +701,25 @@ fun NativeChatScreen(
             val data = args.firstOrNull() as? JSONObject ?: return@Listener
             val arr = data.optJSONArray("messages") ?: return@Listener
             val loaded = mutableListOf<Pair<Boolean, String>>()
+            val loadedIds = mutableListOf<String>()
             for (index in 0 until arr.length()) {
                 val msg = arr.optJSONObject(index) ?: continue
-                val value = msg.optString("text")
-                if (value.isNotBlank()) loaded.add((msg.optString("senderId") == currentUserId || msg.optString("senderAccountId") == currentAccountId) to value)
+                val isVoice = msg.optString("type") == "voice"
+                val value = if (isVoice) {
+                    VoiceMessageStore.saveIncoming(context, msg)
+                        ?: "VOICE::${msg.optLong("durationSec", 1)}"
+                } else msg.optString("text")
+                if (value.isNotBlank()) {
+                    loaded.add((msg.optString("senderId") == currentUserId || msg.optString("senderAccountId") == currentAccountId) to value)
+                    loadedIds.add(msg.optString("id"))
+                }
             }
             if (loaded.isNotEmpty()) {
                 mainHandler.post {
                     messages.clear()
                     messages.addAll(loaded)
+                    messageIds.clear()
+                    messageIds.addAll(loadedIds)
                 }
             }
         }
@@ -817,12 +841,14 @@ fun NativeChatScreen(
             voicePlayer?.stop()
             voicePlayer?.release()
             voicePlayer = null
-            configureVoiceAudioRoute()
+            // Voice-note playback uses the normal media stream/speaker volume, never call volume.
+            val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            audioManager.mode = AudioManager.MODE_NORMAL
             val player = MediaPlayer()
             voicePlayer = player
             player.setAudioAttributes(
                 AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
+                    .setUsage(AudioAttributes.USAGE_MEDIA)
                     .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
                     .build()
             )
