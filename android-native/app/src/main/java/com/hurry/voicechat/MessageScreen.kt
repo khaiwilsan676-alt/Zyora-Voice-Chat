@@ -1167,11 +1167,13 @@ fun NativeChatScreen(
                     Spacer(modifier = Modifier.width(8.dp))
 
                     Text(
-                        text = "I'm chatting and playing games in\nvoice room, join me~",
+                        text = "I'm chatting and playing games in voice room, join me~",
                         color = Color.White,
                         fontSize = 12.sp, // Text chota kar diya
                         fontWeight = FontWeight.Medium,
                         lineHeight = 16.sp, // Line height adjust kar diya
+                        maxLines = 2, // Sirf 2 line tak allow karega
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, // Agar text lamba hua toh 3rd line ki jagah ... dikha dega
                         modifier = Modifier.weight(1f)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
