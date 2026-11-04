@@ -2144,20 +2144,20 @@ private fun formatMusicTime(seconds: Float): String {
                 drawCircle(color=if(blue) Color(0xFF55C6F3).copy(alpha=.25f) else Color(0xFF9CA3AF).copy(alpha=.25f),radius=radius+size.minDimension*7.5f/512f,center=center,style=Stroke(width=size.minDimension*15f/512f))
                 if (isSpeaking) {
                     // Staggered blue rings stay visible around the avatar edge.
-                    val firstRadius = size.minDimension * (0.43f + waveProgress * 0.07f)
+                    val firstRadius = size.minDimension * (0.52f + waveProgress * 0.16f)
                     val secondProgress = (waveProgress + 0.5f) % 1f
-                    val secondRadius = size.minDimension * (0.43f + secondProgress * 0.07f)
+                    val secondRadius = size.minDimension * (0.52f + secondProgress * 0.16f)
                     drawCircle(
                         color = Color(0xFF168CFF).copy(alpha = 0.82f * (1f - waveProgress)),
                         radius = firstRadius,
                         center = center,
-                        style = Stroke(width = size.minDimension * 0.045f)
+                        style = Stroke(width = size.minDimension * 0.060f)
                     )
                     drawCircle(
                         color = Color(0xFF45B7FF).copy(alpha = 0.72f * (1f - secondProgress)),
                         radius = secondRadius,
                         center = center,
-                        style = Stroke(width = size.minDimension * 0.035f)
+                        style = Stroke(width = size.minDimension * 0.048f)
                     )
                 }
                 drawCircle(brush=ringBrush,radius=radius,center=center,style=Stroke(width=size.minDimension*10f/512f))
