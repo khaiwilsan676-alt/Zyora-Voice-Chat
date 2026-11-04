@@ -910,7 +910,7 @@ fun RoomPage(
             if (!currentProfile.has("name") && roomDisplayName.isNotBlank()) currentProfile.put("name", roomDisplayName)
             if (!currentProfile.has("image") && roomDisplayImage.isNotBlank()) currentProfile.put("image", roomDisplayImage)
             currentProfileKeys.forEach { profileDb.saveProfile(it, currentProfile) }
-            val joinPayload = JSONObject().put("roomId",roomId).put("userId",currentUser.uid.ifBlank{currentUser.id.ifBlank{accountId}}).put("accountId",accountId).put("roomOwnerId",roomOwner.uid.ifBlank{roomOwner.id.ifBlank{roomOwner.accountId.ifBlank{roomId}}}).put("name",roomDisplayName).put("dp",roomDisplayImage)
+            val joinPayload = JSONObject().put("roomId",roomId).put("userId",currentUser.uid.ifBlank{currentUser.id.ifBlank{accountId}}).put("accountId",accountId).put("roomOwnerId",roomOwner.uid.ifBlank{roomOwner.id.ifBlank{roomOwner.accountId.ifBlank{roomId}}}).put("name",roomDisplayName).put("dp",roomDisplayImage).put("roomName",roomName).put("roomImage",roomImage)
             roomSocket.emit("room_join",joinPayload)
             if (latestShowChat) roomSocket.emit("room_chat_view", JSONObject().put("roomId", roomId).put("userId", accountId).put("active", true))
             if (!joinMessageSent && accountId != "guest") {
