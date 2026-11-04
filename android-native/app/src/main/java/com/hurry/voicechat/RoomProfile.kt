@@ -92,6 +92,41 @@ fun WhiteColorRemovalShader(imageSrc: String, modifier: Modifier = Modifier) {
     )
 }
 
+
+internal suspend fun loadRoomProfileCountry(
+    context: Context,
+    accountId: String,
+    name: String,
+    image: String,
+    fallbackCountry: String = ""
+): String {
+    if (accountId.isBlank()) return fallbackCountry
+    val cached = runCatching { NativeIndexDatabase(context).loadProfile(accountId) }.getOrNull()
+    val remote = runCatching {
+        ProfilePersistence.load(TargetUser(
+            id = accountId, uid = accountId, accountId = accountId,
+            name = name, image = image, country = fallbackCountry
+        ))
+    }.getOrNull()
+    val merged = org.json.JSONObject(cached?.toString() ?: "{}")
+    remote?.let { profile ->
+        sequenceOf("flag", "countryName", "country", "countryCode", "country_code", "nationality", "location").forEach { key ->
+            val value = profile.optString(key, "").trim()
+            if (value.isNotBlank() && value != "null") merged.put(key, value)
+        }
+    }
+    return sequenceOf(
+        merged.optString("flag", ""),
+        merged.optString("countryName", ""),
+        merged.optString("country", ""),
+        merged.optString("countryCode", ""),
+        merged.optString("country_code", ""),
+        merged.optString("nationality", ""),
+        merged.optString("location", ""),
+        fallbackCountry
+    ).map { it.trim() }.firstOrNull { it.isNotBlank() && it != "null" }.orEmpty()
+}
+
 // --- Main RoomProfile Component ---
 
 @Composable
