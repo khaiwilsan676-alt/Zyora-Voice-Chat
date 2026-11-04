@@ -2151,6 +2151,10 @@ io.on("connection", (socket) => {
 
       if (!room) return;
 
+      // A client can leave only the room this socket actually joined.
+      // This prevents stale UI events from removing another live session's presence.
+      if (!socketIsInRoom(socket, room)) return;
+
       // A client cannot remove another user's room presence.
       const requestedId = String(accountId || userId || "").trim();
       if (requestedId && !socketOwnsIdentity(socket, requestedId)) return;
