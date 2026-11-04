@@ -179,6 +179,7 @@ fun RoomPage(
     roomOwner: RoomPageOwner,
     currentUser: RoomPageCurrentUser,
     onClose:()->Unit={},
+    onOpenPublicProfile:(RoomProfileUser)->Unit={},
     onBack:()->Unit=onClose,
     onKeepRoom:(String,String,String)->Unit={_,_,_->},
     onFollowToggle:(String,Boolean)->Unit={_,_->},
@@ -1541,6 +1542,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                 isCurrentUser = profileId == accountId,
                 isRoomOwner = profileId == roomOwner.accountId.ifBlank { roomOwner.id },
                 onClose = { selectedChatProfile = null },
+                onOpenPublicProfile = { profile -> selectedChatProfile = null; selectedSeat = 0; showSeatSheet = false; onOpenPublicProfile(profile) },
                 onCopyId = { if (profileId.isNotBlank()) clipboard.setText(AnnotatedString(profileId)) },
                 onMention = { name, targetId ->
                     val cleanName = name.trim().ifBlank { "User" }
@@ -1642,6 +1644,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                 isCurrentUser = profileSeat.accountId == accountId,
                 isRoomOwner = profileSeat.accountId == roomOwner.accountId.ifBlank { roomOwner.id },
                 onClose = { selectedSeat = 0 },
+                onOpenPublicProfile = { profile -> selectedSeat = 0; showSeatSheet = false; onOpenPublicProfile(profile) },
                 onMention = { name, targetId ->
                     val cleanName = name.trim().ifBlank { "User" }
                     input = if (input.isBlank()) "@$cleanName " else input.trimEnd() + " @$cleanName "
