@@ -448,6 +448,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                     onOpenPublicProfile = { profile -> openedPublicProfile = profile },
                     onBack = { openedRoom = null },
                     onRoomSupport = { openedRoomSupport = true },
+                    onJoinRoom = { targetRoomId -> openedRoom=HurryRoom(id=targetRoomId,name="Room",image="",country="",accountId=targetRoomId) },
                     onClose = {
                         if (keptRoom?.id == openedRoom?.id) {
                             keptRoom = null
@@ -560,7 +561,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                             )
                             HurryTab.MESSAGE -> MessageScreen(onChat = { uid, name, image ->
                                 openedChat = Triple(uid, name, image)
-                            })
+                            }, onJoinRoom = { targetRoomId -> openedRoom=HurryRoom(id=targetRoomId,name="Room",image="",country="",accountId=targetRoomId) })
                             HurryTab.ME -> when (openedMePage) {
                                 null -> MeScreen(languageCode = languageCode,onOpen = { openedMePage = it }, onPublicProfile = { openedPublicProfile = it })
                                 "Coins" -> CoinsNativePage(onBack = { openedMePage = null })
