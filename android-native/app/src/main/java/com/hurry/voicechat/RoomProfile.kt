@@ -141,6 +141,7 @@ fun RoomProfile(
     onFollow: () -> Unit = {},
     onMessage: () -> Unit = {},
     onThirdAction: () -> Unit = {},
+    onOpenPublicProfile: (RoomUser) -> Unit = {},
     onMute: () -> Unit = {},
     onLock: () -> Unit = {},
     onKickOut: () -> Unit = {}
