@@ -1766,7 +1766,8 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                 receiverId = chat.first,
                 currentUserId = currentUser.uid.ifBlank { currentUser.id },
                 currentAccountIdOverride = currentUser.accountId.ifBlank { currentUser.id },
-                onBack = { selectedOfficialChat = null }
+                onBack = { selectedOfficialChat = null },
+                onJoinRoom = onJoinRoom
             )
         }
         
