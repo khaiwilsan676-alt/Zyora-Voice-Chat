@@ -189,35 +189,40 @@ fun TransparentSeatVideoPlayer(
     val player = remember(context, videoUrl) {
         ExoPlayer.Builder(context).build().apply {
             setMediaItem(MediaItem.fromUri(videoUrl))
-            prepare()
+            repeatMode = Player.REPEAT_MODE_OFF
             playWhenReady = true
             addListener(object : Player.Listener {
                 override fun onPlaybackStateChanged(playbackState: Int) {
                     if (playbackState == Player.STATE_ENDED) latestOnFinished()
                 }
             })
+            prepare()
         }
     }
-    val videoView = remember { mutableStateOf<ChromaKeyVideoView?>(null) }
 
     AndroidView(
         modifier = modifier.fillMaxSize(),
         factory = { ctx ->
-            ChromaKeyVideoView(ctx) { surface ->
-                android.os.Handler(android.os.Looper.getMainLooper()).post {
-                    player.setVideoSurface(surface)
-                }
-            }.also { videoView.value = it }
+            PlayerView(ctx).apply {
+                useController = false
+                // TextureView composites correctly over the seat/avatar without chroma-key processing.
+                setSurfaceType(PlayerView.SURFACE_TYPE_TEXTURE_VIEW)
+                setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)
+                setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                keepScreenOn = true
+                player = player
+            }
         },
-        update = { view -> videoView.value = view }
+        update = { view ->
+            if (view.player !== player) view.player = player
+        }
     )
 
     DisposableEffect(player) {
         onDispose {
-            player.clearVideoSurface()
+            player.stop()
+            player.clearMediaItems()
             player.release()
-            videoView.value?.release()
-            videoView.value = null
         }
     }
 }
