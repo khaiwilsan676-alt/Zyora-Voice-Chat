@@ -143,8 +143,7 @@ fun PublicProfileScreen(
     onBack: () -> Unit,
     onJoinRoom: (String) -> Unit = {},
     isOtherUser: Boolean = false,
-    targetUser: TargetUser? = null,
-    initialReportOpen: Boolean = false
+    targetUser: TargetUser? = null
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -212,7 +211,7 @@ fun PublicProfileScreen(
     var showAgeScreen by remember { mutableStateOf(false) }
     var showBioScreen by remember { mutableStateOf(false) }
     var showActionSheet by remember { mutableStateOf(false) }
-    var showUserReport by remember(initialReportOpen) { mutableStateOf(initialReportOpen) }
+    var showUserReport by remember { mutableStateOf(false) }
     var isUserBlocked by remember(targetUser?.uid, targetUser?.id, targetUser?.accountId) { mutableStateOf(false) }
     var showChat by remember { mutableStateOf(false) }
 
