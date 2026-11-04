@@ -241,7 +241,8 @@ fun JitsiRoomAudio(
                                     runCatching {
                                         roomSocket.emit(
                                             "room_voice_chunk",
-                                            JSONObject().put("roomId", roomId).put("audio", frame.copyOf())
+                                            JSONObject().put("roomId", roomId),
+                                            frame.copyOf()
                                         )
                                     }
                                 }
@@ -279,7 +280,7 @@ fun JitsiRoomAudio(
             // JSONObject serializes Kotlin ByteArray payloads as JSON number arrays.
             // Accept both Socket.IO binary buffers and JSON arrays so relayed mic/music
             // packets are decoded consistently on every Android client.
-            val rawAudio = data.opt("audio")
+            val rawAudio = args.getOrNull(1) as? ByteArray ?: data.opt("audio")
             val bytes = when (rawAudio) {
                 is ByteArray -> rawAudio
                 is org.json.JSONArray -> ByteArray(rawAudio.length()) { index ->
@@ -489,7 +490,7 @@ private fun relayDecodedMusic(
                         resamplePosition += step
                         if (packetSize == packet.size) {
                             if (socket.connected() && running.get()) {
-                                socket.emit("room_voice_chunk", JSONObject().put("roomId", roomId).put("audio", packet.copyOf()))
+                                socket.emit("room_voice_chunk", JSONObject().put("roomId", roomId), packet.copyOf())
                             }
                             nextFrameAt += 20_000_000L
                             val waitNanos = nextFrameAt - System.nanoTime()
