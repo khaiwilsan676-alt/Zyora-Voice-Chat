@@ -67,7 +67,7 @@ fun RoomInfo(
             all.associate { member ->
                 val roomProfileCountry = runCatching {
                     // Read the same Room Profile country field used by the Room Profile sheet.
-                    loadRoomProfileCountry(context, member.accountId, member.name, member.image, member.country)
+                    loadRoomProfileCountry(context, member.accountId, member.name, member.image)
                 }.getOrDefault("")
                 member.accountId to member.copy(country = roomProfileCountry)
             }
@@ -194,7 +194,7 @@ fun RoomInfo(
                     }
                     // Only room followers appear in the Members list.
                     items(roomFollowers.filter { it.accountId.isNotBlank() && it.accountId != roomOwner.accountId }, key = { "member-${it.accountId}" }) { f ->
-                        val profile = memberProfiles[f.accountId] ?: f
+                        val profile = memberProfiles[f.accountId] ?: f.copy(country = "")
                         MemberRow(profile.name, profile.image, profile.accountId, "", profile.country) { onOpenProfile(profile) }
                     }
                     if (roomFollowers.isEmpty() && roomAdmins.isEmpty()) {
