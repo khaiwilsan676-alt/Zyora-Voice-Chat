@@ -268,22 +268,24 @@ fun JitsiRoomAudio(
                         }
                     } else if (count < 0) {
                         if (recording.compareAndSet(true, false)) {
+                            // AudioRecord died. The stop event also revokes the server-side
+                            // publisher session, so a local capture restart alone is invalid.
+                            voiceAllowed.set(false)
                             if (roomSocket.connected()) {
                                 roomSocket.emit("room_voice_stop", JSONObject().put("roomId", roomId))
                             }
                             Handler(Looper.getMainLooper()).post { onSpeakingChanged(false) }
-                            // Recover from transient AudioRecord dead-object / route errors.
-                            // Release the failed recorder before recreating it; never spin retry
-                            // loops while the room is disconnected or mic permission is absent.
                             runCatching { created.stop() }
                             runCatching { created.release() }
                             if (recorder === created) recorder = null
                             runCatching { echoCanceler?.release() }
                             echoCanceler = null
+                            // Re-authorize with the server first; permissionListener starts
+                            // AudioRecord only after room_voice_permission(allowed=true).
                             Handler(Looper.getMainLooper()).postDelayed({
-                                if (alive.get() && voiceAllowed.get() && latestCanSpeak &&
-                                    hasMicPermission && !recording.get() && roomSocket.connected()
-                                ) startCapture()
+                                if (alive.get() && latestCanSpeak && hasMicPermission &&
+                                    !recording.get() && roomSocket.connected()
+                                ) requestVoicePermission()
                             }, 1000)
                         }
                         break
