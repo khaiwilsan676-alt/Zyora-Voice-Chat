@@ -49,9 +49,23 @@ fun JitsiRoomAudio(
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         hasMicPermission = granted || ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
     }
+    var hasBluetoothPermission by remember {
+        mutableStateOf(
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
+                ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
+        )
+    }
+    val bluetoothPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        hasBluetoothPermission = granted || Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
+            ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
+    }
 
-    LaunchedEffect(canSpeak, hasMicPermission) {
-        if (canSpeak && !hasMicPermission) permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+    LaunchedEffect(canSpeak, hasMicPermission, hasBluetoothPermission) {
+        if (canSpeak && !hasMicPermission) {
+            permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+        } else if (canSpeak && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !hasBluetoothPermission) {
+            bluetoothPermissionLauncher.launch(Manifest.permission.BLUETOOTH_CONNECT)
+        }
     }
 
     DisposableEffect(context, roomId, roomSocket, canSpeak, hasMicPermission) {
@@ -61,14 +75,14 @@ fun JitsiRoomAudio(
         val oldCommunicationDeviceId = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) audioManager.communicationDevice?.id else null
         val hadBluetoothSco = audioManager.isBluetoothScoOn
         audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && hasBluetoothPermission) {
             val devices = audioManager.availableCommunicationDevices
             val preferred = devices.firstOrNull {
                 it.type == android.media.AudioDeviceInfo.TYPE_BLE_HEADSET ||
                     it.type == android.media.AudioDeviceInfo.TYPE_BLUETOOTH_SCO
             } ?: devices.firstOrNull { it.type == android.media.AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
             if (preferred != null) audioManager.setCommunicationDevice(preferred)
-        } else {
+        } else if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
             val bluetoothOutput = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS).any {
                 it.type == android.media.AudioDeviceInfo.TYPE_BLUETOOTH_SCO
             }
@@ -218,7 +232,7 @@ fun JitsiRoomAudio(
             stopCapture()
             runCatching { player?.stop(); player?.release() }
             player = null
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && hasBluetoothPermission) {
                 val previousDevice = oldCommunicationDeviceId?.let { id ->
                     audioManager.availableCommunicationDevices.firstOrNull { it.id == id }
                 }
