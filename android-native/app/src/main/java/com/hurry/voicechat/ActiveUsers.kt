@@ -18,7 +18,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
-import org.json.JSONObject
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -43,32 +42,18 @@ fun ActiveUsers(
 ){
  if(!isOpen)return
  val context = LocalContext.current
- val database = remember(context) { NativeIndexDatabase(context) }
  var countryByUser by remember { mutableStateOf<Map<String,String>>(emptyMap()) }
  LaunchedEffect(roomUsers) {
-  val profiles = roomUsers.mapNotNull { user ->
-   if (user.accountId.isBlank()) return@mapNotNull null
-   val cached = database.loadProfile(user.accountId) ?: JSONObject()
-   if (user.name.isNotBlank()) cached.put("name", user.name)
-   if (user.image.isNotBlank()) cached.put("image", user.image)
-   val remote = runCatching {
-    ProfilePersistence.load(TargetUser(uid=user.accountId,id=user.accountId,accountId=user.accountId,name=user.name,image=user.image))
-   }.getOrNull()
-   if (remote != null) {
-    val profileObjects = listOfNotNull(remote, remote.optJSONObject("profile"), remote.optJSONObject("publicProfile"), remote.optJSONObject("user"), remote.optJSONObject("data"))
-    val country = profileObjects.asSequence().flatMap { obj ->
-     sequenceOf("flag","countryName","country","Country","countryCode","country_code","location","country_name","nationality").map { key -> obj.optString(key,"").trim() }
-    }.firstOrNull { it.isNotBlank() && it!="null" }.orEmpty()
-    if (country.isNotBlank()) cached.put("country", country)
-   }
-   val cachedObjects = listOfNotNull(cached, cached.optJSONObject("profile"), cached.optJSONObject("publicProfile"), cached.optJSONObject("user"), cached.optJSONObject("data"))
-   val country = cachedObjects.asSequence().flatMap { obj ->
-    sequenceOf("countryName","country","Country","countryCode","country_code","location","country_name","nationality").map { key -> obj.optString(key,"").trim() }
-   }.firstOrNull { it.isNotBlank() && it!="null" }.orEmpty()
-   if (country.isNotBlank()) cached.put("country", country)
-   database.saveProfile(user.accountId, cached)
-   user.accountId to country
-  }.toMap()
+  val profiles = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+   roomUsers.mapNotNull { user ->
+    if (user.accountId.isBlank()) return@mapNotNull null
+    val country = runCatching {
+     // Use the same Room Profile country resolver as the Room Info Members list.
+     loadRoomProfileCountry(context, user.accountId, user.name, user.image)
+    }.getOrDefault("")
+    user.accountId to country
+   }.toMap()
+  }
   countryByUser = profiles
  }
  Box(Modifier.fillMaxSize(),contentAlignment=Alignment.BottomCenter){
