@@ -273,20 +273,18 @@ fun HomeScreen(
 
 
     LaunchedEffect(Unit) {
-        // Keep the room list reconciled with the authoritative MongoDB snapshot.
-        // Never merge old local entries back into a fresh response.
-        rooms = emptyList()
-        NativeRoomMemoryCache.rooms = null
+        // Keep the process-wide room snapshot while HomeScreen is disposed during tab navigation.
+        // A temporary network failure is not an authoritative empty-room response.
         while (true) {
             if (!NativeRoomMemoryCache.refreshInFlight) {
                 NativeRoomMemoryCache.refreshInFlight = true
                 try {
-                    val update = runCatching { HurryApi.roomsUpdatedSince(0L) }.getOrNull()
-                    NativeRoomMemoryCache.lastRefreshAt = System.currentTimeMillis()
+                    val update = HurryApi.roomsUpdatedSince(0L)
                     if (update != null) {
                         val fresh = update.rooms.distinctBy { it.id }
                         NativeRoomMemoryCache.rooms = fresh
                         rooms = fresh
+                        NativeRoomMemoryCache.lastRefreshAt = System.currentTimeMillis()
                         if (dao != null) {
                             runCatching {
                                 withContext(Dispatchers.IO) {
@@ -309,12 +307,8 @@ fun HomeScreen(
                         if (update.serverTime > 0L) {
                             roomSyncPrefs.edit().putLong("last_server_updated_at", update.serverTime).apply()
                         }
-                    } else {
-                        // Fail closed: an unconfirmed cached room must not remain visible.
-                        NativeRoomMemoryCache.rooms = emptyList()
-                        rooms = emptyList()
-                        if (dao != null) runCatching { withContext(Dispatchers.IO) { dao.clearAll() } }
                     }
+                    // If the request fails, retain the last confirmed list and cache.
                 } finally {
                     NativeRoomMemoryCache.refreshInFlight = false
                 }
