@@ -26,13 +26,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
-import io.socket.client.IO
-import io.socket.emitter.Emitter
 
 import androidx.room.*
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -161,67 +157,17 @@ private suspend fun exchangeCanonicalWallet(userId: String, diamonds: Long): JSO
     }.getOrNull()
 }
 
-private data class WalletAgentSeller(
-    val uid: String,
-    val accountId: String,
-    val name: String,
-    val image: String,
-    val online: Boolean,
-    val coins: Long
-)
-
-private suspend fun fetchWalletAgentSellers(): List<WalletAgentSeller> = withContext(Dispatchers.IO) {
-    runCatching {
-        val connection = (URL("https://zyora-server.onrender.com/api/users?sellers=true").openConnection() as HttpURLConnection).apply {
-            connectTimeout = 12000
-            readTimeout = 20000
-        }
-        val response = try {
-            if (connection.responseCode !in 200..299) return@runCatching emptyList()
-            JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
-        } finally { connection.disconnect() }
-        val users = response.optJSONArray("users") ?: return@runCatching emptyList()
-        val rows = (0 until users.length()).mapNotNull { index ->
-            val user = users.optJSONObject(index) ?: return@mapNotNull null
-            val uid = user.optString("uid").ifBlank { user.optString("id") }
-            val account = user.optString("accountId").ifBlank { user.optString("accountNumber") }
-            if (uid.isBlank() || account.isBlank()) return@mapNotNull null
-            WalletAgentSeller(
-                uid = uid,
-                accountId = account,
-                name = user.optString("name").ifBlank { "User" },
-                image = user.optString("image").ifBlank { "https://zyora-voice-chat.vercel.app/default-avatar.png" },
-                online = user.optBoolean("isOnline", false),
-                coins = 0L
-            )
-        }
-        coroutineScope {
-            rows.map { seller ->
-                async {
-                    // Resolve both immutable UID and public account ID to the canonical
-                    // users.coins record. Never trust an empty alias as the real balance.
-                    val byUid = fetchCanonicalWallet(seller.uid)?.optLong("balance", 0L)?.coerceAtLeast(0L)
-                    val byAccount = if (seller.accountId != seller.uid) {
-                        fetchCanonicalWallet(seller.accountId)?.optLong("balance", 0L)?.coerceAtLeast(0L)
-                    } else null
-                    seller.copy(coins = maxOf(byUid ?: 0L, byAccount ?: 0L))
-                }
-            }.map { it.await() }
-        }
-    }.getOrDefault(emptyList())
-}
-
 // ═══════════════════════════════════════════════════════
 // PUBLIC ENTRY POINTS
 // ═══════════════════════════════════════════════════════
-@Composable fun CoinsNativePage(onBack: () -> Unit, onChat: (String, String, String) -> Unit = { _, _, _ -> }) = WalletNativePage(onBack, 0, onChat)
+@Composable fun CoinsNativePage(onBack: () -> Unit) = WalletNativePage(onBack, 0)
 @Composable fun DiamondsNativePage(onBack: () -> Unit) = WalletNativePage(onBack, 1)
 
 // ═══════════════════════════════════════════════════════
 // MAIN WALLET PAGE
 // ═══════════════════════════════════════════════════════
 @Composable
-private fun WalletNativePage(onBack: () -> Unit, initialTab: Int, onChat: (String, String, String) -> Unit = { _, _, _ -> }) {
+private fun WalletNativePage(onBack: () -> Unit, initialTab: Int) {
     val context = LocalContext.current
     val dao = remember { WalletDatabase.get(context).walletDao() }
     val scope = rememberCoroutineScope()
@@ -381,7 +327,7 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int, onChat: (Strin
                             }
                         }
                     )
-                    2 -> AgentContent(onChat = onChat)
+                    2 -> AgentContent()
                 }
 
                 Spacer(Modifier.height(if (tab == 1) 100.dp else 24.dp))
@@ -587,106 +533,31 @@ private fun DiamondsContent(
 }
 
 @Composable
-private fun AgentContent(onChat: (String, String, String) -> Unit) {
-    var sellers by remember { mutableStateOf<List<WalletAgentSeller>>(emptyList()) }
-    var onlineById by remember { mutableStateOf<Map<String, Boolean>>(emptyMap()) }
-    var loaded by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) {
-        sellers = fetchWalletAgentSellers()
-        loaded = true
-    }
-    DisposableEffect(sellers) {
-        if (sellers.isEmpty()) return@DisposableEffect onDispose { }
-        val socket = runCatching {
-            IO.socket("https://zyora-server.onrender.com", IO.Options().apply {
-                transports = arrayOf("websocket")
-                reconnection = true
-                reconnectionAttempts = Int.MAX_VALUE
-                reconnectionDelay = 1000
-                reconnectionDelayMax = 5000
-            })
-        }.getOrNull() ?: return@DisposableEffect onDispose { }
-        val statusListener = Emitter.Listener { args ->
-            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
-            val id = payload.optString("userId")
-            val account = payload.optString("accountId")
-            val online = payload.optBoolean("online", false)
-            sellers.filter { it.uid == id || it.accountId == id || it.uid == account || it.accountId == account }
-                .forEach { seller ->
-                    onlineById = onlineById + (seller.uid to online) + (seller.accountId to online)
+private fun AgentContent() {
+    Row(
+        Modifier.fillMaxWidth().padding(top = 20.dp, start = 8.dp, end = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(Modifier.size(48.dp).clip(RoundedCornerShape(50)).background(Color(0xFFE5E7EB))
+            .border(2.dp, Color.White, RoundedCornerShape(50)),
+            contentAlignment = Alignment.Center
+        ) {
+            androidx.compose.foundation.Canvas(Modifier.size(34.dp)) {
+                drawCircle(Color(0xFF9CA3AF), radius = size.width * .17f,
+                    center = androidx.compose.ui.geometry.Offset(size.width * .5f, size.height * .32f))
+                val p = androidx.compose.ui.graphics.Path().apply {
+                    moveTo(size.width * .16f, size.height * .92f)
+                    cubicTo(size.width * .16f, size.height * .62f,
+                            size.width * .84f, size.height * .62f,
+                            size.width * .84f, size.height * .92f)
+                    close()
                 }
-        }
-        val onlineListener = Emitter.Listener { args ->
-            val id = args.firstOrNull()?.toString().orEmpty()
-            sellers.filter { it.uid == id || it.accountId == id }.forEach { seller ->
-                onlineById = onlineById + (seller.uid to true) + (seller.accountId to true)
+                drawPath(p, Color(0xFF9CA3AF))
             }
         }
-        val offlineListener = Emitter.Listener { args ->
-            val id = args.firstOrNull()?.toString().orEmpty()
-            sellers.filter { it.uid == id || it.accountId == id }.forEach { seller ->
-                onlineById = onlineById + (seller.uid to false) + (seller.accountId to false)
-            }
-        }
-        socket.on("presence_status", statusListener)
-        socket.on("user_online", onlineListener)
-        socket.on("user_offline", offlineListener)
-        socket.connect()
-        sellers.forEach { seller ->
-            socket.emit("check_presence", seller.uid)
-            socket.emit("check_presence", seller.accountId)
-        }
-        onDispose {
-            socket.off("presence_status", statusListener)
-            socket.off("user_online", onlineListener)
-            socket.off("user_offline", offlineListener)
-            socket.disconnect()
-            socket.close()
-        }
-    }
-    Column(Modifier.fillMaxWidth().padding(top = 16.dp, start = 12.dp, end = 12.dp)) {
-        sellers.forEach { seller ->
-            Row(
-                Modifier.fillMaxWidth().padding(vertical = 9.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
-                    Modifier.size(48.dp).clip(RoundedCornerShape(50)).border(2.dp, Color.White, RoundedCornerShape(50)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    AsyncImage(
-                        model = seller.image,
-                        contentDescription = seller.name,
-                        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(50)),
-                        contentScale = ContentScale.Crop
-                    )
-                }
-                Column(Modifier.weight(1f).padding(start = 10.dp)) {
-                    Text(seller.name, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color(0xFF111827), maxLines = 1)
-                    Text("ID: ${seller.accountId}", fontSize = 12.sp, color = Color(0xFF6B7280))
-                    Text(
-                        if (onlineById[seller.uid] ?: onlineById[seller.accountId] ?: seller.online) "Online" else "Offline",
-                        fontSize = 11.sp,
-                        color = if (onlineById[seller.uid] ?: onlineById[seller.accountId] ?: seller.online) Color(0xFF16A34A) else Color(0xFF9CA3AF)
-                    )
-                }
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                    AsyncImage(
-                        model = RAW_WALLET + "file_00000000e56882119c217d508b6733dc.png",
-                        contentDescription = "Coins",
-                        modifier = Modifier.size(18.dp),
-                        contentScale = ContentScale.Fit
-                    )
-                    Text(seller.coins.toString(), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF374151))
-                }
-                ChatIcon(onClick = { onChat(seller.uid, seller.name, seller.image) })
-            }
-            Divider(color = Color(0xFFE5E7EB), thickness = 0.6.dp)
-        }
-        if (loaded && sellers.isEmpty()) {
-            Text("No sellers available", Modifier.fillMaxWidth().padding(vertical = 28.dp),
-                textAlign = TextAlign.Center, fontSize = 13.sp, color = Color(0xFF9CA3AF))
-        }
+        Text("Agent Anmol", Modifier.weight(1f).padding(start = 12.dp),
+            fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Color(0xFF111827))
+        ChatIcon()
     }
 }
 
@@ -765,8 +636,8 @@ private fun DiamondInputBox(
 
 // ─── Agent chat icon ───
 @Composable
-private fun ChatIcon(onClick: () -> Unit = {}) {
-    Box(Modifier.size(44.dp).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
+private fun ChatIcon() {
+    Box(Modifier.size(44.dp).clickable {}, contentAlignment = Alignment.Center) {
         androidx.compose.foundation.Canvas(Modifier.size(32.dp)) {
             val scale = size.width / 48f
             val blue = Color(0xFF0044FF)

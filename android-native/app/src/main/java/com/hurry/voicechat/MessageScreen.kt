@@ -576,9 +576,7 @@ fun NativeChatScreen(
     var mediaRecorder by remember { mutableStateOf<MediaRecorder?>(null) }
     var recordedVoiceFile by remember { mutableStateOf<File?>(null) }
     var voicePlayer by remember { mutableStateOf<MediaPlayer?>(null) }
-    var playingVoicePath by remember { mutableStateOf<String?>(null) }
-    var voiceCountdownSeconds by remember { mutableLongStateOf(0L) }
-    val audioPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { }
+    val audioPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
     // Equalizer Animation State
     val infiniteTransition = rememberInfiniteTransition(label = "equalizer")
@@ -874,7 +872,6 @@ fun NativeChatScreen(
             val recorder = createVoiceRecorder()
             createdRecorder = recorder
             recorder.setAudioSource(MediaRecorder.AudioSource.VOICE_COMMUNICATION)
-            val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
             recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
             recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
             recorder.setAudioEncodingBitRate(32000)
@@ -883,12 +880,6 @@ fun NativeChatScreen(
             recorder.setMaxFileSize(700000)
             recorder.setOutputFile(file.absolutePath)
             recorder.prepare()
-            // Route the prepared recorder to the actual Bluetooth microphone input.
-            val bluetoothInput = audioManager.getDevices(AudioManager.GET_DEVICES_INPUTS).firstOrNull {
-                it.type == android.media.AudioDeviceInfo.TYPE_BLUETOOTH_SCO ||
-                    (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && it.type == android.media.AudioDeviceInfo.TYPE_BLE_HEADSET)
-            }
-            if (bluetoothInput != null) recorder.setPreferredDevice(bluetoothInput)
             recorder.start()
             mediaRecorder = recorder
             recordedVoiceFile = file
@@ -925,10 +916,9 @@ fun NativeChatScreen(
             voicePlayer?.stop()
             voicePlayer?.release()
             voicePlayer = null
+            // Voice-note playback uses the normal media stream/speaker volume, never call volume.
             val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
             audioManager.mode = AudioManager.MODE_NORMAL
-            @Suppress("DEPRECATION")
-            audioManager.isSpeakerphoneOn = false
             val player = MediaPlayer()
             voicePlayer = player
             player.setAudioAttributes(
@@ -938,39 +928,17 @@ fun NativeChatScreen(
                     .build()
             )
             player.setDataSource(path)
-            val bluetoothOutput = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS).firstOrNull {
-                it.type == android.media.AudioDeviceInfo.TYPE_BLUETOOTH_A2DP ||
-                    it.type == android.media.AudioDeviceInfo.TYPE_BLUETOOTH_SCO ||
-                    (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && it.type == android.media.AudioDeviceInfo.TYPE_BLE_HEADSET)
-            }
-            if (bluetoothOutput != null) player.setPreferredDevice(bluetoothOutput)
             player.setOnCompletionListener {
                 it.release()
                 if (voicePlayer === it) voicePlayer = null
-                playingVoicePath = null
-                voiceCountdownSeconds = 0L
                 resetVoiceAudioRoute()
             }
             player.prepare()
-            playingVoicePath = path
-            voiceCountdownSeconds = ((player.duration + 999) / 1000).toLong().coerceAtLeast(1L)
             player.start()
         }.onFailure {
             runCatching { voicePlayer?.release() }
             voicePlayer = null
-            playingVoicePath = null
-            voiceCountdownSeconds = 0L
             resetVoiceAudioRoute()
-        }
-    }
-
-    LaunchedEffect(playingVoicePath) {
-        while (playingVoicePath != null) {
-            val player = voicePlayer ?: break
-            if (!runCatching { player.isPlaying }.getOrDefault(false)) break
-            voiceCountdownSeconds = ((player.duration - player.currentPosition).coerceAtLeast(0) + 999L)
-                .div(1000L).coerceAtLeast(0L)
-            kotlinx.coroutines.delay(200)
         }
     }
 
@@ -1247,10 +1215,6 @@ fun NativeChatScreen(
                     
                     val isVoiceNote = VoiceMessageStore.isVoice(item.second)
                     val messageText = if (isVoiceNote) VoiceMessageStore.displayDuration(item.second) else item.second
-                    val voiceFilePath = if (isVoiceNote) VoiceMessageStore.playableFile(context, item.second)?.absolutePath else null
-                    val voiceTimeText = if (voiceFilePath != null && playingVoicePath == voiceFilePath) {
-                        "%d:%02d".format(voiceCountdownSeconds / 60L, voiceCountdownSeconds % 60L)
-                    } else messageText
 
                     Row(
                         Modifier.fillMaxWidth(),
@@ -1280,12 +1244,7 @@ fun NativeChatScreen(
                                     Row(
                                         modifier = Modifier
                                             .widthIn(min = 100.dp, max = 220.dp)
-                                            .clickable {
-                                    val needsBluetoothPermission = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
-                                        ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED
-                                    if (needsBluetoothPermission) audioPermissionLauncher.launch(arrayOf(Manifest.permission.BLUETOOTH_CONNECT))
-                                    else voiceFilePath?.let(::playVoiceNote)
-                                }
+                                            .clickable { VoiceMessageStore.playableFile(context, item.second)?.absolutePath?.let(::playVoiceNote) }
                                             .padding(horizontal = 14.dp, vertical = 10.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
@@ -1315,7 +1274,7 @@ fun NativeChatScreen(
                                         
                                         Spacer(Modifier.width(8.dp))
                                         Text(
-                                            text = "$voiceTimeText\"",
+                                            text = "$messageText\"",
                                             color = if (mine) Color.White else Color(0xFF1F2937),
                                             fontSize = 13.sp,
                                             fontWeight = FontWeight.Medium
@@ -1424,17 +1383,8 @@ fun NativeChatScreen(
                                     .pointerInput(Unit) {
                                         detectTapGestures(
                                             onPress = {
-                                                val missingVoicePermissions = buildList {
-                                                    if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-                                                        add(Manifest.permission.RECORD_AUDIO)
-                                                    }
-                                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
-                                                        ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-                                                        add(Manifest.permission.BLUETOOTH_CONNECT)
-                                                    }
-                                                }
-                                                if (missingVoicePermissions.isNotEmpty()) {
-                                                    audioPermissionLauncher.launch(missingVoicePermissions.toTypedArray())
+                                                if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+                                                    audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
                                                     return@detectTapGestures
                                                 }
                                                 if (!startVoiceRecording()) return@detectTapGestures

@@ -917,29 +917,6 @@ app.get("/api/users", async (req, res) => {
       });
     }
 
-    // Wallet Agent tab only lists real profiles carrying a seller tag.
-    // Preserve the original account profile fields; only append live presence.
-    if (String(req.query.sellers || "").toLowerCase() === "true") {
-      const sellerUsers = await users.find({
-        $or: [
-          { coinSellerTag: true }, { coinSeller: true }, { sellerTag: true },
-          { accountId: "100002" }, { accountNumber: "100002" }, { displayUserNumber: "100002" }, { "Account Number": "100002" },
-          { accountId: 100002 }, { accountNumber: 100002 },
-          { accountId: "100003" }, { accountNumber: "100003" }, { displayUserNumber: "100003" }, { "Account Number": "100003" },
-          { accountId: 100003 }, { accountNumber: 100003 }
-        ]
-      }).limit(1000).toArray();
-      const normalizedSellers = sellerUsers.map((raw) => {
-        const user = normalizeUser(raw);
-        const identifiers = [user.id, user.uid, user.accountId].map(String);
-        return {
-          ...user,
-          isOnline: identifiers.some((id) => onlineUsers.has(id)),
-        };
-      });
-      return res.json({ users: normalizedSellers });
-    }
-
     // No query = return all registered users (for Owner Panel).
     const allUsers = await users
       .find({})
