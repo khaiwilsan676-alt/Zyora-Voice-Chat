@@ -722,6 +722,8 @@ fun RoomPage(
     val messages=remember{mutableStateListOf<NativeRoomMessage>()}
     val entryToasts=remember{mutableStateListOf<NativeEntryToast>()}
     val seats=remember{mutableStateListOf<NativeRoomSeat>().apply{for(i in 1..15)add(NativeRoomSeat(i))}}
+    // Preserve live speaker state across room_seats snapshots.
+    val activeVoiceSpeakerIds=remember(roomId){mutableStateSetOf<String>()}
     val backendRoomUsers=remember{mutableStateListOf<ActiveUserNative>()}
 
     DisposableEffect(roomId,accountId,roomDisplayName,roomDisplayImage,roomOwner.id,roomOwner.accountId) {
@@ -856,8 +858,18 @@ fun RoomPage(
                 }
                 mainHandler.post {
                     val byNumber = parsed.associateBy { it.number }
-                    for (index in seats.indices) { val number = seats[index].number; seats[index] = byNumber[number] ?: NativeRoomSeat(number=number) }
-                    parsed.filter { it.number !in seats.map(NativeRoomSeat::number) }.forEach { seats.add(it) }
+                    for (index in seats.indices) {
+                        val number = seats[index].number
+                        val incoming = byNumber[number]
+                        seats[index] = incoming?.copy(
+                            speaking = !incoming.muted && (incoming.speaking || incoming.accountId in activeVoiceSpeakerIds)
+                        ) ?: NativeRoomSeat(number=number)
+                    }
+                    parsed.filter { it.number !in seats.map(NativeRoomSeat::number) }.forEach { incoming ->
+                        seats.add(incoming.copy(
+                            speaking = !incoming.muted && (incoming.speaking || incoming.accountId in activeVoiceSpeakerIds)
+                        ))
+                    }
                 }
             }
         }
@@ -868,6 +880,8 @@ fun RoomPage(
                 if (speakingUserId.isNotBlank()) {
                     val isSpeakingNow = payload.optBoolean("speaking", false)
                     mainHandler.post {
+                        if (isSpeakingNow) activeVoiceSpeakerIds.add(speakingUserId)
+                        else activeVoiceSpeakerIds.remove(speakingUserId)
                         for (index in seats.indices) {
                             val seat = seats[index]
                             if (seat.accountId == speakingUserId) {
@@ -1000,6 +1014,7 @@ fun RoomPage(
             roomSocket.off("room_chat_cleared",clearedListener)
             roomSocket.off("room_seats",seatListener)
             roomSocket.off("room_voice_speaker",voiceSpeakerListener)
+            mainHandler.post { activeVoiceSpeakerIds.clear() }
             roomSocket.off("room_settings_updated",settingsListener)
             roomSocket.off("room_follow_updated", roomFollowListener)
             roomSocket.off("lucky_bag_banner",luckyBagBannerListener)
