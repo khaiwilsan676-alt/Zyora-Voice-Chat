@@ -359,7 +359,8 @@ fun MessageScreen(onChat: (String, String, String) -> Unit, embeddedSheet: Boole
             if (payload == null) return
             val peerId = payload.optString("accountId", payload.optString("userId")).trim()
             if (peerId.isBlank()) return
-            val index = chats.indexOfFirst { it.uid == peerId }
+            val loginId = payload.optString("userId").trim()
+            val index = chats.indexOfFirst { it.uid == peerId || (loginId.isNotBlank() && it.uid == loginId) }
             if (index >= 0) {
                 val old = chats[index]
                 val inRoom = payload.optBoolean("inRoom", false) && payload.optString("roomId").isNotBlank()
@@ -719,7 +720,7 @@ fun NativeChatScreen(
         }
         val roomStatusListener = Emitter.Listener { args ->
             val payload = args.firstOrNull() as? JSONObject ?: return@Listener
-            if (payload.optString("accountId", payload.optString("userId")) == receiverId) {
+            if (payload.optString("accountId") == receiverId || payload.optString("userId") == receiverId) {
                 mainHandler.post { peerRoomId = if (payload.optBoolean("inRoom", false)) payload.optString("roomId") else "" }
             }
         }
