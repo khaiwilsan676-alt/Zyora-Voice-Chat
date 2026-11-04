@@ -450,8 +450,9 @@ fun MessageScreen(onChat: (String, String, String) -> Unit, embeddedSheet: Boole
 
 @Composable
 private fun MessageRow(chat: MessagePreview, onClick: () -> Unit, onJoinRoom: (String) -> Unit) {
-    // Check lagaya taaki official pe border ya pill naa aaye
+    // Require a confirmed live room ID; stale booleans must not keep room UI visible.
     val isOfficial = chat.uid == "hurry_team_official" || chat.uid == "hurry_system_official"
+    val showRoomPresence = !isOfficial && chat.isInRoom && chat.roomId.isNotBlank()
 
     Row(
         Modifier.fillMaxWidth()
@@ -461,19 +462,19 @@ private fun MessageRow(chat: MessagePreview, onClick: () -> Unit, onJoinRoom: (S
     ) {
         
         // Avatar + Blue Border + Bottom Music Pill Icon (Sirf normal user ke liye)
-        Box(contentAlignment = Alignment.BottomCenter, modifier = Modifier.clickable(enabled = chat.isInRoom) { onJoinRoom(chat.roomId) }) {
+        Box(contentAlignment = Alignment.BottomCenter, modifier = Modifier.clickable(enabled = showRoomPresence) { if (showRoomPresence) onJoinRoom(chat.roomId) }) {
             AsyncImage(
                 model = resolveChatAvatar(chat.image.ifBlank { RAW_MSG + "default-avatar.png" }), contentDescription = chat.name,
                 modifier = Modifier
                     .size(56.dp)
                     // Conditional border (Agar official nahi hai, tabhi border apply hoga)
-                    .then(if (!isOfficial && chat.isInRoom) Modifier.border(2.dp, Color(0xFF3B82F6), CircleShape) else Modifier)
+                    .then(if (showRoomPresence) Modifier.border(2.dp, Color(0xFF3B82F6), CircleShape) else Modifier)
                     .clip(CircleShape),
                 contentScale = ContentScale.Crop
             )
             
             // Music Pill Icon at bottom center (Sirf normal user ke liye)
-            if (!isOfficial && chat.isInRoom) {
+            if (showRoomPresence) {
                 Box(
                     modifier = Modifier
                         .offset(y = 4.dp)
@@ -721,8 +722,13 @@ fun NativeChatScreen(
         }
         val roomStatusListener = Emitter.Listener { args ->
             val payload = args.firstOrNull() as? JSONObject ?: return@Listener
-            if (payload.optString("accountId") == receiverId || payload.optString("userId") == receiverId) {
-                mainHandler.post { peerRoomId = if (payload.optBoolean("inRoom", false)) payload.optString("roomId") else "" }
+            val statusAccountId = payload.optString("accountId").trim()
+            val statusUserId = payload.optString("userId").trim()
+            if (receiverId == statusAccountId || receiverId == statusUserId) {
+                val confirmedRoomId = payload.optString("roomId").trim()
+                    .takeIf { payload.optBoolean("inRoom", false) && it.isNotBlank() }
+                    .orEmpty()
+                mainHandler.post { peerRoomId = confirmedRoomId }
             }
         }
         chatSocket.on("presence_status", peerPresenceListener)
@@ -1144,7 +1150,7 @@ fun NativeChatScreen(
                     }
                 }
 
-                if (peerRoomId.isNotBlank()) {
+                if (!isOfficial && peerRoomId.isNotBlank()) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
