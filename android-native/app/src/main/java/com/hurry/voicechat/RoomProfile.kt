@@ -158,7 +158,7 @@ fun RoomProfile(
     var displayGender by remember(user.uid, user.id, user.accountId, user.gender, cachedProfile) { mutableStateOf(cachedProfile?.optString("gender")?.takeIf { it.isNotBlank() && it != "null" } ?: user.gender) }
     var displayAge by remember(user.uid, user.id, user.accountId, user.age, cachedProfile) { mutableIntStateOf(if (cachedProfile?.has("age") == true) cachedProfile.optInt("age", user.age) else user.age) }
     var displayBio by remember(user.uid, user.id, user.accountId, user.bio, cachedProfile) { mutableStateOf(cachedProfile?.optString("bio")?.takeIf { it != "null" } ?: user.bio) }
-    var displayCountry by remember(user.uid, user.id, user.accountId, user.country, cachedProfile) { mutableStateOf(sequenceOf(cachedProfile?.optString("countryName", ""), cachedProfile?.optString("country", ""), cachedProfile?.optString("countryCode", ""), cachedProfile?.optString("country_code", ""), user.country, user.countryCode).map { it?.trim().orEmpty() }.firstOrNull { it.isNotBlank() && it != "null" }.orEmpty()) }
+    var displayCountry by remember(user.uid, user.id, user.accountId, user.country, cachedProfile) { mutableStateOf(sequenceOf(cachedProfile?.optString("flag", ""), cachedProfile?.optString("countryName", ""), cachedProfile?.optString("country", ""), cachedProfile?.optString("countryCode", ""), cachedProfile?.optString("country_code", ""), user.flag, user.country, user.countryCode).map { it?.trim().orEmpty() }.firstOrNull { it.isNotBlank() && it != "null" }.orEmpty()) }
 
     LaunchedEffect(user.uid, user.id, user.accountId, profileCacheKeys) {
         val profileDb = NativeIndexDatabase(context)
@@ -182,7 +182,7 @@ fun RoomProfile(
             }
         }
         remote?.let { latest ->
-            sequenceOf("name", "displayName", "userName", "nickname", "image", "avatar", "profileImageUrl", "country", "countryName", "countryCode", "country_code", "nationality", "location").forEach { key ->
+            sequenceOf("name", "displayName", "userName", "nickname", "image", "avatar", "profileImageUrl", "flag", "country", "countryName", "countryCode", "country_code", "nationality", "location").forEach { key ->
                 val value = latest.optString(key, "").trim()
                 val isPlaceholderName = key in setOf("name", "displayName", "userName", "nickname") && value.equals("User", ignoreCase = true)
                 val isPlaceholderAvatar = key in setOf("image", "avatar", "profileImageUrl") &&
@@ -376,7 +376,7 @@ fun RoomProfile(
                         
                         Text(" | ", color = Color.LightGray, modifier = Modifier.padding(horizontal = 4.dp))
                         
-                        if (displayCountry.isNotBlank()) Text(countryFlag(displayCountry), fontSize = 16.sp)
+                        if (displayCountry.isNotBlank()) Text(roomProfileCountryFlag(displayCountry), fontSize = 16.sp)
                     }
 
                     // Action Buttons (Leave Seat OR Social Actions)
@@ -450,7 +450,8 @@ fun RoomProfile(
                 Box(
                     modifier = Modifier
                         .align(Alignment.TopCenter)
-                        .size(88.dp) // Total 22 units equivalent (88dp)
+                        .size(88.dp)
+                        .clickable { onOpenPublicProfile(user.copy(name = displayName, image = displayProfileImage, country = displayCountry)) } // Open matching Public Profile
                 ) {
                     AsyncImage(
                         model = displayProfileImage.ifBlank { "default-avatar.png".fullUrl() },
