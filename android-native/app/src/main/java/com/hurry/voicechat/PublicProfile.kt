@@ -45,6 +45,10 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.launch
+import io.socket.client.IO
+import io.socket.client.Socket
+import io.socket.emitter.Emitter
+import org.json.JSONObject
 import kotlin.math.abs
 
 @Composable
@@ -143,6 +147,33 @@ fun PublicProfileScreen(
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+    val targetPresenceId = targetUser?.accountId?.takeIf { it.isNotBlank() } ?: targetUser?.id.orEmpty()
+    var liveRoomId by remember(targetPresenceId) { mutableStateOf("") }
+    DisposableEffect(targetPresenceId) {
+        if (targetPresenceId.isBlank()) return@DisposableEffect onDispose { }
+        val presenceSocket = IO.socket("https://zyora-server.onrender.com", IO.Options().apply {
+            transports = arrayOf("websocket")
+            reconnection = true
+            reconnectionAttempts = Int.MAX_VALUE
+        })
+        val statusListener = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
+            val id = payload.optString("accountId", payload.optString("userId"))
+            if (id == targetPresenceId) liveRoomId = if (payload.optBoolean("inRoom", false)) payload.optString("roomId") else ""
+        }
+        presenceSocket.on("user_room_status", statusListener)
+        presenceSocket.on("user_room_status_updated", statusListener)
+        presenceSocket.on(Socket.EVENT_CONNECT) {
+            presenceSocket.emit("user_room_status_request", JSONObject().put("userId", targetPresenceId).put("accountId", targetPresenceId))
+        }
+        presenceSocket.connect()
+        onDispose {
+            presenceSocket.off("user_room_status", statusListener)
+            presenceSocket.off("user_room_status_updated", statusListener)
+            presenceSocket.disconnect()
+            presenceSocket.close()
+        }
+    }
     val profileCacheKeys = listOf(targetUser?.uid, targetUser?.id, targetUser?.accountId, targetUser?.displayAccountNumber).filter { !it.isNullOrBlank() }.map { it!! }.distinct()
     val profileCacheKey = profileCacheKeys.firstOrNull().orEmpty()
     val cachedProfile = remember(profileCacheKeys) {
@@ -382,14 +413,15 @@ fun PublicProfileScreen(
                         }
                     }
                     
-                    // --- IN ROOM BUTTON ---
+                    // --- IN ROOM BUTTON (only while the target is in a live room) ---
+                    if (isOtherUser && liveRoomId.isNotBlank()) {
                     Box(
                         modifier = Modifier
                             .align(Alignment.TopEnd)
                             .padding(top = 90.dp)
                             .clip(RoundedCornerShape(topStart = 20.dp, bottomStart = 20.dp))
-                            .background(Color(0xFF3B82F6)) // Blue color
-                            .clickable { onJoinRoom(targetUser?.accountId ?: "") }
+                            .background(Color(0xFF3B82F6))
+                            .clickable { onJoinRoom(liveRoomId) }
                             .padding(start = 14.dp, end = 16.dp, top = 8.dp, bottom = 8.dp)
                     ) {
                         Row(
@@ -404,6 +436,7 @@ fun PublicProfileScreen(
                                 fontWeight = FontWeight.SemiBold
                             )
                         }
+                    }
                     }
                 }
             }
@@ -1691,7 +1724,8 @@ fun PublicProfile(
     user: RoomProfileUser,
     onBack: () -> Unit,
     onMessage: () -> Unit = {},
-    currentUserId: String = ""
+    currentUserId: String = "",
+    onJoinRoom: (String) -> Unit = {}
 ) {
     val context = LocalContext.current
     val authPrefs = remember(context) { context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE) }
@@ -1735,6 +1769,7 @@ fun PublicProfile(
     PublicProfileScreen(
         onBack = onBack,
         isOtherUser = !isOwnProfile,
-        targetUser = target
+        targetUser = target,
+        onJoinRoom = onJoinRoom
     )
 }
