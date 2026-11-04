@@ -144,7 +144,8 @@ fun RoomProfile(
     onOpenPublicProfile: (RoomUser) -> Unit = {},
     onMute: () -> Unit = {},
     onLock: () -> Unit = {},
-    onKickOut: () -> Unit = {}
+    onKickOut: () -> Unit = {},
+    initialReportOpen: Boolean = false
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -217,7 +218,7 @@ fun RoomProfile(
     var hostTag by remember(cachedProfile, isCoreOfficialAccount) { mutableStateOf(isCoreOfficialAccount || cachedProfile?.optBoolean("hostTag", false) == true || cachedProfile?.optBoolean("isHost", false) == true) }
     var vipTag by remember(user.vipTag) { mutableStateOf(user.vipTag == true) }
     var premiumTag by remember(user.premiumTag) { mutableStateOf(user.premiumTag == true) }
-    var showReports by remember { mutableStateOf(false) }
+    var showReports by remember(initialReportOpen) { mutableStateOf(initialReportOpen) }
 
     // Tag values share the same cached profile payload. Never make a second GitHub storage
     // request here; the profile-loading effect above owns the one-time remote fallback.
