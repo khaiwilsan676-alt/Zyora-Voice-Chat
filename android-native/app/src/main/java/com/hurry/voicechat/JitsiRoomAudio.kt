@@ -36,6 +36,8 @@ import androidx.core.content.ContextCompat
 import io.socket.client.Socket
 import io.socket.emitter.Emitter
 import org.json.JSONObject
+import java.util.concurrent.ArrayBlockingQueue
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.concurrent.thread
 
@@ -94,6 +96,8 @@ fun JitsiRoomAudio(
         var recorder: AudioRecord? = null
         var echoCanceler: AcousticEchoCanceler? = null
         var player: AudioTrack? = null
+        var playbackThread: Thread? = null
+        val playbackQueue = ArrayBlockingQueue<ByteArray>(50)
         var captureThread: Thread? = null
         var musicRelayThread: Thread? = null
         var musicWatcherThread: Thread? = null
@@ -296,7 +300,7 @@ fun JitsiRoomAudio(
                         .setAudioAttributes(
                             AudioAttributes.Builder()
                                 .setUsage(AudioAttributes.USAGE_MEDIA)
-                                .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                                .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
                                 .build()
                         )
                         .setAudioFormat(
@@ -306,13 +310,34 @@ fun JitsiRoomAudio(
                                 .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
                                 .build()
                         )
-                        .setBufferSizeInBytes(maxOf(minOut * 2, ROOM_VOICE_FRAME_BYTES * 8))
+                        .setBufferSizeInBytes(maxOf(minOut * 3, ROOM_VOICE_FRAME_BYTES * 12))
                         .setTransferMode(AudioTrack.MODE_STREAM)
                         .build()
-                        .also { it.play(); player = it }
+                        .also { player = it }
                 }.getOrNull() ?: return@Listener
             }
-            runCatching { output.write(bytes, 0, bytes.size) }
+            // Never block Socket.IO's event thread on AudioTrack.write(). A dedicated
+            // consumer drains a bounded jitter queue so network callbacks stay responsive.
+            if (playbackThread?.isAlive != true) {
+                playbackThread = thread(name = "ZyoraRoomPlayback", isDaemon = true) {
+                    while (alive.get()) {
+                        val packet = try {
+                            playbackQueue.poll(100, TimeUnit.MILLISECONDS)
+                        } catch (_: InterruptedException) {
+                            if (!alive.get()) break else null
+                        } ?: continue
+                        val track = player ?: continue
+                        runCatching {
+                            if (track.playState != AudioTrack.PLAYSTATE_PLAYING) track.play()
+                            track.write(packet, 0, packet.size, AudioTrack.WRITE_BLOCKING)
+                        }
+                    }
+                }
+            }
+            if (!playbackQueue.offer(bytes.copyOf())) {
+                playbackQueue.poll()
+                playbackQueue.offer(bytes.copyOf())
+            }
         }
 
         roomSocket.on("room_voice_permission", permissionListener)
@@ -321,6 +346,7 @@ fun JitsiRoomAudio(
             voiceAllowed.set(false)
             stopMusicRelay()
             stopCapture()
+            playbackQueue.clear()
             runCatching { player?.pause(); player?.flush() }
         }
         roomSocket.on(Socket.EVENT_DISCONNECT, disconnectListener)
@@ -366,6 +392,10 @@ fun JitsiRoomAudio(
             roomSocket.off(Socket.EVENT_DISCONNECT, disconnectListener)
             roomSocket.off(Socket.EVENT_CONNECT, connectListener)
             stopCapture()
+            playbackQueue.clear()
+            playbackThread?.interrupt()
+            playbackThread?.join(500)
+            playbackThread = null
             runCatching { player?.stop(); player?.release() }
             player = null
 
