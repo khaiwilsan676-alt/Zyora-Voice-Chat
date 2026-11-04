@@ -210,15 +210,6 @@ fun TransparentSeatVideoPlayer(
                 textureViewRef.value = this
                 player.setVideoTextureView(this)
             }
-        },
-        update = { view ->
-            textureViewRef.value = view
-            if (player.isPlaying || player.playbackState == Player.STATE_READY ||
-                player.playbackState == Player.STATE_BUFFERING) {
-                player.setVideoTextureView(view)
-            } else {
-                player.setVideoTextureView(view)
-            }
         }
     )
 
