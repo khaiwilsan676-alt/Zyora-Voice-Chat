@@ -1520,57 +1520,10 @@ fun NativeChatScreen(
         }
     }
     if (showReportPage) {
-        var reportReason by remember(showReportPage) { mutableStateOf("") }
-        val reportReasons = listOf(
-            "Harassment or bullying",
-            "Hate speech",
-            "Violence or dangerous content",
-            "Nudity or sexual content",
-            "Spam or scam",
-            "Fake account",
-            "Other"
+        UserReport(
+            targetName = name,
+            targetImage = image,
+            targetId = receiverId,
+            onDismiss = { showReportPage = false }
         )
-        AlertDialog(
-            onDismissRequest = { showReportPage = false },
-            title = { Text("Report") },
-            text = {
-                Column {
-                    Text("Why are you reporting $name?")
-                    Spacer(Modifier.height(12.dp))
-                    reportReasons.forEach { reason ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { reportReason = reason }
-                                .padding(vertical = 7.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(
-                                selected = reportReason == reason,
-                                onClick = { reportReason = reason }
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Text(reason)
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    enabled = reportReason.isNotBlank(),
-                    onClick = {
-                        showReportPage = false
-                        android.widget.Toast.makeText(
-                            context,
-                            "Report submitted",
-                            android.widget.Toast.LENGTH_SHORT
-                        ).show()
-                    }
-                ) { Text("Submit report") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showReportPage = false }) { Text("Cancel") }
-            }
-        )
-    }
-}
+    }}
