@@ -481,8 +481,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                                 unreadMessageCount = unreadMessageCount,
                                 onTabSelected = { selected ->
                                     if (selected == HurryTab.MESSAGE) {
-                                        unreadMessageCount = 0
-                                        unreadPrefs.edit().putInt("unread_$messageIdentity", 0).apply()
+                                        unreadMessageCount = unreadPrefs.getInt("unread_$messageIdentity", 0).coerceAtLeast(0)
                                     }
                                     tab = selected
                                 },
@@ -596,7 +595,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                     Box(Modifier.fillMaxSize()) {
                         Box(Modifier.align(Alignment.BottomCenter)) {
                             HurryBottomNav(tab, languageCode = languageCode, unreadMessageCount = unreadMessageCount, onTab = { selected ->
-                                if (selected == HurryTab.MESSAGE) { unreadMessageCount = 0; unreadPrefs.edit().putInt("unread_$messageIdentity", 0).apply() }
+                                if (selected == HurryTab.MESSAGE) { unreadMessageCount = unreadPrefs.getInt("unread_$messageIdentity", 0).coerceAtLeast(0) }
                                 tab = selected
                                 if (selected != HurryTab.ME) openedMePage = null
                                 if (selected == HurryTab.HOME) homeMine = false
