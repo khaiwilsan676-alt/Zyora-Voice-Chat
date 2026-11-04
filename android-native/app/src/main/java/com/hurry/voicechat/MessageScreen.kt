@@ -1104,22 +1104,6 @@ fun NativeChatScreen(
                 }
             }
 
-            if (!isOfficial && peerRoomId.isNotBlank()) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)
-                        .clip(RoundedCornerShape(24.dp)).background(Color(0xFF3B82F6))
-                        .clickable { onJoinRoom(peerRoomId) }.padding(horizontal = 16.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("I'm chatting and play games in\\nvoice room, join me~", color = Color.White,
-                        fontSize = 14.sp, fontWeight = FontWeight.Medium, lineHeight = 18.sp,
-                        modifier = Modifier.weight(1f))
-                    Spacer(Modifier.width(8.dp))
-                    Text("In Room", color = Color(0xFF3B82F6), fontSize = 13.sp, fontWeight = FontWeight.Bold,
-                        modifier = Modifier.clip(RoundedCornerShape(16.dp)).background(Color.White)
-                            .clickable { onJoinRoom(peerRoomId) }.padding(horizontal = 12.dp, vertical = 6.dp))
-                }
-            }
             if (!isOfficial) {
                 if (showScamBanner) {
                     Row(
@@ -1155,13 +1139,15 @@ fun NativeChatScreen(
                     }
                 }
 
+                if (peerRoomId.isNotBlank()) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         // Outer padding reduced from 8.dp to 4.dp
                         .padding(horizontal = 12.dp, vertical = 4.dp)
                         .clip(RoundedCornerShape(24.dp))
-                        .background(Color(0xFF3B82F6)) 
+                        .background(Color(0xFF3B82F6))
+                        .clickable { onJoinRoom(peerRoomId) }
                         // Inner padding reduced from 10.dp to 6.dp (banner patla kar diya gaya hai)
                         .padding(horizontal = 16.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically
@@ -1179,7 +1165,7 @@ fun NativeChatScreen(
                         modifier = Modifier
                             .clip(RoundedCornerShape(16.dp))
                             .background(Color.White)
-                            .clickable { /* Handle Join Room Action here */ }
+                            .clickable { onJoinRoom(peerRoomId) }
                             .padding(horizontal = 12.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -1199,6 +1185,7 @@ fun NativeChatScreen(
                             fontWeight = FontWeight.Bold
                         )
                     }
+                }
                 }
             }
 
