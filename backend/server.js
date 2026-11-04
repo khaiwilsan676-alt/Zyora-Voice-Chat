@@ -917,26 +917,32 @@ app.get("/api/users", async (req, res) => {
       });
     }
 
-    // Wallet Agent tab only lists real profiles carrying a seller tag.
-    // Preserve the original account profile fields; only append live presence.
+    // Wallet Agent is intentionally limited to the two seller accounts selected by the app owner.
+    // Do not leak other tagged users or fabricate a seller from a generic account record.
     if (String(req.query.sellers || "").toLowerCase() === "true") {
+      const allowedSellerIds = ["100002", "100003"];
       const sellerUsers = await users.find({
-        $or: [
-          { coinSellerTag: true }, { coinSeller: true }, { sellerTag: true },
-          { accountId: "100002" }, { accountNumber: "100002" }, { displayUserNumber: "100002" }, { "Account Number": "100002" },
-          { accountId: 100002 }, { accountNumber: 100002 },
-          { accountId: "100003" }, { accountNumber: "100003" }, { displayUserNumber: "100003" }, { "Account Number": "100003" },
-          { accountId: 100003 }, { accountNumber: 100003 }
-        ]
-      }).limit(1000).toArray();
-      const normalizedSellers = sellerUsers.map((raw) => {
-        const user = normalizeUser(raw);
-        const identifiers = [user.id, user.uid, user.accountId].map(String);
-        return {
-          ...user,
-          isOnline: identifiers.some((id) => onlineUsers.has(id)),
-        };
-      });
+        $or: allowedSellerIds.flatMap((sellerId) => {
+          const numericId = Number(sellerId);
+          return [
+            { accountId: sellerId }, { accountNumber: sellerId },
+            { displayUserNumber: sellerId }, { displayAccountNumber: sellerId },
+            { "Account Number": sellerId }, { "Account ID": sellerId },
+            { accountId: numericId }, { accountNumber: numericId },
+            { displayUserNumber: numericId }, { displayAccountNumber: numericId },
+          ];
+        })
+      }).limit(10).toArray();
+      const normalizedSellers = sellerUsers
+        .map((raw) => normalizeUser(raw))
+        .filter((user) => allowedSellerIds.includes(String(user.accountId)))
+        .map((user) => {
+          const identifiers = [user.id, user.uid, user.accountId].map(String);
+          return {
+            ...user,
+            isOnline: identifiers.some((id) => onlineUsers.has(id)),
+          };
+        });
       return res.json({ users: normalizedSellers });
     }
 
