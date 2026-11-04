@@ -923,10 +923,10 @@ app.get("/api/users", async (req, res) => {
       const sellerUsers = await users.find({
         $or: [
           { coinSellerTag: true }, { coinSeller: true }, { sellerTag: true },
-          { accountId: "100002" }, { accountNumber: "100002" }, { "Account Number": "100002" },
-          { accountId: "100003" }, { accountNumber: "100003" }, { "Account Number": "100003" },
-          { uid: "HUSxCrossnabgU029dWYt1TUV04hd2" }, { id: "HUSxCrossnabgU029dWYt1TUV04hd2" },
-          { uid: "ADqW31RGBMaosOzy0HiqexKSD7h1" }, { id: "ADqW31RGBMaosOzy0HiqexKSD7h1" }
+          { accountId: "100002" }, { accountNumber: "100002" }, { displayUserNumber: "100002" }, { "Account Number": "100002" },
+          { accountId: 100002 }, { accountNumber: 100002 },
+          { accountId: "100003" }, { accountNumber: "100003" }, { displayUserNumber: "100003" }, { "Account Number": "100003" },
+          { accountId: 100003 }, { accountNumber: 100003 }
         ]
       }).limit(1000).toArray();
       const normalizedSellers = sellerUsers.map((raw) => {
