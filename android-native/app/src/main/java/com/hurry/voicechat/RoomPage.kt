@@ -711,7 +711,17 @@ fun RoomPage(
                 for (index in 0 until usersJson.length()) {
                     val user = usersJson.optJSONObject(index) ?: continue
                     val userId = user.optString("accountId", user.optString("userId"))
-                    if (userId.isNotBlank()) parsed.add(ActiveUserNative(accountId=userId,name=user.optString("name","User").ifBlank{"User"},image=user.optString("image","")))
+                    if (userId.isNotBlank()) {
+                        val roomCountry = sequenceOf("flag", "countryName", "country", "countryCode", "country_code")
+                            .map { user.optString(it, "").trim() }
+                            .firstOrNull { it.isNotBlank() && it != "null" }.orEmpty()
+                        parsed.add(ActiveUserNative(
+                            accountId=userId,
+                            name=user.optString("name","User").ifBlank{"User"},
+                            image=user.optString("image",""),
+                            country=roomCountry
+                        ))
+                    }
                 }
                 mainHandler.post { backendRoomUsers.clear(); backendRoomUsers.addAll(parsed) }
             }
