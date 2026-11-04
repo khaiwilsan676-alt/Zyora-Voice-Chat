@@ -2185,7 +2185,7 @@ io.on("connection", (socket) => {
     socket.emit("room_voice_permission", { roomId: room, allowed: hasSeat });
   });
 
-  socket.on("room_voice_chunk", (data = {}) => {
+  socket.on("room_voice_chunk", (data = {}, binaryAudio) => {
     const room = String(data.roomId || "");
     if (!room || !socket.roomVoiceActive || socket.roomVoiceRoomId !== room ||
         !socketIsInRoom(socket, room)) return;
@@ -2201,7 +2201,7 @@ io.on("connection", (socket) => {
       socket.to(`room:${room}`).emit("room_voice_speaker", { roomId: room, userId: accountId, speaking: false });
       return;
     }
-    const audio = data.audio;
+    const audio = Buffer.isBuffer(binaryAudio) ? binaryAudio : data.audio;
     const validAudio = Buffer.isBuffer(audio) ? audio.length > 0 && audio.length <= 4096
       : Array.isArray(audio) && audio.length > 0 && audio.length <= 4096;
     if (!validAudio) return;
