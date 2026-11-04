@@ -2,16 +2,13 @@ package com.hurry.voicechat
 
 import android.Manifest
 import android.content.Context
-import android.media.AudioManager
-import android.os.Build
 import android.content.pm.PackageManager
-import android.webkit.PermissionRequest
-import android.webkit.WebChromeClient
-import android.webkit.CookieManager
-import android.webkit.WebSettings
-import android.webkit.WebView
-import android.webkit.WebViewClient
-import android.webkit.JavascriptInterface
+import android.media.AudioAttributes
+import android.media.AudioFormat
+import android.media.AudioManager
+import android.media.AudioRecord
+import android.media.AudioTrack
+import android.media.MediaRecorder
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.size
@@ -23,198 +20,180 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import io.socket.client.Socket
+import io.socket.emitter.Emitter
 import org.json.JSONObject
+import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.concurrent.thread
 
-/** Hidden audio-only Jitsi conference; existing Compose room UI stays unchanged. */
+private const val ROOM_VOICE_SAMPLE_RATE = 16000
+private const val ROOM_VOICE_FRAME_BYTES = 640 // 20 ms, mono, 16-bit PCM
+
+/** Room-only live audio relay over Zyora's existing authenticated room Socket.IO connection. */
 @Composable
-fun JitsiRoomAudio(roomId: String, userName: String, canSpeak: Boolean, onSpeakingChanged: (Boolean) -> Unit = {}) {
+fun JitsiRoomAudio(
+    roomId: String,
+    userName: String,
+    canSpeak: Boolean,
+    roomSocket: Socket?,
+    onSpeakingChanged: (Boolean) -> Unit = {}
+) {
     val context = LocalContext.current
-
-    // Do not force loudspeaker: WebRTC/Android can route to wired and Bluetooth headsets.
-    DisposableEffect(context, roomId) {
-        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-        val previousMode = audioManager.mode
-        audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
-        onDispose { audioManager.mode = previousMode }
-    }
     var hasMicPermission by remember {
         mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED)
     }
-    var hasBluetoothPermission by remember {
-        mutableStateOf(Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
-            ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED)
+    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        hasMicPermission = granted || ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
     }
-    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { results ->
-        hasMicPermission = results[Manifest.permission.RECORD_AUDIO] == true ||
-            ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
-        hasBluetoothPermission = Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
-            results[Manifest.permission.BLUETOOTH_CONNECT] == true ||
-            ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
-    }
-    val webViewState = remember { mutableStateOf<WebView?>(null) }
 
-    LaunchedEffect(canSpeak, hasMicPermission, hasBluetoothPermission) {
-        if (canSpeak && !hasMicPermission) {
-            val permissions = mutableListOf(Manifest.permission.RECORD_AUDIO)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !hasBluetoothPermission) {
-                permissions.add(Manifest.permission.BLUETOOTH_CONNECT)
-            }
-            permissionLauncher.launch(permissions.toTypedArray())
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !hasBluetoothPermission) {
-            permissionLauncher.launch(arrayOf(Manifest.permission.BLUETOOTH_CONNECT))
+    LaunchedEffect(canSpeak, hasMicPermission) {
+        if (canSpeak && !hasMicPermission) permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+    }
+
+    DisposableEffect(context, roomId, roomSocket) {
+        if (roomSocket == null) return@DisposableEffect onDispose { }
+        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        val oldMode = audioManager.mode
+        audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
+
+        val alive = AtomicBoolean(true)
+        val recording = AtomicBoolean(false)
+        var recorder: AudioRecord? = null
+        var player: AudioTrack? = null
+        var captureThread: Thread? = null
+
+        fun stopCapture() {
+            recording.set(false)
+            runCatching { recorder?.stop() }
+            captureThread?.join(350)
+            captureThread = null
+            runCatching { recorder?.release() }
+            recorder = null
+            onSpeakingChanged(false)
         }
-        webViewState.value?.evaluateJavascript(
-            "window.setZyoraMuted && window.setZyoraMuted(${!(canSpeak && hasMicPermission)});", null
-        )
-    }
 
-    AndroidView(
-        modifier = Modifier.size(1.dp).alpha(0.01f),
-        factory = { viewContext ->
-            // Keep Jitsi room names stable and URL-safe even when backend IDs contain punctuation.
-            val safeRoomId = roomId.trim().replace(Regex("[^A-Za-z0-9_-]"), "-").take(120).ifBlank { "default-room" }
-            val roomName = JSONObject.quote("ZyoraVoice-$safeRoomId")
-            val displayName = JSONObject.quote(userName.ifBlank { "User" })
-            val initialMuted = !(canSpeak && hasMicPermission)
-            WebView(viewContext).apply {
-                // Jitsi's embedded conference uses cross-site cookies inside its WebView iframe.
-                // Without third-party cookies some Android builds stay stuck before joining.
-                CookieManager.getInstance().setAcceptCookie(true)
-                CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
-                webViewState.value = this
-                settings.javaScriptEnabled = true
-                settings.domStorageEnabled = true
-                settings.databaseEnabled = true
-                settings.mediaPlaybackRequiresUserGesture = false
-                settings.javaScriptCanOpenWindowsAutomatically = true
-                settings.cacheMode = WebSettings.LOAD_DEFAULT
-                addJavascriptInterface(object {
-                    @JavascriptInterface fun onVoiceActivity(active: Boolean) {
-                        android.os.Handler(android.os.Looper.getMainLooper()).post { onSpeakingChanged(active) }
-                    }
-                }, "ZyoraVoiceBridge")
-                webChromeClient = object : WebChromeClient() {
-                    override fun onPermissionRequest(request: PermissionRequest) {
-                        post {
-                            val granted = ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
-                            if (granted && request.resources.contains(PermissionRequest.RESOURCE_AUDIO_CAPTURE)) {
-                                request.grant(arrayOf(PermissionRequest.RESOURCE_AUDIO_CAPTURE))
-                            } else request.deny()
-                        }
-                    }
-                }
-                webViewClient = WebViewClient()
-                val html = """
-                    <!doctype html>
-                    <html><head><meta name="viewport" content="width=device-width, initial-scale=1"></head>
-                    <body style="margin:0;background:transparent">
-                    <div id="meet" style="width:1px;height:1px;overflow:hidden"></div>
-                    <script src="https://meet.jit.si/external_api.js"></script>
-                    <script>
-                      let desiredMuted = ${initialMuted};
-                      let api = null;
-                      let retryTimer = null;
-                      let joinTimer = null;
-                      let retryDelay = 1000;
-                      let starting = false;
-                      function scheduleReconnect() {
-                        if (retryTimer) return;
-                        starting = false;
-                        if (joinTimer) { clearTimeout(joinTimer); joinTimer = null; }
-                        // Schedule first so dispose-triggered leave events cannot start duplicate retries.
-                        retryTimer = setTimeout(function() { retryTimer = null; startConference(); }, retryDelay);
-                        retryDelay = Math.min(retryDelay * 2, 15000);
-                        try { if (api) api.dispose(); } catch (e) {}
-                        api = null;
-                      }
-                      window.setZyoraMuted = function(muted) {
-                        desiredMuted = !!muted;
-                        if (api) { try { api.executeCommand('setAudioMute', desiredMuted); } catch (e) {} }
-                      };
-                      function startConference() {
-                        if (starting) return;
-                        if (typeof JitsiMeetExternalAPI === 'undefined') { setTimeout(startConference, 500); return; }
-                        starting = true;
-                        try {
-                          api = new JitsiMeetExternalAPI('meet.jit.si', {
-                            roomName: ${roomName},
-                            parentNode: document.getElementById('meet'),
-                            width: '1px',
-                            height: '1px',
-                            configOverwrite: {
-                              startAudioOnly: true,
-                              startWithAudioMuted: true,
-                              startWithVideoMuted: true,
-                              prejoinConfig: { enabled: false },
-                              disableDeepLinking: true
-                            },
-                            interfaceConfigOverwrite: { TOOLBAR_BUTTONS: [] },
-                            userInfo: { displayName: ${displayName} }
-                          });
-                        } catch (error) {
-                          // A WebView/Jitsi constructor exception previously left starting=true forever.
-                          console.error('Zyora Jitsi initialization failed; retrying', error);
-                          starting = false;
-                          api = null;
-                          if (joinTimer) { clearTimeout(joinTimer); joinTimer = null; }
-                          if (!retryTimer) {
-                            retryTimer = setTimeout(function() {
-                              retryTimer = null;
-                              startConference();
-                            }, retryDelay);
-                            retryDelay = Math.min(retryDelay * 2, 15000);
-                          }
-                          return;
-                        }
-                        let localParticipantId = null;
-                      api.addEventListener('videoConferenceJoined', function(event) {
-                        starting = false;
-                        if (joinTimer) { clearTimeout(joinTimer); joinTimer = null; }
-                        retryDelay = 1000;
-                        localParticipantId = event && event.id ? event.id : null;
-                        window.setZyoraMuted(desiredMuted);
-                      });
-                      // Some WebView/network failures never emit connectionFailed.
-                      // Retry if the room has not joined within 25 seconds.
-                      joinTimer = setTimeout(function() {
-                        if (starting) scheduleReconnect();
-                      }, 25000);
-                      api.addEventListener('connectionFailed', scheduleReconnect);
-                      api.addEventListener('conferenceFailed', scheduleReconnect);
-                      api.addEventListener('videoConferenceLeft', scheduleReconnect);
-                      api.addEventListener('audioLevelChanged', function(event) {
-                        if (localParticipantId && event && event.participantId === localParticipantId) {
-                          try { ZyoraVoiceBridge.onVoiceActivity(!desiredMuted && event.audioLevel > 0.08); } catch (e) {}
-                        }
-                      });
-                      api.addEventListener('audioMuteStatusChanged', function(event) {
-                        if (event && event.muted) { try { ZyoraVoiceBridge.onVoiceActivity(false); } catch (e) {} }
-                      });
-                      }
-                      startConference();
-                    </script>
-                    </body></html>
-                """.trimIndent()
-                loadDataWithBaseURL("https://meet.jit.si/", html, "text/html", "UTF-8", null)
-            }
-        },
-        update = { webView ->
-            webViewState.value = webView
-            webView.evaluateJavascript(
-                "window.setZyoraMuted && window.setZyoraMuted(${!(canSpeak && hasMicPermission)});", null
+        fun startCapture() {
+            if (!alive.get() || !hasMicPermission || !canSpeak || recording.get()) return
+            val minBuffer = AudioRecord.getMinBufferSize(
+                ROOM_VOICE_SAMPLE_RATE,
+                AudioFormat.CHANNEL_IN_MONO,
+                AudioFormat.ENCODING_PCM_16BIT
             )
+            if (minBuffer <= 0) return
+            val created = runCatching {
+                AudioRecord(
+                    MediaRecorder.AudioSource.VOICE_COMMUNICATION,
+                    ROOM_VOICE_SAMPLE_RATE,
+                    AudioFormat.CHANNEL_IN_MONO,
+                    AudioFormat.ENCODING_PCM_16BIT,
+                    maxOf(minBuffer * 2, ROOM_VOICE_FRAME_BYTES * 4)
+                )
+            }.getOrNull() ?: return
+            if (created.state != AudioRecord.STATE_INITIALIZED) {
+                created.release()
+                return
+            }
+            recorder = created
+            recording.set(true)
+            runCatching { created.startRecording() }.onFailure {
+                recording.set(false)
+                created.release()
+                recorder = null
+                return
+            }
+            onSpeakingChanged(true)
+            captureThread = thread(name = "ZyoraRoomMic", isDaemon = true) {
+                val frame = ByteArray(ROOM_VOICE_FRAME_BYTES)
+                while (alive.get() && recording.get()) {
+                    val count = runCatching { created.read(frame, 0, frame.size) }.getOrDefault(-1)
+                    if (count > 0 && recording.get() && roomSocket.connected()) {
+                        val chunk = if (count == frame.size) frame.copyOf() else frame.copyOf(count)
+                        runCatching {
+                            roomSocket.emit(
+                                "room_voice_chunk",
+                                JSONObject().put("roomId", roomId).put("audio", chunk)
+                            )
+                        }
+                    } else if (count < 0) break
+                }
+            }
         }
-    )
 
-    DisposableEffect(Unit) {
+        val permissionListener = Emitter.Listener { args ->
+            val data = args.firstOrNull() as? JSONObject ?: return@Listener
+            if (data.optString("roomId") != roomId) return@Listener
+            if (data.optBoolean("allowed", false)) startCapture() else stopCapture()
+        }
+        val chunkListener = Emitter.Listener { args ->
+            val data = args.firstOrNull() as? JSONObject ?: return@Listener
+            if (data.optString("roomId") != roomId || !alive.get()) return@Listener
+            val bytes = data.opt("audio") as? ByteArray ?: return@Listener
+            if (bytes.isEmpty() || bytes.size > 4096) return@Listener
+            val output = player ?: run {
+                val minOut = AudioTrack.getMinBufferSize(
+                    ROOM_VOICE_SAMPLE_RATE,
+                    AudioFormat.CHANNEL_OUT_MONO,
+                    AudioFormat.ENCODING_PCM_16BIT
+                )
+                if (minOut <= 0) return@Listener
+                runCatching {
+                    AudioTrack.Builder()
+                        .setAudioAttributes(
+                            AudioAttributes.Builder()
+                                .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
+                                .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                                .build()
+                        )
+                        .setAudioFormat(
+                            AudioFormat.Builder()
+                                .setSampleRate(ROOM_VOICE_SAMPLE_RATE)
+                                .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                                .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                                .build()
+                        )
+                        .setBufferSizeInBytes(maxOf(minOut * 2, ROOM_VOICE_FRAME_BYTES * 8))
+                        .setTransferMode(AudioTrack.MODE_STREAM)
+                        .build()
+                        .also { it.play(); player = it }
+                }.getOrNull() ?: return@Listener
+            }
+            runCatching { output.write(bytes, 0, bytes.size) }
+        }
+
+        roomSocket.on("room_voice_permission", permissionListener)
+        roomSocket.on("room_voice_chunk", chunkListener)
+        roomSocket.on(Socket.EVENT_DISCONNECT) {
+            stopCapture()
+            runCatching { player?.pause(); player?.flush() }
+        }
+
+        if (canSpeak && hasMicPermission && roomSocket.connected()) {
+            roomSocket.emit("room_voice_start", JSONObject().put("roomId", roomId))
+        }
+
         onDispose {
-            webViewState.value?.let { it.stopLoading(); it.loadUrl("about:blank"); it.destroy() }
-            webViewState.value = null
+            alive.set(false)
+            roomSocket.emit("room_voice_stop", JSONObject().put("roomId", roomId))
+            roomSocket.off("room_voice_permission", permissionListener)
+            roomSocket.off("room_voice_chunk", chunkListener)
+            stopCapture()
+            runCatching { player?.stop(); player?.release() }
+            player = null
+            audioManager.mode = oldMode
+        }
+    }
+
+    LaunchedEffect(canSpeak, hasMicPermission, roomSocket, roomId) {
+        if (roomSocket?.connected() == true) {
+            if (canSpeak && hasMicPermission) {
+                roomSocket.emit("room_voice_start", JSONObject().put("roomId", roomId))
+            } else {
+                roomSocket.emit("room_voice_stop", JSONObject().put("roomId", roomId))
+                onSpeakingChanged(false)
+            }
         }
     }
 }
