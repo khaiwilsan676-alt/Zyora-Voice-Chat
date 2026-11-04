@@ -7,6 +7,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import android.widget.Toast
 import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.*
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
@@ -29,6 +30,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
@@ -379,6 +381,30 @@ fun PublicProfileScreen(
                             }
                         }
                     }
+                    
+                    // --- IN ROOM BUTTON ---
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(top = 90.dp)
+                            .clip(RoundedCornerShape(topStart = 20.dp, bottomStart = 20.dp))
+                            .background(Color(0xFF3B82F6)) // Blue color
+                            .clickable { onJoinRoom(targetUser?.accountId ?: "") }
+                            .padding(start = 14.dp, end = 16.dp, top = 8.dp, bottom = 8.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            InRoomAnimatedEqualizerIcon(modifier = Modifier.size(14.dp))
+                            Text(
+                                text = "In room",
+                                color = Color.White,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
                 }
             }
 
@@ -388,8 +414,6 @@ fun PublicProfileScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .offset(y = (-12).dp) // 🔥 2% Overlap added here to show white box curves clearly
-                        // Clip the white surface at the item layer too, so LazyColumn cannot
-                        // paint square white corners over the rounded profile panel.
                         .graphicsLayer {
                             shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)
                             clip = true
@@ -470,7 +494,7 @@ fun PublicProfileScreen(
 
                     Row(modifier = Modifier.padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         
-                        // Level Indicator Moved Here (Before the Profile badge)
+                        // Level Indicator Moved Here
                         Box(contentAlignment = Alignment.CenterEnd, modifier = Modifier.height(24.dp).width(48.dp)) {
                             AsyncImage(model = profileAsset("/IMG_20261028_004355.png"), contentDescription = "Level", contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
                             Text(
@@ -478,7 +502,7 @@ fun PublicProfileScreen(
                                 color = Color.White, 
                                 fontSize = 9.sp, 
                                 fontWeight = FontWeight.Normal, 
-                                modifier = Modifier.padding(end = 6.dp) // Text ko right corner me center rakhne ke liye
+                                modifier = Modifier.padding(end = 6.dp) 
                             )
                         }
 
@@ -492,11 +516,17 @@ fun PublicProfileScreen(
                         Text("$flag $location", fontSize = 14.sp, color = Color.DarkGray)
                     }
 
-                    Row(modifier = Modifier.padding(top = 8.dp), verticalAlignment = Alignment.Top) {
-                        if (!isOtherUser) {
-                            LucidePublicProfileIcon(warning = false, tint = Color.Gray, modifier = Modifier.size(14.dp).clickable { showEditSheet = true })
-                            Spacer(modifier = Modifier.width(8.dp))
-                        }
+                    // --- BIO TEXT & ICON IN SAME ROW ---
+                    Row(modifier = Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        // Pencil icon is now always visible, but clickable only if it's user's own profile
+                        LucidePublicProfileIcon(
+                            warning = false, 
+                            tint = Color.Gray, 
+                            modifier = Modifier
+                                .size(14.dp)
+                                .then(if (!isOtherUser) Modifier.clickable { showEditSheet = true } else Modifier)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = userBio.ifBlank { if (isOtherUser) "No bio added yet" else "Add bio..." },
                             fontSize = 12.sp,
@@ -521,7 +551,7 @@ fun PublicProfileScreen(
             item {
                 Column(modifier = Modifier
                     .fillMaxWidth()
-                    .offset(y = (-12).dp) // 🔥 Same overlap applied so no gap remains
+                    .offset(y = (-12).dp) 
                     .padding(horizontal = 20.dp, vertical = 8.dp)
                 ) {
                     
@@ -765,50 +795,75 @@ fun PublicProfileScreen(
         }
     }
 
+    // --- REPORT / BLOCK ACTION SHEET UPDATED HERE ---
     if (isOtherUser && showActionSheet) {
         ModalBottomSheet(
             onDismissRequest = { showActionSheet = false },
-            containerColor = Color.Black,
+            containerColor = Color.Transparent, // Background is strictly transparent for floating look
             contentColor = Color.White,
-            scrimColor = Color.Black.copy(alpha = 0.28f),
-            shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp),
-            dragHandle = null
+            scrimColor = Color.Black.copy(alpha = 0.5f),
+            dragHandle = null,
+            windowInsets = WindowInsets(0, 0, 0, 0)
         ) {
             Column(
-                modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 24.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .padding(bottom = 32.dp)
+                    .windowInsetsPadding(WindowInsets.navigationBars)
             ) {
-                Text(
-                    "Report",
-                    modifier = Modifier.fillMaxWidth().clickable {
-                        showActionSheet = false
-                        showUserReport = true
-                    }.padding(vertical = 16.dp),
-                    color = Color.White,
-                    fontSize = 16.sp,
-                    textAlign = TextAlign.Center,
-                    fontWeight = FontWeight.Medium
-                )
-                Text(
-                    if (isUserBlocked) "Unblock" else "Block",
-                    modifier = Modifier.fillMaxWidth().clickable {
-                        isUserBlocked = !isUserBlocked
-                        Toast.makeText(context, if (isUserBlocked) "User blocked" else "User unblocked", Toast.LENGTH_SHORT).show()
-                    }.padding(vertical = 16.dp),
-                    color = Color.White,
-                    fontSize = 16.sp,
-                    textAlign = TextAlign.Center,
-                    fontWeight = FontWeight.Medium
-                )
-                Spacer(Modifier.height(8.dp))
+                // Black Card block
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Color(0xFF1C1C1E)) // iOS Style Dark Gray / Black
+                ) {
+                    Text(
+                        "Report",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                showActionSheet = false
+                                showUserReport = true
+                            }
+                            .padding(vertical = 18.dp),
+                        color = Color.White,
+                        fontSize = 18.sp,
+                        textAlign = TextAlign.Center,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Divider(color = Color.DarkGray.copy(alpha = 0.5f), thickness = 0.5.dp)
+                    Text(
+                        if (isUserBlocked) "Unblock" else "Block",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                isUserBlocked = !isUserBlocked
+                                Toast.makeText(context, if (isUserBlocked) "User blocked" else "User unblocked", Toast.LENGTH_SHORT).show()
+                                showActionSheet = false
+                            }
+                            .padding(vertical = 18.dp),
+                        color = Color.White,
+                        fontSize = 18.sp,
+                        textAlign = TextAlign.Center,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp)) // Transparent Gap
+
+                // Blue Cancel Button
                 Button(
                     onClick = { showActionSheet = false },
                     modifier = Modifier
-                        .width(280.dp)
-                        .height(55.dp)
-                        .align(Alignment.CenterHorizontally),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B82F6)),
-                    shape = RoundedCornerShape(12.dp)
-                ) { Text("Cancel", color = Color.White) }
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B82F6)), // Blue as requested
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Text("Cancel", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                }
             }
         }
     }
@@ -1427,6 +1482,77 @@ fun PublicProfileScreen(
 }
 
 // --- HELPER COMPOSABLES ---
+
+@Composable
+fun InRoomAnimatedEqualizerIcon(modifier: Modifier = Modifier) {
+    val infiniteTransition = rememberInfiniteTransition()
+    
+    // Bar 1 animates from 0.4 to 1.0 of height
+    val bar1Height by infiniteTransition.animateFloat(
+        initialValue = 0.4f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(400, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "bar1"
+    )
+    
+    // Bar 2 animates from 1.0 to 0.3 of height (different timing)
+    val bar2Height by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 0.3f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(500, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "bar2"
+    )
+    
+    // Bar 3 animates from 0.5 to 0.9 of height (different timing)
+    val bar3Height by infiniteTransition.animateFloat(
+        initialValue = 0.5f,
+        targetValue = 0.9f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(600, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "bar3"
+    )
+
+    Canvas(modifier = modifier) {
+        val barWidth = size.width * 0.22f
+        val spacing = size.width * 0.17f
+        val corner = CornerRadius(barWidth / 2, barWidth / 2)
+        
+        // Draw Bar 1
+        val h1 = size.height * bar1Height
+        drawRoundRect(
+            color = Color.White,
+            topLeft = Offset(0f, size.height - h1),
+            size = androidx.compose.ui.geometry.Size(barWidth, h1),
+            cornerRadius = corner
+        )
+        
+        // Draw Bar 2
+        val h2 = size.height * bar2Height
+        drawRoundRect(
+            color = Color.White,
+            topLeft = Offset(barWidth + spacing, size.height - h2),
+            size = androidx.compose.ui.geometry.Size(barWidth, h2),
+            cornerRadius = corner
+        )
+        
+        // Draw Bar 3
+        val h3 = size.height * bar3Height
+        drawRoundRect(
+            color = Color.White,
+            topLeft = Offset((barWidth + spacing) * 2, size.height - h3),
+            size = androidx.compose.ui.geometry.Size(barWidth, h3),
+            cornerRadius = corner
+        )
+    }
+}
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
