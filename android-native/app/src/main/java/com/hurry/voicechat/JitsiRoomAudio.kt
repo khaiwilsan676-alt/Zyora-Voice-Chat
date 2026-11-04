@@ -73,8 +73,12 @@ fun JitsiRoomAudio(
         if (roomSocket == null) return@DisposableEffect onDispose { }
         val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
         val oldMode = audioManager.mode
-        val oldCommunicationDeviceId = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) audioManager.communicationDevice?.id else null
-        val hadBluetoothSco = audioManager.isBluetoothScoOn
+        val oldCommunicationDeviceId = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && hasBluetoothPermission) {
+            runCatching { audioManager.communicationDevice?.id }.getOrNull()
+        } else null
+        val hadBluetoothSco = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+            runCatching { audioManager.isBluetoothScoOn }.getOrDefault(false)
+        } else false
         audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && hasBluetoothPermission) {
             val devices = audioManager.availableCommunicationDevices
