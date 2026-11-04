@@ -67,7 +67,7 @@ fun RoomInfo(
             all.associate { member ->
                 val roomProfileCountry = runCatching {
                     // Read the same Room Profile country field used by the Room Profile sheet.
-                    loadRoomProfileCountry(context, member.accountId, member.name, member.image)
+                    loadRoomProfileCountry(context, member.accountId, member.name, member.image, member.country)
                 }.getOrDefault("")
                 member.accountId to member.copy(country = roomProfileCountry)
             }
