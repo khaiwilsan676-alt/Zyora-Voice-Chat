@@ -2064,8 +2064,10 @@ private fun formatMusicTime(seconds: Float): String {
     Box(Modifier.size(42.dp).clip(CircleShape).background(Color.Black.copy(alpha=.30f)).clickable(onClick=onClick),contentAlignment=Alignment.Center){
         Image(painterResource(icon),contentDescription=description,modifier=Modifier.size(when(description){"Say Hi Chat"->30.dp;"Emoji"->26.dp;"Message Box Menu"->28.dp;"Apps Menu"->26.dp;else->26.dp}))
         if (hasUnread && description == "Message Box Menu") {
+            // Anchor the unread indicator to the mail glyph, not its touch target.
             Box(
-                Modifier.align(Alignment.TopEnd).offset(x=(-2).dp, y=2.dp)
+                Modifier.align(Alignment.TopEnd)
+                    .padding(top = 7.dp, end = 7.dp)
                     .size(8.dp).background(Color(0xFFFF3030), CircleShape)
             )
         }
