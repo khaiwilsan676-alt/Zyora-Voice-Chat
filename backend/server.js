@@ -61,6 +61,10 @@ const io = new Server(server, {
     origin: "*",
     methods: ["GET", "POST"],
   },
+  // Keep long-lived room voice sockets healthy on mobile networks.
+  pingInterval: 20000,
+  pingTimeout: 60000,
+  upgradeTimeout: 10000,
   maxHttpBufferSize: 1024 * 1024,
 });
 
