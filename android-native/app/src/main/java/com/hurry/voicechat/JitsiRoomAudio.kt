@@ -111,6 +111,7 @@ fun JitsiRoomAudio(
         var recorder: AudioRecord? = null
         var echoCanceler: AcousticEchoCanceler? = null
         var player: AudioTrack? = null
+        val playerLock = Any()
         var playbackThread: Thread? = null
         val playbackQueue = ArrayBlockingQueue<ByteArray>(50)
         var captureThread: Thread? = null
@@ -326,33 +327,36 @@ fun JitsiRoomAudio(
                 else -> return@Listener
             }
             if (bytes.isEmpty() || bytes.size > 4096 || bytes.size % 2 != 0) return@Listener
-            val output = player ?: run {
-                val minOut = AudioTrack.getMinBufferSize(
-                    ROOM_VOICE_SAMPLE_RATE,
-                    AudioFormat.CHANNEL_OUT_MONO,
-                    AudioFormat.ENCODING_PCM_16BIT
-                )
-                if (minOut <= 0) return@Listener
-                runCatching {
-                    AudioTrack.Builder()
-                        .setAudioAttributes(
-                            AudioAttributes.Builder()
-                                .setUsage(AudioAttributes.USAGE_MEDIA)
-                                .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-                                .build()
-                        )
-                        .setAudioFormat(
-                            AudioFormat.Builder()
-                                .setSampleRate(ROOM_VOICE_SAMPLE_RATE)
-                                .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-                                .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
-                                .build()
-                        )
-                        .setBufferSizeInBytes(maxOf(minOut * 3, ROOM_VOICE_FRAME_BYTES * 12))
-                        .setTransferMode(AudioTrack.MODE_STREAM)
-                        .build()
-                        .also { player = it }
-                }.getOrNull() ?: return@Listener
+            val output = synchronized(playerLock) {
+                player?.takeIf { it.state == AudioTrack.STATE_INITIALIZED } ?: run {
+                    val minOut = AudioTrack.getMinBufferSize(
+                        ROOM_VOICE_SAMPLE_RATE,
+                        AudioFormat.CHANNEL_OUT_MONO,
+                        AudioFormat.ENCODING_PCM_16BIT
+                    )
+                    if (minOut <= 0) return@Listener
+                    runCatching {
+                        AudioTrack.Builder()
+                            .setAudioAttributes(
+                                AudioAttributes.Builder()
+                                    .setUsage(AudioAttributes.USAGE_MEDIA)
+                                    .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                                    .build()
+                            )
+                            .setAudioFormat(
+                                AudioFormat.Builder()
+                                    .setSampleRate(ROOM_VOICE_SAMPLE_RATE)
+                                    .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                                    .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                                    .build()
+                            )
+                            .setBufferSizeInBytes(maxOf(minOut * 3, ROOM_VOICE_FRAME_BYTES * 12))
+                            .setTransferMode(AudioTrack.MODE_STREAM)
+                            .build()
+                            .takeIf { it.state == AudioTrack.STATE_INITIALIZED }
+                            ?.also { player = it }
+                    }.getOrNull() ?: return@Listener
+                }
             }
             // Never block Socket.IO's event thread on AudioTrack.write(). A dedicated
             // consumer drains a bounded jitter queue so network callbacks stay responsive.
@@ -364,10 +368,33 @@ fun JitsiRoomAudio(
                         } catch (_: InterruptedException) {
                             if (!alive.get()) break else null
                         } ?: continue
-                        val track = player ?: continue
-                        runCatching {
+                        val track = synchronized(playerLock) { player } ?: continue
+                        var offset = 0
+                        var playbackFailed = false
+                        try {
                             if (track.playState != AudioTrack.PLAYSTATE_PLAYING) track.play()
-                            track.write(packet, 0, packet.size, AudioTrack.WRITE_BLOCKING)
+                            while (offset < packet.size && alive.get()) {
+                                val written = track.write(
+                                    packet, offset, packet.size - offset, AudioTrack.WRITE_BLOCKING
+                                )
+                                if (written <= 0) {
+                                    playbackFailed = true
+                                    break
+                                }
+                                offset += written
+                            }
+                        } catch (_: Throwable) {
+                            playbackFailed = true
+                        }
+                        if (playbackFailed) {
+                            synchronized(playerLock) {
+                                if (player === track) {
+                                    player = null
+                                    runCatching { track.pause(); track.flush(); track.stop(); track.release() }
+                                }
+                            }
+                            // Drop stale buffered audio; the next incoming packet recreates AudioTrack.
+                            playbackQueue.clear()
                         }
                     }
                 }
@@ -458,8 +485,10 @@ fun JitsiRoomAudio(
             playbackThread?.interrupt()
             playbackThread?.join(500)
             playbackThread = null
-            runCatching { player?.stop(); player?.release() }
-            player = null
+            synchronized(playerLock) {
+                runCatching { player?.pause(); player?.flush(); player?.stop(); player?.release() }
+                player = null
+            }
 
             audioManager.mode = oldMode
         }
