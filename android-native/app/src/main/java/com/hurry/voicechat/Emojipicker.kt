@@ -186,7 +186,6 @@ fun TransparentSeatVideoPlayer(
 ) {
     val context = LocalContext.current
     val latestOnFinished by rememberUpdatedState(onVideoFinished)
-    val textureViewRef = remember { mutableStateOf<android.view.TextureView?>(null) }
     val player = remember(context, videoUrl) {
         ExoPlayer.Builder(context).build().apply {
             setMediaItem(MediaItem.fromUri(videoUrl))
@@ -200,26 +199,22 @@ fun TransparentSeatVideoPlayer(
             prepare()
         }
     }
+    val chromaView = remember(context, player) {
+        ChromaKeyVideoView(context) { surface -> player.setVideoSurface(surface) }
+    }
 
     AndroidView(
         modifier = modifier.fillMaxSize(),
-        factory = { ctx ->
-            android.view.TextureView(ctx).apply {
-                // TextureView is composited by Android and does not create a black SurfaceView layer.
-                isOpaque = false
-                textureViewRef.value = this
-                player.setVideoTextureView(this)
-            }
-        }
+        factory = { chromaView }
     )
 
-    DisposableEffect(player) {
+    DisposableEffect(player, chromaView) {
         onDispose {
-            textureViewRef.value?.let { player.clearVideoTextureView(it) }
-            textureViewRef.value = null
+            player.clearVideoSurface()
             player.stop()
             player.clearMediaItems()
             player.release()
+            chromaView.release()
         }
     }
 }
