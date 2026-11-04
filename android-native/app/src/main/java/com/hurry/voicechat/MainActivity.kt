@@ -553,7 +553,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                             }, onJoinRoom = { targetRoomId -> openedRoom=HurryRoom(id=targetRoomId,name="Room",image="",country="",accountId=targetRoomId) })
                             HurryTab.ME -> when (openedMePage) {
                                 null -> MeScreen(languageCode = languageCode,onOpen = { openedMePage = it }, onPublicProfile = { openedPublicProfile = it })
-                                "Coins" -> CoinsNativePage(onBack = { openedMePage = null })
+                                "Coins" -> CoinsNativePage(onBack = { openedMePage = null }, onChat = { uid, name, image -> openedMePage = null; openedChat = Triple(uid, name, image) })
                                 "Diamonds" -> DiamondsNativePage(onBack = { openedMePage = null })
                                 "Invite Friends" -> InviteFriends(onBack = { openedMePage = null })
                                 "Family" -> Family(onBack = { openedMePage = null })
