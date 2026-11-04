@@ -57,6 +57,7 @@ fun JitsiRoomAudio(
 ) {
     val context = LocalContext.current
     val latestMusicUri by rememberUpdatedState(musicUri)
+    val latestCanSpeak by rememberUpdatedState(canSpeak)
     val latestMusicPlaying by rememberUpdatedState(musicPlaying)
     var hasMicPermission by remember {
         mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED)
@@ -83,7 +84,7 @@ fun JitsiRoomAudio(
         }
     }
 
-    DisposableEffect(context, roomId, roomSocket, canSpeak, hasMicPermission, hasBluetoothPermission) {
+    DisposableEffect(context, roomId, roomSocket, hasMicPermission, hasBluetoothPermission) {
         if (roomSocket == null) return@DisposableEffect onDispose { }
         val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
         val oldMode = audioManager.mode
@@ -114,7 +115,7 @@ fun JitsiRoomAudio(
         }
 
         fun startMusicRelay(uri: String) {
-            if (!alive.get() || !voiceAllowed.get() || !canSpeak || uri.isBlank() || musicRelayRunning.get()) return
+            if (!alive.get() || !voiceAllowed.get() || !latestCanSpeak || uri.isBlank() || musicRelayRunning.get()) return
             musicRelayRunning.set(true)
             activeMusicUri = uri
             musicRelayThread = thread(name = "ZyoraRoomMusicRelay", isDaemon = true) {
@@ -149,7 +150,7 @@ fun JitsiRoomAudio(
         }
 
         fun startCapture() {
-            if (!alive.get() || !hasMicPermission || !canSpeak || recording.get()) return
+            if (!alive.get() || !hasMicPermission || !latestCanSpeak || recording.get()) return
             val minBuffer = AudioRecord.getMinBufferSize(
                 ROOM_VOICE_SAMPLE_RATE,
                 AudioFormat.CHANNEL_IN_MONO,
@@ -264,7 +265,7 @@ fun JitsiRoomAudio(
                             runCatching { echoCanceler?.release() }
                             echoCanceler = null
                             Handler(Looper.getMainLooper()).postDelayed({
-                                if (alive.get() && voiceAllowed.get() && canSpeak &&
+                                if (alive.get() && voiceAllowed.get() && latestCanSpeak &&
                                     hasMicPermission && !recording.get() && roomSocket.connected()
                                 ) startCapture()
                             }, 1000)
@@ -280,7 +281,7 @@ fun JitsiRoomAudio(
         val permissionListener = Emitter.Listener { args ->
             val data = args.firstOrNull() as? JSONObject ?: return@Listener
             if (data.optString("roomId") != roomId) return@Listener
-            val allowed = data.optBoolean("allowed", false) && canSpeak
+            val allowed = data.optBoolean("allowed", false) && latestCanSpeak
             voiceAllowed.set(allowed)
             if (allowed) startCapture() else {
                 stopMusicRelay()
@@ -369,16 +370,38 @@ fun JitsiRoomAudio(
             // Server authorization is seat-based. Do not gate the room audio session
             // on RECORD_AUDIO: local music sharing must still work if mic permission
             // is denied; startCapture() independently checks that permission.
-            if (canSpeak && alive.get()) {
+            if (latestCanSpeak && alive.get()) {
                 roomSocket.emit("room_voice_start", JSONObject().put("roomId", roomId))
             }
         }
         roomSocket.on(Socket.EVENT_CONNECT, connectListener)
 
+        // Keep the room audio session and Socket.IO listeners alive across mute toggles.
+        // Only stop publishing mic frames while muted; request permission again on unmute.
+        var lastMicEnabled = latestCanSpeak
+        val micMuteWatcherThread = thread(name = "ZyoraRoomMicMuteWatch", isDaemon = true) {
+            while (alive.get()) {
+                val micEnabled = latestCanSpeak
+                if (micEnabled != lastMicEnabled) {
+                    lastMicEnabled = micEnabled
+                    if (!micEnabled) {
+                        voiceAllowed.set(false)
+                        stopCapture()
+                        if (roomSocket.connected()) {
+                            roomSocket.emit("room_voice_stop", JSONObject().put("roomId", roomId))
+                        }
+                    } else if (roomSocket.connected()) {
+                        roomSocket.emit("room_voice_start", JSONObject().put("roomId", roomId))
+                    }
+                }
+                try { Thread.sleep(50) } catch (_: InterruptedException) { }
+            }
+        }
+
         musicWatcherThread = thread(name = "ZyoraRoomMusicWatch", isDaemon = true) {
             while (alive.get()) {
                 val uri = latestMusicUri?.takeIf { it.isNotBlank() }
-                val shouldRelay = voiceAllowed.get() && canSpeak && latestMusicPlaying && uri != null
+                val shouldRelay = voiceAllowed.get() && latestCanSpeak && latestMusicPlaying && uri != null
                 if (!shouldRelay) {
                     if (musicRelayRunning.get()) stopMusicRelay()
                     if (!latestMusicPlaying || uri == null) finishedMusicUri = null
@@ -390,13 +413,15 @@ fun JitsiRoomAudio(
             }
             stopMusicRelay()
         }
-        if (canSpeak && roomSocket.connected()) {
+        if (latestCanSpeak && roomSocket.connected()) {
             roomSocket.emit("room_voice_start", JSONObject().put("roomId", roomId))
         }
 
         onDispose {
             alive.set(false)
             voiceAllowed.set(false)
+            micMuteWatcherThread.interrupt()
+            micMuteWatcherThread.join(300)
             musicWatcherThread?.interrupt()
             musicWatcherThread?.join(300)
             stopMusicRelay()
