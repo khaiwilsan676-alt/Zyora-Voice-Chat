@@ -473,6 +473,30 @@ fun RoomPage(
     var showChat by remember{mutableStateOf(false)}
     val latestShowChat by rememberUpdatedState(showChat)
     var showMessageSheet by remember{mutableStateOf(false)}
+    val roomUnreadPrefs = remember { appContext.getSharedPreferences("zyora_unread_messages", android.content.Context.MODE_PRIVATE) }
+    var roomHasUnreadMessages by remember(accountId) {
+        mutableStateOf(roomUnreadPrefs.getInt("unread_$accountId", 0) > 0)
+    }
+    DisposableEffect(accountId, roomUnreadPrefs) {
+        val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { prefs, key ->
+            if (key == "unread_$accountId" || key?.startsWith("unread_${accountId}_") == true) {
+                val prefix = "unread_${accountId}_"
+                val total = prefs.all.entries.asSequence()
+                    .filter { it.key.startsWith(prefix) }
+                    .sumOf { (it.value as? Int ?: 0).coerceAtLeast(0) }
+                prefs.edit().putInt("unread_$accountId", total).apply()
+                roomHasUnreadMessages = total > 0
+            }
+        }
+        roomUnreadPrefs.registerOnSharedPreferenceChangeListener(listener)
+        val prefix = "unread_${accountId}_"
+        val total = roomUnreadPrefs.all.entries.asSequence()
+            .filter { it.key.startsWith(prefix) }
+            .sumOf { (it.value as? Int ?: 0).coerceAtLeast(0) }
+        roomUnreadPrefs.edit().putInt("unread_$accountId", total).apply()
+        roomHasUnreadMessages = total > 0
+        onDispose { roomUnreadPrefs.unregisterOnSharedPreferenceChangeListener(listener) }
+    }
     var selectedOfficialChat by remember { mutableStateOf<Triple<String, String, String>?>(null) }
     var showMenu by remember{mutableStateOf(false)}
     var showStore by remember { mutableStateOf(false) }
@@ -1201,7 +1225,7 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                             contentScale=ContentScale.Fit
                         )
                         Row(Modifier.weight(1f),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp,Alignment.End)){
-                            RoomFooterButton(onClick={showMessageSheet=true},description="Message Box Menu",icon=R.drawable.ic_hurry_mail)
+                            RoomFooterButton(onClick={showMessageSheet=true},description="Message Box Menu",icon=R.drawable.ic_hurry_mail,hasUnread=roomHasUnreadMessages)
                             RoomFooterButton(onClick={showMenu=true},description="Apps Menu",icon=R.drawable.ic_hurry_apps)
                         }
                     }
@@ -2033,9 +2057,15 @@ private fun formatMusicTime(seconds: Float): String {
     TextButton(onClick=onClick,enabled=enabled,modifier=Modifier.fillMaxWidth().height(44.dp),shape=RoundedCornerShape(10.dp)){ Text(label,color=if(enabled)Color(0xFF171717) else Color.Gray,fontSize=14.sp) }
 }
 
-@Composable private fun RoomFooterButton(onClick:()->Unit,description:String,icon:Int){
+@Composable private fun RoomFooterButton(onClick:()->Unit,description:String,icon:Int,hasUnread:Boolean=false){
     Box(Modifier.size(42.dp).clip(CircleShape).background(Color.Black.copy(alpha=.30f)).clickable(onClick=onClick),contentAlignment=Alignment.Center){
         Image(painterResource(icon),contentDescription=description,modifier=Modifier.size(when(description){"Say Hi Chat"->30.dp;"Emoji"->26.dp;"Message Box Menu"->28.dp;"Apps Menu"->26.dp;else->26.dp}))
+        if (hasUnread && description == "Message Box Menu") {
+            Box(
+                Modifier.align(Alignment.TopEnd).offset(x=(-2).dp, y=2.dp)
+                    .size(8.dp).background(Color(0xFFFF3030), CircleShape)
+            )
+        }
     }
 }
 
