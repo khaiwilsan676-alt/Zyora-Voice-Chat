@@ -23,7 +23,7 @@ class ChromaKeyVideoView(
     context: Context,
     private val onVideoSurfaceReady: (Surface) -> Unit
 ) : GLSurfaceView(context) {
-    private val videoRenderer = ChromaKeyRenderer(onVideoSurfaceReady)
+    private val videoRenderer = ChromaKeyRenderer(onVideoSurfaceReady) { requestRender() }
 
     init {
         setEGLContextClientVersion(2)
@@ -41,7 +41,8 @@ class ChromaKeyVideoView(
 }
 
 private class ChromaKeyRenderer(
-    private val onSurfaceReady: (Surface) -> Unit
+    private val onSurfaceReady: (Surface) -> Unit,
+    private val requestRender: () -> Unit
 ) : GLSurfaceView.Renderer {
     private var program = 0
     private var textureId = 0
