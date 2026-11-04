@@ -75,31 +75,8 @@ fun JitsiRoomAudio(
         if (roomSocket == null) return@DisposableEffect onDispose { }
         val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
         val oldMode = audioManager.mode
-        val oldCommunicationDeviceId = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && hasBluetoothPermission) {
-            runCatching { audioManager.communicationDevice?.id }.getOrNull()
-        } else null
-        val hadBluetoothSco = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
-            runCatching { audioManager.isBluetoothScoOn }.getOrDefault(false)
-        } else false
-        audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && hasBluetoothPermission) {
-            val devices = audioManager.availableCommunicationDevices
-            val preferred = devices.firstOrNull {
-                it.type == android.media.AudioDeviceInfo.TYPE_BLE_HEADSET ||
-                    it.type == android.media.AudioDeviceInfo.TYPE_BLUETOOTH_SCO
-            } ?: devices.firstOrNull { it.type == android.media.AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
-            if (preferred != null) audioManager.setCommunicationDevice(preferred)
-        } else if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
-            val bluetoothOutput = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS).any {
-                it.type == android.media.AudioDeviceInfo.TYPE_BLUETOOTH_SCO
-            }
-            if (bluetoothOutput) {
-                @Suppress("DEPRECATION")
-                audioManager.startBluetoothSco()
-                @Suppress("DEPRECATION")
-                runCatching { audioManager.isBluetoothScoOn = true }
-            }
-        }
+        // Room audio uses the normal media/speaker route, never call mode.
+        audioManager.mode = AudioManager.MODE_NORMAL
 
         val alive = AtomicBoolean(true)
         val recording = AtomicBoolean(false)
@@ -264,8 +241,8 @@ fun JitsiRoomAudio(
                     AudioTrack.Builder()
                         .setAudioAttributes(
                             AudioAttributes.Builder()
-                                .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
-                                .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                                .setUsage(AudioAttributes.USAGE_MEDIA)
+                                .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
                                 .build()
                         )
                         .setAudioFormat(
@@ -312,20 +289,7 @@ fun JitsiRoomAudio(
             stopCapture()
             runCatching { player?.stop(); player?.release() }
             player = null
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && hasBluetoothPermission) {
-                val previousDevice = oldCommunicationDeviceId?.let { id ->
-                    audioManager.availableCommunicationDevices.firstOrNull { it.id == id }
-                }
-                if (previousDevice != null) audioManager.setCommunicationDevice(previousDevice)
-                else audioManager.clearCommunicationDevice()
-            } else {
-                @Suppress("DEPRECATION")
-                runCatching { audioManager.isBluetoothScoOn = hadBluetoothSco }
-                if (!hadBluetoothSco) {
-                    @Suppress("DEPRECATION")
-                    audioManager.stopBluetoothSco()
-                }
-            }
+
             audioManager.mode = oldMode
         }
     }
