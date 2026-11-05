@@ -45,6 +45,10 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.net.HttpURLConnection
+import java.net.URL
 import io.socket.client.IO
 import io.socket.client.Socket
 import io.socket.emitter.Emitter
@@ -1569,6 +1573,31 @@ fun PublicProfile(
     }
     val isOwnProfile = listOf(user.uid, user.id, user.accountId)
         .filterNotNull().map { it.trim() }.any { it.isNotBlank() && it in signedInIds }
+    val visitorIdentity = authPrefs.getString("accountId", "").orEmpty()
+        .ifBlank { authPrefs.getString("uid", "").orEmpty() }
+        .ifBlank { currentUserId }
+    val viewedProfileIdentity = user.accountId?.takeIf { it.isNotBlank() }
+        ?: user.uid?.takeIf { it.isNotBlank() } ?: user.id.orEmpty()
+    LaunchedEffect(visitorIdentity, viewedProfileIdentity, isOwnProfile) {
+        if (!isOwnProfile && visitorIdentity.isNotBlank() && viewedProfileIdentity.isNotBlank()) {
+            withContext(Dispatchers.IO) {
+                runCatching {
+                    val payload = JSONObject().put("viewerId", visitorIdentity).put("profileId", viewedProfileIdentity)
+                    val connection = (URL("https://zyora-server.onrender.com/api/profile-visitors").openConnection() as HttpURLConnection).apply {
+                        requestMethod = "POST"
+                        connectTimeout = 10000
+                        readTimeout = 10000
+                        doOutput = true
+                        setRequestProperty("Content-Type", "application/json; charset=utf-8")
+                    }
+                    try {
+                        connection.outputStream.use { it.write(payload.toString().toByteArray(Charsets.UTF_8)) }
+                        connection.responseCode
+                    } finally { connection.disconnect() }
+                }
+            }
+        }
+    }
     PublicProfileScreen(
         onBack = onBack,
         isOtherUser = !isOwnProfile,
