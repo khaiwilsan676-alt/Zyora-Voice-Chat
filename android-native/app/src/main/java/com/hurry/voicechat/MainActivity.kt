@@ -109,7 +109,7 @@ class MainActivity : ComponentActivity() {
                 )
             }
             LaunchedEffect(Unit) {
-                kotlinx.coroutines.delay(1200)
+                kotlinx.coroutines.delay(400)
                 showLaunch = false
                 checkForHurryUpdate()
             }
