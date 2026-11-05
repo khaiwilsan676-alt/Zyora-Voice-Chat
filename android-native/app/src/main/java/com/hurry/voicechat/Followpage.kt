@@ -1,5 +1,5 @@
 package com.hurry.voicechat
-
+import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -9,239 +9,102 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material3.Divider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.json.JSONArray
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
-// Fake User Data Model
-data class VisitorData(
-    val name: String,
-    val gender: String, // "M" for Male, "F" for Female
-    val date: String,
-    val views: Int,
-    val avatarUrl: String
-)
+private const val VISITOR_API = "https://zyora-server.onrender.com"
+private data class VisitorData(val id:String,val name:String,val gender:String,val avatar:String,val lastViewedAt:Long,val viewCount:Int)
 
-@Composable
-fun VisitorsPage(onBack: () -> Unit) {
-    var selectedTab by remember { mutableStateOf(1) }
+private suspend fun loadProfileVisitors(userId:String,type:String):List<VisitorData> = withContext(Dispatchers.IO) {
+    if(userId.isBlank()) return@withContext emptyList()
+    val encoded=java.net.URLEncoder.encode(userId,"UTF-8")
+    val connection=(URL("$VISITOR_API/api/profile-visitors?userId=$encoded&type=$type").openConnection() as HttpURLConnection).apply { requestMethod="GET";connectTimeout=12000;readTimeout=12000 }
+    try {
+        val status=connection.responseCode
+        val body=(if(status in 200..299) connection.inputStream else connection.errorStream)?.bufferedReader()?.use{it.readText()}.orEmpty()
+        if(status !in 200..299) return@withContext emptyList()
+        val rows=JSONObject(body).optJSONArray("visitors") ?: JSONArray()
+        (0 until rows.length()).mapNotNull { i -> rows.optJSONObject(i)?.let { v ->
+            VisitorData(v.optString("id"),v.optString("name","User"),v.optString("gender"),v.optString("avatar"),v.optLong("lastViewedAt"),v.optInt("viewCount",1).coerceAtLeast(1))
+        }}.take(20)
+    } finally { connection.disconnect() }
+}
+private fun visitorDate(t:Long)=if(t<=0L) "—" else SimpleDateFormat("dd/MM/yyyy • hh:mm a",Locale.getDefault()).format(Date(t))
 
-    val fakeVisitors = listOf(
-        VisitorData("Ghost", "M", "04/11 18:53", 87, "https://i.pravatar.cc/150?u=1"),
-        VisitorData("HUMSAFAR", "M", "04/11 18:09", 4, "https://i.pravatar.cc/150?u=2"),
-        VisitorData("MEET !!", "F", "04/11 18:09", 2, "https://i.pravatar.cc/150?u=3"),
-        VisitorData("palak", "F", "04/11 14:47", 7, "https://i.pravatar.cc/150?u=4"),
-        VisitorData("Current", "M", "04/11 14:46", 74, "https://i.pravatar.cc/150?u=5"),
-        VisitorData("जाटनी", "F", "04/11 01:06", 2, "https://i.pravatar.cc/150?u=6")
-    )
+@Composable fun FollowPage(type:String,onBack:()->Unit) {
+    if(type.equals("Visitors",true)) VisitorsPage(onBack) else FollowList(onBack=onBack,type=type)
+}
 
-    val baseUrl = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/"
-
-    // Exact Top 3% Blue mixing into White page using Color Stops
-    val topBlueGradient = Brush.verticalGradient(
-        0.0f to Color(0xFFE0F0FF),  // Top pe Halka blue
-        0.03f to Color.White,       // Exactly 3% aate aate White me mix
-        1.0f to Color.White         // Baaki 97% pura White
-    )
-
-    Column(
-        Modifier
-            .fillMaxSize()
-            .background(topBlueGradient)
-            .statusBarsPadding()
-    ) {
-        // Top Bar
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .height(56.dp)
-                .padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = Icons.Default.ArrowBack,
-                contentDescription = "Back",
-                tint = Color(0xFF222222),
-                modifier = Modifier.clickable { onBack() }
-            )
-            Spacer(Modifier.width(16.dp))
-            Text(
-                text = "Visitors",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = Color(0xFF111827),
-                modifier = Modifier.weight(1f),
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center
-            )
-            Spacer(Modifier.width(40.dp))
+@Composable fun VisitorsPage(onBack:()->Unit) {
+    val context=LocalContext.current
+    val prefs=remember(context){context.getSharedPreferences("hurry_auth",Context.MODE_PRIVATE)}
+    val myId=remember(prefs){prefs.getString("accountId","").orEmpty().ifBlank{prefs.getString("uid","").orEmpty()}.ifBlank{prefs.getString("id","").orEmpty()}}
+    var tab by remember { mutableIntStateOf(0) }
+    var rows by remember { mutableStateOf<List<VisitorData>>(emptyList()) }
+    var loading by remember { mutableStateOf(true) }
+    val scope=rememberCoroutineScope()
+    LaunchedEffect(myId,tab) {
+        loading=true
+        rows=loadProfileVisitors(myId,if(tab==0) "received" else "sent")
+        loading=false
+    }
+    Column(Modifier.fillMaxSize().background(Color(0xFF101116))) {
+        Row(Modifier.fillMaxWidth().height(56.dp).padding(horizontal=16.dp),verticalAlignment=Alignment.CenterVertically) {
+            Icon(Icons.Default.ArrowBack,"Back",tint=Color.White,modifier=Modifier.clickable{onBack()})
+            Text("Visitors",color=Color.White,fontSize=19.sp,fontWeight=FontWeight.SemiBold,modifier=Modifier.weight(1f),textAlign=androidx.compose.ui.text.style.TextAlign.Center)
+            Spacer(Modifier.width(24.dp))
         }
-
-        // Tabs
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .padding(top = 8.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            TabItem(
-                title = "My Visitors",
-                isSelected = selectedTab == 0,
-                onClick = { selectedTab = 0 }
-            )
-            TabItem(
-                title = "Who I have visited",
-                isSelected = selectedTab == 1,
-                onClick = { selectedTab = 1 }
-            )
+        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceEvenly) {
+            VisitorTab("My Visitors",tab==0){tab=0}
+            VisitorTab("Who I have visited",tab==1){tab=1}
         }
-        Divider(color = Color(0xFFE5E7EB), thickness = 1.dp)
-
-        // List & Banner Content
-        LazyColumn(
-            Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp)
-        ) {
-            item {
-                // Banner Logic
-                val bannerImage = if (selectedTab == 0) {
-                    "${baseUrl}public/IMG_20261105_125016.png"
-                } else {
-                    "${baseUrl}public/IMG_20261105_124951.png"
-                }
-
-                AsyncImage(
-                    model = bannerImage,
-                    contentDescription = "Banner",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(60.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(Color(0xFF0D251C)) 
-                )
-                Spacer(Modifier.height(16.dp))
-            }
-
-            // User List
-            items(fakeVisitors) { visitor ->
-                VisitorItemRow(
-                    visitor = visitor,
-                    isMyVisitorsTab = selectedTab == 0,
-                    baseUrl = baseUrl
-                )
-            }
+        HorizontalDivider(color=Color(0xFF30313A))
+        when {
+            loading -> Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center){CircularProgressIndicator(color=Color(0xFF4B9BFF))}
+            rows.isEmpty() -> Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center){Text("No visitors yet",color=Color(0xFF8B8D98),fontSize=14.sp)}
+            else -> LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(horizontal=16.dp,vertical=10.dp)){items(rows,key={it.id}){VisitorItemRow(it,tab==0)}}
         }
     }
 }
-
-@Composable
-fun TabItem(title: String, isSelected: Boolean, onClick: () -> Unit) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-            .clickable { onClick() }
-            .padding(horizontal = 16.dp, vertical = 8.dp)
-    ) {
-        Text(
-            text = title,
-            fontSize = 16.sp,
-            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-            color = if (isSelected) Color(0xFF111827) else Color(0xFF9CA3AF)
-        )
+@Composable private fun VisitorTab(title:String,selected:Boolean,onClick:()->Unit) {
+    Column(Modifier.clickable(onClick=onClick).padding(horizontal=12.dp,vertical=10.dp),horizontalAlignment=Alignment.CenterHorizontally) {
+        Text(title,color=if(selected) Color.White else Color(0xFF888B96),fontSize=14.sp,fontWeight=if(selected) FontWeight.SemiBold else FontWeight.Normal)
         Spacer(Modifier.height(8.dp))
-        if (isSelected) {
-            Box(
-                Modifier
-                    .height(3.dp)
-                    .width(40.dp)
-                    .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
-                    .background(Color(0xFF222222))
-            )
-        } else {
-            Spacer(Modifier.height(3.dp))
-        }
+        Box(Modifier.width(38.dp).height(3.dp).clip(RoundedCornerShape(4.dp)).background(if(selected) Color(0xFF4B9BFF) else Color.Transparent))
     }
 }
-
-@Composable
-fun VisitorItemRow(visitor: VisitorData, isMyVisitorsTab: Boolean, baseUrl: String) {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .padding(vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        // Profile Avatar
-        AsyncImage(
-            model = visitor.avatarUrl,
-            contentDescription = "Avatar",
-            contentScale = ContentScale.Crop,
-            modifier = Modifier
-                .size(54.dp)
-                .clip(CircleShape)
-                .background(Color.LightGray)
-        )
+@Composable private fun VisitorItemRow(v:VisitorData,myVisitors:Boolean) {
+    Row(Modifier.fillMaxWidth().padding(vertical=10.dp),verticalAlignment=Alignment.CenterVertically) {
+        AsyncImage(model=v.avatar.takeIf{it.isNotBlank()},contentDescription="Avatar",contentScale=ContentScale.Crop,modifier=Modifier.size(52.dp).clip(CircleShape).background(Color(0xFF30313A)))
         Spacer(Modifier.width(12.dp))
-
-        // Name, Gender, and Views
         Column(Modifier.weight(1f)) {
-            val blurModifier = if (isMyVisitorsTab) Modifier.blur(8.dp) else Modifier
-
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = blurModifier) {
-                Text(
-                    text = visitor.name,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.Black
-                )
-                Spacer(Modifier.width(6.dp))
-                
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier
-                        .size(16.dp)
-                        .clip(CircleShape)
-                        .background(if (visitor.gender == "M") Color(0xFF3B82F6) else Color(0xFFEC4899))
-                ) {
-                    Text(
-                        text = if (visitor.gender == "M") "♂" else "♀",
-                        color = Color.White,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
+            Row(verticalAlignment=Alignment.CenterVertically) {
+                Text(v.name,color=Color.White,fontSize=15.sp,fontWeight=FontWeight.SemiBold)
+                if(v.gender.isNotBlank()){Spacer(Modifier.width(6.dp));val male=v.gender.equals("male",true)||v.gender.equals("m",true);Box(Modifier.size(17.dp).clip(CircleShape).background(if(male) Color(0xFF347FE5) else Color(0xFFE34D91)),contentAlignment=Alignment.Center){Text(if(male)"♂" else "♀",color=Color.White,fontSize=10.sp)}}
             }
-            
             Spacer(Modifier.height(4.dp))
-            
-            Text(
-                text = "${visitor.date}  |  View ${visitor.views} times",
-                fontSize = 12.sp,
-                color = Color(0xFF9CA3AF)
-            )
-        }
-
-        // Chat Icon
-        if (!isMyVisitorsTab) {
-            AsyncImage(
-                model = "${baseUrl}public/IMG_20261105_125330.png",
-                contentDescription = "Chat",
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(CircleShape)
-            )
+            Text(if(myVisitors) "${v.viewCount} views • Last viewed ${visitorDate(v.lastViewedAt)}" else "Viewed ${visitorDate(v.lastViewedAt)}",color=Color(0xFF9699A5),fontSize=11.sp)
         }
     }
+    HorizontalDivider(color=Color(0xFF242630))
 }
