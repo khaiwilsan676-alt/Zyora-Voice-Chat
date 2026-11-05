@@ -720,6 +720,8 @@ fun RoomPage(
     var selectedSeat by remember{mutableIntStateOf(0)}
     var showInviteSheet by remember(roomId) { mutableStateOf(false) }
     var incomingSeatInvite by remember(roomId) { mutableStateOf<JSONObject?>(null) }
+    var kickedInfo by remember(roomId) { mutableStateOf<JSONObject?>(null) }
+    var roomKickBlockedUntil by remember(roomId) { mutableLongStateOf(0L) }
     LaunchedEffect(incomingSeatInvite?.optString("inviteId")) {
         val activeInviteId = incomingSeatInvite?.optString("inviteId").orEmpty()
         if (activeInviteId.isNotBlank()) {
@@ -863,6 +865,18 @@ fun RoomPage(
             val payload = args.firstOrNull() as? JSONObject ?: return@Listener
             if (payload.optString("roomId") == roomId && payload.optString("targetId") == accountId) {
                 mainHandler.post { incomingSeatInvite = payload }
+            }
+        }
+        val roomKickedListener = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
+            if (payload.optString("roomId") == roomId && payload.optString("targetId") == accountId) {
+                mainHandler.post { kickedInfo = payload; incomingSeatInvite = null }
+            }
+        }
+        val roomKickBlockedListener = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
+            if (payload.optString("roomId") == roomId && payload.optString("userId") == accountId) {
+                mainHandler.post { roomKickBlockedUntil = payload.optLong("expiresAt", 0L) }
             }
         }
         val walletBalanceListener = Emitter.Listener { args ->
@@ -1032,6 +1046,8 @@ fun RoomPage(
         }
         roomSocket.on("room_presence",presenceListener)
         roomSocket.on("room_seat_invite", seatInviteListener)
+        roomSocket.on("room_kicked", roomKickedListener)
+        roomSocket.on("room_kick_blocked", roomKickBlockedListener)
         roomSocket.on("room_seat_invite_result", seatInviteResultListener)
         roomSocket.on("room_message",messageListener)
         roomSocket.on("room_chat_message",messageListener)
@@ -1051,6 +1067,8 @@ fun RoomPage(
             }
             roomSocket.off("room_presence",presenceListener)
             roomSocket.off("room_seat_invite", seatInviteListener)
+            roomSocket.off("room_kicked", roomKickedListener)
+            roomSocket.off("room_kick_blocked", roomKickBlockedListener)
             roomSocket.off("room_seat_invite_result", seatInviteResultListener)
             roomSocket.off("room_message",messageListener)
             roomSocket.off("room_chat_message",messageListener)
