@@ -79,13 +79,13 @@ fun EmojiPicker(onClose: () -> Unit = {}, onSelectEmoji: (EmojiSticker) -> Unit 
     var activeTab by remember { mutableStateOf("emojis") }
 
     val stickers = listOf(
-        EmojiSticker("welcome","Welcome","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261028_183916.png", "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/VID_20261028_105329_293_bsl.mp4"),
-        EmojiSticker("thanks","Thanks","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261028_184100.png", "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/VID_20261028_105159_978_bsl.mp4"),
+        EmojiSticker("welcome","Welcome","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261028_183916.png", "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/VID_20261028_105159_978_bsl.mp4"),
+        EmojiSticker("thanks","Thanks","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261028_184100.png", "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/VID_20261028_105329_293_bsl.mp4"),
         EmojiSticker("gift_me","Gift me","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261028_184037.png", "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/VID_20261028_105304_745_bsl.mp4"),
-        EmojiSticker("kiss_r","Kiss-R","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261028_184130.png", "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/VID_20261028_105348_731_bsl.mp4"),
-        EmojiSticker("kiss_l","Kiss-L","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261028_184200.png", "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/VID_20261028_105414_962_bsl.mp4"),
-        EmojiSticker("punch_r","Punch-R","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261028_184240.png", "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/VID_20261028_104823_659_bsl.mp4"),
-        EmojiSticker("punch_l","Punch-L","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261028_184300.png", "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/VID_20261028_104846_084_bsl.mp4"),
+        EmojiSticker("kiss_r","Kiss-R","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261028_184130.png", "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/VID_20261028_104846_084_bsl.mp4"),
+        EmojiSticker("kiss_l","Kiss-L","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261028_184200.png", "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/VID_20261028_104823_659_bsl.mp4"),
+        EmojiSticker("punch_r","Punch-R","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261028_184240.png", "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/VID_20261028_105414_962_bsl.mp4"),
+        EmojiSticker("punch_l","Punch-L","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261028_184300.png", "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/VID_20261028_105348_731_bsl.mp4"),
         
         EmojiSticker("laugh","Laugh","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/512.gif"),
         EmojiSticker("sad","Sad","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/512%20(6).gif"),
@@ -105,7 +105,12 @@ fun EmojiPicker(onClose: () -> Unit = {}, onSelectEmoji: (EmojiSticker) -> Unit 
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
         Box(Modifier.fillMaxSize().clickable(onClick = onClose))
         
-        Box(Modifier.fillMaxWidth().fillMaxHeight(.42f).background(Color.Black)) {
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(.42f)
+                .background(Color.Black, shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
+        ) {
             
             // Border waali photo normal hi rahegi
             AsyncImage(
@@ -113,6 +118,7 @@ fun EmojiPicker(onClose: () -> Unit = {}, onSelectEmoji: (EmojiSticker) -> Unit 
                 contentDescription = "Top Border",
                 modifier = Modifier
                     .fillMaxWidth()
+                    .offset(y = (-12).dp)
                     .wrapContentHeight(align = Alignment.Top)
                     .align(Alignment.TopCenter), 
                 contentScale = ContentScale.FillWidth 
@@ -135,7 +141,21 @@ fun EmojiPicker(onClose: () -> Unit = {}, onSelectEmoji: (EmojiSticker) -> Unit 
                     ) {
                         items(stickers) { s ->
                             val isBigEmoji = s.id in listOf("welcome", "thanks", "gift_me", "punch_l", "punch_r")
-                            val imageSize = if (isBigEmoji) 60.dp else 48.dp 
+                            var imageSize = if (isBigEmoji) 60.dp else 48.dp 
+                            var imageOffsetY = 0.dp
+                            var textOffsetY = 0.dp
+
+                            // YAHAN CONDITION LAGAI HAI ADJUSTMENTS KE LIYE:
+                            when (s.id) {
+                                "kiss_r" -> {
+                                    imageOffsetY = 4.dp // 2% niche
+                                    textOffsetY = 2.dp  // 1% niche
+                                }
+                                "punch_l", "punch_r" -> {
+                                    imageSize = 58.dp      // 1% chhota
+                                    imageOffsetY = (-2).dp // 1% upar
+                                }
+                            }
 
                             Column(
                                 Modifier.fillMaxWidth().clickable {
@@ -144,13 +164,20 @@ fun EmojiPicker(onClose: () -> Unit = {}, onSelectEmoji: (EmojiSticker) -> Unit 
                                 },
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                // YAHAN PAR CUSTOM STATIC IMAGE LAGA DIYA HAI
                                 CustomStaticImage(
                                     url = s.src,
                                     contentDescription = s.name,
-                                    modifier = Modifier.size(imageSize)
+                                    modifier = Modifier
+                                        .size(imageSize)
+                                        .offset(y = imageOffsetY) // Offset apply kiya
                                 )
-                                Text(s.name.trim(), fontSize = 11.sp, color = Color.White.copy(alpha = .90f), maxLines = 1)
+                                Text(
+                                    s.name.trim(), 
+                                    fontSize = 11.sp, 
+                                    color = Color.White.copy(alpha = .90f), 
+                                    maxLines = 1,
+                                    modifier = Modifier.offset(y = textOffsetY) // Text offset apply kiya
+                                )
                             }
                         }
                     }
