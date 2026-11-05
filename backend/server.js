@@ -2264,7 +2264,7 @@ io.on("connection", (socket) => {
       socket.to(`room:${room}`).emit("room_voice_speaker", { roomId: room, userId: accountId, speaking: false });
       return;
     }
-    const audio = Buffer.isBuffer(binaryAudio) ? binaryAudio : data.audio;
+    const audio = (Buffer.isBuffer(binaryAudio) || Array.isArray(binaryAudio)) ? binaryAudio : data.audio;
     const validAudio = Buffer.isBuffer(audio) ? audio.length > 0 && audio.length <= 4096
       : Array.isArray(audio) && audio.length > 0 && audio.length <= 4096;
     if (!validAudio) return;
