@@ -195,11 +195,12 @@ fun EmojiPicker(onClose: () -> Unit = {}, onSelectEmoji: (EmojiSticker) -> Unit 
                                 },
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                if (s.id == "kiss_r" && !s.videoUrl.isNullOrBlank()) {
+                                if (!s.videoUrl.isNullOrBlank()) {
                                     EmojiVideoPreview(
                                         videoUrl = s.videoUrl,
                                         fallbackImageUrl = s.src,
-                                        modifier = Modifier.size(imageSize).offset(y = imageOffsetY)
+                                        modifier = Modifier.size(imageSize).offset(y = imageOffsetY),
+                                        contentDescription = s.name
                                     )
                                 } else {
                                     CustomStaticImage(
@@ -231,7 +232,7 @@ fun EmojiPicker(onClose: () -> Unit = {}, onSelectEmoji: (EmojiSticker) -> Unit 
 }
 
 @Composable
-private fun EmojiVideoPreview(videoUrl: String, fallbackImageUrl: String, modifier: Modifier = Modifier) {
+private fun EmojiVideoPreview(videoUrl: String, fallbackImageUrl: String, modifier: Modifier = Modifier, contentDescription: String) {
     val context = LocalContext.current
     val player = remember(context, videoUrl) {
         ExoPlayer.Builder(context)
@@ -248,10 +249,10 @@ private fun EmojiVideoPreview(videoUrl: String, fallbackImageUrl: String, modifi
     }
 
     Box(modifier, contentAlignment = Alignment.Center) {
-        // Keep the existing Kiss-R artwork visible while the MP4 buffers.
+        // Keep each emoji artwork visible until its transparent MP4 has decoded frames.
         CustomStaticImage(
             url = fallbackImageUrl,
-            contentDescription = "Kiss-R",
+            contentDescription = contentDescription,
             modifier = Modifier.fillMaxSize()
         )
         AndroidView(modifier = Modifier.fillMaxSize(), factory = { videoView })
