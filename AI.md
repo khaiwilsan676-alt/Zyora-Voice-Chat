@@ -163,3 +163,13 @@ Current documentation does not certify that all historical features are build-, 
 - [ ] Forged/replayed coin transfers and duplicate reward claims are rejected.
 - [ ] Rate limits work across multiple Render instances.
 - [ ] Two-account / two-device regression tests pass.
+
+
+## 13. Performance optimization (2026-11-06)
+
+### Native Android targeted performance pass
+- `StorePage.kt`: removed the one-second Compose state ticker that invalidated the full Store composable every second. Equipped/owned item expiry now uses an event-driven coroutine that sleeps until the nearest expiry and wakes only when needed. This reduces needless recomposition while preserving expiry behavior.
+- `MainActivity.kt`: reduced the fixed launch-screen wait from 1,200 ms to 400 ms; the existing update check still runs after the launch transition and performs network work on `Dispatchers.IO`.
+- No visual redesign, room/voice protocol, wallet API, or purchase behavior was intentionally changed.
+- Status: **Implemented in repository**. Native APK build, startup timing on Redmi 14C, store scroll performance, and item-expiry behavior still require CI/device verification.
+- Next profiling targets before broad optimization: room screen recomposition and bitmap/video decode cost, duplicate Socket.IO connections/listeners across navigation, repeated profile/inventory/wallet requests, backend cold-start/database query latency, and web bundle/render performance. Measure first; avoid speculative changes to voice and wallet correctness.
