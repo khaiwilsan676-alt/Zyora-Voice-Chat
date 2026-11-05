@@ -221,6 +221,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
         }
     }
     val isBag = currentView == "bag"
+    val clockNow = System.currentTimeMillis()
     val visibleItems = nativeStoreItems.filter { it.tab == activeTab && (!isBag || ownedIds.contains(it.id)) }
 
     // Dark theme glossy blue background
