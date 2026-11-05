@@ -920,7 +920,7 @@ fun RoomPage(
                         val number = seats[index].number
                         val incoming = byNumber[number]
                         seats[index] = incoming?.copy(
-                            speaking = !incoming.muted && (incoming.speaking || incoming.accountId in activeVoiceSpeakerIds)
+                            speaking = !incoming.muted && !incoming.selfMuted && (incoming.speaking || incoming.accountId in activeVoiceSpeakerIds)
                         ) ?: NativeRoomSeat(number=number)
                     }
                     parsed.filter { it.number !in seats.map(NativeRoomSeat::number) }.forEach { incoming ->
@@ -943,7 +943,7 @@ fun RoomPage(
                         for (index in seats.indices) {
                             val seat = seats[index]
                             if (seat.accountId == speakingUserId) {
-                                seats[index] = seat.copy(speaking = isSpeakingNow && !seat.muted)
+                                seats[index] = seat.copy(speaking = isSpeakingNow && !seat.muted && !seat.selfMuted)
                             }
                         }
                     }
