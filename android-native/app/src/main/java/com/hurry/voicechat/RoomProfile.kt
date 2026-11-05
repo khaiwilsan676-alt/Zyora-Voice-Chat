@@ -249,6 +249,9 @@ fun RoomProfile(
     val showModerationRow = isRoomOwner && !isCurrentUser
     val showActions = !isCurrentUser
 
+    var isFollowing by remember(user.uid, user.id, user.accountId) { mutableStateOf(user.isFollowing) }
+    LaunchedEffect(user.isFollowing) { isFollowing = user.isFollowing }
+
     // Fetch Tags
     LaunchedEffect(user.uid, user.id, user.accountId) {
         val uid = user.uid ?: user.id ?: user.accountId
@@ -412,18 +415,31 @@ fun RoomProfile(
                             horizontalArrangement = Arrangement.SpaceEvenly,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            // Follow
-                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { onFollow() }) {
-                                Icon(Icons.Default.Favorite, null, tint = Color(0xFFEC4899), modifier = Modifier.size(24.dp))
+                            // Follow: switch to the followed artwork immediately after tapping.
+                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable {
+                                isFollowing = !isFollowing
+                                onFollow()
+                            }) {
+                                AsyncImage(
+                                    model = (if (isFollowing) "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261105_125204.png" else "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261105_125259.png"),
+                                    contentDescription = if (isFollowing) "Followed" else "Follow",
+                                    contentScale = ContentScale.Fit,
+                                    modifier = Modifier.size(24.dp)
+                                )
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text(if (user.isFollowing) "Following" else "Follow", color = Color(0xFFEC4899), fontWeight = FontWeight.Medium)
+                                Text(if (isFollowing) "Followed" else "Follow", color = Color(0xFFEC4899), fontWeight = FontWeight.Medium, maxLines = 1, softWrap = false)
                             }
-                            
+
                             // Chat
                             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { onMessage() }) {
-                                Icon(Icons.Default.MailOutline, null, tint = Color.DarkGray, modifier = Modifier.size(24.dp))
+                                AsyncImage(
+                                    model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261105_125330.png",
+                                    contentDescription = "Chat",
+                                    contentScale = ContentScale.Fit,
+                                    modifier = Modifier.size(24.dp)
+                                )
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("Chat", color = Color.DarkGray, fontWeight = FontWeight.Medium)
+                                Text("Chat", color = Color.DarkGray, fontWeight = FontWeight.Medium, maxLines = 1, softWrap = false)
                             }
                             
                             // 3rd Action Icon
