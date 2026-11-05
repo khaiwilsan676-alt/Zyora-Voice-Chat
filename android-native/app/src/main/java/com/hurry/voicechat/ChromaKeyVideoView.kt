@@ -21,9 +21,10 @@ import javax.microedition.khronos.opengles.GL10
  */
 class ChromaKeyVideoView(
     context: Context,
-    private val onVideoSurfaceReady: (Surface) -> Unit
+    private val onVideoSurfaceReady: (Surface) -> Unit,
+    private val onFirstFrameAvailable: () -> Unit = {}
 ) : GLSurfaceView(context) {
-    private val videoRenderer = ChromaKeyRenderer(onVideoSurfaceReady) { requestRender() }
+    private val videoRenderer = ChromaKeyRenderer(onVideoSurfaceReady, onFirstFrameAvailable) { requestRender() }
 
     init {
         setEGLContextClientVersion(2)
@@ -42,6 +43,7 @@ class ChromaKeyVideoView(
 
 private class ChromaKeyRenderer(
     private val onSurfaceReady: (Surface) -> Unit,
+    private val onFirstFrameAvailable: () -> Unit,
     private val requestRender: () -> Unit
 ) : GLSurfaceView.Renderer {
     private var program = 0
@@ -92,7 +94,10 @@ private class ChromaKeyRenderer(
         GLES20.glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE)
 
         surfaceTexture = SurfaceTexture(textureId).also { texture ->
-            texture.setOnFrameAvailableListener { requestRender() }
+            texture.setOnFrameAvailableListener {
+                Handler(Looper.getMainLooper()).post { onFirstFrameAvailable() }
+                requestRender()
+            }
             outputSurface = Surface(texture)
             val readySurface = outputSurface!!
             Handler(Looper.getMainLooper()).post { onSurfaceReady(readySurface) }
