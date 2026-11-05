@@ -23,7 +23,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage // Ensure you have coil dependency for loading image paths
+import coil3.compose.AsyncImage
 
 // Fake User Data Model
 data class VisitorData(
@@ -251,4 +251,11 @@ fun VisitorItemRow(visitor: VisitorData, isMyVisitorsTab: Boolean) {
             )
         }
     }
+}
+
+
+@Composable
+fun FollowPage(pageTitle: String, onBack: () -> Unit) {
+    // Keep the existing native follow/visitor screen entry point build-safe.
+    VisitorsPage(onBack = onBack)
 }
