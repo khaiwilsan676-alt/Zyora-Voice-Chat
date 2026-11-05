@@ -180,3 +180,9 @@ Current documentation does not certify that all historical features are build-, 
 - `RoomPage.kt`: avoids a second inventory fetch for the current user's own join event; the connect path already performs the local user's equipped-vehicle lookup. Other users' join events still resolve their vehicle as before.
 - These changes reduce room-entry network work without changing room UI, seat rules, voice signaling, wallet operations, or other users' join toasts.
 - Verification pending: native APK CI and real-device room entry / theme / DP / join-toast checks. Render free-tier cold starts and network latency remain external sources of delay and are not eliminated by client changes.
+
+## 15. Room card scrolling performance fix (2026-11-06)
+- `android-native/app/src/main/java/com/hurry/voicechat/HomeScreen.kt`: removed the per-visible-card infinite equalizer animations and repeated random live-count timer updates. Those animated state values caused continuous recompositions across visible room cards while the user scrolled.
+- Preserved the existing card layout, image, displayed count, and equalizer appearance; the count and bar heights are now stable for each room card instead of continuously changing.
+- Added an explicit LazyColumn `contentType` for room-card rows while retaining the stable row key.
+- Status: **Implemented in repository**. Native APK CI and real-device scroll smoothness on Redmi 14C still need verification. No UI redesign or room/voice behavior change intended.
