@@ -428,7 +428,7 @@ fun RoomProfile(
                             
                             // 3rd Action Icon
                             AsyncImage(
-                                model = "file_000000008e508208b1353ae33e2abef9.png".fullUrl(),
+                                model = "file_0000000019c4821180028eebae10dbfc.png".fullUrl(),
                                 contentDescription = null,
                                 modifier = Modifier
                                     .size(40.dp)
