@@ -35,7 +35,7 @@ import java.util.Locale
 private const val VISITOR_API = "https://zyora-server.onrender.com"
 private data class VisitorData(val id:String,val name:String,val gender:String,val avatar:String,val lastViewedAt:Long,val viewCount:Int)
 
-private suspend fun loadProfileVisitors(userId:String,type:String):List<VisitorData> = withContext(Dispatchers.IO) {
+private suspend fun loadProfileVisitors(context:Context,userId:String,type:String):List<VisitorData> = withContext(Dispatchers.IO) {
     if(userId.isBlank()) return@withContext emptyList()
     val encoded=java.net.URLEncoder.encode(userId,"UTF-8")
     val connection=(URL("$VISITOR_API/api/profile-visitors?userId=$encoded&type=$type").openConnection() as HttpURLConnection).apply { requestMethod="GET";connectTimeout=12000;readTimeout=12000 }
@@ -43,10 +43,13 @@ private suspend fun loadProfileVisitors(userId:String,type:String):List<VisitorD
         val status=connection.responseCode
         val body=(if(status in 200..299) connection.inputStream else connection.errorStream)?.bufferedReader()?.use{it.readText()}.orEmpty()
         if(status !in 200..299) return@withContext emptyList()
-        val rows=JSONObject(body).optJSONArray("visitors") ?: JSONArray()
-        (0 until rows.length()).mapNotNull { i -> rows.optJSONObject(i)?.let { v ->
+        val root=JSONObject(body)
+        val rows=root.optJSONArray("visitors") ?: JSONArray()
+        val result=(0 until rows.length()).mapNotNull { i -> rows.optJSONObject(i)?.let { v ->
             VisitorData(v.optString("id"),v.optString("name","User"),v.optString("gender"),v.optString("avatar"),v.optLong("lastViewedAt"),v.optInt("viewCount",1).coerceAtLeast(1))
         }}.take(20)
+        NativeIndexDatabase(context).saveProfile("visitor_history:"+userId+":"+type,root)
+        result
     } finally { connection.disconnect() }
 }
 private fun visitorDate(t:Long)=if(t<=0L) "—" else SimpleDateFormat("dd/MM/yyyy • hh:mm a",Locale.getDefault()).format(Date(t))
@@ -64,8 +67,14 @@ private fun visitorDate(t:Long)=if(t<=0L) "—" else SimpleDateFormat("dd/MM/yyy
     var loading by remember { mutableStateOf(true) }
     val scope=rememberCoroutineScope()
     LaunchedEffect(myId,tab) {
-        loading=true
-        rows=loadProfileVisitors(myId,if(tab==0) "received" else "sent")
+        val type=if(tab==0) "received" else "sent"
+        val cached=NativeIndexDatabase(context).loadProfile("visitor_history:"+myId+":"+type)
+        val cachedRows=cached?.optJSONArray("visitors")
+        if(cachedRows!=null) rows=(0 until cachedRows.length()).mapNotNull { i -> cachedRows.optJSONObject(i)?.let { v ->
+            VisitorData(v.optString("id"),v.optString("name","User"),v.optString("gender"),v.optString("avatar"),v.optLong("lastViewedAt"),v.optInt("viewCount",1).coerceAtLeast(1))
+        }}.take(20)
+        loading=rows.isEmpty()
+        rows=loadProfileVisitors(context,myId,type)
         loading=false
     }
     Column(Modifier.fillMaxSize().background(Color(0xFF101116))) {
