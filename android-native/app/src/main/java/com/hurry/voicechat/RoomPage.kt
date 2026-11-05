@@ -718,6 +718,8 @@ fun RoomPage(
     }
     
     var selectedSeat by remember{mutableIntStateOf(0)}
+    var showInviteSheet by remember { mutableStateOf(false) }
+    var incomingSeatInvite by remember { mutableStateOf<JSONObject?>(null) }
 
     val messages=remember{mutableStateListOf<NativeRoomMessage>()}
     val entryToasts=remember{mutableStateListOf<NativeEntryToast>()}
@@ -832,6 +834,12 @@ fun RoomPage(
                     showOfficialAnnouncement = false
                     clearedBy = payload.optString("userName").ifBlank { backendRoomUsers.firstOrNull { it.accountId == payload.optString("userId") }?.name ?: "Admin" }
                 }
+            }
+        }
+        val seatInviteListener = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
+            if (payload.optString("roomId") == roomId && payload.optString("targetId") == accountId) {
+                mainHandler.post { incomingSeatInvite = payload }
             }
         }
         val walletBalanceListener = Emitter.Listener { args ->
@@ -1000,6 +1008,7 @@ fun RoomPage(
             roomSocket.emit("room_seats_request",JSONObject().put("roomId",roomId))
         }
         roomSocket.on("room_presence",presenceListener)
+        roomSocket.on("room_seat_invite", seatInviteListener)
         roomSocket.on("room_message",messageListener)
         roomSocket.on("room_chat_message",messageListener)
         roomSocket.on("room_chat_cleared",clearedListener)
@@ -1017,6 +1026,7 @@ fun RoomPage(
                 roomSocket.emit("room_leave",JSONObject().put("roomId",roomId).put("userId",accountId).put("accountId",accountId))
             }
             roomSocket.off("room_presence",presenceListener)
+            roomSocket.off("room_seat_invite", seatInviteListener)
             roomSocket.off("room_message",messageListener)
             roomSocket.off("room_chat_message",messageListener)
             roomSocket.off("room_chat_cleared",clearedListener)
@@ -1593,6 +1603,51 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
         )
         
         val activeRoomUsers = backendRoomUsers.toList()
+        if (showInviteSheet) RoomInviteSheet(
+            roomUsers = activeRoomUsers,
+            roomOwnerId = roomOwner.accountId.ifBlank { roomOwner.id },
+            onClose = { showInviteSheet = false },
+            onInvite = { target ->
+                roomSocketRef.value?.takeIf { it.connected() }?.emit(
+                    "room_seat_invite_send",
+                    JSONObject()
+                        .put("roomId", roomId)
+                        .put("inviterId", accountId)
+                        .put("inviterName", roomDisplayName.ifBlank { "User" })
+                        .put("inviterImage", roomDisplayImage)
+                        .put("targetId", target.accountId)
+                        .put("seatNumber", selectedSeat)
+                )
+                showInviteSheet = false
+                selectedSeat = 0
+            }
+        )
+        incomingSeatInvite?.let { invite ->
+            RoomSeatInviteDialog(
+                inviterName = invite.optString("inviterName", "User"),
+                inviterImage = invite.optString("inviterImage", ""),
+                onRefuse = {
+                    roomSocketRef.value?.emit(
+                        "room_seat_invite_response",
+                        JSONObject().put("roomId", roomId).put("targetId", accountId)
+                            .put("inviterId", invite.optString("inviterId"))
+                            .put("seatNumber", invite.optInt("seatNumber")).put("accepted", false)
+                    )
+                    incomingSeatInvite = null
+                },
+                onAccept = {
+                    roomSocketRef.value?.emit(
+                        "room_seat_invite_response",
+                        JSONObject().put("roomId", roomId).put("targetId", accountId)
+                            .put("inviterId", invite.optString("inviterId"))
+                            .put("seatNumber", invite.optInt("seatNumber")).put("accepted", true)
+                            .put("userName", roomDisplayName.ifBlank { "User" })
+                            .put("userImage", roomDisplayImage)
+                    )
+                    incomingSeatInvite = null
+                }
+            )
+        }
         val roomFollowers = followedRoomUsers.filter { it.accountId != roomOwner.accountId && it.accountId != roomOwner.id }
         if(showStore) StorePage(onBack={showStore=false}, initialView=storeInitialView, userId=accountId.ifBlank{roomOwner.accountId.ifBlank{roomOwner.id}})
         if(showInfo) RoomInfo(isOpen=true,onClose={showInfo=false},isRoomOwner=accountId==roomOwner.accountId.ifBlank{roomOwner.id},roomOwner=RoomInfoOwner(id=roomOwner.id,uid=roomOwner.uid,accountId=roomOwner.accountId.ifBlank{roomOwner.id},name=roomOwner.name,image=roomOwner.image),roomData=RoomInfoData(roomName,roomImage,announcement,roomId),roomFollowers=roomFollowers,roomAdmins=roomAdminUsers,onOpenProfile={ follower -> selectedChatProfile=NativeRoomMessage("member-profile-" + follower.accountId,"",follower.name,follower.image,follower.accountId);showInfo=false },onCopyId={ id -> clipboard.setText(AnnotatedString(id));copiedId=id },copied=copiedId==roomId)
@@ -1739,7 +1794,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                         showSeatSheet=false;selectedSeat=0
                     }
                 },
-                onInvite={clipboard.setText(AnnotatedString("Join room $roomName — seat $selectedSeat (ID: $roomId)"));showSeatSheet=false;selectedSeat=0}
+                onInvite={showSeatSheet=false;showInviteSheet=true}
             )
         }
         if(selectedSeat>0 && seats.firstOrNull{it.number==selectedSeat}?.occupied==true && !showSeatSheet) {
@@ -2119,6 +2174,132 @@ private fun formatMusicTime(seconds: Float): String {
     if (seconds.isNaN() || seconds < 0f) return "0:00"
     val t = seconds.toInt()
     return "${t / 60}:${(t % 60).toString().padStart(2, '0')}"
+}
+
+
+@Composable
+private fun RoomInviteSheet(
+    roomUsers: List<ActiveUserNative>,
+    roomOwnerId: String,
+    onClose: () -> Unit,
+    onInvite: (ActiveUserNative) -> Unit
+) {
+    val visibleUsers = roomUsers.filter { it.accountId.isNotBlank() }
+        .distinctBy { it.accountId }
+        .sortedWith(compareBy<ActiveUserNative> { if (it.accountId == roomOwnerId) 0 else 1 }.thenBy { it.name.lowercase() })
+    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .30f)).clickable { onClose() }, contentAlignment = Alignment.BottomCenter) {
+        Column(
+            Modifier.fillMaxWidth().fillMaxHeight(.5f)
+                .clip(RoundedCornerShape(topStart = 11.dp, topEnd = 11.dp))
+                .background(Color(0xF5000000))
+                .clickable(enabled = false) {},
+        ) {
+            Text("Invite", modifier = Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 10.dp),
+                color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+            LazyColumn(
+                Modifier.fillMaxWidth().weight(1f),
+                contentPadding = PaddingValues(start = 13.dp, end = 12.dp, top = 3.dp, bottom = 14.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                items(visibleUsers, key = { it.accountId }) { user ->
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        AsyncImage(
+                            model = user.image.ifBlank { "https://zyora-voice-chat.vercel.app/default-avatar.png" },
+                            contentDescription = user.name,
+                            modifier = Modifier.size(38.dp).clip(CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
+                        Column(Modifier.weight(1f).padding(start = 9.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                                Text(user.name.ifBlank { "User" }, color = Color.White, fontSize = 13.sp,
+                                    fontWeight = FontWeight.SemiBold, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
+                                if (user.accountId == roomOwnerId) {
+                                    AsyncImage(model = "https://zyora-voice-chat.vercel.app/IMG_20261027_235537.png",
+                                        contentDescription = "Owner", contentScale = ContentScale.Fit, modifier = Modifier.height(18.dp).width(40.dp))
+                                }
+                            }
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Box(Modifier.width(18.dp).height(18.dp), contentAlignment = Alignment.Center) {
+                                    val flag = roomProfileCountryFlag(user.country)
+                                    if (flag.isNotBlank()) Text(flag, fontSize = 14.sp)
+                                }
+                                Box(Modifier.height(16.dp).width(36.dp), contentAlignment = Alignment.CenterEnd) {
+                                    AsyncImage(model = "https://zyora-voice-chat.vercel.app/IMG_20261028_004355.png",
+                                        contentDescription = "Level", contentScale = ContentScale.FillBounds, modifier = Modifier.fillMaxSize())
+                                    Text("Lv.1", color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(end = 5.dp))
+                                }
+                            }
+                        }
+                        Box(
+                            Modifier.padding(start = 8.dp).width(66.dp).height(30.dp)
+                                .clip(RoundedCornerShape(7.dp)).background(Color(0xFF1685FF))
+                                .clickable { onInvite(user) },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("Invite", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+                if (visibleUsers.isEmpty()) {
+                    item { Text("No active users", modifier = Modifier.fillMaxWidth().padding(18.dp),
+                        color = Color.White.copy(alpha = .65f), fontSize = 12.sp, textAlign = TextAlign.Center) }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RoomSeatInviteDialog(
+    inviterName: String,
+    inviterImage: String,
+    onRefuse: () -> Unit,
+    onAccept: () -> Unit
+) {
+    val raw = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/"
+    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .68f)), contentAlignment = Alignment.Center) {
+        Box(Modifier.fillMaxWidth(.84f).height(420.dp), contentAlignment = Alignment.Center) {
+            AsyncImage(
+                model = raw + "IMG_20261106_001208.png",
+                contentDescription = "Mic invitation",
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.FillBounds
+            )
+            Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).align(Alignment.TopCenter).padding(top = 34.dp),
+                horizontalAlignment = Alignment.CenterHorizontally) {
+                Spacer(Modifier.height(40.dp))
+                Text(inviterName.ifBlank { "User" }, color = Color.White, fontSize = 17.sp,
+                    fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Spacer(Modifier.height(13.dp))
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+                    Text("Invite you to join mic", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                    Spacer(Modifier.width(5.dp))
+                    AsyncImage(model = raw + "IMG_20261106_001226.png", contentDescription = "Mic",
+                        modifier = Modifier.size(23.dp), contentScale = ContentScale.Fit)
+                }
+            }
+            AsyncImage(
+                model = inviterImage.ifBlank { "https://zyora-voice-chat.vercel.app/default-avatar.png" },
+                contentDescription = "Inviter avatar",
+                modifier = Modifier.align(Alignment.TopCenter).offset(y = (-27).dp).size(68.dp).clip(CircleShape),
+                contentScale = ContentScale.Crop
+            )
+            Row(
+                Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal = 18.dp, vertical = 22.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Box(Modifier.weight(1f).height(43.dp).clip(RoundedCornerShape(9.dp))
+                    .background(Color.White.copy(alpha = .10f)).clickable { onRefuse() }, contentAlignment = Alignment.Center) {
+                    Text("Refuse", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                }
+                Box(Modifier.weight(1f).height(43.dp).clip(RoundedCornerShape(9.dp))
+                    .background(Brush.verticalGradient(listOf(Color(0xFFFFE49A), Color(0xFFD69A36))))
+                    .clickable { onAccept() }, contentAlignment = Alignment.Center) {
+                    Text("Accept", color = Color(0xFF4B2D08), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+    }
 }
 
 @Composable private fun SeatActionSheet(seat:NativeRoomSeat,isOwner:Boolean,isMySeat:Boolean,onDismiss:()->Unit,onTake:()->Unit,onLeave:()->Unit,onMute:()->Unit,onLock:()->Unit,onInvite:()->Unit){
