@@ -402,6 +402,14 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
         )
     ) { mutableStateOf<HurryRoom?>(null) }
     var openedRoom by remember { mutableStateOf<HurryRoom?>(null) }
+    var roomKickNotice by remember { mutableStateOf<JSONObject?>(null) }
+    var kickNoticeNow by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(roomKickNotice) {
+        while (roomKickNotice != null) {
+            kickNoticeNow = System.currentTimeMillis()
+            kotlinx.coroutines.delay(1000)
+        }
+    }
     var openedChat by remember { mutableStateOf<Triple<String, String, String>?>(null) }
     var openedMePage by remember { mutableStateOf<String?>(null) }
     var openedLeaderboard by remember { mutableStateOf<String?>(null) }
@@ -449,6 +457,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                     onBack = { openedRoom = null },
                     onRoomSupport = { openedRoomSupport = true },
                     onJoinRoom = { targetRoomId -> openedRoom=HurryRoom(id=targetRoomId,name="Room",image="",country="",accountId=targetRoomId) },
+                    onKickNotice = { notice -> roomKickNotice = notice },
                     onClose = {
                         if (keptRoom?.id == openedRoom?.id) {
                             keptRoom = null
@@ -621,6 +630,57 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                         authPrefs.edit().remove("kept_room_data").apply()
                     }
                 )
+            }
+
+            roomKickNotice?.let { notice ->
+                val expiresAt = notice.optLong("expiresAt", 0L)
+                val remainingMs = (expiresAt - kickNoticeNow).coerceAtLeast(0L)
+                val remainingMinutes = ((remainingMs + 59_999L) / 60_000L).coerceAtLeast(0L)
+                Box(
+                    Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.30f)).clickable(enabled = false) {},
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        Modifier.fillMaxWidth(0.86f).clip(RoundedCornerShape(12.dp))
+                            .background(Color(0xFF171717)).padding(horizontal = 20.dp, vertical = 22.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        AsyncImage(
+                            model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261106_003241.png",
+                            contentDescription = "Room access restricted",
+                            modifier = Modifier.size(76.dp),
+                            contentScale = ContentScale.Fit
+                        )
+                        Text(
+                            if (notice.optBoolean("blocked", false)) "You can't enter this room"
+                            else "You are kicked out of the room",
+                            color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            modifier = Modifier.padding(top = 12.dp)
+                        )
+                        if (!notice.optBoolean("blocked", false)) {
+                            Row(Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+                                val ownerImage = notice.optString("ownerImage")
+                                if (ownerImage.isNotBlank()) AsyncImage(model = ownerImage, contentDescription = "Room owner", modifier = Modifier.size(25.dp).clip(CircleShape), contentScale = ContentScale.Crop)
+                                Text("by room owner ", color = Color.White.copy(alpha = .8f), fontSize = 12.sp, modifier = Modifier.padding(start = 6.dp))
+                                Text(notice.optString("ownerName", "Room Owner"), color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                            }
+                        }
+                        Text(
+                            if (remainingMs > 0L) "You can't enter until $remainingMinutes min"
+                            else "Your room restriction has ended",
+                            color = Color.White.copy(alpha = .85f), fontSize = 13.sp,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            modifier = Modifier.padding(top = 12.dp)
+                        )
+                        androidx.compose.material3.Button(
+                            onClick = { roomKickNotice = null },
+                            modifier = Modifier.fillMaxWidth().padding(top = 18.dp).height(44.dp),
+                            shape = RoundedCornerShape(8.dp),
+                            colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color(0xFF2583F7))
+                        ) { Text("Got it", color = Color.White, fontWeight = FontWeight.Bold) }
+                    }
+                }
             }
             LuckyBagNotificationSlider(
                 currentUserId = userId,
