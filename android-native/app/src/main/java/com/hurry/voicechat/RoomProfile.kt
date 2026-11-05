@@ -305,7 +305,7 @@ fun RoomProfile(
                         )
                         if (isRoomOwner) {
                             AsyncImage(
-                                model = ""IMG_20261027_235537.png".fullUrl()",
+                                model = "IMG_20261027_235537.png".fullUrl(),
                                 contentDescription = "Room owner",
                                 contentScale = ContentScale.Fit,
                                 modifier = Modifier.padding(start = 5.dp).height(16.dp).widthIn(max = 64.dp)
@@ -325,33 +325,63 @@ fun RoomProfile(
                         }
                     }
 
-                    // Row 2: Public Profile tags (keep each badge's established size)
+                    // Row 2: Public Profile tags (Divided into 2 rows with 0.2.dp gap)
                     if (hasAnyTag) {
-                        Row(
+                        Column(
                             modifier = Modifier.padding(top = 6.dp),
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically
+                            horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            if (officialHeadTag) AsyncImage(model = "file_00000000ef2c82118b2266596d0e992d.png".fullUrl(), contentDescription = "Official Head", contentScale = ContentScale.Fit, modifier = Modifier.height(31.dp).widthIn(max = 80.dp))
-                            if (officialTag) AsyncImage(model = "IMG_20261027_102250.png".fullUrl(), contentDescription = "Official", contentScale = ContentScale.Fit, modifier = Modifier.height(22.dp).widthIn(max = 60.dp))
-                            if (adminTag) AsyncImage(model = "IMG_20261027_114117.png".fullUrl(), contentDescription = "Admin", contentScale = ContentScale.Fit, modifier = Modifier.height(22.dp).widthIn(max = 60.dp))
-                            if (serviceTag) AsyncImage(model = "IMG_20261027_102207.png".fullUrl(), contentDescription = "Service / CS", contentScale = ContentScale.Fit, modifier = Modifier.height(22.dp).widthIn(max = 60.dp))
-                            if (hostTag) AsyncImage(model = "IMG_20261028_154914.png".fullUrl(), contentDescription = "Host", contentScale = ContentScale.Fit, modifier = Modifier.height(19.dp).widthIn(max = 60.dp))
-                            if (coinSellerTag) AsyncImage(model = "IMG_20261027_105359.png".fullUrl(), contentDescription = "Coin Seller", contentScale = ContentScale.Fit, modifier = Modifier.height(22.dp).widthIn(max = 60.dp))
+                            // Row 1 for tags
+                            if (officialHeadTag || officialTag || adminTag || serviceTag) {
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(0.2.dp, Alignment.CenterHorizontally),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    if (officialHeadTag) AsyncImage(model = "file_00000000ef2c82118b2266596d0e992d.png".fullUrl(), contentDescription = "Official Head", contentScale = ContentScale.Fit, modifier = Modifier.height(31.dp).widthIn(max = 80.dp))
+                                    if (officialTag) AsyncImage(model = "IMG_20261027_102250.png".fullUrl(), contentDescription = "Official", contentScale = ContentScale.Fit, modifier = Modifier.height(22.dp).widthIn(max = 60.dp))
+                                    if (adminTag) AsyncImage(model = "IMG_20261027_114117.png".fullUrl(), contentDescription = "Admin", contentScale = ContentScale.Fit, modifier = Modifier.height(22.dp).widthIn(max = 60.dp))
+                                    if (serviceTag) AsyncImage(model = "IMG_20261027_102207.png".fullUrl(), contentDescription = "Service / CS", contentScale = ContentScale.Fit, modifier = Modifier.height(22.dp).widthIn(max = 60.dp))
+                                }
+                            }
+                            
+                            // Row 2 for remaining tags
+                            if (hostTag || coinSellerTag) {
+                                Row(
+                                    modifier = Modifier.padding(top = 2.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(0.2.dp, Alignment.CenterHorizontally),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    if (hostTag) AsyncImage(model = "IMG_20261028_154914.png".fullUrl(), contentDescription = "Host", contentScale = ContentScale.Fit, modifier = Modifier.height(19.dp).widthIn(max = 60.dp))
+                                    if (coinSellerTag) AsyncImage(model = "IMG_20261027_105359.png".fullUrl(), contentDescription = "Coin Seller", contentScale = ContentScale.Fit, modifier = Modifier.height(22.dp).widthIn(max = 60.dp))
+                                }
+                            }
                         }
                     }
 
-                    // Row 3: Level Badge
+                    // Row 3: Level Badge (Image ki height 30dp aur Text Center Right Corner me, bas color White kiya hai)
                     Row(
                         modifier = Modifier.padding(top = 6.dp),
                         horizontalArrangement = Arrangement.Center,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            AsyncImage(model = "IMG_20261028_004355.png".fullUrl(), contentDescription = "Level", modifier = Modifier.height(32.dp))
-                            Text("1", color = Color(0xFFF5DDA0), fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.Center))
+                        Box(
+                            contentAlignment = Alignment.CenterEnd,
+                            modifier = Modifier.height(30.dp) // Yahan image ke hisaab se height 30dp kar di hai
+                        ) {
+                            AsyncImage(
+                                model = "IMG_20261028_004355.png".fullUrl(), 
+                                contentDescription = "Level", 
+                                modifier = Modifier.height(30.dp) // Image size set to 30.dp jaisa tune kaha
+                            )
+                            Text(
+                                text = "Lv.1", 
+                                color = Color.White, // <--- BASS YAHI COLOR WHITE KIYA HAI
+                                fontSize = 13.sp, 
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(end = 6.dp) // Right se thoda padding diya hai taaki border pe na chipke but andar center-right me rahe
+                            )
                         }
-                        Spacer(modifier = Modifier.width(2.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
                         AsyncImage(model = "1785486414756.png".fullUrl(), contentDescription = null, modifier = Modifier.height(24.dp))
                     }
 
@@ -466,7 +496,7 @@ fun RoomProfile(
                                 Text("|", color = Color.LightGray)
                                 Text(if (user.isLocked) "Unlock" else "Lock", color = Color.Gray, fontSize = 14.sp, modifier = Modifier.clickable { onLock() })
                                 Text("|", color = Color.LightGray)
-                                Text("Kick out", color = Color.Red, fontSize = 14.sp, modifier = Modifier.clickable { onKickOut() })
+                                Text("Kick out", color = Color.Gray, fontSize = 14.sp, modifier = Modifier.clickable { onKickOut() })
                             }
                         }
                     }
