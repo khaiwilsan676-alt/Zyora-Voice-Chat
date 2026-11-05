@@ -242,52 +242,6 @@ fun RoomPage(
         mutableStateOf(appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).getString("customTheme_$roomId", "").orEmpty())
     }
 
-    LaunchedEffect(roomId) {
-        withContext(Dispatchers.IO) {
-            runCatching {
-                val encoded = java.net.URLEncoder.encode(roomId, "UTF-8")
-                val connection = (java.net.URL("https://zyora-server.onrender.com/api/rooms?roomId=$encoded").openConnection() as java.net.HttpURLConnection).apply {
-                    connectTimeout = 10000
-                    readTimeout = 10000
-                    setRequestProperty("Accept", "application/json")
-                }
-                try {
-                    if (connection.responseCode in 200..299) {
-                        val root = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
-                        val saved = root.optJSONObject("room") ?: root
-                        val savedDp = sequenceOf("dp", "image", "roomDp", "Room dp")
-                            .map { saved.optString(it, "").trim() }
-                            .firstOrNull { it.isNotBlank() && it != "null" && it != "/default-avatar.png" }
-                            .orEmpty()
-                        val savedTheme = sequenceOf("theme", "roomTheme", "Room Theme")
-                            .map { saved.optString(it, "").trim() }
-                            .firstOrNull { it.isNotBlank() && it != "null" }
-                            ?: "forest-night"
-                        val savedCustomTheme = sequenceOf("customTheme", "themeImage")
-                            .map { saved.optString(it, "").trim() }
-                            .firstOrNull { it.isNotBlank() && it != "null" }
-                            .orEmpty()
-                        withContext(Dispatchers.Main) {
-                            roomName = saved.optString("name", saved.optString("roomName", roomName)).ifBlank { roomName }
-                            if (savedDp.isNotBlank()) roomImage = savedDp
-                            announcement = saved.optString("message", saved.optString("announcement", announcement))
-                            roomTheme = savedTheme
-                            roomMicMode = saved.optInt("micMode", roomMicMode)
-                            locked = saved.optBoolean("isLocked", locked)
-                            roomPassword = saved.optString("roomPassword", roomPassword)
-                            val admins = saved.optJSONArray("admin") ?: saved.optJSONArray("admins")
-                            if (admins != null) roomAdminIds = (0 until admins.length()).map { admins.optString(it) }.filter { it.isNotBlank() }
-                            appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).edit()
-                                .putString("theme_$roomId", savedTheme)
-                                .putString("customTheme_$roomId", savedCustomTheme)
-                                .putInt("micMode_$roomId", roomMicMode)
-                                .apply()
-                        }
-                    }
-                } finally { connection.disconnect() }
-            }.onFailure { android.util.Log.w("ZyoraRoom", "Could not refresh saved room settings", it) }
-        }
-    }
     LaunchedEffect(roomId, roomTheme) {
         purchasedRoomThemeImage = ""
         if (roomTheme.isNotBlank() && roomTheme !in setOf("forest-night", "mood-light", "custom")) {
@@ -403,11 +357,11 @@ fun RoomPage(
                         val root = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
                         val saved = root.optJSONObject("room") ?: root
                         val name = saved.optString("name", saved.optString("roomName", "")).takeUnless { it == "null" }.orEmpty()
-                        val image = saved.optString("dp", saved.optString("image", saved.optString("roomDp", ""))).takeUnless { it == "null" }.orEmpty()
+                        val image = sequenceOf("dp", "image", "roomDp", "Room dp").map { saved.optString(it, "").trim() }.firstOrNull { it.isNotBlank() && it != "null" && it != "/default-avatar.png" }.orEmpty()
                         val message = saved.optString("message", saved.optString("announcement", "")).takeUnless { it == "null" }.orEmpty()
                         val savedMicMode = saved.optInt("micMode", roomMicMode).let { if (it in listOf(5, 10, 15)) it else roomMicMode }
-                        val savedTheme = saved.optString("theme", roomTheme).takeUnless { it.isBlank() || it == "null" } ?: roomTheme
-                        val savedCustomTheme = saved.optString("customTheme", saved.optString("themeImage", "")).takeUnless { it == "null" }.orEmpty()
+                        val savedTheme = sequenceOf("theme", "roomTheme", "Room Theme").map { saved.optString(it, "").trim() }.firstOrNull { it.isNotBlank() && it != "null" } ?: roomTheme
+                        val savedCustomTheme = sequenceOf("customTheme", "themeImage").map { saved.optString(it, "").trim() }.firstOrNull { it.isNotBlank() && it != "null" }.orEmpty()
                         val savedLocked = saved.optBoolean("isLocked", locked)
                         val savedRoomPassword = saved.optString("roomPassword", roomPassword).takeUnless { it == "null" }.orEmpty()
                         val savedAdminsJson = saved.optJSONArray("admin") ?: JSONArray()
@@ -807,7 +761,8 @@ fun RoomPage(
                         mainHandler.postDelayed({entryToasts.removeAll{it.id==id}},4000)
                     }
                 }
-                if (type == "join" && senderId.isNotBlank()) {
+                // The local user's join event is handled by connectListener; avoid a duplicate inventory request.
+                if (type == "join" && senderId.isNotBlank() && senderId != accountId) {
                     kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
                         val vehicleVideo = runCatching {
                             val encodedUser = java.net.URLEncoder.encode(senderId, "UTF-8")
