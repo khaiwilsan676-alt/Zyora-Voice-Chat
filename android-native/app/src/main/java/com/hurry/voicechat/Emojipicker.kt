@@ -37,11 +37,12 @@ import coil3.compose.AsyncImage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.net.URL
+import java.util.concurrent.ConcurrentHashMap
 
 data class EmojiSticker(val id: String, val name: String, val src: String, val videoUrl: String? = null)
 
 // Yeh ek global cache hai taaki emojis baar-baar load na ho aur fast chalein
-val staticBitmapCache = mutableMapOf<String, android.graphics.Bitmap>()
+private val staticBitmapCache = ConcurrentHashMap<String, android.graphics.Bitmap>()
 
 private object EmojiVideoCache {
     @Volatile private var cache: SimpleCache? = null
@@ -234,6 +235,7 @@ fun EmojiPicker(onClose: () -> Unit = {}, onSelectEmoji: (EmojiSticker) -> Unit 
 @Composable
 private fun EmojiVideoPreview(videoUrl: String, fallbackImageUrl: String, modifier: Modifier = Modifier, contentDescription: String) {
     val context = LocalContext.current
+    var videoFrameReady by remember(videoUrl) { mutableStateOf(false) }
     val player = remember(context, videoUrl) {
         ExoPlayer.Builder(context)
             .setMediaSourceFactory(emojiVideoMediaSourceFactory(context))
@@ -245,25 +247,33 @@ private fun EmojiVideoPreview(videoUrl: String, fallbackImageUrl: String, modifi
             }
     }
     val videoView = remember(context, player) {
-        ChromaKeyVideoView(context, { surface -> player.setVideoSurface(surface) })
+        ChromaKeyVideoView(
+            context,
+            { surface -> player.setVideoSurface(surface) },
+            { videoFrameReady = true }
+        )
     }
 
     Box(modifier, contentAlignment = Alignment.Center) {
-        // Keep each emoji artwork visible until its transparent MP4 has decoded frames.
-        CustomStaticImage(
-            url = fallbackImageUrl,
-            contentDescription = contentDescription,
-            modifier = Modifier.fillMaxSize()
-        )
+        // The still image stays visible until the decoder supplies the first real video frame.
+        if (!videoFrameReady) {
+            CustomStaticImage(
+                url = fallbackImageUrl,
+                contentDescription = contentDescription,
+                modifier = Modifier.fillMaxSize()
+            )
+        }
         AndroidView(modifier = Modifier.fillMaxSize(), factory = { videoView })
     }
 
     DisposableEffect(player, videoView) {
+        videoView.onResume()
         onDispose {
             player.clearVideoSurface()
             player.stop()
             player.clearMediaItems()
             player.release()
+            videoView.onPause()
             videoView.release()
         }
     }
