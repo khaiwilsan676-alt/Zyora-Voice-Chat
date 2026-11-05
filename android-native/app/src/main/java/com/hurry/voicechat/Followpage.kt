@@ -23,7 +23,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil3.compose.AsyncImage
+import coil.compose.AsyncImage
 
 // Fake User Data Model
 data class VisitorData(
@@ -36,10 +36,8 @@ data class VisitorData(
 
 @Composable
 fun VisitorsPage(onBack: () -> Unit) {
-    // Tab State: 0 for "My Visitors", 1 for "Who I have visited"
     var selectedTab by remember { mutableStateOf(1) }
 
-    // Fake Data matching your screenshot
     val fakeVisitors = listOf(
         VisitorData("Ghost", "M", "04/11 18:53", 87, "https://i.pravatar.cc/150?u=1"),
         VisitorData("HUMSAFAR", "M", "04/11 18:09", 4, "https://i.pravatar.cc/150?u=2"),
@@ -49,15 +47,13 @@ fun VisitorsPage(onBack: () -> Unit) {
         VisitorData("जाटनी", "F", "04/11 01:06", 2, "https://i.pravatar.cc/150?u=6")
     )
 
-    // Top 3% Blue color mixing into White page
+    val baseUrl = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/"
+
+    // Exact Top 3% Blue mixing into White page using Color Stops
     val topBlueGradient = Brush.verticalGradient(
-        colors = listOf(
-            Color(0xFFE0F0FF),
-            Color.White,
-            Color.White
-        ),
-        startY = 0f,
-        endY = 400f
+        0.0f to Color(0xFFE0F0FF),  // Top pe Halka blue
+        0.03f to Color.White,       // Exactly 3% aate aate White me mix
+        1.0f to Color.White         // Baaki 97% pura White
     )
 
     Column(
@@ -89,7 +85,7 @@ fun VisitorsPage(onBack: () -> Unit) {
                 modifier = Modifier.weight(1f),
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
             )
-            Spacer(Modifier.width(40.dp)) // To balance the back arrow
+            Spacer(Modifier.width(40.dp))
         }
 
         // Tabs
@@ -118,11 +114,11 @@ fun VisitorsPage(onBack: () -> Unit) {
             contentPadding = PaddingValues(16.dp)
         ) {
             item {
-                // Banner Logic based on Selected Tab
+                // Banner Logic
                 val bannerImage = if (selectedTab == 0) {
-                    "public/IMG_20261105_125016.png" // My Visitors Banner
+                    "${baseUrl}public/IMG_20261105_125016.png"
                 } else {
-                    "public/IMG_20261105_124951.png" // Who I have visited Banner
+                    "${baseUrl}public/IMG_20261105_124951.png"
                 }
 
                 AsyncImage(
@@ -133,16 +129,17 @@ fun VisitorsPage(onBack: () -> Unit) {
                         .fillMaxWidth()
                         .height(60.dp)
                         .clip(RoundedCornerShape(12.dp))
-                        .background(Color(0xFF0D251C)) // Dark fallback color
+                        .background(Color(0xFF0D251C)) 
                 )
                 Spacer(Modifier.height(16.dp))
             }
 
-            // User List Logic
+            // User List
             items(fakeVisitors) { visitor ->
                 VisitorItemRow(
                     visitor = visitor,
-                    isMyVisitorsTab = selectedTab == 0
+                    isMyVisitorsTab = selectedTab == 0,
+                    baseUrl = baseUrl
                 )
             }
         }
@@ -164,7 +161,6 @@ fun TabItem(title: String, isSelected: Boolean, onClick: () -> Unit) {
             color = if (isSelected) Color(0xFF111827) else Color(0xFF9CA3AF)
         )
         Spacer(Modifier.height(8.dp))
-        // Underline Indicator
         if (isSelected) {
             Box(
                 Modifier
@@ -180,7 +176,7 @@ fun TabItem(title: String, isSelected: Boolean, onClick: () -> Unit) {
 }
 
 @Composable
-fun VisitorItemRow(visitor: VisitorData, isMyVisitorsTab: Boolean) {
+fun VisitorItemRow(visitor: VisitorData, isMyVisitorsTab: Boolean, baseUrl: String) {
     Row(
         Modifier
             .fillMaxWidth()
@@ -199,9 +195,8 @@ fun VisitorItemRow(visitor: VisitorData, isMyVisitorsTab: Boolean) {
         )
         Spacer(Modifier.width(12.dp))
 
-        // Name, Gender, and Views Info
+        // Name, Gender, and Views
         Column(Modifier.weight(1f)) {
-            // Apply Blur if it's "My Visitors" Tab
             val blurModifier = if (isMyVisitorsTab) Modifier.blur(8.dp) else Modifier
 
             Row(verticalAlignment = Alignment.CenterVertically, modifier = blurModifier) {
@@ -213,7 +208,6 @@ fun VisitorItemRow(visitor: VisitorData, isMyVisitorsTab: Boolean) {
                 )
                 Spacer(Modifier.width(6.dp))
                 
-                // Gender Icon Background Circle
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
@@ -232,7 +226,6 @@ fun VisitorItemRow(visitor: VisitorData, isMyVisitorsTab: Boolean) {
             
             Spacer(Modifier.height(4.dp))
             
-            // Date and Views Count
             Text(
                 text = "${visitor.date}  |  View ${visitor.views} times",
                 fontSize = 12.sp,
@@ -240,10 +233,10 @@ fun VisitorItemRow(visitor: VisitorData, isMyVisitorsTab: Boolean) {
             )
         }
 
-        // Chat Icon Logic (Only show if NOT in "My Visitors" Tab)
+        // Chat Icon
         if (!isMyVisitorsTab) {
             AsyncImage(
-                model = "public/IMG_20261105_125330.png",
+                model = "${baseUrl}public/IMG_20261105_125330.png",
                 contentDescription = "Chat",
                 modifier = Modifier
                     .size(36.dp)
@@ -251,11 +244,4 @@ fun VisitorItemRow(visitor: VisitorData, isMyVisitorsTab: Boolean) {
             )
         }
     }
-}
-
-
-@Composable
-fun FollowPage(pageTitle: String, onBack: () -> Unit) {
-    // Keep the existing native follow/visitor screen entry point build-safe.
-    VisitorsPage(onBack = onBack)
 }
