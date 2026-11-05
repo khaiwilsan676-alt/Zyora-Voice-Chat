@@ -6,6 +6,7 @@ import android.content.Context
 import android.widget.Toast
 import androidx.compose.animation.*
 import androidx.compose.foundation.*
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -215,6 +216,9 @@ fun RoomProfile(
     var vipTag by remember(user.vipTag) { mutableStateOf(user.vipTag == true) }
     var premiumTag by remember(user.premiumTag) { mutableStateOf(user.premiumTag == true) }
     var showReports by remember(initialReportOpen) { mutableStateOf(initialReportOpen) }
+    
+    // New State for the KickOut dialog
+    var showKickDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(user.uid, user.id, user.accountId, loadedProfile) {
         val profile = loadedProfile ?: return@LaunchedEffect
@@ -262,207 +266,156 @@ fun RoomProfile(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color.Transparent)
-                .clickable { onClose() }
+                .clickable { if (!showKickDialog) onClose() else showKickDialog = false }
         ) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .clickable(enabled = false) {}
-            ) {
-                Column(
+            // Agar kick dialog nahi dikh raha hai toh main Room Profile sheet dikhegi
+            if (!showKickDialog) {
+                Box(
                     modifier = Modifier
-                        .padding(top = 44.dp)
+                        .align(Alignment.BottomCenter)
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
-                        .background(Color.White)
-                        .padding(top = 56.dp, bottom = 24.dp, start = 16.dp, end = 16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                        .clickable(enabled = false) {}
                 ) {
-                    
-                    // Row 1: Name + Gender Tag
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
-                        Text(
-                            text = displayName.ifBlank { "User" },
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF111827)
-                        )
-                        if (isRoomOwner) {
-                            AsyncImage(
-                                model = "IMG_20261027_235537.png".fullUrl(),
-                                contentDescription = "Room owner",
-                                contentScale = ContentScale.Fit,
-                                modifier = Modifier.padding(start = 5.dp).height(16.dp).widthIn(max = 64.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Box(
-                            modifier = Modifier
-                                .clip(CircleShape)
-                                .background(genderColor)
-                                .padding(horizontal = 5.dp, vertical = 2.dp)
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                                CustomGenderIcon(isFemale = displayGender.equals("female", true) || displayGender.equals("f", true) || displayGender == "♀", modifier = Modifier.size(8.dp))
-                                Text(displayAge.toString(), color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-                            }
-                        }
-                    }
-
-                    // Row 2: Public Profile tags
-                    if (hasAnyTag) {
-                        Column(
-                            modifier = Modifier.padding(top = 6.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            if (officialHeadTag || officialTag || adminTag || serviceTag) {
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterHorizontally), 
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    if (officialHeadTag) AsyncImage(model = "file_00000000ef2c82118b2266596d0e992d.png".fullUrl(), contentDescription = "Official Head", contentScale = ContentScale.Fit, modifier = Modifier.height(31.dp).widthIn(max = 80.dp))
-                                    if (officialTag) AsyncImage(model = "IMG_20261027_102250.png".fullUrl(), contentDescription = "Official", contentScale = ContentScale.Fit, modifier = Modifier.height(22.dp).widthIn(max = 60.dp))
-                                    if (adminTag) AsyncImage(model = "IMG_20261027_114117.png".fullUrl(), contentDescription = "Admin", contentScale = ContentScale.Fit, modifier = Modifier.height(22.dp).widthIn(max = 60.dp))
-                                    if (serviceTag) AsyncImage(model = "IMG_20261027_102207.png".fullUrl(), contentDescription = "Service / CS", contentScale = ContentScale.Fit, modifier = Modifier.height(22.dp).widthIn(max = 60.dp))
-                                }
-                            }
-                            if (hostTag || coinSellerTag) {
-                                Row(
-                                    modifier = Modifier.padding(top = 2.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterHorizontally), 
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    if (hostTag) AsyncImage(model = "IMG_20261028_154914.png".fullUrl(), contentDescription = "Host", contentScale = ContentScale.Fit, modifier = Modifier.height(19.dp).widthIn(max = 60.dp))
-                                    if (coinSellerTag) AsyncImage(model = "IMG_20261027_105359.png".fullUrl(), contentDescription = "Coin Seller", contentScale = ContentScale.Fit, modifier = Modifier.height(22.dp).widthIn(max = 60.dp))
-                                }
-                            }
-                        }
-                    }
-
-                    // Row 3: Level Badge
-                    Row(
-                        modifier = Modifier.padding(top = 6.dp),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
+                    Column(
+                        modifier = Modifier
+                            .padding(top = 44.dp)
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
+                            .background(Color.White)
+                            .padding(top = 56.dp, bottom = 24.dp, start = 16.dp, end = 16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Box(
-                            contentAlignment = Alignment.CenterEnd,
-                            modifier = Modifier.height(24.dp) 
-                        ) {
-                            AsyncImage(
-                                model = "IMG_20261028_004355.png".fullUrl(), 
-                                contentDescription = "Level", 
-                                modifier = Modifier.height(24.dp) 
-                            )
+                        
+                        // Row 1: Name + Gender Tag
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
                             Text(
-                                text = "Lv.1", 
-                                color = Color.White,
-                                fontSize = 11.sp, 
+                                text = displayName.ifBlank { "User" },
+                                fontSize = 18.sp,
                                 fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(end = 6.dp)
+                                color = Color(0xFF111827)
                             )
-                        }
-                        Spacer(modifier = Modifier.width(6.dp))
-                        AsyncImage(model = "1785486414756.png".fullUrl(), contentDescription = null, modifier = Modifier.height(24.dp))
-                    }
-
-                    // Row 4: ID | Fans | Flag
-                    Row(
-                        modifier = Modifier.padding(top = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        if (isCoreOfficialAccount || is500002OfficialAccount || isRedOfficialAccount) {
-                            AsyncImage(model = "IMG_20261101_125212.png".fullUrl(), contentDescription = "Purple ID Badge", contentScale = ContentScale.Fit, modifier = Modifier.height(30.dp).widthIn(min = 22.dp, max = 35.dp).padding(end = 4.dp))
-                            Text(accountId, color = Color.DarkGray, fontSize = 14.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(start = 4.dp))
-                        } else {
-                            Text("ID: $accountId", color = Color.DarkGray, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                        }
-                        
-                        if (accountId != "N/A" && accountId != "User") {
-                            IconButton(
-                                onClick = {
-                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                    clipboard.setPrimaryClip(ClipData.newPlainText("ID", accountId))
-                                    Toast.makeText(context, "ID Copied!", Toast.LENGTH_SHORT).show()
-                                    onCopyId()
-                                },
-                                modifier = Modifier.size(24.dp)
+                            if (isRoomOwner) {
+                                AsyncImage(
+                                    model = "IMG_20261027_235537.png".fullUrl(),
+                                    contentDescription = "Room owner",
+                                    contentScale = ContentScale.Fit,
+                                    modifier = Modifier.padding(start = 5.dp).height(16.dp).widthIn(max = 64.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Box(
+                                modifier = Modifier
+                                    .clip(CircleShape)
+                                    .background(genderColor)
+                                    .padding(horizontal = 5.dp, vertical = 2.dp)
                             ) {
-                                Icon(Icons.Default.ContentCopy, contentDescription = "Copy", tint = Color.Gray, modifier = Modifier.size(14.dp))
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                                    CustomGenderIcon(isFemale = displayGender.equals("female", true) || displayGender.equals("f", true) || displayGender == "♀", modifier = Modifier.size(8.dp))
+                                    Text(displayAge.toString(), color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                                }
                             }
                         }
-                        
-                        Text(" | ", color = Color.LightGray, modifier = Modifier.padding(horizontal = 4.dp))
-                        
-                        Text("${user.followers}", color = Color.DarkGray, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                        Text(" Fans", color = Color.Gray, fontSize = 14.sp, modifier = Modifier.padding(start = 4.dp))
-                        
-                        Text(" | ", color = Color.LightGray, modifier = Modifier.padding(horizontal = 4.dp))
-                        
-                        if (displayCountry.isNotBlank()) Text(roomProfileCountryFlag(displayCountry), fontSize = 16.sp)
-                    }
 
-                    if (showLeaveSeat) {
+                        // Row 2: Public Profile tags
+                        if (hasAnyTag) {
+                            Column(
+                                modifier = Modifier.padding(top = 6.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                if (officialHeadTag || officialTag || adminTag || serviceTag) {
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally), 
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        if (officialHeadTag) AsyncImage(model = "file_00000000ef2c82118b2266596d0e992d.png".fullUrl(), contentDescription = "Official Head", contentScale = ContentScale.Fit, modifier = Modifier.height(31.dp).widthIn(max = 80.dp))
+                                        if (officialTag) AsyncImage(model = "IMG_20261027_102250.png".fullUrl(), contentDescription = "Official", contentScale = ContentScale.Fit, modifier = Modifier.height(22.dp).widthIn(max = 60.dp))
+                                        if (adminTag) AsyncImage(model = "IMG_20261027_114117.png".fullUrl(), contentDescription = "Admin", contentScale = ContentScale.Fit, modifier = Modifier.height(22.dp).widthIn(max = 60.dp))
+                                        if (serviceTag) AsyncImage(model = "IMG_20261027_102207.png".fullUrl(), contentDescription = "Service / CS", contentScale = ContentScale.Fit, modifier = Modifier.height(22.dp).widthIn(max = 60.dp))
+                                    }
+                                }
+                                if (hostTag || coinSellerTag) {
+                                    Row(
+                                        modifier = Modifier.padding(top = 2.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally), 
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        if (hostTag) AsyncImage(model = "IMG_20261028_154914.png".fullUrl(), contentDescription = "Host", contentScale = ContentScale.Fit, modifier = Modifier.height(19.dp).widthIn(max = 60.dp))
+                                        if (coinSellerTag) AsyncImage(model = "IMG_20261027_105359.png".fullUrl(), contentDescription = "Coin Seller", contentScale = ContentScale.Fit, modifier = Modifier.height(22.dp).widthIn(max = 60.dp))
+                                    }
+                                }
+                            }
+                        }
+
+                        // Row 3: Level Badge
                         Row(
-                            modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+                            modifier = Modifier.padding(top = 6.dp),
                             horizontalArrangement = Arrangement.Center,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                modifier = Modifier.clickable { onLeaveSeat() }
+                            Box(
+                                contentAlignment = Alignment.CenterEnd,
+                                modifier = Modifier.height(24.dp) 
                             ) {
-                                Box(modifier = Modifier.size(26.dp)) {
-                                    Icon(
-                                        imageVector = Icons.Default.Person, 
-                                        contentDescription = "Leave",
-                                        tint = Color.Black,
-                                        modifier = Modifier.size(22.dp).align(Alignment.TopStart)
-                                    )
-                                    Icon(
-                                        imageVector = Icons.Default.ArrowDownward,
-                                        contentDescription = null,
-                                        tint = Color(0xFFF97316),
-                                        modifier = Modifier
-                                            .size(12.dp)
-                                            .align(Alignment.BottomEnd)
-                                            .background(Color.White, CircleShape) 
-                                    )
-                                }
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Text("Leave", color = Color.Black, fontSize = 12.sp)
+                                AsyncImage(
+                                    model = "IMG_20261028_004355.png".fullUrl(), 
+                                    contentDescription = "Level", 
+                                    modifier = Modifier.height(24.dp) 
+                                )
+                                Text(
+                                    text = "Lv.1", 
+                                    color = Color.White,
+                                    fontSize = 11.sp, 
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(end = 6.dp)
+                                )
                             }
+                            Spacer(modifier = Modifier.width(6.dp))
+                            AsyncImage(model = "1785486414756.png".fullUrl(), contentDescription = null, modifier = Modifier.height(24.dp))
                         }
-                    }
 
-                    if (showActions) {
-                        // Modertaion Row (Mute, Leave, Lock, Kick)
-                        if (showModerationRow) {
+                        // Row 4: ID | Fans | Flag
+                        Row(
+                            modifier = Modifier.padding(top = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            if (isCoreOfficialAccount || is500002OfficialAccount || isRedOfficialAccount) {
+                                AsyncImage(model = "IMG_20261101_125212.png".fullUrl(), contentDescription = "Purple ID Badge", contentScale = ContentScale.Fit, modifier = Modifier.height(30.dp).widthIn(min = 22.dp, max = 35.dp).padding(end = 4.dp))
+                                Text(accountId, color = Color.DarkGray, fontSize = 14.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(start = 4.dp))
+                            } else {
+                                Text("ID: $accountId", color = Color.DarkGray, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                            }
+                            
+                            if (accountId != "N/A" && accountId != "User") {
+                                IconButton(
+                                    onClick = {
+                                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                        clipboard.setPrimaryClip(ClipData.newPlainText("ID", accountId))
+                                        Toast.makeText(context, "ID Copied!", Toast.LENGTH_SHORT).show()
+                                        onCopyId()
+                                    },
+                                    modifier = Modifier.size(24.dp)
+                                ) {
+                                    Icon(Icons.Default.ContentCopy, contentDescription = "Copy", tint = Color.Gray, modifier = Modifier.size(14.dp))
+                                }
+                            }
+                            
+                            Text(" | ", color = Color.LightGray, modifier = Modifier.padding(horizontal = 4.dp))
+                            
+                            Text("${user.followers}", color = Color.DarkGray, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                            Text(" Fans", color = Color.Gray, fontSize = 14.sp, modifier = Modifier.padding(start = 4.dp))
+                            
+                            Text(" | ", color = Color.LightGray, modifier = Modifier.padding(horizontal = 4.dp))
+                            
+                            if (displayCountry.isNotBlank()) Text(roomProfileCountryFlag(displayCountry), fontSize = 16.sp)
+                        }
+
+                        if (showLeaveSeat) {
                             Row(
                                 modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
-                                horizontalArrangement = Arrangement.SpaceEvenly,
+                                horizontalArrangement = Arrangement.Center,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                // NEW MUTE ICON ADDED HERE
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    modifier = Modifier.clickable { onMute() }
-                                ) {
-                                    Icon(
-                                        imageVector = if (user.isMuted) Icons.Default.Mic else Icons.Default.MicOff,
-                                        contentDescription = "Mute Toggle",
-                                        tint = Color.Black,
-                                        modifier = Modifier.size(24.dp)
-                                    )
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Text(if (user.isMuted) "Unmute" else "Mute", color = Color.Black, fontSize = 12.sp)
-                                }
-                                
-                                Text("|", color = Color.LightGray)
-                                
-                                // LEAVE ICON 
                                 Column(
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     modifier = Modifier.clickable { onLeaveSeat() }
@@ -477,7 +430,7 @@ fun RoomProfile(
                                         Icon(
                                             imageVector = Icons.Default.ArrowDownward,
                                             contentDescription = null,
-                                            tint = Color(0xFFF97316),
+                                            tint = Color.Black,
                                             modifier = Modifier
                                                 .size(12.dp)
                                                 .align(Alignment.BottomEnd)
@@ -487,158 +440,223 @@ fun RoomProfile(
                                     Spacer(modifier = Modifier.height(2.dp))
                                     Text("Leave", color = Color.Black, fontSize = 12.sp)
                                 }
-                                
-                                Text("|", color = Color.LightGray)
+                            }
+                        }
 
-                                // NEW KICK OUT ICON ADDED HERE (Person + Cross)
+                        if (showActions) {
+                            // Modertaion Row (Mute, Leave, Lock, Kick)
+                            if (showModerationRow) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+                                    horizontalArrangement = Arrangement.SpaceEvenly,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    // MUTE ICON 
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        modifier = Modifier.clickable { onMute() }
+                                    ) {
+                                        Icon(
+                                            imageVector = if (user.isMuted) Icons.Default.Mic else Icons.Default.MicOff,
+                                            contentDescription = "Mute Toggle",
+                                            tint = Color.Black,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Text(if (user.isMuted) "Unmute" else "Mute", color = Color.Black, fontSize = 12.sp)
+                                    }
+                                    
+                                    Text("|", color = Color.LightGray)
+                                    
+                                    // LEAVE ICON 
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        modifier = Modifier.clickable { onLeaveSeat() }
+                                    ) {
+                                        Box(modifier = Modifier.size(26.dp)) {
+                                            Icon(
+                                                imageVector = Icons.Default.Person, 
+                                                contentDescription = "Leave",
+                                                tint = Color.Black,
+                                                modifier = Modifier.size(22.dp).align(Alignment.TopStart)
+                                            )
+                                            Icon(
+                                                imageVector = Icons.Default.ArrowDownward,
+                                                contentDescription = null,
+                                                tint = Color.Black,
+                                                modifier = Modifier
+                                                    .size(12.dp)
+                                                    .align(Alignment.BottomEnd)
+                                                    .background(Color.White, CircleShape) 
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Text("Leave", color = Color.Black, fontSize = 12.sp)
+                                    }
+                                    
+                                    Text("|", color = Color.LightGray)
+
+                                    // KICK OUT ICON ADDED HERE (Person + Cross) - Changed behavior
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        modifier = Modifier.clickable { showKickDialog = true } // Yaha Sheet hide hoke Dialog Trigger hoga
+                                    ) {
+                                        Box(modifier = Modifier.size(26.dp)) {
+                                            Icon(
+                                                imageVector = Icons.Default.Person, 
+                                                contentDescription = "Kick out",
+                                                tint = Color.Black,
+                                                modifier = Modifier.size(22.dp).align(Alignment.TopStart)
+                                            )
+                                            Icon(
+                                                imageVector = Icons.Default.Close, // Cross icon added
+                                                contentDescription = null,
+                                                tint = Color.Black,
+                                                modifier = Modifier
+                                                    .size(12.dp)
+                                                    .align(Alignment.BottomEnd)
+                                                    .background(Color.White, CircleShape) 
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Text("Kick", color = Color.Black, fontSize = 12.sp)
+                                    }
+                                }
+                            }
+                            
+                            // Follow, Chat, Gift Row
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(top = 20.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                // Follow Column
                                 Column(
                                     horizontalAlignment = Alignment.CenterHorizontally,
-                                    modifier = Modifier.clickable { onKickOut() }
+                                    modifier = Modifier
+                                        .weight(1f) 
+                                        .clickable {
+                                            isFollowing = !isFollowing
+                                            onFollow()
+                                        }
                                 ) {
-                                    Box(modifier = Modifier.size(26.dp)) {
-                                        Icon(
-                                            imageVector = Icons.Default.Person, 
-                                            contentDescription = "Kick out",
-                                            tint = Color.Black,
-                                            modifier = Modifier.size(22.dp).align(Alignment.TopStart)
-                                        )
-                                        Icon(
-                                            imageVector = Icons.Default.Close, // Cross icon added
-                                            contentDescription = null,
-                                            tint = Color.Red, // Red color for cross
-                                            modifier = Modifier
-                                                .size(12.dp)
-                                                .align(Alignment.BottomEnd)
-                                                .background(Color.White, CircleShape) 
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Text("Kick", color = Color.Black, fontSize = 12.sp) 
+                                    AsyncImage(
+                                        model = (if (isFollowing) "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261105_125204.png" else "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261105_125259.png"),
+                                        contentDescription = if (isFollowing) "Followed" else "Follow",
+                                        contentScale = ContentScale.Fit,
+                                        modifier = Modifier.size(44.dp) // Size increased to 44.dp
+                                    )
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Text(
+                                        text = if (isFollowing) "Followed" else "Follow", 
+                                        color = Color.Black,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        maxLines = 1,
+                                        softWrap = false
+                                    )
+                                }
+
+                                // Chat Column
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    modifier = Modifier
+                                        .weight(1f) 
+                                        .clickable { onMessage() }
+                                ) {
+                                    AsyncImage(
+                                        model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261105_125330.png",
+                                        contentDescription = "Chat",
+                                        contentScale = ContentScale.Fit,
+                                        modifier = Modifier.size(44.dp) // Size increased to 44.dp
+                                    )
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Text(
+                                        text = "Chat",
+                                        color = Color.Black,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        maxLines = 1,
+                                        softWrap = false
+                                    )
+                                }
+                                
+                                // Send Gift Column
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    modifier = Modifier
+                                        .weight(1f) 
+                                        .clickable { onThirdAction() }
+                                ) {
+                                    AsyncImage(
+                                        model = "file_00000000b9f481fa90d96c422ae8dd32.png".fullUrl(), // Gift image URL updated
+                                        contentDescription = "Gift",
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier.size(44.dp).clip(CircleShape) // Size increased to 44.dp
+                                    )
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Text(
+                                        text = "Send Gift", 
+                                        color = Color.Black,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        maxLines = 1,
+                                        softWrap = false
+                                    )
                                 }
                             }
                         }
-                        
-                        // Follow, Chat, Gift Row
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(top = 20.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            // Follow Column
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                modifier = Modifier
-                                    .weight(1f) 
-                                    .clickable {
-                                        isFollowing = !isFollowing
-                                        onFollow()
-                                    }
-                            ) {
-                                AsyncImage(
-                                    model = (if (isFollowing) "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261105_125204.png" else "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261105_125259.png"),
-                                    contentDescription = if (isFollowing) "Followed" else "Follow",
-                                    contentScale = ContentScale.Fit,
-                                    modifier = Modifier.size(30.dp) 
-                                )
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Text(
-                                    text = if (isFollowing) "Followed" else "Follow", 
-                                    color = Color.Black,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    maxLines = 1,
-                                    softWrap = false
-                                )
-                            }
+                    }
 
-                            // Chat Column
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                modifier = Modifier
-                                    .weight(1f) 
-                                    .clickable { onMessage() }
-                            ) {
-                                AsyncImage(
-                                    model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261105_125330.png",
-                                    contentDescription = "Chat",
-                                    contentScale = ContentScale.Fit,
-                                    modifier = Modifier.size(30.dp) 
-                                )
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Text(
-                                    text = "Chat",
-                                    color = Color.Black,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    maxLines = 1,
-                                    softWrap = false
-                                )
-                            }
-                            
-                            // Send Gift Column
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                modifier = Modifier
-                                    .weight(1f) 
-                                    .clickable { onThirdAction() }
-                            ) {
-                                AsyncImage(
-                                    model = "file_0000000019c4821180028eebae10dbfc.png".fullUrl(),
-                                    contentDescription = "Gift",
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier.size(30.dp).clip(CircleShape) 
-                                )
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Text(
-                                    text = "Send Gift", 
-                                    color = Color.Black,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    maxLines = 1,
-                                    softWrap = false
-                                )
-                            }
+                    // Overlapping Avatar
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .size(88.dp)
+                            .clickable { onOpenPublicProfile(user.copy(name = displayName, image = displayProfileImage, country = displayCountry)) }
+                    ) {
+                        AsyncImage(
+                            model = displayProfileImage.ifBlank { "default-avatar.png".fullUrl() },
+                            contentDescription = displayName,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(CircleShape)
+                                .background(Color.LightGray)
+                        )
+                        NativeAvatarFrameOverlay(
+                            userId = user.accountId.orEmpty().ifBlank { user.uid.orEmpty().ifBlank { user.id.orEmpty() } },
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+
+                    // Corner Action Icons
+                    if (!isCurrentUser) {
+                        IconButton(
+                            onClick = { showReports = true },
+                            modifier = Modifier.align(Alignment.TopStart).padding(top = 52.dp, start = 8.dp)
+                        ) {
+                            LucidePublicProfileIcon(warning = true, tint = Color.Black, modifier = Modifier.size(24.dp))
+                        }
+
+                        IconButton(
+                            onClick = { onMention(displayName.ifBlank { user.name }, sequenceOf(user.accountId, user.id, user.uid).firstOrNull { !it.isNullOrBlank() }.orEmpty()) },
+                            modifier = Modifier.align(Alignment.TopEnd).padding(top = 52.dp, end = 8.dp)
+                        ) {
+                            Icon(Icons.Default.AlternateEmail, contentDescription = "Mention", tint = Color.Black)
                         }
                     }
                 }
-
-                // Overlapping Avatar
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .size(88.dp)
-                        .clickable { onOpenPublicProfile(user.copy(name = displayName, image = displayProfileImage, country = displayCountry)) }
-                ) {
-                    AsyncImage(
-                        model = displayProfileImage.ifBlank { "default-avatar.png".fullUrl() },
-                        contentDescription = displayName,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(CircleShape)
-                            .background(Color.LightGray)
-                    )
-                    NativeAvatarFrameOverlay(
-                        userId = user.accountId.orEmpty().ifBlank { user.uid.orEmpty().ifBlank { user.id.orEmpty() } },
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
-
-                // Corner Action Icons
-                if (!isCurrentUser) {
-                    IconButton(
-                        onClick = { showReports = true },
-                        modifier = Modifier.align(Alignment.TopStart).padding(top = 52.dp, start = 8.dp)
-                    ) {
-                        LucidePublicProfileIcon(warning = true, tint = Color.Black, modifier = Modifier.size(24.dp))
+            } else {
+                // Yaha pe apka new Kick Out Card Show Hoga (RoomProfile hide ho chuka hai)
+                KickOutDialogCard(
+                    userName = displayName.ifBlank { user.name },
+                    onDismiss = { showKickDialog = false },
+                    onConfirm = { time ->
+                        showKickDialog = false
+                        onKickOut() // Parent ki pass ki gayi callback call karega (yaha time ko pass karne ka logic agar chahiye toh callback mein update kar lena)
+                        onClose()   // Full screen Dialog close karne ke liye
                     }
-
-                    IconButton(
-                        onClick = { onMention(displayName.ifBlank { user.name }, sequenceOf(user.accountId, user.id, user.uid).firstOrNull { !it.isNullOrBlank() }.orEmpty()) },
-                        modifier = Modifier.align(Alignment.TopEnd).padding(top = 52.dp, end = 8.dp)
-                    ) {
-                        Icon(Icons.Default.AlternateEmail, contentDescription = "Mention", tint = Color.Black)
-                    }
-                }
+                )
             }
         }
     }
@@ -650,6 +668,119 @@ fun RoomProfile(
             targetId = user.accountId.orEmpty().ifBlank { user.uid.orEmpty().ifBlank { user.id.orEmpty() } },
             idBadgeImage = if (user.accountId.orEmpty().ifBlank { user.uid.orEmpty().ifBlank { user.id.orEmpty() } } in setOf("500002", "500003", "500004")) "IMG_20261101_125212.png".fullUrl() else null,
             onDismiss = { showReports = false }
+        )
+    }
+}
+
+// Ye naya Composable same Image UI ke style mein banaya hai
+@Composable
+fun KickOutDialogCard(
+    userName: String,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit
+) {
+    var selectedTime by remember { mutableStateOf("30 minutes") }
+    val timeOptions = listOf("15 minutes", "30 minutes", "2 hours", "24 hours")
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            // Click outside the card to dismiss it
+            .clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) { onDismiss() },
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth(0.85f)
+                .clip(RoundedCornerShape(16.dp))
+                .background(Color.White)
+                // Consume clicks inside the card so it doesn't dismiss
+                .clickable(enabled = false) {}
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "Are you sure to Kick out",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.Black
+            )
+            Text(
+                text = "$userName?",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.Black,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(bottom = 12.dp)
+            )
+
+            Text(
+                text = "Select kick-out time",
+                fontSize = 14.sp,
+                color = Color.Gray,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+
+            // Grid Layout for time selection
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                    TimeOptionItem(text = timeOptions[0], isSelected = selectedTime == timeOptions[0], modifier = Modifier.weight(1f)) { selectedTime = timeOptions[0] }
+                    TimeOptionItem(text = timeOptions[1], isSelected = selectedTime == timeOptions[1], modifier = Modifier.weight(1f)) { selectedTime = timeOptions[1] }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                    TimeOptionItem(text = timeOptions[2], isSelected = selectedTime == timeOptions[2], modifier = Modifier.weight(1f)) { selectedTime = timeOptions[2] }
+                    TimeOptionItem(text = timeOptions[3], isSelected = selectedTime == timeOptions[3], modifier = Modifier.weight(1f)) { selectedTime = timeOptions[3] }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Action Buttons
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.weight(1f).height(48.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Gray),
+                    border = BorderStroke(1.dp, Color.LightGray)
+                ) {
+                    Text("Cancel", fontSize = 16.sp)
+                }
+
+                Button(
+                    onClick = { onConfirm(selectedTime) },
+                    modifier = Modifier.weight(1f).height(48.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF05133)) // Exact Reddish Orange from Screenshot
+                ) {
+                    Text("Confirm", fontSize = 16.sp, color = Color.White)
+                }
+            }
+        }
+    }
+}
+
+// Button item design for Kickout Timer
+@Composable
+fun TimeOptionItem(text: String, isSelected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    val backgroundColor = if (isSelected) Color(0xFFFDECE9) else Color(0xFFF5F5F5)
+    val borderColor = if (isSelected) Color(0xFFF05133) else Color.Transparent
+    val textColor = if (isSelected) Color(0xFFF05133) else Color.Gray
+
+    Box(
+        modifier = modifier
+            .height(42.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(backgroundColor)
+            .border(1.dp, borderColor, RoundedCornerShape(8.dp))
+            .clickable { onClick() },
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = text, 
+            color = textColor, 
+            fontSize = 14.sp, 
+            fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal
         )
     }
 }
