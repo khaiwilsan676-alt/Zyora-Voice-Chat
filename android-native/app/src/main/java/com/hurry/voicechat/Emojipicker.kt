@@ -118,7 +118,7 @@ fun EmojiPicker(onClose: () -> Unit = {}, onSelectEmoji: (EmojiSticker) -> Unit 
                 contentDescription = "Top Border",
                 modifier = Modifier
                     .fillMaxWidth()
-                    .offset(y = (-12).dp)
+                    .offset(y = (-10).dp)
                     .wrapContentHeight(align = Alignment.Top)
                     .align(Alignment.TopCenter), 
                 contentScale = ContentScale.FillWidth 
