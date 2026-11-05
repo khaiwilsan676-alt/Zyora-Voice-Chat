@@ -307,16 +307,21 @@ fun RoomProfile(
                                 color = Color(0xFF111827)
                             )
                             
-                            // Gender & Age (Chota kar diya)
+                            // Gender & Age (20.dp Size Fixed)
                             Box(
                                 modifier = Modifier
                                     .padding(start = 6.dp)
+                                    .size(20.dp)
                                     .clip(CircleShape)
-                                    .background(genderColor)
-                                    .padding(horizontal = 4.dp, vertical = 1.dp)
+                                    .background(genderColor),
+                                contentAlignment = Alignment.Center
                             ) {
-                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                                    CustomGenderIcon(isFemale = displayGender.equals("female", true) || displayGender.equals("f", true) || displayGender == "♀", modifier = Modifier.size(6.dp))
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically, 
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    CustomGenderIcon(isFemale = displayGender.equals("female", true) || displayGender.equals("f", true) || displayGender == "♀", modifier = Modifier.size(8.dp))
+                                    Spacer(modifier = Modifier.width(2.dp))
                                     Text(displayAge.toString(), color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Bold)
                                 }
                             }
@@ -327,14 +332,14 @@ fun RoomProfile(
                             }
                         }
 
-                        // 2nd: ID | Fans
+                        // 2nd: ID | Fans (ID Image choti kardi -> height 24.dp)
                         Row(
                             modifier = Modifier.padding(top = 8.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.Center
                         ) {
                             if (isCoreOfficialAccount || is500002OfficialAccount || isRedOfficialAccount) {
-                                AsyncImage(model = "IMG_20261101_125212.png".fullUrl(), contentDescription = "Purple ID Badge", contentScale = ContentScale.Fit, modifier = Modifier.height(30.dp).widthIn(min = 22.dp, max = 35.dp).padding(end = 4.dp))
+                                AsyncImage(model = "IMG_20261101_125212.png".fullUrl(), contentDescription = "Purple ID Badge", contentScale = ContentScale.Fit, modifier = Modifier.height(24.dp).widthIn(min = 18.dp, max = 30.dp).padding(end = 4.dp))
                                 Text(accountId, color = Color.DarkGray, fontSize = 14.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(start = 4.dp))
                             } else {
                                 Text("ID: $accountId", color = Color.DarkGray, fontSize = 14.sp, fontWeight = FontWeight.Medium)
@@ -367,15 +372,16 @@ fun RoomProfile(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
 
-                            // Lv.1 Image (choti ki aur text normal kiya, aur side wali image hata di)
+                            // Lv.1 Image 
                             Box(
                                 contentAlignment = Alignment.CenterEnd,
-                                modifier = Modifier.height(16.dp) 
+                                modifier = Modifier.height(22.dp) 
                             ) {
                                 AsyncImage(
                                     model = "IMG_20261028_004355.png".fullUrl(), 
                                     contentDescription = "Level", 
-                                    modifier = Modifier.height(16.dp) 
+                                    modifier = Modifier.height(22.dp),
+                                    contentScale = ContentScale.Fit
                                 )
                                 Text(
                                     text = "Lv.1", 
@@ -429,7 +435,7 @@ fun RoomProfile(
                                         Icon(
                                             imageVector = Icons.Default.ArrowDownward,
                                             contentDescription = null,
-                                            tint = Color.Red, // <--- Red done here
+                                            tint = Color.Red,
                                             modifier = Modifier
                                                 .size(12.dp)
                                                 .align(Alignment.BottomEnd)
@@ -482,7 +488,7 @@ fun RoomProfile(
                                             Icon(
                                                 imageVector = Icons.Default.ArrowDownward,
                                                 contentDescription = null,
-                                                tint = Color.Red, // <--- Red done here
+                                                tint = Color.Red,
                                                 modifier = Modifier
                                                     .size(12.dp)
                                                     .align(Alignment.BottomEnd)
@@ -510,7 +516,7 @@ fun RoomProfile(
                                             Icon(
                                                 imageVector = Icons.Default.Close, 
                                                 contentDescription = null,
-                                                tint = Color.Red, // <--- Red done here (Cross icon)
+                                                tint = Color.Red,
                                                 modifier = Modifier
                                                     .size(12.dp)
                                                     .align(Alignment.BottomEnd)
@@ -526,11 +532,13 @@ fun RoomProfile(
                             // Follow, Chat, Gift Row
                             Row(
                                 modifier = Modifier.fillMaxWidth().padding(top = 20.dp),
+                                horizontalArrangement = Arrangement.SpaceEvenly,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                // Follow Column
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                // Follow 
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center,
                                     modifier = Modifier
                                         .weight(1f) 
                                         .clickable {
@@ -542,9 +550,9 @@ fun RoomProfile(
                                         model = (if (isFollowing) "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261105_125204.png" else "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261105_125259.png"),
                                         contentDescription = if (isFollowing) "Followed" else "Follow",
                                         contentScale = ContentScale.Fit,
-                                        modifier = Modifier.size(50.dp) 
+                                        modifier = Modifier.size(28.dp) 
                                     )
-                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
                                     Text(
                                         text = if (isFollowing) "Followed" else "Follow", 
                                         color = Color.Black,
@@ -555,9 +563,10 @@ fun RoomProfile(
                                     )
                                 }
 
-                                // Chat Column
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                // Chat 
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center,
                                     modifier = Modifier
                                         .weight(1f) 
                                         .clickable { onMessage() }
@@ -566,9 +575,9 @@ fun RoomProfile(
                                         model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261105_125330.png",
                                         contentDescription = "Chat",
                                         contentScale = ContentScale.Fit,
-                                        modifier = Modifier.size(50.dp) 
+                                        modifier = Modifier.size(28.dp) 
                                     )
-                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
                                     Text(
                                         text = "Chat",
                                         color = Color.Black,
@@ -579,9 +588,10 @@ fun RoomProfile(
                                     )
                                 }
                                 
-                                // Send Gift Column
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                // Send Gift 
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center,
                                     modifier = Modifier
                                         .weight(1f) 
                                         .clickable { onThirdAction() }
@@ -590,9 +600,9 @@ fun RoomProfile(
                                         model = "file_00000000b9f481fa90d96c422ae8dd32.png".fullUrl(), 
                                         contentDescription = "Gift",
                                         contentScale = ContentScale.Crop,
-                                        modifier = Modifier.size(50.dp).clip(CircleShape) 
+                                        modifier = Modifier.size(28.dp).clip(CircleShape) 
                                     )
-                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
                                     Text(
                                         text = "Send Gift", 
                                         color = Color.Black,
@@ -646,14 +656,14 @@ fun RoomProfile(
                     }
                 }
             } else {
-                // Yaha pe apka new Kick Out Card Show Hoga (RoomProfile hide ho chuka hai)
+                // Kick Out Card
                 KickOutDialogCard(
                     userName = displayName.ifBlank { user.name },
                     onDismiss = { showKickDialog = false },
                     onConfirm = { time ->
                         showKickDialog = false
-                        onKickOut() // Parent ki pass ki gayi callback call karega
-                        onClose()   // Full screen Dialog close karne ke liye
+                        onKickOut()
+                        onClose()
                     }
                 )
             }
@@ -683,7 +693,6 @@ fun KickOutDialogCard(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            // Click outside the card to dismiss it
             .clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) { onDismiss() },
         contentAlignment = Alignment.Center
     ) {
@@ -692,7 +701,6 @@ fun KickOutDialogCard(
                 .fillMaxWidth(0.85f)
                 .clip(RoundedCornerShape(16.dp))
                 .background(Color.White)
-                // Consume clicks inside the card so it doesn't dismiss
                 .clickable(enabled = false) {}
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
@@ -719,7 +727,6 @@ fun KickOutDialogCard(
                 modifier = Modifier.padding(bottom = 16.dp)
             )
 
-            // Grid Layout for time selection
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
                     TimeOptionItem(text = timeOptions[0], isSelected = selectedTime == timeOptions[0], modifier = Modifier.weight(1f)) { selectedTime = timeOptions[0] }
@@ -733,7 +740,6 @@ fun KickOutDialogCard(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Action Buttons
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedButton(
                     onClick = onDismiss,
@@ -749,7 +755,7 @@ fun KickOutDialogCard(
                     onClick = { onConfirm(selectedTime) },
                     modifier = Modifier.weight(1f).height(48.dp),
                     shape = RoundedCornerShape(8.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF05133)) // Exact Reddish Orange from Screenshot
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF05133))
                 ) {
                     Text("Confirm", fontSize = 16.sp, color = Color.White)
                 }
@@ -758,7 +764,6 @@ fun KickOutDialogCard(
     }
 }
 
-// Button item design for Kickout Timer
 @Composable
 fun TimeOptionItem(text: String, isSelected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val backgroundColor = if (isSelected) Color(0xFFFDECE9) else Color(0xFFF5F5F5)
