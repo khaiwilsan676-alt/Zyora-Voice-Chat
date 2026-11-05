@@ -315,7 +315,7 @@ fun TransparentSeatVideoPlayer(
         }
     }
     val chromaView = remember(context, player) {
-        ChromaKeyVideoView(context) { surface -> player.setVideoSurface(surface) }
+        ChromaKeyVideoView(context, onVideoSurfaceReady = { surface -> player.setVideoSurface(surface) })
     }
 
     AndroidView(
