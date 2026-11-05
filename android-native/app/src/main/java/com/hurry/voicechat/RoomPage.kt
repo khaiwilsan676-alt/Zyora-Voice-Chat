@@ -1605,6 +1605,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
         val activeRoomUsers = backendRoomUsers.toList()
         if (showInviteSheet) RoomInviteSheet(
             roomUsers = activeRoomUsers,
+            currentUserId = accountId,
             roomOwnerId = roomOwner.accountId.ifBlank { roomOwner.id },
             onClose = { showInviteSheet = false },
             onInvite = { target ->
@@ -2180,11 +2181,12 @@ private fun formatMusicTime(seconds: Float): String {
 @Composable
 private fun RoomInviteSheet(
     roomUsers: List<ActiveUserNative>,
+    currentUserId: String,
     roomOwnerId: String,
     onClose: () -> Unit,
     onInvite: (ActiveUserNative) -> Unit
 ) {
-    val visibleUsers = roomUsers.filter { it.accountId.isNotBlank() }
+    val visibleUsers = roomUsers.filter { it.accountId.isNotBlank() && it.accountId != currentUserId }
         .distinctBy { it.accountId }
         .sortedWith(compareBy<ActiveUserNative> { if (it.accountId == roomOwnerId) 0 else 1 }.thenBy { it.name.lowercase() })
     Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .30f)).clickable { onClose() }, contentAlignment = Alignment.BottomCenter) {
