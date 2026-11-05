@@ -2136,6 +2136,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                             "room_seat_invite_response",
                             JSONObject().put("roomId", roomId).put("targetId", accountId)
                                 .put("inviterId", invite.optString("inviterId"))
+                                .put("inviteId", invite.optString("inviteId"))
                                 .put("seatNumber", invite.optInt("seatNumber")).put("accepted", true)
                                 .put("userName", roomDisplayName.ifBlank { "User" })
                                 .put("userImage", roomDisplayImage)
