@@ -133,3 +133,33 @@ Use these labels in future updates:
 - **Two-device verified**: realtime/voice/moderation behavior tested with two accounts/devices.
 
 Current documentation does not certify that all historical features are build-, deployment-, or device-verified. Confirm each status from actual workflow/deployment/test evidence before changing it.
+
+## 12. Security hardening (2026-11-06)
+
+### First backend hardening commit
+- Backend repository: `khaiwilsan676-alt/Zyora-Server`.
+- Updated `server.js` to replace wildcard browser CORS with an explicit HTTPS origin allowlist. The production Vercel origin remains allowed; additional origins must be configured with `ZYORA_ALLOWED_ORIGINS` (comma-separated). Native clients without an Origin header remain supported. CORS is not authentication.
+- Added/strengthened HTTP response headers: `X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options: DENY`, `X-Permitted-Cross-Domain-Policies`, `Cross-Origin-Opener-Policy`, `Cache-Control: no-store`, and production HSTS.
+- Reworked the in-process request limiter: stricter per-minute buckets for auth (20) and image upload (15), general requests (180), bounded map size, stale-entry cleanup, and `Retry-After` on 429.
+- Tightened Socket.IO transport settings: no wildcard CORS, 256 KB maximum packet size, explicit ping settings, and disabled per-message compression.
+- Backend code commit: `982f65eabf0104e2523357c44df257cccf2fc5b4`.
+- Status: **Implemented in repository**. Render deployment, browser/native compatibility, and runtime behavior are **not yet verified**.
+
+### Critical security work still required (do not mark secure/complete)
+- Current Socket.IO server has no Firebase-token connection middleware. Several socket handlers accept client-supplied IDs; identity spoofing remains a critical risk until clients send Firebase ID tokens and the server derives identity only from verified token claims.
+- Several HTTP routes trust caller-supplied `userId` / `accountId`; wallet, store, profile, follow/block, and administrative endpoints need Firebase authentication plus per-resource ownership/role authorization.
+- Owner/admin checks must use server-stored role/ownership data, never public IDs or client-provided role flags as proof.
+- Wallet/gift/coin operations require server-side balance checks, atomic MongoDB transactions/updates, idempotency keys, and anti-replay validation.
+- Rate limits currently run per process; add shared Redis-backed limits and authenticated-account quotas before treating them as production-grade.
+- Audit MongoDB indexes/unique constraints, data access rules, upload MIME/size validation, private data exposure, Socket.IO event authorization, and secret rotation.
+- Never deploy a breaking auth requirement until Web and Android clients are updated to send Firebase ID tokens and compatibility has been tested. Keep UI unchanged.
+
+### Security verification checklist
+- [ ] Render deployment succeeds and health checks pass.
+- [ ] Production web and native app can still connect after CORS/Socket.IO changes.
+- [ ] Unauthorized / expired Firebase tokens are rejected by HTTP and Socket.IO.
+- [ ] A user cannot read or mutate another user's profile, wallet, inventory, follows, messages, or room controls.
+- [ ] Non-owner cannot change room settings, mute/kick users, or administer a room.
+- [ ] Forged/replayed coin transfers and duplicate reward claims are rejected.
+- [ ] Rate limits work across multiple Render instances.
+- [ ] Two-account / two-device regression tests pass.
