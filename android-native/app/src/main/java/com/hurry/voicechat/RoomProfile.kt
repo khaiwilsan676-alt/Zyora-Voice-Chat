@@ -286,7 +286,7 @@ fun RoomProfile(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         
-                        // Row 1: Name + Gender Tag
+                        // 1st: Name
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
                             Text(
                                 text = displayName.ifBlank { "User" },
@@ -294,88 +294,11 @@ fun RoomProfile(
                                 fontWeight = FontWeight.Bold,
                                 color = Color(0xFF111827)
                             )
-                            if (isRoomOwner) {
-                                AsyncImage(
-                                    model = "IMG_20261027_235537.png".fullUrl(),
-                                    contentDescription = "Room owner",
-                                    contentScale = ContentScale.Fit,
-                                    modifier = Modifier.padding(start = 5.dp).height(16.dp).widthIn(max = 64.dp)
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Box(
-                                modifier = Modifier
-                                    .clip(CircleShape)
-                                    .background(genderColor)
-                                    .padding(horizontal = 5.dp, vertical = 2.dp)
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                                    CustomGenderIcon(isFemale = displayGender.equals("female", true) || displayGender.equals("f", true) || displayGender == "♀", modifier = Modifier.size(8.dp))
-                                    Text(displayAge.toString(), color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-                                }
-                            }
                         }
 
-                        // Row 2: Public Profile tags
-                        if (hasAnyTag) {
-                            Column(
-                                modifier = Modifier.padding(top = 6.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                if (officialHeadTag || officialTag || adminTag || serviceTag) {
-                                    Row(
-                                        horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally), 
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        if (officialHeadTag) AsyncImage(model = "file_00000000ef2c82118b2266596d0e992d.png".fullUrl(), contentDescription = "Official Head", contentScale = ContentScale.Fit, modifier = Modifier.height(31.dp).widthIn(max = 80.dp))
-                                        if (officialTag) AsyncImage(model = "IMG_20261027_102250.png".fullUrl(), contentDescription = "Official", contentScale = ContentScale.Fit, modifier = Modifier.height(22.dp).widthIn(max = 60.dp))
-                                        if (adminTag) AsyncImage(model = "IMG_20261027_114117.png".fullUrl(), contentDescription = "Admin", contentScale = ContentScale.Fit, modifier = Modifier.height(22.dp).widthIn(max = 60.dp))
-                                        if (serviceTag) AsyncImage(model = "IMG_20261027_102207.png".fullUrl(), contentDescription = "Service / CS", contentScale = ContentScale.Fit, modifier = Modifier.height(22.dp).widthIn(max = 60.dp))
-                                    }
-                                }
-                                if (hostTag || coinSellerTag) {
-                                    Row(
-                                        modifier = Modifier.padding(top = 2.dp),
-                                        horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally), 
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        if (hostTag) AsyncImage(model = "IMG_20261028_154914.png".fullUrl(), contentDescription = "Host", contentScale = ContentScale.Fit, modifier = Modifier.height(19.dp).widthIn(max = 60.dp))
-                                        if (coinSellerTag) AsyncImage(model = "IMG_20261027_105359.png".fullUrl(), contentDescription = "Coin Seller", contentScale = ContentScale.Fit, modifier = Modifier.height(22.dp).widthIn(max = 60.dp))
-                                    }
-                                }
-                            }
-                        }
-
-                        // Row 3: Level Badge
+                        // 2nd: ID | Fans
                         Row(
-                            modifier = Modifier.padding(top = 6.dp),
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
-                                contentAlignment = Alignment.CenterEnd,
-                                modifier = Modifier.height(24.dp) 
-                            ) {
-                                AsyncImage(
-                                    model = "IMG_20261028_004355.png".fullUrl(), 
-                                    contentDescription = "Level", 
-                                    modifier = Modifier.height(24.dp) 
-                                )
-                                Text(
-                                    text = "Lv.1", 
-                                    color = Color.White,
-                                    fontSize = 11.sp, 
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(end = 6.dp)
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(6.dp))
-                            AsyncImage(model = "1785486414756.png".fullUrl(), contentDescription = null, modifier = Modifier.height(24.dp))
-                        }
-
-                        // Row 4: ID | Fans | Flag
-                        Row(
-                            modifier = Modifier.padding(top = 6.dp),
+                            modifier = Modifier.padding(top = 8.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.Center
                         ) {
@@ -404,10 +327,86 @@ fun RoomProfile(
                             
                             Text("${user.followers}", color = Color.DarkGray, fontSize = 14.sp, fontWeight = FontWeight.Medium)
                             Text(" Fans", color = Color.Gray, fontSize = 14.sp, modifier = Modifier.padding(start = 4.dp))
+                        }
+
+                        // 3rd: Country flag, owner tag image, gender, Lv.1 image, Officialhead, official, Admin tag
+                        Row(
+                            modifier = Modifier.padding(top = 10.dp).horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Country Flag
+                            if (displayCountry.isNotBlank()) {
+                                Text(roomProfileCountryFlag(displayCountry), fontSize = 16.sp)
+                            }
+
+                            // Owner tag image
+                            if (isRoomOwner) {
+                                AsyncImage(
+                                    model = "IMG_20261027_235537.png".fullUrl(),
+                                    contentDescription = "Room owner",
+                                    contentScale = ContentScale.Fit,
+                                    modifier = Modifier.height(16.dp).widthIn(max = 64.dp)
+                                )
+                            }
+
+                            // Gender & Age
+                            Box(
+                                modifier = Modifier
+                                    .clip(CircleShape)
+                                    .background(genderColor)
+                                    .padding(horizontal = 5.dp, vertical = 2.dp)
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                                    CustomGenderIcon(isFemale = displayGender.equals("female", true) || displayGender.equals("f", true) || displayGender == "♀", modifier = Modifier.size(8.dp))
+                                    Text(displayAge.toString(), color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+
+                            // Lv.1 Image
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    contentAlignment = Alignment.CenterEnd,
+                                    modifier = Modifier.height(24.dp) 
+                                ) {
+                                    AsyncImage(
+                                        model = "IMG_20261028_004355.png".fullUrl(), 
+                                        contentDescription = "Level", 
+                                        modifier = Modifier.height(24.dp) 
+                                    )
+                                    Text(
+                                        text = "Lv.1", 
+                                        color = Color.White,
+                                        fontSize = 11.sp, 
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(end = 6.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(4.dp))
+                                AsyncImage(model = "1785486414756.png".fullUrl(), contentDescription = null, modifier = Modifier.height(24.dp))
+                            }
+
+                            // Officialhead
+                            if (officialHeadTag) AsyncImage(model = "file_00000000ef2c82118b2266596d0e992d.png".fullUrl(), contentDescription = "Official Head", contentScale = ContentScale.Fit, modifier = Modifier.height(31.dp).widthIn(max = 80.dp))
                             
-                            Text(" | ", color = Color.LightGray, modifier = Modifier.padding(horizontal = 4.dp))
+                            // Official Tag
+                            if (officialTag) AsyncImage(model = "IMG_20261027_102250.png".fullUrl(), contentDescription = "Official", contentScale = ContentScale.Fit, modifier = Modifier.height(22.dp).widthIn(max = 60.dp))
                             
-                            if (displayCountry.isNotBlank()) Text(roomProfileCountryFlag(displayCountry), fontSize = 16.sp)
+                            // Admin Tag
+                            if (adminTag) AsyncImage(model = "IMG_20261027_114117.png".fullUrl(), contentDescription = "Admin", contentScale = ContentScale.Fit, modifier = Modifier.height(22.dp).widthIn(max = 60.dp))
+                        }
+
+                        // 4th: Baaki other tags (Service, Host, Coin Seller) agar hain toh
+                        if (serviceTag || hostTag || coinSellerTag) {
+                            Row(
+                                modifier = Modifier.padding(top = 8.dp).horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                if (serviceTag) AsyncImage(model = "IMG_20261027_102207.png".fullUrl(), contentDescription = "Service / CS", contentScale = ContentScale.Fit, modifier = Modifier.height(22.dp).widthIn(max = 60.dp))
+                                if (hostTag) AsyncImage(model = "IMG_20261028_154914.png".fullUrl(), contentDescription = "Host", contentScale = ContentScale.Fit, modifier = Modifier.height(19.dp).widthIn(max = 60.dp))
+                                if (coinSellerTag) AsyncImage(model = "IMG_20261027_105359.png".fullUrl(), contentDescription = "Coin Seller", contentScale = ContentScale.Fit, modifier = Modifier.height(22.dp).widthIn(max = 60.dp))
+                            }
                         }
 
                         if (showLeaveSeat) {
@@ -430,7 +429,7 @@ fun RoomProfile(
                                         Icon(
                                             imageVector = Icons.Default.ArrowDownward,
                                             contentDescription = null,
-                                            tint = Color.Black,
+                                            tint = Color.Red, // <--- Red done here
                                             modifier = Modifier
                                                 .size(12.dp)
                                                 .align(Alignment.BottomEnd)
@@ -483,7 +482,7 @@ fun RoomProfile(
                                             Icon(
                                                 imageVector = Icons.Default.ArrowDownward,
                                                 contentDescription = null,
-                                                tint = Color.Black,
+                                                tint = Color.Red, // <--- Red done here
                                                 modifier = Modifier
                                                     .size(12.dp)
                                                     .align(Alignment.BottomEnd)
@@ -496,10 +495,10 @@ fun RoomProfile(
                                     
                                     Text("|", color = Color.LightGray)
 
-                                    // KICK OUT ICON ADDED HERE (Person + Cross) - Changed behavior
+                                    // KICK OUT ICON
                                     Column(
                                         horizontalAlignment = Alignment.CenterHorizontally,
-                                        modifier = Modifier.clickable { showKickDialog = true } // Yaha Sheet hide hoke Dialog Trigger hoga
+                                        modifier = Modifier.clickable { showKickDialog = true } 
                                     ) {
                                         Box(modifier = Modifier.size(26.dp)) {
                                             Icon(
@@ -509,9 +508,9 @@ fun RoomProfile(
                                                 modifier = Modifier.size(22.dp).align(Alignment.TopStart)
                                             )
                                             Icon(
-                                                imageVector = Icons.Default.Close, // Cross icon added
+                                                imageVector = Icons.Default.Close, 
                                                 contentDescription = null,
-                                                tint = Color.Black,
+                                                tint = Color.Red, // <--- Red done here (Cross icon)
                                                 modifier = Modifier
                                                     .size(12.dp)
                                                     .align(Alignment.BottomEnd)
@@ -543,7 +542,7 @@ fun RoomProfile(
                                         model = (if (isFollowing) "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261105_125204.png" else "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261105_125259.png"),
                                         contentDescription = if (isFollowing) "Followed" else "Follow",
                                         contentScale = ContentScale.Fit,
-                                        modifier = Modifier.size(44.dp) // Size increased to 44.dp
+                                        modifier = Modifier.size(44.dp) 
                                     )
                                     Spacer(modifier = Modifier.height(6.dp))
                                     Text(
@@ -567,7 +566,7 @@ fun RoomProfile(
                                         model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261105_125330.png",
                                         contentDescription = "Chat",
                                         contentScale = ContentScale.Fit,
-                                        modifier = Modifier.size(44.dp) // Size increased to 44.dp
+                                        modifier = Modifier.size(44.dp) 
                                     )
                                     Spacer(modifier = Modifier.height(6.dp))
                                     Text(
@@ -588,10 +587,10 @@ fun RoomProfile(
                                         .clickable { onThirdAction() }
                                 ) {
                                     AsyncImage(
-                                        model = "file_00000000b9f481fa90d96c422ae8dd32.png".fullUrl(), // Gift image URL updated
+                                        model = "file_00000000b9f481fa90d96c422ae8dd32.png".fullUrl(), 
                                         contentDescription = "Gift",
                                         contentScale = ContentScale.Crop,
-                                        modifier = Modifier.size(44.dp).clip(CircleShape) // Size increased to 44.dp
+                                        modifier = Modifier.size(44.dp).clip(CircleShape) 
                                     )
                                     Spacer(modifier = Modifier.height(6.dp))
                                     Text(
@@ -653,7 +652,7 @@ fun RoomProfile(
                     onDismiss = { showKickDialog = false },
                     onConfirm = { time ->
                         showKickDialog = false
-                        onKickOut() // Parent ki pass ki gayi callback call karega (yaha time ko pass karne ka logic agar chahiye toh callback mein update kar lena)
+                        onKickOut() // Parent ki pass ki gayi callback call karega
                         onClose()   // Full screen Dialog close karne ke liye
                     }
                 )
@@ -672,7 +671,6 @@ fun RoomProfile(
     }
 }
 
-// Ye naya Composable same Image UI ke style mein banaya hai
 @Composable
 fun KickOutDialogCard(
     userName: String,
