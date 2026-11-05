@@ -555,7 +555,8 @@ fun HomeScreen(
                         } else {
                             items(
                                 items = roomRows,
-                                key = { row -> row.first().id }
+                                key = { row -> row.first().id },
+                                contentType = { "room_card_row" }
                             ) { row ->
                                 Row(
                                     Modifier
@@ -872,19 +873,11 @@ fun RoomListCard(
                 contentScale = ContentScale.Crop
             )
             
-            var liveCount by remember(room.id) { mutableIntStateOf((1000..4999).random()) }
-            val barTransition = androidx.compose.animation.core.rememberInfiniteTransition(label = "room_card_equalizer")
-            val bar1 by barTransition.animateFloat(initialValue = 0.25f, targetValue = 1f, animationSpec = androidx.compose.animation.core.infiniteRepeatable(animation = androidx.compose.animation.core.tween(360, easing = androidx.compose.animation.core.LinearEasing), repeatMode = androidx.compose.animation.core.RepeatMode.Reverse), label = "room_bar_1")
-            val bar2 by barTransition.animateFloat(initialValue = 1f, targetValue = 0.2f, animationSpec = androidx.compose.animation.core.infiniteRepeatable(animation = androidx.compose.animation.core.tween(470, easing = androidx.compose.animation.core.LinearEasing), repeatMode = androidx.compose.animation.core.RepeatMode.Reverse), label = "room_bar_2")
-            val bar3 by barTransition.animateFloat(initialValue = 0.35f, targetValue = 1f, animationSpec = androidx.compose.animation.core.infiniteRepeatable(animation = androidx.compose.animation.core.tween(330, easing = androidx.compose.animation.core.LinearEasing), repeatMode = androidx.compose.animation.core.RepeatMode.Reverse), label = "room_bar_3")
+            // Keep the existing live-count/equalizer appearance without per-card
+            // timers or infinite animations that continuously recompose while scrolling.
+            val liveCount = remember(room.id) { (1000..4999).random() }
+            val barLevels = remember(room.id) { listOf(0.55f, 0.85f, 0.4f) }
 
-            LaunchedEffect(room.id) {
-                while (true) {
-                    kotlinx.coroutines.delay((500L..1200L).random())
-                    liveCount = (liveCount + (-3..5).random()).coerceAtLeast(1000)
-                }
-            }
-            
             Row(
                 modifier = Modifier.align(Alignment.BottomEnd).padding(end = 7.dp, bottom = 2.dp) 
                     .padding(horizontal = 5.dp, vertical = 3.dp),
@@ -903,7 +896,7 @@ fun RoomListCard(
                     horizontalArrangement = Arrangement.spacedBy(2.dp),
                     verticalAlignment = Alignment.Bottom
                 ) {
-                    listOf(bar1, bar2, bar3).forEach { level ->
+                    barLevels.forEach { level ->
                         Box(
                             Modifier.width(2.dp).height((3f + level * 9f).dp)
                                 .clip(RoundedCornerShape(2.dp))
