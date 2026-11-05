@@ -25,45 +25,16 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
-import androidx.media3.datasource.DefaultDataSource
-import androidx.media3.datasource.cache.CacheDataSource
-import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
-import androidx.media3.datasource.cache.SimpleCache
-import androidx.media3.database.StandaloneDatabaseProvider
-import java.io.File
 import androidx.media3.ui.PlayerView
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.net.URL
-import java.util.concurrent.ConcurrentHashMap
 
 data class EmojiSticker(val id: String, val name: String, val src: String, val videoUrl: String? = null)
 
 // Yeh ek global cache hai taaki emojis baar-baar load na ho aur fast chalein
-private val staticBitmapCache = ConcurrentHashMap<String, android.graphics.Bitmap>()
-
-private object EmojiVideoCache {
-    @Volatile private var cache: SimpleCache? = null
-
-    fun get(context: android.content.Context): SimpleCache =
-        cache ?: synchronized(this) {
-            cache ?: SimpleCache(
-                File(context.applicationContext.cacheDir, "zyora_emoji_video_cache"),
-                LeastRecentlyUsedCacheEvictor(100L * 1024L * 1024L),
-                StandaloneDatabaseProvider(context.applicationContext)
-            ).also { cache = it }
-        }
-}
-
-private fun emojiVideoMediaSourceFactory(context: android.content.Context): DefaultMediaSourceFactory {
-    val cachedDataSource = CacheDataSource.Factory()
-        .setCache(EmojiVideoCache.get(context))
-        .setUpstreamDataSourceFactory(DefaultDataSource.Factory(context))
-        .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
-    return DefaultMediaSourceFactory(context).setDataSourceFactory(cachedDataSource)
-}
+val staticBitmapCache = mutableMapOf<String, android.graphics.Bitmap>()
 
 // Yeh Custom Image loader hai jo 100% GIF ko play hone se rokega
 @Composable
@@ -111,7 +82,7 @@ fun EmojiPicker(onClose: () -> Unit = {}, onSelectEmoji: (EmojiSticker) -> Unit 
         EmojiSticker("welcome","Welcome","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261028_183916.png", "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/VID_20261028_105159_978_bsl.mp4"),
         EmojiSticker("thanks","Thanks","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261028_184100.png", "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/VID_20261028_105329_293_bsl.mp4"),
         EmojiSticker("gift_me","Gift me","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261028_184037.png", "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/VID_20261028_105304_745_bsl.mp4"),
-        EmojiSticker("kiss_r","Kiss-R","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261028_184130.png", "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/VID_20261105_081532_302_bsl.mp4"),
+        EmojiSticker("kiss_r","Kiss-R","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261028_184130.png", "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/VID_20261028_104846_084_bsl.mp4"),
         EmojiSticker("kiss_l","Kiss-L","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261028_184200.png", "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/VID_20261028_104823_659_bsl.mp4"),
         EmojiSticker("punch_r","Punch-R","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261028_184240.png", "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/VID_20261028_105414_962_bsl.mp4"),
         EmojiSticker("punch_l","Punch-L","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261028_184300.png", "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/VID_20261028_105348_731_bsl.mp4"),
@@ -196,22 +167,13 @@ fun EmojiPicker(onClose: () -> Unit = {}, onSelectEmoji: (EmojiSticker) -> Unit 
                                 },
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                if (!s.videoUrl.isNullOrBlank()) {
-                                    EmojiVideoPreview(
-                                        videoUrl = s.videoUrl,
-                                        fallbackImageUrl = s.src,
-                                        modifier = Modifier.size(imageSize).offset(y = imageOffsetY),
-                                        contentDescription = s.name
-                                    )
-                                } else {
-                                    CustomStaticImage(
-                                        url = s.src,
-                                        contentDescription = s.name,
-                                        modifier = Modifier
-                                            .size(imageSize)
-                                            .offset(y = imageOffsetY)
-                                    )
-                                }
+                                CustomStaticImage(
+                                    url = s.src,
+                                    contentDescription = s.name,
+                                    modifier = Modifier
+                                        .size(imageSize)
+                                        .offset(y = imageOffsetY) // Image ki position wahi ki wahi rahegi
+                                )
                                 Text(
                                     s.name.trim(), 
                                     fontSize = 11.sp, 
@@ -228,53 +190,6 @@ fun EmojiPicker(onClose: () -> Unit = {}, onSelectEmoji: (EmojiSticker) -> Unit 
                     }
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun EmojiVideoPreview(videoUrl: String, fallbackImageUrl: String, modifier: Modifier = Modifier, contentDescription: String) {
-    val context = LocalContext.current
-    var videoFrameReady by remember(videoUrl) { mutableStateOf(false) }
-    val player = remember(context, videoUrl) {
-        ExoPlayer.Builder(context)
-            .setMediaSourceFactory(emojiVideoMediaSourceFactory(context))
-            .build().apply {
-                setMediaItem(MediaItem.fromUri(videoUrl))
-                repeatMode = Player.REPEAT_MODE_ONE
-                playWhenReady = true
-                prepare()
-            }
-    }
-    val videoView = remember(context, player) {
-        ChromaKeyVideoView(
-            context,
-            { surface -> player.setVideoSurface(surface) },
-            { videoFrameReady = true }
-        )
-    }
-
-    Box(modifier, contentAlignment = Alignment.Center) {
-        // The still image stays visible until the decoder supplies the first real video frame.
-        if (!videoFrameReady) {
-            CustomStaticImage(
-                url = fallbackImageUrl,
-                contentDescription = contentDescription,
-                modifier = Modifier.fillMaxSize()
-            )
-        }
-        AndroidView(modifier = Modifier.fillMaxSize(), factory = { videoView })
-    }
-
-    DisposableEffect(player, videoView) {
-        videoView.onResume()
-        onDispose {
-            player.clearVideoSurface()
-            player.stop()
-            player.clearMediaItems()
-            player.release()
-            videoView.onPause()
-            videoView.release()
         }
     }
 }
@@ -315,7 +230,7 @@ fun TransparentSeatVideoPlayer(
         }
     }
     val chromaView = remember(context, player) {
-        ChromaKeyVideoView(context, onVideoSurfaceReady = { surface -> player.setVideoSurface(surface) })
+        ChromaKeyVideoView(context) { surface -> player.setVideoSurface(surface) }
     }
 
     AndroidView(
