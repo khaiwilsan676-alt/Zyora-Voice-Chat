@@ -573,12 +573,28 @@ private fun relayDecodedMusic(
                     val sourceFrames = info.size / (channels * 2)
                     val step = sampleRate.coerceAtLeast(1).toDouble() / 16000.0
                     while (resamplePosition < sourceFrames && running.get()) {
-                        val sourceFrame = resamplePosition.toInt().coerceIn(0, sourceFrames - 1)
-                        var mixed = 0
-                        for (channel in 0 until channels) {
-                            mixed += output.getShort(info.offset + sourceFrame * channels * 2 + channel * 2).toInt() / channels
+                        // Area-average the source interval for each 16 kHz output sample.
+                        // This acts as a simple anti-alias low-pass filter when reducing
+                        // 44.1/48 kHz music, avoiding the harsh, crackly sound caused by
+                        // selecting a single source frame (nearest-neighbour resampling).
+                        val intervalEnd = minOf(resamplePosition + step, sourceFrames.toDouble())
+                        var cursor = resamplePosition
+                        var weightedSum = 0.0
+                        var totalWeight = 0.0
+                        while (cursor < intervalEnd) {
+                            val sourceFrame = cursor.toInt().coerceIn(0, sourceFrames - 1)
+                            val nextBoundary = minOf(sourceFrame + 1.0, intervalEnd)
+                            val weight = nextBoundary - cursor
+                            var mixed = 0
+                            for (channel in 0 until channels) {
+                                mixed += output.getShort(info.offset + sourceFrame * channels * 2 + channel * 2).toInt() / channels
+                            }
+                            weightedSum += mixed * weight
+                            totalWeight += weight
+                            cursor = nextBoundary
                         }
-                        val sample = mixed.coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort().toInt()
+                        val sample = (if (totalWeight > 0.0) weightedSum / totalWeight else 0.0)
+                            .toInt().coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt())
                         packet[packetSize++] = (sample and 0xFF).toByte()
                         packet[packetSize++] = ((sample shr 8) and 0xFF).toByte()
                         resamplePosition += step
