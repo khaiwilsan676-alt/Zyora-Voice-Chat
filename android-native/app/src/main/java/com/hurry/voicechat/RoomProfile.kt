@@ -135,6 +135,7 @@ fun RoomProfile(
     user: RoomUser,
     isCurrentUser: Boolean = false,
     isRoomOwner: Boolean = false,
+    canModerate: Boolean = false,
     onClose: () -> Unit,
     onCopyId: () -> Unit = {},
     onLeaveSeat: () -> Unit = {},
@@ -145,7 +146,7 @@ fun RoomProfile(
     onOpenPublicProfile: (RoomUser) -> Unit = {},
     onMute: () -> Unit = {},
     onLock: () -> Unit = {},
-    onKickOut: () -> Unit = {},
+    onKickOut: (String) -> Unit = {},
     initialReportOpen: Boolean = false
 ) {
     val context = LocalContext.current
@@ -242,7 +243,7 @@ fun RoomProfile(
     }
 
     val showLeaveSeat = isCurrentUser && user.isInSeat
-    val showModerationRow = isRoomOwner && !isCurrentUser
+    val showModerationRow = canModerate && !isCurrentUser
     val showActions = !isCurrentUser
 
     var isFollowing by remember(user.uid, user.id, user.accountId) { mutableStateOf(user.isFollowing) }
@@ -456,50 +457,55 @@ fun RoomProfile(
                                     horizontalArrangement = Arrangement.SpaceEvenly,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    // MUTE ICON 
-                                    Column(
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        modifier = Modifier.clickable { onMute() }
-                                    ) {
-                                        Icon(
-                                            imageVector = if (user.isMuted) Icons.Default.Mic else Icons.Default.MicOff,
-                                            contentDescription = "Mute Toggle",
-                                            tint = Color.Black,
-                                            modifier = Modifier.size(24.dp)
-                                        )
-                                        Spacer(modifier = Modifier.height(2.dp))
-                                        Text(if (user.isMuted) "Unmute" else "Mute", color = Color.Black, fontSize = 12.sp)
-                                    }
-                                    
-                                    Text("|", color = Color.LightGray)
-                                    
-                                    // LEAVE ICON 
-                                    Column(
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        modifier = Modifier.clickable { onLeaveSeat() }
-                                    ) {
-                                        Box(modifier = Modifier.size(26.dp)) {
+                                    if (user.isInSeat) {
+                                        // MUTE ICON 
+                                        Column(
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            modifier = Modifier.clickable { onMute() }
+                                        ) {
                                             Icon(
-                                                imageVector = Icons.Default.Person, 
-                                                contentDescription = "Leave",
+                                                imageVector = if (user.isMuted) Icons.Default.Mic else Icons.Default.MicOff,
+                                                contentDescription = "Mute Toggle",
                                                 tint = Color.Black,
-                                                modifier = Modifier.size(22.dp).align(Alignment.TopStart)
+                                                modifier = Modifier.size(24.dp)
                                             )
-                                            Icon(
-                                                imageVector = Icons.Default.ArrowDownward,
-                                                contentDescription = null,
-                                                tint = Color.Red,
-                                                modifier = Modifier
-                                                    .size(12.dp)
-                                                    .align(Alignment.BottomEnd)
-                                                    .background(Color.White, CircleShape) 
-                                            )
+                                            Spacer(modifier = Modifier.height(2.dp))
+                                            Text(if (user.isMuted) "Unmute" else "Mute", color = Color.Black, fontSize = 12.sp)
                                         }
-                                        Spacer(modifier = Modifier.height(2.dp))
-                                        Text("Leave", color = Color.Black, fontSize = 12.sp)
+                                        
+                                        Text("|", color = Color.LightGray)
+                                        
+                                        // LEAVE ICON 
+                                        Column(
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            modifier = Modifier.clickable { onLeaveSeat() }
+                                        ) {
+                                            Box(modifier = Modifier.size(26.dp)) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Person, 
+                                                    contentDescription = "Leave",
+                                                    tint = Color.Black,
+                                                    modifier = Modifier.size(22.dp).align(Alignment.TopStart)
+                                                )
+                                                Icon(
+                                                    imageVector = Icons.Default.ArrowDownward,
+                                                    contentDescription = null,
+                                                    tint = Color.Red,
+                                                    modifier = Modifier
+                                                        .size(12.dp)
+                                                        .align(Alignment.BottomEnd)
+                                                        .background(Color.White, CircleShape) 
+                                                )
+                                            }
+                                            Spacer(modifier = Modifier.height(2.dp))
+                                            Text("Leave", color = Color.Black, fontSize = 12.sp)
+                                        }
+                                        
+                                        Text("|", color = Color.LightGray)
+    
+    
+                                        Text("|", color = Color.LightGray)
                                     }
-                                    
-                                    Text("|", color = Color.LightGray)
 
                                     // KICK OUT ICON
                                     Column(
@@ -662,7 +668,7 @@ fun RoomProfile(
                     onDismiss = { showKickDialog = false },
                     onConfirm = { time ->
                         showKickDialog = false
-                        onKickOut()
+                        onKickOut(time)
                         onClose()
                     }
                 )
