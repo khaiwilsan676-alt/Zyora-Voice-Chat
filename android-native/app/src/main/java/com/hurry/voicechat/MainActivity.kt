@@ -594,7 +594,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                                 "Customer Service" -> HurrySupport(onBack = { openedMePage = null })
                                 "Help & Feedback" -> HelpFeedbackPage(onBack = { openedMePage = null })
                                 "Friends", "Fans", "Following", "Visitors" -> FollowPage(openedMePage!!, onBack = { openedMePage = null })
-                                else -> MeNativeSubPage(openedMePage!!, onBack = { openedMePage = null })
+                                else -> FollowPage(openedMePage!!, onBack = { openedMePage = null })
                             }
                         }
                     }
