@@ -720,6 +720,15 @@ fun RoomPage(
     var selectedSeat by remember{mutableIntStateOf(0)}
     var showInviteSheet by remember(roomId) { mutableStateOf(false) }
     var incomingSeatInvite by remember(roomId) { mutableStateOf<JSONObject?>(null) }
+    LaunchedEffect(incomingSeatInvite?.optString("inviteId")) {
+        val activeInviteId = incomingSeatInvite?.optString("inviteId").orEmpty()
+        if (activeInviteId.isNotBlank()) {
+            kotlinx.coroutines.delay(60_000)
+            if (incomingSeatInvite?.optString("inviteId") == activeInviteId) {
+                incomingSeatInvite = null
+            }
+        }
+    }
 
     val messages=remember{mutableStateListOf<NativeRoomMessage>()}
     val entryToasts=remember{mutableStateListOf<NativeEntryToast>()}
