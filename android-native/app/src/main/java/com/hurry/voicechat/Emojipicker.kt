@@ -25,6 +25,13 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.datasource.DefaultDataSource
+import androidx.media3.datasource.cache.CacheDataSource
+import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
+import androidx.media3.datasource.cache.SimpleCache
+import androidx.media3.database.StandaloneDatabaseProvider
+import java.io.File
 import androidx.media3.ui.PlayerView
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.Dispatchers
@@ -35,6 +42,27 @@ data class EmojiSticker(val id: String, val name: String, val src: String, val v
 
 // Yeh ek global cache hai taaki emojis baar-baar load na ho aur fast chalein
 val staticBitmapCache = mutableMapOf<String, android.graphics.Bitmap>()
+
+private object EmojiVideoCache {
+    @Volatile private var cache: SimpleCache? = null
+
+    fun get(context: android.content.Context): SimpleCache =
+        cache ?: synchronized(this) {
+            cache ?: SimpleCache(
+                File(context.applicationContext.cacheDir, "zyora_emoji_video_cache"),
+                LeastRecentlyUsedCacheEvictor(100L * 1024L * 1024L),
+                StandaloneDatabaseProvider(context.applicationContext)
+            ).also { cache = it }
+        }
+}
+
+private fun emojiVideoMediaSourceFactory(context: android.content.Context): DefaultMediaSourceFactory {
+    val cachedDataSource = CacheDataSource.Factory()
+        .setCache(EmojiVideoCache.get(context))
+        .setUpstreamDataSourceFactory(DefaultDataSource.Factory(context))
+        .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
+    return DefaultMediaSourceFactory(context).setDataSourceFactory(cachedDataSource)
+}
 
 // Yeh Custom Image loader hai jo 100% GIF ko play hone se rokega
 @Composable
@@ -82,7 +110,7 @@ fun EmojiPicker(onClose: () -> Unit = {}, onSelectEmoji: (EmojiSticker) -> Unit 
         EmojiSticker("welcome","Welcome","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261028_183916.png", "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/VID_20261028_105159_978_bsl.mp4"),
         EmojiSticker("thanks","Thanks","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261028_184100.png", "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/VID_20261028_105329_293_bsl.mp4"),
         EmojiSticker("gift_me","Gift me","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261028_184037.png", "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/VID_20261028_105304_745_bsl.mp4"),
-        EmojiSticker("kiss_r","Kiss-R","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261028_184130.png", "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/VID_20261028_104846_084_bsl.mp4"),
+        EmojiSticker("kiss_r","Kiss-R","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261028_184130.png", "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/VID_20261105_081532_302_bsl.mp4"),
         EmojiSticker("kiss_l","Kiss-L","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261028_184200.png", "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/VID_20261028_104823_659_bsl.mp4"),
         EmojiSticker("punch_r","Punch-R","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261028_184240.png", "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/VID_20261028_105414_962_bsl.mp4"),
         EmojiSticker("punch_l","Punch-L","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261028_184300.png", "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/VID_20261028_105348_731_bsl.mp4"),
@@ -167,13 +195,21 @@ fun EmojiPicker(onClose: () -> Unit = {}, onSelectEmoji: (EmojiSticker) -> Unit 
                                 },
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                CustomStaticImage(
-                                    url = s.src,
-                                    contentDescription = s.name,
-                                    modifier = Modifier
-                                        .size(imageSize)
-                                        .offset(y = imageOffsetY) // Image ki position wahi ki wahi rahegi
-                                )
+                                if (s.id == "kiss_r" && !s.videoUrl.isNullOrBlank()) {
+                                    EmojiVideoPreview(
+                                        videoUrl = s.videoUrl,
+                                        fallbackImageUrl = s.src,
+                                        modifier = Modifier.size(imageSize).offset(y = imageOffsetY)
+                                    )
+                                } else {
+                                    CustomStaticImage(
+                                        url = s.src,
+                                        contentDescription = s.name,
+                                        modifier = Modifier
+                                            .size(imageSize)
+                                            .offset(y = imageOffsetY)
+                                    )
+                                }
                                 Text(
                                     s.name.trim(), 
                                     fontSize = 11.sp, 
