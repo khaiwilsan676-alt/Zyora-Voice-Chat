@@ -2201,6 +2201,19 @@ private fun RoomInviteSheet(
     onClose: () -> Unit,
     onInvite: (ActiveUserNative) -> Unit
 ) {
+    val context = LocalContext.current
+    var countryByUser by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
+    LaunchedEffect(roomUsers) {
+        countryByUser = withContext(Dispatchers.IO) {
+            roomUsers.mapNotNull { user ->
+                if (user.accountId.isBlank()) return@mapNotNull null
+                val country = runCatching {
+                    loadRoomProfileCountry(context, user.accountId, user.name, user.image, user.country)
+                }.getOrDefault("")
+                user.accountId to country
+            }.toMap()
+        }
+    }
     val visibleUsers = roomUsers.filter { it.accountId.isNotBlank() && it.accountId != currentUserId }
         .distinctBy { it.accountId }
         .sortedWith(compareBy<ActiveUserNative> { if (it.accountId == roomOwnerId) 0 else 1 }.thenBy { it.name.lowercase() })
@@ -2237,7 +2250,7 @@ private fun RoomInviteSheet(
                             }
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Box(Modifier.width(18.dp).height(18.dp), contentAlignment = Alignment.Center) {
-                                    val flag = roomProfileCountryFlag(user.country)
+                                    val flag = roomProfileCountryFlag(countryByUser[user.accountId].orEmpty())
                                     if (flag.isNotBlank()) Text(flag, fontSize = 14.sp)
                                 }
                                 Box(Modifier.height(16.dp).width(36.dp), contentAlignment = Alignment.CenterEnd) {
