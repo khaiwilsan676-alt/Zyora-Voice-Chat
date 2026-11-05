@@ -1158,6 +1158,40 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                     Spacer(Modifier.height(0.2.dp))
                     Row(modifier = Modifier.padding(start = 4.dp).height(26.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {}
                     
+                    // Seat tap policy: only owner/admin opens the seat action sheet; regular users take an available seat directly.
+                    val canManageRoomSeats = accountId.isNotBlank() && (
+                        accountId in setOf(roomOwner.accountId, roomOwner.id, roomOwner.uid, roomId) ||
+                        roomAdminIds.any { it.trim() == accountId.trim() }
+                    )
+                    val handleSeatTap: (NativeRoomSeat) -> Unit = { tappedSeat ->
+                        selectedSeat = tappedSeat.number
+                        if (tappedSeat.occupied) {
+                            showSeatSheet = false
+                        } else if (canManageRoomSeats) {
+                            showSeatSheet = true
+                        } else if (!tappedSeat.locked && accountId.isNotBlank() && accountId != "guest") {
+                            val displayName = roomDisplayName.ifBlank { "User" }
+                            val displayImage = roomDisplayImage.ifBlank { "https://zyora-server.onrender.com/default-avatar.png" }
+                            val user = JSONObject().put("name", displayName).put("image", displayImage).put("accountId", accountId)
+                            val targetIndex = seats.indexOfFirst { it.number == tappedSeat.number }
+                            if (targetIndex >= 0 && !seats[targetIndex].occupied && !seats[targetIndex].locked) {
+                                seats[targetIndex] = seats[targetIndex].copy(
+                                    occupied = true, userName = displayName, userImage = displayImage,
+                                    accountId = accountId, muted = false
+                                )
+                                roomSocketRef.value?.emit(
+                                    "room_seat_action",
+                                    JSONObject().put("roomId", roomId).put("userId", accountId)
+                                        .put("action", "take").put("seatNumber", tappedSeat.number).put("user", user)
+                                )
+                            }
+                            showSeatSheet = false
+                            selectedSeat = 0
+                        } else {
+                            showSeatSheet = false
+                            selectedSeat = 0
+                        }
+                    }
                     // SEAT LAYOUT WITH REDUCED TOP PADDING TO SHIFT UP (5% ouper shift kiya gaya hai)
                     val topPadding = if (roomMicMode == 5) 12.dp else 20.dp
                     Column(Modifier.fillMaxWidth().padding(horizontal=10.dp).padding(top=topPadding, bottom=8.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
@@ -1165,10 +1199,10 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                         
                         if (roomMicMode == 5) {
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-                                seats.take(1).forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, isSpeaking = seat.speaking || (seat.accountId == accountId && localVoiceSpeaking), seatSize = micSize) { selectedSeat = seat.number; showSeatSheet = !seat.occupied } }
+                                seats.take(1).forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, isSpeaking = seat.speaking || (seat.accountId == accountId && localVoiceSpeaking), seatSize = micSize) { handleSeatTap(seat) } }
                             }
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                seats.drop(1).take(4).forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, isSpeaking = seat.speaking || (seat.accountId == accountId && localVoiceSpeaking), seatSize = micSize) { selectedSeat = seat.number; showSeatSheet = !seat.occupied } }
+                                seats.drop(1).take(4).forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, isSpeaking = seat.speaking || (seat.accountId == accountId && localVoiceSpeaking), seatSize = micSize) { handleSeatTap(seat) } }
                             }
                         } else {
                             val rowSizes = when (roomMicMode) {
@@ -1184,10 +1218,10 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = arrangement) {
                                     if (roomMicMode == 10 && rowSize == 2) {
                                         Spacer(modifier = Modifier.width(micSize)) 
-                                        rowSeats.forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, isSpeaking = seat.speaking || (seat.accountId == accountId && localVoiceSpeaking), seatSize = micSize) { selectedSeat = seat.number; showSeatSheet = !seat.occupied } }
+                                        rowSeats.forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, isSpeaking = seat.speaking || (seat.accountId == accountId && localVoiceSpeaking), seatSize = micSize) { handleSeatTap(seat) } }
                                         Spacer(modifier = Modifier.width(micSize))
                                     } else {
-                                        rowSeats.forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, isSpeaking = seat.speaking || (seat.accountId == accountId && localVoiceSpeaking), seatSize = micSize) { selectedSeat = seat.number; showSeatSheet = !seat.occupied } }
+                                        rowSeats.forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, isSpeaking = seat.speaking || (seat.accountId == accountId && localVoiceSpeaking), seatSize = micSize) { handleSeatTap(seat) } }
                                     }
                                 }
                             }
@@ -1669,10 +1703,13 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
         if(showSeatSheet && selectedSeat>0) {
             val seatIndex = seats.indexOfFirst { it.number == selectedSeat }
             val seat = seats.getOrNull(seatIndex)
-            val isRoomOwner = accountId == roomOwner.accountId || accountId == roomOwner.id || accountId == roomId
-            if(seat!=null) SeatActionSheet(
+            val isRoomOwnerOrAdmin = accountId.isNotBlank() && (
+                accountId in setOf(roomOwner.accountId, roomOwner.id, roomOwner.uid, roomId) ||
+                    roomAdminIds.any { it.trim() == accountId.trim() }
+            )
+            if(seat!=null && isRoomOwnerOrAdmin) SeatActionSheet(
                 seat=seat,
-                isOwner=isRoomOwner,
+                isOwner=isRoomOwnerOrAdmin,
                 isMySeat=seat.occupied && seat.accountId==accountId,
                 onDismiss={showSeatSheet=false;selectedSeat=0},
                 onTake={
@@ -1695,7 +1732,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                     showSeatSheet=false;selectedSeat=0
                 },
                 onLock={
-                    if(isRoomOwner) {
+                    if(isRoomOwnerOrAdmin) {
                         val nextLocked=!seat.locked
                         if(seatIndex>=0) seats[seatIndex]=seat.copy(locked=nextLocked)
                         roomSocketRef.value?.emit("room_seat_action",JSONObject().put("roomId",roomId).put("userId",accountId).put("action","lock").put("seatNumber",seat.number).put("isLocked",nextLocked))
