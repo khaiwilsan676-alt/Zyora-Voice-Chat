@@ -1703,13 +1703,13 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
         if(showSeatSheet && selectedSeat>0) {
             val seatIndex = seats.indexOfFirst { it.number == selectedSeat }
             val seat = seats.getOrNull(seatIndex)
-            val isRoomOwnerOrAdmin = accountId.isNotBlank() && (
-                accountId in setOf(roomOwner.accountId, roomOwner.id, roomOwner.uid, roomId) ||
-                    roomAdminIds.any { it.trim() == accountId.trim() }
-            )
-            if(seat!=null && isRoomOwnerOrAdmin) SeatActionSheet(
+            val isRoomOwner = accountId.isNotBlank() &&
+                accountId in setOf(roomOwner.accountId, roomOwner.id, roomOwner.uid, roomId)
+            val isRoomAdmin = accountId.isNotBlank() &&
+                roomAdminIds.any { it.trim() == accountId.trim() }
+            if(seat!=null && (isRoomOwner || isRoomAdmin)) SeatActionSheet(
                 seat=seat,
-                isOwner=isRoomOwnerOrAdmin,
+                isOwner=isRoomOwner,
                 isMySeat=seat.occupied && seat.accountId==accountId,
                 onDismiss={showSeatSheet=false;selectedSeat=0},
                 onTake={
@@ -1732,7 +1732,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                     showSeatSheet=false;selectedSeat=0
                 },
                 onLock={
-                    if(isRoomOwnerOrAdmin) {
+                    if(isRoomOwner) {
                         val nextLocked=!seat.locked
                         if(seatIndex>=0) seats[seatIndex]=seat.copy(locked=nextLocked)
                         roomSocketRef.value?.emit("room_seat_action",JSONObject().put("roomId",roomId).put("userId",accountId).put("action","lock").put("seatNumber",seat.number).put("isLocked",nextLocked))
