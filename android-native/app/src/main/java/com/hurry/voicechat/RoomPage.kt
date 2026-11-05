@@ -2338,7 +2338,7 @@ private fun RoomSeatInviteDialog(
 ) {
     val raw = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/"
     Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .68f)), contentAlignment = Alignment.Center) {
-        Box(Modifier.fillMaxWidth(.84f).height(420.dp), contentAlignment = Alignment.Center) {
+        Box(Modifier.fillMaxWidth(.84f).height(500.dp), contentAlignment = Alignment.Center) {
             AsyncImage(
                 model = raw + "IMG_20261106_001208.png",
                 contentDescription = "Mic invitation",
