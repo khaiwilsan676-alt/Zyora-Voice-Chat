@@ -1617,53 +1617,6 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
             }
         )
         
-        val activeRoomUsers = backendRoomUsers.toList()
-        if (showInviteSheet) RoomInviteSheet(
-            roomUsers = activeRoomUsers,
-            currentUserId = accountId,
-            roomOwnerId = roomOwner.accountId.ifBlank { roomOwner.id },
-            onClose = { showInviteSheet = false },
-            onInvite = { target ->
-                roomSocketRef.value?.takeIf { it.connected() }?.emit(
-                    "room_seat_invite_send",
-                    JSONObject()
-                        .put("roomId", roomId)
-                        .put("inviterId", accountId)
-                        .put("inviterName", roomDisplayName.ifBlank { "User" })
-                        .put("inviterImage", roomDisplayImage)
-                        .put("targetId", target.accountId)
-                        .put("seatNumber", selectedSeat)
-                )
-                showInviteSheet = false
-                selectedSeat = 0
-            }
-        )
-        incomingSeatInvite?.let { invite ->
-            RoomSeatInviteDialog(
-                inviterName = invite.optString("inviterName", "User"),
-                inviterImage = invite.optString("inviterImage", ""),
-                onRefuse = {
-                    roomSocketRef.value?.emit(
-                        "room_seat_invite_response",
-                        JSONObject().put("roomId", roomId).put("targetId", accountId)
-                            .put("inviterId", invite.optString("inviterId"))
-                            .put("seatNumber", invite.optInt("seatNumber")).put("accepted", false)
-                    )
-                    incomingSeatInvite = null
-                },
-                onAccept = {
-                    roomSocketRef.value?.emit(
-                        "room_seat_invite_response",
-                        JSONObject().put("roomId", roomId).put("targetId", accountId)
-                            .put("inviterId", invite.optString("inviterId"))
-                            .put("seatNumber", invite.optInt("seatNumber")).put("accepted", true)
-                            .put("userName", roomDisplayName.ifBlank { "User" })
-                            .put("userImage", roomDisplayImage)
-                    )
-                    incomingSeatInvite = null
-                }
-            )
-        }
         val roomFollowers = followedRoomUsers.filter { it.accountId != roomOwner.accountId && it.accountId != roomOwner.id }
         if(showStore) StorePage(onBack={showStore=false}, initialView=storeInitialView, userId=accountId.ifBlank{roomOwner.accountId.ifBlank{roomOwner.id}})
         if(showInfo) RoomInfo(isOpen=true,onClose={showInfo=false},isRoomOwner=accountId==roomOwner.accountId.ifBlank{roomOwner.id},roomOwner=RoomInfoOwner(id=roomOwner.id,uid=roomOwner.uid,accountId=roomOwner.accountId.ifBlank{roomOwner.id},name=roomOwner.name,image=roomOwner.image),roomData=RoomInfoData(roomName,roomImage,announcement,roomId),roomFollowers=roomFollowers,roomAdmins=roomAdminUsers,onOpenProfile={ follower -> selectedChatProfile=NativeRoomMessage("member-profile-" + follower.accountId,"",follower.name,follower.image,follower.accountId);showInfo=false },onCopyId={ id -> clipboard.setText(AnnotatedString(id));copiedId=id },copied=copiedId==roomId)
@@ -2094,6 +2047,53 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                     }
                 }
             }
+        }
+        val activeRoomUsers = backendRoomUsers.toList()
+        if (showInviteSheet) RoomInviteSheet(
+            roomUsers = activeRoomUsers,
+            currentUserId = accountId,
+            roomOwnerId = roomOwner.accountId.ifBlank { roomOwner.id },
+            onClose = { showInviteSheet = false },
+            onInvite = { target ->
+                roomSocketRef.value?.takeIf { it.connected() }?.emit(
+                    "room_seat_invite_send",
+                    JSONObject()
+                        .put("roomId", roomId)
+                        .put("inviterId", accountId)
+                        .put("inviterName", roomDisplayName.ifBlank { "User" })
+                        .put("inviterImage", roomDisplayImage)
+                        .put("targetId", target.accountId)
+                        .put("seatNumber", selectedSeat)
+                )
+                showInviteSheet = false
+                selectedSeat = 0
+            }
+        )
+        incomingSeatInvite?.let { invite ->
+            RoomSeatInviteDialog(
+                inviterName = invite.optString("inviterName", "User"),
+                inviterImage = invite.optString("inviterImage", ""),
+                onRefuse = {
+                    roomSocketRef.value?.emit(
+                        "room_seat_invite_response",
+                        JSONObject().put("roomId", roomId).put("targetId", accountId)
+                            .put("inviterId", invite.optString("inviterId"))
+                            .put("seatNumber", invite.optInt("seatNumber")).put("accepted", false)
+                    )
+                    incomingSeatInvite = null
+                },
+                onAccept = {
+                    roomSocketRef.value?.emit(
+                        "room_seat_invite_response",
+                        JSONObject().put("roomId", roomId).put("targetId", accountId)
+                            .put("inviterId", invite.optString("inviterId"))
+                            .put("seatNumber", invite.optInt("seatNumber")).put("accepted", true)
+                            .put("userName", roomDisplayName.ifBlank { "User" })
+                            .put("userImage", roomDisplayImage)
+                    )
+                    incomingSeatInvite = null
+                }
+            )
         }
     }
 }
