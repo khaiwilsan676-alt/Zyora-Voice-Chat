@@ -31,6 +31,9 @@ import java.net.URL
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import io.socket.client.IO
+import io.socket.client.Socket
+import io.socket.emitter.Emitter
 
 private const val VISITOR_API = "https://zyora-server.onrender.com"
 private data class VisitorData(val id:String,val name:String,val gender:String,val avatar:String,val lastViewedAt:Long,val viewCount:Int)
@@ -76,6 +79,17 @@ private fun visitorDate(t:Long)=if(t<=0L) "—" else SimpleDateFormat("dd/MM/yyy
         loading=rows.isEmpty()
         rows=loadProfileVisitors(context,myId,type)
         loading=false
+    }
+    DisposableEffect(myId,tab) {
+        if(myId.isBlank()) return@DisposableEffect onDispose { }
+        val live=IO.socket(VISITOR_API,IO.Options().apply { transports=arrayOf("websocket"); reconnection=true })
+        val listener=Emitter.Listener {
+            scope.launch { rows=loadProfileVisitors(context,myId,if(tab==0) "received" else "sent") }
+        }
+        live.on("profile_visitor_updated",listener)
+        live.on(Socket.EVENT_CONNECT) { live.emit("register",JSONObject().put("userId",myId).put("accountId",myId)) }
+        live.connect()
+        onDispose { live.off("profile_visitor_updated",listener); live.disconnect(); live.close() }
     }
     Column(Modifier.fillMaxSize().background(Color(0xFF101116))) {
         Row(Modifier.fillMaxWidth().height(56.dp).padding(horizontal=16.dp),verticalAlignment=Alignment.CenterVertically) {
