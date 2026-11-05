@@ -230,6 +230,44 @@ fun EmojiPicker(onClose: () -> Unit = {}, onSelectEmoji: (EmojiSticker) -> Unit 
     }
 }
 
+@Composable
+private fun EmojiVideoPreview(videoUrl: String, fallbackImageUrl: String, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val player = remember(context, videoUrl) {
+        ExoPlayer.Builder(context)
+            .setMediaSourceFactory(emojiVideoMediaSourceFactory(context))
+            .build().apply {
+                setMediaItem(MediaItem.fromUri(videoUrl))
+                repeatMode = Player.REPEAT_MODE_ONE
+                playWhenReady = true
+                prepare()
+            }
+    }
+    val videoView = remember(context, player) {
+        ChromaKeyVideoView(context, { surface -> player.setVideoSurface(surface) })
+    }
+
+    Box(modifier, contentAlignment = Alignment.Center) {
+        // Keep the existing Kiss-R artwork visible while the MP4 buffers.
+        CustomStaticImage(
+            url = fallbackImageUrl,
+            contentDescription = "Kiss-R",
+            modifier = Modifier.fillMaxSize()
+        )
+        AndroidView(modifier = Modifier.fillMaxSize(), factory = { videoView })
+    }
+
+    DisposableEffect(player, videoView) {
+        onDispose {
+            player.clearVideoSurface()
+            player.stop()
+            player.clearMediaItems()
+            player.release()
+            videoView.release()
+        }
+    }
+}
+
 @Composable 
 private fun Tab(label: String, selected: Boolean, onClick: () -> Unit) {
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable(onClick = onClick)) {
