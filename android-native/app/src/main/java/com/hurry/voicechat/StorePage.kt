@@ -175,13 +175,22 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
     var purchaseBusy by remember { mutableStateOf(false) }
     var purchaseMessage by remember { mutableStateOf<String?>(null) }
     val storeScope = rememberCoroutineScope()
-    var clockNow by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    LaunchedEffect(Unit) { while (true) { delay(1000); clockNow = System.currentTimeMillis() } }
-    LaunchedEffect(clockNow) {
-        expiryById.filterValues { it <= clockNow }.keys.toList().forEach { expiredId ->
-            ownedIds.remove(expiredId)
-            equippedIds.remove(expiredId)
-            expiryById.remove(expiredId)
+    // Expiry is event-driven: wake only at the next item expiry instead of
+    // invalidating/recomposing the entire Store screen every second.
+    LaunchedEffect(expiryById.toMap()) {
+        while (true) {
+            val now = System.currentTimeMillis()
+            val expiredIds = expiryById.filterValues { it <= now }.keys.toList()
+            if (expiredIds.isNotEmpty()) {
+                expiredIds.forEach { expiredId ->
+                    ownedIds.remove(expiredId)
+                    equippedIds.remove(expiredId)
+                    expiryById.remove(expiredId)
+                }
+                continue
+            }
+            val nextExpiry = expiryById.values.minOrNull() ?: break
+            delay((nextExpiry - now).coerceAtLeast(1L))
         }
     }
     LaunchedEffect(userId) {
