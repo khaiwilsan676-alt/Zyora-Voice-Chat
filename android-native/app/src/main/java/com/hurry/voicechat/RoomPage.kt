@@ -1704,6 +1704,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                 ),
                 isCurrentUser = profileId == accountId,
                 isRoomOwner = profileId == roomOwner.accountId.ifBlank { roomOwner.id },
+                canModerate = accountId == roomId || accountId == roomOwnerAccountId,
                 onClose = { selectedChatProfile = null },
                 onOpenPublicProfile = { profile -> selectedChatProfile = null; selectedSeat = 0; showSeatSheet = false; onOpenPublicProfile(profile) },
                 onCopyId = { if (profileId.isNotBlank()) clipboard.setText(AnnotatedString(profileId)) },
@@ -1746,8 +1747,18 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                         roomSocketRef.value?.emit("room_seat_action", JSONObject().put("roomId", roomId).put("userId", accountId).put("action", "lock").put("seatNumber", seats[index].number).put("isLocked", nextLocked))
                     }
                 },
-                onKickOut = {
-                    roomSocketRef.value?.emit("room_seat_action", JSONObject().put("roomId", roomId).put("userId", accountId).put("action", "kick").put("targetUserId", profileId))
+                onKickOut = { selectedTime ->
+                    val durationMs = when (selectedTime) {
+                        "15 minutes" -> 15L * 60_000L
+                        "30 minutes" -> 30L * 60_000L
+                        "2 hours" -> 2L * 60L * 60_000L
+                        "24 hours" -> 24L * 60L * 60_000L
+                        else -> 30L * 60_000L
+                    }
+                    roomSocketRef.value?.emit("room_seat_action", JSONObject().put("roomId", roomId)
+                        .put("userId", accountId).put("action", "kick").put("targetUserId", profileId)
+                        .put("durationMs", durationMs).put("targetName", profileMessage.sender)
+                        .put("ownerName", roomDisplayName).put("ownerImage", roomDisplayImage))
                     selectedChatProfile = null
                 }
             )
@@ -1809,6 +1820,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                 ),
                 isCurrentUser = profileSeat.accountId == accountId,
                 isRoomOwner = profileSeat.accountId == roomOwner.accountId.ifBlank { roomOwner.id },
+                canModerate = accountId == roomId || accountId == roomOwnerAccountId,
                 onClose = { selectedSeat = 0 },
                 onOpenPublicProfile = { profile -> selectedSeat = 0; showSeatSheet = false; onOpenPublicProfile(profile) },
                 onMention = { name, targetId ->
@@ -1863,9 +1875,19 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                             .put("userId", accountId).put("action", "lock").put("seatNumber", selectedSeat).put("isLocked", nextLocked))
                     }
                 },
-                onKickOut = {
+                onKickOut = { selectedTime ->
+                    val durationMs = when (selectedTime) {
+                        "15 minutes" -> 15L * 60_000L
+                        "30 minutes" -> 30L * 60_000L
+                        "2 hours" -> 2L * 60L * 60_000L
+                        "24 hours" -> 24L * 60L * 60_000L
+                        else -> 30L * 60_000L
+                    }
                     roomSocketRef.value?.emit("room_seat_action", JSONObject().put("roomId", roomId)
-                        .put("userId", accountId).put("action", "kick").put("targetUserId", profileSeat.accountId).put("seatNumber", selectedSeat))
+                        .put("userId", accountId).put("action", "kick").put("targetUserId", profileSeat.accountId)
+                        .put("seatNumber", selectedSeat).put("durationMs", durationMs)
+                        .put("targetName", profileSeat.userName).put("ownerName", roomDisplayName)
+                        .put("ownerImage", roomDisplayImage))
                     val idx = seats.indexOfFirst { it.number == selectedSeat }
                     if (idx >= 0) seats[idx] = NativeRoomSeat(number = selectedSeat)
                     selectedSeat = 0
