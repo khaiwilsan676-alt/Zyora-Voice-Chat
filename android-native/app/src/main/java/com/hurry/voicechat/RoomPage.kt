@@ -722,6 +722,11 @@ fun RoomPage(
     var incomingSeatInvite by remember(roomId) { mutableStateOf<JSONObject?>(null) }
     var kickedInfo by remember(roomId) { mutableStateOf<JSONObject?>(null) }
     var roomKickBlockedUntil by remember(roomId) { mutableLongStateOf(0L) }
+    LaunchedEffect(roomKickBlockedUntil) {
+        val remaining = roomKickBlockedUntil - System.currentTimeMillis()
+        if (remaining > 0L) kotlinx.coroutines.delay(remaining)
+        if (roomKickBlockedUntil > 0L && roomKickBlockedUntil <= System.currentTimeMillis()) roomKickBlockedUntil = 0L
+    }
     LaunchedEffect(incomingSeatInvite?.optString("inviteId")) {
         val activeInviteId = incomingSeatInvite?.optString("inviteId").orEmpty()
         if (activeInviteId.isNotBlank()) {
