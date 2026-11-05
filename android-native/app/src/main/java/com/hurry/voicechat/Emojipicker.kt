@@ -149,11 +149,14 @@ fun EmojiPicker(onClose: () -> Unit = {}, onSelectEmoji: (EmojiSticker) -> Unit 
                             when (s.id) {
                                 "kiss_r" -> {
                                     imageOffsetY = 4.dp // 2% niche
-                                    textOffsetY = 2.dp  // 1% niche
+                                    // BSS YAHAN CHANGE KIYA HAI TEXT KO NEECHE KARNE K LIYE TAAKI 'Gift me' SE ALIGN HO JAYE
+                                    textOffsetY = 12.dp  
                                 }
                                 "punch_l", "punch_r" -> {
                                     imageSize = 58.dp      // 1% chhota
                                     imageOffsetY = (-2).dp // 1% upar
+                                    // BSS YAHAN CHANGE KIYA HAI TEXT KO OUPER KARNE K LIYE
+                                    textOffsetY = (-10).dp 
                                 }
                             }
 
@@ -169,14 +172,14 @@ fun EmojiPicker(onClose: () -> Unit = {}, onSelectEmoji: (EmojiSticker) -> Unit 
                                     contentDescription = s.name,
                                     modifier = Modifier
                                         .size(imageSize)
-                                        .offset(y = imageOffsetY) // Offset apply kiya
+                                        .offset(y = imageOffsetY) // Image ki position wahi ki wahi rahegi
                                 )
                                 Text(
                                     s.name.trim(), 
                                     fontSize = 11.sp, 
                                     color = Color.White.copy(alpha = .90f), 
                                     maxLines = 1,
-                                    modifier = Modifier.offset(y = textOffsetY) // Text offset apply kiya
+                                    modifier = Modifier.offset(y = textOffsetY) // Text upar/neeche yahan se ho raha hai bina image hilaye
                                 )
                             }
                         }
