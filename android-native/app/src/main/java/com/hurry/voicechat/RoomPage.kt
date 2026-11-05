@@ -718,8 +718,8 @@ fun RoomPage(
     }
     
     var selectedSeat by remember{mutableIntStateOf(0)}
-    var showInviteSheet by remember { mutableStateOf(false) }
-    var incomingSeatInvite by remember { mutableStateOf<JSONObject?>(null) }
+    var showInviteSheet by remember(roomId) { mutableStateOf(false) }
+    var incomingSeatInvite by remember(roomId) { mutableStateOf<JSONObject?>(null) }
 
     val messages=remember{mutableStateListOf<NativeRoomMessage>()}
     val entryToasts=remember{mutableStateListOf<NativeEntryToast>()}
