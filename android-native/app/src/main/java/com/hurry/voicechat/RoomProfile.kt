@@ -165,8 +165,6 @@ fun RoomProfile(
     LaunchedEffect(user.uid, user.id, user.accountId, profileCacheKeys) {
         val profileDb = NativeIndexDatabase(context)
         val cached = profileCacheKeys.firstNotNullOfOrNull { profileDb.loadProfile(it) }
-        // Refresh the server copy even when index.db has a cached profile.
-        // Cached data remains the fallback if GitHub storage is temporarily unavailable.
         val remote = ProfilePersistence.load(TargetUser(
             id = user.id, uid = user.uid, accountId = user.accountId,
             name = user.name, photo = user.image, image = user.image,
@@ -174,7 +172,6 @@ fun RoomProfile(
         ))
         if (cached == null && remote == null) return@LaunchedEffect
 
-        // Cache all non-name/DP fields once. Always refresh only name and avatar from GitHub storage.
         val merged = org.json.JSONObject(cached?.toString() ?: "{}")
         if (cached == null && remote != null) {
             val keys = remote.keys()
@@ -206,7 +203,6 @@ fun RoomProfile(
         stableDetails?.optString("bio")?.takeIf { it != "null" }?.let { displayBio = it }
     }
 
-    // Tag States
     val isCoreOfficialAccount = user.accountId == "100002" || user.accountId == "100003" || user.id == "100002" || user.id == "100003"
     val isRedOfficialAccount = user.accountId == "500001" || user.id == "500001"
     val is500002OfficialAccount = user.accountId in setOf("500002", "500003", "500004") || user.id in setOf("500002", "500003", "500004")
@@ -220,8 +216,6 @@ fun RoomProfile(
     var premiumTag by remember(user.premiumTag) { mutableStateOf(user.premiumTag == true) }
     var showReports by remember(initialReportOpen) { mutableStateOf(initialReportOpen) }
 
-    // Tag values share the same cached profile payload. Never make a second GitHub storage
-    // request here; the profile-loading effect above owns the one-time remote fallback.
     LaunchedEffect(user.uid, user.id, user.accountId, loadedProfile) {
         val profile = loadedProfile ?: return@LaunchedEffect
         if (profile.has("officialHeadTag")) officialHeadTag = isCoreOfficialAccount || profile.optBoolean("officialHeadTag")
@@ -234,15 +228,13 @@ fun RoomProfile(
         if (profile.has("premiumTag")) premiumTag = profile.optBoolean("premiumTag")
     }
 
-
-
     val hasAnyTag = officialHeadTag || officialTag || adminTag || serviceTag || hostTag || coinSellerTag || vipTag || premiumTag
     val accountId = generateStableId(user.accountId ?: user.id ?: user.uid ?: "User")
     
     val genderColor = if (displayGender.equals("female", true) || displayGender.equals("f", true) || displayGender == "♀") {
-        Color(0xFFEC4899) // pink-500
+        Color(0xFFEC4899)
     } else {
-        Color(0xFF3B82F6) // blue-500
+        Color(0xFF3B82F6)
     }
 
     val showLeaveSeat = isCurrentUser && user.isInSeat
@@ -252,17 +244,12 @@ fun RoomProfile(
     var isFollowing by remember(user.uid, user.id, user.accountId) { mutableStateOf(user.isFollowing) }
     LaunchedEffect(user.isFollowing) { isFollowing = user.isFollowing }
 
-    // Fetch Tags
     LaunchedEffect(user.uid, user.id, user.accountId) {
         val uid = user.uid ?: user.id ?: user.accountId
         if (uid != null && uid != "N/A" && uid != "User") {
             try {
-                // Placeholder for actual API call
-                // val response = fetch("your_api/users?uid=$uid")
-                // Parsing logic...
-                // adminTag = data.adminTag; etc...
+                // Placeholder API Call
             } catch (e: Exception) {
-                // Handle error quietly
             }
         }
     }
@@ -277,14 +264,12 @@ fun RoomProfile(
                 .background(Color.Transparent)
                 .clickable { onClose() }
         ) {
-            // Sheet Container (Aligns to bottom)
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
-                    .clickable(enabled = false) {} // Consume clicks so it doesn't close
+                    .clickable(enabled = false) {}
             ) {
-                // White Background Box (Starts 48dp below to leave room for avatar overlap)
                 Column(
                     modifier = Modifier
                         .padding(top = 44.dp)
@@ -325,16 +310,15 @@ fun RoomProfile(
                         }
                     }
 
-                    // Row 2: Public Profile tags (Divided into 2 rows with 0.2.dp gap)
+                    // Row 2: Public Profile tags
                     if (hasAnyTag) {
                         Column(
                             modifier = Modifier.padding(top = 6.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            // Row 1 for tags
                             if (officialHeadTag || officialTag || adminTag || serviceTag) {
                                 Row(
-                                    horizontalArrangement = Arrangement.spacedBy(0.2.dp, Alignment.CenterHorizontally),
+                                    horizontalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterHorizontally), 
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     if (officialHeadTag) AsyncImage(model = "file_00000000ef2c82118b2266596d0e992d.png".fullUrl(), contentDescription = "Official Head", contentScale = ContentScale.Fit, modifier = Modifier.height(31.dp).widthIn(max = 80.dp))
@@ -343,12 +327,10 @@ fun RoomProfile(
                                     if (serviceTag) AsyncImage(model = "IMG_20261027_102207.png".fullUrl(), contentDescription = "Service / CS", contentScale = ContentScale.Fit, modifier = Modifier.height(22.dp).widthIn(max = 60.dp))
                                 }
                             }
-                            
-                            // Row 2 for remaining tags
                             if (hostTag || coinSellerTag) {
                                 Row(
                                     modifier = Modifier.padding(top = 2.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(0.2.dp, Alignment.CenterHorizontally),
+                                    horizontalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterHorizontally), 
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     if (hostTag) AsyncImage(model = "IMG_20261028_154914.png".fullUrl(), contentDescription = "Host", contentScale = ContentScale.Fit, modifier = Modifier.height(19.dp).widthIn(max = 60.dp))
@@ -358,7 +340,7 @@ fun RoomProfile(
                         }
                     }
 
-                    // Row 3: Level Badge (Image ki height 30dp aur Text Center Right Corner me, bas color White kiya hai)
+                    // Row 3: Level Badge
                     Row(
                         modifier = Modifier.padding(top = 6.dp),
                         horizontalArrangement = Arrangement.Center,
@@ -366,19 +348,19 @@ fun RoomProfile(
                     ) {
                         Box(
                             contentAlignment = Alignment.CenterEnd,
-                            modifier = Modifier.height(30.dp) // Yahan image ke hisaab se height 30dp kar di hai
+                            modifier = Modifier.height(24.dp) 
                         ) {
                             AsyncImage(
                                 model = "IMG_20261028_004355.png".fullUrl(), 
                                 contentDescription = "Level", 
-                                modifier = Modifier.height(30.dp) // Image size set to 30.dp jaisa tune kaha
+                                modifier = Modifier.height(24.dp) 
                             )
                             Text(
                                 text = "Lv.1", 
-                                color = Color.White, // <--- BASS YAHI COLOR WHITE KIYA HAI
-                                fontSize = 13.sp, 
+                                color = Color.White,
+                                fontSize = 11.sp, 
                                 fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(end = 6.dp) // Right se thoda padding diya hai taaki border pe na chipke but andar center-right me rahe
+                                modifier = Modifier.padding(end = 6.dp)
                             )
                         }
                         Spacer(modifier = Modifier.width(6.dp))
@@ -391,13 +373,13 @@ fun RoomProfile(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center
                     ) {
-                        if (isCoreOfficialAccount || is500002OfficialAccount) {
+                        if (isCoreOfficialAccount || is500002OfficialAccount || isRedOfficialAccount) {
                             AsyncImage(model = "IMG_20261101_125212.png".fullUrl(), contentDescription = "Purple ID Badge", contentScale = ContentScale.Fit, modifier = Modifier.height(30.dp).widthIn(min = 22.dp, max = 35.dp).padding(end = 4.dp))
                             Text(accountId, color = Color.DarkGray, fontSize = 14.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(start = 4.dp))
-                        } else if (isRedOfficialAccount) {
-                            AsyncImage(model = "IMG_20261101_125212.png".fullUrl(), contentDescription = "Purple ID Badge", contentScale = ContentScale.Fit, modifier = Modifier.height(30.dp).widthIn(min = 22.dp, max = 35.dp).padding(end = 4.dp))
-                            Text(accountId, color = Color.DarkGray, fontSize = 14.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(start = 4.dp))
-                        } else Text("ID: $accountId", color = Color.DarkGray, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                        } else {
+                            Text("ID: $accountId", color = Color.DarkGray, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                        }
+                        
                         if (accountId != "N/A" && accountId != "User") {
                             IconButton(
                                 onClick = {
@@ -422,92 +404,209 @@ fun RoomProfile(
                         if (displayCountry.isNotBlank()) Text(roomProfileCountryFlag(displayCountry), fontSize = 16.sp)
                     }
 
-                    // Action Buttons (Leave Seat OR Social Actions)
                     if (showLeaveSeat) {
-                        Button(
-                            onClick = onLeaveSeat,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 16.dp)
-                                .height(48.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B82F6)),
-                            shape = CircleShape
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(Icons.Default.Mic, contentDescription = null, tint = Color.White)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Leave", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.clickable { onLeaveSeat() }
+                            ) {
+                                Box(modifier = Modifier.size(26.dp)) {
+                                    Icon(
+                                        imageVector = Icons.Default.Person, 
+                                        contentDescription = "Leave",
+                                        tint = Color.Black,
+                                        modifier = Modifier.size(22.dp).align(Alignment.TopStart)
+                                    )
+                                    Icon(
+                                        imageVector = Icons.Default.ArrowDownward,
+                                        contentDescription = null,
+                                        tint = Color(0xFFF97316),
+                                        modifier = Modifier
+                                            .size(12.dp)
+                                            .align(Alignment.BottomEnd)
+                                            .background(Color.White, CircleShape) 
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text("Leave", color = Color.Black, fontSize = 12.sp)
+                            }
                         }
                     }
 
                     if (showActions) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
-                            horizontalArrangement = Arrangement.SpaceEvenly,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            // Follow: switch to the followed artwork immediately after tapping.
-                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable {
-                                isFollowing = !isFollowing
-                                onFollow()
-                            }) {
-                                AsyncImage(
-                                    model = (if (isFollowing) "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261105_125204.png" else "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261105_125259.png"),
-                                    contentDescription = if (isFollowing) "Followed" else "Follow",
-                                    contentScale = ContentScale.Fit,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(if (isFollowing) "Followed" else "Follow", color = Color(0xFFEC4899), fontWeight = FontWeight.Medium, maxLines = 1, softWrap = false)
-                            }
-
-                            // Chat
-                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { onMessage() }) {
-                                AsyncImage(
-                                    model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261105_125330.png",
-                                    contentDescription = "Chat",
-                                    contentScale = ContentScale.Fit,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("Chat", color = Color.DarkGray, fontWeight = FontWeight.Medium, maxLines = 1, softWrap = false)
-                            }
-                            
-                            // 3rd Action Icon
-                            AsyncImage(
-                                model = "file_0000000019c4821180028eebae10dbfc.png".fullUrl(),
-                                contentDescription = null,
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .clip(CircleShape)
-                                    .clickable { onThirdAction() }
-                            )
-                        }
-
-                        // Moderation Row (Mute, Leave, Lock, Kick)
+                        // Modertaion Row (Mute, Leave, Lock, Kick)
                         if (showModerationRow) {
                             Row(
                                 modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
                                 horizontalArrangement = Arrangement.SpaceEvenly,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(if (user.isMuted) "Unmute" else "Mute", color = Color.Gray, fontSize = 14.sp, modifier = Modifier.clickable { onMute() })
+                                // NEW MUTE ICON ADDED HERE
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    modifier = Modifier.clickable { onMute() }
+                                ) {
+                                    Icon(
+                                        imageVector = if (user.isMuted) Icons.Default.Mic else Icons.Default.MicOff,
+                                        contentDescription = "Mute Toggle",
+                                        tint = Color.Black,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(if (user.isMuted) "Unmute" else "Mute", color = Color.Black, fontSize = 12.sp)
+                                }
+                                
                                 Text("|", color = Color.LightGray)
-                                Text("Leave", color = Color.Gray, fontSize = 14.sp, modifier = Modifier.clickable { onLeaveSeat() })
+                                
+                                // LEAVE ICON 
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    modifier = Modifier.clickable { onLeaveSeat() }
+                                ) {
+                                    Box(modifier = Modifier.size(26.dp)) {
+                                        Icon(
+                                            imageVector = Icons.Default.Person, 
+                                            contentDescription = "Leave",
+                                            tint = Color.Black,
+                                            modifier = Modifier.size(22.dp).align(Alignment.TopStart)
+                                        )
+                                        Icon(
+                                            imageVector = Icons.Default.ArrowDownward,
+                                            contentDescription = null,
+                                            tint = Color(0xFFF97316),
+                                            modifier = Modifier
+                                                .size(12.dp)
+                                                .align(Alignment.BottomEnd)
+                                                .background(Color.White, CircleShape) 
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text("Leave", color = Color.Black, fontSize = 12.sp)
+                                }
+                                
                                 Text("|", color = Color.LightGray)
-                                Text(if (user.isLocked) "Unlock" else "Lock", color = Color.Gray, fontSize = 14.sp, modifier = Modifier.clickable { onLock() })
-                                Text("|", color = Color.LightGray)
-                                Text("Kick out", color = Color.Gray, fontSize = 14.sp, modifier = Modifier.clickable { onKickOut() })
+
+                                // NEW KICK OUT ICON ADDED HERE (Person + Cross)
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    modifier = Modifier.clickable { onKickOut() }
+                                ) {
+                                    Box(modifier = Modifier.size(26.dp)) {
+                                        Icon(
+                                            imageVector = Icons.Default.Person, 
+                                            contentDescription = "Kick out",
+                                            tint = Color.Black,
+                                            modifier = Modifier.size(22.dp).align(Alignment.TopStart)
+                                        )
+                                        Icon(
+                                            imageVector = Icons.Default.Close, // Cross icon added
+                                            contentDescription = null,
+                                            tint = Color.Red, // Red color for cross
+                                            modifier = Modifier
+                                                .size(12.dp)
+                                                .align(Alignment.BottomEnd)
+                                                .background(Color.White, CircleShape) 
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text("Kick", color = Color.Black, fontSize = 12.sp) 
+                                }
+                            }
+                        }
+                        
+                        // Follow, Chat, Gift Row
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(top = 20.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Follow Column
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier
+                                    .weight(1f) 
+                                    .clickable {
+                                        isFollowing = !isFollowing
+                                        onFollow()
+                                    }
+                            ) {
+                                AsyncImage(
+                                    model = (if (isFollowing) "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261105_125204.png" else "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261105_125259.png"),
+                                    contentDescription = if (isFollowing) "Followed" else "Follow",
+                                    contentScale = ContentScale.Fit,
+                                    modifier = Modifier.size(30.dp) 
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = if (isFollowing) "Followed" else "Follow", 
+                                    color = Color.Black,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    maxLines = 1,
+                                    softWrap = false
+                                )
+                            }
+
+                            // Chat Column
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier
+                                    .weight(1f) 
+                                    .clickable { onMessage() }
+                            ) {
+                                AsyncImage(
+                                    model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261105_125330.png",
+                                    contentDescription = "Chat",
+                                    contentScale = ContentScale.Fit,
+                                    modifier = Modifier.size(30.dp) 
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = "Chat",
+                                    color = Color.Black,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    maxLines = 1,
+                                    softWrap = false
+                                )
+                            }
+                            
+                            // Send Gift Column
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier
+                                    .weight(1f) 
+                                    .clickable { onThirdAction() }
+                            ) {
+                                AsyncImage(
+                                    model = "file_0000000019c4821180028eebae10dbfc.png".fullUrl(),
+                                    contentDescription = "Gift",
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.size(30.dp).clip(CircleShape) 
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = "Send Gift", 
+                                    color = Color.Black,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    maxLines = 1,
+                                    softWrap = false
+                                )
                             }
                         }
                     }
                 }
 
-                // Overlapping Avatar (Placed outside the white column to break boundaries)
+                // Overlapping Avatar
                 Box(
                     modifier = Modifier
                         .align(Alignment.TopCenter)
                         .size(88.dp)
-                        .clickable { onOpenPublicProfile(user.copy(name = displayName, image = displayProfileImage, country = displayCountry)) } // Open matching Public Profile
+                        .clickable { onOpenPublicProfile(user.copy(name = displayName, image = displayProfileImage, country = displayCountry)) }
                 ) {
                     AsyncImage(
                         model = displayProfileImage.ifBlank { "default-avatar.png".fullUrl() },
@@ -522,10 +621,9 @@ fun RoomProfile(
                         userId = user.accountId.orEmpty().ifBlank { user.uid.orEmpty().ifBlank { user.id.orEmpty() } },
                         modifier = Modifier.fillMaxSize()
                     )
-                    
                 }
 
-                // Corner Action Icons (Top Left & Top Right above white sheet)
+                // Corner Action Icons
                 if (!isCurrentUser) {
                     IconButton(
                         onClick = { showReports = true },
@@ -556,7 +654,6 @@ fun RoomProfile(
     }
 }
 
-// Extension to simulate fullUrl resolving
 private fun String.fullUrl(): String {
     val baseUrl = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/"
     return if (this.startsWith("http")) this else baseUrl + this.removePrefix("/")
