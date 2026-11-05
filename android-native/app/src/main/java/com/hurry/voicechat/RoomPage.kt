@@ -697,6 +697,7 @@ fun RoomPage(
     // Preserve live speaker state across room_seats snapshots.
     val activeVoiceSpeakerIds=remember(roomId){mutableStateSetOf<String>()}
     val backendRoomUsers=remember{mutableStateListOf<ActiveUserNative>()}
+    val activeRoomUsers = backendRoomUsers.toList()
 
     DisposableEffect(roomId,accountId,roomDisplayName,roomDisplayImage,roomOwner.id,roomOwner.accountId) {
         val roomSocketOptions = IO.Options().apply {
@@ -2088,7 +2089,6 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                 }
             }
         }
-        val activeRoomUsers = backendRoomUsers.toList()
         if (showInviteSheet) RoomInviteSheet(
             roomUsers = activeRoomUsers,
             currentUserId = accountId,
