@@ -320,7 +320,7 @@ fun JitsiRoomAudio(
             // JSONObject serializes Kotlin ByteArray payloads as JSON number arrays.
             // Accept both Socket.IO binary buffers and JSON arrays so relayed mic/music
             // packets are decoded consistently on every Android client.
-            val rawAudio = args.getOrNull(1) as? ByteArray ?: data.opt("audio")
+            val rawAudio = args.getOrNull(1) ?: data.opt("audio")
             val bytes = when (rawAudio) {
                 is ByteArray -> rawAudio
                 is org.json.JSONArray -> ByteArray(rawAudio.length()) { index ->
