@@ -93,8 +93,10 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
     
     val screenHeight = LocalConfiguration.current.screenHeightDp.dp
     val screenWidthDp = LocalConfiguration.current.screenWidthDp
-    val podiumTopWidth = (screenWidthDp * 0.44f).coerceAtMost(180f).dp
-    val podiumSideWidth = (screenWidthDp * 0.40f).coerceAtMost(160f).dp
+    
+    // Top 1,2,3 Frames enlarged considerably
+    val podiumTopWidth = (screenWidthDp * 0.55f).coerceAtMost(240f).dp
+    val podiumSideWidth = (screenWidthDp * 0.50f).coerceAtMost(220f).dp
 
     Box(Modifier.fillMaxSize().background(Color(0xFF1A0204))) {
         Box(Modifier.fillMaxWidth().height(screenHeight * 0.60f).align(Alignment.TopCenter)) {
@@ -196,67 +198,67 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                 }
             }
             
-            LazyColumn(Modifier.weight(1f).fillMaxWidth(),contentPadding=PaddingValues(bottom=12.dp),verticalArrangement=Arrangement.spacedBy(0.dp)) {
+            LazyColumn(Modifier.weight(1f).fillMaxWidth(),contentPadding=PaddingValues(bottom=0.dp),verticalArrangement=Arrangement.spacedBy(0.dp)) {
                 item {
                     Column(Modifier.fillMaxWidth().padding(top=18.dp,bottom=24.dp),horizontalAlignment=Alignment.CenterHorizontally) {
-                        LeaderboardChromaImage(url=raw+"file_00000000a0e48207ade38b36ab946ecb.png",contentDescription="Rank 1 frame",modifier=Modifier.width(podiumTopWidth).height(150.dp),contentScale=ContentScale.Fit)
+                        // Increased height and width of Top Frames
+                        LeaderboardChromaImage(url=raw+"file_00000000a0e48207ade38b36ab946ecb.png",contentDescription="Rank 1 frame",modifier=Modifier.width(podiumTopWidth).height(200.dp),contentScale=ContentScale.Fit)
                         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically) {
-                            LeaderboardChromaImage(url=raw+"file_0000000069b88207b9fdd01576b71ee9.png",contentDescription="Rank 2 frame",modifier=Modifier.width(podiumSideWidth).height(130.dp),contentScale=ContentScale.Fit)
-                            LeaderboardChromaImage(url=raw+"file_00000000ecc882079f34a9356b53dc8e.png",contentDescription="Rank 3 frame",modifier=Modifier.width(160.dp).height(130.dp),contentScale=ContentScale.Fit)
+                            LeaderboardChromaImage(url=raw+"file_0000000069b88207b9fdd01576b71ee9.png",contentDescription="Rank 2 frame",modifier=Modifier.width(podiumSideWidth).height(175.dp),contentScale=ContentScale.Fit)
+                            LeaderboardChromaImage(url=raw+"file_00000000ecc882079f34a9356b53dc8e.png",contentDescription="Rank 3 frame",modifier=Modifier.width(podiumSideWidth).height(175.dp),contentScale=ContentScale.Fit)
                         }
                     }
                 }
                 
-                // Scrolling items same as previous response
+                // Ranks 4 to 50
                 items(47) { i ->
                     Row(
-                        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+                        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         // Rank Number
                         Text(
                             text = "${i + 4}",
-                            color = Color.White,
-                            fontSize = 16.sp,
+                            color = Color(0xFFE7B865),
+                            fontSize = 18.sp,
                             fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                            modifier = Modifier.width(30.dp),
+                            modifier = Modifier.width(32.dp),
                             textAlign = TextAlign.Center
                         )
                         
-                        Spacer(Modifier.width(8.dp))
+                        Spacer(Modifier.width(6.dp))
                         
-                        // Fake Avatar with Frame
+                        // Protocol User Avatar
                         AsyncImage(
-                            model = "https://ui-avatars.com/api/?name=User+${i+4}&background=random",
+                            model = raw + "default_avatar.png",
                             contentDescription = "Avatar",
                             modifier = Modifier
-                                .size(48.dp)
+                                .size(54.dp)
                                 .clip(RoundedCornerShape(50))
-                                .border(1.dp, Color(0x33FFFFFF), RoundedCornerShape(50)),
+                                .border(1.5.dp, Color(0x33FFFFFF), RoundedCornerShape(50)),
                             contentScale = ContentScale.Crop
                         )
                         
                         Spacer(Modifier.width(12.dp))
                         
-                        // Name, Flag, Gender Column
+                        // Middle Section - Name, Flag, Gender (Restored original style)
                         Column(Modifier.weight(1f)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                // Name
                                 Text(
                                     text = "User Name ${i+4}",
                                     color = Color.White,
-                                    fontSize = 15.sp,
+                                    fontSize = 16.sp,
                                     fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
                                 Spacer(Modifier.width(6.dp))
                                 
-                                // Fake Country Flag
+                                // Flag
                                 Text(if (i % 2 == 0) "🇮🇳" else "🇸🇦", fontSize = 14.sp) 
                                 Spacer(Modifier.width(4.dp))
                                 
-                                // Fake Gender Icon
+                                // Gender Icon
                                 Box(
                                     modifier = Modifier
                                         .size(16.dp)
@@ -268,6 +270,7 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                             }
                             Spacer(Modifier.height(4.dp))
                             
+                            // Restored Original Level Style
                             Box(
                                 modifier = Modifier
                                     .background(Color(0xFF3B82F6), RoundedCornerShape(8.dp))
@@ -282,41 +285,69 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                             Text(
                                 text = "${796 - (i * 12)}.9K",
                                 color = Color(0xFFE7B865),
-                                fontSize = 15.sp,
+                                fontSize = 16.sp,
                                 fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
                             )
-                            Spacer(Modifier.width(4.dp))
-                            // Fake Coin Icon
+                            Spacer(Modifier.width(6.dp))
+                            // Gold Coin Icon
                             Box(
                                 modifier = Modifier
-                                    .size(16.dp)
-                                    .background(Color(0xFFFFD700), RoundedCornerShape(50)),
+                                    .size(20.dp)
+                                    .background(Brush.radialGradient(listOf(Color(0xFFFFE066), Color(0xFFD4AF37))), RoundedCornerShape(50)),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Text("C", color = Color(0xFF8B6508), fontSize = 10.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                                Text("S", color = Color(0xFF5C3A00), fontSize = 12.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
                             }
                         }
                     }
                 }
             }
             
-            // Bottom user row - Untouched as requested
-            Row(
-                Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp).height(62.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(Color(0xFF2A1714))
-                    .padding(horizontal = 14.dp),
-                verticalAlignment = Alignment.CenterVertically
+            // Bottom user row - Edge to Edge Background Image
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(72.dp)
             ) {
+                // Full Width/Height Image Background (Edge to Edge)
                 AsyncImage(
-                    model = ownAvatar,
-                    contentDescription = "Your avatar",
-                    modifier = Modifier.size(42.dp).clip(RoundedCornerShape(50)),
+                    model = raw + "IMG_20261106_021443.png",
+                    contentDescription = "Bottom Bar Background",
+                    modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
                 )
-                Spacer(Modifier.width(10.dp))
-                Text(ownName, color=Color.White, fontSize=14.sp, fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold, modifier=Modifier.weight(1f), maxLines=1)
-                Text("+100", color=Color(0xFFE7B865), fontSize=17.sp, fontWeight=androidx.compose.ui.text.font.FontWeight.Bold)
+                
+                // User Details directly overlapping on the image
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 24.dp), // Thoda inner space text aur avatar ke liye
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    AsyncImage(
+                        model = ownAvatar,
+                        contentDescription = "Your avatar",
+                        modifier = Modifier
+                            .size(46.dp)
+                            .clip(RoundedCornerShape(50)),
+                        contentScale = ContentScale.Crop
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    Text(
+                        text = ownName, 
+                        color = Color.White, 
+                        fontSize = 15.sp, 
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, 
+                        modifier = Modifier.weight(1f), 
+                        maxLines = 1
+                    )
+                    Text(
+                        text = "+100", 
+                        color = Color(0xFFE7B865), 
+                        fontSize = 18.sp, 
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                    )
+                }
             }
 
             if (showRules) {
