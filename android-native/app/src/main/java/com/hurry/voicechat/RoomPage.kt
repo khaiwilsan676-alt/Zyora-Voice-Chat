@@ -169,7 +169,7 @@ private fun ThickBar(
 
 data class RoomPageOwner(val id:String="",val uid:String="",val accountId:String="",val name:String="Room",val image:String="",val country:String="")
 data class RoomPageCurrentUser(val id:String="",val uid:String="",val accountId:String="",val name:String="User",val image:String="")
-data class NativeRoomSeat(val number:Int,val occupied:Boolean=false,val locked:Boolean=false,val muted:Boolean=false,val speaking:Boolean=false,val userName:String="",val userImage:String="",val accountId:String="",val gifSrc:String="",val gifTimestamp:Long=0L)
+data class NativeRoomSeat(val number:Int,val occupied:Boolean=false,val locked:Boolean=false,val muted:Boolean=false,val selfMuted:Boolean=false,val speaking:Boolean=false,val userName:String="",val userImage:String="",val accountId:String="",val gifSrc:String="",val gifTimestamp:Long=0L)
 data class NativeMention(val accountId: String, val name: String)
 data class NativeRoomMessage(val id:String,val text:String,val sender:String,val senderImage:String,val senderAccountId:String="",val timestamp:Long=System.currentTimeMillis(),val type:String="message",val mentions: List<NativeMention> = emptyList())
 data class NativeEntryToast(val id:String,val name:String,val image:String,val vehicleVideo:String="")
@@ -912,7 +912,7 @@ fun RoomPage(
                     val seat = seatsJson.optJSONObject(index) ?: continue
                     val user = seat.optJSONObject("user")
                     val gif = seat.optJSONObject("gif")
-                    parsed.add(NativeRoomSeat(number=seat.optInt("number",index+1),occupied=seat.optBoolean("isOccupied",user != null),locked=seat.optBoolean("isLocked",false),muted=seat.optBoolean("isMuted",false),speaking=seat.optBoolean("isSpeaking",false),userName=if (user == null) "" else user.optString("name","User"),userImage=if (user == null) "" else if (user.optString("accountId",user.optString("userId","")) in setOf("100002", "100003")) "https://zyora-voice-chat.vercel.app/logo.png" else user.optString("image","").takeIf { it.isNotBlank() && it != "null" } ?: user.optString("dp","").takeIf { it.isNotBlank() && it != "null" } ?: user.optString("avatarUrl","").takeIf { it.isNotBlank() && it != "null" } ?: user.optString("profileImage","").takeIf { it.isNotBlank() && it != "null" } ?: "",accountId=if (user == null) "" else user.optString("accountId",user.optString("userId","")),gifSrc=gif?.optString("src","") ?: "",gifTimestamp=gif?.optLong("timestamp",0L) ?: 0L))
+                    parsed.add(NativeRoomSeat(number=seat.optInt("number",index+1),occupied=seat.optBoolean("isOccupied",user != null),locked=seat.optBoolean("isLocked",false),muted=seat.optBoolean("isMuted",false),selfMuted=seat.optBoolean("isSelfMuted",false),speaking=seat.optBoolean("isSpeaking",false),userName=if (user == null) "" else user.optString("name","User"),userImage=if (user == null) "" else if (user.optString("accountId",user.optString("userId","")) in setOf("100002", "100003")) "https://zyora-voice-chat.vercel.app/logo.png" else user.optString("image","").takeIf { it.isNotBlank() && it != "null" } ?: user.optString("dp","").takeIf { it.isNotBlank() && it != "null" } ?: user.optString("avatarUrl","").takeIf { it.isNotBlank() && it != "null" } ?: user.optString("profileImage","").takeIf { it.isNotBlank() && it != "null" } ?: "",accountId=if (user == null) "" else user.optString("accountId",user.optString("userId","")),gifSrc=gif?.optString("src","") ?: "",gifTimestamp=gif?.optLong("timestamp",0L) ?: 0L))
                 }
                 mainHandler.post {
                     val byNumber = parsed.associateBy { it.number }
@@ -1377,8 +1377,8 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                             val selfSeatIndex=seats.indexOfFirst{it.occupied && it.accountId==accountId}
                             if(selfSeatIndex>=0) {
                                 val seat = seats[selfSeatIndex]
-                                Box(Modifier.size(42.dp).clip(CircleShape).background(Color.Black.copy(alpha=.30f)).clickable{ val nextMuted = !seat.muted; seats[selfSeatIndex]=seat.copy(muted=nextMuted); roomSocketRef.value?.emit("room_seat_action", JSONObject().put("roomId", roomId).put("userId", accountId).put("action", "mute").put("seatNumber", seat.number).put("isMuted", nextMuted)) },contentAlignment=Alignment.Center) {
-                                    Icon(imageVector = if (seat.muted) Icons.Default.MicOff else Icons.Default.Mic,contentDescription = "Microphone",tint = Color.White,modifier = Modifier.size(28.dp))
+                                Box(Modifier.size(42.dp).clip(CircleShape).background(Color.Black.copy(alpha=.30f)).clickable(enabled = !seat.muted){ val nextMuted = !seat.selfMuted; seats[selfSeatIndex]=seat.copy(selfMuted=nextMuted); roomSocketRef.value?.emit("room_seat_action", JSONObject().put("roomId", roomId).put("userId", accountId).put("action", "self_mute").put("seatNumber", seat.number).put("isMuted", nextMuted)) },contentAlignment=Alignment.Center) {
+                                    Icon(imageVector = if (seat.muted || seat.selfMuted) Icons.Default.MicOff else Icons.Default.Mic,contentDescription = "Microphone",tint = if (seat.muted) Color.LightGray else Color.White,modifier = Modifier.size(28.dp))
                                 }
                             }
                             if(selfSeatIndex>=0) RoomFooterButton(onClick={showEmoji=true},description="Emoji",icon=R.drawable.ic_hurry_emoji)
@@ -1771,7 +1771,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                     if (index >= 0 && (accountId == roomOwner.accountId || accountId == roomOwner.id || accountId == roomId)) {
                         val nextMuted = !seats[index].muted
                         seats[index] = seats[index].copy(muted = nextMuted)
-                        roomSocketRef.value?.emit("room_seat_action", JSONObject().put("roomId", roomId).put("userId", accountId).put("action", "mute").put("seatNumber", seats[index].number).put("isMuted", nextMuted))
+                        roomSocketRef.value?.emit("room_seat_action", JSONObject().put("roomId", roomId).put("userId", accountId).put("action", "owner_mute").put("seatNumber", seats[index].number).put("isMuted", nextMuted))
                     }
                 },
                 onLock = {
@@ -1826,7 +1826,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                 onMute={
                     val nextMuted=!seat.muted
                     if(seatIndex>=0) seats[seatIndex]=seat.copy(muted=nextMuted)
-                    roomSocketRef.value?.emit("room_seat_action",JSONObject().put("roomId",roomId).put("userId",accountId).put("action","mute").put("seatNumber",seat.number).put("isMuted",nextMuted))
+                    roomSocketRef.value?.emit("room_seat_action",JSONObject().put("roomId",roomId).put("userId",accountId).put("action","owner_mute").put("seatNumber",seat.number).put("isMuted",nextMuted))
                     showSeatSheet=false;selectedSeat=0
                 },
                 onLock={
@@ -1898,7 +1898,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                         val nextMuted = !seats[idx].muted
                         seats[idx] = seats[idx].copy(muted = nextMuted)
                         roomSocketRef.value?.emit("room_seat_action", JSONObject().put("roomId", roomId)
-                            .put("userId", accountId).put("action", "mute").put("seatNumber", selectedSeat).put("isMuted", nextMuted))
+                            .put("userId", accountId).put("action", "owner_mute").put("seatNumber", selectedSeat).put("isMuted", nextMuted))
                     }
                 },
                 onLock = {
@@ -2538,7 +2538,7 @@ private fun RoomSeatInviteDialog(
                 }
             }
             
-            if(seat.muted) Box(Modifier.align(Alignment.BottomEnd).clip(CircleShape).background(Color.Red).padding(2.dp)) { Icon(Icons.Default.MicOff,null,tint=Color.White,modifier=Modifier.size(12.dp)) }
+            if(seat.muted) Box(Modifier.align(Alignment.BottomEnd).clip(CircleShape).background(Color.White).padding(2.dp)) { Icon(Icons.Default.MicOff,null,tint=Color.Black,modifier=Modifier.size(12.dp)) }
         }
         
         if (seat.occupied && seat.accountId == ownerId) {
