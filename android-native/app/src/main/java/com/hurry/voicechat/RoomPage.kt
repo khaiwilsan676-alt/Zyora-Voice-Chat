@@ -1089,6 +1089,36 @@ fun RoomPage(
     }
 
     Box(Modifier.fillMaxSize().background(Color.Black)){
+        if (roomKickBlockedUntil > System.currentTimeMillis()) {
+            val remainingMinutes = ((roomKickBlockedUntil - System.currentTimeMillis() + 59_999L) / 60_000L).coerceAtLeast(1L)
+            Surface(Modifier.align(Alignment.TopCenter).padding(top = 54.dp).zIndex(1000f), color = Color(0xFF111111), shape = RoundedCornerShape(7.dp), shadowElevation = 8.dp) {
+                Text("You can't join this room until $remainingMinutes min", color = Color.White, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 13.dp, vertical = 8.dp))
+            }
+        }
+        kickedInfo?.let { info ->
+            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.55f)).zIndex(2000f), contentAlignment = Alignment.Center) {
+                Column(Modifier.fillMaxWidth(0.86f).clip(RoundedCornerShape(11.dp)).background(Color.White).padding(horizontal = 18.dp, vertical = 20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    AsyncImage(model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261106_003241.png", contentDescription = "Kicked out", modifier = Modifier.size(76.dp), contentScale = ContentScale.Fit)
+                    Text("You are kicked out of the room", color = Color.Black, fontSize = 17.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 12.dp))
+                    Row(Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+                        AsyncImage(model = info.optString("ownerImage"), contentDescription = "Room owner avatar", modifier = Modifier.size(25.dp).clip(CircleShape), contentScale = ContentScale.Crop)
+                        Text("by room owner ", color = Color.Black, fontSize = 12.sp, modifier = Modifier.padding(start = 6.dp))
+                        Text(info.optString("ownerName", "Room Owner"), color = Color.Black, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        AsyncImage(model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261027_235537.png", contentDescription = "Owner tag", modifier = Modifier.height(15.dp).padding(start = 4.dp), contentScale = ContentScale.Fit)
+                    }
+                    val kickedId = info.optString("targetId")
+                    Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        if (kickedId in setOf("100002", "100003", "500001", "500002", "500003", "500004")) {
+                            AsyncImage(model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261101_125212.png", contentDescription = "ID badge", modifier = Modifier.height(19.dp), contentScale = ContentScale.Fit)
+                            Text(kickedId, color = Color.Black, fontSize = 12.sp)
+                        } else Text("ID: $kickedId", color = Color.Black, fontSize = 12.sp)
+                    }
+                    Button(onClick = { kickedInfo = null; onClose() }, modifier = Modifier.fillMaxWidth().padding(top = 18.dp).height(44.dp), shape = RoundedCornerShape(8.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2583F7))) {
+                        Text("Got it", color = Color.White, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
         JitsiRoomAudio(roomId=roomId,userName=roomDisplayName,canSpeak=seats.any { it.number <= roomMicMode && it.occupied && it.accountId == accountId && !it.muted },roomSocket=roomSocketRef.value,musicUri=miniMusicTrack?.url ?: MusicPlaybackState.currentPlayingUri,musicPlaying=isMusicPlaying,onSpeakingChanged={localVoiceSpeaking=it})
         AsyncImage(model=when(roomTheme) {
             "forest-night" -> "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/1784875884052~2.jpg"
