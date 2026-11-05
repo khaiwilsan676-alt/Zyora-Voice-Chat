@@ -836,6 +836,19 @@ fun RoomPage(
                 }
             }
         }
+        val seatInviteResultListener = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
+            if (payload.optString("roomId") == roomId &&
+                payload.optString("inviterId") == accountId &&
+                payload.optString("status") == "accepted") {
+                roomSocket.emit("room_seat_invite_apply", JSONObject()
+                    .put("roomId", roomId).put("inviterId", accountId)
+                    .put("targetId", payload.optString("targetId"))
+                    .put("seatNumber", payload.optInt("seatNumber"))
+                    .put("userName", payload.optString("userName", "User"))
+                    .put("userImage", payload.optString("userImage", "")))
+            }
+        }
         val seatInviteListener = Emitter.Listener { args ->
             val payload = args.firstOrNull() as? JSONObject ?: return@Listener
             if (payload.optString("roomId") == roomId && payload.optString("targetId") == accountId) {
@@ -1009,6 +1022,7 @@ fun RoomPage(
         }
         roomSocket.on("room_presence",presenceListener)
         roomSocket.on("room_seat_invite", seatInviteListener)
+        roomSocket.on("room_seat_invite_result", seatInviteResultListener)
         roomSocket.on("room_message",messageListener)
         roomSocket.on("room_chat_message",messageListener)
         roomSocket.on("room_chat_cleared",clearedListener)
@@ -1027,6 +1041,7 @@ fun RoomPage(
             }
             roomSocket.off("room_presence",presenceListener)
             roomSocket.off("room_seat_invite", seatInviteListener)
+            roomSocket.off("room_seat_invite_result", seatInviteResultListener)
             roomSocket.off("room_message",messageListener)
             roomSocket.off("room_chat_message",messageListener)
             roomSocket.off("room_chat_cleared",clearedListener)
