@@ -844,6 +844,7 @@ fun RoomPage(
                 roomSocket.emit("room_seat_invite_apply", JSONObject()
                     .put("roomId", roomId).put("inviterId", accountId)
                     .put("targetId", payload.optString("targetId"))
+                    .put("inviteId", payload.optString("inviteId"))
                     .put("seatNumber", payload.optInt("seatNumber"))
                     .put("userName", payload.optString("userName", "User"))
                     .put("userImage", payload.optString("userImage", "")))
@@ -2083,6 +2084,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                             "room_seat_invite_response",
                             JSONObject().put("roomId", roomId).put("targetId", accountId)
                                 .put("inviterId", invite.optString("inviterId"))
+                                .put("inviteId", invite.optString("inviteId"))
                                 .put("seatNumber", invite.optInt("seatNumber")).put("accepted", false)
                         )
                         incomingSeatInvite = null
