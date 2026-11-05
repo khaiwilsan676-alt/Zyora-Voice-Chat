@@ -299,6 +299,17 @@ fun JitsiRoomAudio(
             }
         }
 
+        val moderationMuteListener = Emitter.Listener { args ->
+            val data = args.firstOrNull() as? JSONObject ?: return@Listener
+            if (data.optString("roomId") != roomId) return@Listener
+            if (data.optBoolean("muted", false)) {
+                voiceAllowed.set(false)
+                stopMusicRelay()
+                stopCapture()
+                if (roomSocket.connected()) roomSocket.emit("room_voice_stop", JSONObject().put("roomId", roomId))
+            }
+        }
+
         val permissionListener = Emitter.Listener { args ->
             val data = args.firstOrNull() as? JSONObject ?: return@Listener
             if (data.optString("roomId") != roomId) return@Listener
@@ -409,6 +420,7 @@ fun JitsiRoomAudio(
             }
         }
 
+        roomSocket.on("room_moderation_mute", moderationMuteListener)
         roomSocket.on("room_voice_permission", permissionListener)
         roomSocket.on("room_voice_chunk", chunkListener)
         val disconnectListener = Emitter.Listener {
@@ -480,6 +492,7 @@ fun JitsiRoomAudio(
             musicWatcherThread?.join(300)
             stopMusicRelay()
             roomSocket.emit("room_voice_stop", JSONObject().put("roomId", roomId))
+            roomSocket.off("room_moderation_mute", moderationMuteListener)
             roomSocket.off("room_voice_permission", permissionListener)
             roomSocket.off("room_voice_chunk", chunkListener)
             roomSocket.off(Socket.EVENT_DISCONNECT, disconnectListener)
