@@ -300,6 +300,14 @@ fun RoomProfile(
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFF111827)
                         )
+                        if (isRoomOwner) {
+                            AsyncImage(
+                                model = "IMG_20261027_235537.png".fullUrl(),
+                                contentDescription = "Room owner",
+                                contentScale = ContentScale.Fit,
+                                modifier = Modifier.padding(start = 5.dp).height(16.dp).widthIn(max = 64.dp)
+                            )
+                        }
                         Spacer(modifier = Modifier.width(8.dp))
                         Box(
                             modifier = Modifier
