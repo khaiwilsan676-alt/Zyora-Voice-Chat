@@ -286,14 +286,45 @@ fun RoomProfile(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         
-                        // 1st: Name
+                        // 1st: Owner tag -> Name -> Gender tag -> Country flag
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+                            
+                            // Owner tag image
+                            if (isRoomOwner) {
+                                AsyncImage(
+                                    model = "IMG_20261027_235537.png".fullUrl(),
+                                    contentDescription = "Room owner",
+                                    contentScale = ContentScale.Fit,
+                                    modifier = Modifier.height(16.dp).widthIn(max = 64.dp).padding(end = 4.dp)
+                                )
+                            }
+                            
+                            // Name
                             Text(
                                 text = displayName.ifBlank { "User" },
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color(0xFF111827)
                             )
+                            
+                            // Gender & Age (Chota kar diya)
+                            Box(
+                                modifier = Modifier
+                                    .padding(start = 6.dp)
+                                    .clip(CircleShape)
+                                    .background(genderColor)
+                                    .padding(horizontal = 4.dp, vertical = 1.dp)
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                                    CustomGenderIcon(isFemale = displayGender.equals("female", true) || displayGender.equals("f", true) || displayGender == "♀", modifier = Modifier.size(6.dp))
+                                    Text(displayAge.toString(), color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                            
+                            // Country Flag
+                            if (displayCountry.isNotBlank()) {
+                                Text(roomProfileCountryFlag(displayCountry), fontSize = 14.sp, modifier = Modifier.padding(start = 4.dp))
+                            }
                         }
 
                         // 2nd: ID | Fans
@@ -329,71 +360,40 @@ fun RoomProfile(
                             Text(" Fans", color = Color.Gray, fontSize = 14.sp, modifier = Modifier.padding(start = 4.dp))
                         }
 
-                        // 3rd: Country flag, owner tag image, gender, Lv.1 image, Officialhead, official, Admin tag
+                        // 3rd: Lv.1 image, Officialhead, official, Admin tag
                         Row(
                             modifier = Modifier.padding(top = 10.dp).horizontalScroll(rememberScrollState()),
                             horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            // Country Flag
-                            if (displayCountry.isNotBlank()) {
-                                Text(roomProfileCountryFlag(displayCountry), fontSize = 16.sp)
-                            }
 
-                            // Owner tag image
-                            if (isRoomOwner) {
+                            // Lv.1 Image (choti ki aur text normal kiya, aur side wali image hata di)
+                            Box(
+                                contentAlignment = Alignment.CenterEnd,
+                                modifier = Modifier.height(16.dp) 
+                            ) {
                                 AsyncImage(
-                                    model = "IMG_20261027_235537.png".fullUrl(),
-                                    contentDescription = "Room owner",
-                                    contentScale = ContentScale.Fit,
-                                    modifier = Modifier.height(16.dp).widthIn(max = 64.dp)
+                                    model = "IMG_20261028_004355.png".fullUrl(), 
+                                    contentDescription = "Level", 
+                                    modifier = Modifier.height(16.dp) 
+                                )
+                                Text(
+                                    text = "Lv.1", 
+                                    color = Color.White,
+                                    fontSize = 10.sp, 
+                                    fontWeight = FontWeight.Normal,
+                                    modifier = Modifier.padding(end = 4.dp)
                                 )
                             }
 
-                            // Gender & Age
-                            Box(
-                                modifier = Modifier
-                                    .clip(CircleShape)
-                                    .background(genderColor)
-                                    .padding(horizontal = 5.dp, vertical = 2.dp)
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                                    CustomGenderIcon(isFemale = displayGender.equals("female", true) || displayGender.equals("f", true) || displayGender == "♀", modifier = Modifier.size(8.dp))
-                                    Text(displayAge.toString(), color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-                                }
-                            }
-
-                            // Lv.1 Image
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(
-                                    contentAlignment = Alignment.CenterEnd,
-                                    modifier = Modifier.height(24.dp) 
-                                ) {
-                                    AsyncImage(
-                                        model = "IMG_20261028_004355.png".fullUrl(), 
-                                        contentDescription = "Level", 
-                                        modifier = Modifier.height(24.dp) 
-                                    )
-                                    Text(
-                                        text = "Lv.1", 
-                                        color = Color.White,
-                                        fontSize = 11.sp, 
-                                        fontWeight = FontWeight.Bold,
-                                        modifier = Modifier.padding(end = 6.dp)
-                                    )
-                                }
-                                Spacer(modifier = Modifier.width(4.dp))
-                                AsyncImage(model = "1785486414756.png".fullUrl(), contentDescription = null, modifier = Modifier.height(24.dp))
-                            }
-
                             // Officialhead
-                            if (officialHeadTag) AsyncImage(model = "file_00000000ef2c82118b2266596d0e992d.png".fullUrl(), contentDescription = "Official Head", contentScale = ContentScale.Fit, modifier = Modifier.height(31.dp).widthIn(max = 80.dp))
+                            if (officialHeadTag) AsyncImage(model = "file_00000000ef2c82118b2266596d0e992d.png".fullUrl(), contentDescription = "Official Head", contentScale = ContentScale.Fit, modifier = Modifier.height(27.dp).widthIn(max = 80.dp))
                             
                             // Official Tag
-                            if (officialTag) AsyncImage(model = "IMG_20261027_102250.png".fullUrl(), contentDescription = "Official", contentScale = ContentScale.Fit, modifier = Modifier.height(22.dp).widthIn(max = 60.dp))
+                            if (officialTag) AsyncImage(model = "IMG_20261027_102250.png".fullUrl(), contentDescription = "Official", contentScale = ContentScale.Fit, modifier = Modifier.height(19.dp).widthIn(max = 60.dp))
                             
                             // Admin Tag
-                            if (adminTag) AsyncImage(model = "IMG_20261027_114117.png".fullUrl(), contentDescription = "Admin", contentScale = ContentScale.Fit, modifier = Modifier.height(22.dp).widthIn(max = 60.dp))
+                            if (adminTag) AsyncImage(model = "IMG_20261027_114117.png".fullUrl(), contentDescription = "Admin", contentScale = ContentScale.Fit, modifier = Modifier.height(19.dp).widthIn(max = 60.dp))
                         }
 
                         // 4th: Baaki other tags (Service, Host, Coin Seller) agar hain toh
@@ -403,9 +403,9 @@ fun RoomProfile(
                                 horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                if (serviceTag) AsyncImage(model = "IMG_20261027_102207.png".fullUrl(), contentDescription = "Service / CS", contentScale = ContentScale.Fit, modifier = Modifier.height(22.dp).widthIn(max = 60.dp))
-                                if (hostTag) AsyncImage(model = "IMG_20261028_154914.png".fullUrl(), contentDescription = "Host", contentScale = ContentScale.Fit, modifier = Modifier.height(19.dp).widthIn(max = 60.dp))
-                                if (coinSellerTag) AsyncImage(model = "IMG_20261027_105359.png".fullUrl(), contentDescription = "Coin Seller", contentScale = ContentScale.Fit, modifier = Modifier.height(22.dp).widthIn(max = 60.dp))
+                                if (serviceTag) AsyncImage(model = "IMG_20261027_102207.png".fullUrl(), contentDescription = "Service / CS", contentScale = ContentScale.Fit, modifier = Modifier.height(19.dp).widthIn(max = 60.dp))
+                                if (hostTag) AsyncImage(model = "IMG_20261028_154914.png".fullUrl(), contentDescription = "Host", contentScale = ContentScale.Fit, modifier = Modifier.height(17.dp).widthIn(max = 60.dp))
+                                if (coinSellerTag) AsyncImage(model = "IMG_20261027_105359.png".fullUrl(), contentDescription = "Coin Seller", contentScale = ContentScale.Fit, modifier = Modifier.height(19.dp).widthIn(max = 60.dp))
                             }
                         }
 
@@ -542,7 +542,7 @@ fun RoomProfile(
                                         model = (if (isFollowing) "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261105_125204.png" else "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261105_125259.png"),
                                         contentDescription = if (isFollowing) "Followed" else "Follow",
                                         contentScale = ContentScale.Fit,
-                                        modifier = Modifier.size(44.dp) 
+                                        modifier = Modifier.size(50.dp) 
                                     )
                                     Spacer(modifier = Modifier.height(6.dp))
                                     Text(
@@ -566,7 +566,7 @@ fun RoomProfile(
                                         model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261105_125330.png",
                                         contentDescription = "Chat",
                                         contentScale = ContentScale.Fit,
-                                        modifier = Modifier.size(44.dp) 
+                                        modifier = Modifier.size(50.dp) 
                                     )
                                     Spacer(modifier = Modifier.height(6.dp))
                                     Text(
@@ -590,7 +590,7 @@ fun RoomProfile(
                                         model = "file_00000000b9f481fa90d96c422ae8dd32.png".fullUrl(), 
                                         contentDescription = "Gift",
                                         contentScale = ContentScale.Crop,
-                                        modifier = Modifier.size(44.dp).clip(CircleShape) 
+                                        modifier = Modifier.size(50.dp).clip(CircleShape) 
                                     )
                                     Spacer(modifier = Modifier.height(6.dp))
                                     Text(
