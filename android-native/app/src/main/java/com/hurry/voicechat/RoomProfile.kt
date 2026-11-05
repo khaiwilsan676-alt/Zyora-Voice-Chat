@@ -302,7 +302,7 @@ fun RoomProfile(
                         )
                         if (isRoomOwner) {
                             AsyncImage(
-                                model = "IMG_20261027_235537.png".fullUrl(),
+                                model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/file_0000000019c4821180028eebae10dbfc.png",
                                 contentDescription = "Room owner",
                                 contentScale = ContentScale.Fit,
                                 modifier = Modifier.padding(start = 5.dp).height(16.dp).widthIn(max = 64.dp)
