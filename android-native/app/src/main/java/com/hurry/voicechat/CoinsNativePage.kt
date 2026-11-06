@@ -237,6 +237,9 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int, onChat: (Strin
     val dao = remember { WalletDatabase.get(context).walletDao() }
     val scope = rememberCoroutineScope()
     val authPrefs = remember { context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE) }
+    val walletCachePrefs = remember {
+        context.getSharedPreferences("zyora_wallet_cache", Context.MODE_PRIVATE)
+    }
     
     val walletUserId = remember {
         authPrefs.getString("uid", null)?.takeIf { it.isNotBlank() }
@@ -244,8 +247,13 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int, onChat: (Strin
     }
 
     var tab by remember { mutableStateOf(initialTab) }
-    var coins by remember { mutableStateOf(0L) }
-    var diamonds by remember { mutableStateOf(0L) }
+    // Render the last known wallet snapshot immediately; never flash zero while refreshes run.
+    var coins by remember(walletUserId) {
+        mutableStateOf(walletCachePrefs.getLong("balance_$walletUserId", 0L).coerceAtLeast(0L))
+    }
+    var diamonds by remember(walletUserId) {
+        mutableStateOf(walletCachePrefs.getLong("diamonds_$walletUserId", 0L).coerceAtLeast(0L))
+    }
     var din by remember { mutableStateOf("") }
     var cin by remember { mutableStateOf("") }
     var rate by remember { mutableStateOf("100%") }
@@ -255,15 +263,43 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int, onChat: (Strin
     var showDetails by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(walletUserId) {
-        coins = loadBalance(dao)
-        diamonds = loadDiamonds(dao)
         if (walletUserId.isBlank()) return@LaunchedEffect
+
+        val balanceKey = "balance_$walletUserId"
+        val diamondsKey = "diamonds_$walletUserId"
+        val syncKey = "last_sync_$walletUserId"
+
+        // Only fall back to Room when this account has no saved wallet snapshot.
+        // Existing cached values remain visible while any refresh is in flight.
+        if (!walletCachePrefs.contains(balanceKey) || !walletCachePrefs.contains(diamondsKey)) {
+            val localBalance = loadBalance(dao)
+            val localDiamonds = loadDiamonds(dao)
+            coins = localBalance
+            diamonds = localDiamonds
+            walletCachePrefs.edit()
+                .putLong(balanceKey, localBalance)
+                .putLong(diamondsKey, localDiamonds)
+                .apply()
+        }
+
+        // Avoid repeating the same wallet request when the page is reopened rapidly.
+        val lastSync = walletCachePrefs.getLong(syncKey, 0L)
+        if (System.currentTimeMillis() - lastSync < 15_000L) return@LaunchedEffect
+
         val wallet = fetchCanonicalWallet(walletUserId) ?: return@LaunchedEffect
         val serverBalance = wallet.optLong("balance").coerceAtLeast(0L)
         val serverDiamonds = wallet.optLong("diamonds").coerceAtLeast(0L)
+
         dao.saveUserData(UserDataEntity(balance = serverBalance, diamonds = serverDiamonds))
-        coins = serverBalance
-        diamonds = serverDiamonds
+        walletCachePrefs.edit()
+            .putLong(balanceKey, serverBalance)
+            .putLong(diamondsKey, serverDiamonds)
+            .putLong(syncKey, System.currentTimeMillis())
+            .apply()
+
+        // Update only the balance fields; the rest of the wallet UI stays mounted.
+        if (coins != serverBalance) coins = serverBalance
+        if (diamonds != serverDiamonds) diamonds = serverDiamonds
     }
 
     if (showDetails != null) {
