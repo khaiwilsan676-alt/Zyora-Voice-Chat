@@ -59,7 +59,7 @@ object SocialFollowApi {
             saveSnapshot(context,targetId,snap); snap
         }.getOrNull()
     }
-    suspend fun list(context:Context,userId:String,type:String):List<SocialFollowUser>=withContext(Dispatchers.IO){
+    suspend fun list(context:Context,userId:String,type:String):List<SocialFollowUser> = withContext(Dispatchers.IO){
         if(userId.isBlank())return@withContext emptyList()
         val key="social_list:$userId:$type"
         val cached=runCatching{NativeIndexDatabase(context).loadProfile(key)?.optJSONArray("rows")}.getOrNull()
