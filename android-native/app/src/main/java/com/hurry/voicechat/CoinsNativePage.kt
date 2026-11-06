@@ -676,7 +676,7 @@ private fun DiamondsContent(
 private fun AgentContent(onChat: (String, String, String) -> Unit) {
     val context = LocalContext.current
     var sellers by remember { mutableStateOf<List<WalletAgentSeller>>(emptyList()) }
-    var onlineById by remember { mutableStateOf>(emptyMap()) }
+    var onlineById by remember { mutableStateOf<Map<String, Boolean>>(emptyMap()) }
     var loaded by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
