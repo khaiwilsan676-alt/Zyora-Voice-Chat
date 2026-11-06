@@ -186,3 +186,8 @@ Current documentation does not certify that all historical features are build-, 
 - Preserved the existing card layout, image, displayed count, and equalizer appearance; the count and bar heights are now stable for each room card instead of continuously changing.
 - Added an explicit LazyColumn `contentType` for room-card rows while retaining the stable row key.
 - Status: **Implemented in repository**. Native APK CI and real-device scroll smoothness on Redmi 14C still need verification. No UI redesign or room/voice behavior change intended.
+
+## 16. Followpage empty-state consistency (2026-11-06)
+- `android-native/app/src/main/java/com/hurry/voicechat/Followpage.kt`: Fans, Friends, and Following now reuse the same empty-state image and “No data” label used by the native Mine page (`file_0000000047308211a02722299d1fda2e.png`).
+- Removed the separate hand-drawn per-tab empty illustrations and “No Fans/Friends/Following yet” labels from this empty state only. Visitors behavior and the page header/background remain unchanged.
+- Status: **Implemented in repository**. Native APK CI and device appearance still require verification.
