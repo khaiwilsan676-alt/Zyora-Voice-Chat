@@ -1855,12 +1855,30 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                 onLock={
                     if(isRoomOwner) {
                         val nextLocked=!seat.locked
-                        if(seatIndex>=0) seats[seatIndex]=seat.copy(locked=nextLocked)
+                        if(seatIndex>=0) seats[seatIndex]=if(nextLocked) NativeRoomSeat(number=seat.number,locked=true) else seat.copy(locked=false)
                         roomSocketRef.value?.emit("room_seat_action",JSONObject().put("roomId",roomId).put("userId",accountId).put("action","lock").put("seatNumber",seat.number).put("isLocked",nextLocked))
                         showSeatSheet=false;selectedSeat=0
                     }
                 },
-                onInvite={showSeatSheet=false;showInviteSheet=true}
+                onInvite={
+                    val targetId = profileSeat.accountId.trim()
+                    val inviteSeat = seats.firstOrNull { !it.occupied && !it.locked }
+                    val socket = roomSocketRef.value
+                    if (targetId.isNotBlank() && targetId != accountId && inviteSeat != null && socket?.connected() == true) {
+                        socket.emit(
+                            "room_seat_invite_send",
+                            JSONObject()
+                                .put("roomId", roomId)
+                                .put("inviterId", accountId)
+                                .put("inviterName", roomDisplayName.ifBlank { "User" })
+                                .put("inviterImage", roomDisplayImage)
+                                .put("targetId", targetId)
+                                .put("seatNumber", inviteSeat.number)
+                        )
+                    }
+                    selectedSeat = 0
+                    showSeatSheet = false
+                }
             )
         }
         if(selectedSeat>0 && seats.firstOrNull{it.number==selectedSeat}?.occupied==true && !showSeatSheet) {
@@ -1928,9 +1946,12 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                     val idx = seats.indexOfFirst { it.number == selectedSeat }
                     if (idx >= 0 && (accountId == roomOwner.accountId || accountId == roomOwner.id || accountId == roomId)) {
                         val nextLocked = !seats[idx].locked
-                        seats[idx] = seats[idx].copy(locked = nextLocked)
+                        val lockedSeat = seats[idx]
+                        seats[idx] = if (nextLocked) NativeRoomSeat(number = selectedSeat, locked = true)
+                            else lockedSeat.copy(locked = false)
                         roomSocketRef.value?.emit("room_seat_action", JSONObject().put("roomId", roomId)
                             .put("userId", accountId).put("action", "lock").put("seatNumber", selectedSeat).put("isLocked", nextLocked))
+                        if (nextLocked) selectedSeat = 0
                     }
                 },
                 onKickOut = { selectedTime ->
