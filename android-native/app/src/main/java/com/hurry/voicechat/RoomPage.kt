@@ -1316,6 +1316,7 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                     RoomChatMessages(
                         state = chatListState,
                         messages = messages,
+                        kickNotices = kickNotices,
                         showOfficialAnnouncement = showOfficialAnnouncement,
                         clearedBy = clearedBy,
                         announcement = announcement,
@@ -2171,6 +2172,7 @@ private fun RoomPageBlock(content: @Composable () -> Unit) {
 private fun RoomChatMessages(
     state: androidx.compose.foundation.lazy.LazyListState,
     messages: List<NativeRoomMessage>,
+    kickNotices: List<NativeRoomKickNotice>,
     showOfficialAnnouncement: Boolean,
     clearedBy: String,
     announcement: String,
