@@ -147,14 +147,15 @@ fun OtherSocialPages(type: String, onBack: () -> Unit) {
             val context = LocalContext.current
             val prefs = remember(context) { context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE) }
             val myId = prefs.getString("accountId", "").orEmpty().ifBlank { prefs.getString("uid", "").orEmpty() }
-            var rows by remember(type, myId) { mutableStateOf<List<SocialFollowUser>>(emptyList()) }
-            var loading by remember(type, myId) { mutableStateOf(true) }
+            var rows by remember(type, myId) {
+                mutableStateOf(SocialFollowApi.cachedList(context, myId, type.lowercase()))
+            }
             LaunchedEffect(type, myId) {
+                // Render the last saved list immediately; refresh silently in the background.
+                rows = SocialFollowApi.cachedList(context, myId, type.lowercase())
                 rows = SocialFollowApi.list(context, myId, type.lowercase())
-                loading = false
             }
             when {
-                loading && rows.isEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment=Alignment.Center) { CircularProgressIndicator(color=Color(0xFF2563EB)) }
                 rows.isEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment=Alignment.Center) {
                     Column(horizontalAlignment=Alignment.CenterHorizontally, modifier=Modifier.padding(bottom=48.dp)) {
                         AsyncImage(model="https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/file_0000000047308211a02722299d1fda2e.png",contentDescription="No data",modifier=Modifier.size(50.dp),contentScale=ContentScale.Fit)
