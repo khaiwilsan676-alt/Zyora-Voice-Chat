@@ -719,7 +719,9 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                         Box(Modifier.align(Alignment.BottomCenter)) {
                             HurryBottomNav(tab, languageCode = languageCode, unreadMessageCount = unreadMessageCount, onTab = { selected ->
                                 if (selected == HurryTab.MESSAGE) {
-                                    ZyoraMessageBannerState.current = null; unreadMessageCount = unreadPrefs.getInt("unread_$messageIdentity", 0).coerceAtLeast(0) }
+                                    ZyoraMessageBannerState.current = null
+                                    unreadMessageCount = unreadPrefs.getInt("unread_$messageIdentity", 0).coerceAtLeast(0)
+                                }
                                 tab = selected
                                 if (selected != HurryTab.ME) openedMePage = null
                                 if (selected == HurryTab.HOME) homeMine = false
@@ -741,6 +743,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
 
             if (incomingMessageBanner != null && openedChat == null && openedPublicProfile == null &&
                 (tab == HurryTab.HOME || tab == HurryTab.ME)) {
+                val banner = incomingMessageBanner
                 Box(
                     Modifier.fillMaxSize().statusBarsPadding().padding(top = 8.dp),
                     contentAlignment = Alignment.TopCenter
@@ -753,7 +756,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         AsyncImage(
-                            model = incomingMessageBanner.senderAvatar.ifBlank {
+                            model = banner.senderAvatar.ifBlank {
                                 "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/default-avatar.png"
                             },
                             contentDescription = "Sender avatar",
@@ -764,7 +767,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                             Modifier.weight(1f).padding(start = 9.dp, end = 8.dp)
                         ) {
                             Text(
-                                incomingMessageBanner.senderName,
+                                banner.senderName,
                                 color = Color(0xFF171717),
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.SemiBold,
@@ -772,7 +775,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                             )
                             Text(
-                                incomingMessageBanner.messageText,
+                                banner.messageText,
                                 color = Color(0xFF555555),
                                 fontSize = 12.sp,
                                 maxLines = 1,
@@ -781,7 +784,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                         }
                         androidx.compose.material3.Button(
                             onClick = {
-                                val message = incomingMessageBanner
+                                val message = banner
                                 openedChat = Triple(message.senderId, message.senderName, message.senderAvatar)
                                 ZyoraMessageBannerState.current = null
                             },
