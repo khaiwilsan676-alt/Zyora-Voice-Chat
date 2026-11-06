@@ -269,3 +269,11 @@ Current documentation does not certify that all historical features are build-, 
 - RoomPage.kt: the room chat image icon opens the system image picker, uploads to room-chat-image, broadcasts the image URL over the existing room Socket.IO message event, and renders a tappable image with a full-screen preview and top-left close control.
 - Direct-chat image messages retain their existing image picker, image preview, and close control. Existing chat and room layouts were left unchanged.
 - Status: source changes committed. Native APK build and live multi-device image/room-invitation verification remain pending.
+
+
+## 25 Room invitation delivery and room info refinements (2026-11-07)
+- Native direct-chat inbox sync and the background message listener now preserve the full `ROOM_INVITE::` payload in local IndexDB instead of reducing an incoming room invitation to the plain text label. The payload retains room ID, room name, room DP, and owner ID, so the receiving user's Chat page restores the tappable room invitation card and opens that exact room.
+- Room Info Share in Zyora now loads the signed-in user's Fans list (excluding the current account), rather than the room owner's Fans list. The room invitation still carries the selected room's ID/name/DP.
+- Room Info sheet height increased from 50% to 60% of screen height; the three-dot danger menu is hidden from the room owner.
+- Room chat shared-image preview thumbnail maximum size reduced from 230dp to 140dp; tapping still opens the full-screen image preview.
+- Verification: source changes committed; native APK CI and two-account online/offline invitation delivery, room join, fan-list, and device-layout checks remain pending.
