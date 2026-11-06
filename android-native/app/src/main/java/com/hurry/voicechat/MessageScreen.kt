@@ -66,6 +66,18 @@ import java.util.Locale
 
 private const val RAW_MSG = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/"
 
+data class ZyoraIncomingMessageBanner(
+    val messageId: String,
+    val senderId: String,
+    val senderName: String,
+    val senderAvatar: String,
+    val messageText: String
+)
+
+object ZyoraMessageBannerState {
+    var current by mutableStateOf<ZyoraIncomingMessageBanner?>(null)
+}
+
 // Added unreadCount to track new messages
 private data class MessagePreview(val uid: String, val name: String, val image: String, val message: String, val time: String = "", val unreadCount: Int = 0, val isInRoom: Boolean = false, val roomId: String = "")
 
@@ -283,6 +295,15 @@ fun PrivateMessageInboxSync() {
                     if (!alreadySaved) {
                         history.put(JSONObject().put("id", messageId).put("mine", false).put("text", body))
                         indexDb.saveChat(chatKey, history.toString())
+                        // Publish only after the message is safely persisted; duplicate socket deliveries
+                        // therefore cannot create repeated top banners.
+                        ZyoraMessageBannerState.current = ZyoraIncomingMessageBanner(
+                            messageId = messageId,
+                            senderId = peerId,
+                            senderName = payload.optString("senderName", "User").ifBlank { "User" },
+                            senderAvatar = payload.optString("senderPhoto", ""),
+                            messageText = preview.ifBlank { "New message" }
+                        )
                         
                         // User-specific unread count logic update
                         val unreadPrefs = context.getSharedPreferences("zyora_unread_messages", Context.MODE_PRIVATE)
