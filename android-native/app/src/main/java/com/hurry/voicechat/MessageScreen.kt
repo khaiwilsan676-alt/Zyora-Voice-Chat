@@ -58,6 +58,8 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import kotlinx.coroutines.launch
 import java.io.File
 import java.text.SimpleDateFormat
@@ -562,7 +564,8 @@ fun NativeChatScreen(
     currentAccountIdOverride: String = "",
     onBack: () -> Unit,
     onJoinRoom: (String) -> Unit = {},
-    onOpenPublicProfile: () -> Unit = {}
+    onOpenPublicProfile: () -> Unit = {},
+    initialRoomInvitation: String? = null
 ) {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("hurry_user", Context.MODE_PRIVATE) }
@@ -588,6 +591,8 @@ fun NativeChatScreen(
     var showReportPage by remember { mutableStateOf(false) }
     var isUserBlocked by remember(receiverId) { mutableStateOf(false) }
     var replyText by remember { mutableStateOf<String?>(null) }
+    var previewImageUrl by remember { mutableStateOf<String?>(null) }
+    var roomInvitationSent by remember(receiverId, initialRoomInvitation) { mutableStateOf(false) }
     
     // Scam banner hide/show
     var showScamBanner by remember { mutableStateOf(true) }
@@ -693,6 +698,51 @@ fun NativeChatScreen(
         }
         indexDb.saveChat(localConversationKey, array.toString())
     }
+    val chatScope = rememberCoroutineScope()
+    val imagePickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) {
+            val messageId = currentUserId + "_" + System.currentTimeMillis()
+            chatScope.launch {
+                val imageUrl = runCatching { uploadChatImage(context, uri, messageId, "chat-image") }.getOrNull()
+                if (!imageUrl.isNullOrBlank()) {
+                    val localImage = "IMAGE::" + imageUrl
+                    messages.add(true to localImage)
+                    messageIds.add(messageId)
+                    saveConversationPreview(receiverId, name, image, "📷 Image", System.currentTimeMillis())
+                    val payload = JSONObject().put("id", messageId).put("senderId", currentUserId)
+                        .put("senderAccountId", currentAccountId).put("receiverId", receiverId)
+                        .put("receiverAccountId", receiverId).put("senderName", currentName)
+                        .put("senderPhoto", currentPhoto).put("receiverName", name).put("receiverPhoto", image)
+                        .put("text", "📷 Image").put("type", "image").put("imageUrl", imageUrl)
+                        .put("timestamp", System.currentTimeMillis())
+                    if (chatRegistered && directSocket?.connected() == true) directSocket?.emit("private_message", payload)
+                } else {
+                    android.widget.Toast.makeText(context, "Image upload failed. Try an image under 5 MB.", android.widget.Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+    LaunchedEffect(initialRoomInvitation, chatRegistered, receiverId) {
+        if (!roomInvitationSent && !initialRoomInvitation.isNullOrBlank() && chatRegistered &&
+            directSocket?.connected() == true && receiverId.isNotBlank()) {
+            val roomData = runCatching { JSONObject(initialRoomInvitation) }.getOrNull()
+            if (roomData != null) {
+                val messageId = currentUserId + "_" + System.currentTimeMillis()
+                val localInvite = "ROOM_INVITE::" + roomData.toString()
+                messages.add(true to localInvite)
+                messageIds.add(messageId)
+                saveConversationPreview(receiverId, name, image, "Room invitation", System.currentTimeMillis())
+                directSocket?.emit("private_message", JSONObject()
+                    .put("id", messageId).put("senderId", currentUserId).put("senderAccountId", currentAccountId)
+                    .put("receiverId", receiverId).put("receiverAccountId", receiverId)
+                    .put("senderName", currentName).put("senderPhoto", currentPhoto)
+                    .put("receiverName", name).put("receiverPhoto", image)
+                    .put("text", "Room invitation").put("type", "room_invitation")
+                    .put("roomData", roomData).put("timestamp", System.currentTimeMillis()))
+                roomInvitationSent = true
+            }
+        }
+    }
 
     fun cacheOfficialMessage(payload: JSONObject, officialId: String) {
         if (payload.optString("senderId") != officialId) return
@@ -772,8 +822,12 @@ fun NativeChatScreen(
             if (fromPeer && addressedToMe) {
                 val isVoice = payload.optString("type") == "voice"
                 val value = if (isVoice) {
-                    VoiceMessageStore.saveIncoming(context, payload) ?: "VOICE::${payload.optLong("durationSec", 1)}"
-                } else payload.optString("text")
+                    VoiceMessageStore.saveIncoming(context, payload) ?: ("VOICE::" + payload.optLong("durationSec", 1))
+                } else when (payload.optString("type")) {
+                    "image" -> "IMAGE::" + payload.optString("imageUrl")
+                    "room_invitation" -> "ROOM_INVITE::" + (payload.optJSONObject("roomData")?.toString() ?: "{}")
+                    else -> payload.optString("text")
+                }
                 if (value.isNotBlank()) mainHandler.post {
                     val mine = sender == currentUserId || senderAccountId == currentAccountId
                     val messageId = payload.optString("id")
@@ -803,8 +857,12 @@ fun NativeChatScreen(
                 val isVoice = msg.optString("type") == "voice"
                 val value = if (isVoice) {
                     VoiceMessageStore.saveIncoming(context, msg)
-                        ?: "VOICE::${msg.optLong("durationSec", 1)}"
-                } else msg.optString("text")
+                        ?: ("VOICE::" + msg.optLong("durationSec", 1))
+                } else when (msg.optString("type")) {
+                    "image" -> "IMAGE::" + msg.optString("imageUrl")
+                    "room_invitation" -> "ROOM_INVITE::" + (msg.optJSONObject("roomData")?.toString() ?: "{}")
+                    else -> msg.optString("text")
+                }
                 if (value.isNotBlank()) {
                     loaded.add((msg.optString("senderId") == currentUserId || msg.optString("senderAccountId") == currentAccountId) to value)
                     loadedIds.add(msg.optString("id"))
