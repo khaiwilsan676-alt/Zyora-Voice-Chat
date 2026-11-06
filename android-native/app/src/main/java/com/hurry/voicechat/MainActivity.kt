@@ -813,37 +813,33 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                 }
             }
             roomAccessPromptRoom?.let { lockedRoom ->
-                Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.42f)), contentAlignment = Alignment.Center) {
+                Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.30f)), contentAlignment = Alignment.Center) {
                     Column(
-                        Modifier.fillMaxWidth().padding(horizontal = 30.dp).clip(RoundedCornerShape(14.dp))
-                            .background(Color(0xFF171717)).padding(20.dp),
+                        Modifier.fillMaxWidth().padding(horizontal = 24.dp)
+                            .clip(RoundedCornerShape(16.dp)).background(Color.White).padding(24.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text("Room Locked", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
-                        Spacer(Modifier.height(16.dp))
-                        androidx.compose.material3.OutlinedTextField(
-                            value = roomAccessPassword,
-                            onValueChange = { if (it.length <= 4 && it.all(Char::isDigit)) roomAccessPassword = it },
-                            label = { Text("Enter password", color = Color.LightGray) },
-                            singleLine = true,
-                            visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
-                            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.NumberPassword),
-                            modifier = Modifier.fillMaxWidth()
-                        )
+                        Text("Room Locked", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF202020))
+                        Spacer(Modifier.height(24.dp))
+                        PasswordInputBoxes(roomAccessPassword) { roomAccessPassword = it }
                         if (roomAccessError) {
-                            Text("Password incorrect", color = Color(0xFFFF7777), fontSize = 12.sp, modifier = Modifier.padding(top = 7.dp))
+                            Spacer(Modifier.height(10.dp))
+                            Text("Password incorrect", color = Color(0xFFDC2626), fontSize = 12.sp, fontWeight = FontWeight.Medium)
                         }
-                        Row(Modifier.fillMaxWidth().padding(top = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            androidx.compose.material3.TextButton(
-                                onClick = { roomAccessPromptRoom = null; roomAccessPassword = ""; roomAccessError = false },
-                                modifier = Modifier.weight(1f)
-                            ) { Text("Cancel", color = Color.LightGray) }
-                            androidx.compose.material3.Button(
-                                onClick = { if (roomAccessPassword.length == 4) tryOpenRoom(lockedRoom, roomAccessPassword) },
-                                enabled = roomAccessPassword.length == 4 && !roomAccessCheckInProgress,
-                                modifier = Modifier.weight(1f)
-                            ) { Text("Enter the room") }
-                        }
+                        Spacer(Modifier.height(24.dp))
+                        androidx.compose.material3.Button(
+                            onClick = { if (roomAccessPassword.length == 4) tryOpenRoom(lockedRoom, roomAccessPassword) },
+                            enabled = roomAccessPassword.length == 4 && !roomAccessCheckInProgress,
+                            modifier = Modifier.fillMaxWidth().height(44.dp),
+                            shape = RoundedCornerShape(24.dp)
+                        ) { Text("Enter the room", color = Color.White, fontWeight = FontWeight.SemiBold) }
+                        Spacer(Modifier.height(12.dp))
+                        Box(
+                            Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
+                                .clickable { roomAccessPromptRoom = null; roomAccessPassword = ""; roomAccessError = false }
+                                .padding(vertical = 8.dp),
+                            contentAlignment = Alignment.Center
+                        ) { Text("Cancel", color = Color(0xFF777777), fontSize = 14.sp, fontWeight = FontWeight.Medium) }
                     }
                 }
             }
