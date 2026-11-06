@@ -270,10 +270,12 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                                     .clip(RoundedCornerShape(50)),
                                 contentScale = ContentScale.Crop
                             )
-                            // TOP 1 VIDEO FRAME WITH TRANSPARENT FALLBACK (NO BLACK SCREEN)
-                            ChromaVideoPlayer(
-                                url = raw + "​IMG_20261105_230210.png",
-                                modifier = Modifier.requiredSize(300.dp)
+                            // TOP 1 FRAME IMAGE
+                            LeaderboardChromaImage(
+                                url = raw + "IMG_20261105_230210.png",
+                                contentDescription = "Rank 1 frame",
+                                modifier = Modifier.requiredSize(300.dp),
+                                contentScale = ContentScale.Fit
                             )
                         }
                         
