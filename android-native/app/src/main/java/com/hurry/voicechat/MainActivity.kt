@@ -824,7 +824,15 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                         PasswordInputBoxes(roomAccessPassword) { roomAccessPassword = it }
                         if (roomAccessError) {
                             Spacer(Modifier.height(10.dp))
-                            Text("Password incorrect", color = Color(0xFFDC2626), fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                            Text(
+                                "Password incorrect",
+                                color = Color.White,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium,
+                                modifier = Modifier.clip(RoundedCornerShape(5.dp))
+                                    .background(Color.Black.copy(alpha = 0.70f))
+                                    .padding(horizontal = 12.dp, vertical = 6.dp)
+                            )
                         }
                         Spacer(Modifier.height(24.dp))
                         androidx.compose.material3.Button(
