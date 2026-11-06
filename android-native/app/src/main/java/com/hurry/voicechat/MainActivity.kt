@@ -521,7 +521,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                         if (connection.responseCode !in 200..299) error("Room details unavailable")
                         val root = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
                         val saved = root.optJSONObject("room") ?: root
-                        val rawImage = sequenceOf("dp", "image", "roomDp", "Room dp")
+                        val rawImage = sequenceOf("dp", "image", "roomDp", "Room dp", "roomImage", "imageUrl", "avatar", "photo")
                             .map { saved.optString(it, "").trim() }
                             .firstOrNull { it.isNotBlank() && it != "null" && it != "undefined" }
                             .orEmpty()
