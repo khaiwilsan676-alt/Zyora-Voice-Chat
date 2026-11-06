@@ -1359,22 +1359,53 @@ fun NativeChatScreen(
                                             fontWeight = FontWeight.Medium
                                         )
                                     }
+                                } else if (isImageMessage) {
+                                    AsyncImage(
+                                        model = imageMessageUrl,
+                                        contentDescription = "Shared image",
+                                        modifier = Modifier.widthIn(max = 230.dp).heightIn(max = 230.dp)
+                                            .clip(RoundedCornerShape(12.dp)).clickable { previewImageUrl = imageMessageUrl },
+                                        contentScale = ContentScale.Crop
+                                    )
+                                } else if (isRoomInvitation && roomInvitationData != null) {
+                                    val sharedRoomId = roomInvitationData.optString("roomId")
+                                    Column(
+                                        Modifier.width(238.dp).clip(RoundedCornerShape(12.dp)).background(Color.White)
+                                            .clickable { if (sharedRoomId.isNotBlank()) onJoinRoom(sharedRoomId) }
+                                            .padding(12.dp)
+                                    ) {
+                                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                            Text("Invitation", Modifier.weight(1f), color = Color(0xFF111827), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                            Text("›", color = Color(0xFF111827), fontSize = 24.sp)
+                                        }
+                                        Spacer(Modifier.height(9.dp))
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            AsyncImage(
+                                                model = roomInvitationData.optString("roomDp"),
+                                                contentDescription = roomInvitationData.optString("roomName"),
+                                                modifier = Modifier.size(48.dp).clip(RoundedCornerShape(7.dp)),
+                                                contentScale = ContentScale.Crop
+                                            )
+                                            Column(Modifier.padding(start = 9.dp).weight(1f)) {
+                                                Text(roomInvitationData.optString("roomName").ifBlank { "Room" },
+                                                    color = Color(0xFF111827), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                                                Spacer(Modifier.height(3.dp))
+                                                if (sharedRoomId in setOf("100002","100003","500002","500003","500004")) {
+                                                    AsyncImage(model = "https://zyora-voice-chat.vercel.app/IMG_20261101_125212.png",
+                                                        contentDescription = "Account ID", modifier = Modifier.height(16.dp).widthIn(min = 22.dp, max = 30.dp), contentScale = ContentScale.Fit)
+                                                } else {
+                                                    Text("ID: " + sharedRoomId, color = Color(0xFF6B7280), fontSize = 10.sp)
+                                                }
+                                            }
+                                        }
+                                    }
                                 } else {
                                     Column(Modifier.widthIn(max = 290.dp).padding(horizontal = 13.dp, vertical = 9.dp)) {
                                         if (replyText != null && mine) {
-                                            Text(
-                                                replyText!!,
-                                                color = Color(0xFFCBD5E1),
-                                                fontSize = 10.sp,
-                                                maxLines = 1
-                                            )
+                                            Text(replyText!!, color = Color(0xFFCBD5E1), fontSize = 10.sp, maxLines = 1)
                                             Spacer(Modifier.height(3.dp))
                                         }
-                                        Text(
-                                            messageText,
-                                            color = if (mine) Color.White else Color(0xFF1F2937),
-                                            fontSize = 14.sp
-                                        )
+                                        Text(messageText, color = if (mine) Color.White else Color(0xFF1F2937), fontSize = 14.sp)
                                     }
                                 }
                             }
