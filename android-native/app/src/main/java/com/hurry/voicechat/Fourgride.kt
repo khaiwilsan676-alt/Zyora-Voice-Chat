@@ -142,8 +142,11 @@ fun Fourgride(
     val prefs = remember { context.getSharedPreferences("hurry_room_tools", android.content.Context.MODE_PRIVATE) }
     val musicPrefs = remember { context.getSharedPreferences("zyora_phone_music", android.content.Context.MODE_PRIVATE) }
     var musicTracks by remember { mutableStateOf(emptyList<NativeMusicTrack>()) }
+    var entryEffect by remember { mutableStateOf(false) }
+    var giftEffect by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
+        // Initialize the two room effects as OFF before exposing their controls.
         entryEffect = false
         giftEffect = false
         prefs.edit().putBoolean("entry_effect", false).putBoolean("gift_effect", false).apply()
@@ -157,9 +160,6 @@ fun Fourgride(
             }.getOrNull()
         }
     }
-
-    var entryEffect by remember { mutableStateOf(false) }
-    var giftEffect by remember { mutableStateOf(false) }
     var showMusic by remember { mutableStateOf(false) }
     var showLuckyBag by remember { mutableStateOf(false) }
     var hideToolsAfterLucky by remember { mutableStateOf(false) }
