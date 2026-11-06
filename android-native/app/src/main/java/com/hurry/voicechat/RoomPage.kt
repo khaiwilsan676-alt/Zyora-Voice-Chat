@@ -470,6 +470,7 @@ fun RoomPage(
     var localVoiceSpeaking by remember { mutableStateOf(false) }
     var publicMsgOff by remember(roomId){mutableStateOf(true)}
     var showPublicMessageClosedToast by remember { mutableStateOf(false) }
+    var showRoomOwnerBlockedToast by remember { mutableStateOf(false) }
     val isRoomOwner = accountId == roomOwnerAccountId
     val canSendRoomPublicMessage = isRoomOwner || roomAdminIds.any { it == accountId }
     LaunchedEffect(showPublicMessageClosedToast) {
@@ -1050,6 +1051,13 @@ fun RoomPage(
                 }
             }
         }
+        val roomJoinBlockedListener = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject
+            if (payload != null && payload.optString("roomId") == roomId) {
+                mainHandler.post { showRoomOwnerBlockedToast = true }
+                mainHandler.postDelayed({ showRoomOwnerBlockedToast = false }, 2200)
+            }
+        }
         val settingsListener = Emitter.Listener { args ->
             val payload = args.firstOrNull() as? JSONObject
             if (payload != null && payload.optString("roomId") == roomId) {
@@ -1137,6 +1145,7 @@ fun RoomPage(
         roomSocket.on("room_seats",seatListener)
         roomSocket.on("room_voice_speaker",voiceSpeakerListener)
         roomSocket.on("room_settings_updated",settingsListener)
+        roomSocket.on("room_join_blocked", roomJoinBlockedListener)
         roomSocket.on("room_follow_updated", roomFollowListener)
         roomSocket.on("lucky_bag_banner",luckyBagBannerListener)
         roomSocket.on("wallet_balance_updated",walletBalanceListener)
@@ -1173,6 +1182,7 @@ fun RoomPage(
             roomSocket.off("room_voice_speaker",voiceSpeakerListener)
             mainHandler.post { activeVoiceSpeakerIds.clear() }
             roomSocket.off("room_settings_updated",settingsListener)
+            roomSocket.off("room_join_blocked", roomJoinBlockedListener)
             roomSocket.off("room_follow_updated", roomFollowListener)
             roomSocket.off("lucky_bag_banner",luckyBagBannerListener)
             roomSocket.off("wallet_balance_updated",walletBalanceListener)
@@ -1187,6 +1197,16 @@ fun RoomPage(
     }
 
     Box(Modifier.fillMaxSize().background(Color.Black)){
+        if (showRoomOwnerBlockedToast) {
+            Text(
+                text = "You're blocked by Room owner",
+                color = Color.White,
+                fontSize = 12.sp,
+                modifier = Modifier.align(Alignment.Center).zIndex(101f)
+                    .clip(RoundedCornerShape(8.dp)).background(Color.Black.copy(alpha = 0.70f))
+                    .padding(horizontal = 14.dp, vertical = 8.dp)
+            )
+        }
         if (showPublicMessageClosedToast) {
             Text(
                 text = "Public Message are close",
