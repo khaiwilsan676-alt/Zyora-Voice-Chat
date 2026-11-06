@@ -277,3 +277,11 @@ Current documentation does not certify that all historical features are build-, 
 - Room Info sheet height increased from 50% to 60% of screen height; the three-dot danger menu is hidden from the room owner.
 - Room chat shared-image preview thumbnail maximum size reduced from 230dp to 140dp; tapping still opens the full-screen image preview.
 - Verification: source changes committed; native APK CI and two-account online/offline invitation delivery, room join, fan-list, and device-layout checks remain pending.
+
+
+## Room owner tools and shared block enforcement (2026-11-07)
+- Fourgride owner-only controls: Clear Chat, Public Message toggle, Music, and PK Battle are visible only to the room owner. Non-owner grid cells reflow without reserved empty slots. The sheet uses an opaque near-black background.
+- Public Message starts closed for each room. The room owner can open/close it; the setting is broadcast to current members and sent to new joiners. The server rejects room messages from non-owner/non-admin members while closed, with the existing small closed-message notice on the client.
+- Entry Effect and Gift Effect are initialized and persisted OFF when Fourgride opens.
+- User blocks are shared across Public Profile, Room Profile, and ChatPage through the server blocks collection. Private-message delivery is rejected in either direction when either participant has blocked the other. Room join is rejected when the room owner and joining account have a block relationship.
+- Block verification, native build, server deployment, and multi-account runtime tests remain pending; do not treat source commits alone as verified behavior.
