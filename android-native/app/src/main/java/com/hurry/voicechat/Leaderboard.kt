@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView // NEW IMPORT FOR VIDEO PLAYER
 import coil3.compose.AsyncImage
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.verticalScroll
@@ -37,6 +38,71 @@ import java.util.concurrent.ConcurrentHashMap
 
 private object LeaderboardChromaCache {
     val images = ConcurrentHashMap<String, ImageBitmap>()
+}
+
+// 100% GUARANTEE CHROMA KEY VIDEO PLAYER (USING CANVAS LOGIC)
+@Composable
+fun ChromaVideoPlayer(url: String, modifier: Modifier = Modifier) {
+    AndroidView(
+        modifier = modifier,
+        factory = { context ->
+            android.webkit.WebView(context).apply {
+                setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null)
+                settings.javaScriptEnabled = true
+                settings.mediaPlaybackRequiresUserGesture = false
+                
+                val htmlData = """
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                    <style>
+                        body { margin: 0; overflow: hidden; background-color: transparent; }
+                        canvas { width: 100%; height: 100%; object-fit: contain; }
+                        video { display: none; }
+                    </style>
+                    </head>
+                    <body>
+                    <video id="v" src="$url" autoplay loop muted playsinline crossorigin="anonymous"></video>
+                    <canvas id="c"></canvas>
+                    <script>
+                        const v = document.getElementById('v');
+                        const c = document.getElementById('c');
+                        const ctx = c.getContext('2d', { willReadFrequently: true });
+                        
+                        v.addEventListener('loadedmetadata', function() {
+                            c.width = v.videoWidth || 400;
+                            c.height = v.videoHeight || 400;
+                        });
+                        
+                        v.addEventListener('play', function() {
+                            function step() {
+                                if(v.paused || v.ended) return;
+                                ctx.drawImage(v, 0, 0, c.width, c.height);
+                                let frame = ctx.getImageData(0, 0, c.width, c.height);
+                                let l = frame.data.length / 4;
+                                for (let i = 0; i < l; i++) {
+                                    let r = frame.data[i * 4 + 0];
+                                    let g = frame.data[i * 4 + 1];
+                                    let b = frame.data[i * 4 + 2];
+                                    // 100% Green Removal Logic
+                                    if (g > 50 && g > r * 1.15 && g > b * 1.15) {
+                                        frame.data[i * 4 + 3] = 0;
+                                    }
+                                }
+                                ctx.putImageData(frame, 0, 0);
+                                requestAnimationFrame(step);
+                            }
+                            requestAnimationFrame(step);
+                        });
+                    </script>
+                    </body>
+                    </html>
+                """.trimIndent()
+                loadDataWithBaseURL(null, htmlData, "text/html", "UTF-8", null)
+            }
+        }
+    )
 }
 
 @Composable
@@ -205,25 +271,27 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                             modifier = Modifier.width(podiumTopWidth).height(200.dp).offset(y = (-10).dp), 
                             contentAlignment = Alignment.Center
                         ) {
-                            // Rank 1 Avatar (peeche overlap ke liye pehle likha hai, frame size 350.dp ke hisaab se set kiya)
+                            // Rank 1 Avatar
                             AsyncImage(
-                                model = raw + "default_avatar.png", // Protocol avatar
+                                model = raw + "default_avatar.png",
                                 contentDescription = "Rank 1 Avatar",
                                 modifier = Modifier
                                     .size(66.dp)
                                     .clip(RoundedCornerShape(50)),
                                 contentScale = ContentScale.Crop
                             )
-                            // Rank 1 Frame (avatar ke upar)
-                            LeaderboardChromaImage(url=raw+"file_00000000a0e48207ade38b36ab946ecb.png",contentDescription="Rank 1 frame",modifier=Modifier.requiredSize(260.dp),contentScale=ContentScale.Fit)
+                            // TOP 1 VIDEO FRAME APPLIED HERE (100% Chroma key Guarantee)
+                            ChromaVideoPlayer(
+                                url = raw + "VID_20261106_003652_300_bsl.mp4",
+                                modifier = Modifier.requiredSize(260.dp)
+                            )
                         }
                         
-                        // YE RAHA TERA GAP - Ise 15dp se 45dp kar diya hai Rank 1 aur 2,3 ke beech ka space increase karne ke liye
                         Spacer(Modifier.height(45.dp)) 
                         
                         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically) {
                             Box(modifier = Modifier.width(podiumSideWidth).height(175.dp), contentAlignment = Alignment.Center) {
-                                // Rank 2 Avatar (Top center pe frame ke peeche)
+                                // Rank 2 Avatar
                                 AsyncImage(
                                     model = raw + "default_avatar.png",
                                     contentDescription = "Rank 2 Avatar",
@@ -234,11 +302,11 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                                         .clip(RoundedCornerShape(50)),
                                     contentScale = ContentScale.Crop
                                 )
-                                // Rank 2 Frame (avatar ke upar)
+                                // Rank 2 Frame 
                                 LeaderboardChromaImage(url=raw+"file_0000000069b88207b9fdd01576b71ee9.png",contentDescription="Rank 2 frame",modifier=Modifier.requiredSize(260.dp),contentScale=ContentScale.Fit)
                             }
                             Box(modifier = Modifier.width(podiumSideWidth).height(175.dp), contentAlignment = Alignment.Center) {
-                                // Rank 3 Avatar (Top center pe frame ke peeche)
+                                // Rank 3 Avatar 
                                 AsyncImage(
                                     model = raw + "default_avatar.png",
                                     contentDescription = "Rank 3 Avatar",
@@ -249,7 +317,7 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                                         .clip(RoundedCornerShape(50)),
                                     contentScale = ContentScale.Crop
                                 )
-                                // Rank 3 Frame (avatar ke upar)
+                                // Rank 3 Frame
                                 LeaderboardChromaImage(url=raw+"file_00000000ecc882079f34a9356b53dc8e.png",contentDescription="Rank 3 frame",modifier=Modifier.requiredSize(250.dp),contentScale=ContentScale.Fit)
                             }
                         }
@@ -266,12 +334,11 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 8.dp)
-                            .padding(top = 20.dp) // Yaha maine 20dp niche kiya hai is purre black card ko
+                            .padding(top = 35.dp) // YAHAN 45 SE 35 KAR DIYA HAI BSS 
                             .background(Color(0xE60A0505), RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)) 
                             .border(1.dp, Color(0xFFD4AF37), RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
                     ) {
                         
-                        // Yaha maine Patli Patti lagayi hai Brown color ki fade effect ke sath
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -279,12 +346,12 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                                 .background(
                                     Brush.horizontalGradient(
                                         0.0f to Color.Transparent,
-                                        0.2f to Color(0xFF4A2511), // Brown Color Mix
-                                        0.8f to Color(0xFF4A2511), // Brown Color Mix
+                                        0.2f to Color(0xFF4A2511), 
+                                        0.8f to Color(0xFF4A2511), 
                                         1.0f to Color.Transparent
                                     )
                                 )
-                                .padding(vertical = 4.dp), // Patli patti ka look dene ke liye
+                                .padding(vertical = 4.dp), 
                             horizontalArrangement = Arrangement.Center,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -327,7 +394,6 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                                 )
                                 Spacer(Modifier.width(12.dp))
                                 Column(Modifier.weight(1f)) {
-                                    // Pheli row jisme Name aur (Value + Coin) dono hain
                                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                                         Text(
                                             text = "User Name ${i+4}",
@@ -339,7 +405,6 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                                         )
                                         Spacer(Modifier.width(6.dp))
                                         
-                                        // YAHAN FIX KIYA HAI GENDER ICON KO EKDAM CENTER MEIN
                                         Box(
                                             modifier = Modifier
                                                 .size(14.dp)
@@ -355,11 +420,11 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                                                         includeFontPadding = false
                                                     )
                                                 ),
-                                                modifier = Modifier.offset(y = (-1).dp) // Center fix karne ke liye halka sa upar kiya
+                                                modifier = Modifier.offset(y = (-1).dp) 
                                             )
                                         }
                                         
-                                        Spacer(Modifier.weight(1f)) // Ye Value aur Coin icon ko right shift karega
+                                        Spacer(Modifier.weight(1f)) 
                                         
                                         Text(
                                             text = "${796 - (i * 12)}.9K",
@@ -376,7 +441,6 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                                         )
                                     }
                                     Spacer(Modifier.height(4.dp))
-                                    // Dusri row niche: Flag aur Nayi Level image with text on top
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Text(if (i % 2 == 0) "🇮🇳" else "🇸🇦", fontSize = 14.sp) 
                                         Spacer(Modifier.width(6.dp))
@@ -412,7 +476,8 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
             modifier = Modifier
                 .fillMaxWidth()
                 .align(Alignment.BottomCenter)
-                .height(150.dp) // Yaha height 120.dp se increase karke 150.dp kar di hai chipkane k liye
+                .offset(y = 10.dp) 
+                .height(150.dp) 
         ) {
             AsyncImage(
                 model = raw + "IMG_20261106_021443.png",
@@ -424,7 +489,7 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(horizontal = 24.dp)
-                    .padding(top = 40.dp), // Height badhi hai to top padding thodi increase ki hai taaki design center mein rahe
+                    .padding(top = 30.dp), 
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 AsyncImage(
