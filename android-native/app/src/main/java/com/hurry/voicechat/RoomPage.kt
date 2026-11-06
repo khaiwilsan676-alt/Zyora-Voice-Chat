@@ -2539,15 +2539,20 @@ private fun RoomSeatInviteDialog(
 @Composable private fun NativeMessage(m:NativeRoomMessage, roomOwnerId: String, onAvatarClick: () -> Unit = {}, onMentionClick: (NativeMention) -> Unit = {}){
     val context = LocalContext.current
     val profileDb = remember(context) { NativeIndexDatabase(context) }
-    var profileTags by remember(m.senderAccountId) { mutableStateOf(profileDb.loadProfile(m.senderAccountId)) }
+    var profileTags by remember(m.senderAccountId) { mutableStateOf<JSONObject?>(null) }
     LaunchedEffect(m.senderAccountId) {
         if (m.senderAccountId.isNotBlank()) {
-            val existingCache = profileDb.loadProfile(m.senderAccountId)
+            // SQLite reads/writes and remote profile refreshes must never run on the
+            // Compose main thread while the room chat is being laid out.
+            val cached = withContext(Dispatchers.IO) {
+                runCatching { profileDb.loadProfile(m.senderAccountId) }.getOrNull()
+            }
+            profileTags = cached
             val remote = ProfilePersistence.load(
                 TargetUser(uid = m.senderAccountId, id = m.senderAccountId, accountId = m.senderAccountId, name = m.sender, image = m.senderImage)
             )
             if (remote != null) {
-                val merged = profileDb.loadProfile(m.senderAccountId) ?: JSONObject()
+                val merged = JSONObject(cached?.toString() ?: "{}")
                 listOf("officialHeadTag", "officialTag", "adminTag", "serviceTag", "coinSellerTag", "coinSeller", "sellerTag", "csTag", "hostTag", "isHost").forEach { key ->
                     if (remote.has(key)) merged.put(key, remote.opt(key))
                 }
@@ -2555,7 +2560,7 @@ private fun RoomSeatInviteDialog(
                 val remoteImage = sequenceOf("image", "avatar", "profileImageUrl").map { remote.optString(it, "") }.firstOrNull { it.isNotBlank() && it != "null" } ?: "https://zyora-server.onrender.com/default-avatar.png"
                 if (remoteName.isNotBlank()) merged.put("name", remoteName)
                 if (remoteImage.isNotBlank()) merged.put("image", remoteImage)
-                profileDb.saveProfile(m.senderAccountId, merged)
+                withContext(Dispatchers.IO) { profileDb.saveProfile(m.senderAccountId, merged) }
                 profileTags = merged
             }
         }
