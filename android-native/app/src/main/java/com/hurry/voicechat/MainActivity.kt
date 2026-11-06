@@ -437,31 +437,54 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
         val joiningAccountId = authPrefs.getString("accountId", userId).orEmpty().ifBlank { userId }
         if (roomIdToCheck.isBlank() || joiningAccountId.isBlank() || roomAccessCheckInProgress) return
 
-        // Do not mount RoomPage until the server confirms that this account is allowed in.
-        // room_join keeps its server-side kick-ban check as the final authoritative guard.
+        // Start both independent server checks together. Previously the kick check
+        // waited for room-access to finish, adding a full extra Render round trip.
         roomAccessCheckInProgress = true
         roomCreateScope.launch {
-            val passwordAccess = withContext(Dispatchers.IO) {
-                runCatching {
-                    val connection = (URL("https://zyora-server.onrender.com/api/room-access").openConnection() as HttpURLConnection).apply {
-                        requestMethod = "POST"
-                        connectTimeout = 8000
-                        readTimeout = 8000
-                        doOutput = true
-                        setRequestProperty("Content-Type", "application/json")
-                        setRequestProperty("Accept", "application/json")
-                        setRequestProperty("Cache-Control", "no-cache")
-                    }
-                    try {
-                        val payload = JSONObject().put("roomId", roomIdToCheck).put("userId", joiningAccountId).put("password", roomPassword)
-                        connection.outputStream.bufferedWriter().use { it.write(payload.toString()) }
-                        val code = connection.responseCode
-                        val stream = if (code in 200..299) connection.inputStream else connection.errorStream
-                        val body = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
-                        JSONObject(body.ifBlank { "{}" }).put("_httpCode", code)
-                    } finally { connection.disconnect() }
-                }.getOrNull()
+            val checks = kotlinx.coroutines.coroutineScope {
+                val passwordCheck = kotlinx.coroutines.async(Dispatchers.IO) {
+                    runCatching {
+                        val connection = (URL("https://zyora-server.onrender.com/api/room-access").openConnection() as HttpURLConnection).apply {
+                            requestMethod = "POST"
+                            connectTimeout = 8000
+                            readTimeout = 8000
+                            doOutput = true
+                            setRequestProperty("Content-Type", "application/json")
+                            setRequestProperty("Accept", "application/json")
+                            setRequestProperty("Cache-Control", "no-cache")
+                        }
+                        try {
+                            val payload = JSONObject().put("roomId", roomIdToCheck).put("userId", joiningAccountId).put("password", roomPassword)
+                            connection.outputStream.bufferedWriter().use { it.write(payload.toString()) }
+                            val code = connection.responseCode
+                            val stream = if (code in 200..299) connection.inputStream else connection.errorStream
+                            val body = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+                            JSONObject(body.ifBlank { "{}" }).put("_httpCode", code)
+                        } finally { connection.disconnect() }
+                    }.getOrNull()
+                }
+                val kickCheck = kotlinx.coroutines.async(Dispatchers.IO) {
+                    runCatching {
+                        val encodedRoom = java.net.URLEncoder.encode(roomIdToCheck, "UTF-8")
+                        val encodedUser = java.net.URLEncoder.encode(joiningAccountId, "UTF-8")
+                        val connection = (URL("https://zyora-server.onrender.com/api/room-kick-status?roomId=$encodedRoom&userId=$encodedUser").openConnection() as HttpURLConnection).apply {
+                            requestMethod = "GET"
+                            connectTimeout = 8000
+                            readTimeout = 8000
+                            setRequestProperty("Cache-Control", "no-cache")
+                            setRequestProperty("Accept", "application/json")
+                        }
+                        try {
+                            if (connection.responseCode !in 200..299) error("Room access check unavailable")
+                            JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
+                        } finally { connection.disconnect() }
+                    }.getOrNull()
+                }
+                passwordCheck.await() to kickCheck.await()
             }
+            val passwordAccess = checks.first
+            val kickStatus = checks.second
+
             if (passwordAccess == null) {
                 roomAccessCheckInProgress = false
                 roomBlockedPopup = JSONObject().put("checkFailed", true)
@@ -482,29 +505,11 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                 }
                 return@launch
             }
+
+            roomAccessCheckInProgress = false
             roomAccessPromptRoom = null
             roomAccessPassword = ""
             roomAccessError = false
-            val kickStatus = withContext(Dispatchers.IO) {
-                runCatching {
-                    val encodedRoom = java.net.URLEncoder.encode(roomIdToCheck, "UTF-8")
-                    val encodedUser = java.net.URLEncoder.encode(joiningAccountId, "UTF-8")
-                    val connection = (URL("https://zyora-server.onrender.com/api/room-kick-status?roomId=$encodedRoom&userId=$encodedUser").openConnection() as HttpURLConnection).apply {
-                        requestMethod = "GET"
-                        connectTimeout = 8000
-                        readTimeout = 8000
-                        setRequestProperty("Cache-Control", "no-cache")
-                        setRequestProperty("Accept", "application/json")
-                    }
-                    try {
-                        if (connection.responseCode !in 200..299) error("Room access check unavailable")
-                        JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
-                    } finally {
-                        connection.disconnect()
-                    }
-                }.getOrNull()
-            }
-            roomAccessCheckInProgress = false
             when {
                 kickStatus == null -> roomBlockedPopup = JSONObject().put("checkFailed", true)
                 kickStatus.optBoolean("blocked", false) -> roomBlockedPopup = kickStatus
