@@ -565,6 +565,7 @@ fun NativeChatScreen(
     var text by remember { mutableStateOf("") }
     var showOptions by remember { mutableStateOf(false) }
     var showReportPage by remember { mutableStateOf(false) }
+    var isUserBlocked by remember(receiverId) { mutableStateOf(false) }
     var replyText by remember { mutableStateOf<String?>(null) }
     
     // Scam banner hide/show
@@ -1097,20 +1098,7 @@ fun NativeChatScreen(
                                 .padding(horizontal = 8.dp)
                         )
                         
-                        DropdownMenu(
-                            expanded = showOptions,
-                            onDismissRequest = { showOptions = false },
-                            modifier = Modifier.background(Color.White)
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text("Block", color = Color.Black, fontSize = 15.sp) },
-                                onClick = { showOptions = false }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Report", color = Color.Black, fontSize = 15.sp) },
-                                onClick = { showOptions = false; showReportPage = true }
-                            )
-                        }
+
                     }
                 }
             }
@@ -1527,6 +1515,14 @@ fun NativeChatScreen(
             }
         }
     }
+    UserDangerActionMenu(
+        expanded = showOptions,
+        isBlocked = isUserBlocked,
+        onDismiss = { showOptions = false },
+        onBlockedChange = { isUserBlocked = it },
+        onReport = { showReportPage = true }
+    )
+
     if (showReportPage) {
         UserReport(
             targetName = name,
