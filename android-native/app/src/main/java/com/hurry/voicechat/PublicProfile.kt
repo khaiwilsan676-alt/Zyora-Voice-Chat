@@ -221,7 +221,7 @@ fun PublicProfileScreen(
 
     var fullImageIndex by remember { mutableStateOf<Int?>(null) }
     var isFollowing by remember { mutableStateOf(false) }
-    var followersCount by remember(targetUser?.uid, targetUser?.id, targetUser?.accountId) { mutableIntStateOf(targetUser?.followers ?: 0) }
+    var followersCount by remember(targetUser?.uid, targetUser?.id, targetUser?.accountId) { mutableIntStateOf(targetUser?.followers?.takeIf { it > 0 } ?: -1) }
     var followBusy by remember { mutableStateOf(false) }
     
     // Crop State
@@ -542,7 +542,7 @@ fun PublicProfileScreen(
                             Icon(Icons.Default.ContentCopy, contentDescription = "Copy", tint = Color.Gray, modifier = Modifier.size(14.dp))
                         }
                         Text(" | ", color = Color.LightGray)
-                        Text("$followers Fans", fontSize = 12.sp, color = Color.Gray)
+                        Text("${if (followers >= 0) followers.toString() else "—"} Fans", fontSize = 12.sp, color = Color.Gray)
                     }
 
                     Row(modifier = Modifier.padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
