@@ -230,3 +230,10 @@ Current documentation does not certify that all historical features are build-, 
 - The server-side `room_join` kick-ban validation remains unchanged as the final enforcement layer.
 - No room layout, seat, voice, chat, announcement, or moderation UI was changed in this correction.
 - Status: **Implemented in repository**. Native APK CI, Render availability, and real-device kick/re-entry timing still require verification.
+
+
+## 21 Room kick chat system-row event delivery (2026-11-06)
+- Root cause: native `RoomPage.kt` already listened for `room_kick_announcement` and rendered `kickNotices` through the existing `RoomChatMessages` system-row layout, but the server's successful `room_seat_action` kick handler never emitted that event.
+- Server repo fix: after the kick ban is persisted and target sockets are confirmed, broadcast `room_kick_announcement` to the room with target avatar/name, kicker avatar/name, owner/admin role, and timestamp. Existing client listener now receives it and inserts the already-implemented system row.
+- Kept the existing chat row UI, spacing, position, typography, and popup unchanged. No unrelated room UI behavior changed.
+- Status: **Server event implemented and committed**. Render deployment and live room verification remain pending.
