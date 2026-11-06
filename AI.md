@@ -215,3 +215,10 @@ Current documentation does not certify that all historical features are build-, 
 - `RoomPage.kt`: moved the per-message profile SQLite reads and writes in `NativeMessage` off the Compose main thread. Cached profile tags are applied first; remote tag refresh remains asynchronous and continues to update the same profile fields.
 - No UI, seat, chat, voice, kick-ban, wallet, or room settings behavior intentionally changed.
 - Verification pending: native APK CI and real-device room-entry timing / kicked-user rejection tests. Do not claim a measured latency until tested on device.
+
+
+### Room socket reconnect regression fix (2026-11-06)
+- `android-native/app/src/main/java/com/hurry/voicechat/RoomPage.kt`: removed asynchronously loaded display name/avatar from the `DisposableEffect` socket identity keys. Previously, when the local SQLite profile finished loading, Compose disposed the active room socket and created a second connection, delaying presence/seats/chat initialization.
+- Latest profile and room display values now flow into the existing socket callbacks via `rememberUpdatedState`, so profile/settings refreshes do not reconnect the room socket or use stale join details.
+- UI, voice, seat, kick, chat, and room behavior remain unchanged.
+- Status: source change committed; native APK build and real-device entry timing still require verification. No measured latency improvement is claimed until tested on device.
