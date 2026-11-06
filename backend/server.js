@@ -2538,10 +2538,24 @@ io.on("connection", (socket) => {
         Boolean(socket.roomOwnerId) &&
         socketOwnsIdentity(socket, String(socket.roomOwnerId));
       if (isRoomOwner) {
-        seats.set(seatNumber, {
-          ...current,
-          isLocked: Boolean(data.isLocked),
-        });
+        const shouldLock = Boolean(data.isLocked);
+        // Locking an occupied seat immediately removes its occupant and clears
+        // all live seat state; unlocking only changes the lock flag.
+        seats.set(seatNumber, shouldLock
+          ? {
+              ...current,
+              isLocked: true,
+              isOccupied: false,
+              user: undefined,
+              isMuted: false,
+              isSpeaking: false,
+              gif: undefined,
+              socketId: undefined,
+            }
+          : {
+              ...current,
+              isLocked: false,
+            });
       }
     }
 
