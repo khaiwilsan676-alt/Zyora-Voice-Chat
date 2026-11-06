@@ -1155,7 +1155,7 @@ app.post("/api/users/unblock", async (req, res) => {
 });
 
 // Profile and room image bytes are stored in MongoDB, independent of GitHub tokens.
-const PROFILE_MEDIA_FOLDERS = new Set(["user-dp", "user-albums", "user-covers", "room-dp", "room-theme"]);
+const PROFILE_MEDIA_FOLDERS = new Set(["user-dp", "user-albums", "user-covers", "room-dp", "room-theme", "chat-image", "room-chat-image"]);
 const PROFILE_MEDIA_TYPES = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif" };
 async function connectMediaMongo() {
   if (mediaDb || mediaMongoConnecting) return mediaDb;
