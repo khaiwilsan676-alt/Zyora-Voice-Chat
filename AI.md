@@ -244,3 +244,10 @@ Current documentation does not certify that all historical features are build-, 
 - Moved the kicker avatar to the start of the kicker-name row, immediately before the kicker's name. Removed its previous placement after the word "by" to avoid showing the same avatar twice.
 - Preserved the existing kick notice card styling, target avatar/name, System row, actor role text, normal message rendering, and clear-chat/announcement logic. No other chat UI was changed.
 - Status: **Implemented in repository**. Native APK CI and live room/chat ordering verification remain pending.
+
+
+## 23 Native wallet cached rendering (2026-11-06)
+- `CoinsNativePage.kt`: cache the last known coins/diamonds snapshot in account-keyed SharedPreferences and initialize the displayed balance from that snapshot immediately, avoiding a zero-to-server-balance flash on page entry.
+- Room database is used as a one-time fallback only when no cached snapshot exists. The canonical server wallet refresh remains asynchronous; successful refreshes update Room, the snapshot cache, and only changed balance fields.
+- Rapid reopen operations within 15 seconds reuse the existing snapshot without issuing another wallet GET. No wallet UI layout, payment flow, or balance source-of-truth was changed.
+- Status: source committed; native APK CI and real-device repeated-open/cache behavior remain to be verified.
