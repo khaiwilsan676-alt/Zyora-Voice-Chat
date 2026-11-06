@@ -2217,7 +2217,7 @@ private fun RoomChatMessages(
                                         Row(verticalAlignment=Alignment.CenterVertically, horizontalArrangement=Arrangement.spacedBy(4.dp)) {
                                             FallbackAsyncImage(model=notice.targetImage, contentDescription=notice.targetName, modifier=Modifier.size(22.dp).clip(CircleShape), contentScale=ContentScale.Crop)
                                             Text(notice.targetName, color=Color(0xFFE2C67D), fontSize=13.sp, fontWeight=FontWeight.Bold, maxLines=1, softWrap=false, overflow=TextOverflow.Ellipsis)
-                                            Text("was kicked out of Room by", color=Color.White, fontSize=13.sp, maxLines=1, softWrap=false)
+                                            Text("are kicked out of Room by", color=Color.White, fontSize=13.sp, maxLines=1, softWrap=false)
                                             FallbackAsyncImage(model=notice.actorImage, contentDescription=notice.actorName, modifier=Modifier.size(22.dp).clip(CircleShape), contentScale=ContentScale.Crop)
                                         }
                                         Row(verticalAlignment=Alignment.CenterVertically, horizontalArrangement=Arrangement.spacedBy(4.dp)) {
