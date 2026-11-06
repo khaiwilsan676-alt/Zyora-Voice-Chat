@@ -223,7 +223,10 @@ fun RoomSettingPage(
                     .putInt("micMode_$stableRoomId", permanent.micMode)
                     .putString("theme_$stableRoomId", permanent.theme)
                     .putString("customTheme_$stableRoomId", permanent.customTheme)
+                    .putBoolean("room_locked_$stableRoomId", permanent.isLocked)
+                    .putString("room_password_$stableRoomId", permanent.roomPassword)
                     .apply()
+                withContext(Dispatchers.IO) { NativeIndexDatabase(context).saveRoomLock(stableRoomId, permanent.isLocked, permanent.roomPassword) }
                 permanent
             }.onSuccess { permanent ->
                 state = permanent
@@ -1188,4 +1191,63 @@ private fun Modifier.dashedBorder(color: Color, width: Dp, cornerRadius: Dp): Mo
             pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 8f), 0f)
         )
     )
+}
+
+
+@Composable
+fun RoomPasswordPrompt(
+    onSubmit: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var enteredPassword by remember { mutableStateOf("") }
+    var incorrect by remember { mutableStateOf(false) }
+    var submitting by remember { mutableStateOf(false) }
+    LaunchedEffect(incorrect) {
+        if (incorrect) {
+            delay(1500)
+            incorrect = false
+        }
+    }
+    CenteredModal(scrimAlpha = 0.3f, onDismiss = onDismiss) {
+        Box(
+            Modifier.fillMaxWidth().padding(horizontal = 24.dp)
+                .clip(RoundedCornerShape(16.dp)).background(Color.White).padding(24.dp)
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("Set Room Password", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = gray800)
+                Spacer(Modifier.height(24.dp))
+                PasswordInputBoxes(enteredPassword) { enteredPassword = it; incorrect = false }
+                Spacer(Modifier.height(24.dp))
+                PillButton(
+                    "Enter the room",
+                    enabled = enteredPassword.length == 4 && !submitting,
+                    onClick = {
+                        if (enteredPassword.length == 4 && !submitting) {
+                            submitting = true
+                            onSubmit(enteredPassword)
+                            submitting = false
+                        }
+                    }
+                )
+                Spacer(Modifier.height(12.dp))
+                Box(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
+                        .clickable { onDismiss() }.padding(vertical = 8.dp),
+                    contentAlignment = Alignment.Center
+                ) { Text("Cancel", color = gray500, fontSize = 14.sp, fontWeight = FontWeight.Medium) }
+            }
+        }
+    }
+    if (incorrect) {
+        Box(Modifier.fillMaxSize().background(Color.Transparent), contentAlignment = Alignment.Center) {
+            Text(
+                "Password incorrect",
+                color = Color.White,
+                fontSize = 13.sp,
+                modifier = Modifier.clip(RoundedCornerShape(8.dp))
+                    .background(Color.Black.copy(alpha = 0.70f))
+                    .padding(horizontal = 16.dp, vertical = 10.dp)
+            )
+        }
+    }
 }
