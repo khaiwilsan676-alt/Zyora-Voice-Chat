@@ -2323,7 +2323,7 @@ private fun RoomSeatInviteDialog(
             )
             Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).align(Alignment.TopCenter).padding(top = 34.dp),
                 horizontalAlignment = Alignment.CenterHorizontally) {
-                Spacer(Modifier.height(34.dp))
+                Spacer(Modifier.height(26.dp))
                 Text(inviterName.ifBlank { "User" }, color = Color.White, fontSize = 17.sp,
                     fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Spacer(Modifier.height(9.dp))
