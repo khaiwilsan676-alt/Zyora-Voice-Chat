@@ -493,6 +493,7 @@ fun RoomPage(
         onDispose { roomUnreadPrefs.unregisterOnSharedPreferenceChangeListener(listener) }
     }
     var selectedOfficialChat by remember { mutableStateOf<Triple<String, String, String>?>(null) }
+    var pendingRoomInvitationJson by remember { mutableStateOf<String?>(null) }
     var showMenu by remember{mutableStateOf(false)}
     var showStore by remember { mutableStateOf(false) }
     var storeInitialView by remember { mutableStateOf("store") }
@@ -1774,7 +1775,56 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
         
         val roomFollowers = followedRoomUsers.filter { it.accountId != roomOwner.accountId && it.accountId != roomOwner.id }
         if(showStore) StorePage(onBack={showStore=false}, initialView=storeInitialView, userId=accountId.ifBlank{roomOwner.accountId.ifBlank{roomOwner.id}})
-        if(showInfo) RoomInfo(isOpen=true,onClose={showInfo=false},isRoomOwner=accountId==roomOwner.accountId.ifBlank{roomOwner.id},roomOwner=RoomInfoOwner(id=roomOwner.id,uid=roomOwner.uid,accountId=roomOwner.accountId.ifBlank{roomOwner.id},name=roomOwner.name,image=roomOwner.image),roomData=RoomInfoData(roomName,roomImage,announcement,roomId),roomFollowers=roomFollowers,roomAdmins=roomAdminUsers,onOpenProfile={ follower -> selectedChatProfile=NativeRoomMessage("member-profile-" + follower.accountId,"",follower.name,follower.image,follower.accountId);showInfo=false },onCopyId={ id -> clipboard.setText(AnnotatedString(id));copiedId=id },copied=copiedId==roomId)
+        if(showInfo) RoomInfo(
+            isOpen=true,
+            onClose={showInfo=false},
+            isRoomOwner=accountId==roomOwner.accountId.ifBlank{roomOwner.id},
+            roomOwner=RoomInfoOwner(id=roomOwner.id,uid=roomOwner.uid,accountId=roomOwner.accountId.ifBlank{roomOwner.id},name=roomOwner.name,image=roomOwner.image),
+            roomData=RoomInfoData(roomName,roomImage,announcement,roomId),
+            roomFollowers=roomFollowers,
+            roomAdmins=roomAdminUsers,
+            onOpenProfile={ follower -> selectedChatProfile=NativeRoomMessage("member-profile-" + follower.accountId,"",follower.name,follower.image,follower.accountId);showInfo=false },
+            onCopyId={ id -> clipboard.setText(AnnotatedString(id));copiedId=id },
+            copied=copiedId==roomId,
+            currentUserId=accountId,
+            isRoomFollowed=followed,
+            onToggleRoomFollow={ next ->
+                if (accountId.isNotBlank() && accountId != "guest" && accountId != roomId) {
+                    followed=next
+                    onFollowToggle(roomId,next)
+                    CoroutineScope(Dispatchers.IO).launch {
+                        runCatching {
+                            val encodedUser=java.net.URLEncoder.encode(accountId,"UTF-8")
+                            val encodedRoom=java.net.URLEncoder.encode(roomId,"UTF-8")
+                            val url=if(next) java.net.URL("https://zyora-server.onrender.com/api/room-follows") else java.net.URL("https://zyora-server.onrender.com/api/room-follows?userId=$encodedUser&roomId=$encodedRoom")
+                            val conn=(url.openConnection() as java.net.HttpURLConnection).apply {
+                                requestMethod=if(next) "POST" else "DELETE"
+                                connectTimeout=8000; readTimeout=8000
+                                if(next) { doOutput=true; setRequestProperty("Content-Type","application/json") }
+                            }
+                            if(next) {
+                                val payload=JSONObject().put("userId",accountId).put("roomId",roomId)
+                                    .put("roomName",roomName).put("roomImage",roomImage).put("roomCountry",roomOwner.country)
+                                    .put("followerName",roomDisplayName).put("followerImage",roomDisplayImage)
+                                    .put("followerCountry",cachedCurrentProfile?.optString("country").orEmpty())
+                                conn.outputStream.use { it.write(payload.toString().toByteArray(Charsets.UTF_8)) }
+                            }
+                            if(conn.responseCode !in 200..299) error("Room follow update failed")
+                            conn.disconnect()
+                        }.onFailure {
+                            android.util.Log.e("ZyoraRoomFollow","Room follow update failed",it)
+                        }
+                    }
+                }
+            },
+            onShareToUser={ fan ->
+                pendingRoomInvitationJson=JSONObject().put("roomId",roomId).put("roomName",roomName)
+                    .put("roomDp",roomImage).put("roomOwnerId",roomOwner.accountId.ifBlank{roomOwner.id})
+                    .put("roomIdText",roomId).toString()
+                selectedOfficialChat=Triple(fan.accountId,fan.name,fan.image)
+                showInfo=false
+            }
+        )
         if(showActiveUsers) ActiveUsers(isOpen=true,onClose={showActiveUsers=false},roomUsers=activeRoomUsers,roomOwnerId=roomOwner.accountId.ifBlank{roomOwner.id},onOpenProfile={ user -> selectedChatProfile=NativeRoomMessage("active-profile-" + user.accountId,"",user.name,user.image,user.accountId);showActiveUsers=false },onCopyUserId={ id -> clipboard.setText(AnnotatedString(id));copiedId=id })
         if(showSettings && accountId.isNotBlank() && accountId == roomOwner.accountId.ifBlank { roomOwner.id }) RoomSettingPage(initial = RoomSettingsDataNative(roomName=roomName,roomDp=roomImage,announcement=announcement,micMode=roomMicMode,theme=roomTheme,isLocked=locked,roomPassword=roomPassword,admin=roomAdminIds,customTheme=appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).getString("customTheme_$roomId", "").orEmpty()),roomOwnerId=roomId,currentUserId=accountId,onBack={showSettings=false},onSave={saved->
             roomName=saved.roomName;roomImage=saved.roomDp;announcement=saved.announcement;roomMicMode=saved.micMode;roomTheme=saved.theme;roomCustomThemeUrl=saved.customTheme;roomAdminIds=saved.admin;locked=saved.isLocked;roomPassword=saved.roomPassword;showSettings=false
@@ -2103,8 +2153,9 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                 receiverId = chat.first,
                 currentUserId = currentUser.uid.ifBlank { currentUser.id },
                 currentAccountIdOverride = currentUser.accountId.ifBlank { currentUser.id },
-                onBack = { selectedOfficialChat = null },
-                onJoinRoom = onJoinRoom
+                onBack = { selectedOfficialChat = null; pendingRoomInvitationJson = null },
+                onJoinRoom = onJoinRoom,
+                initialRoomInvitation = pendingRoomInvitationJson
             )
         }
         
