@@ -221,6 +221,8 @@ fun PublicProfileScreen(
 
     var fullImageIndex by remember { mutableStateOf<Int?>(null) }
     var isFollowing by remember { mutableStateOf(false) }
+    var followersCount by remember(targetUser?.uid, targetUser?.id, targetUser?.accountId) { mutableIntStateOf(targetUser?.followers ?: 0) }
+    var followBusy by remember { mutableStateOf(false) }
     
     // Crop State
     var uriToCrop by remember { mutableStateOf<String?>(null) }
@@ -263,11 +265,21 @@ fun PublicProfileScreen(
         uri?.let { picked -> if (coverPhotos.size < 4) { val saved = ProfilePersistence.imageDataUri(context, picked) ?: picked.toString(); coverPhotos = coverPhotos + saved; if (!isOtherUser) coroutineScope.launch { val fields = mapOf("coverPhotos" to org.json.JSONArray(coverPhotos).toString(), "coverPhoto" to saved); ProfilePersistence.save(targetUser, fields); if (profileCacheKey.isNotBlank()) { val db = NativeIndexDatabase(context); val cached = db.loadProfile(profileCacheKey) ?: org.json.JSONObject(); fields.forEach { (key, value) -> if (value.isBlank() || value == "[]") cached.remove(key) else cached.put(key, value) }; listOf(targetUser?.uid, targetUser?.id, targetUser?.accountId, targetUser?.displayAccountNumber, profileCacheKey).filter { !it.isNullOrBlank() }.distinct().forEach { db.saveProfile(it!!, cached) } } } } }
     }
     
-    val followers = targetUser?.followers ?: 0
+    val followers = followersCount
     var location by remember(profileCacheKey, cachedProfile, targetUser?.country, targetUser?.location) {
         mutableStateOf(sequenceOf(cachedProfile?.optString("countryName", ""), cachedProfile?.optString("country", ""), cachedProfile?.optString("countryCode", ""), cachedProfile?.optString("country_code", ""), targetUser?.country, targetUser?.countryCode, targetUser?.location).map { it?.trim().orEmpty() }.firstOrNull { it.isNotBlank() && it != "null" }.orEmpty())
     }
     val flag = location.takeIf { it.isNotBlank() }?.let { countryFlag(it) }.orEmpty()
+
+    val followPrefs = remember(context) { context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE) }
+    val myFollowIdentity = followPrefs.getString("accountId", "").orEmpty().ifBlank { followPrefs.getString("uid", "").orEmpty() }
+    val targetFollowIdentity = targetUser?.accountId?.takeIf { it.isNotBlank() } ?: targetUser?.uid?.takeIf { it.isNotBlank() } ?: targetUser?.id.orEmpty()
+    LaunchedEffect(myFollowIdentity, targetFollowIdentity) {
+        if (myFollowIdentity.isNotBlank() && targetFollowIdentity.isNotBlank() && myFollowIdentity != targetFollowIdentity) {
+            SocialFollowApi.cachedSnapshot(context, targetFollowIdentity)?.let { isFollowing = it.isFollowing; followersCount = it.followers }
+            SocialFollowApi.snapshot(context, myFollowIdentity, targetFollowIdentity)?.let { isFollowing = it.isFollowing; followersCount = it.followers }
+        }
+    }
 
     LaunchedEffect(targetUser?.uid, targetUser?.id, targetUser?.accountId, profileCacheKey) {
         val cache = NativeIndexDatabase(context)
@@ -678,7 +690,7 @@ fun PublicProfileScreen(
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Button(
-                    onClick = { isFollowing = !isFollowing },
+                    onClick = {\n                        if (!followBusy && myFollowIdentity.isNotBlank() && targetFollowIdentity.isNotBlank()) {\n                            val next = !isFollowing; followBusy = true\n                            coroutineScope.launch {\n                                val result = SocialFollowApi.toggle(context, myFollowIdentity, targetFollowIdentity, next)\n                                if (result != null) { isFollowing = result.isFollowing; followersCount = result.followers }\n                                followBusy = false\n                            }\n                        }\n                    },
                     modifier = Modifier.weight(1f).height(48.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF5874)),
                     shape = RoundedCornerShape(16.dp),
