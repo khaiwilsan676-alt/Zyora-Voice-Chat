@@ -185,7 +185,7 @@ internal suspend fun uploadChatImage(
                 val count = input.read(buffer)
                 if (count < 0) break
                 total += count
-                if (total > 5 * 1024 * 1024) return@withContext null
+                if (total > 5 * 1024 * 1024) throw IllegalArgumentException("Image exceeds 5 MB")
                 output.write(buffer, 0, count)
             }
             output.toByteArray()
