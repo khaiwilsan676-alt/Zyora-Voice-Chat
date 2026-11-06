@@ -551,12 +551,33 @@ fun RoomProfile(
                                         .weight(1f) 
                                         .clickable(enabled = !followBusy) {
                                             if (myFollowId.isNotBlank() && targetFollowId.isNotBlank() && myFollowId != targetFollowId) {
-                                                val next = !isFollowing
+                                                val previousFollowing = isFollowing
+                                                val previousCount = followersCount
+                                                val next = !previousFollowing
+                                                val optimistic = SocialFollowSnapshot(
+                                                    followers = (previousCount + if (next) 1 else -1).coerceAtLeast(0),
+                                                    isFollowing = next
+                                                )
+                                                isFollowing = next
+                                                followersCount = optimistic.followers
+                                                SocialFollowApi.cacheSnapshot(context, targetFollowId, optimistic)
                                                 followBusy = true
                                                 coroutineScope.launch {
-                                                    val result = SocialFollowApi.toggle(context, myFollowId, targetFollowId, next)
-                                                    if (result != null) { isFollowing = result.isFollowing; followersCount = result.followers; onFollow() }
-                                                    followBusy = false
+                                                    try {
+                                                        val result = SocialFollowApi.toggle(context, myFollowId, targetFollowId, next)
+                                                        if (result != null) {
+                                                            isFollowing = result.isFollowing
+                                                            followersCount = result.followers
+                                                            SocialFollowApi.cacheSnapshot(context, targetFollowId, result)
+                                                            onFollow()
+                                                        } else {
+                                                            isFollowing = previousFollowing
+                                                            followersCount = previousCount
+                                                            SocialFollowApi.cacheSnapshot(context, targetFollowId, SocialFollowSnapshot(followers = previousCount, isFollowing = previousFollowing))
+                                                        }
+                                                    } finally {
+                                                        followBusy = false
+                                                    }
                                                 }
                                             }
                                         }
