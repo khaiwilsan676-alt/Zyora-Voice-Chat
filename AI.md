@@ -251,3 +251,10 @@ Current documentation does not certify that all historical features are build-, 
 - Room database is used as a one-time fallback only when no cached snapshot exists. The canonical server wallet refresh remains asynchronous; successful refreshes update Room, the snapshot cache, and only changed balance fields.
 - Rapid reopen operations within 15 seconds reuse the existing snapshot without issuing another wallet GET. Both diamond-exchange success paths also update the cached snapshot immediately so the next wallet entry cannot show a stale pre-exchange balance. No wallet UI layout, payment flow, or balance source-of-truth was changed.
 - Status: source committed; native APK CI and real-device repeated-open/cache behavior remain to be verified.
+
+
+## 18. Follow inbox notification and latency fix (2026-11-06)
+- Native `SocialFollow.kt`: follow mutation now uses the authoritative POST response instead of performing a second GET; local relationship cache is updated from that response.
+- Native `RoomProfile.kt`: follow state/count update optimistically and roll back if the server mutation fails. Public Profile retains its existing optimistic UI and rollback.
+- `Zyora-Server/server.js`: a newly-created follow edge sends exactly one normal private inbox message, `I followed you`, to the followed user's Message page; repeat follow requests do not duplicate it. Online delivery uses the existing private-message socket event and offline delivery uses the existing Redis pending-message queue.
+- No UI redesign or layout changes.
