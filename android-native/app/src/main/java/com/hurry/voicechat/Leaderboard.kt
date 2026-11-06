@@ -200,14 +200,14 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                 item {
                     Column(Modifier.fillMaxWidth().padding(top=18.dp,bottom=24.dp),horizontalAlignment=Alignment.CenterHorizontally) {
                         Box(modifier = Modifier.width(podiumTopWidth).height(200.dp), contentAlignment = Alignment.Center) {
-                            LeaderboardChromaImage(url=raw+"file_00000000a0e48207ade38b36ab946ecb.png",contentDescription="Rank 1 frame",modifier=Modifier.requiredSize(1000.dp),contentScale=ContentScale.Fit)
+                            LeaderboardChromaImage(url=raw+"file_00000000a0e48207ade38b36ab946ecb.png",contentDescription="Rank 1 frame",modifier=Modifier.requiredSize(200.dp),contentScale=ContentScale.Fit)
                         }
                         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically) {
                             Box(modifier = Modifier.width(podiumSideWidth).height(175.dp), contentAlignment = Alignment.Center) {
-                                LeaderboardChromaImage(url=raw+"file_0000000069b88207b9fdd01576b71ee9.png",contentDescription="Rank 2 frame",modifier=Modifier.requiredSize(500.dp),contentScale=ContentScale.Fit)
+                                LeaderboardChromaImage(url=raw+"file_0000000069b88207b9fdd01576b71ee9.png",contentDescription="Rank 2 frame",modifier=Modifier.requiredSize(250.dp),contentScale=ContentScale.Fit)
                             }
                             Box(modifier = Modifier.width(podiumSideWidth).height(175.dp), contentAlignment = Alignment.Center) {
-                                LeaderboardChromaImage(url=raw+"file_00000000ecc882079f34a9356b53dc8e.png",contentDescription="Rank 3 frame",modifier=Modifier.requiredSize(500.dp),contentScale=ContentScale.Fit)
+                                LeaderboardChromaImage(url=raw+"file_00000000ecc882079f34a9356b53dc8e.png",contentDescription="Rank 3 frame",modifier=Modifier.requiredSize(250.dp),contentScale=ContentScale.Fit)
                             }
                         }
                     }
