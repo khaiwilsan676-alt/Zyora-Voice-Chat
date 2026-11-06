@@ -61,8 +61,8 @@ fun RoomInfo(
     var showShareSheet by remember { mutableStateOf(false) }
     var showDangerMenu by remember { mutableStateOf(false) }
     var showRoomReport by remember { mutableStateOf(false) }
-    var roomFans by remember(roomOwner.accountId, roomOwner.id) { mutableStateOf<List<RoomInfoFollower>>(emptyList()) }
-    LaunchedEffect(roomOwner.accountId, roomOwner.id, showShareSheet) {
+    var roomFans by remember(currentUserId, roomOwner.accountId, roomOwner.id) { mutableStateOf<List<RoomInfoFollower>>(emptyList()) }
+    LaunchedEffect(currentUserId, roomOwner.accountId, roomOwner.id, showShareSheet) {
         if (showShareSheet) {
             val ownerId = currentUserId.ifBlank { roomOwner.accountId.ifBlank { roomOwner.id.ifBlank { roomOwner.uid } } }
             roomFans = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
