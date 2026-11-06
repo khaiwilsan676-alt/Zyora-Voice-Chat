@@ -226,7 +226,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
 
     // Dark theme glossy blue background
     val darkGlossyBg = Brush.verticalGradient(
-        0.0f to Color(0xFF1D4ED8).copy(alpha = 0.5f), // Top 30% glossy blue mix
+        0.0f to Color(0xFF1D4ED8), // Opaque top background; do not reveal the page behind
         0.3f to Color.Black, // Clear Black starting at 30%
         1.0f to Color.Black
     )
