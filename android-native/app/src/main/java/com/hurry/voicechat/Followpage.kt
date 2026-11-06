@@ -42,15 +42,37 @@ import io.socket.emitter.Emitter
 private const val VISITOR_API = "https://zyora-server.onrender.com"
 private data class VisitorData(val id:String,val name:String,val gender:String,val avatar:String,val lastViewedAt:Long,val viewCount:Int)
 
+// Ye helper function duplicate users ko merge karke unka View Count badha dega
+private fun processVisitorRows(rows: JSONArray): List<VisitorData> {
+    val rawList = (0 until rows.length()).mapNotNull { i -> 
+        rows.optJSONObject(i)?.let { v ->
+            VisitorData(
+                v.optString("id"),
+                v.optString("name","User"),
+                v.optString("gender"),
+                v.optString("avatar"),
+                v.optLong("lastViewedAt"),
+                v.optInt("viewCount",1).coerceAtLeast(1)
+            )
+        }
+    }
+    // ID ke hisaab se group kiya aur view count ko sum (plus) kar diya
+    return rawList.groupBy { it.id }.map { (_, list) ->
+        val latest = list.maxByOrNull { it.lastViewedAt } ?: list.first()
+        val totalViews = list.sumOf { it.viewCount }
+        latest.copy(viewCount = totalViews)
+    }.sortedByDescending { it.lastViewedAt }.take(20)
+}
+
 private suspend fun loadProfileVisitors(context:Context,userId:String,type:String):List<VisitorData> = withContext(Dispatchers.IO) {
     if(userId.isBlank()) return@withContext emptyList()
+    
     fun cachedVisitors(): List<VisitorData> {
         val cached = runCatching { NativeIndexDatabase(context).loadProfile("visitor_history:" + userId + ":" + type) }.getOrNull()
         val cachedRows = cached?.optJSONArray("visitors") ?: return emptyList()
-        return (0 until cachedRows.length()).mapNotNull { i -> cachedRows.optJSONObject(i)?.let { v ->
-            VisitorData(v.optString("id"),v.optString("name","User"),v.optString("gender"),v.optString("avatar"),v.optLong("lastViewedAt"),v.optInt("viewCount",1).coerceAtLeast(1))
-        }}.take(20)
+        return processVisitorRows(cachedRows) // Cache me bhi same deduplication logic
     }
+    
     runCatching {
         val encoded=java.net.URLEncoder.encode(userId,"UTF-8")
         val connection=(URL("$VISITOR_API/api/profile-visitors?userId=$encoded&type=$type").openConnection() as HttpURLConnection).apply { requestMethod="GET";connectTimeout=12000;readTimeout=12000 }
@@ -58,11 +80,11 @@ private suspend fun loadProfileVisitors(context:Context,userId:String,type:Strin
             val status=connection.responseCode
             val body=(if(status in 200..299) connection.inputStream else connection.errorStream)?.bufferedReader()?.use{it.readText()}.orEmpty()
             if(status !in 200..299) return@runCatching cachedVisitors()
+            
             val root=JSONObject(body)
             val rows=root.optJSONArray("visitors") ?: JSONArray()
-            val result=(0 until rows.length()).mapNotNull { i -> rows.optJSONObject(i)?.let { v ->
-                VisitorData(v.optString("id"),v.optString("name","User"),v.optString("gender"),v.optString("avatar"),v.optLong("lastViewedAt"),v.optInt("viewCount",1).coerceAtLeast(1))
-            }}.take(20)
+            val result = processVisitorRows(rows) // Network API data pe deduplication
+            
             runCatching { NativeIndexDatabase(context).saveProfile("visitor_history:"+userId+":"+type,root) }
             result
         } finally { connection.disconnect() }
@@ -71,10 +93,9 @@ private suspend fun loadProfileVisitors(context:Context,userId:String,type:Strin
 
 private fun visitorDate(t:Long)=if(t<=0L) "—" else SimpleDateFormat("dd/MM",Locale.getDefault()).format(Date(t))
 
-// Top 10% blue tint transitioning into the existing grey page.
 val topBlueGradient = Brush.verticalGradient(
     0.0f to Color(0xFF0066FF),
-    0.10f to Color(0xFFE5E7EB),
+    0.20f to Color(0xFFE5E7EB),
     1.0f to Color(0xFFE5E7EB)
 )
 
@@ -149,7 +170,7 @@ fun OtherSocialPages(type: String, onBack: () -> Unit) {
 @Composable
 fun FriendsCanvas(modifier: Modifier) {
     androidx.compose.foundation.Canvas(modifier) {
-        val ink = Color(0xFFB0B5BD) // Thoda dark ink grey page ke hisaab se
+        val ink = Color(0xFFB0B5BD)
         val stroke = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.4.dp.toPx())
         drawCircle(ink, radius = size.minDimension * 0.12f, center = androidx.compose.ui.geometry.Offset(size.width * 0.35f, size.height * 0.35f), style = stroke)
         drawArc(ink, startAngle = 180f, sweepAngle = 180f, useCenter = false,
@@ -220,9 +241,9 @@ fun VisitorsPage(onBack:()->Unit) {
         val type=if(tab==0) "received" else "sent"
         val cached=NativeIndexDatabase(context).loadProfile("visitor_history:"+myId+":"+type)
         val cachedRows=cached?.optJSONArray("visitors")
-        if(cachedRows!=null) rows=(0 until cachedRows.length()).mapNotNull { i -> cachedRows.optJSONObject(i)?.let { v ->
-            VisitorData(v.optString("id"),v.optString("name","User"),v.optString("gender"),v.optString("avatar"),v.optLong("lastViewedAt"),v.optInt("viewCount",1).coerceAtLeast(1))
-        }}.take(20)
+        if(cachedRows!=null) {
+            rows = processVisitorRows(cachedRows) // Cache UI pe bhi duplicate issue resolve kardiya hai 
+        }
         loading=rows.isEmpty()
         rows=loadProfileVisitors(context,myId,type)
         loading=false
@@ -283,15 +304,19 @@ fun VisitorsPage(onBack:()->Unit) {
         HorizontalDivider(color = Color(0xFFD1D5DB), thickness = 1.dp)
 
         val bannerImage = if (tab == 0) {
-            "${baseUrl}public/IMG_20261105_125016.png"
+            "${baseUrl}public/IMG_20261106_122418.png"
         } else {
-            "${baseUrl}public/IMG_20261105_124951.png"
+            "${baseUrl}public/IMG_20261106_122332.png"
         }
+        
         AsyncImage(
             model = bannerImage,
             contentDescription = "Banner",
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxWidth().height(60.dp)
+            contentScale = ContentScale.Fit, 
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp) 
+                .height(60.dp)
         )
 
         when {
@@ -301,7 +326,6 @@ fun VisitorsPage(onBack:()->Unit) {
                 Modifier.fillMaxWidth().weight(1f),
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp)
             ) {
-                // Repeat visits can share a visitor ID; positional keys prevent duplicate-key crashes.
                 items(rows) { visitor ->
                     VisitorItemRow(v = visitor, isMyVisitorsTab = tab == 0, baseUrl = baseUrl)
                 }
@@ -358,11 +382,15 @@ private fun VisitorItemRow(v:VisitorData, isMyVisitorsTab:Boolean, baseUrl:Strin
             val blurModifier = if (isMyVisitorsTab) Modifier.blur(8.dp) else Modifier
 
             Row(verticalAlignment = Alignment.CenterVertically, modifier = blurModifier) {
+                // Name Text modified: weight de diya + maxlines 1 kardia taki ye lamba hoke gender icon ko niche na dhakele
                 Text(
                     text = v.name,
                     color = Color.Black,
                     fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false) 
                 )
                 
                 if(v.gender.isNotBlank()) {
@@ -376,12 +404,18 @@ private fun VisitorItemRow(v:VisitorData, isMyVisitorsTab:Boolean, baseUrl:Strin
                             .clip(CircleShape)
                             .background(if (male) Color(0xFF3B82F6) else Color(0xFFEC4899))
                     ) {
+                        // Gender Text modified: PlatformTextStyle me includeFontPadding false kardia taki box ke ekdam center me rahe
                         Text(
                             text = if (male) "♂" else "♀",
                             color = Color.White,
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
-                            textAlign = TextAlign.Center
+                            textAlign = TextAlign.Center,
+                            style = androidx.compose.ui.text.TextStyle(
+                                platformStyle = androidx.compose.ui.text.PlatformTextStyle(
+                                    includeFontPadding = false
+                                )
+                            )
                         )
                     }
                 }
