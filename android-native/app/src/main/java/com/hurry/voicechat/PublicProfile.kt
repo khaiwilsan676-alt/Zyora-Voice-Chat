@@ -691,12 +691,43 @@ fun PublicProfileScreen(
             ) {
                 Button(
                     onClick = {
-                        if (!followBusy && myFollowIdentity.isNotBlank() && targetFollowIdentity.isNotBlank()) {
-                            val next = !isFollowing; followBusy = true
+                        if (!followBusy && myFollowIdentity.isNotBlank() && targetFollowIdentity.isNotBlank() && myFollowIdentity != targetFollowIdentity) {
+                            val previousFollowing = isFollowing
+                            val previousCount = followersCount
+                            val next = !previousFollowing
+                            val optimisticCount = if (previousCount >= 0) (previousCount + if (next) 1 else -1).coerceAtLeast(0) else previousCount
+                            val cached = SocialFollowApi.cachedSnapshot(context, targetFollowIdentity)
+                            // Update UI and local cache first; never wait for Render/network before showing Following.
+                            isFollowing = next
+                            if (optimisticCount >= 0) followersCount = optimisticCount
+                            SocialFollowApi.cacheSnapshot(
+                                context, targetFollowIdentity,
+                                SocialFollowSnapshot(
+                                    followers = optimisticCount,
+                                    followingCount = cached?.followingCount ?: 0,
+                                    friends = cached?.friends ?: 0,
+                                    isFollowing = next
+                                )
+                            )
+                            followBusy = true
                             coroutineScope.launch {
-                                val result = SocialFollowApi.toggle(context, myFollowIdentity, targetFollowIdentity, next)
-                                if (result != null) { isFollowing = result.isFollowing; followersCount = result.followers }
-                                followBusy = false
+                                try {
+                                    val result = SocialFollowApi.toggle(context, myFollowIdentity, targetFollowIdentity, next)
+                                    if (result != null) {
+                                        isFollowing = result.isFollowing
+                                        followersCount = result.followers
+                                    } else {
+                                        // Failed request: restore the previous confirmed state.
+                                        isFollowing = previousFollowing
+                                        followersCount = previousCount
+                                        SocialFollowApi.cacheSnapshot(
+                                            context, targetFollowIdentity,
+                                            cached ?: SocialFollowSnapshot(followers = previousCount, isFollowing = previousFollowing)
+                                        )
+                                    }
+                                } finally {
+                                    followBusy = false
+                                }
                             }
                         }
                     },
