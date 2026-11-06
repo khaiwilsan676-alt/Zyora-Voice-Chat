@@ -44,29 +44,31 @@ private data class VisitorData(val id:String,val name:String,val gender:String,v
 
 private suspend fun loadProfileVisitors(context:Context,userId:String,type:String):List<VisitorData> = withContext(Dispatchers.IO) {
     if(userId.isBlank()) return@withContext emptyList()
-    val encoded=java.net.URLEncoder.encode(userId,"UTF-8")
-    val connection=(URL("$VISITOR_API/api/profile-visitors?userId=$encoded&type=$type").openConnection() as HttpURLConnection).apply { requestMethod="GET";connectTimeout=12000;readTimeout=12000 }
-    try {
-        val status=connection.responseCode
-        val body=(if(status in 200..299) connection.inputStream else connection.errorStream)?.bufferedReader()?.use{it.readText()}.orEmpty()
-        if(status !in 200..299) return@withContext emptyList()
-        val root=JSONObject(body)
-        val rows=root.optJSONArray("visitors") ?: JSONArray()
-        val result=(0 until rows.length()).mapNotNull { i -> rows.optJSONObject(i)?.let { v ->
-            VisitorData(v.optString("id"),v.optString("name","User"),v.optString("gender"),v.optString("avatar"),v.optLong("lastViewedAt"),v.optInt("viewCount",1).coerceAtLeast(1))
-        }}.take(20)
-        NativeIndexDatabase(context).saveProfile("visitor_history:"+userId+":"+type,root)
-        result
-    } finally { connection.disconnect() }
+    runCatching {
+        val encoded=java.net.URLEncoder.encode(userId,"UTF-8")
+        val connection=(URL("$VISITOR_API/api/profile-visitors?userId=$encoded&type=$type").openConnection() as HttpURLConnection).apply { requestMethod="GET";connectTimeout=12000;readTimeout=12000 }
+        try {
+            val status=connection.responseCode
+            val body=(if(status in 200..299) connection.inputStream else connection.errorStream)?.bufferedReader()?.use{it.readText()}.orEmpty()
+            if(status !in 200..299) return@runCatching emptyList()
+            val root=JSONObject(body)
+            val rows=root.optJSONArray("visitors") ?: JSONArray()
+            val result=(0 until rows.length()).mapNotNull { i -> rows.optJSONObject(i)?.let { v ->
+                VisitorData(v.optString("id"),v.optString("name","User"),v.optString("gender"),v.optString("avatar"),v.optLong("lastViewedAt"),v.optInt("viewCount",1).coerceAtLeast(1))
+            }}.take(20)
+            runCatching { NativeIndexDatabase(context).saveProfile("visitor_history:"+userId+":"+type,root) }
+            result
+        } finally { connection.disconnect() }
+    }.getOrDefault(emptyList())
 }
 
 private fun visitorDate(t:Long)=if(t<=0L) "—" else SimpleDateFormat("dd/MM",Locale.getDefault()).format(Date(t))
 
-// Top 3% Solid Blue 🔵 mixing into Grey Page
+// Top 10% blue tint transitioning into the existing grey page.
 val topBlueGradient = Brush.verticalGradient(
-    0.0f to Color(0xFF0066FF),  // Solid Blue color
-    0.03f to Color(0xFFE5E7EB), // Grey color (White hata diya)
-    1.0f to Color(0xFFE5E7EB)   // Baaki poora page Grey
+    0.0f to Color(0xFF0066FF),
+    0.10f to Color(0xFFE5E7EB),
+    1.0f to Color(0xFFE5E7EB)
 )
 
 @Composable 
@@ -273,6 +275,18 @@ fun VisitorsPage(onBack:()->Unit) {
         }
         HorizontalDivider(color = Color(0xFFD1D5DB), thickness = 1.dp)
 
+        val bannerImage = if (tab == 0) {
+            "${baseUrl}public/IMG_20261105_125016.png"
+        } else {
+            "${baseUrl}public/IMG_20261105_124951.png"
+        }
+        AsyncImage(
+            model = bannerImage,
+            contentDescription = "Banner",
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxWidth().height(60.dp)
+        )
+
         when {
             loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Color(0xFF0066FF)) }
             rows.isEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("No visitors yet", color = Color(0xFF9CA3AF), fontSize = 14.sp) }
@@ -280,32 +294,9 @@ fun VisitorsPage(onBack:()->Unit) {
                 Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp)
             ) {
-                item {
-                    val bannerImage = if (tab == 0) {
-                        "${baseUrl}public/IMG_20261105_125016.png"
-                    } else {
-                        "${baseUrl}public/IMG_20261105_124951.png"
-                    }
-
-                    AsyncImage(
-                        model = bannerImage,
-                        contentDescription = "Banner",
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(60.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(Color(0xFFD1D5DB)) 
-                    )
-                    Spacer(Modifier.height(16.dp))
-                }
-                
-                items(rows, key = { it.id }) { visitor ->
-                    VisitorItemRow(
-                        v = visitor,
-                        isMyVisitorsTab = tab == 0,
-                        baseUrl = baseUrl
-                    )
+                // Repeat visits can share a visitor ID; positional keys prevent duplicate-key crashes.
+                items(rows) { visitor ->
+                    VisitorItemRow(v = visitor, isMyVisitorsTab = tab == 0, baseUrl = baseUrl)
                 }
             }
         }
