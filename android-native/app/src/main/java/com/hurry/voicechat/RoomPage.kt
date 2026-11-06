@@ -2,6 +2,8 @@ package com.hurry.voicechat
 
 import android.content.Intent
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
@@ -70,6 +72,8 @@ import org.json.JSONObject
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.basicMarquee
 import coil3.compose.AsyncImage
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 
 // Room Admin Tag image kept in code for future use
 const val ROOM_ADMIN_TAG = "https://zyora-voice-chat.vercel.app/IMG_20261027_235628.png"
@@ -198,7 +202,7 @@ data class RoomPageOwner(val id:String="",val uid:String="",val accountId:String
 data class RoomPageCurrentUser(val id:String="",val uid:String="",val accountId:String="",val name:String="User",val image:String="")
 data class NativeRoomSeat(val number:Int,val occupied:Boolean=false,val locked:Boolean=false,val muted:Boolean=false,val selfMuted:Boolean=false,val speaking:Boolean=false,val userName:String="",val userImage:String="",val accountId:String="",val gifSrc:String="",val gifTimestamp:Long=0L)
 data class NativeMention(val accountId: String, val name: String)
-data class NativeRoomMessage(val id:String,val text:String,val sender:String,val senderImage:String,val senderAccountId:String="",val timestamp:Long=System.currentTimeMillis(),val type:String="message",val mentions: List<NativeMention> = emptyList())
+data class NativeRoomMessage(val id:String,val text:String,val sender:String,val senderImage:String,val senderAccountId:String="",val timestamp:Long=System.currentTimeMillis(),val type:String="message",val mentions: List<NativeMention> = emptyList(),val imageUrl:String="")
 data class NativeEntryToast(val id:String,val name:String,val image:String,val vehicleVideo:String="")
 data class NativeRoomKickNotice(val id:String,val targetName:String,val targetImage:String,val actorName:String,val actorImage:String,val actorRole:String)
 
@@ -524,6 +528,7 @@ fun RoomPage(
     var musicDuration by remember { mutableFloatStateOf(0f) }
 
     var input by remember{mutableStateOf("")}
+    var previewRoomImageUrl by remember { mutableStateOf<String?>(null) }
     var inputSelection by remember { mutableIntStateOf(0) }
     var pendingMentions by remember { mutableStateOf<List<NativeMention>>(emptyList()) }
     val chatFocusRequester = remember { FocusRequester() }
@@ -728,6 +733,33 @@ fun RoomPage(
     }
 
     val messages=remember{mutableStateListOf<NativeRoomMessage>()}
+    val roomImagePickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) {
+            val messageId = accountId + "-" + System.currentTimeMillis()
+            CoroutineScope(Dispatchers.Main).launch {
+                val imageUrl = runCatching { uploadChatImage(appContext, uri, messageId, "room-chat-image") }.getOrNull()
+                if (!imageUrl.isNullOrBlank()) {
+                    val createdAt = System.currentTimeMillis()
+                    val imageMessage = NativeRoomMessage(
+                        id = messageId, text = "📷 Image", sender = roomDisplayName,
+                        senderImage = roomDisplayImage, senderAccountId = accountId,
+                        timestamp = createdAt, type = "image", imageUrl = imageUrl
+                    )
+                    messages.add(imageMessage)
+                    roomSocketRef.value?.takeIf { it.connected() }?.emit(
+                        "room_message",
+                        JSONObject().put("id", messageId).put("roomId", roomId)
+                            .put("senderId", accountId).put("senderAccountId", accountId)
+                            .put("senderName", roomDisplayName).put("senderAvatar", roomDisplayImage)
+                            .put("senderImage", roomDisplayImage).put("text", "📷 Image")
+                            .put("type", "image").put("imageUrl", imageUrl).put("createdAt", createdAt)
+                    )
+                } else {
+                    android.widget.Toast.makeText(appContext, "Image upload failed. Try an image under 5 MB.", android.widget.Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
     val entryToasts=remember{mutableStateListOf<NativeEntryToast>()}
     val seats=remember{mutableStateListOf<NativeRoomSeat>().apply{for(i in 1..15)add(NativeRoomSeat(i))}}
     // Preserve live speaker state across room_seats snapshots.
@@ -801,7 +833,7 @@ fun RoomPage(
                 }
                 val mentionJson = payload.optJSONArray("mentions") ?: JSONArray()
                 val parsedMentions = (0 until mentionJson.length()).mapNotNull { index -> mentionJson.optJSONObject(index)?.let { mention -> val targetId = mention.optString("accountId").trim(); val targetName = mention.optString("name").trim(); if (targetId.isNotBlank() && targetName.isNotBlank()) NativeMention(targetId, targetName) else null } }
-                val message=NativeRoomMessage(id,payload.optString("text",""),sender,image,senderId,payload.optLong("createdAt",System.currentTimeMillis()),type,parsedMentions)
+                val message=NativeRoomMessage(id,payload.optString("text",""),sender,image,senderId,payload.optLong("createdAt",System.currentTimeMillis()),type,parsedMentions,payload.optString("imageUrl"))
                 mainHandler.post {
                     if(messages.none{it.id==message.id}) messages.add(message)
                     if(type=="join" && entryToasts.none{it.id==id}) {
@@ -1402,7 +1434,7 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                         horizontalArrangement=Arrangement.spacedBy(10.dp)
                     ) {
                         IconButton(
-                            onClick={showEmoji=!showEmoji},
+                            onClick={roomImagePickerLauncher.launch("image/*")},
                             modifier=Modifier.size(28.dp)
                         ) {
                             Image(
@@ -1775,6 +1807,18 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
         
         val roomFollowers = followedRoomUsers.filter { it.accountId != roomOwner.accountId && it.accountId != roomOwner.id }
         if(showStore) StorePage(onBack={showStore=false}, initialView=storeInitialView, userId=accountId.ifBlank{roomOwner.accountId.ifBlank{roomOwner.id}})
+        if (!previewRoomImageUrl.isNullOrBlank()) {
+            Dialog(onDismissRequest = { previewRoomImageUrl = null }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+                Box(Modifier.fillMaxSize().background(Color.Black)) {
+                    AsyncImage(model = previewRoomImageUrl, contentDescription = "Room chat image",
+                        modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
+                    IconButton(onClick = { previewRoomImageUrl = null },
+                        modifier = Modifier.align(Alignment.TopStart).statusBarsPadding().padding(start = 8.dp, top = 6.dp)) {
+                        Icon(Icons.Default.Close, contentDescription = "Close image", tint = Color.White)
+                    }
+                }
+            }
+        }
         if(showInfo) RoomInfo(
             isOpen=true,
             onClose={showInfo=false},
@@ -2777,6 +2821,7 @@ private fun RoomSeatInviteDialog(
 
 @Composable private fun NativeMessage(m:NativeRoomMessage, roomOwnerId: String, onAvatarClick: () -> Unit = {}, onMentionClick: (NativeMention) -> Unit = {}){
     val context = LocalContext.current
+    var showRoomImagePreview by remember(m.id) { mutableStateOf(false) }
     val profileDb = remember(context) { NativeIndexDatabase(context) }
     var profileTags by remember(m.senderAccountId) { mutableStateOf<JSONObject?>(null) }
     LaunchedEffect(m.senderAccountId) {
@@ -2852,7 +2897,25 @@ private fun RoomSeatInviteDialog(
                     if(coinSellerTag) AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261028_110222.png",contentDescription="Coin Seller",contentScale=ContentScale.Fit,modifier=Modifier.height(16.dp).widthIn(max=56.dp))
                 }
             }
-            Box(Modifier.align(Alignment.Start).clip(RoundedCornerShape(topStart=2.dp,topEnd=12.dp,bottomStart=12.dp,bottomEnd=12.dp)).background(Color.Black.copy(alpha=.40f)).border(0.5.dp,Color.White.copy(alpha=.15f),RoundedCornerShape(topStart=2.dp,topEnd=12.dp,bottomStart=12.dp,bottomEnd=12.dp)).padding(horizontal=10.dp,vertical=8.dp)){
+            if (m.type == "image" && m.imageUrl.isNotBlank()) {
+                AsyncImage(model = m.imageUrl, contentDescription = "Room shared image",
+                    modifier = Modifier.widthIn(max = 230.dp).heightIn(max = 230.dp)
+                        .clip(RoundedCornerShape(12.dp)).clickable { showRoomImagePreview = true },
+                    contentScale = ContentScale.Crop)
+                if (showRoomImagePreview) {
+                    Dialog(onDismissRequest = { showRoomImagePreview = false },
+                        properties = DialogProperties(usePlatformDefaultWidth = false)) {
+                        Box(Modifier.fillMaxSize().background(Color.Black)) {
+                            AsyncImage(model = m.imageUrl, contentDescription = "Image preview",
+                                modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
+                            IconButton(onClick = { showRoomImagePreview = false },
+                                modifier = Modifier.align(Alignment.TopStart).statusBarsPadding().padding(start = 8.dp, top = 6.dp)) {
+                                Icon(Icons.Default.Close, contentDescription = "Close image", tint = Color.White)
+                            }
+                        }
+                    }
+                }
+            } else Box(Modifier.align(Alignment.Start).clip(RoundedCornerShape(topStart=2.dp,topEnd=12.dp,bottomStart=12.dp,bottomEnd=12.dp)).background(Color.Black.copy(alpha=.40f)).border(0.5.dp,Color.White.copy(alpha=.15f),RoundedCornerShape(topStart=2.dp,topEnd=12.dp,bottomStart=12.dp,bottomEnd=12.dp)).padding(horizontal=10.dp,vertical=8.dp)){
                 if (m.mentions.isEmpty()) {
                     Text(m.text,color=Color.White,fontSize=13.sp,lineHeight=18.sp,softWrap=true)
                 } else {
