@@ -47,6 +47,8 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -521,6 +523,7 @@ fun RoomPage(
     var musicDuration by remember { mutableFloatStateOf(0f) }
 
     var input by remember{mutableStateOf("")}
+    var inputSelection by remember { mutableIntStateOf(0) }
     var pendingMentions by remember { mutableStateOf<List<NativeMention>>(emptyList()) }
     val chatFocusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -1416,8 +1419,8 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                             verticalAlignment=Alignment.CenterVertically
                         ) {
                             androidx.compose.foundation.text.BasicTextField(
-                                value=input,
-                                onValueChange={input=it},
+                                value=TextFieldValue(text=input, selection=TextRange(inputSelection.coerceIn(0, input.length))),
+                                onValueChange={ input=it.text; inputSelection=it.selection.start },
                                 singleLine=true,
                                 textStyle=androidx.compose.ui.text.TextStyle(color=Color.Black,fontSize=15.sp),
                                 cursorBrush=SolidColor(Color(0xFF3B82F6)),
@@ -1449,7 +1452,7 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                                                 .put("senderAvatar",roomDisplayImage).put("senderImage",roomDisplayImage)
                                                 .put("text",text).put("mentions",mentionsJson).put("type","message").put("createdAt",createdAt)
                                         )
-                                        input=""
+                                        input=""; inputSelection=0
                                         pendingMentions=emptyList()
                                     },
                                 contentAlignment=Alignment.Center
@@ -1835,7 +1838,12 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                 onCopyId = { if (profileId.isNotBlank()) clipboard.setText(AnnotatedString(profileId)) },
                 onMention = { name, targetId ->
                     val cleanName = name.trim().ifBlank { "User" }
-                    input = if (input.isBlank()) "@$cleanName " else input.trimEnd() + " @$cleanName "
+                    run {
+                        val cursor = inputSelection.coerceIn(0, input.length)
+                        val insertion = (if (cursor > 0 && !input[cursor - 1].isWhitespace()) " " else "") + "@$cleanName "
+                        input = input.substring(0, cursor) + insertion + input.substring(cursor)
+                        inputSelection = cursor + insertion.length
+                    }
                     if (targetId.isNotBlank()) pendingMentions = (pendingMentions.filterNot { it.accountId == targetId } + NativeMention(targetId, cleanName))
                     showChat = true
                     selectedChatProfile = null
@@ -1990,7 +1998,12 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                 onOpenPublicProfile = { profile -> selectedSeat = 0; showSeatSheet = false; keepingRoomForMini = true; onOpenPublicProfile(profile) },
                 onMention = { name, targetId ->
                     val cleanName = name.trim().ifBlank { "User" }
-                    input = if (input.isBlank()) "@$cleanName " else input.trimEnd() + " @$cleanName "
+                    run {
+                        val cursor = inputSelection.coerceIn(0, input.length)
+                        val insertion = (if (cursor > 0 && !input[cursor - 1].isWhitespace()) " " else "") + "@$cleanName "
+                        input = input.substring(0, cursor) + insertion + input.substring(cursor)
+                        inputSelection = cursor + insertion.length
+                    }
                     if (targetId.isNotBlank()) pendingMentions = (pendingMentions.filterNot { it.accountId == targetId } + NativeMention(targetId, cleanName))
                     showChat = true
                     selectedSeat = 0
