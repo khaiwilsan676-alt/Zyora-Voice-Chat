@@ -468,9 +468,10 @@ fun RoomPage(
     }
     var speaker by remember{mutableStateOf(true)}
     var localVoiceSpeaking by remember { mutableStateOf(false) }
-    var publicMsgOff by remember{mutableStateOf(false)}
+    var publicMsgOff by remember(roomId){mutableStateOf(true)}
     var showPublicMessageClosedToast by remember { mutableStateOf(false) }
-    val canSendRoomPublicMessage = accountId == roomOwnerAccountId || roomAdminIds.any { it == accountId }
+    val isRoomOwner = accountId == roomOwnerAccountId
+    val canSendRoomPublicMessage = isRoomOwner || roomAdminIds.any { it == accountId }
     LaunchedEffect(showPublicMessageClosedToast) {
         if (showPublicMessageClosedToast) {
             kotlinx.coroutines.delay(1800)
@@ -1063,6 +1064,7 @@ fun RoomPage(
                             .edit().putInt("micMode_$roomId", updatedMicMode).apply()
                     }
                     if (hasAnnouncement) announcement = updatedAnnouncement
+                    if (payload.has("publicMsgOff")) publicMsgOff = payload.optBoolean("publicMsgOff", true)
                     if (payload.has("roomName")) roomName = payload.optString("roomName", latestRoomName)
                 }
             }
@@ -1767,7 +1769,14 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                 showMenu=false
             },
             publicMsgOff=publicMsgOff,
-            onTogglePublicMsg={publicMsgOff=!publicMsgOff},
+            isRoomOwner=isRoomOwner,
+            onTogglePublicMsg={
+                if (isRoomOwner) {
+                    publicMsgOff = !publicMsgOff
+                    roomSocketRef.value?.takeIf { it.connected() }?.emit("room_settings_update", JSONObject()
+                        .put("roomId", roomId).put("userId", accountId).put("publicMsgOff", publicMsgOff))
+                }
+            },
             speaker=speaker,
             onToggleSpeaker={speaker=!speaker},
             onMusicPlaylistChanged={ tracks ->
