@@ -1674,8 +1674,19 @@ fun NativeChatScreen(
         val blockedListener = Emitter.Listener { args ->
             val payload = args.firstOrNull() as? JSONObject ?: return@Listener
             val code = payload.optString("code")
-            if (code == "BLOCKED_BY_ME") blockPopupText = "You blocked this person"
-            else if (code == "YOU_ARE_BLOCKED") blockPopupText = "You are blocked"
+            if (code == "BLOCKED_BY_ME" || code == "YOU_ARE_BLOCKED") {
+                val messageId = payload.optString("id")
+                android.os.Handler(android.os.Looper.getMainLooper()).post {
+                    if (messageId.isNotBlank()) {
+                        val index = messageIds.indexOf(messageId)
+                        if (index >= 0) {
+                            if (index < messages.size) messages.removeAt(index)
+                            messageIds.removeAt(index)
+                        }
+                    }
+                    blockPopupText = if (code == "BLOCKED_BY_ME") "You blocked this person" else "You are blocked"
+                }
+            }
         }
         socket?.on("private_message_error", blockedListener)
         onDispose { socket?.off("private_message_error", blockedListener) }
