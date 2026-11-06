@@ -307,7 +307,6 @@ fun VisitorsPage(onBack:()->Unit) {
             "${baseUrl}public/IMG_20261106_122332.png"
         }
         
-        // Yahan left aur right me thoda gap de diya (horizontal = 8.dp)
         AsyncImage(
             model = bannerImage,
             contentDescription = "Banner",
@@ -321,9 +320,13 @@ fun VisitorsPage(onBack:()->Unit) {
         when {
             loading -> Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Color(0xFF0066FF)) }
             rows.isEmpty() -> Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) { Text("No visitors yet", color = Color(0xFF9CA3AF), fontSize = 14.sp) }
+            
+            // Yahan LazyColumn me offset dekar isko ~4% upar shift kar diya
             else -> LazyColumn(
-                Modifier.fillMaxWidth().weight(1f),
-                // Yahan top padding ko 0 kar diya taki list banner ki thoda aur paas aa jaye
+                Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .offset(y = (-24).dp), // Ye list ko upar khiskata hai bina background bigade
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 0.dp, bottom = 10.dp)
             ) {
                 items(rows) { visitor ->
@@ -338,7 +341,12 @@ fun VisitorsPage(onBack:()->Unit) {
 private fun VisitorTab(title:String, selected:Boolean, onClick:()->Unit) {
     Column(
         Modifier
-            .clickable(onClick = onClick)
+            // Yahan indication null karke tap ka grey (ripple) effect hata diya gaya hai
+            .clickable(
+                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                indication = null, 
+                onClick = onClick
+            )
             .padding(horizontal = 12.dp, vertical = 10.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
