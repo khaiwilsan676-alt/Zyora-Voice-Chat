@@ -42,14 +42,14 @@ import java.net.URLEncoder
 
 private const val RAW_WALLET = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/"
 
-// Real App Logos (Updated)
+// Real App Logos
 private const val GPAY_LOGO = RAW_WALLET + "IMG_20261030_135231.jpg"
 private const val PHONEPE_LOGO = RAW_WALLET + "IMG_20261030_135211.jpg"
 private const val PAYTM_LOGO = RAW_WALLET + "IMG_20261030_135245.jpg"
 private const val DIAMOND_ICON = "file_00000000552c81f4b6f31ba13346015e.png"
 
 // ═══════════════════════════════════════════════════════
-// ROOM DB — FruitPartyDB equivalent
+// ROOM DB
 // ═══════════════════════════════════════════════════════
 @Entity(tableName = "user_data")
 data class UserDataEntity(
@@ -99,7 +99,6 @@ abstract class WalletDatabase : RoomDatabase() {
     }
 }
 
-// ─── DB helpers ───
 private suspend fun loadBalance(dao: WalletDao): Long = withContext(Dispatchers.IO) { dao.getUserData()?.balance ?: 0L }
 private suspend fun loadDiamonds(dao: WalletDao): Long = withContext(Dispatchers.IO) { dao.getUserData()?.diamonds ?: 0L }
 
@@ -212,8 +211,6 @@ private suspend fun fetchWalletAgentSellers(): List<WalletAgentSeller> = withCon
         coroutineScope {
             rows.map { seller ->
                 async {
-                    // Resolve both immutable UID and public account ID to the canonical
-                    // users.coins record. Never trust an empty alias as the real balance.
                     val byUid = fetchCanonicalWallet(seller.uid)?.optLong("balance", 0L)?.coerceAtLeast(0L)
                     val byAccount = if (seller.accountId != seller.uid) {
                         fetchCanonicalWallet(seller.accountId)?.optLong("balance", 0L)?.coerceAtLeast(0L)
@@ -242,8 +239,6 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int, onChat: (Strin
     val authPrefs = remember { context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE) }
     
     val walletUserId = remember {
-        // Use the immutable login UID as the canonical wallet key.
-        // The server also resolves legacy account-number aliases to this same user.
         authPrefs.getString("uid", null)?.takeIf { it.isNotBlank() }
             ?: authPrefs.getString("accountId", "").orEmpty()
     }
@@ -260,7 +255,6 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int, onChat: (Strin
     var showDetails by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(walletUserId) {
-        // Local Room is only a display cache. GitHub-backed server values are authoritative.
         coins = loadBalance(dao)
         diamonds = loadDiamonds(dao)
         if (walletUserId.isBlank()) return@LaunchedEffect
@@ -337,7 +331,6 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int, onChat: (Strin
                         Modifier.fillMaxWidth(),
                         contentScale = ContentScale.FillWidth
                     )
-                    // PADDING FIX: Agar tab 1 (Diamond) hai toh normal 34.dp, warna 42.dp (Coins keliye right shift)
                     Column(Modifier.padding(start = if (tab == 1) 34.dp else 42.dp, top = 34.dp)) {
                         Text(if (tab == 1) "My Diamonds" else "My Coins",
                             fontSize = 14.sp, color = Color(0xFFE5E7EB), fontWeight = FontWeight.Medium)
@@ -353,14 +346,46 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int, onChat: (Strin
                     }
                 }
 
-                // ─── Pill Tabs ───
-                Row(
+                // ─── Pill Tabs with Extra 30% Tag ───
+                Box(
                     Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 18.dp)
-                        .clip(RoundedCornerShape(30.dp)).background(Color(0x33000000)).padding(4.dp)
                 ) {
-                    PillTab("Coins", tab == 0, Modifier.weight(1f)) { tab = 0 }
-                    PillTab("Diamonds", tab == 1, Modifier.weight(1f)) { tab = 1 }
-                    PillTab("Agent", tab == 2, Modifier.weight(1f)) { tab = 2 }
+                    Row(
+                        Modifier.fillMaxWidth()
+                            .clip(RoundedCornerShape(30.dp)).background(Color(0x33000000)).padding(4.dp)
+                    ) {
+                        PillTab("Coins", tab == 0, Modifier.weight(1f)) { tab = 0 }
+                        PillTab("Diamonds", tab == 1, Modifier.weight(1f)) { tab = 1 }
+                        PillTab("Agent", tab == 2, Modifier.weight(1f)) { tab = 2 }
+                    }
+
+                    Box(
+                        Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(end = 12.dp)
+                            .offset(y = (-14).dp)
+                    ) {
+                        Box(
+                            Modifier
+                                .clip(
+                                    RoundedCornerShape(
+                                        topStart = 8.dp,
+                                        topEnd = 8.dp,
+                                        bottomEnd = 8.dp,
+                                        bottomStart = 2.dp
+                                    )
+                                )
+                                .background(Color(0xFF0044FF)) 
+                                .padding(horizontal = 8.dp, vertical = 3.dp)
+                        ) {
+                            Text(
+                                "Extra 30%",
+                                color = Color.White,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
                 }
 
                 when (tab) {
@@ -450,8 +475,6 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int, onChat: (Strin
             PaySheet(onClose = { showPayUsingSheet = false },
                 onSelect = {
                     scope.launch {
-                        // Payment selection alone is not proof of a completed UPI payment.
-                        // Never credit a local-only balance; credit is added after server-side payment verification.
                         showPayUsingSheet = false
                     }
                 })
@@ -600,11 +623,14 @@ private fun DiamondsContent(
     }
 }
 
+// ═══════════════════════════════════════════════════════
+// UI UPDATED AGENT CONTENT (COMPACT LIKE IMAGE) 
+// ═══════════════════════════════════════════════════════
 @Composable
 private fun AgentContent(onChat: (String, String, String) -> Unit) {
     val context = LocalContext.current
     var sellers by remember { mutableStateOf<List<WalletAgentSeller>>(emptyList()) }
-    var onlineById by remember { mutableStateOf<Map<String, Boolean>>(emptyMap()) }
+    var onlineById by remember { mutableStateOf>(emptyMap()) }
     var loaded by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
@@ -663,104 +689,110 @@ private fun AgentContent(onChat: (String, String, String) -> Unit) {
         }
     }
 
-    Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         sellers.forEach { seller ->
             val isOnline = onlineById[seller.uid] ?: onlineById[seller.accountId] ?: seller.online
+            
             Column(
                 Modifier.fillMaxWidth()
-                    .clip(RoundedCornerShape(24.dp))
+                    .clip(RoundedCornerShape(12.dp)) // Compact padding and corners
                     .background(Color.White)
-                    .padding(horizontal = 18.dp, vertical = 18.dp)
+                    .padding(14.dp) 
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(76.dp), contentAlignment = Alignment.BottomCenter) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    
+                    // Smaller Avatar Box like image
+                    Box(Modifier.size(46.dp), contentAlignment = Alignment.TopCenter) {
                         AsyncImage(
                             model = seller.image,
                             contentDescription = seller.name,
-                            modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(50)),
+                            modifier = Modifier.size(40.dp).clip(RoundedCornerShape(50)),
                             contentScale = ContentScale.Crop
                         )
-                        Text(
-                            if (isOnline) "online" else "offline",
-                            Modifier.padding(bottom = 0.dp)
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(if (isOnline) Color(0xFF16A66A) else Color(0xFF9CA3AF))
-                                .padding(horizontal = 9.dp, vertical = 3.dp),
-                            fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Medium
-                        )
+                        Box(Modifier.align(Alignment.BottomCenter).offset(y = 2.dp)) {
+                            Text(
+                                text = if (isOnline) "online" else "offline",
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(50))
+                                    .background(if (isOnline) Color(0xFF0044FF) else Color(0xFFD1D5DB))
+                                    .border(1.dp, Color.White, RoundedCornerShape(50))
+                                    .padding(horizontal = 6.dp, vertical = 1.dp),
+                                fontSize = 9.sp, // Smaller pill text
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
-                    Column(Modifier.weight(1f).padding(start = 14.dp)) {
-                        Text(seller.name, fontSize = 19.sp, fontWeight = FontWeight.Bold, color = Color(0xFF111827), maxLines = 1)
+
+                    Column(Modifier.weight(1f).padding(start = 10.dp)) {
+                        Text(
+                            text = seller.name, 
+                            fontSize = 15.sp, // Smaller name text
+                            fontWeight = FontWeight.Bold, 
+                            color = Color(0xFF111827), 
+                            maxLines = 1
+                        )
                         Row(
-                            Modifier.padding(top = 7.dp),
+                            Modifier.padding(top = 2.dp),
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(7.dp)
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            Text("Deal of last 30 days:", fontSize = 13.sp, color = Color(0xFF7B8492), maxLines = 1)
+                            Text("Deal of last 30 days:", fontSize = 12.sp, color = Color(0xFF6B7280), maxLines = 1)
                             AsyncImage(
                                 model = RAW_WALLET + "file_00000000e56882119c217d508b6733dc.png",
                                 contentDescription = "Coins",
-                                modifier = Modifier.size(19.dp),
+                                modifier = Modifier.size(13.dp),
                                 contentScale = ContentScale.Fit
                             )
                             Text(
                                 seller.dealLast30Days.ifBlank { "—" },
-                                fontSize = 14.sp, color = Color(0xFF7B8492), maxLines = 1
+                                fontSize = 12.sp, color = Color(0xFF6B7280), maxLines = 1
                             )
                         }
                     }
-                    Box(
-                        Modifier.size(58.dp).clip(RoundedCornerShape(50)).background(Color(0xFF08B879))
+
+                    // Scaled down chat icon
+                    AsyncImage(
+                        model = RAW_WALLET + "IMG_20261105_125330.png",
+                        contentDescription = "Chat",
+                        modifier = Modifier
+                            .size(36.dp) 
+                            .clip(RoundedCornerShape(50))
                             .clickable { onChat(seller.uid, seller.name, seller.image) },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        androidx.compose.foundation.Canvas(Modifier.size(36.dp)) {
-                            val scale = size.width / 48f
-                            val bubble = androidx.compose.ui.graphics.Path().apply {
-                                moveTo(10f * scale, 9f * scale)
-                                quadraticTo(10f * scale, 5f * scale, 15f * scale, 5f * scale)
-                                lineTo(34f * scale, 5f * scale)
-                                quadraticTo(39f * scale, 5f * scale, 39f * scale, 10f * scale)
-                                lineTo(39f * scale, 27f * scale)
-                                quadraticTo(39f * scale, 32f * scale, 34f * scale, 32f * scale)
-                                lineTo(23f * scale, 32f * scale)
-                                lineTo(15f * scale, 39f * scale)
-                                lineTo(16f * scale, 32f * scale)
-                                quadraticTo(10f * scale, 31f * scale, 10f * scale, 26f * scale)
-                                close()
-                            }
-                            drawPath(bubble, Color.White)
-                            listOf(19f, 25f, 31f).forEach { x ->
-                                drawCircle(Color(0xFF08B879), radius = 1.8f * scale,
-                                    center = androidx.compose.ui.geometry.Offset(x * scale, 19f * scale))
-                            }
-                        }
+                        contentScale = ContentScale.Crop
+                    )
+                }
+
+                Spacer(Modifier.height(14.dp)) // Less height to make it compact
+
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text("Payment method:", fontSize = 13.sp, color = Color(0xFF374151))
+                    Spacer(Modifier.weight(1f))
+                    
+                    val pMethod = seller.paymentMethod.lowercase()
+                    when {
+                        pMethod.contains("paytm") -> AsyncImage(PAYTM_LOGO, null, Modifier.height(14.dp), contentScale = ContentScale.Fit)
+                        pMethod.contains("gpay") || pMethod.contains("google") -> AsyncImage(GPAY_LOGO, null, Modifier.height(14.dp), contentScale = ContentScale.Fit)
+                        pMethod.contains("phonepe") -> AsyncImage(PHONEPE_LOGO, null, Modifier.height(14.dp), contentScale = ContentScale.Fit)
+                        else -> Text(seller.paymentMethod.ifBlank { "—" }, fontSize = 13.sp, color = Color(0xFF374151), fontWeight = FontWeight.Medium)
                     }
                 }
 
-                Row(
-                    Modifier.fillMaxWidth().padding(top = 24.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("Payment method:", fontSize = 17.sp, color = Color(0xFF344054))
+                Spacer(Modifier.height(10.dp))
+
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text("Whatsapp:", fontSize = 13.sp, color = Color(0xFF374151))
                     Spacer(Modifier.weight(1f))
-                    Text(seller.paymentMethod.ifBlank { "—" }, fontSize = 14.sp, color = Color(0xFF344054), fontWeight = FontWeight.SemiBold)
-                }
-                Row(
-                    Modifier.fillMaxWidth().padding(top = 18.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("Whatsapp:", fontSize = 17.sp, color = Color(0xFF344054))
-                    Spacer(Modifier.weight(1f))
-                    Text(seller.whatsapp.ifBlank { "—" }, fontSize = 16.sp, color = Color(0xFF344054), maxLines = 1)
+                    Text(seller.whatsapp.ifBlank { "—" }, fontSize = 13.sp, color = Color(0xFF374151))
+                    
                     if (seller.whatsapp.isNotBlank()) {
                         Text(
-                            "▣",
-                            Modifier.padding(start = 8.dp).clickable {
+                            " ⧉",
+                            Modifier.clickable {
                                 val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
                                 clipboard.setPrimaryClip(android.content.ClipData.newPlainText("WhatsApp", seller.whatsapp))
                             },
-                            fontSize = 20.sp, color = Color(0xFF98A2B3)
+                            fontSize = 15.sp, color = Color(0xFF9CA3AF)
                         )
                     }
                 }
@@ -846,30 +878,6 @@ private fun DiamondInputBox(
     }
 }
 
-// ─── Agent chat icon ───
-@Composable
-private fun ChatIcon(onClick: () -> Unit = {}) {
-    Box(Modifier.size(44.dp).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
-        androidx.compose.foundation.Canvas(Modifier.size(32.dp)) {
-            val scale = size.width / 48f
-            val blue = Color(0xFF0044FF)
-            drawCircle(blue, radius = 23f * scale)
-            drawCircle(Color.White, radius = 14f * scale)
-            val tail = androidx.compose.ui.graphics.Path().apply {
-                moveTo(14f * scale, 32f * scale)
-                lineTo(13f * scale, 38f * scale)
-                lineTo(19f * scale, 34f * scale)
-                close()
-            }
-            drawPath(tail, Color.White)
-            listOf(18f, 24f, 30f).forEach { x ->
-                drawCircle(blue, radius = 2f * scale,
-                    center = androidx.compose.ui.geometry.Offset(x * scale, 24f * scale))
-            }
-        }
-    }
-}
-
 // ═══════════════════════════════════════════════════════
 // SHEETS
 // ═══════════════════════════════════════════════════════
@@ -922,7 +930,6 @@ private fun PaymentSheet(onClose: () -> Unit, onRecharge: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically) {
                 Text("UPI", fontSize = 18.sp, fontWeight = FontWeight.Black, color = Color(0xFF1F2937))
                 
-                // Crop daala hai yahan taaki Circle mein perfectly fit ho
                 AsyncImage(GPAY_LOGO, null, Modifier.padding(start = 10.dp).size(22.dp).clip(RoundedCornerShape(50)), contentScale = ContentScale.Crop)
                 AsyncImage(PHONEPE_LOGO, null, Modifier.padding(start = 8.dp).size(22.dp).clip(RoundedCornerShape(50)), contentScale = ContentScale.Crop)
                 AsyncImage(PAYTM_LOGO, null, Modifier.padding(start = 8.dp).size(22.dp).clip(RoundedCornerShape(50)), contentScale = ContentScale.Crop)
@@ -980,7 +987,6 @@ private fun PaySheet(onClose: () -> Unit, onSelect: () -> Unit) {
                 }
                 HorizontalDivider(color = Color(0xFFF9FAFB))
                 
-                // 3 DOT FIX - Ekdam center me rahega ab text nahi boxes use kiye hain!
                 PayRow("Other", onSelect) {
                     Box(Modifier.fillMaxSize().clip(RoundedCornerShape(50)).background(Color(0xFFF3F4F6)), contentAlignment = Alignment.Center) {
                         Row(horizontalArrangement = Arrangement.spacedBy(3.dp), verticalAlignment = Alignment.CenterVertically) {
