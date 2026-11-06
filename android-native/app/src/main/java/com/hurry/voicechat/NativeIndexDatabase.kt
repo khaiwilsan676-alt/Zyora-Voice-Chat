@@ -6,17 +6,19 @@ import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import org.json.JSONObject
 
-internal class NativeIndexDatabase(context: Context) : SQLiteOpenHelper(context.applicationContext, "index.db", null, 4) {
+internal class NativeIndexDatabase(context: Context) : SQLiteOpenHelper(context.applicationContext, "index.db", null, 5) {
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL("CREATE TABLE IF NOT EXISTS chat_cache (chat_key TEXT PRIMARY KEY NOT NULL, payload TEXT NOT NULL, updated_at INTEGER NOT NULL)")
         db.execSQL("CREATE TABLE IF NOT EXISTS profile_cache (profile_key TEXT PRIMARY KEY NOT NULL, payload TEXT NOT NULL, updated_at INTEGER NOT NULL)")
         db.execSQL("CREATE TABLE IF NOT EXISTS conversation_cache (conversation_key TEXT PRIMARY KEY NOT NULL, peer_id TEXT NOT NULL, payload TEXT NOT NULL, updated_at INTEGER NOT NULL)")
         db.execSQL("CREATE TABLE IF NOT EXISTS voice_cache (message_id TEXT PRIMARY KEY NOT NULL, peer_id TEXT NOT NULL, audio BLOB NOT NULL, duration_seconds INTEGER NOT NULL, updated_at INTEGER NOT NULL)")
+        db.execSQL("CREATE TABLE IF NOT EXISTS room_lock_cache (room_id TEXT PRIMARY KEY NOT NULL, is_locked INTEGER NOT NULL, room_password TEXT NOT NULL, updated_at INTEGER NOT NULL)")
     }
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
         if (oldVersion < 2) db.execSQL("CREATE TABLE IF NOT EXISTS profile_cache (profile_key TEXT PRIMARY KEY NOT NULL, payload TEXT NOT NULL, updated_at INTEGER NOT NULL)")
         if (oldVersion < 3) db.execSQL("CREATE TABLE IF NOT EXISTS conversation_cache (conversation_key TEXT PRIMARY KEY NOT NULL, peer_id TEXT NOT NULL, payload TEXT NOT NULL, updated_at INTEGER NOT NULL)")
         if (oldVersion < 4) db.execSQL("CREATE TABLE IF NOT EXISTS voice_cache (message_id TEXT PRIMARY KEY NOT NULL, peer_id TEXT NOT NULL, audio BLOB NOT NULL, duration_seconds INTEGER NOT NULL, updated_at INTEGER NOT NULL)")
+        if (oldVersion < 5) db.execSQL("CREATE TABLE IF NOT EXISTS room_lock_cache (room_id TEXT PRIMARY KEY NOT NULL, is_locked INTEGER NOT NULL, room_password TEXT NOT NULL, updated_at INTEGER NOT NULL)")
     }
     fun saveChat(key: String, payload: String) {
         val values = ContentValues()
@@ -70,6 +72,23 @@ internal class NativeIndexDatabase(context: Context) : SQLiteOpenHelper(context.
         if (messageId.isBlank()) return null
         readableDatabase.query("voice_cache", arrayOf("audio"), "message_id=?", arrayOf(messageId), null, null, null).use { cursor ->
             return if (cursor.moveToFirst()) cursor.getBlob(0) else null
+        }
+    }
+
+    fun saveRoomLock(roomId: String, isLocked: Boolean, password: String) {
+        if (roomId.isBlank()) return
+        val values = ContentValues().apply {
+            put("room_id", roomId)
+            put("is_locked", if (isLocked) 1 else 0)
+            put("room_password", password)
+            put("updated_at", System.currentTimeMillis())
+        }
+        writableDatabase.insertWithOnConflict("room_lock_cache", null, values, SQLiteDatabase.CONFLICT_REPLACE)
+    }
+    fun loadRoomLock(roomId: String): Pair<Boolean, String>? {
+        if (roomId.isBlank()) return null
+        readableDatabase.query("room_lock_cache", arrayOf("is_locked", "room_password"), "room_id=?", arrayOf(roomId), null, null, null).use { cursor ->
+            return if (cursor.moveToFirst()) Pair(cursor.getInt(0) == 1, cursor.getString(1).orEmpty()) else null
         }
     }
 
