@@ -1777,6 +1777,23 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                         selectedChatProfile = null
                     }
                 },
+                onInvite = {
+                    val inviteSeat = seats.firstOrNull { !it.occupied && !it.locked }
+                    val socket = roomSocketRef.value
+                    if (profileId.isNotBlank() && profileId != accountId && inviteSeat != null && socket?.connected() == true) {
+                        socket.emit(
+                            "room_seat_invite_send",
+                            JSONObject()
+                                .put("roomId", roomId)
+                                .put("inviterId", accountId)
+                                .put("inviterName", roomDisplayName.ifBlank { "User" })
+                                .put("inviterImage", roomDisplayImage)
+                                .put("targetId", profileId)
+                                .put("seatNumber", inviteSeat.number)
+                        )
+                        selectedChatProfile = null
+                    }
+                },
                 onLeaveSeat = {
                     val index = seats.indexOfFirst { it.occupied && it.accountId == profileId }
                     if (index >= 0) {
