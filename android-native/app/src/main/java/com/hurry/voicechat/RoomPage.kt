@@ -528,7 +528,6 @@ fun RoomPage(
     var musicDuration by remember { mutableFloatStateOf(0f) }
 
     var input by remember{mutableStateOf("")}
-    var previewRoomImageUrl by remember { mutableStateOf<String?>(null) }
     var inputSelection by remember { mutableIntStateOf(0) }
     var pendingMentions by remember { mutableStateOf<List<NativeMention>>(emptyList()) }
     val chatFocusRequester = remember { FocusRequester() }
@@ -1808,18 +1807,6 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
         
         val roomFollowers = followedRoomUsers.filter { it.accountId != roomOwner.accountId && it.accountId != roomOwner.id }
         if(showStore) StorePage(onBack={showStore=false}, initialView=storeInitialView, userId=accountId.ifBlank{roomOwner.accountId.ifBlank{roomOwner.id}})
-        if (!previewRoomImageUrl.isNullOrBlank()) {
-            Dialog(onDismissRequest = { previewRoomImageUrl = null }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-                Box(Modifier.fillMaxSize().background(Color.Black)) {
-                    AsyncImage(model = previewRoomImageUrl, contentDescription = "Room chat image",
-                        modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
-                    IconButton(onClick = { previewRoomImageUrl = null },
-                        modifier = Modifier.align(Alignment.TopStart).statusBarsPadding().padding(start = 8.dp, top = 6.dp)) {
-                        Icon(Icons.Default.Close, contentDescription = "Close image", tint = Color.White)
-                    }
-                }
-            }
-        }
         if(showInfo) RoomInfo(
             isOpen=true,
             onClose={showInfo=false},
