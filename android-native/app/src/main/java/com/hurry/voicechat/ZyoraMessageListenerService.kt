@@ -134,6 +134,19 @@ class ZyoraMessageListenerService : Service() {
             val unreadPrefs = getSharedPreferences("zyora_unread_messages", Context.MODE_PRIVATE)
             val key = "unread_$identity"
             unreadPrefs.edit().putInt(key, unreadPrefs.getInt(key, 0) + 1).apply()
+            // The foreground listener owns incoming messages while Home, Room and Me are visible.
+            // Publish the banner here as well as in the open-chat listener so it works outside MessageScreen.
+            ZyoraMessageBannerState.current = ZyoraIncomingMessageBanner(
+                messageId = messageId,
+                senderId = peerId,
+                senderName = payload.optString("senderName", "User").ifBlank { "User" },
+                senderAvatar = payload.optString("senderPhoto", ""),
+                messageText = when {
+                    isVoice -> "🎤 Voice message"
+                    payload.optString("type") == "image" -> "📷 Image"
+                    else -> storedText
+                }
+            )
         }
         val timestamp = payload.optLong("timestamp", System.currentTimeMillis())
         val preview = JSONObject()
