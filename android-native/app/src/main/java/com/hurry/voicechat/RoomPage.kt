@@ -469,6 +469,14 @@ fun RoomPage(
     var speaker by remember{mutableStateOf(true)}
     var localVoiceSpeaking by remember { mutableStateOf(false) }
     var publicMsgOff by remember{mutableStateOf(false)}
+    var showPublicMessageClosedToast by remember { mutableStateOf(false) }
+    val canSendRoomPublicMessage = accountId == roomOwnerAccountId || roomAdminIds.any { it == accountId }
+    LaunchedEffect(showPublicMessageClosedToast) {
+        if (showPublicMessageClosedToast) {
+            kotlinx.coroutines.delay(1800)
+            showPublicMessageClosedToast = false
+        }
+    }
     var showChat by remember{mutableStateOf(false)}
     val latestShowChat by rememberUpdatedState(showChat)
     var showMessageSheet by remember{mutableStateOf(false)}
@@ -1177,6 +1185,19 @@ fun RoomPage(
     }
 
     Box(Modifier.fillMaxSize().background(Color.Black)){
+        if (showPublicMessageClosedToast) {
+            Text(
+                text = "Public Message are close",
+                color = Color.White,
+                fontSize = 12.sp,
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .zIndex(100f)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Color.Black.copy(alpha = 0.70f))
+                    .padding(horizontal = 14.dp, vertical = 9.dp)
+            )
+        }
         JitsiRoomAudio(roomId=roomId,userName=roomDisplayName,canSpeak=seats.any { it.number <= roomMicMode && it.occupied && it.accountId == accountId && !it.muted && !it.selfMuted },roomSocket=roomSocketRef.value,musicUri=miniMusicTrack?.url ?: MusicPlaybackState.currentPlayingUri,musicPlaying=isMusicPlaying,onSpeakingChanged={localVoiceSpeaking=it})
         AsyncImage(model=when(roomTheme) {
             "forest-night" -> "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/1784875884052~2.jpg"
@@ -1471,6 +1492,9 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                                     .clip(CircleShape)
                                     .background(if(isRoomInputBlank) Color(0xFF9CA3AF) else Color(0xFF3B82F6))
                                     .clickable(enabled=!isRoomInputBlank) {
+                                        if (!publicMsgOff && !canSendRoomPublicMessage) {
+                                            showPublicMessageClosedToast = true
+                                        } else {
                                         val text=input.trim()
                                         val createdAt=System.currentTimeMillis()
                                         val messageId="$accountId-$createdAt"
@@ -1487,6 +1511,7 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                                         )
                                         input=""; inputSelection=0
                                         pendingMentions=emptyList()
+                                        }
                                     },
                                 contentAlignment=Alignment.Center
                             ) {
