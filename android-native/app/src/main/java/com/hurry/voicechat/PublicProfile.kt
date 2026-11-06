@@ -690,7 +690,16 @@ fun PublicProfileScreen(
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Button(
-                    onClick = {\n                        if (!followBusy && myFollowIdentity.isNotBlank() && targetFollowIdentity.isNotBlank()) {\n                            val next = !isFollowing; followBusy = true\n                            coroutineScope.launch {\n                                val result = SocialFollowApi.toggle(context, myFollowIdentity, targetFollowIdentity, next)\n                                if (result != null) { isFollowing = result.isFollowing; followersCount = result.followers }\n                                followBusy = false\n                            }\n                        }\n                    },
+                    onClick = {
+                        if (!followBusy && myFollowIdentity.isNotBlank() && targetFollowIdentity.isNotBlank()) {
+                            val next = !isFollowing; followBusy = true
+                            coroutineScope.launch {
+                                val result = SocialFollowApi.toggle(context, myFollowIdentity, targetFollowIdentity, next)
+                                if (result != null) { isFollowing = result.isFollowing; followersCount = result.followers }
+                                followBusy = false
+                            }
+                        }
+                    },
                     modifier = Modifier.weight(1f).height(48.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF5874)),
                     shape = RoundedCornerShape(16.dp),
