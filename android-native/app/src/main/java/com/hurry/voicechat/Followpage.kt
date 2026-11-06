@@ -89,7 +89,6 @@ private suspend fun loadProfileVisitors(context:Context,userId:String,type:Strin
     }.getOrElse { cachedVisitors() }
 }
 
-// Yaha par date ke sath time add kiya gaya hai (dd/MM hh:mm a)
 private fun visitorDate(t:Long)=if(t<=0L) "—" else SimpleDateFormat("dd/MM hh:mm a",Locale.getDefault()).format(Date(t))
 
 val topBlueGradient = Brush.verticalGradient(
@@ -308,14 +307,15 @@ fun VisitorsPage(onBack:()->Unit) {
             "${baseUrl}public/IMG_20261106_122332.png"
         }
         
+        // Yahan banner ka modifier change kar diya gaya hai
         AsyncImage(
             model = bannerImage,
             contentDescription = "Banner",
-            contentScale = ContentScale.Fit, 
+            // FillWidth image ko device ki choudai (width) me fela dega original ratio maintain karke
+            contentScale = ContentScale.FillWidth, 
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp) 
-                .height(60.dp)
+                .fillMaxWidth()           // Puri choudai lega
+                .wrapContentHeight()      // Height khud adjust kar lega bina kate (crop)
         )
 
         when {
@@ -421,7 +421,6 @@ private fun VisitorItemRow(v:VisitorData, isMyVisitorsTab:Boolean, baseUrl:Strin
             Spacer(Modifier.height(4.dp))
             
             Text(
-                // Yaha format ab date ke sath time bhi dikhayega, aur divider sirf view ke pehle rahega
                 text = "${visitorDate(v.lastViewedAt)}  |  View ${v.viewCount} times",
                 color = Color(0xFF9CA3AF),
                 fontSize = 12.sp
