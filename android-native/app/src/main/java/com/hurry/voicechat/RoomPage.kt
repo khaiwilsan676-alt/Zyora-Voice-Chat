@@ -1193,7 +1193,6 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                                                 model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261107_003419.png",
                                                 contentDescription = "Follow room",
                                                 modifier = Modifier.size(26.dp).clickable {
-{
                                             val next = !followed
                                             followed = next
                                             onFollowToggle(roomId, next)
