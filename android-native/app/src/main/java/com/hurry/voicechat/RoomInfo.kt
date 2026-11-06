@@ -407,9 +407,9 @@ private fun RoomDangerActionMenu(
             }
             Spacer(Modifier.height(12.dp))
             Button(onClick = onDismiss, Modifier.fillMaxWidth().height(56.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1C1C1E)),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B82F6)),
                 shape = RoundedCornerShape(16.dp)) {
-                Text("Cancel", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                Text("Cancel", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
             }
         }
     }
