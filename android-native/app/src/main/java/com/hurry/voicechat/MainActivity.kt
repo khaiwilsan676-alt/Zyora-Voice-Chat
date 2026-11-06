@@ -240,6 +240,7 @@ private fun HurryLaunchScreen() {
 @Composable
 private fun HurryNativeRoot(onLogout: () -> Unit) {
     val context = LocalContext.current
+    val incomingMessageBanner = ZyoraMessageBannerState.current
 
     // Ask for the app's media, camera and voice permissions together only after
     // the authenticated user reaches the Home root (after first-time profile setup).
@@ -601,6 +602,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                                 unreadMessageCount = unreadMessageCount,
                                 onTabSelected = { selected ->
                                     if (selected == HurryTab.MESSAGE) {
+                                        ZyoraMessageBannerState.current = null;
                                         unreadMessageCount = unreadPrefs.getInt("unread_$messageIdentity", 0).coerceAtLeast(0)
                                     }
                                     tab = selected
@@ -716,7 +718,8 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                     Box(Modifier.fillMaxSize()) {
                         Box(Modifier.align(Alignment.BottomCenter)) {
                             HurryBottomNav(tab, languageCode = languageCode, unreadMessageCount = unreadMessageCount, onTab = { selected ->
-                                if (selected == HurryTab.MESSAGE) { unreadMessageCount = unreadPrefs.getInt("unread_$messageIdentity", 0).coerceAtLeast(0) }
+                                if (selected == HurryTab.MESSAGE) {
+                                    ZyoraMessageBannerState.current = null; unreadMessageCount = unreadPrefs.getInt("unread_$messageIdentity", 0).coerceAtLeast(0) }
                                 tab = selected
                                 if (selected != HurryTab.ME) openedMePage = null
                                 if (selected == HurryTab.HOME) homeMine = false
@@ -736,6 +739,65 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                 )
             }
 
+            if (incomingMessageBanner != null && openedChat == null && openedPublicProfile == null &&
+                (tab == HurryTab.HOME || tab == HurryTab.ME)) {
+                Box(
+                    Modifier.fillMaxSize().statusBarsPadding().padding(top = 8.dp),
+                    contentAlignment = Alignment.TopCenter
+                ) {
+                    Row(
+                        Modifier.fillMaxWidth(0.94f)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color.White)
+                            .padding(horizontal = 10.dp, vertical = 9.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        AsyncImage(
+                            model = incomingMessageBanner.senderAvatar.ifBlank {
+                                "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/default-avatar.png"
+                            },
+                            contentDescription = "Sender avatar",
+                            modifier = Modifier.size(42.dp).clip(CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
+                        Column(
+                            Modifier.weight(1f).padding(start = 9.dp, end = 8.dp)
+                        ) {
+                            Text(
+                                incomingMessageBanner.senderName,
+                                color = Color(0xFF171717),
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                            )
+                            Text(
+                                incomingMessageBanner.messageText,
+                                color = Color(0xFF555555),
+                                fontSize = 12.sp,
+                                maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                            )
+                        }
+                        androidx.compose.material3.Button(
+                            onClick = {
+                                val message = incomingMessageBanner
+                                openedChat = Triple(message.senderId, message.senderName, message.senderAvatar)
+                                ZyoraMessageBannerState.current = null
+                            },
+                            modifier = Modifier.height(34.dp).width(64.dp),
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp),
+                            colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF2583F7),
+                                contentColor = Color.White
+                            )
+                        ) {
+                            Text("View", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                }
+            }
             roomKickNotice?.let { notice ->
                 val expiresAt = notice.optLong("expiresAt", 0L)
                 val remainingMs = (expiresAt - kickNoticeNow).coerceAtLeast(0L)
