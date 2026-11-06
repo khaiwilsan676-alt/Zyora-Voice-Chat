@@ -1131,7 +1131,7 @@ fun RoomPage(
             roomSocket.off("lucky_bag_banner",luckyBagBannerListener)
             roomSocket.off("wallet_balance_updated",walletBalanceListener)
             roomSocket.off(Socket.EVENT_CONNECT,connectListener)
-            if (!keepingRoomForMini) {
+            if (!latestKeepingRoomForMini) {
                 roomSocket.disconnect()
                 roomSocket.close()
             }
