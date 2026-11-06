@@ -10,14 +10,19 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.MoreHoriz
-import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
@@ -48,9 +53,9 @@ fun RoomInfo(
     val context = LocalContext.current
     var tab by remember { mutableStateOf(0) }
     
-    // Naya state bottom menu aur share sheet ke liye
-    var showShareSheet by remember { mutableStateOf(false) } // SHARE SHEET STATE
-
+    // Naya state share sheet handle karne ke liye
+    var showShareSheet by remember { mutableStateOf(false) }
+    
     var ownerDisplayName by remember(roomOwner.id, roomOwner.uid, roomOwner.accountId) {
         mutableStateOf(if (roomOwner.accountId == "100002" || roomOwner.id == "100002") "Zyora" else "User")
     }
@@ -59,7 +64,7 @@ fun RoomInfo(
         mutableStateOf(if (isLogoOwner) "https://zyora-voice-chat.vercel.app/logo.png" else roomOwner.image)
     }
     var ownerCountry by remember(roomOwner.accountId) { mutableStateOf("") }
-    var memberProfiles by remember { mutableStateOf<Map<String, RoomInfoFollower>>(emptyMap()) }
+    var memberProfiles by remember { mutableStateOf>(emptyMap()) }
 
     LaunchedEffect(roomFollowers.map { it.accountId }, roomAdmins.map { it.accountId }) {
         val all = (roomFollowers + roomAdmins).distinctBy { it.accountId }.filter { it.accountId.isNotBlank() }
@@ -108,185 +113,195 @@ fun RoomInfo(
     }
 
     Box(Modifier.fillMaxSize(), contentAlignment=Alignment.BottomCenter) {
-        Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=.50f)).clickable(onClick=onClose))
-        
-        Box(Modifier.fillMaxWidth().fillMaxHeight(.65f)) {
+        Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=.30f)).clickable(onClick=onClose))
+        Column(
+            Modifier.fillMaxWidth().fillMaxHeight(.50f)
+                .clip(RoundedCornerShape(topStart=15.dp,topEnd=15.dp))
+                .background(Color(0xEB000000))
+        ) {
             
-            Column(
-                Modifier.fillMaxSize()
-                    .padding(top = 40.dp)
-                    .clip(RoundedCornerShape(topStart=24.dp, topEnd=24.dp))
-                    .background(Color(0xFF1E1E1E))
+            // Top Box Layout - 3 Dot (Left), Title (Center), Share (Right)
+            Box(
+                modifier = Modifier.fillMaxWidth().padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 4.dp)
             ) {
-                Row(
-                    Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                // 3 Dots Icon (Ekdam Left)
+                Box(
+                    modifier = Modifier.align(Alignment.CenterStart).size(34.dp).clip(CircleShape).background(Color.White.copy(alpha=0.15f)).clickable { },
+                    contentAlignment = Alignment.Center
                 ) {
-                    Box(
-                        modifier = Modifier.size(36.dp).background(Color(0xFF2A2A2A), CircleShape).clickable {
-                            showShareSheet = true
-                        },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(Icons.Default.Share, contentDescription="Share", tint=Color.White, modifier = Modifier.size(18.dp))
+                    Canvas(Modifier.size(16.dp)) {
+                        drawCircle(Color.White, radius = 1.8.dp.toPx(), center = androidx.compose.ui.geometry.Offset(size.width * 0.15f, size.height / 2))
+                        drawCircle(Color.White, radius = 1.8.dp.toPx(), center = androidx.compose.ui.geometry.Offset(size.width * 0.5f, size.height / 2))
+                        drawCircle(Color.White, radius = 1.8.dp.toPx(), center = androidx.compose.ui.geometry.Offset(size.width * 0.85f, size.height / 2))
                     }
                 }
 
-                Column(
-                    Modifier.fillMaxWidth().padding(top = 8.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                // Heading Top Middle (Center)
+                Text(
+                    text = "Room Information",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    modifier = Modifier.align(Alignment.Center)
+                )
+
+                // Share/Forward Arrow Icon (Ekdam Right)
+                Box(
+                    modifier = Modifier.align(Alignment.CenterEnd).size(34.dp).clip(CircleShape).background(Color.White.copy(alpha=0.15f))
+                        .clickable { showShareSheet = true }, // Yahan click lagaya hai
+                    contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        roomData.roomName.ifBlank{"Room"}, 
-                        fontSize=18.sp, 
-                        fontWeight=FontWeight.Bold, 
-                        color=Color.White
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    Row(verticalAlignment=Alignment.CenterVertically) {
-                        Text("ID:${roomData.roomId}", fontSize=13.sp, color=Color.White.copy(alpha=.70f))
-                        Spacer(Modifier.width(4.dp))
-                        IconButton(onClick={onCopyId(roomData.roomId)}, modifier=Modifier.size(24.dp)) {
-                            Icon(Icons.Default.ContentCopy, contentDescription="Copy", tint=Color.White.copy(alpha=.70f), modifier=Modifier.size(14.dp))
+                    Canvas(Modifier.size(16.dp)) {
+                        val path = Path().apply {
+                            moveTo(size.width * 0.15f, size.height * 0.85f)
+                            quadraticTo(size.width * 0.15f, size.height * 0.35f, size.width * 0.5f, size.height * 0.35f)
+                            lineTo(size.width * 0.5f, size.height * 0.15f)
+                            lineTo(size.width * 0.95f, size.height * 0.5f)
+                            lineTo(size.width * 0.5f, size.height * 0.85f)
+                            lineTo(size.width * 0.5f, size.height * 0.65f)
+                            quadraticTo(size.width * 0.3f, size.height * 0.65f, size.width * 0.15f, size.height * 0.85f)
+                        }
+                        drawPath(path, Color.White, style = Stroke(width = 1.8.dp.toPx(), join = StrokeJoin.Round, cap = StrokeCap.Round))
+                    }
+                }
+            }
+
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=8.dp),
+                horizontalArrangement=Arrangement.spacedBy(7.dp)
+            ) {
+                listOf("Room info","Members").forEachIndexed { index, label ->
+                    Column(
+                        Modifier.weight(1f).clickable { tab=index }.padding(vertical=4.dp),
+                        horizontalAlignment=Alignment.CenterHorizontally
+                    ) {
+                        Text(label,
+                            fontSize=14.sp, fontWeight=FontWeight.SemiBold,
+                            color=if(tab==index) Color.White else Color.White.copy(alpha=.50f))
+                        if (tab==index) {
+                            Box(
+                                Modifier.padding(top=4.dp).size(width=20.dp, height=2.dp)
+                                    .background(Color.White, RoundedCornerShape(1.dp))
+                            )
                         }
                     }
-                    if(copied) Text("Copied!", fontSize=12.sp, color=Color(0xFF4ADE80))
                 }
+            }
 
-                Spacer(Modifier.height(16.dp))
-
-                Row(
-                    Modifier.fillMaxWidth().padding(horizontal=16.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly
+            if (tab==0) {
+                Column(
+                    Modifier.fillMaxWidth().weight(1f).padding(horizontal=16.dp,vertical=12.dp),
+                    verticalArrangement=Arrangement.spacedBy(12.dp)
                 ) {
-                    listOf("Profile", "Member").forEachIndexed { index, label ->
-                        Column(
-                            Modifier.weight(1f).clickable { tab=index }.padding(vertical=8.dp),
-                            horizontalAlignment=Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                label,
-                                fontSize=16.sp,
-                                fontWeight=if(tab==index) FontWeight.Bold else FontWeight.Medium,
-                                color=if(tab==index) Color.White else Color.Gray
-                            )
-                            if (tab==index) {
-                                Spacer(Modifier.height(4.dp))
-                                Box(Modifier.width(20.dp).height(3.dp).background(Color.White, RoundedCornerShape(1.5.dp)))
-                            } else {
-                                Spacer(Modifier.height(7.dp))
+                    Row(verticalAlignment=Alignment.CenterVertically) {
+                        AsyncImage(
+                            model=roomData.roomDp.ifBlank { "/default-avatar.png" },
+                            contentDescription="Room",
+                            modifier=Modifier.size(80.dp).clip(RoundedCornerShape(6.dp)).border(1.dp,Color.White.copy(alpha=.15f),RoundedCornerShape(6.dp)),
+                            contentScale=ContentScale.Crop
+                        )
+                        Column(Modifier.padding(start=8.dp)) {
+                            Text(roomData.roomName.ifBlank{"Room"},fontSize=14.sp,
+                                fontWeight=FontWeight.SemiBold,color=Color.White)
+                            Row(verticalAlignment=Alignment.CenterVertically) {
+                                if (roomData.roomId in setOf("100002","100003","500002","500003","500004")) {
+                                    AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261101_125212.png", contentDescription="Purple ID Badge", modifier=Modifier.height(16.dp).widthIn(min=22.dp,max=30.dp), contentScale=ContentScale.Fit)
+                                    Text(roomData.roomId,fontSize=10.sp,color=Color.White.copy(alpha=.60f))
+                                } else Text("ID: "+roomData.roomId,fontSize=10.sp,color=Color.White.copy(alpha=.60f))
+                                IconButton(onClick={onCopyId(roomData.roomId)},modifier=Modifier.size(26.dp)) {
+                                    Icon(Icons.Default.ContentCopy,contentDescription="Copy room ID",
+                                        tint=Color.White.copy(alpha=.70f),modifier=Modifier.size(15.dp))
+                                }
+                                if(copied) Text("Copied!",fontSize=12.sp,color=Color(0xFF4ADE80))
                             }
                         }
                     }
-                }
-                
-                Box(Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(alpha=0.05f)))
-
-                if (tab==0) {
-                    Column(
-                        Modifier.fillMaxWidth().weight(1f).padding(horizontal=16.dp, vertical=20.dp)
+                    
+                    Row(
+                        Modifier.fillMaxWidth().clickable {
+                            onOpenProfile(RoomInfoFollower(roomOwner.accountId, ownerDisplayName, ownerDisplayImage, ownerCountry))
+                        }.padding(vertical=4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Row(
-                            Modifier.fillMaxWidth().background(Color(0xFF2A2A2A), RoundedCornerShape(16.dp)).padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             AsyncImage(
-                                model = if (isLogoOwner) "https://zyora-voice-chat.vercel.app/logo.png" else ownerDisplayImage,
-                                contentDescription = "Owner",
-                                modifier = Modifier.size(48.dp).clip(CircleShape),
+                                model = if (isLogoOwner) "https://zyora-voice-chat.vercel.app/logo.png" else ownerDisplayImage.ifBlank { "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/default-avatar.png" },
+                                contentDescription = "Host Avatar",
+                                modifier = Modifier.size(38.dp).clip(CircleShape),
                                 contentScale = ContentScale.Crop
                             )
-                            Spacer(Modifier.width(12.dp))
-                            Column(Modifier.weight(1f)) {
-                                Text(ownerDisplayName.ifBlank{"Unknown"}, fontSize=16.sp, fontWeight=FontWeight.SemiBold, color=Color.White, maxLines=1)
-                                Spacer(Modifier.height(2.dp))
-                                Text("Room owner", fontSize=12.sp, color=Color.Gray)
+                            Column(Modifier.padding(start = 10.dp)) {
+                                Text("Host",fontSize=10.sp,fontWeight=FontWeight.Medium,color=Color.White.copy(alpha=.50f))
+                                Text(ownerDisplayName.ifBlank{"Unknown"},
+                                    fontSize=12.sp,fontWeight=FontWeight.Medium,color=Color.White,
+                                    maxLines=2, softWrap=true)
                             }
-                            
-                            AsyncImage(
-                                model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261105_125330.png",
-                                contentDescription = "Chat",
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .clickable {
-                                        onOpenProfile(RoomInfoFollower(roomOwner.accountId, ownerDisplayName, ownerDisplayImage, ownerCountry))
-                                    },
-                                contentScale = ContentScale.Fit
-                            )
                         }
-
-                        Spacer(Modifier.height(24.dp))
-
-                        Text("Announcement", fontSize=13.sp, color=Color.Gray, fontWeight=FontWeight.Medium)
-                        Spacer(Modifier.height(8.dp))
-                        Text(roomData.roomAnnouncement.ifBlank{"No Announcement"}, fontSize=14.sp, color=Color.White)
+                        Icon(
+                            imageVector = Icons.Default.KeyboardArrowRight,
+                            contentDescription = "Go to Profile",
+                            tint = Color.White.copy(alpha = 0.5f),
+                            modifier = Modifier.size(22.dp)
+                        )
                     }
-                } else {
-                    LazyColumn(
-                        Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp),
-                        verticalArrangement = Arrangement.spacedBy(7.dp)
-                    ) {
-                        item {
-                            MemberRow(ownerDisplayName, if (isLogoOwner) "https://zyora-voice-chat.vercel.app/logo.png" else ownerDisplayImage, roomOwner.accountId, "Owner", ownerCountry) {
-                                onOpenProfile(RoomInfoFollower(roomOwner.accountId, ownerDisplayName, ownerDisplayImage, ownerCountry))
-                            }
-                        }
-                        items(roomFollowers.filter { it.accountId.isNotBlank() && it.accountId != roomOwner.accountId }, key = { "member-${it.accountId}" }) { f ->
-                            val profile = memberProfiles[f.accountId] ?: f.copy(country = "")
-                            MemberRow(profile.name, profile.image, profile.accountId, "", profile.country) { onOpenProfile(profile) }
-                        }
-                        if (roomFollowers.isEmpty() && roomAdmins.isEmpty()) {
-                            item {
-                                Text("No members yet", modifier = Modifier.fillMaxWidth().padding(20.dp),
-                                    textAlign = TextAlign.Center, fontSize = 13.sp, color = Color(0xFF9CA3AF))
-                            }
-                        }
+
+                    Column {
+                        Text("Announcement:",fontSize=12.sp,fontWeight=FontWeight.Medium,color=Color(0xFF9CA3AF))
+                        Text(roomData.roomAnnouncement.ifBlank{"—"},Modifier.padding(top=2.dp),
+                            fontSize=12.sp,color=Color.White.copy(alpha=.90f))
                     }
                 }
-            }
-            
-            AsyncImage(
-                model = roomData.roomDp.ifBlank { "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/default-avatar.png" },
-                contentDescription = "Room Avatar",
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .size(80.dp)
-                    .clip(RoundedCornerShape(18.dp))
-                    .border(3.dp, Color(0xFF1E1E1E), RoundedCornerShape(18.dp)),
-                contentScale = ContentScale.Crop
-            )
-        }
-        
-        // --- SHARE BOTTOM SHEET 40VH BLACK BSS ---
-        if (showShareSheet) {
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.6f))
-                    .clickable { showShareSheet = false },
-                contentAlignment = Alignment.BottomCenter
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .fillMaxHeight(0.40f) // 40Vh
-                        .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
-                        .background(Color.Black) // Black Background
-                        .clickable(enabled = false) {} // Taki sheet click hone pe khud se close na ho
+            } else {
+                LazyColumn(
+                    Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(7.dp)
                 ) {
-                    Text(
-                        text = "Share in zyora", // Top left heading
-                        color = Color.White,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier
-                            .align(Alignment.TopStart)
-                            .padding(top = 20.dp, start = 20.dp)
-                    )
+                    item {
+                        MemberRow(ownerDisplayName, if (isLogoOwner) "https://zyora-voice-chat.vercel.app/logo.png" else ownerDisplayImage, roomOwner.accountId, "Owner", ownerCountry) {
+                            onOpenProfile(RoomInfoFollower(roomOwner.accountId, ownerDisplayName, ownerDisplayImage, ownerCountry))
+                        }
+                    }
+                    items(roomFollowers.filter { it.accountId.isNotBlank() && it.accountId != roomOwner.accountId }, key = { "member-${it.accountId}" }) { f ->
+                        val profile = memberProfiles[f.accountId] ?: f.copy(country = "")
+                        MemberRow(profile.name, profile.image, profile.accountId, "", profile.country) { onOpenProfile(profile) }
+                    }
+                    if (roomFollowers.isEmpty() && roomAdmins.isEmpty()) {
+                        item {
+                            Text("No members yet", modifier = Modifier.fillMaxWidth().padding(20.dp),
+                                textAlign = TextAlign.Center, fontSize = 13.sp, color = Color(0xFF9CA3AF))
+                        }
+                    }
                 }
             }
         }
+
+        // --- NEW SHARE BOTTOM SHEET LOGIC ---
+        if (showShareSheet) {
+            // Dark overlay background for share sheet to dismiss it when clicked outside
+            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=0.4f)).clickable { showShareSheet = false })
+            
+            // Share Bottom Sheet Container (50Vh, Black, 12dp curve)
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight(0.50f)
+                    .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
+                    .background(Color.Black)
+            ) {
+                // Top Left Title
+                Text(
+                    text = "Share in Zyora",
+                    color = Color.White,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 8.dp)
+                )
+                
+                // Abhi tumne baaki cheezon ke liye mana kiya tha, toh andar kuch aur add nahi kiya hai.
+            }
+        }
+        // ------------------------------------
     }
 }
 
@@ -322,7 +337,7 @@ private fun MemberRow(
             }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                 Box(Modifier.size(width = 18.dp, height = 16.dp), contentAlignment = Alignment.Center) {
-                    if (country.isNotBlank()) Text(countryFlagEmoji(country), fontSize = 13.sp)
+                    if (country.isNotBlank()) Text(roomProfileCountryFlag(country), fontSize = 13.sp)
                 }
                 Box(Modifier.height(16.dp).width(36.dp), contentAlignment = Alignment.Center) {
                     AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261028_004355.png",
