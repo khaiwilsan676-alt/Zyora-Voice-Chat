@@ -71,12 +71,12 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
     val savedAccount = prefs.getString("accountNumber", null)?.takeIf { it.isNotBlank() }
         ?: prefs.getString("accountId", "") ?: ""
     val account = savedAccount.ifBlank { nativeMeAccountNumber(uid) }
-    var visitorCount by remember(uid) { mutableIntStateOf(0) }\n    var fansCount by remember(uid) { mutableIntStateOf(0) }\n    var friendsCount by remember(uid) { mutableIntStateOf(0) }\n    var followingCount by remember(uid) { mutableIntStateOf(0) }
+    var visitorCount by remember(uid) { mutableIntStateOf(0) }\n    var fansCount by remember(uid) { mutableIntStateOf(0) }\n    var friendsCount by remember(uid) { mutableIntStateOf(0) }\n    var followingCount by remember(uid) { mutableIntStateOf(0) }\n    var followCountsReady by remember(uid) { mutableStateOf(false) }
     val visitorUserId = prefs.getString("accountId", "").orEmpty().ifBlank { uid }
     LaunchedEffect(visitorUserId) {
         if (visitorUserId.isNotBlank()) {
-            SocialFollowApi.cachedSnapshot(context, visitorUserId)?.let { fansCount=it.followers; followingCount=it.followingCount; friendsCount=it.friends }
-            SocialFollowApi.snapshot(context, visitorUserId, visitorUserId)?.let { fansCount=it.followers; followingCount=it.followingCount; friendsCount=it.friends }
+            SocialFollowApi.cachedSnapshot(context, visitorUserId)?.let { fansCount=it.followers; followingCount=it.followingCount; friendsCount=it.friends; followCountsReady=true }
+            SocialFollowApi.snapshot(context, visitorUserId, visitorUserId)?.let { fansCount=it.followers; followingCount=it.followingCount; friendsCount=it.friends; followCountsReady=true }
         }
     }
     LaunchedEffect(visitorUserId) {
@@ -206,11 +206,11 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
 
                 Spacer(Modifier.height(18.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                    Stat(friendsCount.toString(), nativeText(languageCode, "friends"), onClick = { onOpen("Friends") })
+                    Stat(if(followCountsReady) friendsCount.toString() else "—", nativeText(languageCode, "friends"), onClick = { onOpen("Friends") })
                     DividerV()
-                    Stat(fansCount.toString(), "Fans", onClick = { onOpen("Fans") })
+                    Stat(if(followCountsReady) fansCount.toString() else "—", "Fans", onClick = { onOpen("Fans") })
                     DividerV()
-                    Stat(followingCount.toString(), nativeText(languageCode, "following"), onClick = { onOpen("Following") })
+                    Stat(if(followCountsReady) followingCount.toString() else "—", nativeText(languageCode, "following"), onClick = { onOpen("Following") })
                     DividerV()
                     Stat(visitorCount.toString(), nativeText(languageCode, "visitors"), onClick = { onOpen("Visitors") })
                 }
