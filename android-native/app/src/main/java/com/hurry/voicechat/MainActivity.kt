@@ -602,7 +602,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                                 unreadMessageCount = unreadMessageCount,
                                 onTabSelected = { selected ->
                                     if (selected == HurryTab.MESSAGE) {
-                                        ZyoraMessageBannerState.current = null;
+                                        ZyoraMessageBannerState.current = null
                                         unreadMessageCount = unreadPrefs.getInt("unread_$messageIdentity", 0).coerceAtLeast(0)
                                     }
                                     tab = selected
@@ -785,6 +785,10 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                         androidx.compose.material3.Button(
                             onClick = {
                                 val message = banner
+                                openedRoom = null
+                                openedRoomSupport = false
+                                openedSearch = false
+                                openedMePage = null
                                 openedChat = Triple(message.senderId, message.senderName, message.senderAvatar)
                                 ZyoraMessageBannerState.current = null
                             },
