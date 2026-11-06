@@ -507,7 +507,54 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
     }
     fun tryOpenRoomById(targetRoomId: String) {
         if (targetRoomId.isBlank()) return
-        tryOpenRoom(HurryRoom(id=targetRoomId,name="Room",image="",country="",accountId=targetRoomId))
+        roomCreateScope.launch {
+            // Resolve the live room document first so profile In-room cards carry its real DP.
+            val room = withContext(Dispatchers.IO) {
+                runCatching {
+                    val encoded = java.net.URLEncoder.encode(targetRoomId, "UTF-8")
+                    val connection = (URL("https://zyora-server.onrender.com/api/rooms?roomId=$encoded").openConnection() as HttpURLConnection).apply {
+                        connectTimeout = 8000
+                        readTimeout = 8000
+                        setRequestProperty("Accept", "application/json")
+                    }
+                    try {
+                        if (connection.responseCode !in 200..299) error("Room details unavailable")
+                        val root = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
+                        val saved = root.optJSONObject("room") ?: root
+                        val rawImage = sequenceOf("dp", "image", "roomDp", "Room dp")
+                            .map { saved.optString(it, "").trim() }
+                            .firstOrNull { it.isNotBlank() && it != "null" && it != "undefined" }
+                            .orEmpty()
+                        val image = when {
+                            rawImage.startsWith("data:image/", true) || rawImage.isBlank() ->
+                                "https://zyora-server.onrender.com/api/rooms/image?roomId=$encoded"
+                            rawImage.startsWith("/") -> "https://zyora-server.onrender.com$rawImage"
+                            else -> rawImage
+                        }
+                        HurryRoom(
+                            id = saved.optString("roomId", saved.optString("id", targetRoomId)).ifBlank { targetRoomId },
+                            name = saved.optString("name", saved.optString("roomName", "Room")).ifBlank { "Room" },
+                            image = image,
+                            country = sequenceOf("countryName", "country", "countryCode")
+                                .map { saved.optString(it, "").trim() }
+                                .firstOrNull { it.isNotBlank() && it != "null" }.orEmpty(),
+                            accountId = saved.optString("accountId", targetRoomId).ifBlank { targetRoomId },
+                            locked = saved.optBoolean("isLocked", false)
+                        )
+                    } finally { connection.disconnect() }
+                }.getOrElse {
+                    val encoded = java.net.URLEncoder.encode(targetRoomId, "UTF-8")
+                    HurryRoom(
+                        id = targetRoomId,
+                        name = "Room",
+                        image = "https://zyora-server.onrender.com/api/rooms/image?roomId=" + encoded,
+                        country = "",
+                        accountId = targetRoomId
+                    )
+                }
+            }
+            tryOpenRoom(room)
+        }
     }
     var openedChat by remember { mutableStateOf<Triple<String, String, String>?>(null) }
     var openedMePage by remember { mutableStateOf<String?>(null) }
