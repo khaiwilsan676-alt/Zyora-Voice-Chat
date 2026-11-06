@@ -1814,9 +1814,11 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                 onLock = {
                     val index = seats.indexOfFirst { it.occupied && it.accountId == profileId }
                     if (index >= 0 && (accountId == roomOwner.accountId || accountId == roomOwner.id || accountId == roomId)) {
+                        val seatNumber = seats[index].number
                         val nextLocked = !seats[index].locked
-                        seats[index] = seats[index].copy(locked = nextLocked)
-                        roomSocketRef.value?.emit("room_seat_action", JSONObject().put("roomId", roomId).put("userId", accountId).put("action", "lock").put("seatNumber", seats[index].number).put("isLocked", nextLocked))
+                        seats[index] = if (nextLocked) NativeRoomSeat(number = seatNumber, locked = true)
+                            else seats[index].copy(locked = false)
+                        roomSocketRef.value?.emit("room_seat_action", JSONObject().put("roomId", roomId).put("userId", accountId).put("action", "lock").put("seatNumber", seatNumber).put("isLocked", nextLocked))
                     }
                 },
                 onKickOut = { selectedTime ->
