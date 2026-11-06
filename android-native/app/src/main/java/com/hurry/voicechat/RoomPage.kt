@@ -386,7 +386,7 @@ fun RoomPage(
                         val root = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
                         val saved = root.optJSONObject("room") ?: root
                         val name = saved.optString("name", saved.optString("roomName", "")).takeUnless { it == "null" }.orEmpty()
-                        val image = sequenceOf("dp", "image", "roomDp", "Room dp").map { saved.optString(it, "").trim() }.firstOrNull { it.isNotBlank() && it != "null" && it != "/default-avatar.png" }.orEmpty()
+                        val image = sequenceOf("dp", "image", "roomDp", "Room dp", "roomImage", "imageUrl", "avatar", "photo").map { saved.optString(it, "").trim() }.firstOrNull { it.isNotBlank() && it != "null" && it != "/default-avatar.png" }.orEmpty()
                         val message = saved.optString("message", saved.optString("announcement", "")).takeUnless { it == "null" }.orEmpty()
                         val savedMicMode = saved.optInt("micMode", roomMicMode).let { if (it in listOf(5, 10, 15)) it else roomMicMode }
                         val savedTheme = sequenceOf("theme", "roomTheme", "Room Theme").map { saved.optString(it, "").trim() }.firstOrNull { it.isNotBlank() && it != "null" } ?: roomTheme
@@ -1436,7 +1436,7 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
 
             Column(horizontalAlignment=Alignment.CenterHorizontally) {
                 androidx.compose.foundation.pager.HorizontalPager(state = sideBannerPager,modifier = Modifier.size(60.dp, 84.dp).clip(RoundedCornerShape(8.dp))) { page ->
-                    AsyncImage(model = sideBannerImages[page],contentDescription = "Room side banner",modifier = Modifier.fillMaxSize().clickable(indication = null, interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }) { if (page == 0) onRoomSupport() },contentScale = ContentScale.Crop)
+                    AsyncImage(model = sideBannerImages[page],contentDescription = "Room side banner",modifier = Modifier.fillMaxSize().clickable(indication = null, interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }) { if (page == 0) { keepingRoomForMini = true; onRoomSupport() } },contentScale = ContentScale.Crop)
                 }
                 Row(horizontalArrangement=Arrangement.spacedBy(2.dp), verticalAlignment=Alignment.CenterVertically, modifier=Modifier.padding(top=4.dp)) {
                     repeat(sideBannerImages.size) { i ->
@@ -1754,7 +1754,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                 isRoomOwner = profileId == roomOwner.accountId.ifBlank { roomOwner.id },
                 canModerate = accountId == roomId || accountId == roomOwnerAccountId,
                 onClose = { selectedChatProfile = null },
-                onOpenPublicProfile = { profile -> selectedChatProfile = null; selectedSeat = 0; showSeatSheet = false; onOpenPublicProfile(profile) },
+                onOpenPublicProfile = { profile -> selectedChatProfile = null; selectedSeat = 0; showSeatSheet = false; keepingRoomForMini = true; onOpenPublicProfile(profile) },
                 onCopyId = { if (profileId.isNotBlank()) clipboard.setText(AnnotatedString(profileId)) },
                 onMention = { name, targetId ->
                     val cleanName = name.trim().ifBlank { "User" }
@@ -1873,7 +1873,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                 isRoomOwner = profileSeat.accountId == roomOwner.accountId.ifBlank { roomOwner.id },
                 canModerate = accountId == roomId || accountId == roomOwnerAccountId,
                 onClose = { selectedSeat = 0 },
-                onOpenPublicProfile = { profile -> selectedSeat = 0; showSeatSheet = false; onOpenPublicProfile(profile) },
+                onOpenPublicProfile = { profile -> selectedSeat = 0; showSeatSheet = false; keepingRoomForMini = true; onOpenPublicProfile(profile) },
                 onMention = { name, targetId ->
                     val cleanName = name.trim().ifBlank { "User" }
                     input = if (input.isBlank()) "@$cleanName " else input.trimEnd() + " @$cleanName "
