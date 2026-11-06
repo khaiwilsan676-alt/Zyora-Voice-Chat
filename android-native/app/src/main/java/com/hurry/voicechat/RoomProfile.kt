@@ -217,6 +217,8 @@ fun RoomProfile(
     var vipTag by remember(user.vipTag) { mutableStateOf(user.vipTag == true) }
     var premiumTag by remember(user.premiumTag) { mutableStateOf(user.premiumTag == true) }
     var showReports by remember(initialReportOpen) { mutableStateOf(initialReportOpen) }
+    var showDangerMenu by remember { mutableStateOf(false) }
+    var isUserBlocked by remember(user.uid, user.id, user.accountId) { mutableStateOf(false) }
     
     // New State for the KickOut dialog
     var showKickDialog by remember { mutableStateOf(false) }
@@ -654,7 +656,7 @@ fun RoomProfile(
                     // Corner Action Icons
                     if (!isCurrentUser) {
                         IconButton(
-                            onClick = { showReports = true },
+                            onClick = { showDangerMenu = true },
                             modifier = Modifier.align(Alignment.TopStart).padding(top = 52.dp, start = 8.dp)
                         ) {
                             LucidePublicProfileIcon(warning = true, tint = Color.Black, modifier = Modifier.size(24.dp))
@@ -683,6 +685,14 @@ fun RoomProfile(
         }
     }
     
+    UserDangerActionMenu(
+        expanded = showDangerMenu,
+        isBlocked = isUserBlocked,
+        onDismiss = { showDangerMenu = false },
+        onBlockedChange = { isUserBlocked = it },
+        onReport = { showReports = true }
+    )
+
     if (showReports) {
         UserReport(
             targetName = displayName,
