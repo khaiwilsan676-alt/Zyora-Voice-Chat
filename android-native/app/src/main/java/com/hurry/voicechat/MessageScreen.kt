@@ -599,10 +599,26 @@ fun NativeChatScreen(
     var showOptions by remember { mutableStateOf(false) }
     var showReportPage by remember { mutableStateOf(false) }
     var isUserBlocked by remember(receiverId) { mutableStateOf(false) }
+    var blockedByPeer by remember(receiverId) { mutableStateOf(false) }
+    var blockPopupText by remember { mutableStateOf("") }
     var replyText by remember { mutableStateOf<String?>(null) }
     var previewImageUrl by remember { mutableStateOf<String?>(null) }
     var roomInvitationSent by remember(receiverId, initialRoomInvitation) { mutableStateOf(false) }
     
+    LaunchedEffect(currentAccountId, receiverId) {
+        if (currentAccountId.isNotBlank() && receiverId.isNotBlank()) {
+            val state = withContext(Dispatchers.IO) { fetchZyoraUserBlockState(currentAccountId, receiverId) }
+            isUserBlocked = state.first
+            blockedByPeer = state.second
+        }
+    }
+    LaunchedEffect(blockPopupText) {
+        if (blockPopupText.isNotBlank()) {
+            kotlinx.coroutines.delay(1800)
+            blockPopupText = ""
+        }
+    }
+
     // Scam banner hide/show
     var showScamBanner by remember { mutableStateOf(true) }
     
@@ -1651,11 +1667,35 @@ fun NativeChatScreen(
             }
         }
     }
+    DisposableEffect(directSocket, receiverId) {
+        val socket = directSocket
+        val blockedListener = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
+            val code = payload.optString("code")
+            if (code == "BLOCKED_BY_ME") blockPopupText = "You blocked this person"
+            else if (code == "YOU_ARE_BLOCKED") blockPopupText = "You are blocked"
+        }
+        socket?.on("private_message_error", blockedListener)
+        onDispose { socket?.off("private_message_error", blockedListener) }
+    }
+    if (blockPopupText.isNotBlank()) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(blockPopupText, color = Color.White, fontSize = 12.sp,
+                modifier = Modifier.clip(RoundedCornerShape(7.dp)).background(Color.Black.copy(alpha = 0.70f))
+                    .padding(horizontal = 14.dp, vertical = 8.dp))
+        }
+    }
     UserDangerActionMenu(
         expanded = showOptions,
         isBlocked = isUserBlocked,
         onDismiss = { showOptions = false },
-        onBlockedChange = { isUserBlocked = it },
+        onBlockedChange = { shouldBlock ->
+            isUserBlocked = shouldBlock
+            kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
+                val saved = updateZyoraUserBlock(context, currentAccountId, receiverId, shouldBlock)
+                if (!saved) android.os.Handler(android.os.Looper.getMainLooper()).post { isUserBlocked = !shouldBlock }
+            }
+        },
         onReport = { showReportPage = true }
     )
 
