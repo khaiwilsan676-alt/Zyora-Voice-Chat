@@ -258,3 +258,5 @@ Current documentation does not certify that all historical features are build-, 
 - Native `RoomProfile.kt`: follow state/count update optimistically and roll back if the server mutation fails. Public Profile retains its existing optimistic UI and rollback.
 - `Zyora-Server/server.js`: a newly-created follow edge sends exactly one normal private inbox message, `I followed you`, to the followed user's Message page; repeat follow requests do not duplicate it. Online delivery uses the existing private-message socket event and offline delivery uses the existing Redis pending-message queue.
 - No UI redesign or layout changes.
+- Room Profile Invite: tapping Invite on a non-seated user's room profile now sends that exact user the existing Socket.IO seat invitation for the first available unlocked seat, using the same `room_seat_invite_send` flow as the seat menu. No UI changes.
+- Seat Lock: when the room owner locks an occupied seat, the server clears the occupant and live mic/emoji state before broadcasting the locked seat; unlocking preserves the empty seat. No UI changes.
