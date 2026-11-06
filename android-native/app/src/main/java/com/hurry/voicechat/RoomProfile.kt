@@ -146,6 +146,7 @@ fun RoomProfile(
     onOpenPublicProfile: (RoomUser) -> Unit = {},
     onMute: () -> Unit = {},
     onLock: () -> Unit = {},
+    onInvite: () -> Unit = {}, // <-- Bhai Invite ke liye hook add kar diya hai (default empty)
     onKickOut: (String) -> Unit = {},
     initialReportOpen: Boolean = false
 ) {
@@ -452,7 +453,7 @@ fun RoomProfile(
                         }
 
                         if (showActions) {
-                            // Modertaion Row (Mute, Leave, Lock, Kick)
+                            // Modertaion Row (Mute, Lock, Leave, Invite, Kick)
                             if (showModerationRow) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
@@ -463,7 +464,8 @@ fun RoomProfile(
                                         // MUTE ICON 
                                         Column(
                                             horizontalAlignment = Alignment.CenterHorizontally,
-                                            modifier = Modifier.clickable { onMute() }
+                                            // Bhai weight(1f) dene se inki size ekdam fixed rahegi, chahe click kar ya text badal jaye (Mute/Unmute) toh UI hilta nahi hai.
+                                            modifier = Modifier.weight(1f).clickable { onMute() }
                                         ) {
                                             Icon(
                                                 imageVector = if (user.isMuted) Icons.Default.Mic else Icons.Default.MicOff,
@@ -474,13 +476,26 @@ fun RoomProfile(
                                             Spacer(modifier = Modifier.height(2.dp))
                                             Text(if (user.isMuted) "Unmute" else "Mute", color = Color.Black, fontSize = 12.sp)
                                         }
-                                        
-                                        Text("|", color = Color.LightGray)
+
+                                        // LOCK ICON 
+                                        Column(
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            modifier = Modifier.weight(1f).clickable { onLock() }
+                                        ) {
+                                            Icon(
+                                                imageVector = if (user.isLocked) Icons.Default.Lock else Icons.Default.LockOpen,
+                                                contentDescription = "Lock Toggle",
+                                                tint = Color.Black,
+                                                modifier = Modifier.size(24.dp)
+                                            )
+                                            Spacer(modifier = Modifier.height(2.dp))
+                                            Text(if (user.isLocked) "Unlock" else "Lock", color = Color.Black, fontSize = 12.sp)
+                                        }
                                         
                                         // LEAVE ICON 
                                         Column(
                                             horizontalAlignment = Alignment.CenterHorizontally,
-                                            modifier = Modifier.clickable { onLeaveSeat() }
+                                            modifier = Modifier.weight(1f).clickable { onLeaveSeat() }
                                         ) {
                                             Box(modifier = Modifier.size(26.dp)) {
                                                 Icon(
@@ -502,37 +517,84 @@ fun RoomProfile(
                                             Spacer(modifier = Modifier.height(2.dp))
                                             Text("Leave", color = Color.Black, fontSize = 12.sp)
                                         }
-                                        
-                                        Text("|", color = Color.LightGray)
-    
-    
-                                        Text("|", color = Color.LightGray)
-                                    }
 
-                                    // KICK OUT ICON
-                                    Column(
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        modifier = Modifier.clickable { showKickDialog = true } 
-                                    ) {
-                                        Box(modifier = Modifier.size(26.dp)) {
-                                            Icon(
-                                                imageVector = Icons.Default.Person, 
-                                                contentDescription = "Kick out",
-                                                tint = Color.Black,
-                                                modifier = Modifier.size(22.dp).align(Alignment.TopStart)
-                                            )
-                                            Icon(
-                                                imageVector = Icons.Default.Close, 
-                                                contentDescription = null,
-                                                tint = Color.Red,
-                                                modifier = Modifier
-                                                    .size(12.dp)
-                                                    .align(Alignment.BottomEnd)
-                                                    .background(Color.White, CircleShape) 
-                                            )
+                                        // KICK OUT ICON (On Seat)
+                                        Column(
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            modifier = Modifier.weight(1f).clickable { showKickDialog = true } 
+                                        ) {
+                                            Box(modifier = Modifier.size(26.dp)) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Person, 
+                                                    contentDescription = "Kick out",
+                                                    tint = Color.Black,
+                                                    modifier = Modifier.size(22.dp).align(Alignment.TopStart)
+                                                )
+                                                Icon(
+                                                    imageVector = Icons.Default.Close, 
+                                                    contentDescription = null,
+                                                    tint = Color.Red,
+                                                    modifier = Modifier
+                                                        .size(12.dp)
+                                                        .align(Alignment.BottomEnd)
+                                                        .background(Color.White, CircleShape) 
+                                                )
+                                            }
+                                            Spacer(modifier = Modifier.height(2.dp))
+                                            Text("Kick", color = Color.Black, fontSize = 12.sp)
                                         }
-                                        Spacer(modifier = Modifier.height(2.dp))
-                                        Text("Kick", color = Color.Black, fontSize = 12.sp)
+                                    } else {
+                                        // INVITE ICON (Not in seat)
+                                        Column(
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            modifier = Modifier.weight(1f).clickable { onInvite() }
+                                        ) {
+                                            Box(modifier = Modifier.size(26.dp)) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Person, 
+                                                    contentDescription = "Invite",
+                                                    tint = Color.Black,
+                                                    modifier = Modifier.size(22.dp).align(Alignment.TopStart)
+                                                )
+                                                Icon(
+                                                    imageVector = Icons.Default.ArrowUpward,
+                                                    contentDescription = null,
+                                                    tint = Color.Green,
+                                                    modifier = Modifier
+                                                        .size(12.dp)
+                                                        .align(Alignment.BottomEnd)
+                                                        .background(Color.White, CircleShape) 
+                                                )
+                                            }
+                                            Spacer(modifier = Modifier.height(2.dp))
+                                            Text("Invite", color = Color.Black, fontSize = 12.sp)
+                                        }
+
+                                        // KICK OUT ICON (Not in seat)
+                                        Column(
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            modifier = Modifier.weight(1f).clickable { showKickDialog = true } 
+                                        ) {
+                                            Box(modifier = Modifier.size(26.dp)) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Person, 
+                                                    contentDescription = "Kick out",
+                                                    tint = Color.Black,
+                                                    modifier = Modifier.size(22.dp).align(Alignment.TopStart)
+                                                )
+                                                Icon(
+                                                    imageVector = Icons.Default.Close, 
+                                                    contentDescription = null,
+                                                    tint = Color.Red,
+                                                    modifier = Modifier
+                                                        .size(12.dp)
+                                                        .align(Alignment.BottomEnd)
+                                                        .background(Color.White, CircleShape) 
+                                                )
+                                            }
+                                            Spacer(modifier = Modifier.height(2.dp))
+                                            Text("Kick", color = Color.Black, fontSize = 12.sp)
+                                        }
                                     }
                                 }
                             }
