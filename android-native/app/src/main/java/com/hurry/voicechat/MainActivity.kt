@@ -241,6 +241,13 @@ private fun HurryLaunchScreen() {
 private fun HurryNativeRoot(onLogout: () -> Unit) {
     val context = LocalContext.current
     val incomingMessageBanner = ZyoraMessageBannerState.current
+    LaunchedEffect(incomingMessageBanner?.messageId) {
+        val activeBanner = incomingMessageBanner ?: return@LaunchedEffect
+        kotlinx.coroutines.delay(3000)
+        if (ZyoraMessageBannerState.current?.messageId == activeBanner.messageId) {
+            ZyoraMessageBannerState.current = null
+        }
+    }
 
     // Ask for the app's media, camera and voice permissions together only after
     // the authenticated user reaches the Home root (after first-time profile setup).
@@ -789,7 +796,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
             }
 
             if (incomingMessageBanner != null && openedChat == null && openedPublicProfile == null &&
-                (tab == HurryTab.HOME || tab == HurryTab.ME)) {
+                (tab == HurryTab.HOME || tab == HurryTab.ME || openedRoom != null)) {
                 val banner = incomingMessageBanner
                 Box(
                     Modifier.fillMaxSize().statusBarsPadding().padding(top = 8.dp),
