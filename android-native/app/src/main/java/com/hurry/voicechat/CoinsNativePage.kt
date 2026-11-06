@@ -630,7 +630,7 @@ private fun DiamondsContent(
 private fun AgentContent(onChat: (String, String, String) -> Unit) {
     val context = LocalContext.current
     var sellers by remember { mutableStateOf<List<WalletAgentSeller>>(emptyList()) }
-    var onlineById by remember { mutableStateOf<Map<String, Boolean>>(emptyMap()) }
+    var onlineById by remember { mutableStateOf>(emptyMap()) }
     var loaded by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
@@ -701,14 +701,22 @@ private fun AgentContent(onChat: (String, String, String) -> Unit) {
             ) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     
-                    // Smaller Avatar Box like image
+                    // Smaller Avatar Box like image with Border and thin Pill
                     Box(Modifier.size(46.dp), contentAlignment = Alignment.TopCenter) {
                         AsyncImage(
                             model = seller.image,
                             contentDescription = seller.name,
-                            modifier = Modifier.size(40.dp).clip(RoundedCornerShape(50)),
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(RoundedCornerShape(50))
+                                .border(
+                                    width = 1.5.dp, 
+                                    color = if (isOnline) Color(0xFF0044FF) else Color(0xFFD1D5DB), 
+                                    shape = RoundedCornerShape(50)
+                                ),
                             contentScale = ContentScale.Crop
                         )
+                        // Pill at exact bottom center with patli si padding
                         Box(Modifier.align(Alignment.BottomCenter).offset(y = 2.dp)) {
                             Text(
                                 text = if (isOnline) "online" else "offline",
@@ -716,8 +724,8 @@ private fun AgentContent(onChat: (String, String, String) -> Unit) {
                                     .clip(RoundedCornerShape(50))
                                     .background(if (isOnline) Color(0xFF0044FF) else Color(0xFFD1D5DB))
                                     .border(1.dp, Color.White, RoundedCornerShape(50))
-                                    .padding(horizontal = 6.dp, vertical = 1.dp),
-                                fontSize = 9.sp, // Smaller pill text
+                                    .padding(horizontal = 4.dp, vertical = 0.dp), // Patli si padding
+                                fontSize = 8.sp, // Choti font
                                 color = Color.White,
                                 fontWeight = FontWeight.Bold
                             )
