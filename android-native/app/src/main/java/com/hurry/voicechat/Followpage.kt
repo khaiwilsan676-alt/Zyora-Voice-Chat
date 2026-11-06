@@ -307,15 +307,15 @@ fun VisitorsPage(onBack:()->Unit) {
             "${baseUrl}public/IMG_20261106_122332.png"
         }
         
-        // Yahan banner ka modifier change kar diya gaya hai
+        // Yahan left aur right me thoda gap de diya (horizontal = 8.dp)
         AsyncImage(
             model = bannerImage,
             contentDescription = "Banner",
-            // FillWidth image ko device ki choudai (width) me fela dega original ratio maintain karke
             contentScale = ContentScale.FillWidth, 
             modifier = Modifier
-                .fillMaxWidth()           // Puri choudai lega
-                .wrapContentHeight()      // Height khud adjust kar lega bina kate (crop)
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp) 
+                .wrapContentHeight()
         )
 
         when {
@@ -323,7 +323,8 @@ fun VisitorsPage(onBack:()->Unit) {
             rows.isEmpty() -> Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) { Text("No visitors yet", color = Color(0xFF9CA3AF), fontSize = 14.sp) }
             else -> LazyColumn(
                 Modifier.fillMaxWidth().weight(1f),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp)
+                // Yahan top padding ko 0 kar diya taki list banner ki thoda aur paas aa jaye
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 0.dp, bottom = 10.dp)
             ) {
                 items(rows) { visitor ->
                     VisitorItemRow(v = visitor, isMyVisitorsTab = tab == 0, baseUrl = baseUrl)
