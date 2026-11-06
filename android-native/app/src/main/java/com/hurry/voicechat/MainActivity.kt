@@ -58,6 +58,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.Image
 import androidx.compose.ui.res.painterResource
@@ -629,7 +630,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                             )
                             HurryTab.MESSAGE -> MessageScreen(onChat = { uid, name, image ->
                                 openedChat = Triple(uid, name, image)
-                            }, onJoinRoom = { targetRoomId -> openedRoom=HurryRoom(id=targetRoomId,name="Room",image="",country="",accountId=targetRoomId) })
+                            }, onJoinRoom = { targetRoomId -> tryOpenRoomById(targetRoomId) })
                             HurryTab.ME -> when (openedMePage) {
                                 null -> MeScreen(languageCode = languageCode,onOpen = { openedMePage = it }, onPublicProfile = { openedPublicProfile = it })
                                 "Coins" -> CoinsNativePage(onBack = { openedMePage = null }, onChat = { uid, name, image -> openedMePage = null; openedChat = Triple(uid, name, image) })
