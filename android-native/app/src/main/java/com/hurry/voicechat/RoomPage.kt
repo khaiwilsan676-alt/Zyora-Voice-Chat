@@ -738,15 +738,15 @@ fun RoomPage(
             val messageId = accountId + "-" + System.currentTimeMillis()
             CoroutineScope(Dispatchers.Main).launch {
                 val imageUrl = runCatching { uploadChatImage(appContext, uri, messageId, "room-chat-image") }.getOrNull()
-                if (!imageUrl.isNullOrBlank()) {
+                val activeRoomSocket = roomSocketRef.value
+                if (!imageUrl.isNullOrBlank() && activeRoomSocket?.connected() == true) {
                     val createdAt = System.currentTimeMillis()
                     val imageMessage = NativeRoomMessage(
                         id = messageId, text = "📷 Image", sender = roomDisplayName,
                         senderImage = roomDisplayImage, senderAccountId = accountId,
                         timestamp = createdAt, type = "image", imageUrl = imageUrl
                     )
-                    messages.add(imageMessage)
-                    roomSocketRef.value?.takeIf { it.connected() }?.emit(
+                    activeRoomSocket.emit(
                         "room_message",
                         JSONObject().put("id", messageId).put("roomId", roomId)
                             .put("senderId", accountId).put("senderAccountId", accountId)
@@ -754,6 +754,7 @@ fun RoomPage(
                             .put("senderImage", roomDisplayImage).put("text", "📷 Image")
                             .put("type", "image").put("imageUrl", imageUrl).put("createdAt", createdAt)
                     )
+                    messages.add(imageMessage)
                 } else {
                     android.widget.Toast.makeText(appContext, "Image upload failed. Try an image under 5 MB.", android.widget.Toast.LENGTH_LONG).show()
                 }
