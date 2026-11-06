@@ -1289,6 +1289,10 @@ fun NativeChatScreen(
                     val mine = item.first
                     
                     val isVoiceNote = VoiceMessageStore.isVoice(item.second)
+                    val isImageMessage = item.second.startsWith("IMAGE::")
+                    val isRoomInvitation = item.second.startsWith("ROOM_INVITE::")
+                    val imageMessageUrl = if (isImageMessage) item.second.removePrefix("IMAGE::") else ""
+                    val roomInvitationData = if (isRoomInvitation) runCatching { JSONObject(item.second.removePrefix("ROOM_INVITE::")) }.getOrNull() else null
                     val messageText = if (isVoiceNote) VoiceMessageStore.displayDuration(item.second) else item.second
 
                     Row(
@@ -1440,8 +1444,8 @@ fun NativeChatScreen(
                         Spacer(Modifier.width(10.dp))
                         
                         IconButton(
-                            onClick = { },
-                            enabled = false,
+                            onClick = { imagePickerLauncher.launch("image/*") },
+                            enabled = !isOfficial,
                             modifier = Modifier.size(28.dp)
                         ) {
                             Icon(Icons.Outlined.Image, contentDescription = "Image", tint = Color(0xFF6B7280), modifier = Modifier.size(26.dp))
@@ -1609,5 +1613,17 @@ fun NativeChatScreen(
             targetId = receiverId,
             onDismiss = { showReportPage = false }
         )
+    }
+    if (!previewImageUrl.isNullOrBlank()) {
+        Dialog(onDismissRequest = { previewImageUrl = null }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+            Box(Modifier.fillMaxSize().background(Color.Black)) {
+                AsyncImage(model = previewImageUrl, contentDescription = "Image preview",
+                    modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
+                IconButton(onClick = { previewImageUrl = null },
+                    modifier = Modifier.align(Alignment.TopStart).statusBarsPadding().padding(start = 8.dp, top = 6.dp)) {
+                    Icon(Icons.Default.Close, contentDescription = "Close image", tint = Color.White)
+                }
+            }
+        }
     }
 }
