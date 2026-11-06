@@ -27,6 +27,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
 
 private const val RAW_ME = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/"
 
@@ -66,6 +71,33 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
     val savedAccount = prefs.getString("accountNumber", null)?.takeIf { it.isNotBlank() }
         ?: prefs.getString("accountId", "") ?: ""
     val account = savedAccount.ifBlank { nativeMeAccountNumber(uid) }
+    var visitorCount by remember(uid) { mutableIntStateOf(0) }
+    val visitorUserId = prefs.getString("accountId", "").orEmpty().ifBlank { uid }
+    LaunchedEffect(visitorUserId) {
+        if (visitorUserId.isBlank()) {
+            visitorCount = 0
+        } else {
+            visitorCount = withContext(Dispatchers.IO) {
+                val encoded = java.net.URLEncoder.encode(visitorUserId, "UTF-8")
+                val connection = (URL("https://zyora-server.onrender.com/api/profile-visitors?userId=$encoded&type=received").openConnection() as HttpURLConnection).apply {
+                    requestMethod = "GET"
+                    connectTimeout = 12000
+                    readTimeout = 12000
+                }
+                try {
+                    val status = connection.responseCode
+                    if (status in 200..299) {
+                        val body = connection.inputStream.bufferedReader().use { it.readText() }
+                        JSONObject(body).optJSONArray("visitors")?.length() ?: 0
+                    } else 0
+                } catch (_: Exception) {
+                    0
+                } finally {
+                    connection.disconnect()
+                }
+            }
+        }
+    }
     val phone = prefs.getString("phone", "") ?: ""
     val displayPhoto = photo
     var profileCountry by remember(uid, cachedProfile) { mutableStateOf(sequenceOf(cachedProfile?.optString("countryName", ""), cachedProfile?.optString("country", ""), cachedProfile?.optString("countryCode", "")).map { it?.trim().orEmpty() }.firstOrNull { it.isNotBlank() && it != "null" }.orEmpty()) }
@@ -166,7 +198,7 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
                     DividerV()
                     Stat("0", nativeText(languageCode, "following"), onClick = { onOpen("Following") })
                     DividerV()
-                    Stat("1", nativeText(languageCode, "visitors"), onClick = { onOpen("Visitors") })
+                    Stat(visitorCount.toString(), nativeText(languageCode, "visitors"), onClick = { onOpen("Visitors") })
                 }
             }
         }
