@@ -40,7 +40,7 @@ private object LeaderboardChromaCache {
     val images = ConcurrentHashMap<String, ImageBitmap>()
 }
 
-// 100% GUARANTEE CHROMA KEY VIDEO PLAYER (WITH NO BLACK SCREEN FALLBACK)
+// VIDEO PLAYER (Green remove logic hat gaya hai)
 @Composable
 fun ChromaVideoPlayer(url: String, modifier: Modifier = Modifier) {
     AndroidView(
@@ -84,19 +84,8 @@ fun ChromaVideoPlayer(url: String, modifier: Modifier = Modifier) {
                             function step() {
                                 if(v.paused || v.ended) return;
                                 try {
+                                    // Sirf video draw ho raha hai, green remove logic removed
                                     ctx.drawImage(v, 0, 0, c.width, c.height);
-                                    let frame = ctx.getImageData(0, 0, c.width, c.height);
-                                    let l = frame.data.length / 4;
-                                    for (let i = 0; i < l; i++) {
-                                        let r = frame.data[i * 4 + 0];
-                                        let g = frame.data[i * 4 + 1];
-                                        let b = frame.data[i * 4 + 2];
-                                        // 100% Green Removal Logic
-                                        if (g > 50 && g > r * 1.15 && g > b * 1.15) {
-                                            frame.data[i * 4 + 3] = 0;
-                                        }
-                                    }
-                                    ctx.putImageData(frame, 0, 0);
                                 } catch(e) {
                                     // Crossorigin ya render issue hone par blank/transparent chor do
                                     ctx.clearRect(0, 0, c.width, c.height);
@@ -115,6 +104,7 @@ fun ChromaVideoPlayer(url: String, modifier: Modifier = Modifier) {
     )
 }
 
+// IMAGE LOADER (Green remove logic hat gaya hai)
 @Composable
 private fun LeaderboardChromaImage(url: String, contentDescription: String?, modifier: Modifier, contentScale: ContentScale = ContentScale.Fit) {
     var bitmap by remember(url) { mutableStateOf(LeaderboardChromaCache.images[url]) }
@@ -125,18 +115,8 @@ private fun LeaderboardChromaImage(url: String, contentDescription: String?, mod
                     LeaderboardChromaCache.images[url] ?: run {
                         val source = URL(url).openStream().use { BitmapFactory.decodeStream(it) }
                         if (source == null) null else {
-                            val result = source.copy(android.graphics.Bitmap.Config.ARGB_8888, true)
-                            for (y in 0 until result.height) for (x in 0 until result.width) {
-                                val pixel = result.getPixel(x, y)
-                                val red = android.graphics.Color.red(pixel)
-                                val green = android.graphics.Color.green(pixel)
-                                val blue = android.graphics.Color.blue(pixel)
-                                if (green > 50 && green > red * 1.15 && green > blue * 1.15) {
-                                    result.setPixel(x, y, android.graphics.Color.TRANSPARENT)
-                                }
-                            }
-                            source.recycle()
-                            result.asImageBitmap().also { LeaderboardChromaCache.images[url] = it }
+                            // Direct bitmap convert ho raha hai, pixel loop removed
+                            source.asImageBitmap().also { LeaderboardChromaCache.images[url] = it }
                         }
                     }
                 }.getOrNull()
@@ -292,8 +272,8 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                             )
                             // TOP 1 VIDEO FRAME WITH TRANSPARENT FALLBACK (NO BLACK SCREEN)
                             ChromaVideoPlayer(
-                                url = raw + "VID_20261106_003652_300_bsl.mp4",
-                                modifier = Modifier.requiredSize(260.dp)
+                                url = raw + "​IMG_20261105_230210.png",
+                                modifier = Modifier.requiredSize(300.dp)
                             )
                         }
                         
@@ -567,3 +547,4 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
         }
     }
 }
+
