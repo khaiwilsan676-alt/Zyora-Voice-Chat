@@ -274,7 +274,7 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                             )
                             // TOP 1 FRAME (Exact 300.dp)
                             LeaderboardChromaImage(
-                                url = raw + "IMG_20261105_230210.png",
+                                url = raw + "file_00000000a0e48207ade38b36ab946ecb.png",
                                 contentDescription = "Rank 1 Frame",
                                 modifier = Modifier.requiredSize(300.dp)
                             )
