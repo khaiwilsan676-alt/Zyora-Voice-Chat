@@ -257,27 +257,30 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                 // Podium Section
                 item {
                     Column(Modifier.fillMaxWidth().padding(top=18.dp, bottom=0.dp),horizontalAlignment=Alignment.CenterHorizontally) {
+                        
+                        // TOP 1 BOX (Height badha di hai 200.dp se 260.dp taki frame cut na ho)
                         Box(
-                            modifier = Modifier.width(podiumTopWidth).height(200.dp).offset(y = (-10).dp), 
+                            modifier = Modifier.width(podiumTopWidth).height(260.dp).offset(y = (-10).dp), 
                             contentAlignment = Alignment.Center
                         ) {
-                            // Rank 1 Avatar
+                            // Rank 1 Avatar (Frame 300dp hua toh isko bhi thoda 72dp kar diya fit aane ke liye)
                             AsyncImage(
                                 model = raw + "default_avatar.png",
                                 contentDescription = "Rank 1 Avatar",
                                 modifier = Modifier
-                                    .size(66.dp)
+                                    .size(72.dp)
                                     .clip(RoundedCornerShape(50)),
                                 contentScale = ContentScale.Crop
                             )
-                            // TOP 1 VIDEO FRAME WITH TRANSPARENT FALLBACK (NO BLACK SCREEN)
-                            ChromaVideoPlayer(
-                                url = raw + "​IMG_20261105_230210.png",
+                            // TOP 1 FRAME (Exact 300.dp)
+                            LeaderboardChromaImage(
+                                url = raw + "IMG_20261105_230210.png",
+                                contentDescription = "Rank 1 Frame",
                                 modifier = Modifier.requiredSize(300.dp)
                             )
                         }
                         
-                        Spacer(Modifier.height(45.dp)) 
+                        Spacer(Modifier.height(25.dp)) // Upar ki height badhi isliye isko adjust kiya
                         
                         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically) {
                             Box(modifier = Modifier.width(podiumSideWidth).height(175.dp), contentAlignment = Alignment.Center) {
@@ -547,4 +550,3 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
         }
     }
 }
-
