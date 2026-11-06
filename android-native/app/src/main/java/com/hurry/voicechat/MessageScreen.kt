@@ -285,8 +285,17 @@ fun PrivateMessageInboxSync() {
             val messageId = payload.optString("id")
             val isVoice = payload.optString("type") == "voice"
             val body = if (isVoice) VoiceMessageStore.saveIncoming(context, payload) ?: ("VOICE::" + payload.optLong("durationSec", 1))
-                else payload.optString("text").ifBlank { if (payload.optString("type") == "image") "📷 Image" else "" }
-            val preview = if (isVoice) "🎤 Voice message" else body
+                else when (payload.optString("type")) {
+                    "image" -> "IMAGE::" + payload.optString("imageUrl")
+                    "room_invitation" -> "ROOM_INVITE::" + (payload.optJSONObject("roomData")?.toString() ?: "{}")
+                    else -> payload.optString("text")
+                }
+            val preview = when {
+                isVoice -> "🎤 Voice message"
+                payload.optString("type") == "image" -> "📷 Image"
+                payload.optString("type") == "room_invitation" -> "Room invitation"
+                else -> body
+            }
             mainHandler.post {
                 runCatching {
                     val chatKey = "chat_" + accountId + "_" + peerId

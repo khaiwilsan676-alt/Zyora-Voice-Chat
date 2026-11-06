@@ -117,11 +117,20 @@ class ZyoraMessageListenerService : Service() {
         val peerId = payload.optString("senderAccountId").ifBlank { payload.optString("senderId") }
         if (peerId.isBlank()) return
         val messageId = payload.optString("id").ifBlank { "incoming_${System.currentTimeMillis()}" }
-        val isVoice = payload.optString("type") == "voice"
+        val messageType = payload.optString("type")
+        val isVoice = messageType == "voice"
         val storedText = if (isVoice) {
             VoiceMessageStore.saveIncoming(this, payload) ?: "VOICE::${payload.optLong("durationSec", 1)}"
-        } else payload.optString("text").ifBlank {
-            if (payload.optString("type") == "image") "📷 Image" else " "
+        } else when (messageType) {
+            "image" -> "IMAGE::" + payload.optString("imageUrl")
+            "room_invitation" -> "ROOM_INVITE::" + (payload.optJSONObject("roomData")?.toString() ?: "{}")
+            else -> payload.optString("text").ifBlank { " " }
+        }
+        val messagePreview = when (messageType) {
+            "voice" -> "🎤 Voice message"
+            "image" -> "📷 Image"
+            "room_invitation" -> "Room invitation"
+            else -> storedText
         }
         val identity = activeAccountId.ifBlank { activeUid }
         val database = NativeIndexDatabase(this)
@@ -144,6 +153,7 @@ class ZyoraMessageListenerService : Service() {
                 messageText = when {
                     isVoice -> "🎤 Voice message"
                     payload.optString("type") == "image" -> "📷 Image"
+                    payload.optString("type") == "room_invitation" -> "Room invitation"
                     else -> storedText
                 }
             )
@@ -153,7 +163,7 @@ class ZyoraMessageListenerService : Service() {
             .put("peerId", peerId)
             .put("peerName", payload.optString("senderName", "User"))
             .put("peerPhoto", payload.optString("senderPhoto", ""))
-            .put("lastMessage", if (isVoice) "🎤 Voice message" else storedText)
+            .put("lastMessage", messagePreview)
             .put("timestamp", timestamp)
             .put("time", SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(timestamp)))
         database.saveConversation("conversation_${identity}_$peerId", peerId, preview)

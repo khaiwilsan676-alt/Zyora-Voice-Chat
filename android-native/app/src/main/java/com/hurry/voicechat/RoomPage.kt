@@ -2919,7 +2919,7 @@ private fun RoomSeatInviteDialog(
             }
             if (m.type == "image" && m.imageUrl.isNotBlank()) {
                 AsyncImage(model = m.imageUrl, contentDescription = "Room shared image",
-                    modifier = Modifier.widthIn(max = 230.dp).heightIn(max = 230.dp)
+                    modifier = Modifier.widthIn(max = 140.dp).heightIn(max = 140.dp)
                         .clip(RoundedCornerShape(12.dp)).clickable { showRoomImagePreview = true },
                     contentScale = ContentScale.Crop)
                 if (showRoomImagePreview) {

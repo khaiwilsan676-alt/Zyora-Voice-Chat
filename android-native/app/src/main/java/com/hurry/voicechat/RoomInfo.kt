@@ -61,10 +61,10 @@ fun RoomInfo(
     var showShareSheet by remember { mutableStateOf(false) }
     var showDangerMenu by remember { mutableStateOf(false) }
     var showRoomReport by remember { mutableStateOf(false) }
-    var roomFans by remember(roomOwner.accountId, roomOwner.id) { mutableStateOf<List<RoomInfoFollower>>(emptyList()) }
-    LaunchedEffect(roomOwner.accountId, roomOwner.id, showShareSheet) {
+    var roomFans by remember(currentUserId, roomOwner.accountId, roomOwner.id) { mutableStateOf<List<RoomInfoFollower>>(emptyList()) }
+    LaunchedEffect(currentUserId, roomOwner.accountId, roomOwner.id, showShareSheet) {
         if (showShareSheet) {
-            val ownerId = roomOwner.accountId.ifBlank { roomOwner.id.ifBlank { roomOwner.uid } }
+            val ownerId = currentUserId.ifBlank { roomOwner.accountId.ifBlank { roomOwner.id.ifBlank { roomOwner.uid } } }
             roomFans = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                 runCatching {
                     SocialFollowApi.list(context, ownerId, "fans").map {
@@ -134,7 +134,7 @@ fun RoomInfo(
     Box(Modifier.fillMaxSize(), contentAlignment=Alignment.BottomCenter) {
         Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=.30f)).clickable(onClick=onClose))
         Column(
-            Modifier.fillMaxWidth().fillMaxHeight(.50f)
+            Modifier.fillMaxWidth().fillMaxHeight(.60f)
                 .clip(RoundedCornerShape(topStart=15.dp,topEnd=15.dp))
                 .background(Color(0xEB000000))
         ) {
@@ -144,7 +144,7 @@ fun RoomInfo(
                 modifier = Modifier.fillMaxWidth().padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 4.dp)
             ) {
                 // 3 Dots Icon (Ekdam Left)
-                Box(
+                if (!isRoomOwner) Box(
                     modifier = Modifier.align(Alignment.CenterStart).size(34.dp).clip(CircleShape).background(Color.White.copy(alpha=0.15f)).clickable { showDangerMenu = true },
                     contentAlignment = Alignment.Center
                 ) {
