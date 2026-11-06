@@ -2323,10 +2323,10 @@ private fun RoomSeatInviteDialog(
             )
             Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).align(Alignment.TopCenter).padding(top = 34.dp),
                 horizontalAlignment = Alignment.CenterHorizontally) {
-                Spacer(Modifier.height(40.dp))
+                Spacer(Modifier.height(34.dp))
                 Text(inviterName.ifBlank { "User" }, color = Color.White, fontSize = 17.sp,
                     fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Spacer(Modifier.height(13.dp))
+                Spacer(Modifier.height(9.dp))
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
                     Text("Invite you to join mic", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
                     Spacer(Modifier.width(5.dp))
@@ -2341,7 +2341,7 @@ private fun RoomSeatInviteDialog(
                 contentScale = ContentScale.Crop
             )
             Row(
-                Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal = 18.dp, vertical = 22.dp),
+                Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(start = 18.dp, end = 18.dp, top = 22.dp, bottom = 18.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Box(Modifier.weight(1f).height(43.dp).clip(RoundedCornerShape(9.dp))
