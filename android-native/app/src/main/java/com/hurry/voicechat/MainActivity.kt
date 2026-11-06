@@ -722,13 +722,6 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                         } else {
                             Text("ID: $ownerId", color = Color(0xFF555555), fontSize = 11.sp, modifier = Modifier.padding(top = 8.dp))
                         }
-                        Text(
-                            if (remainingMs > 0L) "You can't enter until $remainingMinutes min"
-                            else "Your room restriction has ended",
-                            color = Color(0xFF555555), fontSize = 13.sp,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                            modifier = Modifier.padding(top = 12.dp)
-                        )
                         androidx.compose.material3.Button(
                             onClick = { roomKickNotice = null },
                             modifier = Modifier.fillMaxWidth().padding(top = 18.dp).height(44.dp),
