@@ -730,10 +730,11 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                                 modifier = Modifier.padding(start = 7.dp).size(27.dp).clip(CircleShape),
                                 contentScale = ContentScale.Crop
                             )
+                            Text("Room owner", color = Color.White.copy(alpha = .82f), fontSize = 12.sp, modifier = Modifier.padding(start = 7.dp))
                             Text(
                                 notice.optString("ownerName", "Room Owner"),
                                 color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
-                                modifier = Modifier.padding(start = 7.dp)
+                                modifier = Modifier.padding(start = 5.dp)
                             )
                             AsyncImage(
                                 model = ROOM_ADMIN_TAG, contentDescription = "Owner tag",
