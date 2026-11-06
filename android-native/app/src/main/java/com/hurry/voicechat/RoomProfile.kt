@@ -246,16 +246,16 @@ fun RoomProfile(
     val showModerationRow = canModerate && !isCurrentUser
     val showActions = !isCurrentUser
 
+    val authPrefs = remember(context) { context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE) }
+    val myFollowId = authPrefs.getString("accountId", "").orEmpty().ifBlank { authPrefs.getString("uid", "").orEmpty() }
+    val targetFollowId = user.accountId?.takeIf { it.isNotBlank() } ?: user.uid?.takeIf { it.isNotBlank() } ?: user.id.orEmpty()
     var isFollowing by remember(user.uid, user.id, user.accountId) { mutableStateOf(user.isFollowing) }
-    LaunchedEffect(user.isFollowing) { isFollowing = user.isFollowing }
-
-    LaunchedEffect(user.uid, user.id, user.accountId) {
-        val uid = user.uid ?: user.id ?: user.accountId
-        if (uid != null && uid != "N/A" && uid != "User") {
-            try {
-                // Placeholder API Call
-            } catch (e: Exception) {
-            }
+    var followersCount by remember(user.uid, user.id, user.accountId) { mutableIntStateOf(user.followers) }
+    var followBusy by remember { mutableStateOf(false) }
+    LaunchedEffect(user.uid, user.id, user.accountId, myFollowId) {
+        if (myFollowId.isNotBlank() && targetFollowId.isNotBlank()) {
+            SocialFollowApi.cachedSnapshot(context, targetFollowId)?.let { isFollowing = it.isFollowing; followersCount = it.followers }
+            SocialFollowApi.snapshot(context, myFollowId, targetFollowId)?.let { isFollowing = it.isFollowing; followersCount = it.followers }
         }
     }
 
@@ -362,7 +362,7 @@ fun RoomProfile(
                             
                             Text(" | ", color = Color.LightGray, modifier = Modifier.padding(horizontal = 4.dp))
                             
-                            Text("${user.followers}", color = Color.DarkGray, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                            Text("${followersCount}", color = Color.DarkGray, fontSize = 14.sp, fontWeight = FontWeight.Medium)
                             Text(" Fans", color = Color.Gray, fontSize = 14.sp, modifier = Modifier.padding(start = 4.dp))
                         }
 
@@ -547,9 +547,16 @@ fun RoomProfile(
                                     horizontalArrangement = Arrangement.Center,
                                     modifier = Modifier
                                         .weight(1f) 
-                                        .clickable {
-                                            isFollowing = !isFollowing
-                                            onFollow()
+                                        .clickable(enabled = !followBusy) {
+                                            if (myFollowId.isNotBlank() && targetFollowId.isNotBlank() && myFollowId != targetFollowId) {
+                                                val next = !isFollowing
+                                                followBusy = true
+                                                coroutineScope.launch {
+                                                    val result = SocialFollowApi.toggle(context, myFollowId, targetFollowId, next)
+                                                    if (result != null) { isFollowing = result.isFollowing; followersCount = result.followers; onFollow() }
+                                                    followBusy = false
+                                                }
+                                            }
                                         }
                                 ) {
                                     AsyncImage(
