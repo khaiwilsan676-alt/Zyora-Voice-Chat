@@ -246,3 +246,83 @@ fun UserReport(
         }
     }
 }
+
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun UserDangerActionMenu(
+    expanded: Boolean,
+    isBlocked: Boolean,
+    onDismiss: () -> Unit,
+    onBlockedChange: (Boolean) -> Unit,
+    onReport: () -> Unit
+) {
+    if (!expanded) return
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = Color.Transparent,
+        contentColor = Color.White,
+        scrimColor = Color.Black.copy(alpha = 0.5f),
+        dragHandle = null
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 32.dp)
+                .windowInsetsPadding(WindowInsets.navigationBars)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Color(0xFF1C1C1E))
+            ) {
+                androidx.compose.material3.Text(
+                    "Report",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            onDismiss()
+                            onReport()
+                        }
+                        .padding(vertical = 18.dp),
+                    color = Color.White,
+                    fontSize = 18.sp,
+                    textAlign = TextAlign.Center,
+                    fontWeight = FontWeight.Medium
+                )
+                Divider(color = Color.DarkGray.copy(alpha = 0.5f), thickness = 0.5.dp)
+                androidx.compose.material3.Text(
+                    if (isBlocked) "Unblock" else "Block",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            onBlockedChange(!isBlocked)
+                            onDismiss()
+                        }
+                        .padding(vertical = 18.dp),
+                    color = Color.White,
+                    fontSize = 18.sp,
+                    textAlign = TextAlign.Center,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            Button(
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B82F6)),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                androidx.compose.material3.Text(
+                    "Cancel",
+                    color = Color.White,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        }
+    }
+}
