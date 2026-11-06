@@ -49,9 +49,7 @@ fun RoomInfo(
     var tab by remember { mutableStateOf(0) }
     
     // Naya state bottom menu aur share sheet ke liye
-    var showActionMenu by remember { mutableStateOf(false) }
     var showShareSheet by remember { mutableStateOf(false) } // SHARE SHEET STATE
-    var isFollowingUser by remember { mutableStateOf(false) }
 
     var ownerDisplayName by remember(roomOwner.id, roomOwner.uid, roomOwner.accountId) {
         mutableStateOf(if (roomOwner.accountId == "100002" || roomOwner.id == "100002") "Zyora" else "User")
@@ -125,33 +123,13 @@ fun RoomInfo(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Box(
-                            modifier = Modifier.size(36.dp).background(Color(0xFF2A2A2A), CircleShape).clickable { 
-                                showActionMenu = true
-                            },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Default.MoreHoriz, contentDescription="More", tint=Color.White)
-                        }
-                        Box(
-                            // YAHAN SHARE BUTTON PE CLICK LAGAYA HAI
-                            modifier = Modifier.size(36.dp).background(Color(0xFF2A2A2A), CircleShape).clickable {
-                                showShareSheet = true 
-                            },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Default.Share, contentDescription="Share", tint=Color.White, modifier = Modifier.size(18.dp))
-                        }
-                    }
-                    
-                    Row(
-                        modifier = Modifier.background(Color(0xFF2A2A2A), RoundedCornerShape(18.dp)).padding(horizontal = 14.dp, vertical = 8.dp).clickable { },
-                        verticalAlignment = Alignment.CenterVertically
+                    Box(
+                        modifier = Modifier.size(36.dp).background(Color(0xFF2A2A2A), CircleShape).clickable {
+                            showShareSheet = true
+                        },
+                        contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Default.FavoriteBorder, contentDescription="Follow", tint=Color.White, modifier=Modifier.size(16.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text("Follow", color=Color.White, fontSize=14.sp, fontWeight=FontWeight.Medium)
+                        Icon(Icons.Default.Share, contentDescription="Share", tint=Color.White, modifier = Modifier.size(18.dp))
                     }
                 }
 
@@ -280,92 +258,6 @@ fun RoomInfo(
             )
         }
         
-        // --- 3 DOTS (ACTION MENU) ---
-        if (showActionMenu) {
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.6f))
-                    .clickable { showActionMenu = false },
-                contentAlignment = Alignment.BottomCenter
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(Color(0xFF2A2B2E)) 
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { 
-                                    isFollowingUser = !isFollowingUser
-                                    showActionMenu = false 
-                                }
-                                .padding(vertical = 16.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = if (isFollowingUser) "Unfollow" else "Follow",
-                                color = Color.White,
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-                        
-                        Divider(color = Color.White.copy(alpha = 0.1f), thickness = 1.dp)
-                        
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { showActionMenu = false }
-                                .padding(vertical = 16.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("Report", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium)
-                        }
-                        
-                        Divider(color = Color.White.copy(alpha = 0.1f), thickness = 1.dp)
-                        
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { showActionMenu = false }
-                                .padding(vertical = 16.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("Block", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium)
-                        }
-                    }
-                    
-                    Spacer(modifier = Modifier.height(12.dp))
-                    
-                    // YAHAN CANCEL BUTTON KO BLUE KIYA HAI
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(Color(0xFF2196F3)) // BLUE COLOR BSS
-                            .clickable { showActionMenu = false }
-                            .padding(vertical = 16.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "Cancel",
-                            color = Color.White,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                }
-            }
-        }
-
         // --- SHARE BOTTOM SHEET 40VH BLACK BSS ---
         if (showShareSheet) {
             Box(
