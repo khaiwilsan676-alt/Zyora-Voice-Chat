@@ -220,6 +220,7 @@ fun RoomProfile(
     var showReports by remember(initialReportOpen) { mutableStateOf(initialReportOpen) }
     var showDangerMenu by remember { mutableStateOf(false) }
     var isUserBlocked by remember(user.uid, user.id, user.accountId) { mutableStateOf(false) }
+    var blockedByPeer by remember(user.uid, user.id, user.accountId) { mutableStateOf(false) }
     
     // New State for the KickOut dialog
     var showKickDialog by remember { mutableStateOf(false) }
@@ -252,6 +253,13 @@ fun RoomProfile(
     val authPrefs = remember(context) { context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE) }
     val myFollowId = authPrefs.getString("accountId", "").orEmpty().ifBlank { authPrefs.getString("uid", "").orEmpty() }
     val targetFollowId = user.accountId?.takeIf { it.isNotBlank() } ?: user.uid?.takeIf { it.isNotBlank() } ?: user.id.orEmpty()
+    LaunchedEffect(myFollowId, targetFollowId) {
+        if (myFollowId.isNotBlank() && targetFollowId.isNotBlank()) {
+            val state = withContext(Dispatchers.IO) { fetchZyoraUserBlockState(myFollowId, targetFollowId) }
+            isUserBlocked = state.first
+            blockedByPeer = state.second
+        }
+    }
     var isFollowing by remember(user.uid, user.id, user.accountId) { mutableStateOf(user.isFollowing) }
     var followersCount by remember(user.uid, user.id, user.accountId) { mutableIntStateOf(user.followers.takeIf { it > 0 } ?: -1) }
     var followBusy by remember { mutableStateOf(false) }
@@ -772,7 +780,13 @@ fun RoomProfile(
         expanded = showDangerMenu,
         isBlocked = isUserBlocked,
         onDismiss = { showDangerMenu = false },
-        onBlockedChange = { isUserBlocked = it },
+        onBlockedChange = { shouldBlock ->
+            isUserBlocked = shouldBlock
+            kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
+                val saved = updateZyoraUserBlock(context, myFollowId, targetFollowId, shouldBlock)
+                if (!saved) android.os.Handler(android.os.Looper.getMainLooper()).post { isUserBlocked = !shouldBlock }
+            }
+        },
         onReport = { showReports = true }
     )
 
