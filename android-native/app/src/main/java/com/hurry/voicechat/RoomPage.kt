@@ -1661,7 +1661,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                 .put("roomId", roomId).put("userId", accountId).put("roomOwnerId", roomId)
                 .put("micMode", saved.micMode).put("roomName", saved.roomName).put("roomDp", saved.roomDp)
                 .put("announcement", saved.announcement).put("theme", saved.theme)
-                .put("isLocked", saved.isLocked).put("roomPassword", saved.roomPassword)
+                .put("isLocked", saved.isLocked)
                 .put("updatedAt", System.currentTimeMillis()))
         })
         if(showGift) GiftPicker(
