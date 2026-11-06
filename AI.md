@@ -222,3 +222,11 @@ Current documentation does not certify that all historical features are build-, 
 - Latest profile and room display values now flow into the existing socket callbacks via `rememberUpdatedState`, so profile/settings refreshes do not reconnect the room socket or use stale join details.
 - UI, voice, seat, kick, chat, and room behavior remain unchanged.
 - Status: source change committed; native APK build and real-device entry timing still require verification. No measured latency improvement is claimed until tested on device.
+
+
+## 20 Pre-entry room kick blocking correction (2026-11-06)
+- `MainActivity.kt`: restored a server access preflight in `tryOpenRoom`. The app now calls `/api/room-kick-status` before setting `openedRoom`, so a kicked user never mounts `RoomPage` and cannot briefly see or enter the room while the Socket.IO kick event arrives.
+- A blocked account receives the existing slim homepage restriction popup. The existing black/70 popup styling is retained. If the access check cannot be confirmed, the room stays closed and the existing retry message is shown.
+- The server-side `room_join` kick-ban validation remains unchanged as the final enforcement layer.
+- No room layout, seat, voice, chat, announcement, or moderation UI was changed in this correction.
+- Status: **Implemented in repository**. Native APK CI, Render availability, and real-device kick/re-entry timing still require verification.
