@@ -185,6 +185,17 @@ function emitRoomSeats(roomId) {
 
 const pendingSeatDisconnects = new Map();
 const lockedRooms = new Map();
+// Successful password checks grant a short-lived, account-bound permission for socket room_join.
+const roomPasswordGrants = new Map();
+function hasRoomPasswordGrant(roomId, accountId) {
+  const key = `${String(roomId)}:${String(accountId)}`;
+  const expiresAt = roomPasswordGrants.get(key) || 0;
+  if (expiresAt <= Date.now()) {
+    roomPasswordGrants.delete(key);
+    return false;
+  }
+  return true;
+}
 
 function cancelPendingSeatDisconnect(roomId, userId) {
   const key = `${String(roomId)}:${String(userId)}`;
@@ -530,6 +541,7 @@ app.post("/api/room-access", async (req, res) => {
     if (!room.isLocked) return res.json({ success: true, allowed: true });
     const expected = String(room.roomPassword || "");
     if (!expected || password !== expected) return res.status(401).json({ success: false, allowed: false, error: "Password incorrect" });
+    roomPasswordGrants.set(`${roomId}:${userId}`, Date.now() + 2 * 60 * 1000);
     return res.json({ success: true, allowed: true });
   } catch (error) {
     console.error("POST /api/room-access error:", error);
@@ -2036,7 +2048,7 @@ io.on("connection", (socket) => {
       // ASYNC LOCK CHECKS AFTER SYNCHRONOUS JOIN
       const cachedLock = lockedRooms.get(room);
 
-      if (cachedLock?.locked && String(cachedLock.ownerId || "") !== accId) {
+      if (cachedLock?.locked && String(cachedLock.ownerId || "") !== accId && !hasRoomPasswordGrant(room, accId)) {
         socket.emit("room_locked", { roomId: room, ownerId: String(cachedLock.ownerId || "") });
 
         // Revert join side effects
@@ -2057,7 +2069,7 @@ io.on("connection", (socket) => {
           const roomDoc = await db.collection("rooms").findOne({
             $or: [{ accountId: room }, { roomId: room }, { id: room }]
           });
-          if (roomDoc?.isLocked && String(roomDoc.accountId || roomDoc.roomId || roomDoc.id || requestedOwnerId) !== accId) {
+          if (roomDoc?.isLocked && String(roomDoc.accountId || roomDoc.roomId || roomDoc.id || requestedOwnerId) !== accId && !hasRoomPasswordGrant(room, accId)) {
             const owner = String(roomDoc.accountId || roomDoc.roomId || roomDoc.id || requestedOwnerId || "");
             lockedRooms.set(room, { locked: true, ownerId: owner, updatedAt: Date.now() });
             socket.emit("room_locked", { roomId: room, ownerId: owner });
@@ -2078,6 +2090,8 @@ io.on("connection", (socket) => {
           console.error("Room lock check failed:", error.message);
         }
       }
+
+      if (socketIsInRoom(socket, room)) roomPasswordGrants.delete(`${room}:${accId}`);
 
       // Broadcast canonical room status only after membership and lock checks succeed.
       if (socketIsInRoom(socket, room)) {
