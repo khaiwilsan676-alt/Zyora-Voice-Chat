@@ -1055,7 +1055,7 @@ fun RoomPage(
             val payload = args.firstOrNull() as? JSONObject
             if (payload != null && payload.optString("roomId") == roomId) {
                 mainHandler.post { showRoomOwnerBlockedToast = true }
-                mainHandler.postDelayed({ showRoomOwnerBlockedToast = false }, 2200)
+                mainHandler.postDelayed({ showRoomOwnerBlockedToast = false; onClose() }, 2200)
             }
         }
         val settingsListener = Emitter.Listener { args ->
