@@ -666,7 +666,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                 ) {
                     Column(
                         Modifier.fillMaxWidth(0.86f).clip(RoundedCornerShape(12.dp))
-                            .background(Color(0xFF171717)).padding(horizontal = 20.dp, vertical = 22.dp),
+                            .background(Color.White).padding(horizontal = 20.dp, vertical = 22.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         AsyncImage(
@@ -677,7 +677,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                         )
                         Text(
                             "You are kicked out of the room",
-                            color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold,
+                            color = Color(0xFF202020), fontSize = 17.sp, fontWeight = FontWeight.Bold,
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                             modifier = Modifier.padding(top = 12.dp)
                         )
@@ -686,17 +686,17 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.Center
                         ) {
-                            Text("By", color = Color.White.copy(alpha = .82f), fontSize = 12.sp)
+                            Text("By", color = Color(0xFF555555), fontSize = 12.sp)
                             val ownerImage = notice.optString("ownerImage")
                             if (ownerImage.isNotBlank()) AsyncImage(
                                 model = ownerImage, contentDescription = "Room owner avatar",
                                 modifier = Modifier.padding(start = 7.dp).size(27.dp).clip(CircleShape),
                                 contentScale = ContentScale.Crop
                             )
-                            Text("Room owner", color = Color.White.copy(alpha = .82f), fontSize = 12.sp, modifier = Modifier.padding(start = 7.dp))
+                            Text("Room owner", color = Color(0xFF555555), fontSize = 12.sp, modifier = Modifier.padding(start = 7.dp))
                             Text(
                                 notice.optString("ownerName", "Room Owner"),
-                                color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
+                                color = Color(0xFF202020), fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
                                 modifier = Modifier.padding(start = 5.dp)
                             )
                             AsyncImage(
@@ -717,15 +717,15 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                                     modifier = Modifier.height(17.dp).widthIn(max = 30.dp),
                                     contentScale = ContentScale.Fit
                                 )
-                                Text(ownerId, color = Color.White.copy(alpha = .85f), fontSize = 11.sp, modifier = Modifier.padding(start = 5.dp))
+                                Text(ownerId, color = Color(0xFF555555), fontSize = 11.sp, modifier = Modifier.padding(start = 5.dp))
                             }
                         } else {
-                            Text("ID: $ownerId", color = Color.White.copy(alpha = .85f), fontSize = 11.sp, modifier = Modifier.padding(top = 8.dp))
+                            Text("ID: $ownerId", color = Color(0xFF555555), fontSize = 11.sp, modifier = Modifier.padding(top = 8.dp))
                         }
                         Text(
                             if (remainingMs > 0L) "You can't enter until $remainingMinutes min"
                             else "Your room restriction has ended",
-                            color = Color.White.copy(alpha = .85f), fontSize = 13.sp,
+                            color = Color(0xFF555555), fontSize = 13.sp,
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                             modifier = Modifier.padding(top = 12.dp)
                         )
