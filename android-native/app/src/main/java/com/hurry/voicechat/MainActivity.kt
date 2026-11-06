@@ -422,31 +422,11 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
     }
     fun tryOpenRoom(room: HurryRoom) {
         val roomIdToCheck = room.id.ifBlank { room.accountId }
-        val joiningAccountId = authPrefs.getString("accountId", userId).orEmpty().ifBlank { userId }
-        if (roomIdToCheck.isBlank() || joiningAccountId.isBlank()) return
-        roomCreateScope.launch {
-            val kickStatus = withContext(Dispatchers.IO) {
-                runCatching {
-                    val encodedRoom = java.net.URLEncoder.encode(roomIdToCheck, "UTF-8")
-                    val encodedUser = java.net.URLEncoder.encode(joiningAccountId, "UTF-8")
-                    val connection = (URL("https://zyora-server.onrender.com/api/room-kick-status?roomId=$encodedRoom&userId=$encodedUser").openConnection() as HttpURLConnection).apply {
-                        connectTimeout = 8000
-                        readTimeout = 8000
-                    }
-                    try {
-                        if (connection.responseCode !in 200..299) error("Access check failed")
-                        JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
-                    } finally { connection.disconnect() }
-                }.getOrNull()
-            }
-            if (kickStatus == null) {
-                roomBlockedPopup = JSONObject().put("expiresAt", 0L).put("checkFailed", true)
-            } else if (kickStatus.optBoolean("blocked", false)) {
-                roomBlockedPopup = kickStatus
-            } else {
-                openedRoom = room
-            }
-        }
+        if (roomIdToCheck.isBlank()) return
+        // Open immediately. The room_join Socket.IO handler performs the authoritative
+        // kick-ban check and emits room_kick_blocked before adding a banned user to presence.
+        // Avoid waiting for a separate HTTP round-trip before showing the room UI.
+        openedRoom = room
     }
     fun tryOpenRoomById(targetRoomId: String) {
         if (targetRoomId.isBlank()) return
