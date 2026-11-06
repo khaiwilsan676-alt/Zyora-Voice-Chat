@@ -468,9 +468,11 @@ fun RoomPage(
     }
     var speaker by remember{mutableStateOf(true)}
     var localVoiceSpeaking by remember { mutableStateOf(false) }
-    var publicMsgOff by remember{mutableStateOf(false)}
+    var publicMsgOff by remember(roomId){mutableStateOf(true)}
     var showPublicMessageClosedToast by remember { mutableStateOf(false) }
-    val canSendRoomPublicMessage = accountId == roomOwnerAccountId || roomAdminIds.any { it == accountId }
+    var showRoomOwnerBlockedToast by remember { mutableStateOf(false) }
+    val isRoomOwner = accountId == roomOwnerAccountId
+    val canSendRoomPublicMessage = isRoomOwner || roomAdminIds.any { it == accountId }
     LaunchedEffect(showPublicMessageClosedToast) {
         if (showPublicMessageClosedToast) {
             kotlinx.coroutines.delay(1800)
@@ -1049,6 +1051,13 @@ fun RoomPage(
                 }
             }
         }
+        val roomJoinBlockedListener = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject
+            if (payload != null && payload.optString("roomId") == roomId) {
+                mainHandler.post { showRoomOwnerBlockedToast = true }
+                mainHandler.postDelayed({ showRoomOwnerBlockedToast = false; onClose() }, 2200)
+            }
+        }
         val settingsListener = Emitter.Listener { args ->
             val payload = args.firstOrNull() as? JSONObject
             if (payload != null && payload.optString("roomId") == roomId) {
@@ -1063,6 +1072,7 @@ fun RoomPage(
                             .edit().putInt("micMode_$roomId", updatedMicMode).apply()
                     }
                     if (hasAnnouncement) announcement = updatedAnnouncement
+                    if (payload.has("publicMsgOff")) publicMsgOff = payload.optBoolean("publicMsgOff", true)
                     if (payload.has("roomName")) roomName = payload.optString("roomName", latestRoomName)
                 }
             }
@@ -1134,7 +1144,16 @@ fun RoomPage(
         roomSocket.on("room_kick_announcement",kickAnnouncementListener)
         roomSocket.on("room_seats",seatListener)
         roomSocket.on("room_voice_speaker",voiceSpeakerListener)
+        val roomPublicMessageBlockedListener = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject
+            if (payload != null && payload.optString("roomId") == roomId) {
+                mainHandler.post { showPublicMessageClosedToast = true }
+                mainHandler.postDelayed({ showPublicMessageClosedToast = false }, 1800)
+            }
+        }
         roomSocket.on("room_settings_updated",settingsListener)
+        roomSocket.on("room_public_message_blocked", roomPublicMessageBlockedListener)
+        roomSocket.on("room_join_blocked", roomJoinBlockedListener)
         roomSocket.on("room_follow_updated", roomFollowListener)
         roomSocket.on("lucky_bag_banner",luckyBagBannerListener)
         roomSocket.on("wallet_balance_updated",walletBalanceListener)
@@ -1171,6 +1190,8 @@ fun RoomPage(
             roomSocket.off("room_voice_speaker",voiceSpeakerListener)
             mainHandler.post { activeVoiceSpeakerIds.clear() }
             roomSocket.off("room_settings_updated",settingsListener)
+            roomSocket.off("room_public_message_blocked", roomPublicMessageBlockedListener)
+            roomSocket.off("room_join_blocked", roomJoinBlockedListener)
             roomSocket.off("room_follow_updated", roomFollowListener)
             roomSocket.off("lucky_bag_banner",luckyBagBannerListener)
             roomSocket.off("wallet_balance_updated",walletBalanceListener)
@@ -1185,6 +1206,16 @@ fun RoomPage(
     }
 
     Box(Modifier.fillMaxSize().background(Color.Black)){
+        if (showRoomOwnerBlockedToast) {
+            Text(
+                text = "You're blocked by Room owner",
+                color = Color.White,
+                fontSize = 12.sp,
+                modifier = Modifier.align(Alignment.Center).zIndex(101f)
+                    .clip(RoundedCornerShape(8.dp)).background(Color.Black.copy(alpha = 0.70f))
+                    .padding(horizontal = 14.dp, vertical = 8.dp)
+            )
+        }
         if (showPublicMessageClosedToast) {
             Text(
                 text = "Public Message are close",
@@ -1492,7 +1523,7 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                                     .clip(CircleShape)
                                     .background(if(isRoomInputBlank) Color(0xFF9CA3AF) else Color(0xFF3B82F6))
                                     .clickable(enabled=!isRoomInputBlank) {
-                                        if (!publicMsgOff && !canSendRoomPublicMessage) {
+                                        if (publicMsgOff && !canSendRoomPublicMessage) {
                                             showPublicMessageClosedToast = true
                                         } else {
                                         val text=input.trim()
@@ -1767,7 +1798,14 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                 showMenu=false
             },
             publicMsgOff=publicMsgOff,
-            onTogglePublicMsg={publicMsgOff=!publicMsgOff},
+            isRoomOwner=isRoomOwner,
+            onTogglePublicMsg={
+                if (isRoomOwner) {
+                    publicMsgOff = !publicMsgOff
+                    roomSocketRef.value?.takeIf { it.connected() }?.emit("room_settings_update", JSONObject()
+                        .put("roomId", roomId).put("userId", accountId).put("publicMsgOff", publicMsgOff))
+                }
+            },
             speaker=speaker,
             onToggleSpeaker={speaker=!speaker},
             onMusicPlaylistChanged={ tracks ->

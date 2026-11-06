@@ -61,6 +61,8 @@ import coil3.compose.AsyncImage
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -599,10 +601,26 @@ fun NativeChatScreen(
     var showOptions by remember { mutableStateOf(false) }
     var showReportPage by remember { mutableStateOf(false) }
     var isUserBlocked by remember(receiverId) { mutableStateOf(false) }
+    var blockedByPeer by remember(receiverId) { mutableStateOf(false) }
+    var blockPopupText by remember { mutableStateOf("") }
     var replyText by remember { mutableStateOf<String?>(null) }
     var previewImageUrl by remember { mutableStateOf<String?>(null) }
     var roomInvitationSent by remember(receiverId, initialRoomInvitation) { mutableStateOf(false) }
     
+    LaunchedEffect(currentAccountId, receiverId) {
+        if (currentAccountId.isNotBlank() && receiverId.isNotBlank()) {
+            val state = withContext(Dispatchers.IO) { fetchZyoraUserBlockState(currentAccountId, receiverId) }
+            isUserBlocked = state.first
+            blockedByPeer = state.second
+        }
+    }
+    LaunchedEffect(blockPopupText) {
+        if (blockPopupText.isNotBlank()) {
+            kotlinx.coroutines.delay(1800)
+            blockPopupText = ""
+        }
+    }
+
     // Scam banner hide/show
     var showScamBanner by remember { mutableStateOf(true) }
     
@@ -1651,11 +1669,46 @@ fun NativeChatScreen(
             }
         }
     }
+    DisposableEffect(directSocket, receiverId) {
+        val socket = directSocket
+        val blockedListener = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
+            val code = payload.optString("code")
+            if (code == "BLOCKED_BY_ME" || code == "YOU_ARE_BLOCKED") {
+                val messageId = payload.optString("id")
+                android.os.Handler(android.os.Looper.getMainLooper()).post {
+                    if (messageId.isNotBlank()) {
+                        val index = messageIds.indexOf(messageId)
+                        if (index >= 0) {
+                            if (index < messages.size) messages.removeAt(index)
+                            messageIds.removeAt(index)
+                        }
+                    }
+                    blockPopupText = if (code == "BLOCKED_BY_ME") "You blocked this person" else "You are blocked"
+                }
+            }
+        }
+        socket?.on("private_message_error", blockedListener)
+        onDispose { socket?.off("private_message_error", blockedListener) }
+    }
+    if (blockPopupText.isNotBlank()) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(blockPopupText, color = Color.White, fontSize = 12.sp,
+                modifier = Modifier.clip(RoundedCornerShape(7.dp)).background(Color.Black.copy(alpha = 0.70f))
+                    .padding(horizontal = 14.dp, vertical = 8.dp))
+        }
+    }
     UserDangerActionMenu(
         expanded = showOptions,
         isBlocked = isUserBlocked,
         onDismiss = { showOptions = false },
-        onBlockedChange = { isUserBlocked = it },
+        onBlockedChange = { shouldBlock ->
+            isUserBlocked = shouldBlock
+            kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
+                val saved = updateZyoraUserBlock(context, currentAccountId, receiverId, shouldBlock)
+                if (!saved) android.os.Handler(android.os.Looper.getMainLooper()).post { isUserBlocked = !shouldBlock }
+            }
+        },
         onReport = { showReportPage = true }
     )
 
