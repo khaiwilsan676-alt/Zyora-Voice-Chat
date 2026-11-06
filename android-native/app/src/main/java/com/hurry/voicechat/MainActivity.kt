@@ -70,6 +70,7 @@ import androidx.compose.ui.Alignment
 import androidx.core.content.FileProvider
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import kotlinx.coroutines.async
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
@@ -442,7 +443,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
         roomAccessCheckInProgress = true
         roomCreateScope.launch {
             val checks = kotlinx.coroutines.coroutineScope {
-                val passwordCheck = kotlinx.coroutines.async(Dispatchers.IO) {
+                val passwordCheck = async(Dispatchers.IO) {
                     runCatching {
                         val connection = (URL("https://zyora-server.onrender.com/api/room-access").openConnection() as HttpURLConnection).apply {
                             requestMethod = "POST"
@@ -463,7 +464,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                         } finally { connection.disconnect() }
                     }.getOrNull()
                 }
-                val kickCheck = kotlinx.coroutines.async(Dispatchers.IO) {
+                val kickCheck = async(Dispatchers.IO) {
                     runCatching {
                         val encodedRoom = java.net.URLEncoder.encode(roomIdToCheck, "UTF-8")
                         val encodedUser = java.net.URLEncoder.encode(joiningAccountId, "UTF-8")
