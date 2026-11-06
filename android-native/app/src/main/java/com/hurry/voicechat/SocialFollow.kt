@@ -54,11 +54,19 @@ object SocialFollowApi {
     suspend fun toggle(context:Context,userId:String,targetId:String,follow:Boolean):SocialFollowSnapshot?=withContext(Dispatchers.IO){
         if(userId.isBlank()||targetId.isBlank()||userId==targetId)return@withContext null
         runCatching {
-            request("/api/follows","POST",JSONObject().put("followerId",userId).put("targetUid",targetId).put("action",if(follow)"follow" else "unfollow"))
-            // Re-read canonical graph after mutation so legacy UID/account-number edges are deduplicated.
-            val root=request("/api/follows?targetUid=${enc(targetId)}&followerId=${enc(userId)}")
-            val snap=SocialFollowSnapshot(root.optInt("followers"),root.optInt("followingCount"),root.optInt("friends"),root.optBoolean("isFollowing",root.optBoolean("following")))
-            saveSnapshot(context,targetId,snap); snap
+            // The mutation response already contains the authoritative counts/state.
+            // Do not issue a second GET here: that doubled latency on every tap,
+            // especially when Render was waking from its idle state.
+            val root=request("/api/follows","POST",JSONObject().put("followerId",userId).put("targetUid",targetId).put("action",if(follow)"follow" else "unfollow"))
+            if (!root.optBoolean("success", false)) error("Follow update was not accepted")
+            val snap=SocialFollowSnapshot(
+                root.optInt("followers"),
+                root.optInt("followingCount"),
+                root.optInt("friends"),
+                root.optBoolean("isFollowing",root.optBoolean("following",follow))
+            )
+            saveSnapshot(context,targetId,snap)
+            snap
         }.getOrNull()
     }
     fun cachedList(context:Context,userId:String,type:String):List<SocialFollowUser> {
