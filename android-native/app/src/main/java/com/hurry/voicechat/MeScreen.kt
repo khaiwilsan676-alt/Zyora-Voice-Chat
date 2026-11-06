@@ -32,6 +32,9 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
+import io.socket.client.IO
+import io.socket.client.Socket
+import io.socket.emitter.Emitter
 
 private const val RAW_ME = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/"
 
@@ -77,6 +80,25 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
         if (visitorUserId.isNotBlank()) {
             SocialFollowApi.cachedSnapshot(context, visitorUserId)?.let { fansCount=it.followers; followingCount=it.followingCount; friendsCount=it.friends; followCountsReady=true }
             SocialFollowApi.snapshot(context, visitorUserId, visitorUserId)?.let { fansCount=it.followers; followingCount=it.followingCount; friendsCount=it.friends; followCountsReady=true }
+        }
+    }
+    DisposableEffect(visitorUserId) {
+        if (visitorUserId.isBlank()) return@DisposableEffect onDispose { }
+        val socket = IO.socket("https://zyora-server.onrender.com", IO.Options().apply { transports=arrayOf("websocket"); reconnection=true })
+        val refresh: suspend () -> Unit = {
+            SocialFollowApi.snapshot(context, visitorUserId, visitorUserId)?.let {
+                fansCount=it.followers; followingCount=it.followingCount; friendsCount=it.friends; followCountsReady=true
+            }
+        }
+        val listener = Emitter.Listener { scope.launch { refresh() } }
+        socket.on("follow_updated", listener)
+        socket.on("profile_follow_updated", listener)
+        socket.connect()
+        onDispose {
+            socket.off("follow_updated", listener)
+            socket.off("profile_follow_updated", listener)
+            socket.disconnect()
+            socket.close()
         }
     }
     LaunchedEffect(visitorUserId) {
