@@ -1884,7 +1884,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
             onShareToUser={ fan ->
                 pendingRoomInvitationJson=JSONObject().put("roomId",roomId).put("roomName",roomName)
                     .put("roomDp",roomImage).put("roomOwnerId",roomOwner.accountId.ifBlank{roomOwner.id})
-                    .put("roomIdText",roomId).toString()
+                    .put("roomIdText",roomId).put("inviteId",java.util.UUID.randomUUID().toString()).toString()
                 selectedOfficialChat=Triple(fan.accountId,fan.name,fan.image)
                 showInfo=false
             }
