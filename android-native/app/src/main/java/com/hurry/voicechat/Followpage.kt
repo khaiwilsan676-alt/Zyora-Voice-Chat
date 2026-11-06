@@ -42,7 +42,6 @@ import io.socket.emitter.Emitter
 private const val VISITOR_API = "https://zyora-server.onrender.com"
 private data class VisitorData(val id:String,val name:String,val gender:String,val avatar:String,val lastViewedAt:Long,val viewCount:Int)
 
-// Ye helper function duplicate users ko merge karke unka View Count badha dega
 private fun processVisitorRows(rows: JSONArray): List<VisitorData> {
     val rawList = (0 until rows.length()).mapNotNull { i -> 
         rows.optJSONObject(i)?.let { v ->
@@ -56,7 +55,6 @@ private fun processVisitorRows(rows: JSONArray): List<VisitorData> {
             )
         }
     }
-    // ID ke hisaab se group kiya aur view count ko sum (plus) kar diya
     return rawList.groupBy { it.id }.map { (_, list) ->
         val latest = list.maxByOrNull { it.lastViewedAt } ?: list.first()
         val totalViews = list.sumOf { it.viewCount }
@@ -70,7 +68,7 @@ private suspend fun loadProfileVisitors(context:Context,userId:String,type:Strin
     fun cachedVisitors(): List<VisitorData> {
         val cached = runCatching { NativeIndexDatabase(context).loadProfile("visitor_history:" + userId + ":" + type) }.getOrNull()
         val cachedRows = cached?.optJSONArray("visitors") ?: return emptyList()
-        return processVisitorRows(cachedRows) // Cache me bhi same deduplication logic
+        return processVisitorRows(cachedRows) 
     }
     
     runCatching {
@@ -83,7 +81,7 @@ private suspend fun loadProfileVisitors(context:Context,userId:String,type:Strin
             
             val root=JSONObject(body)
             val rows=root.optJSONArray("visitors") ?: JSONArray()
-            val result = processVisitorRows(rows) // Network API data pe deduplication
+            val result = processVisitorRows(rows) 
             
             runCatching { NativeIndexDatabase(context).saveProfile("visitor_history:"+userId+":"+type,root) }
             result
@@ -91,7 +89,8 @@ private suspend fun loadProfileVisitors(context:Context,userId:String,type:Strin
     }.getOrElse { cachedVisitors() }
 }
 
-private fun visitorDate(t:Long)=if(t<=0L) "—" else SimpleDateFormat("dd/MM",Locale.getDefault()).format(Date(t))
+// Yaha par date ke sath time add kiya gaya hai (dd/MM hh:mm a)
+private fun visitorDate(t:Long)=if(t<=0L) "—" else SimpleDateFormat("dd/MM hh:mm a",Locale.getDefault()).format(Date(t))
 
 val topBlueGradient = Brush.verticalGradient(
     0.0f to Color(0xFF0066FF),
@@ -242,7 +241,7 @@ fun VisitorsPage(onBack:()->Unit) {
         val cached=NativeIndexDatabase(context).loadProfile("visitor_history:"+myId+":"+type)
         val cachedRows=cached?.optJSONArray("visitors")
         if(cachedRows!=null) {
-            rows = processVisitorRows(cachedRows) // Cache UI pe bhi duplicate issue resolve kardiya hai 
+            rows = processVisitorRows(cachedRows) 
         }
         loading=rows.isEmpty()
         rows=loadProfileVisitors(context,myId,type)
@@ -382,7 +381,6 @@ private fun VisitorItemRow(v:VisitorData, isMyVisitorsTab:Boolean, baseUrl:Strin
             val blurModifier = if (isMyVisitorsTab) Modifier.blur(8.dp) else Modifier
 
             Row(verticalAlignment = Alignment.CenterVertically, modifier = blurModifier) {
-                // Name Text modified: weight de diya + maxlines 1 kardia taki ye lamba hoke gender icon ko niche na dhakele
                 Text(
                     text = v.name,
                     color = Color.Black,
@@ -404,7 +402,6 @@ private fun VisitorItemRow(v:VisitorData, isMyVisitorsTab:Boolean, baseUrl:Strin
                             .clip(CircleShape)
                             .background(if (male) Color(0xFF3B82F6) else Color(0xFFEC4899))
                     ) {
-                        // Gender Text modified: PlatformTextStyle me includeFontPadding false kardia taki box ke ekdam center me rahe
                         Text(
                             text = if (male) "♂" else "♀",
                             color = Color.White,
@@ -424,6 +421,7 @@ private fun VisitorItemRow(v:VisitorData, isMyVisitorsTab:Boolean, baseUrl:Strin
             Spacer(Modifier.height(4.dp))
             
             Text(
+                // Yaha format ab date ke sath time bhi dikhayega, aur divider sirf view ke pehle rahega
                 text = "${visitorDate(v.lastViewedAt)}  |  View ${v.viewCount} times",
                 color = Color(0xFF9CA3AF),
                 fontSize = 12.sp
