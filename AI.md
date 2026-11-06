@@ -208,3 +208,10 @@ Current documentation does not certify that all historical features are build-, 
 - Backend commit: 47be4d8726de6b3fed75ccb6c4c7d7297a808758 (Zyora-Server).
 - Native compile fix commit: 00fd47aa5150e33bb5aac23823e0c4cd2f37b298 (Zyora-Voice-Chat).
 - Remaining verification: Render must deploy the backend commit; rerun Native APK workflow and test follow/unfollow across two accounts, including legacy UID and numeric account ID aliases. Do not claim runtime verification until these checks pass.
+
+
+## 19. Instant room entry and chat profile I/O (2026-11-06)
+- `MainActivity.kt`: removed the pre-entry `/api/room-kick-status` HTTP round-trip. Room UI opens immediately; the existing authoritative `room_join` handler in `Zyora-Server/server.js` checks MongoDB/in-memory kick bans before adding the user to room presence and emits `room_kick_blocked` for blocked users. This retains kick enforcement while removing a network request from the critical navigation path.
+- `RoomPage.kt`: moved the per-message profile SQLite reads and writes in `NativeMessage` off the Compose main thread. Cached profile tags are applied first; remote tag refresh remains asynchronous and continues to update the same profile fields.
+- No UI, seat, chat, voice, kick-ban, wallet, or room settings behavior intentionally changed.
+- Verification pending: native APK CI and real-device room-entry timing / kicked-user rejection tests. Do not claim a measured latency until tested on device.
