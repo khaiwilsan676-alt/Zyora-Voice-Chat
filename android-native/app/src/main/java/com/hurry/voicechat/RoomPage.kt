@@ -730,6 +730,7 @@ fun RoomPage(
     val latestRoomDisplayImage by rememberUpdatedState(roomDisplayImage)
     val latestRoomName by rememberUpdatedState(roomName)
     val latestRoomImage by rememberUpdatedState(roomImage)
+    val latestKeepingRoomForMini by rememberUpdatedState(keepingRoomForMini)
 
     DisposableEffect(roomId,accountId,roomOwner.id,roomOwner.accountId) {
         val roomSocketOptions = IO.Options().apply {
@@ -1098,7 +1099,7 @@ fun RoomPage(
             roomSocket.connect()
         }
         onDispose {
-            if (keepingRoomForMini) {
+            if (latestKeepingRoomForMini) {
                 // Keep the actual socket connected in the background. Disconnecting it
                 // would trigger server cleanup and release the user's occupied seat.
                 ZyoraKeptRoomSocketSession.retain(roomSocket, roomId, accountId)
