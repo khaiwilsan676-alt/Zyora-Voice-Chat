@@ -736,19 +736,32 @@ fun NativeChatScreen(
             directSocket?.connected() == true && receiverId.isNotBlank()) {
             val roomData = runCatching { JSONObject(initialRoomInvitation) }.getOrNull()
             if (roomData != null) {
-                val messageId = currentUserId + "_" + System.currentTimeMillis()
-                val localInvite = "ROOM_INVITE::" + roomData.toString()
-                messages.add(true to localInvite)
-                messageIds.add(messageId)
-                saveConversationPreview(receiverId, name, image, "Room invitation", System.currentTimeMillis())
-                directSocket?.emit("private_message", JSONObject()
-                    .put("id", messageId).put("senderId", currentUserId).put("senderAccountId", currentAccountId)
-                    .put("receiverId", receiverId).put("receiverAccountId", receiverId)
-                    .put("senderName", currentName).put("senderPhoto", currentPhoto)
-                    .put("receiverName", name).put("receiverPhoto", image)
-                    .put("text", "Room invitation").put("type", "room_invitation")
-                    .put("roomData", roomData).put("timestamp", System.currentTimeMillis()))
-                roomInvitationSent = true
+                // One invitation may be emitted only once. Persist the guard before
+                // touching the socket so reconnects/recomposition cannot resend it.
+                val inviteId = roomData.optString("inviteId").ifBlank {
+                    currentUserId + "_" + receiverId + "_" + roomData.optString("roomId")
+                }
+                val sentKey = "room_invitation_sent_${currentUserId}_${receiverId}_${inviteId}"
+                val alreadySent = prefs.getBoolean(sentKey, false)
+                if (!alreadySent) {
+                    prefs.edit().putBoolean(sentKey, true).commit()
+                    roomInvitationSent = true
+                    val messageId = inviteId
+                    val sentAt = System.currentTimeMillis()
+                    val localInvite = "ROOM_INVITE::" + roomData.toString()
+                    messages.add(true to localInvite)
+                    messageIds.add(messageId)
+                    saveConversationPreview(receiverId, name, image, "Room invitation", sentAt)
+                    directSocket?.emit("private_message", JSONObject()
+                        .put("id", messageId).put("senderId", currentUserId).put("senderAccountId", currentAccountId)
+                        .put("receiverId", receiverId).put("receiverAccountId", receiverId)
+                        .put("senderName", currentName).put("senderPhoto", currentPhoto)
+                        .put("receiverName", name).put("receiverPhoto", image)
+                        .put("text", "Room invitation").put("type", "room_invitation")
+                        .put("roomData", roomData).put("timestamp", sentAt))
+                } else {
+                    roomInvitationSent = true
+                }
             }
         }
     }
