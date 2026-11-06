@@ -44,13 +44,20 @@ private data class VisitorData(val id:String,val name:String,val gender:String,v
 
 private suspend fun loadProfileVisitors(context:Context,userId:String,type:String):List<VisitorData> = withContext(Dispatchers.IO) {
     if(userId.isBlank()) return@withContext emptyList()
+    fun cachedVisitors(): List<VisitorData> {
+        val cached = runCatching { NativeIndexDatabase(context).loadProfile("visitor_history:" + userId + ":" + type) }.getOrNull()
+        val cachedRows = cached?.optJSONArray("visitors") ?: return emptyList()
+        return (0 until cachedRows.length()).mapNotNull { i -> cachedRows.optJSONObject(i)?.let { v ->
+            VisitorData(v.optString("id"),v.optString("name","User"),v.optString("gender"),v.optString("avatar"),v.optLong("lastViewedAt"),v.optInt("viewCount",1).coerceAtLeast(1))
+        }}.take(20)
+    }
     runCatching {
         val encoded=java.net.URLEncoder.encode(userId,"UTF-8")
         val connection=(URL("$VISITOR_API/api/profile-visitors?userId=$encoded&type=$type").openConnection() as HttpURLConnection).apply { requestMethod="GET";connectTimeout=12000;readTimeout=12000 }
         try {
             val status=connection.responseCode
             val body=(if(status in 200..299) connection.inputStream else connection.errorStream)?.bufferedReader()?.use{it.readText()}.orEmpty()
-            if(status !in 200..299) return@runCatching emptyList()
+            if(status !in 200..299) return@runCatching cachedVisitors()
             val root=JSONObject(body)
             val rows=root.optJSONArray("visitors") ?: JSONArray()
             val result=(0 until rows.length()).mapNotNull { i -> rows.optJSONObject(i)?.let { v ->
@@ -59,7 +66,7 @@ private suspend fun loadProfileVisitors(context:Context,userId:String,type:Strin
             runCatching { NativeIndexDatabase(context).saveProfile("visitor_history:"+userId+":"+type,root) }
             result
         } finally { connection.disconnect() }
-    }.getOrDefault(emptyList())
+    }.getOrElse { cachedVisitors() }
 }
 
 private fun visitorDate(t:Long)=if(t<=0L) "—" else SimpleDateFormat("dd/MM",Locale.getDefault()).format(Date(t))
