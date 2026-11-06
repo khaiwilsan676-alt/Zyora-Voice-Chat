@@ -926,7 +926,7 @@ private fun PillButton(
 }
 
 @Composable
-private fun PasswordInputBoxes(value: String, onChange: (String) -> Unit) {
+fun PasswordInputBoxes(value: String, onChange: (String) -> Unit) {
     val focusReqs = remember { List(4) { FocusRequester() } }
     var focusedIdx by remember { mutableIntStateOf(-1) }
     Row(
