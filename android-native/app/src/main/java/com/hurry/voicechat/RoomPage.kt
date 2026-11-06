@@ -840,6 +840,9 @@ fun RoomPage(
                         .put("roomId", roomId)
                         .put("targetId", accountId)
                         .put("expiresAt", payload.optLong("expiresAt", 0L))
+                        .put("ownerId", payload.optString("ownerId", roomId))
+                        .put("ownerName", payload.optString("ownerName", "Room Owner"))
+                        .put("ownerImage", payload.optString("ownerImage", ""))
                         .put("blocked", true))
                     onClose()
                 }
