@@ -288,10 +288,10 @@ fun VisitorsPage(onBack:()->Unit) {
         )
 
         when {
-            loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Color(0xFF0066FF)) }
-            rows.isEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("No visitors yet", color = Color(0xFF9CA3AF), fontSize = 14.sp) }
+            loading -> Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Color(0xFF0066FF)) }
+            rows.isEmpty() -> Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) { Text("No visitors yet", color = Color(0xFF9CA3AF), fontSize = 14.sp) }
             else -> LazyColumn(
-                Modifier.fillMaxSize(),
+                Modifier.fillMaxWidth().weight(1f),
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp)
             ) {
                 // Repeat visits can share a visitor ID; positional keys prevent duplicate-key crashes.
