@@ -15,7 +15,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView // NEW IMPORT FOR VIDEO PLAYER
+import androidx.compose.ui.viewinterop.AndroidView
 import coil3.compose.AsyncImage
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.verticalScroll
@@ -40,7 +40,7 @@ private object LeaderboardChromaCache {
     val images = ConcurrentHashMap<String, ImageBitmap>()
 }
 
-// 100% GUARANTEE CHROMA KEY VIDEO PLAYER (USING CANVAS LOGIC)
+// 100% GUARANTEE CHROMA KEY VIDEO PLAYER (WITH NO BLACK SCREEN FALLBACK)
 @Composable
 fun ChromaVideoPlayer(url: String, modifier: Modifier = Modifier) {
     AndroidView(
@@ -57,12 +57,12 @@ fun ChromaVideoPlayer(url: String, modifier: Modifier = Modifier) {
                     <html>
                     <head>
                     <style>
-                        body { margin: 0; overflow: hidden; background-color: transparent; }
-                        canvas { width: 100%; height: 100%; object-fit: contain; }
+                        body { margin: 0; overflow: hidden; background-color: transparent !important; }
+                        canvas { width: 100%; height: 100%; object-fit: contain; background: transparent; }
                         video { display: none; }
                     </style>
                     </head>
-                    <body>
+                    <body style="background:transparent;">
                     <video id="v" src="$url" autoplay loop muted playsinline crossorigin="anonymous"></video>
                     <canvas id="c"></canvas>
                     <script>
@@ -75,22 +75,32 @@ fun ChromaVideoPlayer(url: String, modifier: Modifier = Modifier) {
                             c.height = v.videoHeight || 400;
                         });
                         
+                        // Agar video load hone mein error aaye toh canvas clear rakho (No Black Screen)
+                        v.addEventListener('error', function() {
+                            ctx.clearRect(0, 0, c.width, c.height);
+                        });
+
                         v.addEventListener('play', function() {
                             function step() {
                                 if(v.paused || v.ended) return;
-                                ctx.drawImage(v, 0, 0, c.width, c.height);
-                                let frame = ctx.getImageData(0, 0, c.width, c.height);
-                                let l = frame.data.length / 4;
-                                for (let i = 0; i < l; i++) {
-                                    let r = frame.data[i * 4 + 0];
-                                    let g = frame.data[i * 4 + 1];
-                                    let b = frame.data[i * 4 + 2];
-                                    // 100% Green Removal Logic
-                                    if (g > 50 && g > r * 1.15 && g > b * 1.15) {
-                                        frame.data[i * 4 + 3] = 0;
+                                try {
+                                    ctx.drawImage(v, 0, 0, c.width, c.height);
+                                    let frame = ctx.getImageData(0, 0, c.width, c.height);
+                                    let l = frame.data.length / 4;
+                                    for (let i = 0; i < l; i++) {
+                                        let r = frame.data[i * 4 + 0];
+                                        let g = frame.data[i * 4 + 1];
+                                        let b = frame.data[i * 4 + 2];
+                                        // 100% Green Removal Logic
+                                        if (g > 50 && g > r * 1.15 && g > b * 1.15) {
+                                            frame.data[i * 4 + 3] = 0;
+                                        }
                                     }
+                                    ctx.putImageData(frame, 0, 0);
+                                } catch(e) {
+                                    // Crossorigin ya render issue hone par blank/transparent chor do
+                                    ctx.clearRect(0, 0, c.width, c.height);
                                 }
-                                ctx.putImageData(frame, 0, 0);
                                 requestAnimationFrame(step);
                             }
                             requestAnimationFrame(step);
@@ -280,7 +290,7 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                                     .clip(RoundedCornerShape(50)),
                                 contentScale = ContentScale.Crop
                             )
-                            // TOP 1 VIDEO FRAME APPLIED HERE (100% Chroma key Guarantee)
+                            // TOP 1 VIDEO FRAME WITH TRANSPARENT FALLBACK (NO BLACK SCREEN)
                             ChromaVideoPlayer(
                                 url = raw + "VID_20261106_003652_300_bsl.mp4",
                                 modifier = Modifier.requiredSize(260.dp)
@@ -334,7 +344,7 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 8.dp)
-                            .padding(top = 35.dp) // YAHAN 45 SE 35 KAR DIYA HAI BSS 
+                            .padding(top = 35.dp) 
                             .background(Color(0xE60A0505), RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)) 
                             .border(1.dp, Color(0xFFD4AF37), RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
                     ) {
