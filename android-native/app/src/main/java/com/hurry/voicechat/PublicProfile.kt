@@ -217,6 +217,15 @@ fun PublicProfileScreen(
     var showActionSheet by remember { mutableStateOf(false) }
     var showUserReport by remember { mutableStateOf(false) }
     var isUserBlocked by remember(targetUser?.uid, targetUser?.id, targetUser?.accountId) { mutableStateOf(false) }
+    var blockedByPeer by remember(targetUser?.uid, targetUser?.id, targetUser?.accountId) { mutableStateOf(false) }
+    LaunchedEffect(currentUserId, targetUser?.accountId, targetUser?.uid, targetUser?.id) {
+        val targetId = targetUser?.accountId?.takeIf { it.isNotBlank() } ?: targetUser?.uid?.takeIf { it.isNotBlank() } ?: targetUser?.id.orEmpty()
+        if (currentUserId.isNotBlank() && targetId.isNotBlank()) {
+            val state = withContext(Dispatchers.IO) { fetchZyoraUserBlockState(currentUserId, targetId) }
+            isUserBlocked = state.first
+            blockedByPeer = state.second
+        }
+    }
     var showChat by remember { mutableStateOf(false) }
 
     var fullImageIndex by remember { mutableStateOf<Int?>(null) }
@@ -932,9 +941,20 @@ fun PublicProfileScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable {
-                                isUserBlocked = !isUserBlocked
-                                Toast.makeText(context, if (isUserBlocked) "User blocked" else "User unblocked", Toast.LENGTH_SHORT).show()
+                                val shouldBlock = !isUserBlocked
+                                val targetId = targetUser?.accountId?.takeIf { it.isNotBlank() } ?: targetUser?.uid?.takeIf { it.isNotBlank() } ?: targetUser?.id.orEmpty()
                                 showActionSheet = false
+                                kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
+                                    val saved = updateZyoraUserBlock(context, currentUserId, targetId, shouldBlock)
+                                    android.os.Handler(android.os.Looper.getMainLooper()).post {
+                                        if (saved) {
+                                            isUserBlocked = shouldBlock
+                                            Toast.makeText(context, if (shouldBlock) "User blocked" else "User unblocked", Toast.LENGTH_SHORT).show()
+                                        } else {
+                                            Toast.makeText(context, "Could not update block. Try again.", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                }
                             }
                             .padding(vertical = 18.dp),
                         color = Color.White,
