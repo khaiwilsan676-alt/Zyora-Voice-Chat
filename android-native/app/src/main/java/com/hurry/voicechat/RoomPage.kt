@@ -1880,7 +1880,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                     }
                 },
                 onInvite={
-                    val targetId = profileSeat.accountId.trim()
+                    val targetId = seat.accountId.trim()
                     val inviteSeat = seats.firstOrNull { !it.occupied && !it.locked }
                     val socket = roomSocketRef.value
                     if (targetId.isNotBlank() && targetId != accountId && inviteSeat != null && socket?.connected() == true) {
