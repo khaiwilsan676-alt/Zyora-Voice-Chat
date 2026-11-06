@@ -1822,10 +1822,11 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
             isRoomFollowed=followed,
             onToggleRoomFollow={ next ->
                 if (accountId.isNotBlank() && accountId != "guest" && accountId != roomId) {
-                    followed=next
+                    val previousFollowState = followed
+                    followed = next
                     onFollowToggle(roomId,next)
                     CoroutineScope(Dispatchers.IO).launch {
-                        runCatching {
+                        val result = runCatching {
                             val encodedUser=java.net.URLEncoder.encode(accountId,"UTF-8")
                             val encodedRoom=java.net.URLEncoder.encode(roomId,"UTF-8")
                             val url=if(next) java.net.URL("https://zyora-server.onrender.com/api/room-follows") else java.net.URL("https://zyora-server.onrender.com/api/room-follows?userId=$encodedUser&roomId=$encodedRoom")
@@ -1834,17 +1835,23 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                                 connectTimeout=8000; readTimeout=8000
                                 if(next) { doOutput=true; setRequestProperty("Content-Type","application/json") }
                             }
-                            if(next) {
-                                val payload=JSONObject().put("userId",accountId).put("roomId",roomId)
-                                    .put("roomName",roomName).put("roomImage",roomImage).put("roomCountry",roomOwner.country)
-                                    .put("followerName",roomDisplayName).put("followerImage",roomDisplayImage)
-                                    .put("followerCountry",cachedCurrentProfile?.optString("country").orEmpty())
-                                conn.outputStream.use { it.write(payload.toString().toByteArray(Charsets.UTF_8)) }
+                            try {
+                                if(next) {
+                                    val payload=JSONObject().put("userId",accountId).put("roomId",roomId)
+                                        .put("roomName",roomName).put("roomImage",roomImage).put("roomCountry",roomOwner.country)
+                                        .put("followerName",roomDisplayName).put("followerImage",roomDisplayImage)
+                                        .put("followerCountry",cachedCurrentProfile?.optString("country").orEmpty())
+                                    conn.outputStream.use { it.write(payload.toString().toByteArray(Charsets.UTF_8)) }
+                                }
+                                if(conn.responseCode !in 200..299) error("Room follow update failed")
+                            } finally { conn.disconnect() }
+                        }
+                        if (result.isFailure) {
+                            android.util.Log.e("ZyoraRoomFollow","Room follow update failed",result.exceptionOrNull())
+                            withContext(Dispatchers.Main) {
+                                followed = previousFollowState
+                                android.widget.Toast.makeText(appContext, "Room follow update failed. Try again.", android.widget.Toast.LENGTH_SHORT).show()
                             }
-                            if(conn.responseCode !in 200..299) error("Room follow update failed")
-                            conn.disconnect()
-                        }.onFailure {
-                            android.util.Log.e("ZyoraRoomFollow","Room follow update failed",it)
                         }
                     }
                 }
