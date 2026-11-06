@@ -167,6 +167,31 @@ private fun ThickBar(
     }
 }
 
+object ZyoraKeptRoomSocketSession {
+    @Volatile var socket: Socket? = null
+    @Volatile var roomId: String = ""
+    @Volatile var accountId: String = ""
+
+    fun retain(value: Socket, room: String, account: String) {
+        socket = value
+        roomId = room
+        accountId = account
+    }
+
+    fun take(room: String, account: String): Socket? {
+        val active = socket
+        return if (roomId == room && accountId == account && active?.connected() == true) active else null
+    }
+
+    fun clear(value: Socket) {
+        if (socket === value) {
+            socket = null
+            roomId = ""
+            accountId = ""
+        }
+    }
+}
+
 data class RoomPageOwner(val id:String="",val uid:String="",val accountId:String="",val name:String="Room",val image:String="",val country:String="")
 data class RoomPageCurrentUser(val id:String="",val uid:String="",val accountId:String="",val name:String="User",val image:String="")
 data class NativeRoomSeat(val number:Int,val occupied:Boolean=false,val locked:Boolean=false,val muted:Boolean=false,val selfMuted:Boolean=false,val speaking:Boolean=false,val userName:String="",val userImage:String="",val accountId:String="",val gifSrc:String="",val gifTimestamp:Long=0L)
@@ -715,7 +740,11 @@ fun RoomPage(
             reconnectionDelayMax = 30000
             timeout = 20000
         }
-        val roomSocket = IO.socket("https://zyora-server.onrender.com", roomSocketOptions)
+        // Keep the same live Socket.IO connection while the room is minimized.
+        // Reusing it preserves server presence and occupied seats without a second room_join.
+        val retainedRoomSocket = ZyoraKeptRoomSocketSession.take(roomId, accountId)
+        val roomSocket = retainedRoomSocket ?: IO.socket("https://zyora-server.onrender.com", roomSocketOptions)
+        val reusedKeptRoomSocket = retainedRoomSocket != null
         roomSocketRef.value=roomSocket
         val mainHandler = Handler(Looper.getMainLooper())
         val presenceListener = Emitter.Listener { args ->
@@ -1059,9 +1088,22 @@ fun RoomPage(
         roomSocket.on("lucky_bag_banner",luckyBagBannerListener)
         roomSocket.on("wallet_balance_updated",walletBalanceListener)
         roomSocket.on(Socket.EVENT_CONNECT,connectListener)
-        roomSocket.connect()
+        if (roomSocket.connected()) {
+            // The retained socket is already a room member. Only refresh snapshots;
+            // do not emit room_join or generate another "Enter the Room" event.
+            roomSocket.emit("room_presence_request", JSONObject().put("roomId", roomId))
+            roomSocket.emit("room_seats_request", JSONObject().put("roomId", roomId))
+            if (latestShowChat) roomSocket.emit("room_chat_view", JSONObject().put("roomId", roomId).put("userId", accountId).put("active", true))
+        } else {
+            roomSocket.connect()
+        }
         onDispose {
-            if (!keepingRoomForMini) {
+            if (keepingRoomForMini) {
+                // Keep the actual socket connected in the background. Disconnecting it
+                // would trigger server cleanup and release the user's occupied seat.
+                ZyoraKeptRoomSocketSession.retain(roomSocket, roomId, accountId)
+            } else {
+                ZyoraKeptRoomSocketSession.clear(roomSocket)
                 roomSocket.emit("room_chat_view", JSONObject().put("roomId", roomId).put("userId", accountId).put("active", false))
                 roomSocket.emit("room_leave",JSONObject().put("roomId",roomId).put("userId",accountId).put("accountId",accountId))
             }
@@ -1082,8 +1124,10 @@ fun RoomPage(
             roomSocket.off("lucky_bag_banner",luckyBagBannerListener)
             roomSocket.off("wallet_balance_updated",walletBalanceListener)
             roomSocket.off(Socket.EVENT_CONNECT,connectListener)
-            roomSocket.disconnect()
-            roomSocket.close()
+            if (!keepingRoomForMini) {
+                roomSocket.disconnect()
+                roomSocket.close()
+            }
             roomSocketRef.value=null
             mainHandler.post { backendRoomUsers.clear() }
         }
