@@ -514,6 +514,29 @@ app.get("/api/rooms/image", async (req, res) => {
   }
 });
 
+app.post("/api/room-access", async (req, res) => {
+  try {
+    if (!db) return res.status(503).json({ error: "Room access check unavailable" });
+    const roomId = String(req.body?.roomId || "").trim();
+    const userId = String(req.body?.userId || "").trim();
+    const password = String(req.body?.password || "");
+    if (!roomId || !userId) return res.status(400).json({ error: "Missing room or user ID" });
+    const room = await db.collection("rooms").findOne({
+      $or: [{ accountId: roomId }, { id: roomId }, { roomId }]
+    });
+    if (!room) return res.status(404).json({ error: "Room not found" });
+    const ownerId = String(room.accountId || room.id || room.roomId || roomId);
+    if (userId === ownerId) return res.json({ success: true, allowed: true, owner: true });
+    if (!room.isLocked) return res.json({ success: true, allowed: true });
+    const expected = String(room.roomPassword || "");
+    if (!expected || password !== expected) return res.status(401).json({ success: false, allowed: false, error: "Password incorrect" });
+    return res.json({ success: true, allowed: true });
+  } catch (error) {
+    console.error("POST /api/room-access error:", error);
+    return res.status(500).json({ error: "Room access check failed" });
+  }
+});
+
 app.get("/api/rooms", async (req, res) => {
   try {
     const roomId = req.query.roomId;
@@ -561,6 +584,7 @@ app.get("/api/rooms", async (req, res) => {
         return res.status(404).json({ error: "Room not found" });
       }
       const safeRoom = { ...room };
+      if (String(req.query.ownerId || "") !== String(room.accountId || room.id || room.roomId || roomId)) delete safeRoom.roomPassword;
       const roomImage = String(safeRoom.dp || safeRoom.image || safeRoom.roomDp || safeRoom["Room dp"] || '').trim();
       if (roomImage.startsWith('data:image/')) {
         const base = `${req.protocol}://${req.get('host')}`;
@@ -602,6 +626,7 @@ app.get("/api/rooms", async (req, res) => {
     const base = `${req.protocol}://${req.get('host')}`;
     const safeRooms = rooms.map((room) => {
       const safeRoom = { ...room };
+      delete safeRoom.roomPassword;
       const roomImage = String(safeRoom.dp || safeRoom.image || safeRoom.roomDp || safeRoom["Room dp"] || '').trim();
       if (roomImage.startsWith('data:image/')) {
         const id = encodeURIComponent(String(safeRoom.accountId || safeRoom.id || safeRoom.roomId || ''));
