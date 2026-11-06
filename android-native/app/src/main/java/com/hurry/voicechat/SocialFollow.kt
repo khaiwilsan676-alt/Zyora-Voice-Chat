@@ -54,8 +54,10 @@ object SocialFollowApi {
     suspend fun toggle(context:Context,userId:String,targetId:String,follow:Boolean):SocialFollowSnapshot?=withContext(Dispatchers.IO){
         if(userId.isBlank()||targetId.isBlank()||userId==targetId)return@withContext null
         runCatching {
-            val root=request("/api/follows","POST",JSONObject().put("followerId",userId).put("targetUid",targetId).put("action",if(follow)"follow" else "unfollow"))
-            val snap=SocialFollowSnapshot(root.optInt("followers"),root.optInt("followingCount"),root.optInt("friends"),root.optBoolean("isFollowing",follow))
+            request("/api/follows","POST",JSONObject().put("followerId",userId).put("targetUid",targetId).put("action",if(follow)"follow" else "unfollow"))
+            // Re-read canonical graph after mutation so legacy UID/account-number edges are deduplicated.
+            val root=request("/api/follows?targetUid=${enc(targetId)}&followerId=${enc(userId)}")
+            val snap=SocialFollowSnapshot(root.optInt("followers"),root.optInt("followingCount"),root.optInt("friends"),root.optBoolean("isFollowing",root.optBoolean("following")))
             saveSnapshot(context,targetId,snap); snap
         }.getOrNull()
     }
