@@ -94,7 +94,6 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
     val screenHeight = LocalConfiguration.current.screenHeightDp.dp
     val screenWidthDp = LocalConfiguration.current.screenWidthDp
     
-    // Top 1,2,3 Frames enlarged considerably
     val podiumTopWidth = (screenWidthDp * 0.55f).coerceAtMost(240f).dp
     val podiumSideWidth = (screenWidthDp * 0.50f).coerceAtMost(220f).dp
 
@@ -118,7 +117,7 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
         }
         Column(Modifier.fillMaxSize().statusBarsPadding()) {
             
-            // TOP ROW: Back Button + Simple Text Tabs with Smile + Rules Button
+            // TOP ROW
             Row(Modifier.fillMaxWidth().height(48.dp).padding(horizontal = 12.dp), verticalAlignment=Alignment.CenterVertically) {
                 AsyncImage(
                     model = raw + "file_0000000051d881f5af4f9cf84a56dcd3.png",
@@ -145,7 +144,6 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                             )
                             if (tab == id) {
                                 Spacer(Modifier.height(4.dp))
-                                // Golden Smile (Curve) Indicator
                                 Canvas(modifier = Modifier.size(width = 24.dp, height = 6.dp)) {
                                     drawArc(
                                         color = Color(0xFFE7B865),
@@ -170,7 +168,7 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                 )
             }
             
-            // SECOND ROW: Left Aligned Pill for Daily / Weekly / Monthly
+            // SECOND ROW
             Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp), horizontalArrangement = Arrangement.Start) {
                 Row(
                     Modifier.width(220.dp).height(30.dp)
@@ -201,22 +199,25 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
             LazyColumn(Modifier.weight(1f).fillMaxWidth(),contentPadding=PaddingValues(bottom=0.dp),verticalArrangement=Arrangement.spacedBy(0.dp)) {
                 item {
                     Column(Modifier.fillMaxWidth().padding(top=18.dp,bottom=24.dp),horizontalAlignment=Alignment.CenterHorizontally) {
-                        // Increased height and width of Top Frames
-                        LeaderboardChromaImage(url=raw+"file_00000000a0e48207ade38b36ab946ecb.png",contentDescription="Rank 1 frame",modifier=Modifier.width(podiumTopWidth).height(500.dp),contentScale=ContentScale.Fit)
+                        Box(modifier = Modifier.width(podiumTopWidth).height(200.dp), contentAlignment = Alignment.Center) {
+                            LeaderboardChromaImage(url=raw+"file_00000000a0e48207ade38b36ab946ecb.png",contentDescription="Rank 1 frame",modifier=Modifier.requiredSize(1000.dp),contentScale=ContentScale.Fit)
+                        }
                         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically) {
-                            LeaderboardChromaImage(url=raw+"file_0000000069b88207b9fdd01576b71ee9.png",contentDescription="Rank 2 frame",modifier=Modifier.width(podiumSideWidth).height(400.dp),contentScale=ContentScale.Fit)
-                            LeaderboardChromaImage(url=raw+"file_00000000ecc882079f34a9356b53dc8e.png",contentDescription="Rank 3 frame",modifier=Modifier.width(podiumSideWidth).height(400.dp),contentScale=ContentScale.Fit)
+                            Box(modifier = Modifier.width(podiumSideWidth).height(175.dp), contentAlignment = Alignment.Center) {
+                                LeaderboardChromaImage(url=raw+"file_0000000069b88207b9fdd01576b71ee9.png",contentDescription="Rank 2 frame",modifier=Modifier.requiredSize(500.dp),contentScale=ContentScale.Fit)
+                            }
+                            Box(modifier = Modifier.width(podiumSideWidth).height(175.dp), contentAlignment = Alignment.Center) {
+                                LeaderboardChromaImage(url=raw+"file_00000000ecc882079f34a9356b53dc8e.png",contentDescription="Rank 3 frame",modifier=Modifier.requiredSize(500.dp),contentScale=ContentScale.Fit)
+                            }
                         }
                     }
                 }
                 
-                // Ranks 4 to 50
                 items(47) { i ->
                     Row(
                         Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Rank Number
                         Text(
                             text = "${i + 4}",
                             color = Color(0xFFE7B865),
@@ -225,10 +226,7 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                             modifier = Modifier.width(32.dp),
                             textAlign = TextAlign.Center
                         )
-                        
                         Spacer(Modifier.width(6.dp))
-                        
-                        // Protocol User Avatar
                         AsyncImage(
                             model = raw + "default_avatar.png",
                             contentDescription = "Avatar",
@@ -238,10 +236,7 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                                 .border(1.5.dp, Color(0x33FFFFFF), RoundedCornerShape(50)),
                             contentScale = ContentScale.Crop
                         )
-                        
                         Spacer(Modifier.width(12.dp))
-                        
-                        // Middle Section - Name, Flag, Gender (Restored original style)
                         Column(Modifier.weight(1f)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
@@ -253,12 +248,8 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                                     overflow = TextOverflow.Ellipsis
                                 )
                                 Spacer(Modifier.width(6.dp))
-                                
-                                // Flag
                                 Text(if (i % 2 == 0) "🇮🇳" else "🇸🇦", fontSize = 14.sp) 
                                 Spacer(Modifier.width(4.dp))
-                                
-                                // Gender Icon
                                 Box(
                                     modifier = Modifier
                                         .size(16.dp)
@@ -269,8 +260,6 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                                 }
                             }
                             Spacer(Modifier.height(4.dp))
-                            
-                            // Restored Original Level Style
                             Box(
                                 modifier = Modifier
                                     .background(Color(0xFF3B82F6), RoundedCornerShape(8.dp))
@@ -279,8 +268,6 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                                 Text("Lv.${10 + i}", color = Color.White, fontSize = 9.sp)
                             }
                         }
-                        
-                        // Right Side - Coins Value and Icon
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
                                 text = "${796 - (i * 12)}.9K",
@@ -289,7 +276,6 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                                 fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
                             )
                             Spacer(Modifier.width(6.dp))
-                            // Gold Coin Icon
                             Box(
                                 modifier = Modifier
                                     .size(20.dp)
@@ -303,25 +289,23 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                 }
             }
             
-            // Bottom user row - Edge to Edge Background Image
+            // BOTTOM BAR FIXED - Offset added to remove any extra line, height is back to strict 72.dp
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(72.dp)
+                    .offset(y = (-1).dp) // Yeh laga diya hai extra line hatane ke liye
+                    .height(100.dp)
             ) {
-                // Full Width/Height Image Background (Edge to Edge)
                 AsyncImage(
                     model = raw + "IMG_20261106_021443.png",
                     contentDescription = "Bottom Bar Background",
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
                 )
-                
-                // User Details directly overlapping on the image
                 Row(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = 24.dp), // Thoda inner space text aur avatar ke liye
+                        .padding(horizontal = 24.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     AsyncImage(
