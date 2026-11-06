@@ -199,3 +199,12 @@ Current documentation does not certify that all historical features are build-, 
 - Native `Followpage.kt`: Fans, Following, and mutual Friends now load real profile rows with avatar, name, gender, country flag, and account ID (official ID image where applicable). Existing no-data artwork remains the empty state.
 - Native `MeScreen.kt`: Friends, Fans, and Following counts now come from the server/cache; unresolved counts display a dash rather than a misleading hardcoded zero. A Socket.IO follow-update listener refreshes these counts while Me remains mounted.
 - Verification: source changes committed. Render deployment, native compile, cache/reconnect behavior, and two-account follow/unfollow tests remain pending. Existing API trusts caller-supplied IDs; Firebase-token authorization remains a separate required security task.
+
+
+## 18. Follow graph root-cause hardening (2026-11-06)
+- Canonical follow identity is shared across Room Profile, Public Profile, Fans, Friends, Following, and Me counts.
+- Backend GET /api/follows now resolves legacy Firebase UID/public account-number aliases in one batched users query before deduplicating incoming/outgoing edges. This prevents the same person being counted more than once when older clients saved UID edges and newer clients saved account-number edges, without issuing one database query per follow row.
+- Native APK compile failure found in CoinsNativePage.kt: AgentContent onlineById had malformed mutableStateOf generic syntax. Corrected to an explicitly typed Map<String, Boolean>; no UI change.
+- Backend commit: 47be4d8726de6b3fed75ccb6c4c7d7297a808758 (Zyora-Server).
+- Native compile fix commit: 00fd47aa5150e33bb5aac23823e0c4cd2f37b298 (Zyora-Voice-Chat).
+- Remaining verification: Render must deploy the backend commit; rerun Native APK workflow and test follow/unfollow across two accounts, including legacy UID and numeric account ID aliases. Do not claim runtime verification until these checks pass.
