@@ -135,7 +135,8 @@ fun Fourgride(
     luckyBagSenderImage: String = "",
     luckyBagRoomId: String = "",
     luckyBagRoomName: String = "Room",
-    onLuckyBagSent: ((String, String, Long, Int, String) -> Unit)? = null
+    onLuckyBagSent: ((String, String, Long, Int, String) -> Unit)? = null,
+    isRoomOwner: Boolean = false
 ) {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("hurry_room_tools", android.content.Context.MODE_PRIVATE) }
@@ -245,7 +246,7 @@ fun Fourgride(
         Column(
             Modifier.fillMaxWidth()
                 .clip(RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp))
-                .background(Color.Black.copy(alpha = 0.85f))
+                .background(Color.Black.copy(alpha = 0.96f))
                 .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 24.dp)
                 .heightIn(max = LocalConfiguration.current.screenHeightDp.dp * 0.70f)
         ) {
@@ -254,8 +255,10 @@ fun Fourgride(
             }
 
             Row(Modifier.fillMaxWidth().padding(bottom = 16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                ToolCell(Modifier.weight(1f), "Clear-Chat", base + "IMG_20261028_182124.png", onClick = onClearChat)
-                ToolCell(Modifier.weight(1f), "Public msg", base + "IMG_20261028_182153.png", toggle = !publicMsgOff, onClick = onTogglePublicMsg)
+                if (isRoomOwner) {
+                    ToolCell(Modifier.weight(1f), "Clear-Chat", base + "IMG_20261028_182124.png", onClick = onClearChat)
+                    ToolCell(Modifier.weight(1f), "Public msg", base + "IMG_20261028_182153.png", toggle = !publicMsgOff, onClick = onTogglePublicMsg)
+                }
                 ToolCell(Modifier.weight(1f), "Entry Effect", base + "IMG_20261028_182218.png", toggle = entryEffect, onClick = {
                     entryEffect = !entryEffect
                     prefs.edit().putBoolean("entry_effect", entryEffect).apply()
@@ -267,7 +270,9 @@ fun Fourgride(
             }
 
             Row(Modifier.fillMaxWidth().padding(bottom = 16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                ToolCell(Modifier.weight(1f), "Music", base + "IMG_20261028_182305.png", onClick = { MusicPlaybackState.wasPlayedOnMusicPage = false; MusicPlaybackState.musicPageBackPressed = false; showMusic = true })
+                if (isRoomOwner) {
+                    ToolCell(Modifier.weight(1f), "Music", base + "IMG_20261028_182305.png", onClick = { MusicPlaybackState.wasPlayedOnMusicPage = false; MusicPlaybackState.musicPageBackPressed = false; showMusic = true })
+                }
                 Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
                     AsyncImage(model = base + "IMG_20261028_182329.png", contentDescription = "Speaker", modifier = Modifier.size(48.dp), contentScale = ContentScale.Fit)
                     Row(Modifier.padding(top = 4.dp).clickable { onToggleSpeaker() }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -282,9 +287,7 @@ fun Fourgride(
             Text("Play Tools", modifier = Modifier.padding(top = 8.dp, bottom = 8.dp), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 ToolCell(Modifier.weight(1f), "Lucky bag", base + "IMG_20261028_182446.png", onClick = { hideToolsAfterLucky = true; showLuckyBag = true })
-                ToolCell(Modifier.weight(1f), "Pk Battle", base + "IMG_20261028_182422.png", onClick = {})
-                Spacer(Modifier.weight(1f))
-                Spacer(Modifier.weight(1f))
+                if (isRoomOwner) ToolCell(Modifier.weight(1f), "Pk Battle", base + "IMG_20261028_182422.png", onClick = {})
             }
         }
     }
