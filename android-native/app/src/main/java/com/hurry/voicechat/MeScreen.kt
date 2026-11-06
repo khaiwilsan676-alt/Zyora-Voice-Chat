@@ -27,6 +27,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -74,7 +75,11 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
     val savedAccount = prefs.getString("accountNumber", null)?.takeIf { it.isNotBlank() }
         ?: prefs.getString("accountId", "") ?: ""
     val account = savedAccount.ifBlank { nativeMeAccountNumber(uid) }
-    var visitorCount by remember(uid) { mutableIntStateOf(0) }\n    var fansCount by remember(uid) { mutableIntStateOf(0) }\n    var friendsCount by remember(uid) { mutableIntStateOf(0) }\n    var followingCount by remember(uid) { mutableIntStateOf(0) }\n    var followCountsReady by remember(uid) { mutableStateOf(false) }
+    var visitorCount by remember(uid) { mutableIntStateOf(0) }
+    var fansCount by remember(uid) { mutableIntStateOf(0) }
+    var friendsCount by remember(uid) { mutableIntStateOf(0) }
+    var followingCount by remember(uid) { mutableIntStateOf(0) }
+    var followCountsReady by remember(uid) { mutableStateOf(false) }
     val visitorUserId = prefs.getString("accountId", "").orEmpty().ifBlank { uid }
     LaunchedEffect(visitorUserId) {
         if (visitorUserId.isNotBlank()) {
@@ -82,6 +87,7 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
             SocialFollowApi.snapshot(context, visitorUserId, visitorUserId)?.let { fansCount=it.followers; followingCount=it.followingCount; friendsCount=it.friends; followCountsReady=true }
         }
     }
+    val followScope = rememberCoroutineScope()
     DisposableEffect(visitorUserId) {
         if (visitorUserId.isBlank()) return@DisposableEffect onDispose { }
         val socket = IO.socket("https://zyora-server.onrender.com", IO.Options().apply { transports=arrayOf("websocket"); reconnection=true })
@@ -90,7 +96,7 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
                 fansCount=it.followers; followingCount=it.followingCount; friendsCount=it.friends; followCountsReady=true
             }
         }
-        val listener = Emitter.Listener { scope.launch { refresh() } }
+        val listener = Emitter.Listener { followScope.launch { refresh() } }
         socket.on("follow_updated", listener)
         socket.on("profile_follow_updated", listener)
         socket.connect()
