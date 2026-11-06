@@ -260,3 +260,11 @@ Current documentation does not certify that all historical features are build-, 
 - No UI redesign or layout changes.
 - Room Profile Invite: tapping Invite on a non-seated user's room profile now sends that exact user the existing Socket.IO seat invitation for the first available unlocked seat, using the same `room_seat_invite_send` flow as the seat menu. No UI changes.
 - Seat Lock: when the room owner locks an occupied seat, the server clears the occupant and live mic/emoji state before broadcasting the locked seat; unlocking preserves the empty seat. No UI changes.
+
+## 24 Room info sharing and room chat image support (2026-11-07)
+- RoomInfo.kt: the Room Info three-dot menu offers Report and room Follow/Followed actions, retaining the Public Profile danger-sheet layout. Room follow mutations use the room-specific /api/room-follows endpoint and room ID, not the owner's user-follow relationship.
+- Room Info Share in Zyora loads the room owner's Me → Fans list through SocialFollowApi.list(..., "fans") and sends the selected fan a private-message room invitation containing that room's ID, name, and DP. The existing white 12dp invitation card opens the exact shared room; special IDs keep their ID image.
+- ProfilePersistence.kt: added the shared uploadChatImage uploader used by direct and room chats. It validates the 5 MB limit and uses dedicated media folders, avoiding accidental writes to the user-DP folder.
+- RoomPage.kt: the room chat image icon opens the system image picker, uploads to room-chat-image, broadcasts the image URL over the existing room Socket.IO message event, and renders a tappable image with a full-screen preview and top-left close control.
+- Direct-chat image messages retain their existing image picker, image preview, and close control. Existing chat and room layouts were left unchanged.
+- Status: source changes committed. Native APK build and live multi-device image/room-invitation verification remain pending.
