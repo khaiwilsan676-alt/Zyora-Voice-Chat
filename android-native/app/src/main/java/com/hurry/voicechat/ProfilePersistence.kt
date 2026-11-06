@@ -164,3 +164,34 @@ internal object ProfilePersistence {
         }
     }.getOrDefault(emptyList())
 }
+
+
+internal suspend fun uploadChatImage(
+    context: Context,
+    uri: Uri,
+    messageId: String,
+    folder: String
+): String? = withContext(Dispatchers.IO) {
+    if (messageId.isBlank()) return@withContext null
+    val mimeType = context.contentResolver.getType(uri)
+        ?.takeIf { it in setOf("image/jpeg", "image/png", "image/webp", "image/gif") }
+        ?: "image/jpeg"
+    val bytes = runCatching {
+        context.contentResolver.openInputStream(uri)?.use { input ->
+            val output = ByteArrayOutputStream()
+            val buffer = ByteArray(16 * 1024)
+            var total = 0
+            while (true) {
+                val count = input.read(buffer)
+                if (count < 0) break
+                total += count
+                if (total > 5 * 1024 * 1024) return@withContext null
+                output.write(buffer, 0, count)
+            }
+            output.toByteArray()
+        }
+    }.getOrNull() ?: return@withContext null
+    if (bytes.isEmpty() || bytes.size > 5 * 1024 * 1024) return@withContext null
+    val encoded = android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
+    ProfilePersistence.uploadImageToMongoDB("data:$mimeType;base64,$encoded", messageId, folder)
+}
