@@ -403,12 +403,54 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
     ) { mutableStateOf<HurryRoom?>(null) }
     var openedRoom by remember { mutableStateOf<HurryRoom?>(null) }
     var roomKickNotice by remember { mutableStateOf<JSONObject?>(null) }
+    var roomBlockedPopup by remember { mutableStateOf<JSONObject?>(null) }
     var kickNoticeNow by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    var blockedPopupNow by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    val roomKickPrefs = remember { context.getSharedPreferences("zyora_room_kick_restrictions", android.content.Context.MODE_PRIVATE) }
     LaunchedEffect(roomKickNotice) {
         while (roomKickNotice != null) {
             kickNoticeNow = System.currentTimeMillis()
             kotlinx.coroutines.delay(1000)
         }
+    }
+    LaunchedEffect(roomBlockedPopup) {
+        if (roomBlockedPopup != null) {
+            blockedPopupNow = System.currentTimeMillis()
+            kotlinx.coroutines.delay(3000)
+            roomBlockedPopup = null
+        }
+    }
+    fun rememberRoomKick(notice: JSONObject) {
+        val kickedRoomId = notice.optString("roomId")
+        val expiry = notice.optLong("expiresAt", 0L)
+        if (kickedRoomId.isNotBlank() && expiry > System.currentTimeMillis()) {
+            val all = runCatching { JSONObject(roomKickPrefs.getString("active", "{}").orEmpty()) }.getOrDefault(JSONObject())
+            all.put(kickedRoomId, JSONObject(notice.toString()).put("expiresAt", expiry))
+            roomKickPrefs.edit().putString("active", all.toString()).apply()
+        }
+    }
+    fun tryOpenRoom(room: HurryRoom) {
+        val targetRoomId = room.id.ifBlank { room.accountId }
+        val all = runCatching { JSONObject(roomKickPrefs.getString("active", "{}").orEmpty()) }.getOrDefault(JSONObject())
+        val restriction = all.optJSONObject(targetRoomId)
+        val expiresAt = restriction?.optLong("expiresAt", 0L) ?: 0L
+        if (expiresAt > System.currentTimeMillis()) {
+            tab = HurryTab.HOME
+            openedRoom = null
+            roomBlockedPopup = JSONObject()
+                .put("roomId", targetRoomId)
+                .put("expiresAt", expiresAt)
+            return
+        }
+        if (restriction != null) {
+            all.remove(targetRoomId)
+            roomKickPrefs.edit().putString("active", all.toString()).apply()
+        }
+        openedRoom = room
+    }
+    fun tryOpenRoomById(targetRoomId: String) {
+        if (targetRoomId.isBlank()) return
+        tryOpenRoom(HurryRoom(id=targetRoomId,name="Room",image="",country="",accountId=targetRoomId))
     }
     var openedChat by remember { mutableStateOf<Triple<String, String, String>?>(null) }
     var openedMePage by remember { mutableStateOf<String?>(null) }
@@ -438,11 +480,11 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
     HurryTheme {
         Box(Modifier.fillMaxSize().navigationBarsPadding()) {
             if (openedPublicProfile != null) {
-                PublicProfile(user=openedPublicProfile!!,onBack={openedPublicProfile=null},onMessage={ val profile = openedPublicProfile!!; val receiverId = profile.accountId?.takeIf { it.isNotBlank() } ?: profile.id?.takeIf { it.isNotBlank() } ?: profile.uid.orEmpty(); if (receiverId.isNotBlank() && receiverId != userId) { openedChat = Triple(receiverId, profile.name, profile.image); openedPublicProfile = null } },currentUserId=userId,onJoinRoom={ targetRoomId -> openedPublicProfile=null; openedRoom=HurryRoom(id=targetRoomId,name="Room",image="",country="",accountId=targetRoomId) })
+                PublicProfile(user=openedPublicProfile!!,onBack={openedPublicProfile=null},onMessage={ val profile = openedPublicProfile!!; val receiverId = profile.accountId?.takeIf { it.isNotBlank() } ?: profile.id?.takeIf { it.isNotBlank() } ?: profile.uid.orEmpty(); if (receiverId.isNotBlank() && receiverId != userId) { openedChat = Triple(receiverId, profile.name, profile.image); openedPublicProfile = null } },currentUserId=userId,onJoinRoom={ targetRoomId -> openedPublicProfile=null; tryOpenRoomById(targetRoomId) })
             } else if (openedRoomSupport) {
                 RoomSupport(onBack = { openedRoomSupport = false })
             } else if (openedSearch) {
-                SearchPage(onBack={openedSearch=false},onOpenProfile={openedPublicProfile=it;openedSearch=false},onOpenRoom={openedRoom=it;openedSearch=false})
+                SearchPage(onBack={openedSearch=false},onOpenProfile={openedPublicProfile=it;openedSearch=false},onOpenRoom={openedSearch=false;tryOpenRoom(it)})
             } else if (openedRoom != null) {
                 RoomPage(
                     roomOwner = RoomPageOwner(
@@ -456,8 +498,25 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                     onOpenPublicProfile = { profile -> openedPublicProfile = profile },
                     onBack = { openedRoom = null },
                     onRoomSupport = { openedRoomSupport = true },
-                    onJoinRoom = { targetRoomId -> openedRoom=HurryRoom(id=targetRoomId,name="Room",image="",country="",accountId=targetRoomId) },
-                    onKickNotice = { notice -> roomKickNotice = notice },
+                    onJoinRoom = { targetRoomId -> tryOpenRoomById(targetRoomId) },
+                    onKickNotice = { notice ->
+                        if (notice.optBoolean("blocked", false)) {
+                            val existing = runCatching { JSONObject(roomKickPrefs.getString("active", "{}").orEmpty()) }.getOrDefault(JSONObject())
+                            val roomId = notice.optString("roomId")
+                            val saved = existing.optJSONObject(roomId)
+                            val merged = JSONObject(saved?.toString() ?: "{}")
+                                .put("roomId", roomId)
+                                .put("expiresAt", notice.optLong("expiresAt", saved?.optLong("expiresAt", 0L) ?: 0L))
+                            if (merged.optLong("expiresAt") > System.currentTimeMillis()) {
+                                existing.put(roomId, merged)
+                                roomKickPrefs.edit().putString("active", existing.toString()).apply()
+                            }
+                            roomBlockedPopup = merged
+                        } else {
+                            rememberRoomKick(notice)
+                            roomKickNotice = notice
+                        }
+                    },
                     onClose = {
                         if (keptRoom?.id == openedRoom?.id) {
                             keptRoom = null
@@ -486,7 +545,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                 InviteFriends(onBack = { openedInvite = false })
             } else if (openedChat != null) {
                 val chat = openedChat!!
-                NativeChatScreen(name = chat.second, image = chat.third, receiverId = chat.first, currentUserId = userId, currentAccountIdOverride = authPrefs.getString("accountId", userId).orEmpty().ifBlank { userId }, onBack = { openedChat = null }, onJoinRoom = { targetRoomId -> openedChat=null; openedRoom=HurryRoom(id=targetRoomId,name="Room",image="",country="",accountId=targetRoomId) })
+                NativeChatScreen(name = chat.second, image = chat.third, receiverId = chat.first, currentUserId = userId, currentAccountIdOverride = authPrefs.getString("accountId", userId).orEmpty().ifBlank { userId }, onBack = { openedChat = null }, onJoinRoom = { targetRoomId -> openedChat=null; tryOpenRoomById(targetRoomId) })
             } else {
                 Column(Modifier.fillMaxSize()) {
                     Box(Modifier.weight(1f)) {
@@ -501,7 +560,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                                     }
                                     tab = selected
                                 },
-                                onRoom = { openedRoom = it },
+                                onRoom = { tryOpenRoom(it) },
                                 onMine = { homeMine = true },
                                 onPopular = { homeMine = false },
                                 onLeaderboard = { openedLeaderboard = it },
@@ -562,7 +621,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                                 mineCreatedRoom = mineCreatedRoom,
                                 mineSelected = homeMine,
                                 keptRoom = keptRoom,
-                                onOpenKeptRoom = { keptRoom?.let { openedRoom = it } },
+                                onOpenKeptRoom = { keptRoom?.let { tryOpenRoom(it) } },
                                 onExitKeptRoom = {
                                     keptRoom = null
                                     authPrefs.edit().remove("kept_room_data").apply()
@@ -624,7 +683,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
             if (keptRoom != null && tab != HurryTab.HOME && openedRoom == null && openedChat == null && openedPublicProfile == null && !openedRoomSupport && !openedSearch) {
                 KeptRoomTabOverlay(
                     room = keptRoom!!,
-                    onOpen = { openedRoom = keptRoom },
+                    onOpen = { keptRoom?.let { tryOpenRoom(it) } },
                     onExit = {
                         keptRoom = null
                         authPrefs.edit().remove("kept_room_data").apply()
@@ -636,6 +695,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                 val expiresAt = notice.optLong("expiresAt", 0L)
                 val remainingMs = (expiresAt - kickNoticeNow).coerceAtLeast(0L)
                 val remainingMinutes = ((remainingMs + 59_999L) / 60_000L).coerceAtLeast(0L)
+                val ownerId = notice.optString("ownerId", notice.optString("roomId"))
                 Box(
                     Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.30f)).clickable(enabled = false) {},
                     contentAlignment = Alignment.Center
@@ -647,24 +707,55 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                     ) {
                         AsyncImage(
                             model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261106_003241.png",
-                            contentDescription = "Room access restricted",
+                            contentDescription = "Room restriction",
                             modifier = Modifier.size(76.dp),
                             contentScale = ContentScale.Fit
                         )
                         Text(
-                            if (notice.optBoolean("blocked", false)) "You can't enter this room"
-                            else "You are kicked out of the room",
+                            "You are kicked out of the room",
                             color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold,
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                             modifier = Modifier.padding(top = 12.dp)
                         )
-                        if (!notice.optBoolean("blocked", false)) {
-                            Row(Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
-                                val ownerImage = notice.optString("ownerImage")
-                                if (ownerImage.isNotBlank()) AsyncImage(model = ownerImage, contentDescription = "Room owner", modifier = Modifier.size(25.dp).clip(CircleShape), contentScale = ContentScale.Crop)
-                                Text("by room owner ", color = Color.White.copy(alpha = .8f), fontSize = 12.sp, modifier = Modifier.padding(start = 6.dp))
-                                Text(notice.optString("ownerName", "Room Owner"), color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        Row(
+                            Modifier.fillMaxWidth().padding(top = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Text("By", color = Color.White.copy(alpha = .82f), fontSize = 12.sp)
+                            val ownerImage = notice.optString("ownerImage")
+                            if (ownerImage.isNotBlank()) AsyncImage(
+                                model = ownerImage, contentDescription = "Room owner avatar",
+                                modifier = Modifier.padding(start = 7.dp).size(27.dp).clip(CircleShape),
+                                contentScale = ContentScale.Crop
+                            )
+                            Text(
+                                notice.optString("ownerName", "Room Owner"),
+                                color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.padding(start = 7.dp)
+                            )
+                            AsyncImage(
+                                model = ROOM_ADMIN_TAG, contentDescription = "Owner tag",
+                                modifier = Modifier.padding(start = 5.dp).height(17.dp).widthIn(max = 42.dp),
+                                contentScale = ContentScale.Fit
+                            )
+                        }
+                        if (ownerId in setOf("500002", "500003", "500004")) {
+                            Row(
+                                Modifier.fillMaxWidth().padding(top = 8.dp),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                AsyncImage(
+                                    model = "https://zyora-voice-chat.vercel.app/IMG_20261101_125212.png",
+                                    contentDescription = "Owner ID badge",
+                                    modifier = Modifier.height(17.dp).widthIn(max = 30.dp),
+                                    contentScale = ContentScale.Fit
+                                )
+                                Text(ownerId, color = Color.White.copy(alpha = .85f), fontSize = 11.sp, modifier = Modifier.padding(start = 5.dp))
                             }
+                        } else {
+                            Text("ID: $ownerId", color = Color.White.copy(alpha = .85f), fontSize = 11.sp, modifier = Modifier.padding(top = 8.dp))
                         }
                         Text(
                             if (remainingMs > 0L) "You can't enter until $remainingMinutes min"
@@ -682,16 +773,38 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                     }
                 }
             }
+            roomBlockedPopup?.let { notice ->
+                val remainingMs = (notice.optLong("expiresAt", 0L) - blockedPopupNow).coerceAtLeast(0L)
+                val remainingMinutes = ((remainingMs + 59_999L) / 60_000L).coerceAtLeast(0L)
+                Box(
+                    Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.18f)).clickable(enabled = false) {},
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        Modifier.fillMaxWidth(0.78f).clip(RoundedCornerShape(10.dp))
+                            .background(Color(0xFF090909)).padding(horizontal = 18.dp, vertical = 15.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text("You can't enter this room", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                        Text(
+                            "Try again after $remainingMinutes min",
+                            color = Color.White.copy(alpha = .72f), fontSize = 12.sp,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            modifier = Modifier.padding(top = 5.dp)
+                        )
+                    }
+                }
+            }
             LuckyBagNotificationSlider(
                 currentUserId = userId,
                 onGoToRoom = { roomId, roomName ->
-                    openedRoom = HurryRoom(
+                    tryOpenRoom(HurryRoom(
                         id = roomId,
                         name = roomName.ifBlank { "Room" },
                         image = "",
                         country = "",
                         accountId = roomId
-                    )
+                    ))
                 }
             )
         }
