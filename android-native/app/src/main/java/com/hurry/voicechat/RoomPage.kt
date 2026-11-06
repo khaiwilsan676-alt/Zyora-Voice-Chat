@@ -173,6 +173,7 @@ data class NativeRoomSeat(val number:Int,val occupied:Boolean=false,val locked:B
 data class NativeMention(val accountId: String, val name: String)
 data class NativeRoomMessage(val id:String,val text:String,val sender:String,val senderImage:String,val senderAccountId:String="",val timestamp:Long=System.currentTimeMillis(),val type:String="message",val mentions: List<NativeMention> = emptyList())
 data class NativeEntryToast(val id:String,val name:String,val image:String,val vehicleVideo:String="")
+data class NativeRoomKickNotice(val id:String,val targetName:String,val targetImage:String,val actorName:String,val actorImage:String,val actorRole:String)
 
 @Composable
 fun RoomPage(
@@ -649,6 +650,7 @@ fun RoomPage(
     
     var showOfficialAnnouncement by remember { mutableStateOf(true) }
     var clearedBy by remember { mutableStateOf("") }
+    val kickNotices = remember { mutableStateListOf<NativeRoomKickNotice>() }
     
     val configuration = LocalConfiguration.current
     val density = LocalDensity.current
@@ -798,8 +800,25 @@ fun RoomPage(
                 mainHandler.post {
                     messages.clear()
                     showOfficialAnnouncement = false
+                    announcement = ""
                     clearedBy = payload.optString("userName").ifBlank { backendRoomUsers.firstOrNull { it.accountId == payload.optString("userId") }?.name ?: "Admin" }
                 }
+            }
+        }
+        val kickAnnouncementListener = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
+            if (payload.optString("roomId") != roomId) return@Listener
+            val targetId = payload.optString("targetId")
+            val notice = NativeRoomKickNotice(
+                id = "kick-$targetId-${payload.optLong("timestamp", System.currentTimeMillis())}",
+                targetName = payload.optString("targetName").ifBlank { "User" },
+                targetImage = payload.optString("targetImage"),
+                actorName = payload.optString("actorName").ifBlank { "Admin" },
+                actorImage = payload.optString("actorImage"),
+                actorRole = if (payload.optString("actorRole") == "admin") "Room Admin" else "Room Owner"
+            )
+            mainHandler.post {
+                if (kickNotices.none { it.id == notice.id }) kickNotices.add(notice)
             }
         }
         val seatInviteResultListener = Emitter.Listener { args ->
@@ -1021,6 +1040,7 @@ fun RoomPage(
         roomSocket.on("room_message",messageListener)
         roomSocket.on("room_chat_message",messageListener)
         roomSocket.on("room_chat_cleared",clearedListener)
+        roomSocket.on("room_kick_announcement",kickAnnouncementListener)
         roomSocket.on("room_seats",seatListener)
         roomSocket.on("room_voice_speaker",voiceSpeakerListener)
         roomSocket.on("room_settings_updated",settingsListener)
@@ -1042,6 +1062,7 @@ fun RoomPage(
             roomSocket.off("room_message",messageListener)
             roomSocket.off("room_chat_message",messageListener)
             roomSocket.off("room_chat_cleared",clearedListener)
+            roomSocket.off("room_kick_announcement",kickAnnouncementListener)
             roomSocket.off("room_seats",seatListener)
             roomSocket.off("room_voice_speaker",voiceSpeakerListener)
             mainHandler.post { activeVoiceSpeakerIds.clear() }
@@ -1545,6 +1566,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
             onClearChat={
                 messages.clear()
                 showOfficialAnnouncement = false
+                announcement = ""
                 val clearerName = roomDisplayName.ifBlank { "User" }
                 clearedBy = clearerName
                 roomSocketRef.value?.emit("room_clear_chat",JSONObject().put("roomId",roomId).put("userId",accountId).put("userName",clearerName).put("timestamp",System.currentTimeMillis()))
@@ -1727,6 +1749,9 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                     roomSocketRef.value?.emit("room_seat_action", JSONObject().put("roomId", roomId)
                         .put("userId", accountId).put("action", "kick").put("targetUserId", profileId)
                         .put("durationMs", durationMs).put("targetName", profileMessage.sender)
+                        .put("targetImage", profileMessage.senderImage)
+                        .put("actorName", roomDisplayName).put("actorImage", roomDisplayImage)
+                        .put("actorRole", if (accountId in roomAdminIds) "admin" else "owner")
                         .put("ownerName", roomDisplayName).put("ownerImage", roomDisplayImage))
                     selectedChatProfile = null
                 }
@@ -1855,8 +1880,10 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                     roomSocketRef.value?.emit("room_seat_action", JSONObject().put("roomId", roomId)
                         .put("userId", accountId).put("action", "kick").put("targetUserId", profileSeat.accountId)
                         .put("seatNumber", selectedSeat).put("durationMs", durationMs)
-                        .put("targetName", profileSeat.userName).put("ownerName", roomDisplayName)
-                        .put("ownerImage", roomDisplayImage))
+                        .put("targetName", profileSeat.userName).put("targetImage", profileSeat.userImage)
+                        .put("actorName", roomDisplayName).put("actorImage", roomDisplayImage)
+                        .put("actorRole", if (accountId in roomAdminIds) "admin" else "owner")
+                        .put("ownerName", roomDisplayName).put("ownerImage", roomDisplayImage))
                     val idx = seats.indexOfFirst { it.number == selectedSeat }
                     if (idx >= 0) seats[idx] = NativeRoomSeat(number = selectedSeat)
                     selectedSeat = 0
@@ -2174,6 +2201,28 @@ private fun RoomChatMessages(
                                                 Text(clearedBy, color=Color(0xFFE2C67D), fontSize=13.sp, fontWeight=FontWeight.Bold, maxLines=1, softWrap=false, overflow=TextOverflow.Ellipsis)
                                                 Text("cleared the chat message", color=Color.White, fontSize=13.sp, fontWeight=FontWeight.Normal, maxLines=1, softWrap=false)
                                             }
+                                        }
+                                    }
+                                }
+                            }
+                            items(kickNotices, key = { it.id }) { notice ->
+                                Column(Modifier.fillMaxWidth().padding(start=4.dp, top=0.dp, end=82.dp, bottom=2.dp)) {
+                                    Column(Modifier.wrapContentWidth().clip(RoundedCornerShape(12.dp)).background(Color.Black.copy(alpha=.30f)).padding(horizontal=12.dp, vertical=8.dp), verticalArrangement=Arrangement.spacedBy(4.dp)) {
+                                        Row(verticalAlignment=Alignment.CenterVertically, horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+                                            Box(Modifier.size(24.dp).clip(CircleShape).background(Color(0xFF00C853)), contentAlignment=Alignment.Center) {
+                                                Icon(Icons.Default.Notifications, contentDescription="System", tint=Color.White, modifier=Modifier.size(16.dp))
+                                            }
+                                            Text("System", color=Color(0xFFD1D1D1), fontSize=15.sp, fontWeight=FontWeight.Medium)
+                                        }
+                                        Row(verticalAlignment=Alignment.CenterVertically, horizontalArrangement=Arrangement.spacedBy(4.dp)) {
+                                            FallbackAsyncImage(model=notice.targetImage, contentDescription=notice.targetName, modifier=Modifier.size(22.dp).clip(CircleShape), contentScale=ContentScale.Crop)
+                                            Text(notice.targetName, color=Color(0xFFE2C67D), fontSize=13.sp, fontWeight=FontWeight.Bold, maxLines=1, softWrap=false, overflow=TextOverflow.Ellipsis)
+                                            Text("was kicked out of Room by", color=Color.White, fontSize=13.sp, maxLines=1, softWrap=false)
+                                            FallbackAsyncImage(model=notice.actorImage, contentDescription=notice.actorName, modifier=Modifier.size(22.dp).clip(CircleShape), contentScale=ContentScale.Crop)
+                                        }
+                                        Row(verticalAlignment=Alignment.CenterVertically, horizontalArrangement=Arrangement.spacedBy(4.dp)) {
+                                            Text(notice.actorName, color=Color(0xFFE2C67D), fontSize=13.sp, fontWeight=FontWeight.Bold, maxLines=1, softWrap=false, overflow=TextOverflow.Ellipsis)
+                                            Text("(${notice.actorRole})", color=Color.White, fontSize=13.sp, fontWeight=FontWeight.Normal)
                                         }
                                     }
                                 }
