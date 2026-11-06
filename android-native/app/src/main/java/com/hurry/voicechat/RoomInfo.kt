@@ -47,7 +47,11 @@ fun RoomInfo(
     roomAdmins:List<RoomInfoFollower> = emptyList(),
     onOpenProfile:(RoomInfoFollower)->Unit,
     onCopyId:(String)->Unit,
-    copied:Boolean=false
+    copied:Boolean=false,
+    currentUserId:String="",
+    isRoomFollowed:Boolean=false,
+    onToggleRoomFollow:(Boolean)->Unit={},
+    onShareToUser:(RoomInfoFollower)->Unit={}
 ) {
     if (!isOpen) return
     val context = LocalContext.current
@@ -55,6 +59,21 @@ fun RoomInfo(
     
     // Naya state share sheet handle karne ke liye
     var showShareSheet by remember { mutableStateOf(false) }
+    var showDangerMenu by remember { mutableStateOf(false) }
+    var showRoomReport by remember { mutableStateOf(false) }
+    var roomFans by remember(roomOwner.accountId, roomOwner.id) { mutableStateOf<List<RoomInfoFollower>>(emptyList()) }
+    LaunchedEffect(roomOwner.accountId, roomOwner.id, showShareSheet) {
+        if (showShareSheet) {
+            val ownerId = roomOwner.accountId.ifBlank { roomOwner.id.ifBlank { roomOwner.uid } }
+            roomFans = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                runCatching {
+                    SocialFollowApi.list(context, ownerId, "fans").map {
+                        RoomInfoFollower(it.accountId.ifBlank { it.uid.ifBlank { it.id } }, it.name, it.image, it.country)
+                    }.filter { it.accountId.isNotBlank() && it.accountId != currentUserId }.distinctBy { it.accountId }
+                }.getOrDefault(emptyList())
+            }
+        }
+    }
     
     var ownerDisplayName by remember(roomOwner.id, roomOwner.uid, roomOwner.accountId) {
         mutableStateOf(if (roomOwner.accountId == "100002" || roomOwner.id == "100002") "Zyora" else "User")
@@ -126,7 +145,7 @@ fun RoomInfo(
             ) {
                 // 3 Dots Icon (Ekdam Left)
                 Box(
-                    modifier = Modifier.align(Alignment.CenterStart).size(34.dp).clip(CircleShape).background(Color.White.copy(alpha=0.15f)).clickable { },
+                    modifier = Modifier.align(Alignment.CenterStart).size(34.dp).clip(CircleShape).background(Color.White.copy(alpha=0.15f)).clickable { showDangerMenu = true },
                     contentAlignment = Alignment.Center
                 ) {
                     Canvas(Modifier.size(16.dp)) {
@@ -298,10 +317,101 @@ fun RoomInfo(
                     modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 8.dp)
                 )
                 
-                // Abhi tumne baaki cheezon ke liye mana kiya tha, toh andar kuch aur add nahi kiya hai.
+                LazyColumn(
+                    Modifier.fillMaxWidth().weight(1f).padding(horizontal = 14.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    if (roomFans.isEmpty()) {
+                        item {
+                            Text("No fans yet", Modifier.fillMaxWidth().padding(vertical = 24.dp),
+                                color = Color(0xFF9CA3AF), fontSize = 13.sp, textAlign = TextAlign.Center)
+                        }
+                    }
+                    items(roomFans, key = { "room-share-" + it.accountId }) { fan ->
+                        Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                            AsyncImage(
+                                model = fan.image.ifBlank { "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/default-avatar.png" },
+                                contentDescription = fan.name,
+                                modifier = Modifier.size(42.dp).clip(CircleShape),
+                                contentScale = ContentScale.Crop
+                            )
+                            Text(fan.name.ifBlank { "User" }, Modifier.weight(1f).padding(start = 10.dp),
+                                color = Color.White, fontSize = 14.sp, maxLines = 1)
+                            Box(
+                                Modifier.clip(RoundedCornerShape(18.dp)).background(Color(0xFF2878E8))
+                                    .clickable {
+                                        onShareToUser(fan)
+                                        showShareSheet = false
+                                    }.padding(horizontal = 17.dp, vertical = 7.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("Share", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                            }
+                        }
+                    }
+                }
             }
         }
         // ------------------------------------
+        if (showDangerMenu) {
+            RoomDangerActionMenu(
+                isFollowing = isRoomFollowed,
+                onDismiss = { showDangerMenu = false },
+                onFollow = {
+                    onToggleRoomFollow(!isRoomFollowed)
+                    showDangerMenu = false
+                },
+                onReport = {
+                    showDangerMenu = false
+                    showRoomReport = true
+                }
+            )
+        }
+        if (showRoomReport) {
+            UserReport(
+                targetName = roomData.roomName,
+                targetImage = roomData.roomDp,
+                targetId = roomData.roomId,
+                onDismiss = { showRoomReport = false }
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun RoomDangerActionMenu(
+    isFollowing: Boolean,
+    onDismiss: () -> Unit,
+    onFollow: () -> Unit,
+    onReport: () -> Unit
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = Color.Transparent,
+        contentColor = Color.White,
+        scrimColor = Color.Black.copy(alpha = 0.5f),
+        dragHandle = null
+    ) {
+        Column(
+            Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 32.dp)
+                .windowInsetsPadding(WindowInsets.navigationBars)
+        ) {
+            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Color(0xFF1C1C1E))) {
+                Text("Report", Modifier.fillMaxWidth().clickable(onClick = onReport).padding(vertical = 18.dp),
+                    color = Color.White, fontSize = 18.sp, textAlign = TextAlign.Center, fontWeight = FontWeight.Medium)
+                Divider(color = Color.DarkGray.copy(alpha = 0.5f), thickness = 0.5.dp)
+                Text(if (isFollowing) "Followed" else "Follow",
+                    Modifier.fillMaxWidth().clickable(onClick = onFollow).padding(vertical = 18.dp),
+                    color = Color.White, fontSize = 18.sp, textAlign = TextAlign.Center, fontWeight = FontWeight.Medium)
+            }
+            Spacer(Modifier.height(12.dp))
+            Button(onClick = onDismiss, Modifier.fillMaxWidth().height(56.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1C1C1E)),
+                shape = RoundedCornerShape(16.dp)) {
+                Text("Cancel", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            }
+        }
     }
 }
 
