@@ -447,6 +447,11 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int, onChat: (Strin
                                         val serverBalance = updated.optLong("balance").coerceAtLeast(0L)
                                         val serverDiamonds = updated.optLong("diamonds").coerceAtLeast(0L)
                                         dao.saveUserData(UserDataEntity(balance = serverBalance, diamonds = serverDiamonds))
+                                        walletCachePrefs.edit()
+                                            .putLong("balance_$walletUserId", serverBalance)
+                                            .putLong("diamonds_$walletUserId", serverDiamonds)
+                                            .putLong("last_sync_$walletUserId", System.currentTimeMillis())
+                                            .apply()
                                         recordTransaction(dao, "Diamond Exchange", -d, "diamond")
                                         din = ""; cin = ""
                                         coins = serverBalance
@@ -482,6 +487,11 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int, onChat: (Strin
                                         val serverBalance = updated.optLong("balance").coerceAtLeast(0L)
                                         val serverDiamonds = updated.optLong("diamonds").coerceAtLeast(0L)
                                         dao.saveUserData(UserDataEntity(balance = serverBalance, diamonds = serverDiamonds))
+                                        walletCachePrefs.edit()
+                                            .putLong("balance_$walletUserId", serverBalance)
+                                            .putLong("diamonds_$walletUserId", serverDiamonds)
+                                            .putLong("last_sync_$walletUserId", System.currentTimeMillis())
+                                            .apply()
                                         recordTransaction(dao, "Diamond Exchange", -d, "diamond")
                                         din = ""; cin = ""
                                         coins = serverBalance
