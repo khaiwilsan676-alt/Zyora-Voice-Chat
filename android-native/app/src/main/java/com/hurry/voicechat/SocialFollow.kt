@@ -61,11 +61,16 @@ object SocialFollowApi {
             saveSnapshot(context,targetId,snap); snap
         }.getOrNull()
     }
+    fun cachedList(context:Context,userId:String,type:String):List<SocialFollowUser> {
+        if(userId.isBlank()) return emptyList()
+        val key="social_list:$userId:$type"
+        val cached=runCatching{NativeIndexDatabase(context).loadProfile(key)?.optJSONArray("rows")}.getOrNull()
+        return parseRows(cached)
+    }
     suspend fun list(context:Context,userId:String,type:String):List<SocialFollowUser> = withContext(Dispatchers.IO){
         if(userId.isBlank())return@withContext emptyList()
         val key="social_list:$userId:$type"
-        val cached=runCatching{NativeIndexDatabase(context).loadProfile(key)?.optJSONArray("rows")}.getOrNull()
-        val cachedRows=parseRows(cached)
+        val cachedRows=cachedList(context,userId,type)
         runCatching {
             val root=request("/api/follows?userId=${enc(userId)}&type=${enc(type)}")
             val rows=parseRows(root.optJSONArray("rows"))
