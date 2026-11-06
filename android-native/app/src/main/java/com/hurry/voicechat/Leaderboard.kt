@@ -215,9 +215,11 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                                 contentScale = ContentScale.Crop
                             )
                             // Rank 1 Frame (avatar ke upar)
-                            LeaderboardChromaImage(url=raw+"file_00000000a0e48207ade38b36ab946ecb.png",contentDescription="Rank 1 frame",modifier=Modifier.requiredSize(350.dp),contentScale=ContentScale.Fit)
+                            LeaderboardChromaImage(url=raw+"file_00000000a0e48207ade38b36ab946ecb.png",contentDescription="Rank 1 frame",modifier=Modifier.requiredSize(260.dp),contentScale=ContentScale.Fit)
                         }
-                        Spacer(Modifier.height(15.dp))
+                        
+                        // YE RAHA TERA GAP - Ise 15dp se 45dp kar diya hai Rank 1 aur 2,3 ke beech ka space increase karne ke liye
+                        Spacer(Modifier.height(45.dp)) 
                         
                         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically) {
                             Box(modifier = Modifier.width(podiumSideWidth).height(175.dp), contentAlignment = Alignment.Center) {
@@ -264,12 +266,25 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 8.dp)
+                            .padding(top = 20.dp) // Yaha maine 20dp niche kiya hai is purre black card ko
                             .background(Color(0xE60A0505), RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)) 
                             .border(1.dp, Color(0xFFD4AF37), RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
                     ) {
                         
+                        // Yaha maine Patli Patti lagayi hai Brown color ki fade effect ke sath
                         Row(
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 12.dp)
+                                .background(
+                                    Brush.horizontalGradient(
+                                        0.0f to Color.Transparent,
+                                        0.2f to Color(0xFF4A2511), // Brown Color Mix
+                                        0.8f to Color(0xFF4A2511), // Brown Color Mix
+                                        1.0f to Color.Transparent
+                                    )
+                                )
+                                .padding(vertical = 4.dp), // Patli patti ka look dene ke liye
                             horizontalArrangement = Arrangement.Center,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -323,13 +338,25 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                                             overflow = TextOverflow.Ellipsis
                                         )
                                         Spacer(Modifier.width(6.dp))
+                                        
+                                        // YAHAN FIX KIYA HAI GENDER ICON KO EKDAM CENTER MEIN
                                         Box(
                                             modifier = Modifier
                                                 .size(14.dp)
                                                 .background(if (i % 2 == 0) Color(0xFF4A90E2) else Color(0xFFFF69B4), RoundedCornerShape(50)),
                                             contentAlignment = Alignment.Center
                                         ) {
-                                            Text(if (i % 2 == 0) "♂" else "♀", color = Color.White, fontSize = 8.sp)
+                                            Text(
+                                                text = if (i % 2 == 0) "♂" else "♀", 
+                                                color = Color.White, 
+                                                fontSize = 9.sp, 
+                                                style = androidx.compose.ui.text.TextStyle(
+                                                    platformStyle = androidx.compose.ui.text.PlatformTextStyle(
+                                                        includeFontPadding = false
+                                                    )
+                                                ),
+                                                modifier = Modifier.offset(y = (-1).dp) // Center fix karne ke liye halka sa upar kiya
+                                            )
                                         }
                                         
                                         Spacer(Modifier.weight(1f)) // Ye Value aur Coin icon ko right shift karega
@@ -353,8 +380,8 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Text(if (i % 2 == 0) "🇮🇳" else "🇸🇦", fontSize = 14.sp) 
                                         Spacer(Modifier.width(6.dp))
-                                        // Box lagaya hai image aur text dono ko overlap karne ke liye
-                                        Box(contentAlignment = Alignment.CenterEnd) {
+                                        
+                                        Box { 
                                             AsyncImage(
                                                 model = raw + "IMG_20261028_004355.png",
                                                 contentDescription = "Level Image",
@@ -362,11 +389,11 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                                                 contentScale = ContentScale.Fit
                                             )
                                             Text(
-                                                text = "Lv.${10 + i}", // Dynamic level text bacha ke rakha hai
+                                                text = "Lv.${10 + i}",
                                                 color = Color.White,
-                                                fontSize = 9.sp, // Text chota kiya hai taaki fit aaye
-                                                fontWeight = androidx.compose.ui.text.font.FontWeight.Normal,
-                                                modifier = Modifier.padding(end = 6.dp) // Right side se thoda padding diya
+                                                fontSize = 9.sp, 
+                                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                                modifier = Modifier.align(Alignment.CenterEnd).padding(end = 4.dp) 
                                             )
                                         }
                                     }
@@ -385,7 +412,7 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
             modifier = Modifier
                 .fillMaxWidth()
                 .align(Alignment.BottomCenter)
-                .height(120.dp)
+                .height(150.dp) // Yaha height 120.dp se increase karke 150.dp kar di hai chipkane k liye
         ) {
             AsyncImage(
                 model = raw + "IMG_20261106_021443.png",
@@ -397,7 +424,7 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(horizontal = 24.dp)
-                    .padding(top = 28.dp),
+                    .padding(top = 40.dp), // Height badhi hai to top padding thodi increase ki hai taaki design center mein rahe
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 AsyncImage(
