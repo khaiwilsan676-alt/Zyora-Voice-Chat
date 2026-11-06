@@ -757,25 +757,22 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                 }
             }
             roomBlockedPopup?.let { notice ->
-                val remainingMs = (notice.optLong("expiresAt", 0L) - blockedPopupNow).coerceAtLeast(0L)
-                val remainingMinutes = ((remainingMs + 59_999L) / 60_000L).coerceAtLeast(0L)
-                Box(
-                    Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.18f)).clickable(enabled = false) {},
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        Modifier.fillMaxWidth(0.78f).clip(RoundedCornerShape(10.dp))
-                            .background(Color(0xFF090909)).padding(horizontal = 18.dp, vertical = 15.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text("You can't enter this room", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-                        Text(
-                            "Try again after $remainingMinutes min",
-                            color = Color.White.copy(alpha = .72f), fontSize = 12.sp,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                            modifier = Modifier.padding(top = 5.dp)
-                        )
-                    }
+                val untilTime = notice.optLong("expiresAt", 0L).takeIf { it > 0L }?.let {
+                    java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault()).format(java.util.Date(it))
+                } ?: "later"
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(
+                        if (notice.optBoolean("checkFailed", false)) "Please try again"
+                        else "You can't join until $untilTime",
+                        color = Color.White,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(5.dp))
+                            .background(Color.Black.copy(alpha = 0.30f))
+                            .padding(horizontal = 12.dp, vertical = 7.dp)
+                    )
                 }
             }
             LuckyBagNotificationSlider(
