@@ -249,5 +249,5 @@ Current documentation does not certify that all historical features are build-, 
 ## 23 Native wallet cached rendering (2026-11-06)
 - `CoinsNativePage.kt`: cache the last known coins/diamonds snapshot in account-keyed SharedPreferences and initialize the displayed balance from that snapshot immediately, avoiding a zero-to-server-balance flash on page entry.
 - Room database is used as a one-time fallback only when no cached snapshot exists. The canonical server wallet refresh remains asynchronous; successful refreshes update Room, the snapshot cache, and only changed balance fields.
-- Rapid reopen operations within 15 seconds reuse the existing snapshot without issuing another wallet GET. No wallet UI layout, payment flow, or balance source-of-truth was changed.
+- Rapid reopen operations within 15 seconds reuse the existing snapshot without issuing another wallet GET. Both diamond-exchange success paths also update the cached snapshot immediately so the next wallet entry cannot show a stale pre-exchange balance. No wallet UI layout, payment flow, or balance source-of-truth was changed.
 - Status: source committed; native APK CI and real-device repeated-open/cache behavior remain to be verified.
