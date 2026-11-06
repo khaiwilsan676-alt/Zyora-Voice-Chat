@@ -694,8 +694,14 @@ fun RoomPage(
     val activeVoiceSpeakerIds=remember(roomId){mutableStateSetOf<String>()}
     val backendRoomUsers=remember{mutableStateListOf<ActiveUserNative>()}
     val activeRoomUsers = backendRoomUsers.toList()
+    // Keep the room socket stable while asynchronously loaded profile/settings state updates.
+    // Reading a cached profile must not tear down and reconnect the live room connection.
+    val latestRoomDisplayName by rememberUpdatedState(roomDisplayName)
+    val latestRoomDisplayImage by rememberUpdatedState(roomDisplayImage)
+    val latestRoomName by rememberUpdatedState(roomName)
+    val latestRoomImage by rememberUpdatedState(roomImage)
 
-    DisposableEffect(roomId,accountId,roomDisplayName,roomDisplayImage,roomOwner.id,roomOwner.accountId) {
+    DisposableEffect(roomId,accountId,roomOwner.id,roomOwner.accountId) {
         val roomSocketOptions = IO.Options().apply {
             transports = arrayOf("websocket")
             reconnection = true
@@ -972,7 +978,7 @@ fun RoomPage(
                             .edit().putInt("micMode_$roomId", updatedMicMode).apply()
                     }
                     if (hasAnnouncement) announcement = updatedAnnouncement
-                    if (payload.has("roomName")) roomName = payload.optString("roomName", roomName)
+                    if (payload.has("roomName")) roomName = payload.optString("roomName", latestRoomName)
                 }
             }
         }
@@ -980,18 +986,18 @@ fun RoomPage(
         val connectListener = Emitter.Listener {
             val profileDb = NativeIndexDatabase(appContext)
             val currentProfile = currentProfileKeys.firstNotNullOfOrNull { profileDb.loadProfile(it) } ?: JSONObject()
-            if (!currentProfile.has("name") && roomDisplayName.isNotBlank()) currentProfile.put("name", roomDisplayName)
-            if (!currentProfile.has("image") && roomDisplayImage.isNotBlank()) currentProfile.put("image", roomDisplayImage)
+            if (!currentProfile.has("name") && latestRoomDisplayName.isNotBlank()) currentProfile.put("name", latestRoomDisplayName)
+            if (!currentProfile.has("image") && latestRoomDisplayImage.isNotBlank()) currentProfile.put("image", latestRoomDisplayImage)
             currentProfileKeys.forEach { profileDb.saveProfile(it, currentProfile) }
-            val joinPayload = JSONObject().put("roomId",roomId).put("userId",currentUser.uid.ifBlank{currentUser.id.ifBlank{accountId}}).put("accountId",accountId).put("roomOwnerId",roomOwner.uid.ifBlank{roomOwner.id.ifBlank{roomOwner.accountId.ifBlank{roomId}}}).put("name",roomDisplayName).put("dp",roomDisplayImage).put("roomName",roomName).put("roomImage",roomImage)
+            val joinPayload = JSONObject().put("roomId",roomId).put("userId",currentUser.uid.ifBlank{currentUser.id.ifBlank{accountId}}).put("accountId",accountId).put("roomOwnerId",roomOwner.uid.ifBlank{roomOwner.id.ifBlank{roomOwner.accountId.ifBlank{roomId}}}).put("name",latestRoomDisplayName).put("dp",latestRoomDisplayImage).put("roomName",latestRoomName).put("roomImage",latestRoomImage)
             roomSocket.emit("room_join",joinPayload)
             if (latestShowChat) roomSocket.emit("room_chat_view", JSONObject().put("roomId", roomId).put("userId", accountId).put("active", true))
             if (!joinMessageSent && accountId != "guest") {
                 joinMessageSent = true
                 val joinCreatedAt = System.currentTimeMillis()
                 val joinId = "$accountId-$joinCreatedAt"
-                val joinName = roomDisplayName.ifBlank { "User" }
-                val joinImage = roomDisplayImage.ifBlank { "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/default-avatar.png" }
+                val joinName = latestRoomDisplayName.ifBlank { "User" }
+                val joinImage = latestRoomDisplayImage.ifBlank { "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/default-avatar.png" }
                 val nativeJoin = NativeRoomMessage(joinId,"Enter the Room",joinName,joinImage,accountId,joinCreatedAt,"join")
                 mainHandler.post {
                     if (messages.none { it.id == joinId }) messages.add(nativeJoin)
