@@ -386,7 +386,13 @@ fun RoomPage(
                         val root = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
                         val saved = root.optJSONObject("room") ?: root
                         val name = saved.optString("name", saved.optString("roomName", "")).takeUnless { it == "null" }.orEmpty()
-                        val image = sequenceOf("dp", "image", "roomDp", "Room dp", "roomImage", "imageUrl", "avatar", "photo").map { saved.optString(it, "").trim() }.firstOrNull { it.isNotBlank() && it != "null" && it != "/default-avatar.png" }.orEmpty()
+                        val rawRoomImage = sequenceOf("dp", "image", "roomDp", "Room dp", "roomImage", "imageUrl", "avatar", "photo").map { saved.optString(it, "").trim() }.firstOrNull { it.isNotBlank() && it != "null" && it != "undefined" && it != "/default-avatar.png" }.orEmpty()
+                        val image = when {
+                            rawRoomImage.startsWith("data:image/", true) || rawRoomImage.isBlank() ->
+                                "https://zyora-server.onrender.com/api/rooms/image?roomId=$encoded"
+                            rawRoomImage.startsWith("/") -> "https://zyora-server.onrender.com$rawRoomImage"
+                            else -> rawRoomImage
+                        }
                         val message = saved.optString("message", saved.optString("announcement", "")).takeUnless { it == "null" }.orEmpty()
                         val savedMicMode = saved.optInt("micMode", roomMicMode).let { if (it in listOf(5, 10, 15)) it else roomMicMode }
                         val savedTheme = sequenceOf("theme", "roomTheme", "Room Theme").map { saved.optString(it, "").trim() }.firstOrNull { it.isNotBlank() && it != "null" } ?: roomTheme
