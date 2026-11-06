@@ -1188,7 +1188,12 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                                     Text(text = roomName,color = Color.White,fontSize = 13.sp,fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,maxLines = 1,modifier = Modifier.widthIn(max = 85.dp).basicMarquee(iterations = Int.MAX_VALUE),overflow = TextOverflow.Clip)
                                     Text(roomCountryFlag(roomOwner.country), color = Color.White, fontSize = 13.sp)
                                     if (accountId != roomOwner.accountId.ifBlank { roomOwner.id }) {
-                                        Box(Modifier.size(20.dp).clip(CircleShape).background(if (followed) Color(0xFF9CA3AF) else Color(0xFF3B82F6)).clickable {
+                                        if (!followed) {
+                                            AsyncImage(
+                                                model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261107_003419.png",
+                                                contentDescription = "Follow room",
+                                                modifier = Modifier.size(26.dp).clickable {
+{
                                             val next = !followed
                                             followed = next
                                             onFollowToggle(roomId, next)
@@ -1222,8 +1227,10 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                                                     conn.disconnect()
                                                 }
                                             }
-                                        }, contentAlignment = Alignment.Center) {
-                                            Icon(imageVector = if(followed) Icons.Default.Check else Icons.Default.Add,contentDescription = if(followed) "Following" else "Follow",tint = Color.White,modifier = Modifier.size(14.dp))
+                                        
+                                                },
+                                                contentScale = ContentScale.Fit
+                                            )
                                         }
                                     }
                                 }
