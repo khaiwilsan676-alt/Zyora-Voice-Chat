@@ -144,6 +144,9 @@ fun Fourgride(
     var musicTracks by remember { mutableStateOf(emptyList<NativeMusicTrack>()) }
 
     LaunchedEffect(Unit) {
+        entryEffect = false
+        giftEffect = false
+        prefs.edit().putBoolean("entry_effect", false).putBoolean("gift_effect", false).apply()
         musicTracks = musicPrefs.getStringSet("uris", emptySet()).orEmpty().mapNotNull { raw ->
             runCatching {
                 val uri = Uri.parse(raw)
@@ -155,8 +158,8 @@ fun Fourgride(
         }
     }
 
-    var entryEffect by remember { mutableStateOf(prefs.getBoolean("entry_effect", false)) }
-    var giftEffect by remember { mutableStateOf(prefs.getBoolean("gift_effect", false)) }
+    var entryEffect by remember { mutableStateOf(false) }
+    var giftEffect by remember { mutableStateOf(false) }
     var showMusic by remember { mutableStateOf(false) }
     var showLuckyBag by remember { mutableStateOf(false) }
     var hideToolsAfterLucky by remember { mutableStateOf(false) }
