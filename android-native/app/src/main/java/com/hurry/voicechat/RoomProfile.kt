@@ -555,7 +555,7 @@ fun RoomProfile(
                                                 val previousCount = followersCount
                                                 val next = !previousFollowing
                                                 val optimistic = SocialFollowSnapshot(
-                                                    followers = (previousCount + if (next) 1 else -1).coerceAtLeast(0),
+                                                    followers = if (previousCount >= 0) (previousCount + if (next) 1 else -1).coerceAtLeast(0) else previousCount,
                                                     isFollowing = next
                                                 )
                                                 isFollowing = next
