@@ -89,7 +89,7 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
     val context = LocalContext.current
     val authPrefs = remember { context.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE) }
     val ownName = authPrefs.getString("name", authPrefs.getString("displayName", "You")).orEmpty().ifBlank { "You" }
-    val ownAvatar = authPrefs.getString("avatar", authPrefs.getString("image", "/default-avatar.png")).orEmpty().let { if (it.startsWith("http")) it else raw + it.removePrefix("/") }
+    val ownAvatar = authPrefs.getString("avatar", authPrefs.getString("image", "/default-avatar.png")).orEmpty().let { if (it.startsWith("http", ignoreCase = true)) it else raw + it.removePrefix("/") }
     
     val screenHeight = LocalConfiguration.current.screenHeightDp.dp
     val screenWidthDp = LocalConfiguration.current.screenWidthDp
@@ -115,6 +115,7 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                 )
             )
         }
+        
         Column(Modifier.fillMaxSize().statusBarsPadding()) {
             
             // TOP ROW
@@ -197,176 +198,266 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
             }
             
             LazyColumn(Modifier.weight(1f).fillMaxWidth(),contentPadding=PaddingValues(bottom=0.dp),verticalArrangement=Arrangement.spacedBy(0.dp)) {
+                // Podium Section
                 item {
-                    Column(Modifier.fillMaxWidth().padding(top=18.dp,bottom=24.dp),horizontalAlignment=Alignment.CenterHorizontally) {
-                        Box(modifier = Modifier.width(podiumTopWidth).height(200.dp), contentAlignment = Alignment.Center) {
-                            LeaderboardChromaImage(url=raw+"file_00000000a0e48207ade38b36ab946ecb.png",contentDescription="Rank 1 frame",modifier=Modifier.requiredSize(200.dp),contentScale=ContentScale.Fit)
+                    Column(Modifier.fillMaxWidth().padding(top=18.dp, bottom=0.dp),horizontalAlignment=Alignment.CenterHorizontally) {
+                        Box(
+                            modifier = Modifier.width(podiumTopWidth).height(200.dp).offset(y = (-10).dp), 
+                            contentAlignment = Alignment.Center
+                        ) {
+                            // Rank 1 Avatar (peeche overlap ke liye pehle likha hai, frame size 350.dp ke hisaab se set kiya)
+                            AsyncImage(
+                                model = raw + "default_avatar.png", // Protocol avatar
+                                contentDescription = "Rank 1 Avatar",
+                                modifier = Modifier
+                                    .size(66.dp)
+                                    .clip(RoundedCornerShape(50)),
+                                contentScale = ContentScale.Crop
+                            )
+                            // Rank 1 Frame (avatar ke upar)
+                            LeaderboardChromaImage(url=raw+"file_00000000a0e48207ade38b36ab946ecb.png",contentDescription="Rank 1 frame",modifier=Modifier.requiredSize(350.dp),contentScale=ContentScale.Fit)
                         }
+                        Spacer(Modifier.height(15.dp))
+                        
                         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically) {
                             Box(modifier = Modifier.width(podiumSideWidth).height(175.dp), contentAlignment = Alignment.Center) {
-                                LeaderboardChromaImage(url=raw+"file_0000000069b88207b9fdd01576b71ee9.png",contentDescription="Rank 2 frame",modifier=Modifier.requiredSize(250.dp),contentScale=ContentScale.Fit)
+                                // Rank 2 Avatar (Top center pe frame ke peeche)
+                                AsyncImage(
+                                    model = raw + "default_avatar.png",
+                                    contentDescription = "Rank 2 Avatar",
+                                    modifier = Modifier
+                                        .align(Alignment.TopCenter)
+                                        .offset(y = 35.dp)
+                                        .size(60.dp)
+                                        .clip(RoundedCornerShape(50)),
+                                    contentScale = ContentScale.Crop
+                                )
+                                // Rank 2 Frame (avatar ke upar)
+                                LeaderboardChromaImage(url=raw+"file_0000000069b88207b9fdd01576b71ee9.png",contentDescription="Rank 2 frame",modifier=Modifier.requiredSize(260.dp),contentScale=ContentScale.Fit)
                             }
                             Box(modifier = Modifier.width(podiumSideWidth).height(175.dp), contentAlignment = Alignment.Center) {
+                                // Rank 3 Avatar (Top center pe frame ke peeche)
+                                AsyncImage(
+                                    model = raw + "default_avatar.png",
+                                    contentDescription = "Rank 3 Avatar",
+                                    modifier = Modifier
+                                        .align(Alignment.TopCenter)
+                                        .offset(y = 35.dp)
+                                        .size(60.dp)
+                                        .clip(RoundedCornerShape(50)),
+                                    contentScale = ContentScale.Crop
+                                )
+                                // Rank 3 Frame (avatar ke upar)
                                 LeaderboardChromaImage(url=raw+"file_00000000ecc882079f34a9356b53dc8e.png",contentDescription="Rank 3 frame",modifier=Modifier.requiredSize(250.dp),contentScale=ContentScale.Fit)
                             }
                         }
                     }
                 }
                 
-                items(47) { i ->
-                    Row(
-                        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                item {
+                    Spacer(Modifier.height(10.dp))
+                }
+
+                // Card and Timer Block (4 to 50 rank list)
+                item {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp)
+                            .background(Color(0xE60A0505), RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)) 
+                            .border(1.dp, Color(0xFFD4AF37), RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
                     ) {
-                        Text(
-                            text = "${i + 4}",
-                            color = Color(0xFFE7B865),
-                            fontSize = 18.sp,
-                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                            modifier = Modifier.width(32.dp),
-                            textAlign = TextAlign.Center
-                        )
-                        Spacer(Modifier.width(6.dp))
-                        AsyncImage(
-                            model = raw + "default_avatar.png",
-                            contentDescription = "Avatar",
-                            modifier = Modifier
-                                .size(54.dp)
-                                .clip(RoundedCornerShape(50))
-                                .border(1.5.dp, Color(0x33FFFFFF), RoundedCornerShape(50)),
-                            contentScale = ContentScale.Crop
-                        )
-                        Spacer(Modifier.width(12.dp))
-                        Column(Modifier.weight(1f)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
+                        
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("— ∞ ", color = Color(0xFFD4AF37), fontSize = 14.sp)
+                            Text(
+                                text = "⏳ 01:27:36 (GMT+5.5)",
+                                color = Color(0xFFD4AF37),
+                                fontSize = 14.sp,
+                                fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
+                            )
+                            Text(" ∞ —", color = Color(0xFFD4AF37), fontSize = 14.sp)
+                        }
+
+                        (0 until 47).forEach { i ->
+                            
+                            val rawAvatarPath = "default_avatar.png"
+                            val resolvedAvatarUrl = if (rawAvatarPath.startsWith("http", ignoreCase = true)) rawAvatarPath else raw + rawAvatarPath.removePrefix("/")
+                            
+                            Row(
+                                Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 14.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
                                 Text(
-                                    text = "User Name ${i+4}",
-                                    color = Color.White,
-                                    fontSize = 16.sp,
-                                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
+                                    text = "${i + 4}",
+                                    color = Color(0xFFE7B865),
+                                    fontSize = 18.sp,
+                                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                    modifier = Modifier.width(32.dp),
+                                    textAlign = TextAlign.Center
                                 )
                                 Spacer(Modifier.width(6.dp))
-                                Text(if (i % 2 == 0) "🇮🇳" else "🇸🇦", fontSize = 14.sp) 
-                                Spacer(Modifier.width(4.dp))
-                                Box(
+                                AsyncImage(
+                                    model = resolvedAvatarUrl,
+                                    contentDescription = "Avatar",
                                     modifier = Modifier
-                                        .size(16.dp)
-                                        .background(if (i % 2 == 0) Color(0xFF4A90E2) else Color(0xFFFF69B4), RoundedCornerShape(50)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(if (i % 2 == 0) "♂" else "♀", color = Color.White, fontSize = 10.sp)
+                                        .size(44.dp)
+                                        .clip(RoundedCornerShape(50))
+                                        .border(1.5.dp, Color(0x33FFFFFF), RoundedCornerShape(50)),
+                                    contentScale = ContentScale.Crop
+                                )
+                                Spacer(Modifier.width(12.dp))
+                                Column(Modifier.weight(1f)) {
+                                    // Pheli row jisme Name aur (Value + Coin) dono hain
+                                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                                        Text(
+                                            text = "User Name ${i+4}",
+                                            color = Color.White,
+                                            fontSize = 14.sp,
+                                            fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        Spacer(Modifier.width(6.dp))
+                                        Box(
+                                            modifier = Modifier
+                                                .size(14.dp)
+                                                .background(if (i % 2 == 0) Color(0xFF4A90E2) else Color(0xFFFF69B4), RoundedCornerShape(50)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(if (i % 2 == 0) "♂" else "♀", color = Color.White, fontSize = 8.sp)
+                                        }
+                                        
+                                        Spacer(Modifier.weight(1f)) // Ye Value aur Coin icon ko right shift karega
+                                        
+                                        Text(
+                                            text = "${796 - (i * 12)}.9K",
+                                            color = Color(0xFFE7B865),
+                                            fontSize = 14.sp,
+                                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                                        )
+                                        Spacer(Modifier.width(4.dp))
+                                        AsyncImage(
+                                            model = raw + "file_00000000e56882119c217d508b6733dc.png",
+                                            contentDescription = "Coins Icon",
+                                            modifier = Modifier.size(16.dp),
+                                            contentScale = ContentScale.Fit
+                                        )
+                                    }
+                                    Spacer(Modifier.height(4.dp))
+                                    // Dusri row niche: Flag aur Nayi Level image with text on top
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(if (i % 2 == 0) "🇮🇳" else "🇸🇦", fontSize = 14.sp) 
+                                        Spacer(Modifier.width(6.dp))
+                                        // Box lagaya hai image aur text dono ko overlap karne ke liye
+                                        Box(contentAlignment = Alignment.CenterEnd) {
+                                            AsyncImage(
+                                                model = raw + "IMG_20261028_004355.png",
+                                                contentDescription = "Level Image",
+                                                modifier = Modifier.height(18.dp),
+                                                contentScale = ContentScale.Fit
+                                            )
+                                            Text(
+                                                text = "Lv.${10 + i}", // Dynamic level text bacha ke rakha hai
+                                                color = Color.White,
+                                                fontSize = 9.sp, // Text chota kiya hai taaki fit aaye
+                                                fontWeight = androidx.compose.ui.text.font.FontWeight.Normal,
+                                                modifier = Modifier.padding(end = 6.dp) // Right side se thoda padding diya
+                                            )
+                                        }
+                                    }
                                 }
                             }
-                            Spacer(Modifier.height(4.dp))
-                            Box(
-                                modifier = Modifier
-                                    .background(Color(0xFF3B82F6), RoundedCornerShape(8.dp))
-                                    .padding(horizontal = 6.dp, vertical = 1.dp)
-                            ) {
-                                Text("Lv.${10 + i}", color = Color.White, fontSize = 9.sp)
-                            }
                         }
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = "${796 - (i * 12)}.9K",
-                                color = Color(0xFFE7B865),
-                                fontSize = 16.sp,
-                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
-                            )
-                            Spacer(Modifier.width(6.dp))
-                            Box(
-                                modifier = Modifier
-                                    .size(20.dp)
-                                    .background(Brush.radialGradient(listOf(Color(0xFFFFE066), Color(0xFFD4AF37))), RoundedCornerShape(50)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text("S", color = Color(0xFF5C3A00), fontSize = 12.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
-                            }
-                        }
+                        
+                        Spacer(Modifier.height(130.dp))
                     }
                 }
             }
-            
-            // BOTTOM BAR FIXED - Offset added to remove any extra line, height is back to strict 72.dp
-            Box(
+        }
+
+        // BOTTOM BAR
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.BottomCenter)
+                .height(120.dp)
+        ) {
+            AsyncImage(
+                model = raw + "IMG_20261106_021443.png",
+                contentDescription = "Bottom Bar Background",
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+            Row(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .offset(y = (-1).dp) // Yeh laga diya hai extra line hatane ke liye
-                    .height(100.dp)
+                    .fillMaxSize()
+                    .padding(horizontal = 24.dp)
+                    .padding(top = 28.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 AsyncImage(
-                    model = raw + "IMG_20261106_021443.png",
-                    contentDescription = "Bottom Bar Background",
-                    modifier = Modifier.fillMaxSize(),
+                    model = ownAvatar,
+                    contentDescription = "Your avatar",
+                    modifier = Modifier
+                        .size(46.dp)
+                        .clip(RoundedCornerShape(50)),
                     contentScale = ContentScale.Crop
                 )
-                Row(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 24.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    AsyncImage(
-                        model = ownAvatar,
-                        contentDescription = "Your avatar",
-                        modifier = Modifier
-                            .size(46.dp)
-                            .clip(RoundedCornerShape(50)),
-                        contentScale = ContentScale.Crop
-                    )
-                    Spacer(Modifier.width(12.dp))
-                    Text(
-                        text = ownName, 
-                        color = Color.White, 
-                        fontSize = 15.sp, 
-                        fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, 
-                        modifier = Modifier.weight(1f), 
-                        maxLines = 1
-                    )
-                    Text(
-                        text = "+100", 
-                        color = Color(0xFFE7B865), 
-                        fontSize = 18.sp, 
-                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
-                    )
-                }
+                Spacer(Modifier.width(12.dp))
+                Text(
+                    text = ownName, 
+                    color = Color.White, 
+                    fontSize = 15.sp, 
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, 
+                    modifier = Modifier.weight(1f), 
+                    maxLines = 1
+                )
+                Text(
+                    text = "+100", 
+                    color = Color(0xFFE7B865), 
+                    fontSize = 18.sp, 
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                )
             }
+        }
 
-            if (showRules) {
-                androidx.compose.ui.window.Dialog(
-                    onDismissRequest = { showRules = false },
-                    properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
-                ) {
-                    Box(Modifier.fillMaxSize().background(Color(0x99000000)).clickable { showRules = false },contentAlignment=Alignment.BottomCenter) {
-                        Column(
-                            Modifier.fillMaxWidth()
-                                .fillMaxHeight(0.60f)
-                                .clip(RoundedCornerShape(topStart=16.dp,topEnd=16.dp))
-                                .background(Color(0xFF1A0204))
-                                .clickable { }
-                                .padding(20.dp)
-                        ) {
-                            Text("Rules",color=Color(0xFFE7B865),fontSize=18.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Bold,modifier=Modifier.align(Alignment.CenterHorizontally))
-                            Spacer(Modifier.height(16.dp))
+        if (showRules) {
+            androidx.compose.ui.window.Dialog(
+                onDismissRequest = { showRules = false },
+                properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
+            ) {
+                Box(Modifier.fillMaxSize().background(Color(0x99000000)).clickable { showRules = false },contentAlignment=Alignment.BottomCenter) {
+                    Column(
+                        Modifier.fillMaxWidth()
+                            .fillMaxHeight(0.60f)
+                            .clip(RoundedCornerShape(topStart=16.dp,topEnd=16.dp))
+                            .background(Color(0xFF1A0204))
+                            .clickable { }
+                            .padding(20.dp)
+                    ) {
+                        Text("Rules",color=Color(0xFFE7B865),fontSize=18.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Bold,modifier=Modifier.align(Alignment.CenterHorizontally))
+                        Spacer(Modifier.height(16.dp))
+                        
+                        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                            Text("Contribution Leaderboard: Your ranking on this leaderboard is determined by the total number of Coins you have spent in the room. The higher the amount spent, the higher your position on the leaderboard.",color=Color.White, fontSize = 12.sp)
+                            Text("Charm Leaderboard: Your ranking on this leaderboard is determined by the total number of Coins you Receive. The higher the amount spent, the higher your position on the leaderboard.",color=Color.White, fontSize = 12.sp)
+                            Text("Room Leaderboard: Your ranking on this leaderboard is determined by the total number of Coins you have spent in the room. The higher the amount spent, the higher your position on the leaderboard.",color=Color.White, fontSize = 12.sp)
                             
-                            Column(Modifier.weight(1f).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(10.dp)) {
-                                Text("Contribution Leaderboard: Your ranking on this leaderboard is determined by the total number of Coins you have spent in the room. The higher the amount spent, the higher your position on the leaderboard.",color=Color.White, fontSize = 12.sp)
-                                Text("Charm Leaderboard: Your ranking on this leaderboard is determined by the total number of Coins you Receive. The higher the amount spent, the higher your position on the leaderboard.",color=Color.White, fontSize = 12.sp)
-                                Text("Room Leaderboard: Your ranking on this leaderboard is determined by the total number of Coins you have spent in the room. The higher the amount spent, the higher your position on the leaderboard.",color=Color.White, fontSize = 12.sp)
-                                
-                                Spacer(Modifier.height(4.dp))
-                                Text("Data Periods",color=Color(0xFFE7B865),fontSize = 14.sp, fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold)
-                                Text("1. Daily leaderboard data is finalized every day at (5:30+GMT).\n2. Weekly leaderboard data is finalized every Monday at (5:30+GMT).\n3. Monthly leaderboard data is finalized on the first day of every month at (5:30+GMT).",color=Color.White, fontSize = 12.sp)
-                                
-                                Spacer(Modifier.height(4.dp))
-                                Text("Note: Users who violate platform rules are ineligible to participate in the rankings.",color=Color.White, fontSize = 12.sp)
-                                Text("The platform reserves the right to make the final decision.",color=Color.White, fontSize = 12.sp)
-                                
-                                Spacer(Modifier.height(12.dp))
-                                Text("Regard Zyora team",color=Color(0xFFE7B865), fontSize = 12.sp, modifier=Modifier.fillMaxWidth(), textAlign = TextAlign.End)
-                            }
+                            Spacer(Modifier.height(4.dp))
+                            Text("Data Periods",color=Color(0xFFE7B865),fontSize = 14.sp, fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold)
+                            Text("1. Daily leaderboard data is finalized every day at (5:30+GMT).\n2. Weekly leaderboard data is finalized every Monday at (5:30+GMT).\n3. Monthly leaderboard data is finalized on the first day of every month at (5:30+GMT).",color=Color.White, fontSize = 12.sp)
+                            
+                            Spacer(Modifier.height(4.dp))
+                            Text("Note: Users who violate platform rules are ineligible to participate in the rankings.",color=Color.White, fontSize = 12.sp)
+                            Text("The platform reserves the right to make the final decision.",color=Color.White, fontSize = 12.sp)
+                            
+                            Spacer(Modifier.height(12.dp))
+                            Text("Regard Zyora team",color=Color(0xFFE7B865), fontSize = 12.sp, modifier=Modifier.fillMaxWidth(), textAlign = TextAlign.End)
                         }
                     }
                 }
