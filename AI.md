@@ -237,3 +237,10 @@ Current documentation does not certify that all historical features are build-, 
 - Server repo fix: after the kick ban is persisted and target sockets are confirmed, broadcast `room_kick_announcement` to the room with target avatar/name, kicker avatar/name, owner/admin role, and timestamp. Existing client listener now receives it and inserts the already-implemented system row.
 - Kept the existing chat row UI, spacing, position, typography, and popup unchanged. No unrelated room UI behavior changed.
 - Status: **Server event implemented and committed**. Render deployment and live room verification remain pending.
+
+
+## 22 Kick notice chat placement and kicker avatar (2026-11-06)
+- `RoomPage.kt`: moved the existing kick-notice LazyColumn items from before announcements/normal messages to after the normal chat-message items, so kick notices render at the bottom of the chat like the latest chat row.
+- Moved the kicker avatar to the start of the kicker-name row, immediately before the kicker's name. Removed its previous placement after the word "by" to avoid showing the same avatar twice.
+- Preserved the existing kick notice card styling, target avatar/name, System row, actor role text, normal message rendering, and clear-chat/announcement logic. No other chat UI was changed.
+- Status: **Implemented in repository**. Native APK CI and live room/chat ordering verification remain pending.
