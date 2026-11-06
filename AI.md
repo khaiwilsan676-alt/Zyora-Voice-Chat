@@ -197,5 +197,5 @@ Current documentation does not certify that all historical features are build-, 
 - Native `SocialFollow.kt`: added shared API client and local cache for relationship state, counts, and social-list rows.
 - Native `RoomProfile.kt` and `PublicProfile.kt`: Follow/Followed state now loads from and writes to the same persistent follow graph; fan counts refresh from the server.
 - Native `Followpage.kt`: Fans, Following, and mutual Friends now load real profile rows with avatar, name, gender, country flag, and account ID (official ID image where applicable). Existing no-data artwork remains the empty state.
-- Native `MeScreen.kt`: Friends, Fans, and Following counts now come from the server/cache; unresolved counts display a dash rather than a misleading hardcoded zero.
+- Native `MeScreen.kt`: Friends, Fans, and Following counts now come from the server/cache; unresolved counts display a dash rather than a misleading hardcoded zero. A Socket.IO follow-update listener refreshes these counts while Me remains mounted.
 - Verification: source changes committed. Render deployment, native compile, cache/reconnect behavior, and two-account follow/unfollow tests remain pending. Existing API trusts caller-supplied IDs; Firebase-token authorization remains a separate required security task.
