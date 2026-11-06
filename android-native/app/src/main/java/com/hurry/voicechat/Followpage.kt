@@ -149,16 +149,14 @@ fun OtherSocialPages(type: String, onBack: () -> Unit) {
                     horizontalAlignment = Alignment.CenterHorizontally, 
                     modifier = Modifier.padding(bottom = 48.dp)
                 ) {
-                    val canvasModifier = Modifier.size(76.dp)
-                    
-                    when (type) {
-                        "Friends" -> FriendsCanvas(canvasModifier)
-                        "Fans" -> FansCanvas(canvasModifier)
-                        "Following" -> FollowingCanvas(canvasModifier)
-                    }
-
-                    Spacer(Modifier.height(12.dp))
-                    Text("No $type yet", fontSize = 14.sp, color = Color(0xFF9CA3AF))
+                    AsyncImage(
+                        model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/file_0000000047308211a02722299d1fda2e.png",
+                        contentDescription = "No data",
+                        modifier = Modifier.size(50.dp),
+                        contentScale = ContentScale.Fit
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text("No data", fontSize = 14.sp, color = Color(0xFF9CA3AF))
                 }
             }
         }
