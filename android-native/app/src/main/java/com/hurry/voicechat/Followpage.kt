@@ -144,19 +144,47 @@ fun OtherSocialPages(type: String, onBack: () -> Unit) {
         }
 
         if (socialPage) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally, 
-                    modifier = Modifier.padding(bottom = 48.dp)
-                ) {
-                    AsyncImage(
-                        model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/file_0000000047308211a02722299d1fda2e.png",
-                        contentDescription = "No data",
-                        modifier = Modifier.size(50.dp),
-                        contentScale = ContentScale.Fit
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Text("No data", fontSize = 14.sp, color = Color(0xFF9CA3AF))
+            val context = LocalContext.current
+            val prefs = remember(context) { context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE) }
+            val myId = prefs.getString("accountId", "").orEmpty().ifBlank { prefs.getString("uid", "").orEmpty() }
+            var rows by remember(type, myId) { mutableStateOf<List<SocialFollowUser>>(emptyList()) }
+            var loading by remember(type, myId) { mutableStateOf(true) }
+            LaunchedEffect(type, myId) {
+                rows = SocialFollowApi.list(context, myId, type.lowercase())
+                loading = false
+            }
+            when {
+                loading && rows.isEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment=Alignment.Center) { CircularProgressIndicator(color=Color(0xFF2563EB)) }
+                rows.isEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment=Alignment.Center) {
+                    Column(horizontalAlignment=Alignment.CenterHorizontally, modifier=Modifier.padding(bottom=48.dp)) {
+                        AsyncImage(model="https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/file_0000000047308211a02722299d1fda2e.png",contentDescription="No data",modifier=Modifier.size(50.dp),contentScale=ContentScale.Fit)
+                        Spacer(Modifier.height(8.dp)); Text("No data",fontSize=14.sp,color=Color(0xFF9CA3AF))
+                    }
+                }
+                else -> LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(horizontal=16.dp,vertical=12.dp)) {
+                    items(rows,key={it.id}) { person ->
+                        Row(Modifier.fillMaxWidth().padding(vertical=9.dp),verticalAlignment=Alignment.CenterVertically) {
+                            AsyncImage(model=person.image.takeIf{it.isNotBlank()},contentDescription=person.name,modifier=Modifier.size(52.dp).clip(CircleShape).background(Color.LightGray),contentScale=ContentScale.Crop)
+                            Spacer(Modifier.width(12.dp))
+                            Column(Modifier.weight(1f)) {
+                                Row(verticalAlignment=Alignment.CenterVertically) {
+                                    Text(person.name, color=Color(0xFF111827),fontSize=15.sp,fontWeight=FontWeight.SemiBold,maxLines=1)
+                                    if(person.gender.isNotBlank()) {
+                                        Spacer(Modifier.width(5.dp)); val male=person.gender.equals("male",true)||person.gender.equals("m",true)||person.gender=="♂"
+                                        Box(Modifier.size(16.dp).clip(CircleShape).background(if(male)Color(0xFF3B82F6) else Color(0xFFEC4899)),contentAlignment=Alignment.Center) { Text(if(male)"♂" else "♀",color=Color.White,fontSize=10.sp) }
+                                    }
+                                    if(person.country.isNotBlank()) Text(countryFlag(person.country),modifier=Modifier.padding(start=5.dp),fontSize=14.sp)
+                                }
+                                Row(verticalAlignment=Alignment.CenterVertically) {
+                                    val account=person.accountId.ifBlank{person.id}
+                                    if(account in setOf("100002","100003","500001","500002","500003","500004")) {
+                                        AsyncImage(model="https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261101_125212.png",contentDescription="ID",modifier=Modifier.height(18.dp).widthIn(max=28.dp),contentScale=ContentScale.Fit)
+                                        Text(account,color=Color(0xFF6B7280),fontSize=11.sp)
+                                    } else Text("ID: $account",color=Color(0xFF6B7280),fontSize=11.sp)
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
