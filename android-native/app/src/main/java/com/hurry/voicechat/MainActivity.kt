@@ -737,12 +737,12 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                                 modifier = Modifier.padding(start = 5.dp)
                             )
                             AsyncImage(
-                                model = ROOM_ADMIN_TAG, contentDescription = "Owner tag",
+                                model = "https://zyora-voice-chat.vercel.app/IMG_20261027_235537.png", contentDescription = "Owner tag",
                                 modifier = Modifier.padding(start = 5.dp).height(17.dp).widthIn(max = 42.dp),
                                 contentScale = ContentScale.Fit
                             )
                         }
-                        if (ownerId in setOf("500002", "500003", "500004")) {
+                        if (ownerId in setOf("100002", "100003", "500001", "500002", "500003", "500004")) {
                             Row(
                                 Modifier.fillMaxWidth().padding(top = 8.dp),
                                 horizontalArrangement = Arrangement.Center,
