@@ -2213,28 +2213,6 @@ private fun RoomChatMessages(
                                     }
                                 }
                             }
-                            items(kickNotices, key = { it.id }) { notice ->
-                                Column(Modifier.fillMaxWidth().padding(start=4.dp, top=0.dp, end=82.dp, bottom=2.dp)) {
-                                    Column(Modifier.wrapContentWidth().clip(RoundedCornerShape(12.dp)).background(Color.Black.copy(alpha=.30f)).padding(horizontal=12.dp, vertical=8.dp), verticalArrangement=Arrangement.spacedBy(4.dp)) {
-                                        Row(verticalAlignment=Alignment.CenterVertically, horizontalArrangement=Arrangement.spacedBy(6.dp)) {
-                                            Box(Modifier.size(24.dp).clip(CircleShape).background(Color(0xFF00C853)), contentAlignment=Alignment.Center) {
-                                                Icon(Icons.Default.Notifications, contentDescription="System", tint=Color.White, modifier=Modifier.size(16.dp))
-                                            }
-                                            Text("System", color=Color(0xFFD1D1D1), fontSize=15.sp, fontWeight=FontWeight.Medium)
-                                        }
-                                        Row(verticalAlignment=Alignment.CenterVertically, horizontalArrangement=Arrangement.spacedBy(4.dp)) {
-                                            FallbackAsyncImage(model=notice.targetImage, contentDescription=notice.targetName, modifier=Modifier.size(22.dp).clip(CircleShape), contentScale=ContentScale.Crop)
-                                            Text(notice.targetName, color=Color(0xFFE2C67D), fontSize=13.sp, fontWeight=FontWeight.Bold, maxLines=1, softWrap=false, overflow=TextOverflow.Ellipsis)
-                                            Text("are kicked out of Room by", color=Color.White, fontSize=13.sp, maxLines=1, softWrap=false)
-                                            FallbackAsyncImage(model=notice.actorImage, contentDescription=notice.actorName, modifier=Modifier.size(22.dp).clip(CircleShape), contentScale=ContentScale.Crop)
-                                        }
-                                        Row(verticalAlignment=Alignment.CenterVertically, horizontalArrangement=Arrangement.spacedBy(4.dp)) {
-                                            Text(notice.actorName, color=Color(0xFFE2C67D), fontSize=13.sp, fontWeight=FontWeight.Bold, maxLines=1, softWrap=false, overflow=TextOverflow.Ellipsis)
-                                            Text("(${notice.actorRole})", color=Color.White, fontSize=13.sp, fontWeight=FontWeight.Normal)
-                                        }
-                                    }
-                                }
-                            }
                             if(announcement.isNotBlank()) {
                                 item {
                                     Column(Modifier.fillMaxWidth().padding(start=4.dp, end=82.dp, bottom=2.dp)) {
@@ -2268,6 +2246,28 @@ private fun RoomChatMessages(
                                         Text("Enter the Room",color=Color.White,fontSize=12.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Medium, modifier=Modifier.padding(start=2.dp).clickable { onSelectMessage(message) })
                                     }
                                 } else NativeMessage(message, roomOwnerId = roomOwnerId, onAvatarClick = { onSelectMessage(message) }, onMentionClick = onSelectMention)
+                            }
+                            items(kickNotices, key = { it.id }) { notice ->
+                                Column(Modifier.fillMaxWidth().padding(start=4.dp, top=0.dp, end=82.dp, bottom=2.dp)) {
+                                    Column(Modifier.wrapContentWidth().clip(RoundedCornerShape(12.dp)).background(Color.Black.copy(alpha=.30f)).padding(horizontal=12.dp, vertical=8.dp), verticalArrangement=Arrangement.spacedBy(4.dp)) {
+                                        Row(verticalAlignment=Alignment.CenterVertically, horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+                                            Box(Modifier.size(24.dp).clip(CircleShape).background(Color(0xFF00C853)), contentAlignment=Alignment.Center) {
+                                                Icon(Icons.Default.Notifications, contentDescription="System", tint=Color.White, modifier=Modifier.size(16.dp))
+                                            }
+                                            Text("System", color=Color(0xFFD1D1D1), fontSize=15.sp, fontWeight=FontWeight.Medium)
+                                        }
+                                        Row(verticalAlignment=Alignment.CenterVertically, horizontalArrangement=Arrangement.spacedBy(4.dp)) {
+                                            FallbackAsyncImage(model=notice.targetImage, contentDescription=notice.targetName, modifier=Modifier.size(22.dp).clip(CircleShape), contentScale=ContentScale.Crop)
+                                            Text(notice.targetName, color=Color(0xFFE2C67D), fontSize=13.sp, fontWeight=FontWeight.Bold, maxLines=1, softWrap=false, overflow=TextOverflow.Ellipsis)
+                                            Text("are kicked out of Room by", color=Color.White, fontSize=13.sp, maxLines=1, softWrap=false)
+                                        }
+                                        Row(verticalAlignment=Alignment.CenterVertically, horizontalArrangement=Arrangement.spacedBy(4.dp)) {
+                                            FallbackAsyncImage(model=notice.actorImage, contentDescription=notice.actorName, modifier=Modifier.size(22.dp).clip(CircleShape), contentScale=ContentScale.Crop)
+                                            Text(notice.actorName, color=Color(0xFFE2C67D), fontSize=13.sp, fontWeight=FontWeight.Bold, maxLines=1, softWrap=false, overflow=TextOverflow.Ellipsis)
+                                            Text("(${notice.actorRole})", color=Color.White, fontSize=13.sp, fontWeight=FontWeight.Normal)
+                                        }
+                                    }
+                                }
                             }
                         }
 }
