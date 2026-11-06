@@ -717,7 +717,7 @@ fun PublicProfileScreen(
                                         isFollowing = result.isFollowing
                                         followersCount = result.followers
                                     } else {
-                                        // Failed request: restore the previous confirmed state.
+                                        // Failed request: restore the previous confirmed state; successful POST returns counts directly.
                                         isFollowing = previousFollowing
                                         followersCount = previousCount
                                         SocialFollowApi.cacheSnapshot(
