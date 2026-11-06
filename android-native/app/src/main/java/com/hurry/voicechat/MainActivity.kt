@@ -421,7 +421,10 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
         }
     }
     var roomAccessCheckInProgress by remember { mutableStateOf(false) }
-    fun tryOpenRoom(room: HurryRoom) {
+    var roomAccessPromptRoom by remember { mutableStateOf<HurryRoom?>(null) }
+    var roomAccessPassword by remember { mutableStateOf("") }
+    var roomAccessError by remember { mutableStateOf(false) }
+    fun tryOpenRoom(room: HurryRoom, roomPassword: String = "") {
         val roomIdToCheck = room.id.ifBlank { room.accountId }
         val joiningAccountId = authPrefs.getString("accountId", userId).orEmpty().ifBlank { userId }
         if (roomIdToCheck.isBlank() || joiningAccountId.isBlank() || roomAccessCheckInProgress) return
@@ -430,6 +433,50 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
         // room_join keeps its server-side kick-ban check as the final authoritative guard.
         roomAccessCheckInProgress = true
         roomCreateScope.launch {
+            val passwordAccess = withContext(Dispatchers.IO) {
+                runCatching {
+                    val connection = (URL("https://zyora-server.onrender.com/api/room-access").openConnection() as HttpURLConnection).apply {
+                        requestMethod = "POST"
+                        connectTimeout = 8000
+                        readTimeout = 8000
+                        doOutput = true
+                        setRequestProperty("Content-Type", "application/json")
+                        setRequestProperty("Accept", "application/json")
+                        setRequestProperty("Cache-Control", "no-cache")
+                    }
+                    try {
+                        val payload = JSONObject().put("roomId", roomIdToCheck).put("userId", joiningAccountId).put("password", roomPassword)
+                        connection.outputStream.bufferedWriter().use { it.write(payload.toString()) }
+                        val code = connection.responseCode
+                        val stream = if (code in 200..299) connection.inputStream else connection.errorStream
+                        val body = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+                        JSONObject(body.ifBlank { "{}" }).put("_httpCode", code)
+                    } finally { connection.disconnect() }
+                }.getOrNull()
+            }
+            if (passwordAccess == null) {
+                roomAccessCheckInProgress = false
+                roomBlockedPopup = JSONObject().put("checkFailed", true)
+                return@launch
+            }
+            if (!passwordAccess.optBoolean("allowed", false)) {
+                roomAccessCheckInProgress = false
+                if (passwordAccess.optInt("_httpCode") == 401) {
+                    if (roomAccessPromptRoom?.id == room.id && roomPassword.isNotEmpty()) {
+                        roomAccessError = true
+                    } else {
+                        roomAccessPromptRoom = room
+                        roomAccessPassword = ""
+                        roomAccessError = false
+                    }
+                } else {
+                    roomBlockedPopup = JSONObject().put("checkFailed", true)
+                }
+                return@launch
+            }
+            roomAccessPromptRoom = null
+            roomAccessPassword = ""
+            roomAccessError = false
             val kickStatus = withContext(Dispatchers.IO) {
                 runCatching {
                     val encodedRoom = java.net.URLEncoder.encode(roomIdToCheck, "UTF-8")
@@ -762,6 +809,41 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                             shape = RoundedCornerShape(8.dp),
                             colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color(0xFF2583F7))
                         ) { Text("Got it", color = Color.White, fontWeight = FontWeight.Bold) }
+                    }
+                }
+            }
+            roomAccessPromptRoom?.let { lockedRoom ->
+                Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.42f)), contentAlignment = Alignment.Center) {
+                    Column(
+                        Modifier.fillMaxWidth().padding(horizontal = 30.dp).clip(RoundedCornerShape(14.dp))
+                            .background(Color(0xFF171717)).padding(20.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text("Room Locked", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(16.dp))
+                        androidx.compose.material3.OutlinedTextField(
+                            value = roomAccessPassword,
+                            onValueChange = { if (it.length <= 4 && it.all(Char::isDigit)) roomAccessPassword = it },
+                            label = { Text("Enter password", color = Color.LightGray) },
+                            singleLine = true,
+                            visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.NumberPassword),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        if (roomAccessError) {
+                            Text("Password incorrect", color = Color(0xFFFF7777), fontSize = 12.sp, modifier = Modifier.padding(top = 7.dp))
+                        }
+                        Row(Modifier.fillMaxWidth().padding(top = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            androidx.compose.material3.TextButton(
+                                onClick = { roomAccessPromptRoom = null; roomAccessPassword = ""; roomAccessError = false },
+                                modifier = Modifier.weight(1f)
+                            ) { Text("Cancel", color = Color.LightGray) }
+                            androidx.compose.material3.Button(
+                                onClick = { if (roomAccessPassword.length == 4) tryOpenRoom(lockedRoom, roomAccessPassword) },
+                                enabled = roomAccessPassword.length == 4 && !roomAccessCheckInProgress,
+                                modifier = Modifier.weight(1f)
+                            ) { Text("Enter the room") }
+                        }
                     }
                 }
             }
