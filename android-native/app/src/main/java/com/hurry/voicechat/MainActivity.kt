@@ -407,7 +407,6 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
     var roomBlockedPopup by remember { mutableStateOf<JSONObject?>(null) }
     var kickNoticeNow by remember { mutableLongStateOf(System.currentTimeMillis()) }
     var blockedPopupNow by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    val roomKickPrefs = remember { context.getSharedPreferences("zyora_room_kick_restrictions", android.content.Context.MODE_PRIVATE) }
     LaunchedEffect(roomKickNotice) {
         while (roomKickNotice != null) {
             kickNoticeNow = System.currentTimeMillis()
@@ -421,32 +420,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
             roomBlockedPopup = null
         }
     }
-    fun rememberRoomKick(notice: JSONObject) {
-        val kickedRoomId = notice.optString("roomId")
-        val expiry = notice.optLong("expiresAt", 0L)
-        if (kickedRoomId.isNotBlank() && expiry > System.currentTimeMillis()) {
-            val all = runCatching { JSONObject(roomKickPrefs.getString("active", "{}").orEmpty()) }.getOrDefault(JSONObject())
-            all.put(kickedRoomId, JSONObject(notice.toString()).put("expiresAt", expiry))
-            roomKickPrefs.edit().putString("active", all.toString()).apply()
-        }
-    }
     fun tryOpenRoom(room: HurryRoom) {
-        val targetRoomId = room.id.ifBlank { room.accountId }
-        val all = runCatching { JSONObject(roomKickPrefs.getString("active", "{}").orEmpty()) }.getOrDefault(JSONObject())
-        val restriction = all.optJSONObject(targetRoomId)
-        val expiresAt = restriction?.optLong("expiresAt", 0L) ?: 0L
-        if (expiresAt > System.currentTimeMillis()) {
-            tab = HurryTab.HOME
-            openedRoom = null
-            roomBlockedPopup = JSONObject()
-                .put("roomId", targetRoomId)
-                .put("expiresAt", expiresAt)
-            return
-        }
-        if (restriction != null) {
-            all.remove(targetRoomId)
-            roomKickPrefs.edit().putString("active", all.toString()).apply()
-        }
         openedRoom = room
     }
     fun tryOpenRoomById(targetRoomId: String) {
@@ -502,19 +476,8 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                     onJoinRoom = { targetRoomId -> tryOpenRoomById(targetRoomId) },
                     onKickNotice = { notice ->
                         if (notice.optBoolean("blocked", false)) {
-                            val existing = runCatching { JSONObject(roomKickPrefs.getString("active", "{}").orEmpty()) }.getOrDefault(JSONObject())
-                            val roomId = notice.optString("roomId")
-                            val saved = existing.optJSONObject(roomId)
-                            val merged = JSONObject(saved?.toString() ?: "{}")
-                                .put("roomId", roomId)
-                                .put("expiresAt", notice.optLong("expiresAt", saved?.optLong("expiresAt", 0L) ?: 0L))
-                            if (merged.optLong("expiresAt") > System.currentTimeMillis()) {
-                                existing.put(roomId, merged)
-                                roomKickPrefs.edit().putString("active", existing.toString()).apply()
-                            }
-                            roomBlockedPopup = merged
+                            roomBlockedPopup = JSONObject(notice.toString())
                         } else {
-                            rememberRoomKick(notice)
                             roomKickNotice = notice
                         }
                     },
