@@ -191,3 +191,11 @@ Current documentation does not certify that all historical features are build-, 
 - `android-native/app/src/main/java/com/hurry/voicechat/Followpage.kt`: Fans, Friends, and Following now reuse the same empty-state image and “No data” label used by the native Mine page (`file_0000000047308211a02722299d1fda2e.png`).
 - Removed the separate hand-drawn per-tab empty illustrations and “No Fans/Friends/Following yet” labels from this empty state only. Visitors behavior and the page header/background remain unchanged.
 - Status: **Implemented in repository**. Native APK CI and device appearance still require verification.
+
+## 17. Persistent social follow graph (2026-11-06)
+- Backend `Zyora-Server/server.js`: follow routes now resolve account aliases to a canonical profile key, persist idempotent follower/target pairs in MongoDB `userFollows`, return follower/following/friend counts and profile rows, and broadcast follow updates. The GET route supports `profile`, `fans`, `following`, and mutual `friends` views.
+- Native `SocialFollow.kt`: added shared API client and local cache for relationship state, counts, and social-list rows.
+- Native `RoomProfile.kt` and `PublicProfile.kt`: Follow/Followed state now loads from and writes to the same persistent follow graph; fan counts refresh from the server.
+- Native `Followpage.kt`: Fans, Following, and mutual Friends now load real profile rows with avatar, name, gender, country flag, and account ID (official ID image where applicable). Existing no-data artwork remains the empty state.
+- Native `MeScreen.kt`: Friends, Fans, and Following counts now come from the server/cache; unresolved counts display a dash rather than a misleading hardcoded zero.
+- Verification: source changes committed. Render deployment, native compile, cache/reconnect behavior, and two-account follow/unfollow tests remain pending. Existing API trusts caller-supplied IDs; Firebase-token authorization remains a separate required security task.
