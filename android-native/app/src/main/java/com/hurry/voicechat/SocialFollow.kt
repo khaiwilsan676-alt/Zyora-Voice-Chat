@@ -84,9 +84,10 @@ object SocialFollowApi {
             SocialFollowUser(p.optString("id"),p.optString("uid"),p.optString("accountId"),p.optString("name","User"),p.optString("image"),p.optString("gender"),p.optString("country"),p.optString("countryFlag"))
         }}
     }
-    private fun saveSnapshot(context:Context,targetId:String,s:SocialFollowSnapshot){
+    fun cacheSnapshot(context:Context,targetId:String,s:SocialFollowSnapshot){
         NativeIndexDatabase(context).saveProfile("social_counts:$targetId",JSONObject().put("followers",s.followers).put("followingCount",s.followingCount).put("friends",s.friends).put("isFollowing",s.isFollowing))
     }
+    private fun saveSnapshot(context:Context,targetId:String,s:SocialFollowSnapshot) = cacheSnapshot(context,targetId,s)
     fun cachedSnapshot(context:Context,targetId:String):SocialFollowSnapshot?=runCatching{
         val j=NativeIndexDatabase(context).loadProfile("social_counts:$targetId")?:return null
         SocialFollowSnapshot(j.optInt("followers"),j.optInt("followingCount"),j.optInt("friends"),j.optBoolean("isFollowing"))
