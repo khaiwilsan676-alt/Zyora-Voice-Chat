@@ -355,8 +355,7 @@ fun RoomPage(
         withContext(Dispatchers.IO) {
             runCatching {
                 val encoded = java.net.URLEncoder.encode(roomId, "UTF-8")
-                val ownerQuery = if (accountId == roomOwnerAccountId) "&ownerId=" + java.net.URLEncoder.encode(accountId, "UTF-8") else ""
-                val conn = (java.net.URL("https://zyora-server.onrender.com/api/rooms?roomId=$encoded$ownerQuery").openConnection() as java.net.HttpURLConnection).apply { connectTimeout=10000; readTimeout=10000 }
+                val conn = (java.net.URL("https://zyora-server.onrender.com/api/rooms?roomId=$encoded").openConnection() as java.net.HttpURLConnection).apply { connectTimeout=10000; readTimeout=10000 }
                 try {
                     if (conn.responseCode in 200..299) {
                         val root = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
