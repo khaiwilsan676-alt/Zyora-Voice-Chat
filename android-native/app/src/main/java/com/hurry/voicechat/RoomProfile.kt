@@ -250,7 +250,7 @@ fun RoomProfile(
     val myFollowId = authPrefs.getString("accountId", "").orEmpty().ifBlank { authPrefs.getString("uid", "").orEmpty() }
     val targetFollowId = user.accountId?.takeIf { it.isNotBlank() } ?: user.uid?.takeIf { it.isNotBlank() } ?: user.id.orEmpty()
     var isFollowing by remember(user.uid, user.id, user.accountId) { mutableStateOf(user.isFollowing) }
-    var followersCount by remember(user.uid, user.id, user.accountId) { mutableIntStateOf(user.followers) }
+    var followersCount by remember(user.uid, user.id, user.accountId) { mutableIntStateOf(user.followers.takeIf { it > 0 } ?: -1) }
     var followBusy by remember { mutableStateOf(false) }
     LaunchedEffect(user.uid, user.id, user.accountId, myFollowId) {
         if (myFollowId.isNotBlank() && targetFollowId.isNotBlank()) {
@@ -362,7 +362,7 @@ fun RoomProfile(
                             
                             Text(" | ", color = Color.LightGray, modifier = Modifier.padding(horizontal = 4.dp))
                             
-                            Text("${followersCount}", color = Color.DarkGray, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                            Text("${if (followersCount >= 0) followersCount.toString() else "—"}", color = Color.DarkGray, fontSize = 14.sp, fontWeight = FontWeight.Medium)
                             Text(" Fans", color = Color.Gray, fontSize = 14.sp, modifier = Modifier.padding(start = 4.dp))
                         }
 
