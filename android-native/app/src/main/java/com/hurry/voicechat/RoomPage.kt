@@ -349,11 +349,14 @@ fun RoomPage(
         }
     }
 
-    LaunchedEffect(roomId) {
+    LaunchedEffect(roomId, accountId) {
+        val cachedLock = withContext(Dispatchers.IO) { runCatching { NativeIndexDatabase(appContext).loadRoomLock(roomId) }.getOrNull() }
+        if (cachedLock != null) { locked = cachedLock.first; if (accountId == roomOwnerAccountId) roomPassword = cachedLock.second }
         withContext(Dispatchers.IO) {
             runCatching {
                 val encoded = java.net.URLEncoder.encode(roomId, "UTF-8")
-                val conn = (java.net.URL("https://zyora-server.onrender.com/api/rooms?roomId=$encoded").openConnection() as java.net.HttpURLConnection).apply { connectTimeout=10000; readTimeout=10000 }
+                val ownerQuery = if (accountId == roomOwnerAccountId) "&ownerId=" + java.net.URLEncoder.encode(accountId, "UTF-8") else ""
+                val conn = (java.net.URL("https://zyora-server.onrender.com/api/rooms?roomId=$encoded$ownerQuery").openConnection() as java.net.HttpURLConnection).apply { connectTimeout=10000; readTimeout=10000 }
                 try {
                     if (conn.responseCode in 200..299) {
                         val root = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
@@ -376,8 +379,11 @@ fun RoomPage(
                             roomTheme = savedTheme
                             roomAdminIds = savedAdmins
                             locked = savedLocked
-                            roomPassword = savedRoomPassword
+                            roomPassword = if (accountId == roomOwnerAccountId) savedRoomPassword else ""
+                            locked = savedLocked
                             roomCustomThemeUrl = savedCustomTheme
+                            appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).edit().putBoolean("room_locked_$roomId", savedLocked).putString("room_password_$roomId", if (accountId == roomOwnerAccountId) savedRoomPassword else "").apply()
+                            NativeIndexDatabase(appContext).saveRoomLock(roomId, savedLocked, if (accountId == roomOwnerAccountId) savedRoomPassword else "")
                             appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).edit().putInt("micMode_$roomId", savedMicMode).putString("theme_$roomId", savedTheme).putString("customTheme_$roomId", savedCustomTheme).apply()
                         }
                     }
@@ -1649,7 +1655,8 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
         if(showActiveUsers) ActiveUsers(isOpen=true,onClose={showActiveUsers=false},roomUsers=activeRoomUsers,roomOwnerId=roomOwner.accountId.ifBlank{roomOwner.id},onOpenProfile={ user -> selectedChatProfile=NativeRoomMessage("active-profile-" + user.accountId,"",user.name,user.image,user.accountId);showActiveUsers=false },onCopyUserId={ id -> clipboard.setText(AnnotatedString(id));copiedId=id })
         if(showSettings && accountId.isNotBlank() && accountId == roomOwner.accountId.ifBlank { roomOwner.id }) RoomSettingPage(initial = RoomSettingsDataNative(roomName=roomName,roomDp=roomImage,announcement=announcement,micMode=roomMicMode,theme=roomTheme,isLocked=locked,roomPassword=roomPassword,admin=roomAdminIds,customTheme=appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).getString("customTheme_$roomId", "").orEmpty()),roomOwnerId=roomId,currentUserId=accountId,onBack={showSettings=false},onSave={saved->
             roomName=saved.roomName;roomImage=saved.roomDp;announcement=saved.announcement;roomMicMode=saved.micMode;roomTheme=saved.theme;roomCustomThemeUrl=saved.customTheme;roomAdminIds=saved.admin;locked=saved.isLocked;roomPassword=saved.roomPassword;showSettings=false
-            appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).edit().putInt("micMode_$roomId", saved.micMode).putString("theme_$roomId", saved.theme).putString("customTheme_$roomId", saved.customTheme).apply()
+            appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).edit().putInt("micMode_$roomId", saved.micMode).putString("theme_$roomId", saved.theme).putString("customTheme_$roomId", saved.customTheme).putBoolean("room_locked_$roomId", saved.isLocked).putString("room_password_$roomId", saved.roomPassword).apply()
+            kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch { NativeIndexDatabase(appContext).saveRoomLock(roomId, saved.isLocked, saved.roomPassword) }
             roomSocketRef.value?.takeIf { it.connected() }?.emit("room_settings_update", JSONObject()
                 .put("roomId", roomId).put("userId", accountId).put("roomOwnerId", roomId)
                 .put("micMode", saved.micMode).put("roomName", saved.roomName).put("roomDp", saved.roomDp)
