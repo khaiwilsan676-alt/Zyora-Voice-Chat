@@ -102,7 +102,9 @@ fun FollowPage(type:String, onBack:()->Unit) {
     if(type.equals("Visitors",true)) {
         VisitorsPage(onBack)
     } else {
-        OtherSocialPages(type = type, onBack = onBack)
+        // Keep each destination isolated so switching between Fans/Friends/Following
+        // cannot reuse another tab's remembered rows or render it as the default.
+        key(type) { OtherSocialPages(type = type, onBack = onBack) }
     }
 }
 
