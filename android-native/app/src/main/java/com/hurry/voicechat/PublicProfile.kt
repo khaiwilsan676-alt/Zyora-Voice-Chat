@@ -150,6 +150,8 @@ fun PublicProfileScreen(
     targetUser: TargetUser? = null
 ) {
     val context = LocalContext.current
+    val authPrefs = remember(context) { context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE) }
+    val currentUserId = authPrefs.getString("accountId", "").orEmpty().ifBlank { authPrefs.getString("uid", "").orEmpty() }
     val coroutineScope = rememberCoroutineScope()
     val targetPresenceId = targetUser?.accountId?.takeIf { it.isNotBlank() } ?: targetUser?.id.orEmpty()
     val targetPresenceIds = remember(targetUser) { setOf(targetUser?.accountId.orEmpty(), targetUser?.id.orEmpty(), targetUser?.uid.orEmpty()).filter { it.isNotBlank() }.toSet() }
