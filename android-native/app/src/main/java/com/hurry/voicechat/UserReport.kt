@@ -1,5 +1,9 @@
 package com.hurry.voicechat
 
+import android.content.Context
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -25,6 +29,48 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+
+
+internal fun updateZyoraUserBlock(context: Context, blockerId: String, blockedId: String, block: Boolean): Boolean {
+    if (blockerId.isBlank() || blockedId.isBlank()) return false
+    return runCatching {
+        val endpoint = if (block) "block" else "unblock"
+        val connection = (URL("https://zyora-server.onrender.com/api/users/$endpoint").openConnection() as HttpURLConnection).apply {
+            requestMethod = "POST"
+            connectTimeout = 10000
+            readTimeout = 10000
+            doOutput = true
+            setRequestProperty("Content-Type", "application/json")
+        }
+        try {
+            connection.outputStream.use {
+                it.write(JSONObject().put("blockedBy", blockerId).put("blockedUser", blockedId).toString().toByteArray(Charsets.UTF_8))
+            }
+            connection.responseCode in 200..299
+        } finally { connection.disconnect() }
+    }.getOrDefault(false)
+}
+
+internal fun fetchZyoraUserBlockState(viewerId: String, targetId: String): Pair<Boolean, Boolean> {
+    if (viewerId.isBlank() || targetId.isBlank()) return false to false
+    return runCatching {
+        val connection = (URL("https://zyora-server.onrender.com/api/users/block/status").openConnection() as HttpURLConnection).apply {
+            requestMethod = "POST"
+            connectTimeout = 10000
+            readTimeout = 10000
+            doOutput = true
+            setRequestProperty("Content-Type", "application/json")
+        }
+        try {
+            connection.outputStream.use {
+                it.write(JSONObject().put("viewerId", viewerId).put("targetId", targetId).toString().toByteArray(Charsets.UTF_8))
+            }
+            if (connection.responseCode !in 200..299) return@runCatching false to false
+            val response = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
+            response.optBoolean("viewerBlockedTarget") to response.optBoolean("targetBlockedViewer")
+        } finally { connection.disconnect() }
+    }.getOrDefault(false to false)
+}
 
 @Composable
 fun UserReport(
