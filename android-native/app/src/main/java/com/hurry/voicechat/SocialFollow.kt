@@ -80,10 +80,35 @@ object SocialFollowApi {
         val key="social_list:$userId:$type"
         val cachedRows=cachedList(context,userId,type)
         runCatching {
-            val root=request("/api/follows?userId=${enc(userId)}&type=${enc(type)}")
-            val rows=parseRows(root.optJSONArray("rows"))
-            NativeIndexDatabase(context).saveProfile(key,JSONObject().put("rows",root.optJSONArray("rows")?:org.json.JSONArray()).put("updatedAt",System.currentTimeMillis()))
-            rows
+            // The backend's canonical fans endpoint is targetUid + followerList.
+            // The previous userId/type query was not implemented server-side and
+            // therefore returned HTTP 400, leaving the Room share sheet empty.
+            val root = if (type.equals("fans", ignoreCase = true)) {
+                request("/api/follows?targetUid=${enc(userId)}")
+            } else {
+                request("/api/follows?userId=${enc(userId)}&type=${enc(type)}")
+            }
+            val sourceRows = if (type.equals("fans", ignoreCase = true)) {
+                root.optJSONArray("followerList") ?: org.json.JSONArray()
+            } else {
+                root.optJSONArray("rows") ?: org.json.JSONArray()
+            }
+            val normalized = org.json.JSONArray()
+            for (i in 0 until sourceRows.length()) {
+                val row = sourceRows.optJSONObject(i) ?: continue
+                val id = row.optString("accountId").ifBlank { row.optString("uid").ifBlank { row.optString("id") } }
+                normalized.put(JSONObject()
+                    .put("id", row.optString("id").ifBlank { id })
+                    .put("uid", row.optString("uid").ifBlank { id })
+                    .put("accountId", id)
+                    .put("name", row.optString("name", "User"))
+                    .put("image", row.optString("image"))
+                    .put("gender", row.optString("gender"))
+                    .put("country", row.optString("country"))
+                    .put("countryFlag", row.optString("countryFlag")))
+            }
+            NativeIndexDatabase(context).saveProfile(key,JSONObject().put("rows",normalized).put("updatedAt",System.currentTimeMillis()))
+            parseRows(normalized)
         }.getOrElse { cachedRows }
     }
     private fun parseRows(array:org.json.JSONArray?):List<SocialFollowUser>{
