@@ -420,13 +420,42 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
             roomBlockedPopup = null
         }
     }
+    var roomAccessCheckInProgress by remember { mutableStateOf(false) }
     fun tryOpenRoom(room: HurryRoom) {
         val roomIdToCheck = room.id.ifBlank { room.accountId }
-        if (roomIdToCheck.isBlank()) return
-        // Open immediately. The room_join Socket.IO handler performs the authoritative
-        // kick-ban check and emits room_kick_blocked before adding a banned user to presence.
-        // Avoid waiting for a separate HTTP round-trip before showing the room UI.
-        openedRoom = room
+        val joiningAccountId = authPrefs.getString("accountId", userId).orEmpty().ifBlank { userId }
+        if (roomIdToCheck.isBlank() || joiningAccountId.isBlank() || roomAccessCheckInProgress) return
+
+        // Do not mount RoomPage until the server confirms that this account is allowed in.
+        // room_join keeps its server-side kick-ban check as the final authoritative guard.
+        roomAccessCheckInProgress = true
+        roomCreateScope.launch {
+            val kickStatus = withContext(Dispatchers.IO) {
+                runCatching {
+                    val encodedRoom = java.net.URLEncoder.encode(roomIdToCheck, "UTF-8")
+                    val encodedUser = java.net.URLEncoder.encode(joiningAccountId, "UTF-8")
+                    val connection = (URL("https://zyora-server.onrender.com/api/room-kick-status?roomId=$encodedRoom&userId=$encodedUser").openConnection() as HttpURLConnection).apply {
+                        requestMethod = "GET"
+                        connectTimeout = 8000
+                        readTimeout = 8000
+                        setRequestProperty("Cache-Control", "no-cache")
+                        setRequestProperty("Accept", "application/json")
+                    }
+                    try {
+                        if (connection.responseCode !in 200..299) error("Room access check unavailable")
+                        JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
+                    } finally {
+                        connection.disconnect()
+                    }
+                }.getOrNull()
+            }
+            roomAccessCheckInProgress = false
+            when {
+                kickStatus == null -> roomBlockedPopup = JSONObject().put("checkFailed", true)
+                kickStatus.optBoolean("blocked", false) -> roomBlockedPopup = kickStatus
+                else -> openedRoom = room
+            }
+        }
     }
     fun tryOpenRoomById(targetRoomId: String) {
         if (targetRoomId.isBlank()) return
