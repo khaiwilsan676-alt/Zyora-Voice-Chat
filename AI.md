@@ -371,3 +371,9 @@ Current documentation does not certify that all historical features are build-, 
 - Native Active Users and room chat use the dedicated admin badge asset; the owner badge remains unchanged.
 - Room admins receive the same Fourgride tools visibility and Room Profile moderation controls as the owner, while the Room Settings entry remains owner-only.
 - Room admin IDs are preserved when a room API response omits the admin field; both legacy `admin` and alternate `admins` arrays are accepted. The Room members Add Admin image is slightly larger (30dp to 36dp).
+
+
+## 2026-11-07 — Emoji image cache and network-stall guard
+- `android-native/app/src/main/java/com/hurry/voicechat/Emojipicker.kt`: replaced the process-wide unbounded, unsynchronized emoji bitmap map with a thread-safe 12 MiB LRU cache. Reopening the picker can no longer retain every previously decoded sticker bitmap indefinitely.
+- Added connection and read timeouts to sticker image downloads so a stalled image host cannot leave the picker coroutine waiting without a bound. Bitmap state is published after the IO decode completes; existing sticker URLs, grid, click behavior, and static-first-frame GIF behavior remain unchanged.
+- Status: implemented in repository. Native APK CI and repeated-open / low-memory device checks remain pending; this is a focused confirmed-risk fix, not certification that every app bug or hang has been eliminated.
