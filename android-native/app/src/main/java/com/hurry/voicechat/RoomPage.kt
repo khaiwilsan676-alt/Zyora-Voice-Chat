@@ -1642,7 +1642,7 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                 }
                 // Exact existing composer footprint: 48dp field + 24dp vertical
                 // padding, plus system navigation inset. This spacer is transparent.
-                Spacer(Modifier.height(72.dp).navigationBarsPadding())
+                Spacer(Modifier.navigationBarsPadding().height(72.dp))
             }
         }
 
