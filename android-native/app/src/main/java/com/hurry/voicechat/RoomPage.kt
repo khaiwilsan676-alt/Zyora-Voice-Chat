@@ -1651,7 +1651,7 @@ Column(Modifier.fillMaxSize().drawWithContent { drawContent(); if (showChat) dra
                 )
             }
 
-            Column(horizontalAlignment=Alignment.CenterHorizontally) {
+            Column(horizontalAlignment=Alignment.CenterHorizontally, modifier = Modifier.offset(y = 6.dp)) {
                 androidx.compose.foundation.pager.HorizontalPager(state = sideBannerPager,modifier = Modifier.size(58.dp, 80.dp).clip(RoundedCornerShape(8.dp))) { page ->
                     AsyncImage(model = sideBannerImages[page],contentDescription = "Room side banner",modifier = Modifier.fillMaxSize().clickable(indication = null, interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }) { if (page == 0) { keepingRoomForMini = true; onRoomSupport() } },contentScale = ContentScale.Crop)
                 }
@@ -1664,7 +1664,7 @@ Column(Modifier.fillMaxSize().drawWithContent { drawContent(); if (showChat) dra
             }
             
             // Task Image reverted back to bottom right above games
-            TransparentGreenImage(url="https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG-20260902-WA0066.jpg",modifier=Modifier.padding(top=2.dp).size(60.dp).clickable { showRoomTask=true })
+            TransparentGreenImage(url="https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG-20260902-WA0066.jpg",modifier=Modifier.offset(y = 6.dp).padding(top=2.dp).size(60.dp).clickable { showRoomTask=true })
             AsyncImage(model="https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/file_000000002a8c81fab8232bebeeeb45cc.png",contentDescription="Games",modifier=Modifier.size(56.dp).clickable { showGames=true },contentScale=ContentScale.Fit)
         }
         
