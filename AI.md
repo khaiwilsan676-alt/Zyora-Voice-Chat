@@ -357,3 +357,10 @@ Current documentation does not certify that all historical features are build-, 
 - `android-native/app/src/main/java/com/hurry/voicechat/RoomPage.kt`: room-only inventory and room-follow network fetches now run in a `SupervisorJob`-backed IO scope owned by the room `DisposableEffect`.
 - On room disposal, the scope is cancelled and queued main-thread callbacks are removed before socket listeners are released. This prevents pending room fetches and delayed UI callbacks from continuing to mutate state after leaving or switching rooms.
 - Socket retention, room membership, seat persistence, event payloads, and visible UI are unchanged.
+
+
+## 2026-11-07 — Room Admin management
+- Redesigned native Room Admins and Room Members bottom sheets with black surfaces, 12dp top corners, 45%/50% heights, 5-admin cap, add/remove controls, and persistent room admin list updates through `/api/rooms`.
+- Updated seat invite buttons to use `public/IMG_20261107_153857.png`; admin badge uses `public/IMG_20261107_154649.png`.
+- Admins inherit room moderation/seat controls while the Room Settings icon remains owner-only. Admin saves no longer dismiss Room Settings.
+- Build verification remains pending; no successful Actions run was returned for the commits in this change.
