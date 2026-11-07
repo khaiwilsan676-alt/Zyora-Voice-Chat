@@ -285,3 +285,10 @@ Current documentation does not certify that all historical features are build-, 
 - Entry Effect and Gift Effect are initialized and persisted OFF when Fourgride opens.
 - User blocks are shared across Public Profile, Room Profile, and ChatPage through the server blocks collection. Private-message delivery is rejected in either direction when either participant has blocked the other. Room join is rejected when the room owner and joining account have a block relationship.
 - Block verification, native build, server deployment, and multi-account runtime tests remain pending; do not treat source commits alone as verified behavior.
+
+### Native Room Info sheet layout update
+- Reduced the Room Info sheet height from 60% to 55% of the available screen height.
+- Removed the centered “Room Information” heading. Room DP now overlaps the sheet's top edge at the horizontal center; room name and ID remain visible above the tabs on both tabs.
+- Moved the existing three-dot action (for non-owners) and Share control together to the top-left.
+- Reordered the Room info tab content: tabs, then a white/10 Room owner card (owner avatar/name, “Room owner” subtitle, and the existing chat icon asset), then Announcement.
+- Kept Members list behavior and existing actions unchanged. Removed the green “Copied!” label from the room ID row while retaining the copy action.
