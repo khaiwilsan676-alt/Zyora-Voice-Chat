@@ -86,7 +86,16 @@ fun TransparentGreenImage(url: String, modifier: Modifier = Modifier) {
     LaunchedEffect(url) {
         bitmap = withContext(Dispatchers.IO) {
             runCatching {
-                val source = java.net.URL(url).openStream().use { android.graphics.BitmapFactory.decodeStream(it) } ?: return@runCatching null
+                val connection = (java.net.URL(url).openConnection() as java.net.HttpURLConnection).apply {
+                    connectTimeout = 7_000
+                    readTimeout = 9_000
+                    useCaches = true
+                }
+                val source = try {
+                    connection.inputStream.use { android.graphics.BitmapFactory.decodeStream(it) }
+                } finally {
+                    connection.disconnect()
+                } ?: return@runCatching null
                 val result = source.copy(android.graphics.Bitmap.Config.ARGB_8888, true)
                 val width = result.width
                 val height = result.height
