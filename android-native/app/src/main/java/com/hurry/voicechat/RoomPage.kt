@@ -730,6 +730,7 @@ fun RoomPage(
     
     var selectedSeat by remember{mutableIntStateOf(0)}
     var showInviteSheet by remember(roomId) { mutableStateOf(false) }
+    var showSeatInviteUsers by remember(roomId) { mutableStateOf(false) }
     var incomingSeatInvite by remember(roomId) { mutableStateOf<JSONObject?>(null) }
      LaunchedEffect(incomingSeatInvite?.optString("inviteId")) {
         val activeInviteId = incomingSeatInvite?.optString("inviteId").orEmpty()
@@ -1928,6 +1929,33 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
             }
         )
         if(showActiveUsers) ActiveUsers(isOpen=true,onClose={showActiveUsers=false},roomUsers=activeRoomUsers,roomOwnerId=roomOwner.accountId.ifBlank{roomOwner.id},onOpenProfile={ user -> selectedChatProfile=NativeRoomMessage("active-profile-" + user.accountId,"",user.name,user.image,user.accountId);showActiveUsers=false },onCopyUserId={ id -> clipboard.setText(AnnotatedString(id));copiedId=id })
+        if(showSeatInviteUsers) ActiveUsers(
+            isOpen=true,
+            onClose={showSeatInviteUsers=false},
+            roomUsers=activeRoomUsers.filter { it.accountId != accountId },
+            roomOwnerId=roomOwner.accountId.ifBlank{roomOwner.id},
+            onOpenProfile={},
+            onCopyUserId={},
+            inviteMode=true,
+            onInvite={ user ->
+                val inviteSeat=seats.firstOrNull { !it.occupied && !it.locked }
+                val socket=roomSocketRef.value
+                if(user.accountId.isNotBlank() && user.accountId != accountId && inviteSeat != null && socket?.connected()==true) {
+                    socket.emit("room_seat_invite_send", JSONObject()
+                        .put("roomId",roomId)
+                        .put("inviterId",accountId)
+                        .put("inviterName",roomDisplayName.ifBlank{"User"})
+                        .put("inviterImage",roomDisplayImage)
+                        .put("targetId",user.accountId)
+                        .put("seatNumber",inviteSeat.number))
+                    showSeatInviteUsers=false
+                } else if(inviteSeat==null) {
+                    android.widget.Toast.makeText(appContext,"No available unlocked seat",android.widget.Toast.LENGTH_SHORT).show()
+                } else {
+                    android.widget.Toast.makeText(appContext,"Unable to send invitation",android.widget.Toast.LENGTH_SHORT).show()
+                }
+            }
+        )
         if(showSettings && accountId.isNotBlank() && accountId == roomOwner.accountId.ifBlank { roomOwner.id }) RoomSettingPage(initial = RoomSettingsDataNative(roomName=roomName,roomDp=roomImage,announcement=announcement,micMode=roomMicMode,theme=roomTheme,isLocked=locked,roomPassword=roomPassword,admin=roomAdminIds,customTheme=appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).getString("customTheme_$roomId", "").orEmpty()),roomOwnerId=roomId,currentUserId=accountId,onBack={showSettings=false},onSave={saved->
             roomName=saved.roomName;roomImage=saved.roomDp;announcement=saved.announcement;roomMicMode=saved.micMode;roomTheme=saved.theme;roomCustomThemeUrl=saved.customTheme;roomAdminIds=saved.admin;locked=saved.isLocked;roomPassword=saved.roomPassword;showSettings=false
             appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).edit().putInt("micMode_$roomId", saved.micMode).putString("theme_$roomId", saved.theme).putString("customTheme_$roomId", saved.customTheme).putBoolean("room_locked_$roomId", saved.isLocked).putString("room_password_$roomId", saved.roomPassword).apply()
@@ -2110,23 +2138,8 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                     }
                 },
                 onInvite={
-                    val targetId = seat.accountId.trim()
-                    val inviteSeat = seats.firstOrNull { !it.occupied && !it.locked }
-                    val socket = roomSocketRef.value
-                    if (targetId.isNotBlank() && targetId != accountId && inviteSeat != null && socket?.connected() == true) {
-                        socket.emit(
-                            "room_seat_invite_send",
-                            JSONObject()
-                                .put("roomId", roomId)
-                                .put("inviterId", accountId)
-                                .put("inviterName", roomDisplayName.ifBlank { "User" })
-                                .put("inviterImage", roomDisplayImage)
-                                .put("targetId", targetId)
-                                .put("seatNumber", inviteSeat.number)
-                        )
-                    }
-                    selectedSeat = 0
-                    showSeatSheet = false
+                    showSeatSheet=false
+                    showSeatInviteUsers=true
                 }
             )
         }
