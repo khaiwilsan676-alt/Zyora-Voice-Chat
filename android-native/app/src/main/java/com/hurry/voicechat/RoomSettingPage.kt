@@ -645,7 +645,7 @@ fun RoomSettingPage(
                 }
             }
         }
-        "admin" -> BottomSheetModal(scrimAlpha = 0.45f, heightFraction = 0.45f, dark = true, onDismiss = { sheet = "" }) {
+        "admin" -> BottomSheetModal(scrimAlpha = 0.45f, heightFraction = 0.45f, dark = true, cornerRadius = 12.dp, onDismiss = { sheet = "" }) {
             Column(Modifier.fillMaxSize().navigationBarsPadding().background(Color.Black).padding(horizontal = 16.dp)) {
                 Row(Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     Spacer(Modifier.width(32.dp))
@@ -681,7 +681,7 @@ fun RoomSettingPage(
                 }
             }
         }
-        "admin-members" -> BottomSheetModal(scrimAlpha = 0.45f, heightFraction = 0.5f, dark = true, onDismiss = { sheet = "admin" }) {
+        "admin-members" -> BottomSheetModal(scrimAlpha = 0.45f, heightFraction = 0.5f, dark = true, cornerRadius = 12.dp, onDismiss = { sheet = "admin" }) {
             Column(Modifier.fillMaxSize().navigationBarsPadding().background(Color.Black).padding(horizontal = 14.dp)) {
                 Text("Room members", Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 12.dp), color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
                 val visibleMembers = members.distinctBy { it.accountId }.filterNot { it.accountId == roomOwnerId }
@@ -995,6 +995,7 @@ private fun BottomSheetModal(
     scrimAlpha: Float = 0.5f,
     heightFraction: Float = 0.85f,
     dark: Boolean = false,
+    cornerRadius: Dp = 16.dp,
     onDismiss: () -> Unit,
     content: @Composable () -> Unit
 ) {
@@ -1014,7 +1015,7 @@ private fun BottomSheetModal(
         ) {
             Box(
                 Modifier.fillMaxWidth().heightIn(max = screenH * heightFraction)
-                    .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+                    .clip(RoundedCornerShape(topStart = cornerRadius, topEnd = cornerRadius))
                     .background(if (dark) Color.Black else Color.White)
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
