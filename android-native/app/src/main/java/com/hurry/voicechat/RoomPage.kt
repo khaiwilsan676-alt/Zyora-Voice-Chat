@@ -707,7 +707,7 @@ fun RoomPage(
     var clearedBy by remember { mutableStateOf("") }
     // A live kick owns the acknowledgement card; do not replace it with the
     // compact restriction popup if a delayed join-block event arrives.
-    var liveKickReceived by remember(roomId, accountId) { mutableStateOf(false) }
+    val liveKickReceived = remember(roomId, accountId) { java.util.concurrent.atomic.AtomicBoolean(false) }
     val kickNotices = remember { mutableStateListOf<NativeRoomKickNotice>() }
     
     val configuration = LocalConfiguration.current
@@ -944,8 +944,9 @@ fun RoomPage(
         val roomKickedListener = Emitter.Listener { args ->
             val payload = args.firstOrNull() as? JSONObject ?: return@Listener
             if (payload.optString("roomId") == roomId && payload.optString("targetId") == accountId) {
+                // Set before posting to main: a subsequent blocked event must not win this race.
+                liveKickReceived.set(true)
                 mainHandler.post {
-                    liveKickReceived = true
                     incomingSeatInvite = null
                     onKickNotice(payload)
                     onClose()
@@ -955,9 +956,9 @@ fun RoomPage(
         val roomKickBlockedListener = Emitter.Listener { args ->
             val payload = args.firstOrNull() as? JSONObject ?: return@Listener
             if (payload.optString("roomId") == roomId &&
-                payload.optString("userId") == accountId && !liveKickReceived) {
+                payload.optString("userId") == accountId && !liveKickReceived.get()) {
                 mainHandler.post {
-                    if (!liveKickReceived) {
+                    if (!liveKickReceived.get()) {
                         onKickNotice(JSONObject()
                             .put("roomId", roomId)
                             .put("targetId", accountId)
