@@ -764,7 +764,7 @@ fun RoomPage(
 
     val messages=remember{mutableStateListOf<NativeRoomMessage>()}
             val chatListState = androidx.compose.foundation.lazy.rememberLazyListState()
-            LaunchedEffect(messages.size, imeVisible) { if (messages.isNotEmpty()) chatListState.animateScrollToItem(messages.lastIndex) }
+            LaunchedEffect(messages.size, imeVisible) { if (messages.isNotEmpty()) chatListState.animateScrollToItem(messages.lastIndex, scrollOffset = 0) }
     val roomImagePickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) {
             val messageId = accountId + "-" + System.currentTimeMillis()
@@ -1473,7 +1473,7 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                 // Chat messages stay over the room; the root layer supplies the same
                 // white/20 overlay across the complete screen (including the composer).
                 if (showChat) {
-                    Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = 0.30f))) {
+                    Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = 0.50f))) {
                         RoomChatMessages(
                             state = chatListState,
                             messages = messages,
@@ -2580,8 +2580,8 @@ private fun RoomChatMessages(
 ) {
     LazyColumn(
         state = state,
-                            modifier = Modifier.fillMaxSize().padding(horizontal = 10.dp),
-                            contentPadding = PaddingValues(top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 8.dp, bottom = 8.dp),
+                            modifier = Modifier.fillMaxSize().padding(top = 80.dp, start = 10.dp, end = 10.dp),
+                            contentPadding = PaddingValues(top = 8.dp, bottom = 8.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             if (showOfficialAnnouncement) {
