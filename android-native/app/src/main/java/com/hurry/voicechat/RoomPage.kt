@@ -1467,6 +1467,9 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                     }
                 }
                 
+            val chatListState = androidx.compose.foundation.lazy.rememberLazyListState()
+            LaunchedEffect(messages.size, imeVisible) { if (messages.isNotEmpty()) chatListState.animateScrollToItem(messages.lastIndex) }
+
                 // Dedicated chat layer sits over the dimmed room while chat is open.
                 if (showChat) {
                     Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = 0.30f))) {
@@ -1487,8 +1490,6 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
             }
             // --- END TOP SECTION ---
 
-            val chatListState = androidx.compose.foundation.lazy.rememberLazyListState()
-            LaunchedEffect(messages.size, imeVisible) { if (messages.isNotEmpty()) chatListState.animateScrollToItem(messages.lastIndex) }
             
             // --- BOTTOM SECTION (MESSAGES + INPUT/FOOTER, WITH IME PADDING) ---
             Column(Modifier.fillMaxWidth().weight(1f).imePadding()) {
