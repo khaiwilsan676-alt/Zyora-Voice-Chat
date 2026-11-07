@@ -1683,10 +1683,8 @@ Column(Modifier.align(Alignment.BottomStart).padding(bottom=LocalConfiguration.c
                             Text(toast.name,color=Color.White,fontSize=13.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold,maxLines=1,modifier=Modifier.weight(1f, fill=false))
                             if (toast.accountId in roomAdminIds) {
                                 AsyncImage(model=ROOM_ADMIN_TAG, contentDescription="Room Admin", contentScale=ContentScale.Fit, modifier=Modifier.height(16.dp))
-                            } else if (toast.accountId == roomOwnerAccountId) {
-                                AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261027_235537.png", contentDescription="Owner", contentScale=ContentScale.Fit, modifier=Modifier.height(16.dp))
                             }
-                            Text("Enter the Room",color=Color.White,fontSize=12.sp,maxLines=1)
+                            Text("Enter the Room",color=Color.White,fontSize=12.sp,fontWeight=FontWeight.Bold,maxLines=1)
                             if (toast.vehicleVideo.isNotBlank()) {
                                 val vehicleUrl = if (toast.vehicleVideo.startsWith("http", true)) toast.vehicleVideo else "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/" + toast.vehicleVideo
                                 val vehicleItemId = when {
@@ -2629,6 +2627,9 @@ private fun RoomChatMessages(
                                         Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp), modifier=Modifier.clickable { onSelectMessage(message) }){
                                             FallbackAsyncImage(model=message.senderImage,contentDescription=message.sender,modifier=Modifier.size(24.dp).clip(CircleShape),contentScale=ContentScale.Crop)
                                             Text(message.sender,color=Color.White.copy(alpha=.95f),fontSize=12.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold)
+                                            if (message.senderAccountId == roomOwnerId) {
+                                                AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261027_235537.png", contentDescription="Owner", contentScale=ContentScale.Fit, modifier=Modifier.height(16.dp))
+                                            }
                                             
 
                                             val hasPublicProfileIdImage = message.senderAccountId in setOf("100002", "100003", "500001", "500002", "500003", "500004")
