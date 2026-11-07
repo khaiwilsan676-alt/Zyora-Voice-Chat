@@ -1104,6 +1104,12 @@ fun RoomPage(
                     if (hasAnnouncement) announcement = updatedAnnouncement
                     if (payload.has("publicMsgOff")) publicMsgOff = payload.optBoolean("publicMsgOff", true)
                     if (payload.has("roomName")) roomName = payload.optString("roomName", latestRoomName)
+                    if (payload.has("admin") && payload.optJSONArray("admin") != null) {
+                        val adminsJson = payload.optJSONArray("admin")!!
+                        roomAdminIds = (0 until adminsJson.length())
+                            .mapNotNull { index -> adminsJson.optString(index).trim().takeIf { it.isNotBlank() && it != "null" } }
+                            .distinct()
+                    }
                 }
             }
         }
@@ -2003,6 +2009,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                 .put("roomId", roomId).put("userId", accountId).put("roomOwnerId", roomId)
                 .put("micMode", saved.micMode).put("roomName", saved.roomName).put("roomDp", saved.roomDp)
                 .put("announcement", saved.announcement).put("theme", saved.theme)
+                .put("admin", JSONArray(saved.admin))
                 .put("isLocked", saved.isLocked)
                 .put("updatedAt", System.currentTimeMillis()))
         })
