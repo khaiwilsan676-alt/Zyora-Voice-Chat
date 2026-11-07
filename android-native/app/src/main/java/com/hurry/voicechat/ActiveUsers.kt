@@ -47,15 +47,20 @@ fun ActiveUsers(
  val context = LocalContext.current
  var countryByUser by remember { mutableStateOf<Map<String,String>>(emptyMap()) }
  LaunchedEffect(roomUsers) {
-  val profiles = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-   roomUsers.mapNotNull { user ->
-    if (user.accountId.isBlank()) return@mapNotNull null
-    val country = runCatching {
-     // Use the same Room Profile country resolver as the Room Info Members list.
-     loadRoomProfileCountry(context, user.accountId, user.name, user.image, user.country)
-    }.getOrDefault("")
-    user.accountId to country
-   }.toMap()
+  // Resolve member countries concurrently with a small cap. The previous
+  // sequential remote profile lookups made this sheet wait for every user in turn.
+  val profiles = kotlinx.coroutines.coroutineScope {
+   val limiter = kotlinx.coroutines.sync.Semaphore(4)
+   roomUsers.filter { it.accountId.isNotBlank() }.distinctBy { it.accountId }.map { user ->
+    kotlinx.coroutines.async(kotlinx.coroutines.Dispatchers.IO) {
+     limiter.withPermit {
+      val country = runCatching {
+       loadRoomProfileCountry(context, user.accountId, user.name, user.image, user.country)
+      }.getOrDefault("")
+      user.accountId to country
+     }
+    }
+   }.awaitAll().toMap()
   }
   countryByUser = profiles
  }
