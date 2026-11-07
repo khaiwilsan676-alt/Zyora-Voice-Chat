@@ -22,7 +22,16 @@ fun GreenColorRemovalImage(
     LaunchedEffect(imageUrl,threshold){
         bitmap=withContext(Dispatchers.IO){
             runCatching{
-                val source=URL(imageUrl).openStream().use{BitmapFactory.decodeStream(it)} ?: return@runCatching null
+                val connection = URL(imageUrl).openConnection().apply {
+                    connectTimeout = 7_000
+                    readTimeout = 9_000
+                    useCaches = true
+                } as java.net.HttpURLConnection
+                val source = try {
+                    connection.getInputStream().use { BitmapFactory.decodeStream(it) }
+                } finally {
+                    connection.disconnect()
+                } ?: return@runCatching null
                 val result=source.copy(android.graphics.Bitmap.Config.ARGB_8888,true)
                 val pixels=IntArray(result.width*result.height)
                 result.getPixels(pixels,0,result.width,0,0,result.width,result.height)
