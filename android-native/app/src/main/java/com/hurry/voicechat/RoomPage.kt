@@ -233,11 +233,6 @@ fun RoomPage(
     val roomOwnerAccountId = roomOwner.accountId.ifBlank { roomOwner.id }
     val isLogoRoom = roomOwnerAccountId in setOf("100002", "100003", "500002")
     val accountId=currentUser.accountId.ifBlank{currentUser.uid.ifBlank{currentUser.id.ifBlank{"guest"}}}
-    // Some seat snapshots identify the signed-in user by UID while admin lists use accountId.
-    val currentUserSeatIds = setOf(accountId, currentUser.uid, currentUser.id).filter { it.isNotBlank() }.toSet()
-    val seatAdminIds = remember(roomAdminIds, currentUserSeatIds) {
-        if (roomAdminIds.any { it in currentUserSeatIds }) roomAdminIds + currentUserSeatIds else roomAdminIds
-    }
     val clipboard = LocalClipboardManager.current
     val appContext = LocalContext.current
     var roomWalletBalance by remember(accountId) { mutableLongStateOf(0L) }
@@ -280,6 +275,11 @@ fun RoomPage(
     var roomImage by remember{mutableStateOf(roomOwner.image)}
     var announcement by remember{mutableStateOf("")}
     var roomAdminIds by remember(roomId) { mutableStateOf<List<String>>(emptyList()) }
+    // Some seat snapshots identify the signed-in user by UID while admin lists use accountId.
+    val currentUserSeatIds = setOf(accountId, currentUser.uid, currentUser.id).filter { it.isNotBlank() }.toSet()
+    val seatAdminIds = remember(roomAdminIds, currentUserSeatIds) {
+        if (roomAdminIds.any { it in currentUserSeatIds }) roomAdminIds + currentUserSeatIds else roomAdminIds
+    }
     var locked by remember(roomId) { mutableStateOf(false) }
     var roomPassword by remember(roomId) { mutableStateOf("") }
     var roomAdminUsers by remember(roomId) { mutableStateOf<List<RoomInfoFollower>>(emptyList()) }
