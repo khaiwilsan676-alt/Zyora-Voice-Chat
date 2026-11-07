@@ -383,3 +383,11 @@ Current documentation does not certify that all historical features are build-, 
 - `android-native/app/src/main/java/com/hurry/voicechat/Leaderboard.kt`: replaced the process-lifetime unbounded concurrent image map with a thread-safe 16 MiB LRU cache sized from decoded image dimensions. Repeated leaderboard visits no longer retain every distinct podium/avatar bitmap indefinitely.
 - Added connection/read timeouts to leaderboard image downloads; existing image URLs, rendering, tabs, and screen UI remain unchanged.
 - Status: source committed; APK compile and on-device memory/scroll verification pending.
+
+
+## 17. Active member/profile loading performance fix (2026-11-07)
+- `ActiveUsers.kt`: country/profile resolution for visible active users now runs concurrently with a four-request cap instead of serially. Duplicate account IDs are removed before requests.
+- `RoomInfo.kt`: member country/profile resolution uses the same bounded concurrency, avoiding a long sequential wait when opening Members in a room with many followers/admins.
+- `GreenColorRemovalImage.kt`: image downloads now have explicit 7-second connect and 9-second read timeouts and always disconnect, preventing a stalled image host from holding a background decode indefinitely.
+- No composable layout, colors, navigation, room permissions, voice/chat behavior, or user-facing feature was intentionally changed.
+- Status: **Implemented in repository**. Native APK CI and real-device sheet/image regression checks are pending; do not treat these changes as device-verified.
