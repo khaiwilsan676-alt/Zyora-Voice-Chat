@@ -965,8 +965,11 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                 } ?: "later"
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(
-                        if (notice.optBoolean("checkFailed", false)) "Please try again"
-                        else "You can't join until $untilTime",
+                        when {
+                            notice.optBoolean("checkFailed", false) -> "Please try again"
+                            notice.optBoolean("blockedByOwner", false) -> "You're blocked by Room owner"
+                            else -> "You can't join until $untilTime"
+                        },
                         color = Color.White,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
