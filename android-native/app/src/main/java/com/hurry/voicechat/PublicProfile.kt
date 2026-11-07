@@ -744,7 +744,7 @@ fun PublicProfileScreen(
                     },
                     modifier = Modifier.weight(1f).height(48.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF5874)),
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(12.dp),
                     contentPadding = PaddingValues(horizontal = 8.dp) 
                 ) {
                     Icon(Icons.Default.Favorite, null, tint = Color.White, modifier = Modifier.size(20.dp))
@@ -912,16 +912,16 @@ fun PublicProfileScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .padding(bottom = 32.dp)
+                    .padding(horizontal = 12.dp)
+                    .padding(bottom = 24.dp)
                     .windowInsetsPadding(WindowInsets.navigationBars)
             ) {
                 // Black Card block
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(Color(0xFF1C1C1E)) // iOS Style Dark Gray / Black
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color.Black) // iOS Style Dark Gray / Black
                 ) {
                     Text(
                         "Report",
@@ -966,7 +966,7 @@ fun PublicProfileScreen(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(12.dp)) // Transparent Gap
+                Spacer(modifier = Modifier.height(8.dp)) // Transparent Gap
 
                 // Blue Cancel Button
                 Button(
