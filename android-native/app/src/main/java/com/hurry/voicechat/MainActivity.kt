@@ -438,96 +438,63 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
         val joiningAccountId = authPrefs.getString("accountId", userId).orEmpty().ifBlank { userId }
         if (roomIdToCheck.isBlank() || joiningAccountId.isBlank() || roomAccessCheckInProgress) return
 
-        // Normal unlocked room cards must open immediately. The Socket.IO room_join
-        // handler is the authoritative server-side gate for kick bans, owner blocks,
-        // and current room-lock state before the socket is admitted to room presence.
-        // Only locked rooms need the password preflight/grant round trip.
-        if (!room.locked && roomPassword.isBlank()) {
+        // Verify owner-block and kick status before mounting RoomPage. This prevents
+        // even a brief room flash for users who are not allowed to enter.
+        roomAccessCheckInProgress = true
+        roomCreateScope.launch {
+            val access = withContext(Dispatchers.IO) {
+                runCatching {
+                    val connection = (URL("https://zyora-server.onrender.com/api/room-access").openConnection() as HttpURLConnection).apply {
+                        requestMethod = "POST"
+                        connectTimeout = 8000
+                        readTimeout = 8000
+                        doOutput = true
+                        setRequestProperty("Content-Type", "application/json")
+                        setRequestProperty("Accept", "application/json")
+                        setRequestProperty("Cache-Control", "no-cache")
+                    }
+                    try {
+                        val payload = JSONObject().put("roomId", roomIdToCheck)
+                            .put("userId", joiningAccountId).put("password", roomPassword)
+                        connection.outputStream.bufferedWriter().use { it.write(payload.toString()) }
+                        val code = connection.responseCode
+                        val stream = if (code in 200..299) connection.inputStream else connection.errorStream
+                        JSONObject(stream?.bufferedReader()?.use { it.readText() }.orEmpty().ifBlank { "{}" })
+                            .put("_httpCode", code)
+                    } finally { connection.disconnect() }
+                }.getOrNull()
+            }
+            roomAccessCheckInProgress = false
+            if (access == null) {
+                roomBlockedPopup = JSONObject().put("checkFailed", true)
+                return@launch
+            }
+            if (access.optBoolean("blockedByOwner", false)) {
+                roomBlockedPopup = JSONObject().put("blockedByOwner", true)
+                return@launch
+            }
+            if (access.optBoolean("kicked", false)) {
+                roomKickNotice = access
+                return@launch
+            }
+            if (access.optInt("_httpCode") == 401) {
+                if (roomAccessPromptRoom?.id == room.id && roomPassword.isNotEmpty()) {
+                    roomAccessError = true
+                } else {
+                    roomAccessPromptRoom = room
+                    roomAccessPassword = ""
+                    roomAccessError = false
+                }
+                return@launch
+            }
+            if (!access.optBoolean("allowed", false)) {
+                roomBlockedPopup = JSONObject().put("checkFailed", true)
+                return@launch
+            }
             roomAccessPromptRoom = null
             roomAccessPassword = ""
             roomAccessError = false
             openedRoom = room
-            return
-        }
-
-        // Password verification is only needed for locked rooms. Kick-ban enforcement
-        // remains authoritative in the server's room_join handler.
-        roomAccessCheckInProgress = true
-        roomCreateScope.launch {
-            val checks = kotlinx.coroutines.coroutineScope {
-                val passwordCheck = async(Dispatchers.IO) {
-                    runCatching {
-                        val connection = (URL("https://zyora-server.onrender.com/api/room-access").openConnection() as HttpURLConnection).apply {
-                            requestMethod = "POST"
-                            connectTimeout = 8000
-                            readTimeout = 8000
-                            doOutput = true
-                            setRequestProperty("Content-Type", "application/json")
-                            setRequestProperty("Accept", "application/json")
-                            setRequestProperty("Cache-Control", "no-cache")
-                        }
-                        try {
-                            val payload = JSONObject().put("roomId", roomIdToCheck).put("userId", joiningAccountId).put("password", roomPassword)
-                            connection.outputStream.bufferedWriter().use { it.write(payload.toString()) }
-                            val code = connection.responseCode
-                            val stream = if (code in 200..299) connection.inputStream else connection.errorStream
-                            val body = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
-                            JSONObject(body.ifBlank { "{}" }).put("_httpCode", code)
-                        } finally { connection.disconnect() }
-                    }.getOrNull()
-                }
-                val kickCheck = async(Dispatchers.IO) {
-                    runCatching {
-                        val encodedRoom = java.net.URLEncoder.encode(roomIdToCheck, "UTF-8")
-                        val encodedUser = java.net.URLEncoder.encode(joiningAccountId, "UTF-8")
-                        val connection = (URL("https://zyora-server.onrender.com/api/room-kick-status?roomId=$encodedRoom&userId=$encodedUser").openConnection() as HttpURLConnection).apply {
-                            requestMethod = "GET"
-                            connectTimeout = 8000
-                            readTimeout = 8000
-                            setRequestProperty("Cache-Control", "no-cache")
-                            setRequestProperty("Accept", "application/json")
-                        }
-                        try {
-                            if (connection.responseCode !in 200..299) error("Room access check unavailable")
-                            JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
-                        } finally { connection.disconnect() }
-                    }.getOrNull()
-                }
-                passwordCheck.await() to kickCheck.await()
-            }
-            val passwordAccess = checks.first
-            val kickStatus = checks.second
-
-            if (passwordAccess == null) {
-                roomAccessCheckInProgress = false
-                roomBlockedPopup = JSONObject().put("checkFailed", true)
-                return@launch
-            }
-            if (!passwordAccess.optBoolean("allowed", false)) {
-                roomAccessCheckInProgress = false
-                if (passwordAccess.optInt("_httpCode") == 401) {
-                    if (roomAccessPromptRoom?.id == room.id && roomPassword.isNotEmpty()) {
-                        roomAccessError = true
-                    } else {
-                        roomAccessPromptRoom = room
-                        roomAccessPassword = ""
-                        roomAccessError = false
-                    }
-                } else {
-                    roomBlockedPopup = JSONObject().put("checkFailed", true)
-                }
-                return@launch
-            }
-
-            roomAccessCheckInProgress = false
-            roomAccessPromptRoom = null
-            roomAccessPassword = ""
-            roomAccessError = false
-            when {
-                kickStatus == null -> roomBlockedPopup = JSONObject().put("checkFailed", true)
-                kickStatus.optBoolean("blocked", false) -> roomBlockedPopup = kickStatus
-                else -> openedRoom = room
-            }
         }
     }
     fun tryOpenRoomById(targetRoomId: String) {
