@@ -247,7 +247,7 @@ fun RoomSettingPage(
 
     LaunchedEffect(adminSearch, sheet) {
         val q = adminSearch.trim()
-        if (sheet != "admin" || q.isBlank()) return@LaunchedEffect
+        if (sheet != "admin-members" || q.isBlank()) return@LaunchedEffect
         delay(180)
         withContext(Dispatchers.IO) {
             runCatching {
@@ -283,7 +283,7 @@ fun RoomSettingPage(
                 } finally { conn.disconnect() }
             }.getOrDefault(emptyList())
         }.let { found ->
-            if (sheet == "admin" && adminSearch.trim() == q) {
+            if (sheet == "admin-members" && adminSearch.trim() == q) {
                 found.forEach { result ->
                     val index = members.indexOfFirst { it.accountId == result.accountId }
                     if (index >= 0) members[index] = result else members.add(0, result)
@@ -665,7 +665,9 @@ fun RoomSettingPage(
         "admin-members" -> BottomSheetModal(scrimAlpha = 0.45f, heightFraction = 0.5f, dark = true, cornerRadius = 12.dp, onDismiss = { sheet = "admin" }) {
             Column(Modifier.fillMaxSize().navigationBarsPadding().background(Color.Black).padding(horizontal = 14.dp)) {
                 Text("Room members", Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 12.dp), color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
-                val visibleMembers = members.distinctBy { it.accountId }.filterNot { it.accountId == roomOwnerId }
+                val visibleMembers = (roomMembers.map { NativeSettingMember(it.accountId, it.name, it.image) } + members.toList())
+                    .filter { it.accountId.isNotBlank() && it.accountId != roomOwnerId }
+                    .distinctBy { it.accountId }
                 LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     items(visibleMembers, key = { it.accountId }) { member ->
                         val added = member.accountId in admins
