@@ -38,7 +38,9 @@ fun ActiveUsers(
  roomUsers:List<ActiveUserNative>,
  roomOwnerId:String,
  onOpenProfile:(ActiveUserNative)->Unit,
- onCopyUserId:(String)->Unit
+ onCopyUserId:(String)->Unit,
+ inviteMode:Boolean=false,
+ onInvite:(ActiveUserNative)->Unit={}
 ){
  if(!isOpen)return
  val context = LocalContext.current
@@ -63,7 +65,7 @@ fun ActiveUsers(
     .clip(RoundedCornerShape(topStart=15.dp,topEnd=15.dp))
     .background(Color(0xEB000000))
   ){
-   Text("Active Users",modifier=Modifier.fillMaxWidth().padding(start=16.dp,end=16.dp,top=16.dp,bottom=8.dp),textAlign=TextAlign.Center,fontSize=16.sp,fontWeight=FontWeight.Bold,color=Color.White)
+   Text(if(inviteMode) "Invite User" else "Active Users",modifier=Modifier.fillMaxWidth().padding(start=16.dp,end=16.dp,top=16.dp,bottom=8.dp),textAlign=TextAlign.Center,fontSize=16.sp,fontWeight=FontWeight.Bold,color=Color.White)
    val visibleUsers = roomUsers
     .filter { it.accountId.isNotBlank() }
     .distinctBy { it.accountId }
@@ -75,7 +77,7 @@ fun ActiveUsers(
    ){
     items(visibleUsers,key={it.accountId}){ user ->
      Row(
-      Modifier.fillMaxWidth().clickable { onOpenProfile(user) }.padding(horizontal=4.dp),
+      Modifier.fillMaxWidth().then(if(inviteMode) Modifier else Modifier.clickable { onOpenProfile(user) }).padding(horizontal=4.dp),
       verticalAlignment=Alignment.CenterVertically
      ){
       AsyncImage(
@@ -103,6 +105,16 @@ fun ActiveUsers(
           contentScale=ContentScale.FillBounds,modifier=Modifier.fillMaxSize())
          Text("Lv.1",color=Color.White,fontSize=8.sp,fontWeight=FontWeight.Bold,modifier=Modifier.padding(end=5.dp))
         }
+       }
+      }
+      if(inviteMode) {
+       Box(
+        Modifier.clip(RoundedCornerShape(50)).background(Color(0xFF287BFF))
+         .clickable { onInvite(user) }
+         .padding(horizontal=14.dp, vertical=7.dp),
+        contentAlignment=Alignment.Center
+       ) {
+        Text("Invite",fontSize=11.sp,fontWeight=FontWeight.SemiBold,color=Color.White)
        }
       }
      }
