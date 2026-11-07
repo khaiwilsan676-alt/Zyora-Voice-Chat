@@ -28,6 +28,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.sync.withPermit
 
@@ -54,7 +55,7 @@ fun ActiveUsers(
   val profiles = kotlinx.coroutines.coroutineScope {
    val limiter = kotlinx.coroutines.sync.Semaphore(4)
    roomUsers.asSequence().filter { it.accountId.isNotBlank() }.distinctBy { it.accountId }.toList().map { user ->
-    kotlinx.coroutines.async(kotlinx.coroutines.Dispatchers.IO) {
+    async(kotlinx.coroutines.Dispatchers.IO) {
      limiter.withPermit {
       val country = runCatching {
        loadRoomProfileCountry(context, user.accountId, user.name, user.image, user.country)
