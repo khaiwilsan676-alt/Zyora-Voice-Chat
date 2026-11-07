@@ -53,7 +53,7 @@ fun ActiveUsers(
   // sequential remote profile lookups made this sheet wait for every user in turn.
   val profiles = kotlinx.coroutines.coroutineScope {
    val limiter = kotlinx.coroutines.sync.Semaphore(4)
-   roomUsers.filter { it.accountId.isNotBlank() }.distinctBy { it.accountId }.map { user ->
+   roomUsers.asSequence().filter { it.accountId.isNotBlank() }.distinctBy { it.accountId }.toList().map { user ->
     kotlinx.coroutines.async(kotlinx.coroutines.Dispatchers.IO) {
      limiter.withPermit {
       val country = runCatching {
@@ -74,10 +74,14 @@ fun ActiveUsers(
     .background(Color(0xEB000000))
   ){
    Text(if(inviteMode) "Invite User" else "Active Users",modifier=Modifier.fillMaxWidth().padding(start=16.dp,end=16.dp,top=16.dp,bottom=8.dp),textAlign=TextAlign.Center,fontSize=16.sp,fontWeight=FontWeight.Bold,color=Color.White)
-   val visibleUsers = roomUsers
-    .filter { it.accountId.isNotBlank() }
-    .distinctBy { it.accountId }
-    .sortedWith(compareBy<ActiveUserNative> { if (it.accountId == roomOwnerId) 0 else 1 }.thenBy { it.name.lowercase() })
+   // Keep sorting/filtering out of recompositions caused by country lookup updates.
+   val visibleUsers = remember(roomUsers, roomOwnerId) {
+    roomUsers.asSequence()
+     .filter { it.accountId.isNotBlank() }
+     .distinctBy { it.accountId }
+     .sortedWith(compareBy<ActiveUserNative> { if (it.accountId == roomOwnerId) 0 else 1 }.thenBy { it.name.lowercase() })
+     .toList()
+   }
    LazyColumn(
     Modifier.weight(1f).fillMaxWidth(),
     contentPadding=PaddingValues(start=12.dp,end=12.dp,top=4.dp,bottom=12.dp),
@@ -136,6 +140,24 @@ fun ActiveUsers(
  }
 }
 
+// Build the ISO lookup once instead of allocating/scanning the full country list
+// every time an active-user row is recomposed.
+private val roomCountryIsoCodes by lazy { java.util.Locale.getISOCountries().toSet() }
+private val roomCountryDisplayNames by lazy {
+ java.util.Locale.getISOCountries().associate { code ->
+  java.util.Locale("", code).displayCountry.lowercase() to code
+ }
+}
+private val roomCountryAliases = mapOf(
+ "india" to "IN", "indian" to "IN",
+ "united states" to "US", "united states of america" to "US", "usa" to "US", "us" to "US",
+ "united kingdom" to "GB", "uk" to "GB", "britain" to "GB", "england" to "GB",
+ "pakistan" to "PK", "bangladesh" to "BD", "nepal" to "NP", "sri lanka" to "LK",
+ "uae" to "AE", "united arab emirates" to "AE", "saudi arabia" to "SA",
+ "canada" to "CA", "australia" to "AU", "turkey" to "TR", "türkiye" to "TR",
+ "other" to ""
+)
+
 fun roomProfileCountryFlag(country: String): String {
  val raw = country.trim()
  if (raw.isBlank()) return ""
@@ -144,19 +166,9 @@ fun roomProfileCountryFlag(country: String): String {
   return String(Character.toChars(regionalIndicators[0])) + String(Character.toChars(regionalIndicators[1]))
  }
  val normalized = raw.substringBefore("(").trim().lowercase()
- val aliases = mapOf(
-  "india" to "IN", "indian" to "IN",
-  "united states" to "US", "united states of america" to "US", "usa" to "US", "us" to "US",
-  "united kingdom" to "GB", "uk" to "GB", "britain" to "GB", "england" to "GB",
-  "pakistan" to "PK", "bangladesh" to "BD", "nepal" to "NP", "sri lanka" to "LK",
-  "uae" to "AE", "united arab emirates" to "AE", "saudi arabia" to "SA",
-  "canada" to "CA", "australia" to "AU", "turkey" to "TR", "türkiye" to "TR",
-  "other" to ""
- )
- val iso = java.util.Locale.getISOCountries().toSet()
- val code = aliases[normalized]
-  ?: raw.uppercase().takeIf { it.length == 2 && it in iso }
-  ?: java.util.Locale.getISOCountries().firstOrNull { java.util.Locale("", it).displayCountry.equals(normalized, ignoreCase = true) }
+ val code = roomCountryAliases[normalized]
+  ?: raw.uppercase().takeIf { it.length == 2 && it in roomCountryIsoCodes }
+  ?: roomCountryDisplayNames[normalized]
   ?: return ""
  if (code.isBlank()) return ""
  return code.map { String(Character.toChars(0x1F1E6 + it.code - 65)) }.joinToString("")
