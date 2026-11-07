@@ -763,6 +763,8 @@ fun RoomPage(
     }
 
     val messages=remember{mutableStateListOf<NativeRoomMessage>()}
+            val chatListState = androidx.compose.foundation.lazy.rememberLazyListState()
+            LaunchedEffect(messages.size, imeVisible) { if (messages.isNotEmpty()) chatListState.animateScrollToItem(messages.lastIndex) }
     val roomImagePickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) {
             val messageId = accountId + "-" + System.currentTimeMillis()
@@ -1467,8 +1469,6 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                     }
                 }
                 
-            val chatListState = androidx.compose.foundation.lazy.rememberLazyListState()
-            LaunchedEffect(messages.size, imeVisible) { if (messages.isNotEmpty()) chatListState.animateScrollToItem(messages.lastIndex) }
 
                 // Dedicated chat layer sits over the dimmed room while chat is open.
                 if (showChat) {
