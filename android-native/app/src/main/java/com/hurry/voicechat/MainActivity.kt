@@ -466,6 +466,9 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                 return@launch
             }
             if (access.optBoolean("kicked", false)) {
+                tab = HurryTab.HOME
+                homeMine = false
+                openedRoom = null
                 roomKickNotice = access
                 return@launch
             }
@@ -591,7 +594,13 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                         if (notice.optBoolean("blocked", false)) {
                             roomBlockedPopup = JSONObject(notice.toString())
                         } else {
-                            roomKickNotice = notice
+                            // A kick immediately returns the user to Home and shows the
+                            // acknowledgement card there. The restriction toast is deferred
+                            // until the user taps Got it on that card.
+                            tab = HurryTab.HOME
+                            homeMine = false
+                            openedRoom = null
+                            roomKickNotice = JSONObject(notice.toString())
                         }
                     },
                     onClose = {
@@ -903,7 +912,10 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                             Text("ID: $ownerId", color = Color(0xFF555555), fontSize = 11.sp, modifier = Modifier.padding(top = 8.dp))
                         }
                         androidx.compose.material3.Button(
-                            onClick = { roomKickNotice = null },
+                            onClick = {
+                                roomKickNotice = null
+                                roomBlockedPopup = JSONObject(notice.toString())
+                            },
                             modifier = Modifier.fillMaxWidth().padding(top = 18.dp).height(44.dp),
                             shape = RoundedCornerShape(8.dp),
                             colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color(0xFF2583F7))
