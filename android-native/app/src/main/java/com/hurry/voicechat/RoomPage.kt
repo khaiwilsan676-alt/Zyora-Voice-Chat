@@ -914,9 +914,9 @@ fun RoomPage(
                 actorImage = payload.optString("actorImage"),
                 actorRole = if (payload.optString("actorRole") == "admin") "Room Admin" else "Room Owner"
             )
-            mainHandler.post {
-                if (kickNotices.none { it.id == notice.id }) kickNotices.add(notice)
-            }
+            // Kick notices are private to the kicked account. The target receives
+            // room_kicked and MainActivity shows the single acknowledgement card.
+            // Do not render a kick popup/card in the room chat for other members.
         }
         val seatInviteResultListener = Emitter.Listener { args ->
             val payload = args.firstOrNull() as? JSONObject ?: return@Listener
