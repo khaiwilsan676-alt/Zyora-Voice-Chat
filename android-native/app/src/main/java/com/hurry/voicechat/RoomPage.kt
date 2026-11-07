@@ -28,7 +28,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Path
@@ -1304,7 +1303,7 @@ fun RoomPage(
 
         // FULL ROOM CONTENT LAYOUT
         RoomPageBlock {
-Column(Modifier.fillMaxSize().drawWithContent { drawContent(); if (showChat) drawRect(Color.White.copy(alpha = 0.20f)) }) { // REMOVED imePadding() FROM HERE TO PREVENT TOP UI FROM JUMPING
+Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TOP UI FROM JUMPING
             
             // --- TOP SECTION (FIXED, NO IME PADDING) ---
             Box(Modifier.fillMaxWidth()) {
@@ -1474,7 +1473,7 @@ Column(Modifier.fillMaxSize().drawWithContent { drawContent(); if (showChat) dra
                 // Chat messages stay over the room; the root layer supplies the same
                 // white/20 overlay across the complete screen (including the composer).
                 if (showChat) {
-                    Box(Modifier.matchParentSize()) {
+                    Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = 0.30f))) {
                         RoomChatMessages(
                             state = chatListState,
                             messages = messages,
@@ -1664,7 +1663,7 @@ Column(Modifier.fillMaxSize().drawWithContent { drawContent(); if (showChat) dra
             }
             
             // Task Image reverted back to bottom right above games
-            TransparentGreenImage(url="https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG-20260902-WA0066.jpg",modifier=Modifier.offset(y = 6.dp).padding(top=2.dp).size(60.dp).clickable { showRoomTask=true })
+            TransparentGreenImage(url="https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG-20260902-WA0066.jpg",modifier=Modifier.offset(y = 12.dp).padding(top=2.dp).size(60.dp).clickable { showRoomTask=true })
             AsyncImage(model="https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/file_000000002a8c81fab8232bebeeeb45cc.png",contentDescription="Games",modifier=Modifier.size(56.dp).clickable { showGames=true },contentScale=ContentScale.Fit)
         }
         
