@@ -1433,7 +1433,7 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                         }
                     }
                     // SEAT LAYOUT WITH REDUCED TOP PADDING TO SHIFT UP (5% ouper shift kiya gaya hai)
-                    val topPadding = if (roomMicMode == 5) 36.dp else 44.dp
+                    val topPadding = when (roomMicMode) { 5 -> 12.dp; 15 -> 25.dp; else -> 20.dp }
                     Column(Modifier.fillMaxWidth().padding(horizontal=10.dp).padding(top=topPadding, bottom=8.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
                         val micSize = when (roomMicMode) { 15 -> 57.dp; 5 -> 68.dp; else -> 66.dp } // 5-mic seats 68dp; 15-mic seats 57dp
                         
@@ -2740,7 +2740,7 @@ private fun RoomInviteSheet(
                                 Box(Modifier.height(16.dp).width(36.dp), contentAlignment = Alignment.CenterEnd) {
                                     AsyncImage(model = "https://zyora-voice-chat.vercel.app/IMG_20261028_004355.png",
                                         contentDescription = "Level", contentScale = ContentScale.FillBounds, modifier = Modifier.fillMaxSize())
-                                    Text("Lv.1", color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(end = 5.dp))
+                                    Text("Lv.1", color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Bold, modifier = Modifier.offset(x = 2.dp, y = (-3).dp).padding(end = 5.dp))
                                 }
                             }
                         }
