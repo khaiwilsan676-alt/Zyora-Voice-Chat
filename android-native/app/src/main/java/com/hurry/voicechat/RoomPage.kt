@@ -1470,39 +1470,9 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                 }
                 
 
-                // Black/50 chat page: fixed arrow header, independently scrollable
-                // message area below it. The composer remains in the bottom section.
-                if (showChat) {
-                    Column(Modifier.matchParentSize().background(Color.Black.copy(alpha = 0.50f))) {
-                        Box(Modifier.fillMaxWidth().height(56.dp)) {
-                            IconButton(
-                                onClick = { showChat = false; keyboardController?.hide() },
-                                modifier = Modifier.align(Alignment.TopEnd).padding(top = 8.dp, end = 12.dp).size(36.dp)
-                            ) {
-                                Icon(
-                                    Icons.Default.KeyboardArrowDown,
-                                    contentDescription = "Close room chat",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(30.dp)
-                                )
-                            }
-                        }
-                        Box(Modifier.weight(1f).fillMaxWidth()) {
-                            RoomChatMessages(
-                                state = chatListState,
-                                messages = messages,
-                                kickNotices = kickNotices,
-                                showOfficialAnnouncement = showOfficialAnnouncement,
-                                clearedBy = clearedBy,
-                                announcement = announcement,
-                                roomOwnerId = roomOwner.accountId.ifBlank { roomOwner.id },
-                                roomAdminIds = roomAdminIds,
-                                onSelectMessage = { selectedChatProfile = it },
-                                onSelectMention = { mention -> selectedChatProfile = NativeRoomMessage("mention-profile-${mention.accountId}", "", mention.name, "", mention.accountId) }
-                            )
-                        }
-                    }
-                }
+                // Chat page is rendered once at the root so seat-mode height changes
+                // cannot resize or clip its scrolling region.
+
             }
             // --- END TOP SECTION ---
 
@@ -1629,7 +1599,53 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
             }
         }
         }
-        
+
+        // Full-page Black/50 chat layer. It is independent of the seat layout:
+        // arrow stays at the top, messages use all space down to the composer,
+        // and the transparent reserved composer slot leaves the original input
+        // row (48dp field + original padding/width) completely untouched.
+        if (showChat) {
+            Column(
+                Modifier.fillMaxSize().imePadding().zIndex(50f)
+            ) {
+                Column(
+                    Modifier.weight(1f).fillMaxWidth()
+                        .background(Color.Black.copy(alpha = 0.50f))
+                ) {
+                    Box(Modifier.fillMaxWidth().height(80.dp)) {
+                        IconButton(
+                            onClick = { showChat = false; keyboardController?.hide() },
+                            modifier = Modifier.align(Alignment.TopEnd).padding(top = 40.dp, end = 12.dp).size(36.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.KeyboardArrowDown,
+                                contentDescription = "Close room chat",
+                                tint = Color.White,
+                                modifier = Modifier.size(30.dp)
+                            )
+                        }
+                    }
+                    Box(Modifier.weight(1f).fillMaxWidth()) {
+                        RoomChatMessages(
+                            state = chatListState,
+                            messages = messages,
+                            kickNotices = kickNotices,
+                            showOfficialAnnouncement = showOfficialAnnouncement,
+                            clearedBy = clearedBy,
+                            announcement = announcement,
+                            roomOwnerId = roomOwner.accountId.ifBlank { roomOwner.id },
+                            roomAdminIds = roomAdminIds,
+                            onSelectMessage = { selectedChatProfile = it },
+                            onSelectMention = { mention -> selectedChatProfile = NativeRoomMessage("mention-profile-${mention.accountId}", "", mention.name, "", mention.accountId) }
+                        )
+                    }
+                }
+                // Exact existing composer footprint: 48dp field + 24dp vertical
+                // padding, plus system navigation inset. This spacer is transparent.
+                Spacer(Modifier.height(72.dp).navigationBarsPadding())
+            }
+        }
+
         val sideBannerImages = listOf(
             "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261018_165235.png",
             "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/1788339681679~2.jpg"
