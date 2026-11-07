@@ -1467,17 +1467,22 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                     }
                 }
                 
-                // TOP DIM OVERLAY WHEN CHAT IS OPEN
+                // Dedicated chat layer sits over the dimmed room while chat is open.
                 if (showChat) {
-                    Box(
-                        Modifier
-                            .matchParentSize()
-                            .background(Color.Black.copy(alpha = 0.65f))
-                            .clickable(
-                                indication = null,
-                                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-                            ) { showChat = false; keyboardController?.hide() }
-                    )
+                    Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = 0.30f))) {
+                        RoomChatMessages(
+                            state = chatListState,
+                            messages = messages,
+                            kickNotices = kickNotices,
+                            showOfficialAnnouncement = showOfficialAnnouncement,
+                            clearedBy = clearedBy,
+                            announcement = announcement,
+                            roomOwnerId = roomOwner.accountId.ifBlank { roomOwner.id },
+                            roomAdminIds = roomAdminIds,
+                            onSelectMessage = { selectedChatProfile = it },
+                            onSelectMention = { mention -> selectedChatProfile = NativeRoomMessage("mention-profile-${mention.accountId}", "", mention.name, "", mention.accountId) }
+                        )
+                    }
                 }
             }
             // --- END TOP SECTION ---
@@ -1502,18 +1507,20 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                         )
                     }
 
-                    RoomChatMessages(
-                        state = chatListState,
-                        messages = messages,
-                        kickNotices = kickNotices,
-                        showOfficialAnnouncement = showOfficialAnnouncement,
-                        clearedBy = clearedBy,
-                        announcement = announcement,
-                        roomOwnerId = roomOwner.accountId.ifBlank { roomOwner.id },
-                        roomAdminIds = roomAdminIds,
-                        onSelectMessage = { selectedChatProfile = it },
-                        onSelectMention = { mention -> selectedChatProfile = NativeRoomMessage("mention-profile-${mention.accountId}", "", mention.name, "", mention.accountId) }
-                    )
+                    if (!showChat) {
+                        RoomChatMessages(
+                            state = chatListState,
+                            messages = messages,
+                            kickNotices = kickNotices,
+                            showOfficialAnnouncement = showOfficialAnnouncement,
+                            clearedBy = clearedBy,
+                            announcement = announcement,
+                            roomOwnerId = roomOwner.accountId.ifBlank { roomOwner.id },
+                            roomAdminIds = roomAdminIds,
+                            onSelectMessage = { selectedChatProfile = it },
+                            onSelectMention = { mention -> selectedChatProfile = NativeRoomMessage("mention-profile-${mention.accountId}", "", mention.name, "", mention.accountId) }
+                        )
+                    }
                 }
                 
                 if(showChat) {
@@ -2622,10 +2629,7 @@ private fun RoomChatMessages(
                                             FallbackAsyncImage(model=message.senderImage,contentDescription=message.sender,modifier=Modifier.size(24.dp).clip(CircleShape),contentScale=ContentScale.Crop)
                                             Text(message.sender,color=Color.White.copy(alpha=.95f),fontSize=12.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold)
                                             
-                                            val isRoomOwnerMessage = message.senderAccountId == roomOwnerId
-                                            if (isRoomOwnerMessage || message.senderAccountId in roomAdminIds) {
-                                                AsyncImage(model = if (message.senderAccountId in roomAdminIds) ROOM_ADMIN_TAG else "https://zyora-voice-chat.vercel.app/IMG_20261027_235537.png", contentDescription = if (message.senderAccountId in roomAdminIds) "Room Admin" else "Owner", contentScale = ContentScale.Fit, modifier = Modifier.height(16.dp))
-                                            }
+
                                             val hasPublicProfileIdImage = message.senderAccountId in setOf("100002", "100003", "500001", "500002", "500003", "500004")
                                             if (hasPublicProfileIdImage) {
                                                 AsyncImage(model = "https://zyora-voice-chat.vercel.app/IMG_20261101_125212.png", contentDescription = "Purple ID", contentScale = ContentScale.Fit, modifier = Modifier.height(16.dp).widthIn(min = 14.dp, max = 22.dp))
@@ -2636,7 +2640,7 @@ private fun RoomChatMessages(
                                                 Text("Lv.1", color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(end = 5.dp))
                                             }
                                         }
-                                        Text("Enter the Room",color=Color.White,fontSize=12.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Medium, modifier=Modifier.padding(start=2.dp).clickable { onSelectMessage(message) })
+                                        Text("Enter the room",color=Color.White,fontSize=12.sp,fontWeight=FontWeight.Bold, modifier=Modifier.padding(start=2.dp).clickable { onSelectMessage(message) })
                                     }
                                 } else NativeMessage(message, roomOwnerId = roomOwnerId, roomAdminIds = roomAdminIds, onAvatarClick = { onSelectMessage(message) }, onMentionClick = onSelectMention)
                             }
