@@ -1470,31 +1470,35 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                 }
                 
 
-                // Chat messages stay over the room; the root layer supplies the same
-                // white/20 overlay across the complete screen (including the composer).
+                // Black/50 chat page: fixed arrow header, independently scrollable
+                // message area below it. The composer remains in the bottom section.
                 if (showChat) {
-                    Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = 0.50f))) {
-                        RoomChatMessages(
-                            state = chatListState,
-                            messages = messages,
-                            kickNotices = kickNotices,
-                            showOfficialAnnouncement = showOfficialAnnouncement,
-                            clearedBy = clearedBy,
-                            announcement = announcement,
-                            roomOwnerId = roomOwner.accountId.ifBlank { roomOwner.id },
-                            roomAdminIds = roomAdminIds,
-                            onSelectMessage = { selectedChatProfile = it },
-                            onSelectMention = { mention -> selectedChatProfile = NativeRoomMessage("mention-profile-${mention.accountId}", "", mention.name, "", mention.accountId) }
-                        )
-                        IconButton(
-                            onClick = { showChat = false; keyboardController?.hide() },
-                            modifier = Modifier.align(Alignment.TopEnd).padding(top = 40.dp, end = 12.dp).size(36.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.KeyboardArrowDown,
-                                contentDescription = "Close room chat",
-                                tint = Color.White,
-                                modifier = Modifier.size(30.dp)
+                    Column(Modifier.matchParentSize().background(Color.Black.copy(alpha = 0.50f))) {
+                        Box(Modifier.fillMaxWidth().height(56.dp)) {
+                            IconButton(
+                                onClick = { showChat = false; keyboardController?.hide() },
+                                modifier = Modifier.align(Alignment.TopEnd).padding(top = 8.dp, end = 12.dp).size(36.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.KeyboardArrowDown,
+                                    contentDescription = "Close room chat",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(30.dp)
+                                )
+                            }
+                        }
+                        Box(Modifier.weight(1f).fillMaxWidth()) {
+                            RoomChatMessages(
+                                state = chatListState,
+                                messages = messages,
+                                kickNotices = kickNotices,
+                                showOfficialAnnouncement = showOfficialAnnouncement,
+                                clearedBy = clearedBy,
+                                announcement = announcement,
+                                roomOwnerId = roomOwner.accountId.ifBlank { roomOwner.id },
+                                roomAdminIds = roomAdminIds,
+                                onSelectMessage = { selectedChatProfile = it },
+                                onSelectMention = { mention -> selectedChatProfile = NativeRoomMessage("mention-profile-${mention.accountId}", "", mention.name, "", mention.accountId) }
                             )
                         }
                     }
