@@ -1675,6 +1675,26 @@ fun NativeChatScreen(
     }
     DisposableEffect(directSocket, receiverId) {
         val socket = directSocket
+        val sentListener = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
+            val id = payload.optString("id")
+            val peerId = payload.optString("receiverAccountId").ifBlank { payload.optString("receiverId") }
+            if (peerId != receiverId) return@Listener
+            android.os.Handler(android.os.Looper.getMainLooper()).post {
+                if (id.isNotBlank() && messageIds.contains(id)) return@post
+                val value = when (payload.optString("type")) {
+                    "image" -> "IMAGE::" + payload.optString("imageUrl")
+                    "room_invitation" -> "ROOM_INVITE::" + (payload.optJSONObject("roomData")?.toString() ?: "{}")
+                    "voice" -> "VOICE::" + payload.optLong("durationSec", 1)
+                    else -> payload.optString("text")
+                }
+                if (value.isNotBlank()) {
+                    messages.add(true to value)
+                    messageIds.add(id)
+                    saveConversationPreview(receiverId, name, image, payload.optString("previewText").ifBlank { value }, payload.optLong("timestamp", System.currentTimeMillis()))
+                }
+            }
+        }
         val blockedListener = Emitter.Listener { args ->
             val payload = args.firstOrNull() as? JSONObject ?: return@Listener
             val code = payload.optString("code")
@@ -1692,8 +1712,12 @@ fun NativeChatScreen(
                 }
             }
         }
+        socket?.on("private_message_sent", sentListener)
         socket?.on("private_message_error", blockedListener)
-        onDispose { socket?.off("private_message_error", blockedListener) }
+        onDispose {
+            socket?.off("private_message_sent", sentListener)
+            socket?.off("private_message_error", blockedListener)
+        }
     }
     if (blockPopupText.isNotBlank()) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
