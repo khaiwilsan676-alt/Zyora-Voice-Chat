@@ -204,6 +204,43 @@ fun RoomSettingPage(
         members.clear()
         members.addAll(sharedRoomMembers)
     }
+    LaunchedEffect(sheet, roomOwnerId) {
+        if (sheet != "admin-members" || roomOwnerId.isBlank()) return@LaunchedEffect
+        val refreshed = withContext(Dispatchers.IO) {
+            runCatching {
+                val encodedRoom = java.net.URLEncoder.encode(roomOwnerId, "UTF-8")
+                val connection = (URL("$SETTINGS_API/api/room-follows?roomId=$encodedRoom").openConnection() as HttpURLConnection).apply {
+                    connectTimeout = 8000
+                    readTimeout = 8000
+                    setRequestProperty("Accept", "application/json")
+                    setRequestProperty("Cache-Control", "no-cache")
+                }
+                try {
+                    if (connection.responseCode !in 200..299) error("Room members unavailable")
+                    val root = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
+                    val array = root.optJSONArray("followers") ?: JSONArray()
+                    (0 until array.length()).mapNotNull { index ->
+                        val item = array.optJSONObject(index) ?: return@mapNotNull null
+                        val id = item.optString("userId").trim()
+                        if (id.isBlank() || id == roomOwnerId || id == currentUserId) return@mapNotNull null
+                        NativeSettingMember(
+                            id,
+                            item.optString("followerName").ifBlank { "User" },
+                            item.optString("followerImage")
+                        )
+                    }.distinctBy { it.accountId }
+                } finally {
+                    connection.disconnect()
+                }
+            }.getOrDefault(emptyList())
+        }
+        if (sheet == "admin-members") {
+            refreshed.forEach { fresh ->
+                val index = members.indexOfFirst { it.accountId == fresh.accountId }
+                if (index >= 0) members[index] = fresh else members.add(fresh)
+            }
+        }
+    }
 
     // 🔥 COMMON SAVE FUNCTION 🔥 
     val performSave = { newState: RoomSettingsDataNative ->
