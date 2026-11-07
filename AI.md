@@ -298,3 +298,9 @@ Current documentation does not certify that all historical features are build-, 
 - It lists the same currently active room users with their avatar, name, country flag and Lv.1 display; each row has a blue Invite pill on the right.
 - Selecting Invite sends the existing `room_seat_invite_send` event to that selected active user and targets the first available unlocked seat.
 - Room Profile's existing Invite action and implementation were not changed.
+
+
+## 21. Fast homepage room-card entry (2026-11-07)
+- `MainActivity.kt`: ordinary room cards already marked unlocked now open immediately without waiting for separate Render `/api/room-access` and `/api/room-kick-status` requests. This removes two HTTP round trips from the normal room-entry critical path and prevents transient preflight failures from showing “Please try again” for unlocked rooms.
+- Locked rooms still use the existing password preflight and grant flow. The server-side Socket.IO `room_join` handler remains authoritative for kick bans, owner blocks, and the current lock state before admitting the socket to room presence.
+- No room UI, seat, voice, chat, or moderation behavior was intentionally changed. Real-device verification and native APK CI remain pending.
