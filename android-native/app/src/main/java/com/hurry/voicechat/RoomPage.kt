@@ -204,7 +204,7 @@ data class RoomPageCurrentUser(val id:String="",val uid:String="",val accountId:
 data class NativeRoomSeat(val number:Int,val occupied:Boolean=false,val locked:Boolean=false,val muted:Boolean=false,val selfMuted:Boolean=false,val speaking:Boolean=false,val userName:String="",val userImage:String="",val accountId:String="",val gifSrc:String="",val gifTimestamp:Long=0L)
 data class NativeMention(val accountId: String, val name: String)
 data class NativeRoomMessage(val id:String,val text:String,val sender:String,val senderImage:String,val senderAccountId:String="",val timestamp:Long=System.currentTimeMillis(),val type:String="message",val mentions: List<NativeMention> = emptyList(),val imageUrl:String="")
-data class NativeEntryToast(val id:String,val name:String,val image:String,val vehicleVideo:String="")
+data class NativeEntryToast(val id:String,val name:String,val image:String,val vehicleVideo:String="",val accountId:String="")
 data class NativeRoomKickNotice(val id:String,val targetName:String,val targetImage:String,val actorName:String,val actorImage:String,val actorRole:String)
 
 @Composable
@@ -1110,7 +1110,7 @@ fun RoomPage(
                 val nativeJoin = NativeRoomMessage(joinId,"Enter the Room",joinName,joinImage,accountId,joinCreatedAt,"join")
                 mainHandler.post {
                     if (messages.none { it.id == joinId }) messages.add(nativeJoin)
-                    if (entryToasts.none { it.id == joinId }) { entryToasts.add(NativeEntryToast(joinId,joinName,joinImage)); mainHandler.postDelayed({ entryToasts.removeAll { it.id == joinId } },4000) }
+                    if (entryToasts.none { it.id == joinId }) { entryToasts.add(NativeEntryToast(joinId,joinName,joinImage,accountId=accountId)); mainHandler.postDelayed({ entryToasts.removeAll { it.id == joinId } },4000) }
                 }
                 roomIoScope.launch {
                     val vehicleVideo = runCatching {
@@ -1138,7 +1138,7 @@ fun RoomPage(
                         if (index >= 0) {
                             entryToasts[index] = entryToasts[index].copy(vehicleVideo = vehicleVideo)
                         } else {
-                            entryToasts.add(NativeEntryToast(joinId, joinName, joinImage, vehicleVideo))
+                            entryToasts.add(NativeEntryToast(joinId, joinName, joinImage, vehicleVideo, accountId))
                             mainHandler.postDelayed({ entryToasts.removeAll { it.id == joinId } }, 4000)
                         }
                     }
@@ -1651,6 +1651,11 @@ Column(Modifier.align(Alignment.BottomStart).padding(bottom=LocalConfiguration.c
                         Row(Modifier.fillMaxWidth(0.80f).clip(RoundedCornerShape(topStart=50.dp,bottomStart=50.dp,topEnd=0.dp,bottomEnd=0.dp)).background(Brush.horizontalGradient(listOf(Color(0xCC2563EB),Color(0x802563EB),Color.Transparent))).padding(start=10.dp,end=10.dp,top=2.dp,bottom=2.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(6.dp)) {
                             FallbackAsyncImage(model=toast.image,contentDescription=toast.name,modifier=Modifier.size(24.dp).clip(CircleShape),contentScale=ContentScale.Crop)
                             Text(toast.name,color=Color.White,fontSize=13.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold,maxLines=1,modifier=Modifier.weight(1f, fill=false))
+                            if (toast.accountId in roomAdminIds) {
+                                AsyncImage(model=ROOM_ADMIN_TAG, contentDescription="Room Admin", contentScale=ContentScale.Fit, modifier=Modifier.height(16.dp))
+                            } else if (toast.accountId == roomOwnerAccountId) {
+                                AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261027_235537.png", contentDescription="Owner", contentScale=ContentScale.Fit, modifier=Modifier.height(16.dp))
+                            }
                             Text("Enter the Room",color=Color.White,fontSize=12.sp,maxLines=1)
                             if (toast.vehicleVideo.isNotBlank()) {
                                 val vehicleUrl = if (toast.vehicleVideo.startsWith("http", true)) toast.vehicleVideo else "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/" + toast.vehicleVideo
