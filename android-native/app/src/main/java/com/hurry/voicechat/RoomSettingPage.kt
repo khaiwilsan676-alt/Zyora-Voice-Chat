@@ -196,9 +196,9 @@ fun RoomSettingPage(
     var saving by remember { mutableStateOf(false) }
     var saveError by remember { mutableStateOf("") }
     val members = remember { mutableStateListOf<NativeSettingMember>() }
-    LaunchedEffect(roomMembers) {
+    LaunchedEffect(roomMembers, roomOwnerId, currentUserId) {
         val sharedRoomMembers = roomMembers
-            .filter { it.accountId.isNotBlank() && it.accountId != roomOwnerId }
+            .filter { it.accountId.isNotBlank() && it.accountId != roomOwnerId && it.accountId != currentUserId }
             .distinctBy { it.accountId }
             .map { NativeSettingMember(it.accountId, it.name, it.image) }
         members.clear()
@@ -666,7 +666,7 @@ fun RoomSettingPage(
             Column(Modifier.fillMaxSize().navigationBarsPadding().background(Color.Black).padding(horizontal = 14.dp)) {
                 Text("Room members", Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 12.dp), color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
                 val visibleMembers = (roomMembers.map { NativeSettingMember(it.accountId, it.name, it.image) } + members.toList())
-                    .filter { it.accountId.isNotBlank() && it.accountId != roomOwnerId }
+                    .filter { it.accountId.isNotBlank() && it.accountId != roomOwnerId && it.accountId != currentUserId }
                     .distinctBy { it.accountId }
                 LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     items(visibleMembers, key = { it.accountId }) { member ->
