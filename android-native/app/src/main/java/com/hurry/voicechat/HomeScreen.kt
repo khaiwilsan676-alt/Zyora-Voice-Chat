@@ -295,9 +295,17 @@ fun HomeScreen(
             }
         }
 
-        // One process-wide refresh at a time. Other HomeScreen instances wait briefly
-        // for it instead of sleeping 15 seconds with a stale local copy.
+        // One process-wide refresh at a time. Keep the warm Room DB/memory snapshot
+        // visible and throttle a full room-list refresh when Home is recreated by tab changes.
+        // The refresh remains a full snapshot so deleted rooms are still removed correctly.
+        val refreshIntervalMs = 15_000L
         while (true) {
+            val lastRefreshAt = NativeRoomMemoryCache.lastRefreshAt
+            val elapsedSinceRefresh = System.currentTimeMillis() - lastRefreshAt
+            if (lastRefreshAt > 0L && NativeRoomMemoryCache.rooms != null && elapsedSinceRefresh < refreshIntervalMs) {
+                kotlinx.coroutines.delay((refreshIntervalMs - elapsedSinceRefresh).coerceAtLeast(1L))
+                continue
+            }
             if (NativeRoomMemoryCache.refreshInFlight) {
                 kotlinx.coroutines.delay(300L)
                 continue
