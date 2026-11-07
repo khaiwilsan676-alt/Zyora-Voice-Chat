@@ -1478,6 +1478,7 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                         clearedBy = clearedBy,
                         announcement = announcement,
                         roomOwnerId = roomOwner.accountId.ifBlank { roomOwner.id },
+                        roomAdminIds = roomAdminIds,
                         onSelectMessage = { selectedChatProfile = it },
                         onSelectMention = { mention -> selectedChatProfile = NativeRoomMessage("mention-profile-${mention.accountId}", "", mention.name, "", mention.accountId) }
                     )
@@ -2529,6 +2530,7 @@ private fun RoomChatMessages(
     clearedBy: String,
     announcement: String,
     roomOwnerId: String,
+    roomAdminIds: List<String> = emptyList(),
     onSelectMessage: (NativeRoomMessage) -> Unit,
     onSelectMention: (NativeMention) -> Unit = {}
 ) {
