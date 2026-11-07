@@ -801,6 +801,8 @@ fun RoomPage(
         val reusedKeptRoomSocket = retainedRoomSocket != null
         roomSocketRef.value=roomSocket
         val mainHandler = Handler(Looper.getMainLooper())
+        // Own room-scoped background work so requests cannot outlive this room instance.
+        val roomIoScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.IO)
         val presenceListener = Emitter.Listener { args ->
             val payload = args.firstOrNull() as? JSONObject
             if (payload != null && payload.optString("roomId") == roomId) {
@@ -854,7 +856,7 @@ fun RoomPage(
                 }
                 // The local user's join event is handled by connectListener; avoid a duplicate inventory request.
                 if (type == "join" && senderId.isNotBlank() && senderId != accountId) {
-                    kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
+                    roomIoScope.launch {
                         val vehicleVideo = runCatching {
                             val encodedUser = java.net.URLEncoder.encode(senderId, "UTF-8")
                             val conn = (java.net.URL("https://zyora-server.onrender.com/api/store/inventory/$encodedUser").openConnection() as java.net.HttpURLConnection).apply {
@@ -1099,7 +1101,7 @@ fun RoomPage(
                     if (messages.none { it.id == joinId }) messages.add(nativeJoin)
                     if (entryToasts.none { it.id == joinId }) { entryToasts.add(NativeEntryToast(joinId,joinName,joinImage)); mainHandler.postDelayed({ entryToasts.removeAll { it.id == joinId } },4000) }
                 }
-                kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
+                roomIoScope.launch {
                     val vehicleVideo = runCatching {
                         val encodedUser = java.net.URLEncoder.encode(accountId, "UTF-8")
                         val conn = (java.net.URL("https://zyora-server.onrender.com/api/store/inventory/$encodedUser").openConnection() as java.net.HttpURLConnection).apply {
@@ -1169,6 +1171,9 @@ fun RoomPage(
             roomSocket.connect()
         }
         onDispose {
+            // Stop pending room-only fetches and queued UI callbacks before releasing listeners.
+            roomIoScope.cancel()
+            mainHandler.removeCallbacksAndMessages(null)
             if (latestKeepingRoomForMini) {
                 // Keep the actual socket connected in the background. Disconnecting it
                 // would trigger server cleanup and release the user's occupied seat.
@@ -1959,7 +1964,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
         if(showSettings && accountId.isNotBlank() && accountId == roomOwner.accountId.ifBlank { roomOwner.id }) RoomSettingPage(initial = RoomSettingsDataNative(roomName=roomName,roomDp=roomImage,announcement=announcement,micMode=roomMicMode,theme=roomTheme,isLocked=locked,roomPassword=roomPassword,admin=roomAdminIds,customTheme=appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).getString("customTheme_$roomId", "").orEmpty()),roomOwnerId=roomId,currentUserId=accountId,onBack={showSettings=false},onSave={saved->
             roomName=saved.roomName;roomImage=saved.roomDp;announcement=saved.announcement;roomMicMode=saved.micMode;roomTheme=saved.theme;roomCustomThemeUrl=saved.customTheme;roomAdminIds=saved.admin;locked=saved.isLocked;roomPassword=saved.roomPassword;showSettings=false
             appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).edit().putInt("micMode_$roomId", saved.micMode).putString("theme_$roomId", saved.theme).putString("customTheme_$roomId", saved.customTheme).putBoolean("room_locked_$roomId", saved.isLocked).putString("room_password_$roomId", saved.roomPassword).apply()
-            kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch { NativeIndexDatabase(appContext).saveRoomLock(roomId, saved.isLocked, saved.roomPassword) }
+            roomIoScope.launch { NativeIndexDatabase(appContext).saveRoomLock(roomId, saved.isLocked, saved.roomPassword) }
             roomSocketRef.value?.takeIf { it.connected() }?.emit("room_settings_update", JSONObject()
                 .put("roomId", roomId).put("userId", accountId).put("roomOwnerId", roomId)
                 .put("micMode", saved.micMode).put("roomName", saved.roomName).put("roomDp", saved.roomDp)
