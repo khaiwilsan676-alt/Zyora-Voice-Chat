@@ -292,3 +292,9 @@ Current documentation does not certify that all historical features are build-, 
 - Moved the existing three-dot action (for non-owners) and Share control together to the top-left.
 - Reordered the Room info tab content: tabs, then a white/10 Room owner card (owner avatar/name, “Room owner” subtitle, and the existing chat icon asset), then Announcement.
 - Kept Members list behavior and existing actions unchanged. Removed the green “Copied!” label from the room ID row while retaining the copy action.
+
+### Seat menu Invite → Active User picker
+- The seat action menu's Invite option now opens the existing Active Users sheet layout, titled "Invite User".
+- It lists the same currently active room users with their avatar, name, country flag and Lv.1 display; each row has a blue Invite pill on the right.
+- Selecting Invite sends the existing `room_seat_invite_send` event to that selected active user and targets the first available unlocked seat.
+- Room Profile's existing Invite action and implementation were not changed.
