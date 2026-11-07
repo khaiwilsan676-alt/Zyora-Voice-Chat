@@ -233,6 +233,11 @@ fun RoomPage(
     val roomOwnerAccountId = roomOwner.accountId.ifBlank { roomOwner.id }
     val isLogoRoom = roomOwnerAccountId in setOf("100002", "100003", "500002")
     val accountId=currentUser.accountId.ifBlank{currentUser.uid.ifBlank{currentUser.id.ifBlank{"guest"}}}
+    // Some seat snapshots identify the signed-in user by UID while admin lists use accountId.
+    val currentUserSeatIds = setOf(accountId, currentUser.uid, currentUser.id).filter { it.isNotBlank() }.toSet()
+    val seatAdminIds = remember(roomAdminIds, currentUserSeatIds) {
+        if (roomAdminIds.any { it in currentUserSeatIds }) roomAdminIds + currentUserSeatIds else roomAdminIds
+    }
     val clipboard = LocalClipboardManager.current
     val appContext = LocalContext.current
     var roomWalletBalance by remember(accountId) { mutableLongStateOf(0L) }
@@ -967,19 +972,21 @@ fun RoomPage(
         val roomKickBlockedListener = Emitter.Listener { args ->
             val payload = args.firstOrNull() as? JSONObject ?: return@Listener
             if (payload.optString("roomId") == roomId &&
-                payload.optString("userId") == accountId && !liveKickReceived.get()) {
+                payload.optString("userId") == accountId && liveKickReceived.compareAndSet(false, true)) {
+                // This event is sent to the user being removed from the live room.
+                // Show the same acknowledgement card as room_kicked; only later
+                // re-entry checks use the compact "can't join until" popup.
                 mainHandler.post {
-                    if (!liveKickReceived.get()) {
-                        onKickNotice(JSONObject()
-                            .put("roomId", roomId)
-                            .put("targetId", accountId)
-                            .put("expiresAt", payload.optLong("expiresAt", 0L))
-                            .put("ownerId", payload.optString("ownerId", roomId))
-                            .put("ownerName", payload.optString("ownerName", "Room Owner"))
-                            .put("ownerImage", payload.optString("ownerImage", ""))
-                            .put("blocked", true))
-                        onClose()
-                    }
+                    incomingSeatInvite = null
+                    onKickNotice(JSONObject()
+                        .put("roomId", roomId)
+                        .put("targetId", accountId)
+                        .put("expiresAt", payload.optLong("expiresAt", 0L))
+                        .put("ownerId", payload.optString("ownerId", roomId))
+                        .put("ownerName", payload.optString("ownerName", "Room Owner"))
+                        .put("ownerImage", payload.optString("ownerImage", ""))
+                        .put("blocked", false))
+                    onClose()
                 }
             }
         }
@@ -1424,10 +1431,10 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                         
                         if (roomMicMode == 5) {
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-                                seats.take(1).forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, roomAdminIds = roomAdminIds, isSpeaking = seat.speaking || (seat.accountId == accountId && localVoiceSpeaking), seatSize = micSize) { handleSeatTap(seat) } }
+                                seats.take(1).forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, roomAdminIds = seatAdminIds, isSpeaking = seat.speaking || (seat.accountId == accountId && localVoiceSpeaking), seatSize = micSize) { handleSeatTap(seat) } }
                             }
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                seats.drop(1).take(4).forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, roomAdminIds = roomAdminIds, isSpeaking = seat.speaking || (seat.accountId == accountId && localVoiceSpeaking), seatSize = micSize) { handleSeatTap(seat) } }
+                                seats.drop(1).take(4).forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, roomAdminIds = seatAdminIds, isSpeaking = seat.speaking || (seat.accountId == accountId && localVoiceSpeaking), seatSize = micSize) { handleSeatTap(seat) } }
                             }
                         } else {
                             val rowSizes = when (roomMicMode) {
@@ -1443,10 +1450,10 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = arrangement) {
                                     if (roomMicMode == 10 && rowSize == 2) {
                                         Spacer(modifier = Modifier.width(micSize)) 
-                                        rowSeats.forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, roomAdminIds = roomAdminIds, isSpeaking = seat.speaking || (seat.accountId == accountId && localVoiceSpeaking), seatSize = micSize) { handleSeatTap(seat) } }
+                                        rowSeats.forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, roomAdminIds = seatAdminIds, isSpeaking = seat.speaking || (seat.accountId == accountId && localVoiceSpeaking), seatSize = micSize) { handleSeatTap(seat) } }
                                         Spacer(modifier = Modifier.width(micSize))
                                     } else {
-                                        rowSeats.forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, roomAdminIds = roomAdminIds, isSpeaking = seat.speaking || (seat.accountId == accountId && localVoiceSpeaking), seatSize = micSize) { handleSeatTap(seat) } }
+                                        rowSeats.forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, roomAdminIds = seatAdminIds, isSpeaking = seat.speaking || (seat.accountId == accountId && localVoiceSpeaking), seatSize = micSize) { handleSeatTap(seat) } }
                                     }
                                 }
                             }
