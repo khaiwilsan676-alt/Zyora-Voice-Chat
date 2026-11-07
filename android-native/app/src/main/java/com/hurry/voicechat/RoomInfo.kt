@@ -391,10 +391,10 @@ private fun RoomDangerActionMenu(
         dragHandle = null
     ) {
         Column(
-            Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 32.dp)
+            Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 24.dp)
                 .windowInsetsPadding(WindowInsets.navigationBars)
         ) {
-            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Color(0xFF1C1C1E))) {
+            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Color.Black)) {
                 Text("Report", Modifier.fillMaxWidth().clickable(onClick = onReport).padding(vertical = 18.dp),
                     color = Color.White, fontSize = 18.sp, textAlign = TextAlign.Center, fontWeight = FontWeight.Medium)
                 Divider(color = Color.DarkGray.copy(alpha = 0.5f), thickness = 0.5.dp)
@@ -402,10 +402,10 @@ private fun RoomDangerActionMenu(
                     Modifier.fillMaxWidth().clickable(onClick = onFollow).padding(vertical = 18.dp),
                     color = Color.White, fontSize = 18.sp, textAlign = TextAlign.Center, fontWeight = FontWeight.Medium)
             }
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(8.dp))
             Button(onClick = onDismiss, Modifier.fillMaxWidth().height(56.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B82F6)),
-                shape = RoundedCornerShape(16.dp)) {
+                shape = RoundedCornerShape(12.dp)) {
                 Text("Cancel", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
             }
         }
