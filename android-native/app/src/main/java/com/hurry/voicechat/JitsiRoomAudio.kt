@@ -482,32 +482,51 @@ fun JitsiRoomAudio(
         requestVoicePermission()
 
         onDispose {
+            // Detach listeners and stop producers immediately, but never join audio
+            // workers on Compose's main thread. The old synchronous joins could block
+            // navigation/room exit for more than a second on slower devices.
             alive.set(false)
             voiceAllowed.set(false)
+            recording.set(false)
+            musicRelayRunning.set(false)
             retryHandler.removeCallbacksAndMessages(null)
             retryPending.set(false)
             micMuteWatcherThread.interrupt()
-            micMuteWatcherThread.join(300)
             musicWatcherThread?.interrupt()
-            musicWatcherThread?.join(300)
-            stopMusicRelay()
+            playbackQueue.clear()
+            playbackThread?.interrupt()
+            runCatching { recorder?.stop() }
+            captureThread?.interrupt()
             roomSocket.emit("room_voice_stop", JSONObject().put("roomId", roomId))
             roomSocket.off("room_moderation_mute", moderationMuteListener)
             roomSocket.off("room_voice_permission", permissionListener)
             roomSocket.off("room_voice_chunk", chunkListener)
             roomSocket.off(Socket.EVENT_DISCONNECT, disconnectListener)
             roomSocket.off(Socket.EVENT_CONNECT, connectListener)
-            stopCapture()
-            playbackQueue.clear()
-            playbackThread?.interrupt()
-            playbackThread?.join(500)
-            playbackThread = null
-            synchronized(playerLock) {
-                runCatching { player?.pause(); player?.flush(); player?.stop(); player?.release() }
-                player = null
-            }
+            onSpeakingChanged(false)
 
-            audioManager.mode = oldMode
+            val cleanupRecorder = recorder
+            val cleanupEchoCanceler = echoCanceler
+            recorder = null
+            echoCanceler = null
+            val cleanupPlayerThread = playbackThread
+            playbackThread = null
+            val cleanupMusicThread = musicRelayThread
+            val cleanupMusicWatcher = musicWatcherThread
+            thread(name = "ZyoraRoomAudioCleanup", isDaemon = true) {
+                runCatching { micMuteWatcherThread.join(350) }
+                runCatching { cleanupMusicWatcher?.join(350) }
+                runCatching { cleanupMusicThread?.interrupt(); cleanupMusicThread?.join(350) }
+                runCatching { captureThread?.join(350) }
+                runCatching { cleanupRecorder?.release() }
+                runCatching { cleanupEchoCanceler?.release() }
+                runCatching { cleanupPlayerThread?.join(500) }
+                synchronized(playerLock) {
+                    runCatching { player?.pause(); player?.flush(); player?.stop(); player?.release() }
+                    player = null
+                }
+                runCatching { audioManager.mode = oldMode }
+            }
         }
     }
 
