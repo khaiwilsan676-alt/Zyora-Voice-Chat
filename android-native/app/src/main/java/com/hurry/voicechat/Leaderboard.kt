@@ -1,6 +1,7 @@
 package com.hurry.voicechat
 
 import android.graphics.BitmapFactory
+import android.util.LruCache
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -34,10 +35,14 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.net.URL
-import java.util.concurrent.ConcurrentHashMap
 
 private object LeaderboardChromaCache {
-    val images = ConcurrentHashMap<String, ImageBitmap>()
+    // Keep decoded podium/avatar images bounded across screen visits.
+    val images = object : LruCache<String, ImageBitmap>(16 * 1024) {
+        override fun sizeOf(key: String, value: ImageBitmap): Int =
+            ((value.width.toLong() * value.height.toLong() * 4L) / 1024L)
+                .coerceAtLeast(1L).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+    }
 }
 
 // VIDEO PLAYER (Green remove logic hat gaya hai)
@@ -112,11 +117,16 @@ private fun LeaderboardChromaImage(url: String, contentDescription: String?, mod
         if (bitmap == null) {
             bitmap = withContext(Dispatchers.IO) {
                 runCatching {
-                    LeaderboardChromaCache.images[url] ?: run {
-                        val source = URL(url).openStream().use { BitmapFactory.decodeStream(it) }
+                    LeaderboardChromaCache.images.get(url) ?: run {
+                        val connection = URL(url).openConnection().apply {
+                            connectTimeout = 7_000
+                            readTimeout = 9_000
+                            useCaches = true
+                        }
+                        val source = connection.getInputStream().use { BitmapFactory.decodeStream(it) }
                         if (source == null) null else {
                             // Direct bitmap convert ho raha hai, pixel loop removed
-                            source.asImageBitmap().also { LeaderboardChromaCache.images[url] = it }
+                            source.asImageBitmap().also { LeaderboardChromaCache.images.put(url, it) }
                         }
                     }
                 }.getOrNull()
