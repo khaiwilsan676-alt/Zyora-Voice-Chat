@@ -1956,6 +1956,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
             onClose={showSeatInviteUsers=false},
             roomUsers=activeRoomUsers.filter { it.accountId != accountId },
             roomOwnerId=roomOwner.accountId.ifBlank{roomOwner.id},
+            roomAdminIds=roomAdminIds,
             onOpenProfile={},
             onCopyUserId={},
             inviteMode=true,
