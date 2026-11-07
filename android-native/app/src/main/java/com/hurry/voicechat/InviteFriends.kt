@@ -55,7 +55,16 @@ private fun InviteArt(file: String, modifier: Modifier = Modifier, key: InviteKe
     LaunchedEffect(file, key) {
         bitmap = withContext(Dispatchers.IO) {
             runCatching {
-                val source = URL(inviteAsset(file)).openStream().use { BitmapFactory.decodeStream(it) }
+                val connection = (URL(inviteAsset(file)).openConnection() as java.net.HttpURLConnection).apply {
+                    connectTimeout = 7_000
+                    readTimeout = 9_000
+                    useCaches = true
+                }
+                val source = try {
+                    connection.inputStream.use { BitmapFactory.decodeStream(it) }
+                } finally {
+                    connection.disconnect()
+                }
                 if (source == null || key == InviteKey.NONE) source
                 else {
                     val output = source.copy(Bitmap.Config.ARGB_8888, true)
