@@ -1286,7 +1286,7 @@ fun RoomPage(
         },contentDescription="Room theme background",modifier=Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
 
         // CUP AND MUSIC PILLS REVERTED TO ORIGINAL TOP LEFT OVERLAY POSITION
-        Row(modifier = Modifier.align(Alignment.TopStart).padding(top = 84.dp, start = 4.dp),verticalAlignment = Alignment.CenterVertically,horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(modifier = Modifier.align(Alignment.TopStart).padding(top = 88.dp, start = 4.dp),verticalAlignment = Alignment.CenterVertically,horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             Row(modifier = Modifier.height(22.dp).background(Brush.horizontalGradient(listOf(Color(0xE6242B35),Color(0x99242B35),Color.Transparent))).clickable { showInfo = true }.padding(start = 12.dp, end = 12.dp),verticalAlignment = Alignment.CenterVertically) {
                 TransparentGreenImage(url = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/1788258883971~2.jpg",modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(6.dp))
