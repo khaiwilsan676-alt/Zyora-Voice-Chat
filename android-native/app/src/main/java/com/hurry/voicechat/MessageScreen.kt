@@ -602,6 +602,7 @@ fun NativeChatScreen(
     var showReportPage by remember { mutableStateOf(false) }
     var isUserBlocked by remember(receiverId) { mutableStateOf(false) }
     var blockedByPeer by remember(receiverId) { mutableStateOf(false) }
+    var blockStateReady by remember(receiverId) { mutableStateOf(false) }
     var blockPopupText by remember { mutableStateOf("") }
     var replyText by remember { mutableStateOf<String?>(null) }
     var previewImageUrl by remember { mutableStateOf<String?>(null) }
@@ -612,6 +613,7 @@ fun NativeChatScreen(
             val state = withContext(Dispatchers.IO) { fetchZyoraUserBlockState(currentAccountId, receiverId) }
             isUserBlocked = state.first
             blockedByPeer = state.second
+            blockStateReady = true
         }
     }
     LaunchedEffect(blockPopupText) {
@@ -1623,6 +1625,11 @@ fun NativeChatScreen(
                                             .clip(CircleShape)
                                             .background(if (isTextBlank) Color(0xFF9CA3AF) else Color(0xFF3B82F6))
                                             .clickable(enabled = !isTextBlank) {
+                                                if (blockStateReady && (isUserBlocked || blockedByPeer)) {
+                                                    blockPopupText = if (isUserBlocked) "You blocked this person" else "You are blocked"
+                                                    return@clickable
+                                                }
+                                                if (!blockStateReady) return@clickable
                                                 val activeSocket = directSocket
                                                 if (!chatRegistered || activeSocket == null || !activeSocket.connected()) {
                                                     activeSocket?.connect()
@@ -1630,9 +1637,6 @@ fun NativeChatScreen(
                                                 }
                                                 val outgoingText = text.trim()
                                                 val outgoingId = "${currentUserId}_${System.currentTimeMillis()}"
-                                                messages.add(true to outgoingText)
-                                                messageIds.add(outgoingId)
-                                                saveConversationPreview(receiverId, name, image, outgoingText, System.currentTimeMillis())
                                                 val outgoing = JSONObject()
                                                     .put("id", outgoingId)
                                                     .put("senderId", currentUserId)
