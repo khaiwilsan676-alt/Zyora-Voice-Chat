@@ -2581,7 +2581,7 @@ private fun RoomChatMessages(
     LazyColumn(
         state = state,
                             modifier = Modifier.fillMaxSize().padding(horizontal = 10.dp),
-                            contentPadding = PaddingValues(top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 8.dp, bottom = 8.dp),
+                            contentPadding = PaddingValues(top = 8.dp, bottom = 8.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             if (showOfficialAnnouncement) {
