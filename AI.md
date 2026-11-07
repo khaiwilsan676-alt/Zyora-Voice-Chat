@@ -317,3 +317,10 @@ Current documentation does not certify that all historical features are build-, 
 - Aligned the three-dot action sheets used by Public Profile, Room Profile, and Room Info: the action card is pure black, while the existing Cancel button remains blue.
 - Made the sheet sit slightly lower by reducing its bottom spacing, widened the sheet content slightly, brought the black card closer to Cancel, and reduced both card and Cancel corner radii slightly.
 - Report/Block/Unblock/Room Follow actions and their behavior remain unchanged. Native APK build and on-device visual verification remain pending.
+
+
+## Remove background mobile-message notifications (2026-11-07)
+- Removed the persistent background Socket.IO message-listener foreground service and boot receiver that displayed the ongoing “Zyora is running” notification and generated Android system message notifications while the app was backgrounded.
+- Removed the unused local Android message-notification helper, the associated manifest components/permissions, and the POST_NOTIFICATIONS runtime permission request.
+- Kept the existing in-app chat banner/unread indicators and the separate Room Music foreground service/notification required for active media playback. No screen layout or unrelated feature behavior was intentionally changed.
+- Native build and device behavior verification pending.
