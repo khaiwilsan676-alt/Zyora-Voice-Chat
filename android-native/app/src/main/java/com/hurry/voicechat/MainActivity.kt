@@ -264,7 +264,6 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                 else Manifest.permission.READ_EXTERNAL_STORAGE
             )
             if (Build.VERSION.SDK_INT >= 31) add(Manifest.permission.BLUETOOTH_CONNECT)
-            if (Build.VERSION.SDK_INT >= 33) add(Manifest.permission.POST_NOTIFICATIONS)
         }
         val missingPermissions = requiredPermissions.filter { permission ->
             ContextCompat.checkSelfPermission(context, permission) != PackageManager.PERMISSION_GRANTED
@@ -278,13 +277,6 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
     val languagePrefs = remember { context.getSharedPreferences("zyora_settings", android.content.Context.MODE_PRIVATE) }
     var languageCode by remember { mutableStateOf(languagePrefs.getString("appLanguage", "en") ?: "en") }
     val userId = remember { authPrefs.getString("uid", "").orEmpty() }
-    LaunchedEffect(userId) {
-        if (userId.isNotBlank()) {
-            val serviceIntent = Intent(context, ZyoraMessageListenerService::class.java)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) context.startForegroundService(serviceIntent)
-            else context.startService(serviceIntent)
-        }
-    }
     // Isolate the local Mine-room cache by Firebase UID when multiple Google accounts use one device.
     val mineRoomKey = "mine_room_${userId}"
     var mineCreatedRoom by remember {
@@ -731,7 +723,6 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                                 "Language Setting" -> LanguagePage(selectedLanguage = languageCode, onLanguageSelected = { code -> languageCode = code; languagePrefs.edit().putString("appLanguage", code).apply() }, onBack = { openedMePage = null })
                                 "Settings" -> SettingsPage(languageCode = languageCode, onBack = { openedMePage = null }, onLogout = {
                                     // Fully end the previous Firebase session and clear cached auth identity.
-                                    context.stopService(Intent(context, ZyoraMessageListenerService::class.java))
                                     FirebaseAuth.getInstance().signOut()
                                     authPrefs.edit()
                                         .remove("uid")
