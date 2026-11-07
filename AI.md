@@ -331,3 +331,10 @@ Current documentation does not certify that all historical features are build-, 
 - Confirmed the background message listener, boot receiver, Android message-notification helper, runtime notification permission request, and their manifest registrations are absent from the current source tree.
 - The Room Music foreground playback notification and in-app chat banners/unread badges remain intentionally separate.
 - Build verification for this follow-up is pending.
+
+## 21 Room kick acknowledgement order correction (2026-11-07)
+- A kick received while inside a room now immediately returns the app to the Home tab and shows the existing kick-details acknowledgement card there.
+- Tapping **Got it** dismisses that card and then shows the existing compact **You can't join until...** restriction popup using the same kick expiry timestamp.
+- The pre-entry access-check path also routes a kicked user to Home before showing the acknowledgement card.
+- Kick enforcement, expiry, owner details, popup styling, and room access rules are unchanged; only the presentation/navigation order was corrected.
+- Status: **Implemented in repository**. APK CI and real-device behavior still require verification.
