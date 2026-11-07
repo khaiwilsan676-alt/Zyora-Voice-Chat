@@ -391,3 +391,10 @@ Current documentation does not certify that all historical features are build-, 
 - `GreenColorRemovalImage.kt`: image downloads now have explicit 7-second connect and 9-second read timeouts and always disconnect, preventing a stalled image host from holding a background decode indefinitely.
 - No composable layout, colors, navigation, room permissions, voice/chat behavior, or user-facing feature was intentionally changed.
 - Status: **Implemented in repository**. Native APK CI and real-device sheet/image regression checks are pending; do not treat these changes as device-verified.
+
+
+## 18. Image-network hang protection (2026-11-07)
+- `InviteFriends.kt`, `StorePage.kt`, and `RoomPage.kt`: replaced unbounded `URL.openStream()` image downloads with HTTP connections using 7-second connect and 9-second read timeouts, and guaranteed disconnect in `finally`.
+- Image processing remains on `Dispatchers.IO`; image transformations and visual output are unchanged.
+- No layout, feature, interaction, navigation, room, chat, voice, or wallet behaviour was intentionally changed.
+- Status: committed to the default branch; native APK build and device regression verification still pending.
