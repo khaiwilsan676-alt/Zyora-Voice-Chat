@@ -278,9 +278,13 @@ fun RoomInfo(
                             onOpenProfile(RoomInfoFollower(roomOwner.accountId, ownerDisplayName, ownerDisplayImage, ownerCountry))
                         }
                     }
-                    items(roomFollowers.filter { it.accountId.isNotBlank() && it.accountId != roomOwner.accountId }, key = { "member-${it.accountId}" }) { f ->
+                    val adminIds = roomAdmins.map { it.accountId }.toSet()
+                    val allMembers = (roomFollowers + roomAdmins)
+                        .filter { it.accountId.isNotBlank() && it.accountId != roomOwner.accountId }
+                        .distinctBy { it.accountId }
+                    items(allMembers, key = { "member-${it.accountId}" }) { f ->
                         val profile = memberProfiles[f.accountId] ?: f.copy(country = "")
-                        MemberRow(profile.name, profile.image, profile.accountId, "", profile.country) { onOpenProfile(profile) }
+                        MemberRow(profile.name, profile.image, profile.accountId, if (profile.accountId in adminIds) "Admin" else "", profile.country) { onOpenProfile(profile) }
                     }
                     if (roomFollowers.isEmpty() && roomAdmins.isEmpty()) {
                         item {
@@ -440,6 +444,9 @@ private fun MemberRow(
                     AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261027_235537.png",
                         contentDescription="Owner", contentScale=ContentScale.Fit,
                         modifier=Modifier.padding(start=5.dp).height(14.dp).widthIn(min=30.dp, max=42.dp))
+                } else if (role == "Admin") {
+                    AsyncImage(model=ROOM_ADMIN_TAG, contentDescription="Room Admin",
+                        contentScale=ContentScale.Fit, modifier=Modifier.padding(start=5.dp).height(14.dp).widthIn(min=30.dp, max=42.dp))
                 }
             }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
