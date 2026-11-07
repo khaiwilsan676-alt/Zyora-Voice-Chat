@@ -311,3 +311,9 @@ Current documentation does not certify that all historical features are build-, 
 - `Zyora-Server/server.js`: `POST /api/room-access` now checks owner/user block relationships and active room kick bans before granting entry, alongside the existing lock/password validation.
 - `MainActivity.kt`: every room entry is gated by that single access response before `RoomPage` is mounted. Blocked users receive the owner-block popup and kicked users receive the existing timed restriction notice, so neither briefly sees room content first.
 - UI layout, room seats, voice, and unrelated chat behavior were not intentionally changed. APK/real-device verification remains pending.
+
+
+## Chat / profile danger-sheet styling alignment (2026-11-07)
+- Aligned the three-dot action sheets used by Public Profile, Room Profile, and Room Info: the action card is pure black, while the existing Cancel button remains blue.
+- Made the sheet sit slightly lower by reducing its bottom spacing, widened the sheet content slightly, brought the black card closer to Cancel, and reduced both card and Cancel corner radii slightly.
+- Report/Block/Unblock/Room Follow actions and their behavior remain unchanged. Native APK build and on-device visual verification remain pending.
