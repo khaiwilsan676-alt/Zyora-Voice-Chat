@@ -119,7 +119,7 @@ fun ActiveUsers(
         Box(Modifier.height(16.dp).width(36.dp),contentAlignment=Alignment.CenterEnd){
          AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261028_004355.png",contentDescription="Level",
           contentScale=ContentScale.FillBounds,modifier=Modifier.fillMaxSize())
-         Text("Lv.1",color=Color.White,fontSize=8.sp,fontWeight=FontWeight.Bold,modifier=Modifier.padding(end=5.dp))
+         Text("Lv.1",color=Color.White,fontSize=8.sp,fontWeight=FontWeight.Bold,modifier=Modifier.offset(x=2.dp,y=(-3).dp).padding(end=5.dp))
         }
        }
       }
