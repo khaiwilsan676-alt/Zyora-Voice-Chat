@@ -181,8 +181,8 @@ fun RoomInfo(
                     model = roomData.roomDp.ifBlank { "/default-avatar.png" },
                     contentDescription = "Room",
                     modifier = Modifier.align(Alignment.TopCenter).offset(y = (-40).dp)
-                        .size(80.dp).clip(RoundedCornerShape(0.dp))
-                        .border(1.dp, Color.White.copy(alpha=.18f), RoundedCornerShape(0.dp)),
+                        .size(80.dp).clip(RoundedCornerShape(12.dp))
+                        .border(1.dp, Color.White.copy(alpha=.18f), RoundedCornerShape(12.dp)),
                     contentScale = ContentScale.Crop
                 )
             }
