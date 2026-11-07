@@ -406,15 +406,17 @@ fun RoomPage(
                         val savedCustomTheme = sequenceOf("customTheme", "themeImage").map { saved.optString(it, "").trim() }.firstOrNull { it.isNotBlank() && it != "null" }.orEmpty()
                         val savedLocked = saved.optBoolean("isLocked", locked)
                         val savedRoomPassword = saved.optString("roomPassword", roomPassword).takeUnless { it == "null" }.orEmpty()
-                        val savedAdminsJson = saved.optJSONArray("admin") ?: JSONArray()
-                        val savedAdmins = (0 until savedAdminsJson.length()).mapNotNull { i -> savedAdminsJson.optString(i).takeIf { it.isNotBlank() && it != "null" } }.distinct()
+                        val savedAdminsJson = saved.optJSONArray("admin") ?: saved.optJSONArray("admins")
+                        val savedAdmins = savedAdminsJson?.let { adminsJson ->
+                            (0 until adminsJson.length()).mapNotNull { i -> adminsJson.optString(i).takeIf { it.isNotBlank() && it != "null" } }.distinct()
+                        }
                         launch(Dispatchers.Main) {
                             if (name.isNotBlank()) roomName = name
                             if (!isLogoRoom && image.isNotBlank()) roomImage = image
                             announcement = message
                             roomMicMode = savedMicMode
                             roomTheme = savedTheme
-                            roomAdminIds = savedAdmins
+                            if (savedAdmins != null) roomAdminIds = savedAdmins
                             locked = savedLocked
                             roomPassword = if (accountId == roomOwnerAccountId) savedRoomPassword else ""
                             locked = savedLocked
@@ -1814,9 +1816,9 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                 showMenu=false
             },
             publicMsgOff=publicMsgOff,
-            isRoomOwner=isRoomOwner,
+            isRoomOwner=isRoomOwner || accountId in roomAdminIds,
             onTogglePublicMsg={
-                if (isRoomOwner) {
+                if (isRoomOwner || accountId in roomAdminIds) {
                     publicMsgOff = !publicMsgOff
                     roomSocketRef.value?.takeIf { it.connected() }?.emit("room_settings_update", JSONObject()
                         .put("roomId", roomId).put("userId", accountId).put("publicMsgOff", publicMsgOff))
@@ -1943,7 +1945,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                 showInfo=false
             }
         )
-        if(showActiveUsers) ActiveUsers(isOpen=true,onClose={showActiveUsers=false},roomUsers=activeRoomUsers,roomOwnerId=roomOwner.accountId.ifBlank{roomOwner.id},onOpenProfile={ user -> selectedChatProfile=NativeRoomMessage("active-profile-" + user.accountId,"",user.name,user.image,user.accountId);showActiveUsers=false },onCopyUserId={ id -> clipboard.setText(AnnotatedString(id));copiedId=id })
+        if(showActiveUsers) ActiveUsers(isOpen=true,onClose={showActiveUsers=false},roomUsers=activeRoomUsers,roomOwnerId=roomOwner.accountId.ifBlank{roomOwner.id},roomAdminIds=roomAdminIds,onOpenProfile={ user -> selectedChatProfile=NativeRoomMessage("active-profile-" + user.accountId,"",user.name,user.image,user.accountId);showActiveUsers=false },onCopyUserId={ id -> clipboard.setText(AnnotatedString(id));copiedId=id })
         if(showSeatInviteUsers) ActiveUsers(
             isOpen=true,
             onClose={showSeatInviteUsers=false},
@@ -2027,7 +2029,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                 ),
                 isCurrentUser = profileId == accountId,
                 isRoomOwner = profileId == roomOwner.accountId.ifBlank { roomOwner.id },
-                canModerate = accountId == roomId || accountId == roomOwnerAccountId,
+                canModerate = accountId == roomId || accountId == roomOwnerAccountId || accountId in roomAdminIds,
                 onClose = { selectedChatProfile = null },
                 onOpenPublicProfile = { profile -> selectedChatProfile = null; selectedSeat = 0; showSeatSheet = false; keepingRoomForMini = true; onOpenPublicProfile(profile) },
                 onCopyId = { if (profileId.isNotBlank()) clipboard.setText(AnnotatedString(profileId)) },
@@ -2173,7 +2175,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                 ),
                 isCurrentUser = profileSeat.accountId == accountId,
                 isRoomOwner = profileSeat.accountId == roomOwner.accountId.ifBlank { roomOwner.id },
-                canModerate = accountId == roomId || accountId == roomOwnerAccountId,
+                canModerate = accountId == roomId || accountId == roomOwnerAccountId || accountId in roomAdminIds,
                 onClose = { selectedSeat = 0 },
                 onOpenPublicProfile = { profile -> selectedSeat = 0; showSeatSheet = false; keepingRoomForMini = true; onOpenPublicProfile(profile) },
                 onMention = { name, targetId ->
