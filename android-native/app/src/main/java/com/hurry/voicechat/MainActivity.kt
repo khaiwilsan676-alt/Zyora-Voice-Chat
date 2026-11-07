@@ -466,10 +466,14 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                 return@launch
             }
             if (access.optBoolean("kicked", false)) {
+                // The acknowledgement card is only for the live kick event.
+                // A later attempt to re-enter an active kick restriction gets
+                // the compact black restriction popup, never a second Got it card.
                 tab = HurryTab.HOME
                 homeMine = false
                 openedRoom = null
-                roomKickNotice = access
+                roomKickNotice = null
+                roomBlockedPopup = JSONObject(access.toString())
                 return@launch
             }
             if (access.optInt("_httpCode") == 401) {
@@ -913,8 +917,9 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                         }
                         androidx.compose.material3.Button(
                             onClick = {
+                                // Got it only acknowledges the kick card.
+                                // The restriction popup is shown only on a later re-entry attempt.
                                 roomKickNotice = null
-                                roomBlockedPopup = JSONObject(notice.toString())
                             },
                             modifier = Modifier.fillMaxWidth().padding(top = 18.dp).height(44.dp),
                             shape = RoundedCornerShape(8.dp),
