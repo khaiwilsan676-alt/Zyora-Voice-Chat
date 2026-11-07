@@ -715,7 +715,7 @@ fun RoomSettingPage(
                                 Text("ID: ${member.accountId}", color = Color(0xFF9CA3AF), fontSize = 10.sp)
                             }
                             AsyncImage(model = RAW_SETTINGS + "IMG_20261107_153929.png", contentDescription = if (added) "Already added" else "Add admin",
-                                modifier = Modifier.size(30.dp).clickable(enabled = !added && admins.size < 5) {
+                                modifier = Modifier.size(36.dp).clickable(enabled = !added && admins.size < 5) {
                                     admins = (admins + member.accountId).distinct()
                                     performSave(state.copy(admin = admins))
                                     sheet = "admin"
