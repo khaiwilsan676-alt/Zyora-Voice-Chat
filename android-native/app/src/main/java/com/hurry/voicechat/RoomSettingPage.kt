@@ -188,7 +188,7 @@ fun RoomSettingPage(
     var draft by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var tempMicMode by remember { mutableIntStateOf(initial.micMode) }
-    var adminSearch by remember { mutableStateOf("") }
+    var adminSearch by remember { mutableStateOf("") }\n    
     var admins by remember(initial.admin) { mutableStateOf(initial.admin) }
     var customTheme by remember(roomOwnerId) { mutableStateOf(context.getSharedPreferences("room_settings", Context.MODE_PRIVATE).getString("customTheme_$roomOwnerId", "").orEmpty()) }
     var pendingPicker by remember { mutableStateOf("photo") }
@@ -425,7 +425,7 @@ fun RoomSettingPage(
                     SettingRow("Room Name", state.roomName) { draft = state.roomName; sheet = "name" }
                     SettingRow("Room Announcement", state.announcement) { draft = state.announcement; sheet = "announcement" }
                     SettingRow("Theme", themeItems.firstOrNull { it.id == state.theme }?.name ?: "") { sheet = "theme" }
-                    SettingRow("Admin", "${admins.size} Selected") { adminSearch = ""; sheet = "admin" }
+                    SettingRow("Admin", "${admins.size}/5") { adminSearch = ""; sheet = "admin" }
                     SettingRow("Lock Room", if (state.isLocked) "Locked" else "", red = state.isLocked) {
                         password = if (state.isLocked) state.roomPassword else ""; sheet = "lock"
                     }
@@ -645,94 +645,65 @@ fun RoomSettingPage(
                 }
             }
         }
-        "admin" -> BottomSheetModal(scrimAlpha = 0.35f, heightFraction = 0.5f, dark = false, onDismiss = { 
-            performSave(state.copy(admin = admins))
-            sheet = "" 
-        }) {
-            Column(Modifier.fillMaxSize().navigationBarsPadding().background(Color.White)) {
-                Row(
-                    Modifier.fillMaxWidth().padding(start = 12.dp, end = 16.dp, top = 8.dp, bottom = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        Modifier.size(38.dp).clip(CircleShape).clickable { 
-                            performSave(state.copy(admin = admins))
-                            sheet = "" 
-                        },
-                        contentAlignment = Alignment.Center
-                    ) { Icon(Icons.Default.ArrowBack, "Back", tint = gray800, modifier = Modifier.size(22.dp)) }
-                    Text(
-                        "Admin", Modifier.weight(1f),
-                        fontSize = 16.sp, fontWeight = FontWeight.Bold, color = gray800, textAlign = TextAlign.Center
-                    )
-                    Spacer(Modifier.size(38.dp))
-                }
-                Box(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp)) {
-                    Box(
-                        Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp))
-                            .background(gray100).padding(horizontal = 12.dp, vertical = 10.dp)
-                    ) {
-                        BasicTextField(
-                            value = adminSearch,
-                            onValueChange = { adminSearch = it.filter { ch -> ch.isDigit() } },
-                            modifier = Modifier.fillMaxWidth(),
-                            textStyle = TextStyle(fontSize = 13.sp, color = gray800),
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            decorationBox = { inner ->
-                                Box {
-                                    if (adminSearch.isEmpty()) Text("Search user by ID", color = gray400, fontSize = 13.sp)
-                                    inner()
-                                }
-                            }
-                        )
+        "admin" -> BottomSheetModal(scrimAlpha = 0.45f, heightFraction = 0.45f, dark = true, onDismiss = { sheet = "" }) {
+            Column(Modifier.fillMaxSize().navigationBarsPadding().background(Color.Black).padding(horizontal = 16.dp)) {
+                Row(Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Spacer(Modifier.width(32.dp))
+                    Text("Room Admins", Modifier.weight(1f), color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                    Box(Modifier.size(32.dp).clip(CircleShape).clickable { sheet = "admin-help" }, contentAlignment = Alignment.Center) {
+                        Text("?", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                     }
                 }
-                val filtered = members.filter {
-                    adminSearch.isBlank() || it.accountId.contains(adminSearch, true)
-                }
-                LazyColumn(
-                    Modifier.weight(1f).padding(horizontal = 16.dp, vertical = 4.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(filtered, key = { it.accountId }) { member ->
-                        val isAdmin = admins.contains(member.accountId)
-                        Row(
-                            Modifier.fillMaxWidth().padding(vertical = 3.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            AsyncImage(
-                                model = member.image.ifBlank { RAW_SETTINGS + "default-avatar.png" },
-                                contentDescription = member.name,
-                                modifier = Modifier.size(38.dp).clip(CircleShape),
-                                contentScale = ContentScale.Crop
-                            )
+                Text("Room Admins: ${admins.size}/5", color = Color(0xFF9CA3AF), fontSize = 12.sp, modifier = Modifier.padding(top = 5.dp, bottom = 10.dp))
+                LazyColumn(Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    items(admins, key = { it }) { adminId ->
+                        val member = members.firstOrNull { it.accountId == adminId }
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            AsyncImage(model = member?.image?.ifBlank { RAW_SETTINGS + "default-avatar.png" } ?: RAW_SETTINGS + "default-avatar.png", contentDescription = "Admin", modifier = Modifier.size(40.dp).clip(CircleShape), contentScale = ContentScale.Crop)
                             Column(Modifier.weight(1f).padding(start = 10.dp)) {
-                                Text(member.name, color = gray800, fontSize = 13.sp,
-                                    fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                Text("ID: ${member.accountId}", color = gray500, fontSize = 10.sp)
+                                Text(member?.name ?: adminId, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                                AsyncImage(model = RAW_SETTINGS + "IMG_20261107_153823.png", contentDescription = "Room admin tag", modifier = Modifier.height(16.dp).width(52.dp), contentScale = ContentScale.Fit)
                             }
-                            Box(
-                                Modifier.clip(RoundedCornerShape(7.dp))
-                                    .background(if (isAdmin) gray200 else blue500)
-                                    .clickable {
-                                        admins = if (isAdmin) admins.filterNot { it == member.accountId }
-                                        else if (admins.size < 20) admins + member.accountId else admins
-                                    }
-                                    .padding(horizontal = 15.dp, vertical = 7.dp)
-                            ) {
-                                Text(if (isAdmin) "Added" else "Add",
-                                    color = if (isAdmin) gray700 else Color.White,
-                                    fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                            }
+                            Text("Remove", color = Color(0xFFEF4444), fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.clip(RoundedCornerShape(6.dp)).clickable {
+                                    admins = admins.filterNot { it == adminId }
+                                    performSave(state.copy(admin = admins))
+                                }.padding(horizontal = 8.dp, vertical = 7.dp))
                         }
                     }
-                    if (filtered.isEmpty()) item {
-                        Box(Modifier.fillMaxWidth().padding(22.dp), contentAlignment = Alignment.Center) {
-                            Text(if (adminSearch.isBlank()) "Search by ID to add an admin" else "No user found",
-                                color = gray500, fontSize = 12.sp)
+                    if (admins.isEmpty()) item { Text("No room admins", color = Color(0xFF9CA3AF), fontSize = 12.sp, modifier = Modifier.fillMaxWidth().padding(vertical = 18.dp), textAlign = TextAlign.Center) }
+                }
+                Box(Modifier.fillMaxWidth().padding(vertical = 12.dp), contentAlignment = Alignment.Center) {
+                    Box(Modifier.fillMaxWidth().height(44.dp).clip(RoundedCornerShape(9.dp)).background(blue500)
+                        .clickable { adminSearch = ""; sheet = "admin-members" }.padding(vertical = 11.dp), contentAlignment = Alignment.Center) {
+                        Text("Add", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+        "admin-members" -> BottomSheetModal(scrimAlpha = 0.45f, heightFraction = 0.5f, dark = true, onDismiss = { sheet = "admin" }) {
+            Column(Modifier.fillMaxSize().navigationBarsPadding().background(Color.Black).padding(horizontal = 14.dp)) {
+                Text("Room members", Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 12.dp), color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                val visibleMembers = members.distinctBy { it.accountId }.filterNot { it.accountId == roomOwnerId }
+                LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    items(visibleMembers, key = { it.accountId }) { member ->
+                        val added = member.accountId in admins
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            AsyncImage(model = member.image.ifBlank { RAW_SETTINGS + "default-avatar.png" }, contentDescription = member.name, modifier = Modifier.size(38.dp).clip(CircleShape), contentScale = ContentScale.Crop)
+                            Column(Modifier.weight(1f).padding(start = 9.dp)) {
+                                Text(member.name, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text("ID: ${member.accountId}", color = Color(0xFF9CA3AF), fontSize = 10.sp)
+                            }
+                            AsyncImage(model = RAW_SETTINGS + "IMG_20261107_153929.png", contentDescription = if (added) "Already added" else "Add admin",
+                                modifier = Modifier.size(30.dp).clickable(enabled = !added && admins.size < 5) {
+                                    admins = (admins + member.accountId).distinct()
+                                    performSave(state.copy(admin = admins))
+                                    adminMembersSheet = false
+                                    sheet = "admin"
+                                }, contentScale = ContentScale.Fit, alpha = if (added || admins.size >= 5) 0.35f else 1f)
                         }
                     }
+                    if (visibleMembers.isEmpty()) item { Text("No room members available", color = Color(0xFF9CA3AF), modifier = Modifier.fillMaxWidth().padding(20.dp), textAlign = TextAlign.Center) }
                 }
             }
         }
