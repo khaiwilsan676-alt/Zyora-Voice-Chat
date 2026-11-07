@@ -402,3 +402,11 @@ Current documentation does not certify that all historical features are build-, 
 ## Native performance hardening — 2026-11-07
 - Room audio teardown now detaches Socket.IO listeners, stops audio producers, and updates speaking state immediately, then joins worker threads and releases audio resources on a dedicated daemon cleanup thread. This avoids blocking Compose navigation/room exit on the main thread while preserving the existing room voice protocol, mute flow, media routing, and UI.
 - Fixed the Kotlin coroutine `async` receiver usage in Active Users and Room Info so the native APK build does not fail on the deprecated scope-less async call.
+
+
+## 2026-11-07 — Room chat overlay and entry banner refinement
+- Native RoomPage moves the dedicated room-chat message list into the upper room area while chat is open, over a black/30 dim layer; the normal room message list is hidden during chat mode and restored when chat closes.
+- The existing `room_chat_view` Socket.IO room subscription and server-side split remain the delivery rule: users currently on the dedicated chat page receive `room_chat_message` together, while users not on that page continue receiving the existing `room_message` presentation.
+- Chat list continues auto-scrolling to the latest message when new messages arrive.
+- The room-entry banner no longer shows the owner/admin tag image beside the entrant; “Enter the room” is bold.
+- No room voice, seat, permission, or public-message behavior was intentionally changed. Native APK build and two-device chat-mode verification remain pending.
