@@ -1433,9 +1433,9 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                         }
                     }
                     // SEAT LAYOUT WITH REDUCED TOP PADDING TO SHIFT UP (5% ouper shift kiya gaya hai)
-                    val topPadding = if (roomMicMode == 5) 12.dp else 20.dp
+                    val topPadding = when (roomMicMode) { 5 -> 12.dp; 15 -> 25.dp; else -> 20.dp }
                     Column(Modifier.fillMaxWidth().padding(horizontal=10.dp).padding(top=topPadding, bottom=8.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
-                        val micSize = if (roomMicMode == 15) 60.dp else 66.dp // 15 mic ke liye seat size choti (60)
+                        val micSize = if (roomMicMode == 15) 57.dp else 66.dp // Only 15-mic mode uses 57dp seats
                         
                         if (roomMicMode == 5) {
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
