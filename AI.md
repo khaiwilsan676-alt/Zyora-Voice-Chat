@@ -364,3 +364,10 @@ Current documentation does not certify that all historical features are build-, 
 - Updated seat invite buttons to use `public/IMG_20261107_153857.png`; admin badge uses `public/IMG_20261107_154649.png`.
 - Admins inherit room moderation/seat controls while the Room Settings icon remains owner-only. Admin saves no longer dismiss Room Settings.
 - Build verification remains pending; no successful Actions run was returned for the commits in this change.
+
+
+### Room admin badge and moderation visibility (2026-11-07)
+- Native Room Info includes saved room admins in the Members list and shows the dedicated room-admin badge beside their names.
+- Native Active Users and room chat use the dedicated admin badge asset; the owner badge remains unchanged.
+- Room admins receive the same Fourgride tools visibility and Room Profile moderation controls as the owner, while the Room Settings entry remains owner-only.
+- Room admin IDs are preserved when a room API response omits the admin field; both legacy `admin` and alternate `admins` arrays are accepted. The Room members Add Admin image is slightly larger (30dp to 36dp).
