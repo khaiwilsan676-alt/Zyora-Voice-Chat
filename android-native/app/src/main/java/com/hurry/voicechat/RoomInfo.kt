@@ -87,13 +87,20 @@ fun RoomInfo(
 
     LaunchedEffect(roomFollowers.map { it.accountId }, roomAdmins.map { it.accountId }) {
         val all = (roomFollowers + roomAdmins).distinctBy { it.accountId }.filter { it.accountId.isNotBlank() }
-        val loaded = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            all.associate { member ->
-                val roomProfileCountry = runCatching {
-                    loadRoomProfileCountry(context, member.accountId, member.name, member.image)
-                }.getOrDefault("")
-                member.accountId to member.copy(country = roomProfileCountry)
-            }
+        // Avoid N sequential profile requests when the Members sheet opens.
+        // Keep concurrency bounded so large rooms do not flood the backend.
+        val loaded = kotlinx.coroutines.coroutineScope {
+            val limiter = kotlinx.coroutines.sync.Semaphore(4)
+            all.map { member ->
+                kotlinx.coroutines.async(kotlinx.coroutines.Dispatchers.IO) {
+                    limiter.withPermit {
+                        val roomProfileCountry = runCatching {
+                            loadRoomProfileCountry(context, member.accountId, member.name, member.image)
+                        }.getOrDefault("")
+                        member.accountId to member.copy(country = roomProfileCountry)
+                    }
+                }
+            }.awaitAll().toMap()
         }
         memberProfiles = loaded
     }
