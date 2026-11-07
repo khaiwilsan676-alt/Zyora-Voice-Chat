@@ -2698,14 +2698,12 @@ private fun RoomInviteSheet(
                                 }
                             }
                         }
-                        Box(
-                            Modifier.padding(start = 8.dp).width(66.dp).height(30.dp)
-                                .clip(RoundedCornerShape(7.dp)).background(Color(0xFF1685FF))
-                                .clickable { onInvite(user) },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("Invite", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        }
+                        AsyncImage(
+                            model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261107_153857.png",
+                            contentDescription = "Invite",
+                            modifier = Modifier.padding(start = 8.dp).width(66.dp).height(30.dp).clickable { onInvite(user) },
+                            contentScale = ContentScale.Fit
+                        )
                     }
                 }
                 if (visibleUsers.isEmpty()) {
