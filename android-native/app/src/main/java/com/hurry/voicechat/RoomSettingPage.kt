@@ -188,7 +188,7 @@ fun RoomSettingPage(
     var draft by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var tempMicMode by remember { mutableIntStateOf(initial.micMode) }
-    var adminSearch by remember { mutableStateOf("") }\n    
+    var adminSearch by remember { mutableStateOf("") }    
     var admins by remember(initial.admin) { mutableStateOf(initial.admin) }
     var customTheme by remember(roomOwnerId) { mutableStateOf(context.getSharedPreferences("room_settings", Context.MODE_PRIVATE).getString("customTheme_$roomOwnerId", "").orEmpty()) }
     var pendingPicker by remember { mutableStateOf("photo") }
