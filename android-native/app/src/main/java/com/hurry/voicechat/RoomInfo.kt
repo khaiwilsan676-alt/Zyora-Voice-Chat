@@ -60,11 +60,11 @@ fun RoomInfo(
     val context = LocalContext.current
     var tab by remember { mutableStateOf(0) }
     
-    // Naya state share sheet handle karne ke liye
     var showShareSheet by remember { mutableStateOf(false) }
     var showDangerMenu by remember { mutableStateOf(false) }
     var showRoomReport by remember { mutableStateOf(false) }
     var roomFans by remember(currentUserId, roomOwner.accountId, roomOwner.id) { mutableStateOf<List<RoomInfoFollower>>(emptyList()) }
+    
     LaunchedEffect(currentUserId, roomOwner.accountId, roomOwner.id, showShareSheet) {
         if (showShareSheet) {
             val ownerId = currentUserId.ifBlank { roomOwner.accountId.ifBlank { roomOwner.id.ifBlank { roomOwner.uid } } }
@@ -86,12 +86,10 @@ fun RoomInfo(
         mutableStateOf(if (isLogoOwner) "https://zyora-voice-chat.vercel.app/logo.png" else roomOwner.image)
     }
     var ownerCountry by remember(roomOwner.accountId) { mutableStateOf("") }
-    var memberProfiles by remember { mutableStateOf<Map<String, RoomInfoFollower>>(emptyMap()) }
+    var memberProfiles by remember { mutableStateOf>(emptyMap()) }
 
     LaunchedEffect(roomFollowers.map { it.accountId }, roomAdmins.map { it.accountId }) {
         val all = (roomFollowers + roomAdmins).distinctBy { it.accountId }.filter { it.accountId.isNotBlank() }
-        // Avoid N sequential profile requests when the Members sheet opens.
-        // Keep concurrency bounded so large rooms do not flood the backend.
         val loaded = kotlinx.coroutines.coroutineScope {
             val limiter = kotlinx.coroutines.sync.Semaphore(4)
             all.map { member ->
@@ -148,7 +146,6 @@ fun RoomInfo(
                 .background(Color(0xEB000000), RoundedCornerShape(topStart=15.dp,topEnd=15.dp))
         ) {
             
-            // Compact top controls stay together in the top-left corner.
             Box(Modifier.fillMaxWidth().height(48.dp).padding(start = 14.dp, top = 10.dp)) {
                 Row(
                     Modifier.align(Alignment.TopStart),
@@ -191,7 +188,7 @@ fun RoomInfo(
                     model = roomData.roomDp.ifBlank { "/default-avatar.png" },
                     contentDescription = "Room",
                     modifier = Modifier.align(Alignment.TopCenter).offset(y = (-40).dp)
-                        .size(80.dp).clip(RoundedCornerShape(12.dp))
+                        .requiredSize(80.dp).clip(RoundedCornerShape(12.dp))
                         .border(1.dp, Color.White.copy(alpha=.18f), RoundedCornerShape(12.dp)),
                     contentScale = ContentScale.Crop
                 )
@@ -258,7 +255,7 @@ fun RoomInfo(
                                 modifier = Modifier.size(38.dp).clip(CircleShape),
                                 contentScale = ContentScale.Crop
                             )
-                            Column(Modifier.padding(start=10.dp), verticalArrangement=Arrangement.spacedBy(2.dp)) {
+                            Column(Modifier.padding(start=10.dp), verticalArrangement=Arrangement.spacedBy(0.dp)) {
                                 Text(ownerDisplayName.ifBlank{"Unknown"}, fontSize=13.sp,
                                     fontWeight=FontWeight.SemiBold, color=Color.White, maxLines=1)
                                 Text("Room owner", fontSize=10.sp, color=Color.White.copy(alpha=.55f))
@@ -296,22 +293,13 @@ fun RoomInfo(
                         val profile = memberProfiles[f.accountId] ?: f.copy(country = "")
                         MemberRow(profile.name, profile.image, profile.accountId, if (profile.accountId in adminIds) "Admin" else "", profile.country) { onOpenProfile(profile) }
                     }
-                    if (roomFollowers.isEmpty() && roomAdmins.isEmpty()) {
-                        item {
-                            Text("No members yet", modifier = Modifier.fillMaxWidth().padding(20.dp),
-                                textAlign = TextAlign.Center, fontSize = 13.sp, color = Color(0xFF9CA3AF))
-                        }
-                    }
+                    // "No members yet" wala block yahan se ekdam hata diya hai bss!
                 }
             }
         }
 
-        // --- NEW SHARE BOTTOM SHEET LOGIC ---
         if (showShareSheet) {
-            // Dark overlay background for share sheet to dismiss it when clicked outside
             Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=0.4f)).clickable { showShareSheet = false })
-            
-            // Share Bottom Sheet Container (50Vh, Black, 12dp curve)
             Column(
                 Modifier
                     .fillMaxWidth()
@@ -319,7 +307,6 @@ fun RoomInfo(
                     .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
                     .background(Color.Black)
             ) {
-                // Top Left Title
                 Text(
                     text = "Share in Zyora",
                     color = Color.White,
@@ -363,7 +350,6 @@ fun RoomInfo(
                 }
             }
         }
-        // ------------------------------------
         if (showDangerMenu) {
             RoomDangerActionMenu(
                 isFollowing = isRoomFollowed,
@@ -442,31 +428,44 @@ private fun MemberRow(
         AsyncImage(
             model = if (image.isBlank()) "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/default-avatar.png" else image,
             contentDescription = name,
-            modifier = Modifier.size(38.dp).clip(CircleShape),
+            // Avatar size increase kar diya 44.dp
+            modifier = Modifier.size(44.dp).clip(CircleShape),
             contentScale = ContentScale.Crop
         )
-        Column(Modifier.padding(start = 11.dp).weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        // Vertical gap reduce karne ke liye spacedBy(0.dp) kar diya
+        Column(Modifier.padding(start = 11.dp).weight(1f), verticalArrangement = Arrangement.spacedBy(0.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(name.ifBlank { "User" },
+                    modifier = Modifier.weight(1f, fill = false), // Name ab pura aayega, adha cut nahi hoga
                     fontSize = 13.sp, fontWeight = FontWeight.Medium,
                     color = Color.White, maxLines = 2, softWrap = true)
+                
                 if (role == "Owner") {
                     AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261027_235537.png",
                         contentDescription="Owner", contentScale=ContentScale.Fit,
-                        modifier=Modifier.padding(start=5.dp).height(14.dp).widthIn(min=30.dp, max=42.dp))
+                        // Gap reduce kiya start=2.dp karke
+                        modifier=Modifier.padding(start=2.dp).height(14.dp).widthIn(min=30.dp, max=42.dp))
                 } else if (role == "Admin") {
                     AsyncImage(model=ROOM_ADMIN_TAG, contentDescription="Room Admin",
-                        contentScale=ContentScale.Fit, modifier=Modifier.padding(start=5.dp).height(14.dp).widthIn(min=30.dp, max=42.dp))
+                        contentScale=ContentScale.Fit, 
+                        // Yahan bhi gap reduce kiya start=2.dp karke
+                        modifier=Modifier.padding(start=2.dp).height(14.dp).widthIn(min=30.dp, max=42.dp))
                 }
             }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                Box(Modifier.size(width = 18.dp, height = 16.dp), contentAlignment = Alignment.Center) {
-                    if (country.isNotBlank()) Text(roomProfileCountryFlag(country), fontSize = 13.sp)
+                // Flag align fix kiya, directly Text use kiya takki upar niche na bhage
+                if (country.isNotBlank()) {
+                    Text(countryFlagEmoji(country), fontSize = 13.sp)
                 }
-                Box(Modifier.height(16.dp).width(36.dp), contentAlignment = Alignment.Center) {
+                Box(Modifier.height(16.dp).width(36.dp)) {
                     AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261028_004355.png",
-                        contentDescription="Level", contentScale=ContentScale.Fit, modifier=Modifier.fillMaxSize())
-                    Text("Lv.1", color=Color.White, fontSize=8.sp, fontWeight=FontWeight.Bold)
+                        contentDescription="Level", 
+                        // Image pura fit karega
+                        contentScale=ContentScale.FillBounds, modifier=Modifier.fillMaxSize())
+                    
+                    // Text align center-right ekdam perfect fix kar diya
+                    Text("Lv.1", color=Color.White, fontSize=8.sp, fontWeight=FontWeight.Bold,
+                        modifier = Modifier.align(Alignment.CenterEnd).padding(end = 4.dp))
                 }
             }
         }
