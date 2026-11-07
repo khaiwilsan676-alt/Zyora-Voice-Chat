@@ -698,7 +698,6 @@ fun RoomSettingPage(
                                 modifier = Modifier.size(30.dp).clickable(enabled = !added && admins.size < 5) {
                                     admins = (admins + member.accountId).distinct()
                                     performSave(state.copy(admin = admins))
-                                    adminMembersSheet = false
                                     sheet = "admin"
                                 }, contentScale = ContentScale.Fit, alpha = if (added || admins.size >= 5) 0.35f else 1f)
                         }
