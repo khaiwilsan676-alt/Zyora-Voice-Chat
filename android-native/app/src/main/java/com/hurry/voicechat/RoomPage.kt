@@ -705,6 +705,9 @@ fun RoomPage(
     
     var showOfficialAnnouncement by remember { mutableStateOf(true) }
     var clearedBy by remember { mutableStateOf("") }
+    // A live kick owns the acknowledgement card; do not replace it with the
+    // compact restriction popup if a delayed join-block event arrives.
+    var liveKickReceived by remember(roomId, accountId) { mutableStateOf(false) }
     val kickNotices = remember { mutableStateListOf<NativeRoomKickNotice>() }
     
     val configuration = LocalConfiguration.current
@@ -942,6 +945,7 @@ fun RoomPage(
             val payload = args.firstOrNull() as? JSONObject ?: return@Listener
             if (payload.optString("roomId") == roomId && payload.optString("targetId") == accountId) {
                 mainHandler.post {
+                    liveKickReceived = true
                     incomingSeatInvite = null
                     onKickNotice(payload)
                     onClose()
@@ -950,17 +954,20 @@ fun RoomPage(
         }
         val roomKickBlockedListener = Emitter.Listener { args ->
             val payload = args.firstOrNull() as? JSONObject ?: return@Listener
-            if (payload.optString("roomId") == roomId && payload.optString("userId") == accountId) {
+            if (payload.optString("roomId") == roomId &&
+                payload.optString("userId") == accountId && !liveKickReceived) {
                 mainHandler.post {
-                    onKickNotice(JSONObject()
-                        .put("roomId", roomId)
-                        .put("targetId", accountId)
-                        .put("expiresAt", payload.optLong("expiresAt", 0L))
-                        .put("ownerId", payload.optString("ownerId", roomId))
-                        .put("ownerName", payload.optString("ownerName", "Room Owner"))
-                        .put("ownerImage", payload.optString("ownerImage", ""))
-                        .put("blocked", true))
-                    onClose()
+                    if (!liveKickReceived) {
+                        onKickNotice(JSONObject()
+                            .put("roomId", roomId)
+                            .put("targetId", accountId)
+                            .put("expiresAt", payload.optLong("expiresAt", 0L))
+                            .put("ownerId", payload.optString("ownerId", roomId))
+                            .put("ownerName", payload.optString("ownerName", "Room Owner"))
+                            .put("ownerImage", payload.optString("ownerImage", ""))
+                            .put("blocked", true))
+                        onClose()
+                    }
                 }
             }
         }
