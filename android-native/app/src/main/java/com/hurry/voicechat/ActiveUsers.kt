@@ -108,14 +108,12 @@ fun ActiveUsers(
        }
       }
       if(inviteMode) {
-       Box(
-        Modifier.clip(RoundedCornerShape(50)).background(Color(0xFF287BFF))
-         .clickable { onInvite(user) }
-         .padding(horizontal=14.dp, vertical=7.dp),
-        contentAlignment=Alignment.Center
-       ) {
-        Text("Invite",fontSize=11.sp,fontWeight=FontWeight.SemiBold,color=Color.White)
-       }
+       AsyncImage(
+        model="https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261107_153857.png",
+        contentDescription="Invite",
+        modifier=Modifier.size(width=58.dp, height=30.dp).clickable { onInvite(user) },
+        contentScale=ContentScale.Fit
+       )
       }
      }
     }
