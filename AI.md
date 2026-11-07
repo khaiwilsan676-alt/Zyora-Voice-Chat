@@ -401,3 +401,4 @@ Current documentation does not certify that all historical features are build-, 
 
 ## Native performance hardening — 2026-11-07
 - Room audio teardown now detaches Socket.IO listeners, stops audio producers, and updates speaking state immediately, then joins worker threads and releases audio resources on a dedicated daemon cleanup thread. This avoids blocking Compose navigation/room exit on the main thread while preserving the existing room voice protocol, mute flow, media routing, and UI.
+- Fixed the Kotlin coroutine `async` receiver usage in Active Users and Room Info so the native APK build does not fail on the deprecated scope-less async call.
