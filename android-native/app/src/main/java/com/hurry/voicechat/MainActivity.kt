@@ -457,6 +457,10 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                 }.getOrNull()
             }
             roomAccessCheckInProgress = false
+            // A live kick may arrive while this asynchronous join check is still in flight.
+            // Never let its late HTTP response replace the Got it acknowledgement with
+            // the compact restriction popup.
+            if (roomKickNotice != null) return@launch
             if (access == null) {
                 roomBlockedPopup = JSONObject().put("checkFailed", true)
                 return@launch
@@ -472,7 +476,6 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                 tab = HurryTab.HOME
                 homeMine = false
                 openedRoom = null
-                roomKickNotice = null
                 roomBlockedPopup = JSONObject(access.toString())
                 return@launch
             }
