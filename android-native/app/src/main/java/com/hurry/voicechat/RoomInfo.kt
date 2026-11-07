@@ -293,7 +293,6 @@ fun RoomInfo(
                         val profile = memberProfiles[f.accountId] ?: f.copy(country = "")
                         MemberRow(profile.name, profile.image, profile.accountId, if (profile.accountId in adminIds) "Admin" else "", profile.country) { onOpenProfile(profile) }
                     }
-                    // "No members yet" wala block yahan se ekdam hata diya hai bss!
                 }
             }
         }
@@ -319,12 +318,8 @@ fun RoomInfo(
                     Modifier.fillMaxWidth().weight(1f).padding(horizontal = 14.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    if (roomFans.isEmpty()) {
-                        item {
-                            Text("No fans yet", Modifier.fillMaxWidth().padding(vertical = 24.dp),
-                                color = Color(0xFF9CA3AF), fontSize = 13.sp, textAlign = TextAlign.Center)
-                        }
-                    }
+                    // Yahan se "No fans yet" wala block hata diya hai
+                    
                     items(roomFans, key = { "room-share-" + it.accountId }) { fan ->
                         Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                             AsyncImage(
@@ -335,16 +330,21 @@ fun RoomInfo(
                             )
                             Text(fan.name.ifBlank { "User" }, Modifier.weight(1f).padding(start = 10.dp),
                                 color = Color.White, fontSize = 14.sp, maxLines = 1)
-                            Box(
-                                Modifier.clip(RoundedCornerShape(18.dp)).background(Color(0xFF2878E8))
+                            
+                            // Ye rahi teri nayi image wali button bss 
+                            AsyncImage(
+                                model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261107_205456.png",
+                                contentDescription = "Share",
+                                modifier = Modifier
+                                    .height(28.dp)
+                                    .width(64.dp)
+                                    .clip(RoundedCornerShape(18.dp))
                                     .clickable {
                                         onShareToUser(fan)
                                         showShareSheet = false
-                                    }.padding(horizontal = 17.dp, vertical = 7.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text("Share", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                            }
+                                    },
+                                contentScale = ContentScale.FillBounds
+                            )
                         }
                     }
                 }
@@ -428,42 +428,35 @@ private fun MemberRow(
         AsyncImage(
             model = if (image.isBlank()) "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/default-avatar.png" else image,
             contentDescription = name,
-            // Avatar size increase kar diya 44.dp
             modifier = Modifier.size(44.dp).clip(CircleShape),
             contentScale = ContentScale.Crop
         )
-        // Vertical gap reduce karne ke liye spacedBy(0.dp) kar diya
         Column(Modifier.padding(start = 11.dp).weight(1f), verticalArrangement = Arrangement.spacedBy(0.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(name.ifBlank { "User" },
-                    modifier = Modifier.weight(1f, fill = false), // Name ab pura aayega, adha cut nahi hoga
+                    modifier = Modifier.weight(1f, fill = false), 
                     fontSize = 13.sp, fontWeight = FontWeight.Medium,
                     color = Color.White, maxLines = 2, softWrap = true)
                 
                 if (role == "Owner") {
                     AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261027_235537.png",
                         contentDescription="Owner", contentScale=ContentScale.Fit,
-                        // Gap reduce kiya start=2.dp karke
                         modifier=Modifier.padding(start=2.dp).height(14.dp).widthIn(min=30.dp, max=42.dp))
                 } else if (role == "Admin") {
                     AsyncImage(model=ROOM_ADMIN_TAG, contentDescription="Room Admin",
                         contentScale=ContentScale.Fit, 
-                        // Yahan bhi gap reduce kiya start=2.dp karke
                         modifier=Modifier.padding(start=2.dp).height(14.dp).widthIn(min=30.dp, max=42.dp))
                 }
             }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                // Flag align fix kiya, directly Text use kiya takki upar niche na bhage
                 if (country.isNotBlank()) {
                     Text(countryFlagEmoji(country), fontSize = 13.sp)
                 }
                 Box(Modifier.height(16.dp).width(36.dp)) {
                     AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261028_004355.png",
                         contentDescription="Level", 
-                        // Image pura fit karega
                         contentScale=ContentScale.FillBounds, modifier=Modifier.fillMaxSize())
                     
-                    // Text align center-right ekdam perfect fix kar diya
                     Text("Lv.1", color=Color.White, fontSize=8.sp, fontWeight=FontWeight.Bold,
                         modifier = Modifier.align(Alignment.CenterEnd).padding(end = 4.dp))
                 }
