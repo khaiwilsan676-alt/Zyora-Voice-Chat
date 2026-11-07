@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalContext
 import coil3.compose.AsyncImage
+import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.sync.withPermit
 
@@ -94,7 +95,7 @@ fun RoomInfo(
         val loaded = kotlinx.coroutines.coroutineScope {
             val limiter = kotlinx.coroutines.sync.Semaphore(4)
             all.map { member ->
-                kotlinx.coroutines.async(kotlinx.coroutines.Dispatchers.IO) {
+                async(kotlinx.coroutines.Dispatchers.IO) {
                     limiter.withPermit {
                         val roomProfileCountry = runCatching {
                             loadRoomProfileCountry(context, member.accountId, member.name, member.image)
