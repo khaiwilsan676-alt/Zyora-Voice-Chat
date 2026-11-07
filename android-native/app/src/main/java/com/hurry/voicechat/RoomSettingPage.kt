@@ -178,6 +178,7 @@ fun RoomSettingPage(
     initial: RoomSettingsDataNative = RoomSettingsDataNative(),
     roomOwnerId: String = "",
     currentUserId: String = "",
+    roomMembers: List<RoomInfoFollower> = emptyList(),
     onBack: () -> Unit = {},
     onSave: (RoomSettingsDataNative) -> Unit = {}
 ) {
@@ -195,6 +196,14 @@ fun RoomSettingPage(
     var saving by remember { mutableStateOf(false) }
     var saveError by remember { mutableStateOf("") }
     val members = remember { mutableStateListOf<NativeSettingMember>() }
+    LaunchedEffect(roomMembers) {
+        val sharedRoomMembers = roomMembers
+            .filter { it.accountId.isNotBlank() && it.accountId != roomOwnerId }
+            .distinctBy { it.accountId }
+            .map { NativeSettingMember(it.accountId, it.name, it.image) }
+        members.clear()
+        members.addAll(sharedRoomMembers)
+    }
 
     // 🔥 COMMON SAVE FUNCTION 🔥 
     val performSave = { newState: RoomSettingsDataNative ->
@@ -337,34 +346,6 @@ fun RoomSettingPage(
             roomThemeChoices + storeRoomThemes.toList()
     }
 
-    DisposableEffect(roomOwnerId) {
-        if (roomOwnerId.isBlank()) return@DisposableEffect onDispose { }
-        val socket = runCatching { IO.socket(SETTINGS_API) }.getOrNull() ?: return@DisposableEffect onDispose { }
-        val listener = Emitter.Listener { args ->
-            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
-            if (payload.optString("roomId") != roomOwnerId) return@Listener
-            val users = payload.optJSONArray("users") ?: JSONArray()
-            val parsed = (0 until users.length()).mapNotNull { i ->
-                val item = users.optJSONObject(i) ?: return@mapNotNull null
-                val id = item.optString("accountId", item.optString("userId", item.optString("appLongId", "")))
-                if (id.isBlank()) null else NativeSettingMember(
-                    id,
-                    item.optString("name", item.optString("userName", "User")),
-                    item.optString("image", item.optString("dp", item.optString("avatar", "")))
-                )
-            }
-            android.os.Handler(android.os.Looper.getMainLooper()).post {
-                members.clear(); members.addAll(parsed)
-            }
-        }
-        socket.on("room_members_list", listener)
-        socket.connect()
-        socket.emit("get_room_members", JSONObject().put("roomId", roomOwnerId))
-        onDispose {
-            socket.off("room_members_list", listener)
-            socket.disconnect(); socket.close()
-        }
-    }
 
     Box(Modifier.fillMaxSize().background(Color.White)) {
         Column(Modifier.fillMaxSize()) {
