@@ -186,8 +186,7 @@ fun RoomInfo(
                     contentScale = ContentScale.Crop
                 )
             }
-            if (tab == 0) {
-                Column(Modifier.fillMaxWidth().padding(top = 0.dp, bottom = 6.dp),
+            Column(Modifier.fillMaxWidth().padding(top = 0.dp, bottom = 6.dp),
                     horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(roomData.roomName.ifBlank { "Room" }, fontSize = 15.sp,
                         fontWeight = FontWeight.SemiBold, color = Color.White, maxLines = 1)
@@ -204,7 +203,6 @@ fun RoomInfo(
                         }
                     }
                 }
-            }
 
             Row(
                 Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=6.dp),
