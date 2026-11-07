@@ -28,6 +28,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Path
@@ -1303,7 +1304,7 @@ fun RoomPage(
 
         // FULL ROOM CONTENT LAYOUT
         RoomPageBlock {
-Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TOP UI FROM JUMPING
+Column(Modifier.fillMaxSize().drawWithContent { drawContent(); if (showChat) drawRect(Color.White.copy(alpha = 0.20f)) }) { // REMOVED imePadding() FROM HERE TO PREVENT TOP UI FROM JUMPING
             
             // --- TOP SECTION (FIXED, NO IME PADDING) ---
             Box(Modifier.fillMaxWidth()) {
@@ -1495,19 +1496,6 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
             Column(Modifier.fillMaxWidth().weight(1f).imePadding()) {
                 Box(Modifier.weight(1f).fillMaxWidth()) {
                     
-                    // BOTTOM DIM OVERLAY BEHIND MESSAGES WHEN CHAT IS OPEN
-                    if (showChat) {
-                        Box(
-                            Modifier
-                                .matchParentSize()
-                                .background(Color.Black.copy(alpha = 0.65f))
-                                .clickable(
-                                    indication = null,
-                                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-                                ) { showChat = false; keyboardController?.hide() }
-                        )
-                    }
-
                     if (!showChat) {
                         RoomChatMessages(
                             state = chatListState,
@@ -2582,7 +2570,7 @@ private fun RoomChatMessages(
     LazyColumn(
         state = state,
                             modifier = Modifier.fillMaxSize().padding(horizontal = 10.dp),
-                            contentPadding = PaddingValues(bottom = 8.dp),
+                            contentPadding = PaddingValues(top = 8.dp, bottom = 8.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             if (showOfficialAnnouncement) {
