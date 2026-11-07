@@ -344,3 +344,11 @@ Current documentation does not certify that all historical features are build-, 
 - Kept its existing 80dp × 80dp dimensions and -40dp vertical offset, so it remains half outside and half inside the top edge of the sheet.
 - No other Room Info positions, dimensions, controls, or UI styling were changed.
 - Status: committed; APK build/device verification pending.
+
+
+## Room Info DP corners and public-message realtime root fix (2026-11-07)
+- RoomInfo.kt: restored 12dp rounded corners on the existing 80dp Room DP while preserving its centered -40dp overlap, size, border, and all other sheet UI.
+- Zyora-Server/server.js: fixed the public-message owner authorization root cause. The settings handler previously compared the owner's socket identity directly with the room ID; those identifiers are not guaranteed to match, so the server silently discarded the owner's toggle. Room join now records server-verified owner identity aliases and only those verified identities can change room settings.
+- Public Message ON/OFF is now persisted in MongoDB and refreshed into the server cache on every room join. Each room-message send checks the persisted shared setting, preventing another server process or stale in-memory cache from continuing to reject messages after the owner opens Public Message.
+- While the setting is OFF, only the verified room owner and verified room admins can send; when ON, all joined room members can send. The existing Socket.IO room broadcast and message UI are retained.
+- Status: source commits completed. Render deployment, native APK CI, and two-account real-time verification are still required; do not claim runtime success until those checks pass.
