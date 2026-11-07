@@ -77,7 +77,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 
 // Room Admin Tag image kept in code for future use
-const val ROOM_ADMIN_TAG = "https://zyora-voice-chat.vercel.app/IMG_20261027_235628.png"
+const val ROOM_ADMIN_TAG = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261107_154649.png"
 
 // Optimized Shader-like CPU logic to prevent room hanging
 @Composable
@@ -1963,7 +1963,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
             }
         )
         if(showSettings && accountId.isNotBlank() && accountId == roomOwner.accountId.ifBlank { roomOwner.id }) RoomSettingPage(initial = RoomSettingsDataNative(roomName=roomName,roomDp=roomImage,announcement=announcement,micMode=roomMicMode,theme=roomTheme,isLocked=locked,roomPassword=roomPassword,admin=roomAdminIds,customTheme=appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).getString("customTheme_$roomId", "").orEmpty()),roomOwnerId=roomId,currentUserId=accountId,onBack={showSettings=false},onSave={saved->
-            roomName=saved.roomName;roomImage=saved.roomDp;announcement=saved.announcement;roomMicMode=saved.micMode;roomTheme=saved.theme;roomCustomThemeUrl=saved.customTheme;roomAdminIds=saved.admin;locked=saved.isLocked;roomPassword=saved.roomPassword;showSettings=false
+            roomName=saved.roomName;roomImage=saved.roomDp;announcement=saved.announcement;roomMicMode=saved.micMode;roomTheme=saved.theme;roomCustomThemeUrl=saved.customTheme;roomAdminIds=saved.admin;locked=saved.isLocked;roomPassword=saved.roomPassword
             appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).edit().putInt("micMode_$roomId", saved.micMode).putString("theme_$roomId", saved.theme).putString("customTheme_$roomId", saved.customTheme).putBoolean("room_locked_$roomId", saved.isLocked).putString("room_password_$roomId", saved.roomPassword).apply()
             roomIoScope.launch { NativeIndexDatabase(appContext).saveRoomLock(roomId, saved.isLocked, saved.roomPassword) }
             roomSocketRef.value?.takeIf { it.connected() }?.emit("room_settings_update", JSONObject()
@@ -2583,7 +2583,7 @@ private fun RoomChatMessages(
                                             
                                             val isRoomOwnerMessage = message.senderAccountId == roomOwnerId
                                             if (isRoomOwnerMessage) {
-                                                AsyncImage(model = "https://zyora-voice-chat.vercel.app/IMG_20261027_235537.png", contentDescription = "Owner", contentScale = ContentScale.Fit, modifier = Modifier.height(16.dp))
+                                                AsyncImage(model = if (m.senderAccountId in roomAdminIds) ROOM_ADMIN_TAG else "https://zyora-voice-chat.vercel.app/IMG_20261027_235537.png", contentDescription = if (m.senderAccountId in roomAdminIds) "Room Admin" else "Owner", contentScale = ContentScale.Fit, modifier = Modifier.height(16.dp))
                                             }
                                             val hasPublicProfileIdImage = message.senderAccountId in setOf("100002", "100003", "500001", "500002", "500003", "500004")
                                             if (hasPublicProfileIdImage) {
@@ -2950,7 +2950,7 @@ private fun RoomSeatInviteDialog(
                 Text(cachedName.ifBlank { m.sender },color=Color.White.copy(alpha=.9f),fontSize=12.sp,lineHeight=13.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold,maxLines=1,overflow=TextOverflow.Ellipsis)
                 
                 if (isRoomOwnerMessage) {
-                    AsyncImage(model = "https://zyora-voice-chat.vercel.app/IMG_20261027_235537.png", contentDescription = "Owner", contentScale = ContentScale.Fit, modifier = Modifier.height(16.dp))
+                    AsyncImage(model = if (m.senderAccountId in roomAdminIds) ROOM_ADMIN_TAG else "https://zyora-voice-chat.vercel.app/IMG_20261027_235537.png", contentDescription = if (m.senderAccountId in roomAdminIds) "Room Admin" else "Owner", contentScale = ContentScale.Fit, modifier = Modifier.height(16.dp))
                 }
                 if (showPurpleIdImage) {
                     AsyncImage(model = "https://zyora-voice-chat.vercel.app/IMG_20261101_125212.png", contentDescription = "Purple ID", contentScale = ContentScale.Fit, modifier = Modifier.height(16.dp).widthIn(min = 14.dp, max = 22.dp))
