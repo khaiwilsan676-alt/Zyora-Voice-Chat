@@ -31,6 +31,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalContext
 import coil3.compose.AsyncImage
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.sync.withPermit
 
 data class RoomInfoOwner(val id:String="",val uid:String="",val accountId:String="",val name:String,val image:String)
 data class RoomInfoData(val roomName:String,val roomDp:String,val roomAnnouncement:String,val roomId:String)
