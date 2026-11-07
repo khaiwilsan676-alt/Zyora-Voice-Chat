@@ -338,3 +338,9 @@ Current documentation does not certify that all historical features are build-, 
 - The pre-entry access-check path also routes a kicked user to Home before showing the acknowledgement card.
 - Kick enforcement, expiry, owner details, popup styling, and room access rules are unchanged; only the presentation/navigation order was corrected.
 - Status: **Implemented in repository**. APK CI and real-device behavior still require verification.
+
+## Room Info Room DP square shape restore (2026-11-07)
+- Restored the Room Info room display picture to a true square crop with square corners.
+- Kept its existing 80dp × 80dp dimensions and -40dp vertical offset, so it remains half outside and half inside the top edge of the sheet.
+- No other Room Info positions, dimensions, controls, or UI styling were changed.
+- Status: committed; APK build/device verification pending.
