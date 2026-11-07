@@ -1471,9 +1471,10 @@ Column(Modifier.fillMaxSize().drawWithContent { drawContent(); if (showChat) dra
                 }
                 
 
-                // Dedicated chat layer sits over the dimmed room while chat is open.
+                // Chat messages stay over the room; the root layer supplies the same
+                // white/20 overlay across the complete screen (including the composer).
                 if (showChat) {
-                    Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = 0.30f))) {
+                    Box(Modifier.matchParentSize()) {
                         RoomChatMessages(
                             state = chatListState,
                             messages = messages,
@@ -1486,6 +1487,17 @@ Column(Modifier.fillMaxSize().drawWithContent { drawContent(); if (showChat) dra
                             onSelectMessage = { selectedChatProfile = it },
                             onSelectMention = { mention -> selectedChatProfile = NativeRoomMessage("mention-profile-${mention.accountId}", "", mention.name, "", mention.accountId) }
                         )
+                        IconButton(
+                            onClick = { showChat = false; keyboardController?.hide() },
+                            modifier = Modifier.align(Alignment.TopEnd).padding(top = 40.dp, end = 12.dp).size(36.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.KeyboardArrowDown,
+                                contentDescription = "Close room chat",
+                                tint = Color.White,
+                                modifier = Modifier.size(30.dp)
+                            )
+                        }
                     }
                 }
             }
