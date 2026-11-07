@@ -315,15 +315,15 @@ fun UserDangerActionMenu(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .padding(bottom = 32.dp)
+                .padding(horizontal = 12.dp)
+                .padding(bottom = 24.dp)
                 .windowInsetsPadding(WindowInsets.navigationBars)
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(Color(0xFF1C1C1E))
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color.Black)
             ) {
                 androidx.compose.material3.Text(
                     "Report",
@@ -355,12 +355,12 @@ fun UserDangerActionMenu(
                     fontWeight = FontWeight.Medium
                 )
             }
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             Button(
                 onClick = onDismiss,
                 modifier = Modifier.fillMaxWidth().height(56.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B82F6)),
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(12.dp)
             ) {
                 androidx.compose.material3.Text(
                     "Cancel",
