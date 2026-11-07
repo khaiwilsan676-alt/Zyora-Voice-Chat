@@ -438,8 +438,20 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
         val joiningAccountId = authPrefs.getString("accountId", userId).orEmpty().ifBlank { userId }
         if (roomIdToCheck.isBlank() || joiningAccountId.isBlank() || roomAccessCheckInProgress) return
 
-        // Start both independent server checks together. Previously the kick check
-        // waited for room-access to finish, adding a full extra Render round trip.
+        // Normal unlocked room cards must open immediately. The Socket.IO room_join
+        // handler is the authoritative server-side gate for kick bans, owner blocks,
+        // and current room-lock state before the socket is admitted to room presence.
+        // Only locked rooms need the password preflight/grant round trip.
+        if (!room.locked && roomPassword.isBlank()) {
+            roomAccessPromptRoom = null
+            roomAccessPassword = ""
+            roomAccessError = false
+            openedRoom = room
+            return
+        }
+
+        // Password verification is only needed for locked rooms. Kick-ban enforcement
+        // remains authoritative in the server's room_join handler.
         roomAccessCheckInProgress = true
         roomCreateScope.launch {
             val checks = kotlinx.coroutines.coroutineScope {
