@@ -2583,7 +2583,7 @@ private fun RoomChatMessages(
                                             
                                             val isRoomOwnerMessage = message.senderAccountId == roomOwnerId
                                             if (isRoomOwnerMessage) {
-                                                AsyncImage(model = if (m.senderAccountId in roomAdminIds) ROOM_ADMIN_TAG else "https://zyora-voice-chat.vercel.app/IMG_20261027_235537.png", contentDescription = if (m.senderAccountId in roomAdminIds) "Room Admin" else "Owner", contentScale = ContentScale.Fit, modifier = Modifier.height(16.dp))
+                                                AsyncImage(model = if (message.senderAccountId in roomAdminIds) ROOM_ADMIN_TAG else "https://zyora-voice-chat.vercel.app/IMG_20261027_235537.png", contentDescription = if (message.senderAccountId in roomAdminIds) "Room Admin" else "Owner", contentScale = ContentScale.Fit, modifier = Modifier.height(16.dp))
                                             }
                                             val hasPublicProfileIdImage = message.senderAccountId in setOf("100002", "100003", "500001", "500002", "500003", "500004")
                                             if (hasPublicProfileIdImage) {
@@ -2597,7 +2597,7 @@ private fun RoomChatMessages(
                                         }
                                         Text("Enter the Room",color=Color.White,fontSize=12.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Medium, modifier=Modifier.padding(start=2.dp).clickable { onSelectMessage(message) })
                                     }
-                                } else NativeMessage(message, roomOwnerId = roomOwnerId, onAvatarClick = { onSelectMessage(message) }, onMentionClick = onSelectMention)
+                                } else NativeMessage(message, roomOwnerId = roomOwnerId, roomAdminIds = roomAdminIds, onAvatarClick = { onSelectMessage(message) }, onMentionClick = onSelectMention)
                             }
                             items(kickNotices, key = { it.id }) { notice ->
                                 Column(Modifier.fillMaxWidth().padding(start=4.dp, top=0.dp, end=82.dp, bottom=2.dp)) {
@@ -2896,7 +2896,7 @@ private fun RoomSeatInviteDialog(
     }
 }
 
-@Composable private fun NativeMessage(m:NativeRoomMessage, roomOwnerId: String, onAvatarClick: () -> Unit = {}, onMentionClick: (NativeMention) -> Unit = {}){
+@Composable private fun NativeMessage(m:NativeRoomMessage, roomOwnerId: String, roomAdminIds: List<String> = emptyList(), onAvatarClick: () -> Unit = {}, onMentionClick: (NativeMention) -> Unit = {}){
     val context = LocalContext.current
     var showRoomImagePreview by remember(m.id) { mutableStateOf(false) }
     val profileDb = remember(context) { NativeIndexDatabase(context) }
