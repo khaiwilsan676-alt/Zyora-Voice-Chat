@@ -598,6 +598,9 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                         if (notice.optBoolean("blocked", false)) {
                             roomBlockedPopup = JSONObject(notice.toString())
                         } else {
+                            // A live kick acknowledgement takes priority over any stale
+                            // access-denied popup left by the room socket.
+                            roomBlockedPopup = null;
                             // A kick immediately returns the user to Home and shows the
                             // acknowledgement card there. The restriction toast is deferred
                             // until the user taps Got it on that card.
