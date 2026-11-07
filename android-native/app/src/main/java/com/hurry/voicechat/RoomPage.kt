@@ -472,7 +472,7 @@ fun RoomPage(
     var publicMsgOff by remember(roomId){mutableStateOf(true)}
     var showPublicMessageClosedToast by remember { mutableStateOf(false) }
     var showRoomOwnerBlockedToast by remember { mutableStateOf(false) }
-    val isRoomOwner = accountId == roomOwnerAccountId
+    val isRoomOwner = accountId == roomOwnerAccountId || roomAdminIds.any { it.trim() == accountId.trim() }
     val canSendRoomPublicMessage = isRoomOwner || roomAdminIds.any { it == accountId }
     LaunchedEffect(showPublicMessageClosedToast) {
         if (showPublicMessageClosedToast) {
@@ -2114,7 +2114,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                 roomAdminIds.any { it.trim() == accountId.trim() }
             if(seat!=null && (isRoomOwner || isRoomAdmin)) SeatActionSheet(
                 seat=seat,
-                isOwner=isRoomOwner,
+                isOwner=isRoomOwner || isRoomAdmin,
                 isMySeat=seat.occupied && seat.accountId==accountId,
                 onDismiss={showSeatSheet=false;selectedSeat=0},
                 onTake={
@@ -2137,7 +2137,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                     showSeatSheet=false;selectedSeat=0
                 },
                 onLock={
-                    if(isRoomOwner) {
+                    if(isRoomOwner || isRoomAdmin) {
                         val nextLocked=!seat.locked
                         if(seatIndex>=0) seats[seatIndex]=if(nextLocked) NativeRoomSeat(number=seat.number,locked=true) else seat.copy(locked=false)
                         roomSocketRef.value?.emit("room_seat_action",JSONObject().put("roomId",roomId).put("userId",accountId).put("action","lock").put("seatNumber",seat.number).put("isLocked",nextLocked))
@@ -2584,7 +2584,7 @@ private fun RoomChatMessages(
                                             Text(message.sender,color=Color.White.copy(alpha=.95f),fontSize=12.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold)
                                             
                                             val isRoomOwnerMessage = message.senderAccountId == roomOwnerId
-                                            if (isRoomOwnerMessage) {
+                                            if (isRoomOwnerMessage || message.senderAccountId in roomAdminIds) {
                                                 AsyncImage(model = if (message.senderAccountId in roomAdminIds) ROOM_ADMIN_TAG else "https://zyora-voice-chat.vercel.app/IMG_20261027_235537.png", contentDescription = if (message.senderAccountId in roomAdminIds) "Room Admin" else "Owner", contentScale = ContentScale.Fit, modifier = Modifier.height(16.dp))
                                             }
                                             val hasPublicProfileIdImage = message.senderAccountId in setOf("100002", "100003", "500001", "500002", "500003", "500004")
@@ -2949,7 +2949,7 @@ private fun RoomSeatInviteDialog(
             Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(3.dp)){
                 Text(cachedName.ifBlank { m.sender },color=Color.White.copy(alpha=.9f),fontSize=12.sp,lineHeight=13.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold,maxLines=1,overflow=TextOverflow.Ellipsis)
                 
-                if (isRoomOwnerMessage) {
+                if (isRoomOwnerMessage || m.senderAccountId in roomAdminIds) {
                     AsyncImage(model = if (m.senderAccountId in roomAdminIds) ROOM_ADMIN_TAG else "https://zyora-voice-chat.vercel.app/IMG_20261027_235537.png", contentDescription = if (m.senderAccountId in roomAdminIds) "Room Admin" else "Owner", contentScale = ContentScale.Fit, modifier = Modifier.height(16.dp))
                 }
                 if (showPurpleIdImage) {
