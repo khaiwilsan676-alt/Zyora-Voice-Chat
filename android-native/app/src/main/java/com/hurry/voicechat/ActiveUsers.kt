@@ -37,6 +37,7 @@ fun ActiveUsers(
  onClose:()->Unit,
  roomUsers:List<ActiveUserNative>,
  roomOwnerId:String,
+ roomAdminIds:List<String> = emptyList(),
  onOpenProfile:(ActiveUserNative)->Unit,
  onCopyUserId:(String)->Unit,
  inviteMode:Boolean=false,
@@ -91,6 +92,9 @@ fun ActiveUsers(
         Text(user.name.ifBlank{"User"},fontSize=13.sp,fontWeight=FontWeight.SemiBold,color=Color.White,maxLines=1,softWrap=false,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
         if(user.accountId==roomOwnerId){
          AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261027_235537.png",contentDescription="Owner",contentScale=ContentScale.Fit,
+          modifier=Modifier.height(19.dp).width(42.dp))
+        } else if(user.accountId in roomAdminIds) {
+         AsyncImage(model=ROOM_ADMIN_TAG,contentDescription="Room Admin",contentScale=ContentScale.Fit,
           modifier=Modifier.height(19.dp).width(42.dp))
         }
        }
