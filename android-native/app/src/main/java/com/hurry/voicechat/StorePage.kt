@@ -939,7 +939,16 @@ private fun StoreChromaImage(
     LaunchedEffect(url) {
         bitmap = withContext(Dispatchers.IO) {
             runCatching {
-                val original = URL(url).openStream().use { BitmapFactory.decodeStream(it) }
+                val connection = (URL(url).openConnection() as java.net.HttpURLConnection).apply {
+                    connectTimeout = 7_000
+                    readTimeout = 9_000
+                    useCaches = true
+                }
+                val original = try {
+                    connection.inputStream.use { BitmapFactory.decodeStream(it) }
+                } finally {
+                    connection.disconnect()
+                }
                 if (original == null) null else {
                     val pixels = IntArray(original.width * original.height)
                     original.getPixels(pixels, 0, original.width, 0, 0, original.width, original.height)
