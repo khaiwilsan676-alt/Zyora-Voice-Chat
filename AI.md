@@ -352,3 +352,8 @@ Current documentation does not certify that all historical features are build-, 
 - Public Message ON/OFF is now persisted in MongoDB and refreshed into the server cache on every room join. Each room-message send checks the persisted shared setting, preventing another server process or stale in-memory cache from continuing to reject messages after the owner opens Public Message.
 - While the setting is OFF, only the verified room owner and verified room admins can send; when ON, all joined room members can send. The existing Socket.IO room broadcast and message UI are retained.
 - Status: source commits completed. Render deployment, native APK CI, and two-account real-time verification are still required; do not claim runtime success until those checks pass.
+
+## 16. Room lifecycle background-work cleanup (2026-11-07)
+- `android-native/app/src/main/java/com/hurry/voicechat/RoomPage.kt`: room-only inventory and room-follow network fetches now run in a `SupervisorJob`-backed IO scope owned by the room `DisposableEffect`.
+- On room disposal, the scope is cancelled and queued main-thread callbacks are removed before socket listeners are released. This prevents pending room fetches and delayed UI callbacks from continuing to mutate state after leaving or switching rooms.
+- Socket retention, room membership, seat persistence, event payloads, and visible UI are unchanged.
