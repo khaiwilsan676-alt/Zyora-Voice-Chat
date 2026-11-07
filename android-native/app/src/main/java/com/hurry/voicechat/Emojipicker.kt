@@ -1,6 +1,8 @@
 package com.hurry.voicechat
 
 import android.graphics.BitmapFactory
+import android.graphics.Bitmap
+import android.util.LruCache
 import android.graphics.PixelFormat
 import android.view.SurfaceView
 import android.view.ViewGroup
@@ -33,8 +35,11 @@ import java.net.URL
 
 data class EmojiSticker(val id: String, val name: String, val src: String, val videoUrl: String? = null)
 
-// Yeh ek global cache hai taaki emojis baar-baar load na ho aur fast chalein
-val staticBitmapCache = mutableMapOf<String, android.graphics.Bitmap>()
+// Thread-safe, memory-bounded cache: emoji bitmaps must not grow without limit
+// while the picker is opened repeatedly or URLs are loaded concurrently.
+val staticBitmapCache = object : LruCache<String, Bitmap>(12 * 1024) {
+    override fun sizeOf(key: String, value: Bitmap): Int = maxOf(1, value.byteCount / 1024)
+}
 
 // Yeh Custom Image loader hai jo 100% GIF ko play hone se rokega
 @Composable
@@ -43,22 +48,26 @@ fun CustomStaticImage(url: String, contentDescription: String, modifier: Modifie
 
     LaunchedEffect(url) {
         if (bitmap == null) {
-            withContext(Dispatchers.IO) {
+            val loadedBitmap = withContext(Dispatchers.IO) {
                 try {
-                    val connection = URL(url).openConnection()
-                    connection.connect()
-                    val input = connection.getInputStream()
-                    // BitmapFactory GIF ka sirf pehla frame nikalta hai, animation possible hi nahi hai!
-                    val bmp = BitmapFactory.decodeStream(input) 
-                    input.close()
-                    if (bmp != null) {
-                        staticBitmapCache[url] = bmp
-                        bitmap = bmp
+                    val connection = URL(url).openConnection().apply {
+                        connectTimeout = 7_000
+                        readTimeout = 9_000
+                        useCaches = true
                     }
-                } catch (e: Exception) {
-                    e.printStackTrace()
+                    // Keep the existing static-first-frame behavior for GIF stickers.
+                    val decoded = connection.getInputStream().use { input ->
+                        BitmapFactory.decodeStream(input)
+                    }
+                    if (decoded != null) staticBitmapCache.put(url, decoded)
+                    decoded
+                } catch (_: java.io.IOException) {
+                    null
+                } catch (_: SecurityException) {
+                    null
                 }
             }
+            if (loadedBitmap != null) bitmap = loadedBitmap
         }
     }
 
