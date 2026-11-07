@@ -398,3 +398,6 @@ Current documentation does not certify that all historical features are build-, 
 - Image processing remains on `Dispatchers.IO`; image transformations and visual output are unchanged.
 - No layout, feature, interaction, navigation, room, chat, voice, or wallet behaviour was intentionally changed.
 - Status: committed to the default branch; native APK build and device regression verification still pending.
+
+## Native performance hardening — 2026-11-07
+- Room audio teardown now detaches Socket.IO listeners, stops audio producers, and updates speaking state immediately, then joins worker threads and releases audio resources on a dedicated daemon cleanup thread. This avoids blocking Compose navigation/room exit on the main thread while preserving the existing room voice protocol, mute flow, media routing, and UI.
