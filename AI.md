@@ -324,3 +324,10 @@ Current documentation does not certify that all historical features are build-, 
 - Removed the unused local Android message-notification helper, the associated manifest components/permissions, and the POST_NOTIFICATIONS runtime permission request.
 - Kept the existing in-app chat banner/unread indicators and the separate Room Music foreground service/notification required for active media playback. No screen layout or unrelated feature behavior was intentionally changed.
 - Native build and device behavior verification pending.
+
+
+## Native responsiveness and notification cleanup follow-up (2026-11-07)
+- Home room-list refresh now respects the process-wide 15-second successful-refresh window when Home is recreated during tab navigation. This avoids immediately repeating the same full room-list download and Room DB replacement while keeping the cached snapshot visible and retaining periodic full refreshes for deleted-room correctness.
+- Confirmed the background message listener, boot receiver, Android message-notification helper, runtime notification permission request, and their manifest registrations are absent from the current source tree.
+- The Room Music foreground playback notification and in-app chat banners/unread badges remain intentionally separate.
+- Build verification for this follow-up is pending.
