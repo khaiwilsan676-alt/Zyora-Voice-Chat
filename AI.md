@@ -489,3 +489,8 @@ Current documentation does not certify that all historical features are build-, 
 - GiftPicker.kt: removed the dimming alpha from the Send button, so it stays at its normal full brightness whether or not a gift is selected.
 - The existing click eligibility and send behavior are unchanged; the button remains non-actionable until a gift is selected.
 - Native APK build and device verification remain pending.
+
+## 2026-11-08 — Gift Send button brightness
+- GiftPicker.kt: keep the Send button at full alpha (1f) whether or not a gift is selected. The existing click guard remains: sending is only actionable when a gift is selected and a send is not already in progress.
+- No button colors, gradient, sizing, or layout changed.
+- Native APK build and device verification remain pending.
