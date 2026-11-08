@@ -428,7 +428,7 @@ private fun RoomDangerActionMenu(
         onDismissRequest = onDismiss,
         containerColor = Color.Transparent,
         contentColor = Color.White,
-        scrimColor = Color.Black.copy(alpha = 0.5f),
+        scrimColor = Color.Transparent,
         dragHandle = null
     ) {
         Column(
