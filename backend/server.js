@@ -2091,7 +2091,18 @@ io.on("connection", (socket) => {
         }
       }
 
-      if (socketIsInRoom(socket, room)) roomPasswordGrants.delete(`${room}:${accId}`);
+      if (socketIsInRoom(socket, room)) {
+        roomPasswordGrants.delete(`${room}:${accId}`);
+        const occupiedSeats = roomSeats.get(room);
+        if (occupiedSeats) {
+          for (const [number, seat] of occupiedSeats.entries()) {
+            const seatedId = String(seat?.user?.accountId || seat?.user?.userId || "");
+            if (seat?.isOccupied && seatedId === accId) {
+              occupiedSeats.set(number, { ...seat, socketId: String(socket.id) });
+            }
+          }
+        }
+      }
 
       // Broadcast canonical room status only after membership and lock checks succeed.
       if (socketIsInRoom(socket, room)) {
@@ -2405,204 +2416,133 @@ io.on("connection", (socket) => {
     });
   });
 
-  socket.on("room_seat_action", (data = {}) => {
-    const roomId = data.roomId ? String(data.roomId) : "";
-    const userId = data.userId ? String(data.userId) : "";
-    const action = data.action;
+  socket.on("room_seat_action", async (data = {}) => {
+    const roomId = String(data.roomId || "");
+    const actorId = String(data.userId || "");
+    const action = String(data.action || "");
     const seatNumber = Number(data.seatNumber);
 
-    if (
-      !roomId ||
-      !userId ||
-      !Number.isFinite(seatNumber)
-    ) {
-      return;
+    if (!roomId || !actorId || !Number.isInteger(seatNumber) || seatNumber < 1) return;
+    if (!socketIsInRoom(socket, roomId) || !socketOwnsIdentity(socket, actorId)) return;
+
+    let roomAdmins = [];
+    if (db && (action === "leave" || action === "lock" || action === "owner_mute" || action === "mute")) {
+      try {
+        const roomDoc = await db.collection("rooms").findOne({
+          $or: [{ accountId: roomId }, { roomId }, { id: roomId }]
+        });
+        const rawAdmins = Array.isArray(roomDoc?.admin) ? roomDoc.admin : [];
+        roomAdmins = rawAdmins.map(value => String(
+          typeof value === "object" ? (value.accountId || value.userId || value.id || "") : value
+        )).filter(Boolean);
+      } catch (error) {
+        console.warn("Room seat permission lookup failed:", error.message);
+        // Fail closed for privileged seat actions if admin permissions cannot be verified.
+      }
     }
 
-    // Only a user who is actually joined to this room can control a seat.
-    const isRoomUser =
-      String(socket.roomAccountId || "") === userId ||
-      String(socket.accountId || "") === userId ||
-      String(socket.roomUserId || "") === userId ||
-      String(socket.userId || "") === userId;
+    const ownerIds = [String(socket.roomOwnerId || ""), String(roomId)];
+    const isRoomOwner = ownerIds.includes(actorId);
+    const isRoomAdmin = roomAdmins.includes(actorId);
+    const canModerateSeats = isRoomOwner || isRoomAdmin;
 
-    if (!socketIsInRoom(socket, roomId) || !isRoomUser) {
-      return;
-    }
-
-    if (!roomSeats.has(roomId)) {
-      roomSeats.set(roomId, new Map());
-    }
-
+    if (!roomSeats.has(roomId)) roomSeats.set(roomId, new Map());
     const seats = roomSeats.get(roomId);
-
     const current = seats.get(seatNumber) || {
-      number: seatNumber,
-      isOccupied: false,
-      isLocked: false,
-      isMuted: false,
-      isSpeaking: false,
+      number: seatNumber, isOccupied: false, isLocked: false,
+      isMuted: false, isSpeaking: false,
     };
 
     if (action === "take") {
-      // Validate the requested seat BEFORE releasing the user's current seat.
-      // A tap on a locked/occupied seat must never drop an already-held seat.
-      if (current.isLocked && !current.isOccupied) {
+      // Validate target first. Never release an existing seat for an invalid target.
+      if ((current.isLocked && !current.isOccupied) ||
+          (current.isOccupied && String(current.user?.accountId || current.user?.userId || "") !== actorId)) {
         emitRoomSeats(roomId);
         return;
       }
 
-      if (
-        current.isOccupied &&
-        String(current.user?.accountId || current.user?.userId || "") !== userId
-      ) {
-        emitRoomSeats(roomId);
-        return;
-      }
-
-      // One user can occupy only one seat. Move only after the target is valid.
       for (const [number, seat] of seats.entries()) {
-        if (
-          seat?.isOccupied &&
-          String(seat?.user?.accountId || seat?.user?.userId || "") === userId &&
-          Number(number) !== seatNumber
-        ) {
+        if (seat?.isOccupied &&
+            String(seat?.user?.accountId || seat?.user?.userId || "") === actorId &&
+            Number(number) !== seatNumber) {
           seats.set(number, {
-            ...seat,
-            isOccupied: false,
-            user: undefined,
-            isMuted: false,
-            isSpeaking: false,
-            gif: undefined,
+            ...seat, isOccupied: false, user: undefined,
+            isMuted: false, isSpeaking: false, gif: undefined,
           });
         }
       }
 
       seats.set(seatNumber, {
-        ...current,
-        number: seatNumber,
-        isOccupied: true,
+        ...current, number: seatNumber, isOccupied: true,
         user: {
           name: data.user?.name || "User",
-          image:
-            data.user?.image ||
-            "/default-avatar.png",
-          accountId: userId,
+          image: data.user?.image || "/default-avatar.png",
+          accountId: actorId,
         },
-        isMuted: false,
-        isSpeaking: false,
-        gif: undefined,
+        isMuted: false, isSpeaking: false, gif: undefined,
         socketId: String(socket.id),
       });
     }
 
     if (action === "leave") {
-      // The authenticated account may leave its own seat from any active
-      // session. Socket IDs can change after reconnect; they must not block
-      // an intentional leave. The room membership + identity checks above
-      // still prevent another account from releasing this seat.
-      if (
-        current.isOccupied &&
-        String(current.user?.accountId || current.user?.userId || "") === userId
-      ) {
+      const targetId = String(data.targetUserId || actorId);
+      const isSelfLeave = targetId === actorId;
+      if (!isSelfLeave && !canModerateSeats) return;
+      if (current.isOccupied &&
+          String(current.user?.accountId || current.user?.userId || "") === targetId) {
         seats.set(seatNumber, {
-          ...current,
-          isOccupied: false,
-          user: undefined,
-          isMuted: false,
-          isSpeaking: false,
-          gif: undefined,
+          ...current, isOccupied: false, user: undefined,
+          isMuted: false, isSpeaking: false, gif: undefined, socketId: undefined,
         });
       }
     }
 
-    if (action === "mute") {
-      // A user may only change the microphone state of their own occupied seat.
-      const isRoomOwner = Boolean(socket.roomOwnerId) &&
-        socketOwnsIdentity(socket, String(socket.roomOwnerId));
-      if (
-        current.isOccupied &&
-        (String(current.user?.accountId || current.user?.userId || "") === userId || isRoomOwner)
-      ) {
-        seats.set(seatNumber, {
-          ...current,
-          isMuted: Boolean(data.isMuted),
-        });
+    if (action === "mute" || action === "owner_mute") {
+      const targetId = String(data.targetUserId || actorId);
+      if (action === "owner_mute" && !canModerateSeats) return;
+      if (current.isOccupied &&
+          (String(current.user?.accountId || current.user?.userId || "") === targetId) &&
+          (targetId === actorId || canModerateSeats)) {
+        seats.set(seatNumber, { ...current, isMuted: Boolean(data.isMuted) });
+      }
+    }
+
+    if (action === "self_mute") {
+      if (current.isOccupied &&
+          String(current.user?.accountId || current.user?.userId || "") === actorId) {
+        seats.set(seatNumber, { ...current, isMuted: Boolean(data.isMuted) });
       }
     }
 
     if (action === "lock") {
-      // Seat locks are room-owner controls, not actions available to every member.
-      const isRoomOwner =
-        Boolean(socket.roomOwnerId) &&
-        socketOwnsIdentity(socket, String(socket.roomOwnerId));
-      if (isRoomOwner) {
-        const shouldLock = Boolean(data.isLocked);
-        // Locking an occupied seat immediately removes its occupant and clears
-        // all live seat state; unlocking only changes the lock flag.
-        seats.set(seatNumber, shouldLock
-          ? {
-              ...current,
-              isLocked: true,
-              isOccupied: false,
-              user: undefined,
-              isMuted: false,
-              isSpeaking: false,
-              gif: undefined,
-              socketId: undefined,
-            }
-          : {
-              ...current,
-              isLocked: false,
-            });
-      }
+      if (!canModerateSeats) return;
+      const shouldLock = Boolean(data.isLocked);
+      seats.set(seatNumber, shouldLock
+        ? {
+            ...current, isLocked: true, isOccupied: false, user: undefined,
+            isMuted: false, isSpeaking: false, gif: undefined, socketId: undefined,
+          }
+        : { ...current, isLocked: false });
     }
 
     if (action === "emoji") {
-      // Only the person occupying this seat may trigger its emoji/sticker.
-      if (
-        current.isOccupied &&
-        String(current.user?.accountId || current.user?.userId || "") === userId &&
-        typeof data.src === "string" &&
-        data.src.trim()
-      ) {
+      if (current.isOccupied &&
+          String(current.user?.accountId || current.user?.userId || "") === actorId &&
+          typeof data.src === "string" && data.src.trim()) {
         const emojiTimestamp = Number(data.timestamp || Date.now());
-        seats.set(seatNumber, {
-          ...current,
-          gif: {
-            src: data.src,
-            timestamp: emojiTimestamp,
-          },
-        });
-
-        // A previous emoji timer must never clear a newer emoji on this seat.
+        seats.set(seatNumber, { ...current, gif: { src: data.src, timestamp: emojiTimestamp } });
         setTimeout(() => {
           const currentSeats = roomSeats.get(roomId);
-          if (currentSeats) {
-            const seat = currentSeats.get(seatNumber);
-            if (seat?.gif && Number(seat.gif.timestamp) === emojiTimestamp) {
-              currentSeats.set(seatNumber, {
-                ...seat,
-                gif: undefined,
-              });
-              emitRoomSeats(roomId);
-            }
+          const seat = currentSeats?.get(seatNumber);
+          if (seat?.gif && Number(seat.gif.timestamp) === emojiTimestamp) {
+            currentSeats.set(seatNumber, { ...seat, gif: undefined });
+            emitRoomSeats(roomId);
           }
         }, 5000);
       }
     }
 
-    // Lucky Gift fly is a transient visual event, so relay it to the other room clients.
-    // The sender also plays it locally from GiftPicker.tsx.
-    if (action === "lucky_image") {
-      // Broadcast to every room member, including the sender. The client-side
-      // animation is mounted at room level, so GiftPicker does not need a
-      // global listener or a local duplicate animation.
-      io.to(`room:${roomId}`).emit("room_seat_action", data);
-    }
-
-    // IMPORTANT:
-    // Broadcast the complete seat state to EVERYONE in the room.
+    if (action === "lucky_image") io.to(`room:${roomId}`).emit("room_seat_action", data);
     emitRoomSeats(roomId);
   });
 
