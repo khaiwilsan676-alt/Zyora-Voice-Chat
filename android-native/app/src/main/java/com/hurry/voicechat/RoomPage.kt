@@ -1984,7 +1984,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
             roomAdmins=roomAdminUsers,
             onOpenProfile={ follower -> selectedChatProfile=NativeRoomMessage("member-profile-" + follower.accountId,"",follower.name,follower.image,follower.accountId);showInfo=false },
             onOpenOwnerChat={ owner ->
-                val ownerChatId = owner.accountId.trim().ifBlank { owner.uid.trim() }.ifBlank { owner.id.trim() }
+                val ownerChatId = owner.accountId.trim()
                 if (ownerChatId.isNotBlank() && ownerChatId != accountId) {
                     selectedOfficialChat = Triple(ownerChatId, owner.name.ifBlank { "Room Owner" }, owner.image)
                     showInfo = false
