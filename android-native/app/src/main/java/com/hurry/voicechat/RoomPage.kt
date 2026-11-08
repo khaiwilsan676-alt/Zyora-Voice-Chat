@@ -2171,7 +2171,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                     if (index >= 0) {
                         val seatNumber = seats[index].number
                         seats[index] = NativeRoomSeat(number = seatNumber)
-                        roomSocketRef.value?.emit("room_seat_action", JSONObject().put("roomId", roomId).put("userId", accountId).put("action", "leave").put("seatNumber", seatNumber))
+                        roomSocketRef.value?.emit("room_seat_action", JSONObject().put("roomId", roomId).put("userId", accountId).put("targetUserId", profileId).put("action", "leave").put("seatNumber", seatNumber))
                     }
                     selectedChatProfile = null
                 },
@@ -2296,8 +2296,8 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                         NativeRoomSeat(number = selectedSeat)
                     roomSocketRef.value?.emit(
                         "room_seat_action",
-                        JSONObject().put("roomId", roomId).put("userId", profileSeat.accountId)
-                            .put("action", "leave").put("seatNumber", selectedSeat)
+                        JSONObject().put("roomId", roomId).put("userId", accountId)
+                            .put("targetUserId", profileSeat.accountId).put("action", "leave").put("seatNumber", selectedSeat)
                     )
                     selectedSeat = 0
                 },
