@@ -475,3 +475,5 @@ Current documentation does not certify that all historical features are build-, 
 ### Room owner profile moderation visibility
 - Hide the room moderation action row when the viewed profile belongs to the room owner, including when opened by a Room Admin.
 - Keep the existing moderation row behavior for other users and leave profile UI styling unchanged.
+
+- Room Gift Picker: removed the dialog's dim-behind effect so the original room background remains visible above the sheet; reduced sheet height slightly from 56% to 53%. Gift picker contents and styling remain unchanged.
