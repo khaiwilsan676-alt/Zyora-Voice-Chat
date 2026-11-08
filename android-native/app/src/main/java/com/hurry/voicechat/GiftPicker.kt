@@ -349,7 +349,7 @@ fun GiftPicker(
                 BoxWithConstraints(
                     Modifier
                         .fillMaxWidth()
-                        .fillMaxHeight(0.50f)
+                        .fillMaxHeight(0.47f)
                         .background(Color(0xEB000000)) // rgba(0,0,0,0.92)
                         .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp)) // ⬅️ 6.dp curved
                         .border(
