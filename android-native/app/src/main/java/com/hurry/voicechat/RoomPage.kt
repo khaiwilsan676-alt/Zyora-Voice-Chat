@@ -1,6 +1,8 @@
 package com.hurry.voicechat
 
 import android.content.Intent
+import android.net.Uri
+import android.media.MediaMetadataRetriever
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -562,6 +564,36 @@ fun RoomPage(
     val imeVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
     var keyboardShownForChat by remember { mutableStateOf(false) }
 
+    // Resolve the real duration for tracks whose playlist metadata is missing.
+    // Never substitute a hard-coded 3:00 value in the room mini-player.
+    LaunchedEffect(miniMusicTrack?.url, miniMusicTrack?.duration) {
+        val track = miniMusicTrack ?: return@LaunchedEffect
+        if (track.duration > 0L) {
+            musicDuration = track.duration / 1000f
+        } else {
+            val resolvedDuration = withContext(Dispatchers.IO) {
+                runCatching {
+                    val retriever = MediaMetadataRetriever()
+                    try {
+                        val uri = Uri.parse(track.url)
+                        if (uri.scheme == "http" || uri.scheme == "https") {
+                            retriever.setDataSource(track.url, emptyMap<String, String>())
+                        } else {
+                            retriever.setDataSource(appContext, uri)
+                        }
+                        retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
+                            ?.toLongOrNull() ?: 0L
+                    } finally {
+                        runCatching { retriever.release() }
+                    }
+                }.getOrDefault(0L)
+            }
+            if (miniMusicTrack?.url == track.url && resolvedDuration > 0L) {
+                musicDuration = resolvedDuration / 1000f
+            }
+        }
+    }
+
     LaunchedEffect(isMusicPlaying, miniMusicTrack) {
         while (isMusicPlaying && miniMusicTrack != null) {
             kotlinx.coroutines.delay(1000)
@@ -623,7 +655,7 @@ fun RoomPage(
         val nextTrack = tracks[currentTrackIndex]
         miniMusicTrack = nextTrack
         musicCurrentTime = 0f
-        musicDuration = if (nextTrack.duration > 0L) nextTrack.duration / 1000f else 180f
+        musicDuration = if (nextTrack.duration > 0L) nextTrack.duration / 1000f else 0f
         MusicPlaybackState.currentPlayingUri = nextTrack.url
         MusicPlaybackState.currentTrack = nextTrack
         MusicPlaybackState.isPlaying = true
@@ -1813,8 +1845,8 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                             Icon(Icons.Default.VolumeUp, "Volume", tint = Color.White, modifier = Modifier.size(21.dp))
                             ThickBar(
                                 progress = musicVolume,
-                                height = 5.dp,
-                                activeColor = Color(0xFF10B981),
+                                height = 8.dp,
+                                activeColor = Color(0xFF3B82F6),
                                 inactiveColor = Color.White.copy(alpha = 0.20f),
                                 modifier = Modifier.weight(1f),
                                 onProgressChange = { value ->
