@@ -286,6 +286,7 @@ fun RoomProfile(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
+                        .navigationBarsPadding()
                         .clickable(enabled = false) {}
                 ) {
                     Column(
