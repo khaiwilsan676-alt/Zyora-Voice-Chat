@@ -477,3 +477,4 @@ Current documentation does not certify that all historical features are build-, 
 - Keep the existing moderation row behavior for other users and leave profile UI styling unchanged.
 
 - Room Gift Picker: removed the dialog's dim-behind effect so the original room background remains visible above the sheet; reduced sheet height slightly from 50% to 47%. Gift picker contents and styling remain unchanged.
+- Room Gift Picker: keep the underlying room background transparent/visible above the sheet, and slightly reduce the sheet height to 44%; gift picker content and styling remain unchanged.
