@@ -571,6 +571,8 @@ fun RoomPage(
         if (track.duration > 0L) {
             musicDuration = track.duration / 1000f
         } else {
+            musicDuration = 0f
+            musicCurrentTime = 0f
             val resolvedDuration = withContext(Dispatchers.IO) {
                 runCatching {
                     val retriever = MediaMetadataRetriever()
