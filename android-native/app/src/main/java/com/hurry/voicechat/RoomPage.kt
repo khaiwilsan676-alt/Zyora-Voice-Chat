@@ -1978,14 +1978,15 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
             isOpen=true,
             onClose={showInfo=false},
             isRoomOwner=accountId==roomOwner.accountId.ifBlank{roomOwner.id},
-            roomOwner=RoomInfoOwner(id=roomOwner.id,uid=roomOwner.uid,accountId=roomOwner.accountId.ifBlank{roomOwner.id},name=roomOwner.name,image=roomOwner.image),
+            roomOwner=RoomInfoOwner(id=roomOwner.id,uid=roomOwner.uid,accountId=roomOwner.accountId,name=roomOwner.name,image=roomOwner.image),
             roomData=RoomInfoData(roomName,roomImage,announcement,roomId),
             roomFollowers=roomFollowers,
             roomAdmins=roomAdminUsers,
             onOpenProfile={ follower -> selectedChatProfile=NativeRoomMessage("member-profile-" + follower.accountId,"",follower.name,follower.image,follower.accountId);showInfo=false },
             onOpenOwnerChat={ owner ->
-                if (owner.accountId.isNotBlank()) {
-                    selectedOfficialChat = Triple(owner.accountId, owner.name.ifBlank { "Room Owner" }, owner.image)
+                val ownerChatId = owner.accountId.ifBlank { owner.uid }.ifBlank { owner.id }.trim()
+                if (ownerChatId.isNotBlank() && ownerChatId != roomId) {
+                    selectedOfficialChat = Triple(ownerChatId, owner.name.ifBlank { "Room Owner" }, owner.image)
                     showInfo = false
                 }
             },
