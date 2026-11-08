@@ -242,7 +242,7 @@ fun HomeScreen(
                         val item = array.optJSONObject(index) ?: return@mapNotNull null
                         val id = item.optString("roomId").trim()
                         if (id.isBlank()) return@mapNotNull null
-                        HurryRoom(id, item.optString("roomName").ifBlank { "Room" }, item.optString("roomImage"), country = item.optString("roomCountry").ifBlank { item.optString("country", "") }, accountId = id)
+                        HurryRoom(id, item.optString("roomName").ifBlank { "Room" }, item.optString("roomImage"), country = sequenceOf("roomCountry", "countryName", "country", "countryCode", "country_code", "flag").map { key -> item.optString(key, "").trim() }.firstOrNull { it.isNotBlank() && it != "null" && it != "undefined" }.orEmpty(), accountId = id)
                     }.distinctBy { it.id }
                 } finally { connection.disconnect() }
             }.getOrDefault(emptyList())
