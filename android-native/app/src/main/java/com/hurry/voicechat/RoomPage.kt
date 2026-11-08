@@ -1315,7 +1315,7 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                             Column(Modifier.padding(start = 8.dp), verticalArrangement = Arrangement.Center) {
                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                     Text(text = roomName,color = Color.White,fontSize = 13.sp,fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,maxLines = 1,modifier = Modifier.widthIn(max = 85.dp).basicMarquee(iterations = Int.MAX_VALUE),overflow = TextOverflow.Clip)
-                                    Text(roomCountryFlag(roomOwner.country), color = Color.White, fontSize = 13.sp)
+                                    CountryFlagImage(roomOwner.country, Modifier.size(18.dp, 12.dp))
                                     if (accountId != roomOwner.accountId.ifBlank { roomOwner.id }) {
                                         if (!followed) {
                                             AsyncImage(
@@ -2754,8 +2754,8 @@ private fun RoomInviteSheet(
                             }
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Box(Modifier.width(18.dp).height(18.dp), contentAlignment = Alignment.Center) {
-                                    val flag = roomProfileCountryFlag(countryByUser[user.accountId].orEmpty())
-                                    if (flag.isNotBlank()) Text(flag, fontSize = 14.sp)
+                                    val flagCountry = countryByUser[user.accountId].orEmpty()
+                                    if (flagCountry.isNotBlank()) CountryFlagImage(flagCountry, Modifier.size(18.dp, 12.dp))
                                 }
                                 Box(Modifier.height(16.dp).width(36.dp), contentAlignment = Alignment.CenterEnd) {
                                     AsyncImage(model = "https://zyora-voice-chat.vercel.app/IMG_20261028_004355.png",
