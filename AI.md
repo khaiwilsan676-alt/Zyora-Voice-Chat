@@ -422,3 +422,10 @@ Current documentation does not certify that all historical features are build-, 
 - Active Users country values are now stored in app-private SharedPreferences with no time-based expiry. The same account's resolved country is reused after reopening the sheet and across app restarts, avoiding repeated profile lookups. Only nonblank country values are cached.
 - Reduced Owner and Room Admin tag images in the Active Users sheet from 19dp × 42dp to 16dp × 36dp and tightened the gap beside the username. No other sheet layout or behavior changed.
 - Native APK build and device verification remain pending.
+
+
+## Room Info share lists and persistent member cache (2026-11-08)
+- RoomInfo.kt: the “Share in Zyora” sheet now loads the signed-in user's Fans and Following lists, combines them into one list, excludes the current account, and deduplicates accounts that appear in both lists. Existing share-row UI and invitation action are unchanged.
+- Both social lists use the existing SocialFollowApi persistent NativeIndexDatabase cache; cached rows remain available across app restarts and are used as fallback when refresh requests fail.
+- Room Info Members now restores each member's saved name, avatar, and country from NativeIndexDatabase immediately, then refreshes profile-country data with the existing four-request concurrency cap and saves the refreshed result persistently. Cache keys are account-based, so the same profile can be reused across rooms.
+- Status: source committed. Native APK build, live Fans/Following API response, and device/offline cache verification remain pending.
