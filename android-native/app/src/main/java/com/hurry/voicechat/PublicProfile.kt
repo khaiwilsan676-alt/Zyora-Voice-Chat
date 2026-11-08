@@ -280,7 +280,6 @@ fun PublicProfileScreen(
     var location by remember(profileCacheKey, cachedProfile, targetUser?.country, targetUser?.location) {
         mutableStateOf(sequenceOf(cachedProfile?.optString("countryName", ""), cachedProfile?.optString("country", ""), cachedProfile?.optString("countryCode", ""), cachedProfile?.optString("country_code", ""), targetUser?.country, targetUser?.countryCode, targetUser?.location).map { it?.trim().orEmpty() }.firstOrNull { it.isNotBlank() && it != "null" }.orEmpty())
     }
-    val flag = location.takeIf { it.isNotBlank() }?.let { countryFlag(it) }.orEmpty()
 
     val followPrefs = remember(context) { context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE) }
     val myFollowIdentity = followPrefs.getString("accountId", "").orEmpty().ifBlank { followPrefs.getString("uid", "").orEmpty() }
@@ -577,7 +576,11 @@ fun PublicProfileScreen(
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 12.dp)) {
                         Icon(Icons.Outlined.LocationOn, "Location", tint = Color.Gray, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("$flag $location", fontSize = 14.sp, color = Color.DarkGray)
+                        if (location.isNotBlank()) {
+                            CountryFlagImage(location, Modifier.size(18.dp, 12.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                        }
+                        Text(location, fontSize = 14.sp, color = Color.DarkGray)
                     }
 
                     // --- BIO TEXT & ICON IN SAME ROW ---
