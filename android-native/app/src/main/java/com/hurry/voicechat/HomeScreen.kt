@@ -18,6 +18,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.border
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -57,6 +58,8 @@ import coil3.compose.AsyncImage
 import androidx.room.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.withContext
 
 // ═══════════════════════════════════════════════════════
@@ -126,6 +129,7 @@ private object NativeRoomMemoryCache {
     var rooms by mutableStateOf<List<HurryRoom>?>(null)
     var lastRefreshAt: Long = 0L
     var refreshInFlight: Boolean = false
+    val manualRefresh = Channel<Unit>(Channel.CONFLATED)
 }
 
 // ═══════════════════════════════════════════════════════
@@ -300,12 +304,14 @@ fun HomeScreen(
         // The refresh remains a full snapshot so deleted rooms are still removed correctly.
         // Keep the cached Room/DB snapshot on screen; refresh the full server snapshot
         // less frequently so background network traffic does not compete with scrolling.
-        val refreshIntervalMs = 60_000L
+        val refreshIntervalMs = 300_000L
         while (true) {
             val lastRefreshAt = NativeRoomMemoryCache.lastRefreshAt
             val elapsedSinceRefresh = System.currentTimeMillis() - lastRefreshAt
             if (lastRefreshAt > 0L && NativeRoomMemoryCache.rooms != null && elapsedSinceRefresh < refreshIntervalMs) {
-                kotlinx.coroutines.delay((refreshIntervalMs - elapsedSinceRefresh).coerceAtLeast(1L))
+                withTimeoutOrNull((refreshIntervalMs - elapsedSinceRefresh).coerceAtLeast(1L)) {
+                    NativeRoomMemoryCache.manualRefresh.receive()
+                }
                 continue
             }
             if (NativeRoomMemoryCache.refreshInFlight) {
@@ -347,7 +353,9 @@ fun HomeScreen(
                 NativeRoomMemoryCache.refreshInFlight = false
             }
             // Also back off after failed/offline requests instead of retrying every 15 seconds.
-            kotlinx.coroutines.delay(60_000L)
+            withTimeoutOrNull(300_000L) {
+                NativeRoomMemoryCache.manualRefresh.receive()
+            }
         }
     }
 
@@ -379,7 +387,26 @@ fun HomeScreen(
     val roomRows = remember(filteredRooms) { filteredRooms.chunked(2) }
 
     // 🔥 Outermost Box
-    Box(Modifier.fillMaxSize()) {
+    var pullDistance by remember { mutableFloatStateOf(0f) }
+    Box(
+        Modifier.fillMaxSize().pointerInput(listState) {
+            detectVerticalDragGestures(
+                onVerticalDrag = { change, dragAmount ->
+                    if (listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0 && dragAmount > 0f) {
+                        pullDistance = (pullDistance + dragAmount).coerceAtMost(180f)
+                        change.consume()
+                    } else if (pullDistance > 0f) {
+                        pullDistance = (pullDistance + dragAmount).coerceAtLeast(0f)
+                    }
+                },
+                onDragEnd = {
+                    if (pullDistance >= 72f) NativeRoomMemoryCache.manualRefresh.trySend(Unit)
+                    pullDistance = 0f
+                },
+                onDragCancel = { pullDistance = 0f }
+            )
+        }
+    ) {
         
         // Dono states yahan outermost Box me declare kiye hain taaki Red Zone aur Draggable DP dono sync rahe
         var keptRoomDrag by remember(keptRoom?.id) { mutableStateOf(Offset.Zero) }
