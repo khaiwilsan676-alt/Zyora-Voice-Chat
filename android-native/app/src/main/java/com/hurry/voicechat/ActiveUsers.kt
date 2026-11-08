@@ -17,6 +17,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import android.content.Context
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -34,25 +35,21 @@ import kotlinx.coroutines.sync.withPermit
 
 data class ActiveUserNative(val accountId:String,val name:String,val image:String,val country:String="")
 
-// Keep resolved countries between Active Users sheet openings so the same profiles
-// are not fetched from the server every time the sheet is shown.
+// Persist resolved countries locally with no expiry so reopening the sheet or
+// restarting the app does not trigger the same profile lookup again.
 private object ActiveUsersCountryCache {
- private data class Entry(val country:String,val savedAt:Long)
- private val values = java.util.concurrent.ConcurrentHashMap<String,Entry>()
- private const val TTL_MS = 10 * 60 * 1000L
+ private const val PREFS = "active_users_country_cache"
 
- fun get(accountId:String):String? {
-  val entry = values[accountId] ?: return null
-  if (System.currentTimeMillis() - entry.savedAt > TTL_MS) {
-   values.remove(accountId, entry)
-   return null
-  }
-  return entry.country
+ fun get(context:Context,accountId:String):String? {
+  if(accountId.isBlank()) return null
+  return context.getSharedPreferences(PREFS,Context.MODE_PRIVATE)
+   .getString(accountId,null)?.takeIf { it.isNotBlank() }
  }
 
- fun put(accountId:String,country:String) {
-  if (accountId.isNotBlank() && country.isNotBlank()) {
-   values[accountId] = Entry(country,System.currentTimeMillis())
+ fun put(context:Context,accountId:String,country:String) {
+  if(accountId.isNotBlank() && country.isNotBlank()) {
+   context.getSharedPreferences(PREFS,Context.MODE_PRIVATE)
+    .edit().putString(accountId,country).apply()
   }
  }
 }
@@ -80,9 +77,9 @@ fun ActiveUsers(
    roomUsers.asSequence().filter { it.accountId.isNotBlank() }.distinctBy { it.accountId }.toList().map { user ->
     async(kotlinx.coroutines.Dispatchers.IO) {
      limiter.withPermit {
-      val country = ActiveUsersCountryCache.get(user.accountId) ?: runCatching {
+      val country = ActiveUsersCountryCache.get(context,user.accountId) ?: runCatching {
        loadRoomProfileCountry(context, user.accountId, user.name, user.image, user.country)
-      }.getOrDefault(user.country).also { ActiveUsersCountryCache.put(user.accountId,it) }
+      }.getOrDefault(user.country).also { ActiveUsersCountryCache.put(context,user.accountId,it) }
       user.accountId to country
      }
     }
