@@ -2497,12 +2497,18 @@ io.on("connection", (socket) => {
       }
     }
 
-    if (action === "mute" || action === "owner_mute") {
-      const targetId = String(data.targetUserId || actorId);
-      if (action === "owner_mute" && !canModerateSeats) return;
+    if (action === "owner_mute") {
+      // Owner/admin controls the occupied seat selected in the UI.
+      if (!canModerateSeats) return;
+      if (current.isOccupied) {
+        seats.set(seatNumber, { ...current, isMuted: Boolean(data.isMuted) });
+      }
+    }
+
+    if (action === "mute") {
+      // A regular user can only mute their own occupied seat.
       if (current.isOccupied &&
-          (String(current.user?.accountId || current.user?.userId || "") === targetId) &&
-          (targetId === actorId || canModerateSeats)) {
+          String(current.user?.accountId || current.user?.userId || "") === actorId) {
         seats.set(seatNumber, { ...current, isMuted: Boolean(data.isMuted) });
       }
     }
