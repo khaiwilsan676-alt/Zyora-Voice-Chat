@@ -18,7 +18,6 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.border
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -59,6 +58,10 @@ import androidx.room.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.channels.Channel
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.unit.Velocity
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.withContext
 
@@ -388,25 +391,24 @@ fun HomeScreen(
 
     // 🔥 Outermost Box
     var pullDistance by remember { mutableFloatStateOf(0f) }
-    Box(
-        Modifier.fillMaxSize().pointerInput(listState) {
-            detectVerticalDragGestures(
-                onVerticalDrag = { change, dragAmount ->
-                    if (listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0 && dragAmount > 0f) {
-                        pullDistance = (pullDistance + dragAmount).coerceAtMost(180f)
-                        change.consume()
-                    } else if (pullDistance > 0f) {
-                        pullDistance = (pullDistance + dragAmount).coerceAtLeast(0f)
-                    }
-                },
-                onDragEnd = {
-                    if (pullDistance >= 72f) NativeRoomMemoryCache.manualRefresh.trySend(Unit)
-                    pullDistance = 0f
-                },
-                onDragCancel = { pullDistance = 0f }
-            )
+    val pullRefreshConnection = remember(listState) {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                if (available.y > 0f && listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0) {
+                    pullDistance = (pullDistance + available.y).coerceAtMost(180f)
+                    return Offset(0f, available.y)
+                }
+                return Offset.Zero
+            }
+
+            override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
+                if (pullDistance >= 72f) NativeRoomMemoryCache.manualRefresh.trySend(Unit)
+                pullDistance = 0f
+                return Velocity.Zero
+            }
         }
-    ) {
+    }
+    Box(Modifier.fillMaxSize()) {
         
         // Dono states yahan outermost Box me declare kiye hain taaki Red Zone aur Draggable DP dono sync rahe
         var keptRoomDrag by remember(keptRoom?.id) { mutableStateOf(Offset.Zero) }
@@ -481,7 +483,7 @@ fun HomeScreen(
                 ) {
                     LazyColumn(
                         state = listState,
-                        modifier = Modifier.fillMaxSize().offset(y = (-8).dp),
+                        modifier = Modifier.fillMaxSize().offset(y = (-8).dp).nestedScroll(pullRefreshConnection),
                         contentPadding = PaddingValues(bottom = 80.dp)
                     ) {
                         item {
