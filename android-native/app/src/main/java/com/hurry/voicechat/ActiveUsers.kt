@@ -34,6 +34,29 @@ import kotlinx.coroutines.sync.withPermit
 
 data class ActiveUserNative(val accountId:String,val name:String,val image:String,val country:String="")
 
+// Keep resolved countries between Active Users sheet openings so the same profiles
+// are not fetched from the server every time the sheet is shown.
+private object ActiveUsersCountryCache {
+ private data class Entry(val country:String,val savedAt:Long)
+ private val values = java.util.concurrent.ConcurrentHashMap<String,Entry>()
+ private const val TTL_MS = 10 * 60 * 1000L
+
+ fun get(accountId:String):String? {
+  val entry = values[accountId] ?: return null
+  if (System.currentTimeMillis() - entry.savedAt > TTL_MS) {
+   values.remove(accountId, entry)
+   return null
+  }
+  return entry.country
+ }
+
+ fun put(accountId:String,country:String) {
+  if (accountId.isNotBlank() && country.isNotBlank()) {
+   values[accountId] = Entry(country,System.currentTimeMillis())
+  }
+ }
+}
+
 @Composable
 fun ActiveUsers(
  isOpen:Boolean,
@@ -57,9 +80,9 @@ fun ActiveUsers(
    roomUsers.asSequence().filter { it.accountId.isNotBlank() }.distinctBy { it.accountId }.toList().map { user ->
     async(kotlinx.coroutines.Dispatchers.IO) {
      limiter.withPermit {
-      val country = runCatching {
+      val country = ActiveUsersCountryCache.get(user.accountId) ?: runCatching {
        loadRoomProfileCountry(context, user.accountId, user.name, user.image, user.country)
-      }.getOrDefault("")
+      }.getOrDefault(user.country).also { ActiveUsersCountryCache.put(user.accountId,it) }
       user.accountId to country
      }
     }
@@ -100,14 +123,14 @@ fun ActiveUsers(
        contentScale=ContentScale.Crop
       )
       Column(Modifier.weight(1f).padding(start=9.dp)){
-       Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(5.dp)){
+       Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(2.dp)){
         Text(user.name.ifBlank{"User"},fontSize=13.sp,fontWeight=FontWeight.SemiBold,color=Color.White,maxLines=1,softWrap=false,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
         if(user.accountId==roomOwnerId){
          AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261027_235537.png",contentDescription="Owner",contentScale=ContentScale.Fit,
-          modifier=Modifier.height(19.dp).width(42.dp))
+          modifier=Modifier.height(16.dp).width(36.dp))
         } else if(user.accountId in roomAdminIds) {
          AsyncImage(model=ROOM_ADMIN_TAG,contentDescription="Room Admin",contentScale=ContentScale.Fit,
-          modifier=Modifier.height(19.dp).width(42.dp))
+          modifier=Modifier.height(16.dp).width(36.dp))
         }
        }
        Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(6.dp)){
