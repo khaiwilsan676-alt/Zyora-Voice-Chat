@@ -114,7 +114,7 @@ fun ActiveUsers(
         val country = countryByUser[user.accountId].orEmpty()
         // Keep the flag slot reserved so Lv.1 never shifts when a profile has no country.
         Box(Modifier.width(18.dp).height(18.dp),contentAlignment=Alignment.Center) {
-         if(country.isNotBlank()) Text(roomProfileCountryFlag(country),fontSize=14.sp)
+         if(country.isNotBlank()) CountryFlagImage(country, Modifier.size(18.dp, 12.dp))
         }
         Box(Modifier.height(16.dp).width(36.dp),contentAlignment=Alignment.CenterEnd){
          AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261028_004355.png",contentDescription="Level",
