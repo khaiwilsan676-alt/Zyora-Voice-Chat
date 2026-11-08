@@ -350,7 +350,7 @@ fun GiftPicker(
                 BoxWithConstraints(
                     Modifier
                         .fillMaxWidth()
-                        .fillMaxHeight(0.44f)
+                        .fillMaxHeight(0.57f)
                         .background(Color(0xEB000000)) // rgba(0,0,0,0.92)
                         .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp)) // ⬅️ 6.dp curved
                         .border(
@@ -618,7 +618,7 @@ fun GiftPicker(
                                                 .clickable(enabled = selectedGift != null && !sending) {
                                                     handleSend()
                                                 }
-                                                .padding(horizontal = 24.dp, vertical = 6.dp)
+                                                .padding(horizontal = 24.dp, vertical = 4.dp)
                                                 .then(
                                                     if (selectedGift == null || sending)
                                                         Modifier.alpha(0.55f) else Modifier
