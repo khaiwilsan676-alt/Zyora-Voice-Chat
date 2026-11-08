@@ -37,7 +37,7 @@ import java.util.Calendar
 
 private const val NEW_USER_API = "https://zyora-server.onrender.com"
 
-data class CountryData(val name: String, val flag: String, val dialCode: String, val code: String)
+data class CountryData(val name: String, val dialCode: String, val code: String)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -56,28 +56,28 @@ fun Newuserafterlogin(onBack: () -> Unit, onComplete: () -> Unit) {
     var error by remember { mutableStateOf("") }
     
     val countries = listOf(
-        CountryData("India", "🇮🇳", "+91", "IN"),
-        CountryData("Singapore", "🇸🇬", "+65", "SG"),
-        CountryData("United States", "🇺🇸", "+1", "US"),
-        CountryData("United Kingdom", "🇬🇧", "+44", "GB"),
-        CountryData("Pakistan", "🇵🇰", "+92", "PK"),
-        CountryData("Bangladesh", "🇧🇩", "+880", "BD"),
-        CountryData("Nepal", "🇳🇵", "+977", "NP"),
-        CountryData("Sri Lanka", "🇱🇰", "+94", "LK"),
-        CountryData("Indonesia", "🇮🇩", "+62", "ID"),
-        CountryData("Philippines", "🇵🇭", "+63", "PH"),
-        CountryData("Thailand", "🇹🇭", "+66", "TH"),
-        CountryData("Vietnam", "🇻🇳", "+84", "VN"),
-        CountryData("Malaysia", "🇲🇾", "+60", "MY"),
-        CountryData("Japan", "🇯🇵", "+81", "JP"),
-        CountryData("South Korea", "🇰🇷", "+82", "KR"),
-        CountryData("Saudi Arabia", "🇸🇦", "+966", "SA"),
-        CountryData("United Arab Emirates", "🇦🇪", "+971", "AE"),
-        CountryData("Canada", "🇨🇦", "+1", "CA"),
-        CountryData("Australia", "🇦🇺", "+61", "AU"),
-        CountryData("Germany", "🇩🇪", "+49", "DE"),
-        CountryData("France", "🇫🇷", "+33", "FR"),
-        CountryData("Other", "🌐", "+00", "OTHER")
+        CountryData("India", "+91", "IN"),
+        CountryData("Singapore", "+65", "SG"),
+        CountryData("United States", "+1", "US"),
+        CountryData("United Kingdom", "+44", "GB"),
+        CountryData("Pakistan", "+92", "PK"),
+        CountryData("Bangladesh", "+880", "BD"),
+        CountryData("Nepal", "+977", "NP"),
+        CountryData("Sri Lanka", "+94", "LK"),
+        CountryData("Indonesia", "+62", "ID"),
+        CountryData("Philippines", "+63", "PH"),
+        CountryData("Thailand", "+66", "TH"),
+        CountryData("Vietnam", "+84", "VN"),
+        CountryData("Malaysia", "+60", "MY"),
+        CountryData("Japan", "+81", "JP"),
+        CountryData("South Korea", "+82", "KR"),
+        CountryData("Saudi Arabia", "+966", "SA"),
+        CountryData("United Arab Emirates", "+971", "AE"),
+        CountryData("Canada", "+1", "CA"),
+        CountryData("Australia", "+61", "AU"),
+        CountryData("Germany", "+49", "DE"),
+        CountryData("France", "+33", "FR"),
+        CountryData("Other", "+00", "OTHER")
     )
     
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
