@@ -415,3 +415,4 @@ Current documentation does not certify that all historical features are build-, 
 - Replaced visible country emoji flags with those PNG images in New User After Login country selector, Home country pills and room cards, in-room Active Users, Room Profile, Public Profile, and Search user/room results.
 - Kept the existing country options, country values, filtering behavior, and surrounding layouts unchanged. Countries without one of the nine supplied images render no flag rather than an emoji.
 - Images load from the repository's raw public assets through Coil's normal image caching; no country-selection or profile data format was changed.
+- 2026-11-08 follow-up: hardened `CountryFlagImage` lookup to normalize embedded flag emoji/punctuation and added common country-name aliases; switched the shared image asset base to the app's existing Vercel public-asset host so the native Coil image loader uses the same established asset origin as other app images.
