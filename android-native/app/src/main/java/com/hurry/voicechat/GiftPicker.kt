@@ -616,11 +616,7 @@ fun GiftPicker(
                                                 .clickable(enabled = selectedGift != null && !sending) {
                                                     handleSend()
                                                 }
-                                                .padding(horizontal = 24.dp, vertical = 4.dp)
-                                                .then(
-                                                    if (selectedGift == null || sending)
-                                                        Modifier.alpha(0.55f) else Modifier
-                                                ),
+                                                .padding(horizontal = 24.dp, vertical = 4.dp),
                                             contentAlignment = Alignment.Center,
                                         ) {
                                             Text(
