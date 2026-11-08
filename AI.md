@@ -429,3 +429,9 @@ Current documentation does not certify that all historical features are build-, 
 - Both social lists use the existing SocialFollowApi persistent NativeIndexDatabase cache; cached rows remain available across app restarts and are used as fallback when refresh requests fail.
 - Room Info Members now restores each member's saved name, avatar, and country from NativeIndexDatabase immediately, then refreshes profile-country data with the existing four-request concurrency cap and saves the refreshed result persistently. Cache keys are account-based, so the same profile can be reused across rooms.
 - Status: source committed. Native APK build, live Fans/Following API response, and device/offline cache verification remain pending.
+
+
+## Room mini music controller refinement (2026-11-08)
+- RoomPage.kt: increased only the compact in-room music controller's volume bar height from 5dp to 8dp and changed its active fill from green to blue (#3B82F6). Existing slider interaction and volume service action are unchanged.
+- Removed the hard-coded 180-second/3:00 duration fallback for room mini-player tracks. When a track lacks duration metadata, the mini-player resolves the actual duration from the track URI with MediaMetadataRetriever on Dispatchers.IO, then displays that duration; while metadata is unavailable it does not falsely display 3:00.
+- No card size, position, controls, playback, queue, repeat, or other UI was intentionally changed. Native APK build and device playback verification remain pending.
