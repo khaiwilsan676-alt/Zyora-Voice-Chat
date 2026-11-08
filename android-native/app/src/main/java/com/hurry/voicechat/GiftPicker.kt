@@ -341,6 +341,7 @@ fun GiftPicker(
         ) {
             val dialogWindow = (LocalView.current.parent as? DialogWindowProvider)?.window
             SideEffect {
+                dialogWindow?.setBackgroundDrawableResource(android.R.color.transparent)
                 dialogWindow?.setDimAmount(0f)
                 dialogWindow?.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
             }
@@ -348,7 +349,7 @@ fun GiftPicker(
                 BoxWithConstraints(
                     Modifier
                         .fillMaxWidth()
-                        .fillMaxHeight(0.53f)
+                        .fillMaxHeight(0.50f)
                         .background(Color(0xEB000000)) // rgba(0,0,0,0.92)
                         .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp)) // ⬅️ 6.dp curved
                         .border(
