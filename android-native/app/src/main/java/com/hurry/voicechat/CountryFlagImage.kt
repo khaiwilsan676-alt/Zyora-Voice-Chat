@@ -7,7 +7,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 
-private const val COUNTRY_FLAG_ASSET_BASE = "https://zyora-voice-chat.vercel.app/"
+private const val COUNTRY_FLAG_ASSET_BASE = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/"
 
 private val countryFlagAssets = mapOf(
     "india" to "IMG_20261108_123655.png",
