@@ -369,7 +369,7 @@ fun SearchPage(onBack:()->Unit={},onOpenProfile:(RoomProfileUser)->Unit={},onOpe
                                     verticalAlignment=Alignment.CenterVertically,
                                     horizontalArrangement=Arrangement.spacedBy(1.dp)
                                 ) {
-                                    Text(countryFlag(u.country),fontSize=16.sp,maxLines=1)
+                                    CountryFlagImage(u.country, Modifier.size(20.dp, 14.dp))
                                     Text(
                                         u.name,fontSize=14.sp,fontWeight=FontWeight.Normal,color=Color(0xFF202124),
                                         maxLines=1,overflow=TextOverflow.Ellipsis,modifier=Modifier.weight(1f)
@@ -390,7 +390,7 @@ fun SearchPage(onBack:()->Unit={},onOpenProfile:(RoomProfileUser)->Unit={},onOpe
                                     Text(text=u.name,fontSize=15.sp,fontWeight=FontWeight.SemiBold,color=Color(0xFF111827),maxLines=1,overflow=TextOverflow.Ellipsis)
                                     Spacer(Modifier.height(3.dp))
                                     Row(verticalAlignment=Alignment.CenterVertically) {
-                                        Text(text=countryFlag(u.country),fontSize=12.sp)
+                                        CountryFlagImage(u.country, Modifier.size(16.dp, 11.dp))
                                         Spacer(Modifier.width(5.dp))
                                         AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261028_004355.png",contentDescription="Lv.1",modifier=Modifier.height(18.dp).width(31.dp),contentScale=ContentScale.Fit)
                                     }
