@@ -47,7 +47,7 @@ object HurryApi {
                             name = o.optString("roomName", o.optString("name", "Room")),
                             image = roomImage,
                             announcement = o.optString("announcement", o.optString("message", "")),
-                            country = sequenceOf("countryName", "country", "countryCode").map { o.optString(it, "").trim() }.firstOrNull { it.isNotBlank() && it != "null" }.orEmpty(),
+                            country = sequenceOf("countryName", "country", "countryCode", "country_code", "nationality", "location", "flag").map { key -> o.optString(key, "").trim() }.firstOrNull { it.isNotBlank() && it != "null" && it != "undefined" }.orEmpty(),
                             locked = o.optBoolean("isLocked", false),
                             accountId = o.optString("accountId", id).takeIf { it.isNotBlank() && it != "null" } ?: id
                         )
