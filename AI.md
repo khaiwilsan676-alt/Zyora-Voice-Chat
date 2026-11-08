@@ -419,6 +419,6 @@ Current documentation does not certify that all historical features are build-, 
 
 
 ## Active Users sheet caching and role-tag spacing (2026-11-08)
-- Added a 10-minute in-memory cache for resolved Active Users country values so reopening the sheet does not repeatedly fetch the same user profiles; expired entries refresh through the existing profile loader.
+- Active Users country values are now stored in app-private SharedPreferences with no time-based expiry. The same account's resolved country is reused after reopening the sheet and across app restarts, avoiding repeated profile lookups. Only nonblank country values are cached.
 - Reduced Owner and Room Admin tag images in the Active Users sheet from 19dp × 42dp to 16dp × 36dp and tightened the gap beside the username. No other sheet layout or behavior changed.
 - Native APK build and device verification remain pending.
