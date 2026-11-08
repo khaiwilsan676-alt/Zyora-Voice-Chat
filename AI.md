@@ -435,3 +435,10 @@ Current documentation does not certify that all historical features are build-, 
 - RoomPage.kt: increased only the compact in-room music controller's volume bar height from 5dp to 8dp and changed its active fill from green to blue (#3B82F6). Existing slider interaction and volume service action are unchanged.
 - Removed the hard-coded 180-second/3:00 duration fallback for room mini-player tracks. When a track lacks duration metadata, the mini-player resolves the actual duration from the track URI with MediaMetadataRetriever on Dispatchers.IO, then displays that duration; while metadata is unavailable it does not falsely display 3:00.
 - No card size, position, controls, playback, queue, repeat, or other UI was intentionally changed. Native APK build and device playback verification remain pending.
+
+
+## Native online-smoothness pass — 2026-11-08
+- `HomeScreen.kt`: the Home room list continues to render the in-memory/Room DB snapshot immediately, while the full authoritative room refresh is now throttled to once per 60 seconds instead of every 15 seconds. Failed/offline refresh attempts also wait 60 seconds before retrying, reducing repeated background network work and avoiding replacement of a valid cached snapshot with an empty list.
+- `HurryApi.kt`: room-list HTTP connect/read timeouts are now 5 seconds (previously 12 seconds), non-2xx responses are treated as failed refreshes, and the connection is always disconnected in `finally`. Parsing and room model fields remain unchanged.
+- No UI, navigation, room/voice protocol, or user-facing feature behavior was intentionally changed. This is a focused reduction of Home room-list network traffic; it does not yet establish app-wide online/offline performance parity.
+- Status: source committed. Native APK CI and online/slow-network/offline device checks remain pending.
