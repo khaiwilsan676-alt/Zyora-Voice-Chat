@@ -251,7 +251,7 @@ fun Newuserafterlogin(onBack: () -> Unit, onComplete: () -> Unit) {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(currentCountry?.flag ?: "🌐", fontSize = 20.sp)
+                            CountryFlagImage(currentCountry?.name.orEmpty(), Modifier.size(24.dp, 16.dp))
                             Spacer(Modifier.width(8.dp))
                             Text(currentCountry?.name ?: "Select country", color = if (currentCountry == null) Color.Gray else Color.Black, fontSize = 16.sp, fontWeight = FontWeight.Medium)
                         }
@@ -274,7 +274,7 @@ fun Newuserafterlogin(onBack: () -> Unit, onComplete: () -> Unit) {
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Text(text = item.flag, fontSize = 20.sp)
+                                            CountryFlagImage(item.name, Modifier.size(24.dp, 16.dp))
                                             Spacer(modifier = Modifier.width(12.dp))
                                             Text(text = item.name, color = Color.Black, fontSize = 15.sp)
                                         }
