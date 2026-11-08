@@ -1926,7 +1926,7 @@ io.on("connection", (socket) => {
 
   socket.on(
     "room_join",
-    async ({ roomId, userId, accountId, name, dp, email, roomOwnerId } = {}) => {
+    async ({ roomId, userId, accountId, name, dp, email, roomOwnerId, suppressEntry } = {}) => {
       if (!roomId || (!userId && !accountId)) return;
 
       const room = String(roomId);
@@ -2100,7 +2100,7 @@ io.on("connection", (socket) => {
 
       // The server is the single source of truth for room-entry banners.
       // Broadcast only after room membership and lock checks succeed.
-      if (isNewRoomJoin && socketIsInRoom(socket, room)) {
+      if (isNewRoomJoin && !suppressEntry && socketIsInRoom(socket, room)) {
         const entryTimestamp = Date.now();
         const entryMessage = {
           id: `${accId}-${entryTimestamp}`,
