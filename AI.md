@@ -478,3 +478,9 @@ Current documentation does not certify that all historical features are build-, 
 
 - Room Gift Picker: removed the dialog's dim-behind effect so the original room background remains visible above the sheet; reduced sheet height slightly from 50% to 47%. Gift picker contents and styling remain unchanged.
 - Room Gift Picker: keep the underlying room background transparent/visible above the sheet, and slightly reduce the sheet height to 44%; gift picker content and styling remain unchanged.
+
+## 2026-11-08 — Room Gift Picker coin value and Hot artwork
+- GiftPicker.kt: fixed the gift-card coin icon to use the same resolved public-asset URL as the wallet coin icon, so the coin image loads before the value.
+- Moved the coin icon/value row 2dp upward, closer to the gift name.
+- Added a subtle bottom mixed-fade overlay to Hot gift artwork only; Lucky artwork and other picker controls remain unchanged.
+- Native APK build and device visual verification remain pending.
