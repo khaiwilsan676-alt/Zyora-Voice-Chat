@@ -454,3 +454,8 @@ Current documentation does not certify that all historical features are build-, 
 - The chat icon in the Room Info white/10 owner card opens the existing native direct-chat screen for the room owner.
 - Room Info closes before opening chat; owner account ID is resolved from accountId, then id, then uid.
 - No owner-card layout or styling changes.
+
+
+## 2026-11-08 — Room owner chat visibility
+- Moved the Room Info owner-card chat destination to the topmost layer of the RoomPage overlay stack so NativeChatScreen is not covered by later room overlays.
+- Preserved the existing owner identity, chat screen, and UI.
