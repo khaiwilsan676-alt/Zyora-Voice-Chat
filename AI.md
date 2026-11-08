@@ -410,3 +410,8 @@ Current documentation does not certify that all historical features are build-, 
 - Chat list continues auto-scrolling to the latest message when new messages arrive.
 - The room-entry banner no longer shows the owner/admin tag image beside the entrant; “Enter the room” is bold.
 - No room voice, seat, permission, or public-message behavior was intentionally changed. Native APK build and two-device chat-mode verification remain pending.
+## 18. Country flag PNG rollout (2026-11-08)
+- Added shared native Compose component `CountryFlagImage.kt`, resolving country names and ISO aliases to the nine supplied PNGs in `public/` (India, Singapore, Pakistan, USA, South Africa, Turkey, UK, UAE, South Korea).
+- Replaced visible country emoji flags with those PNG images in New User After Login country selector, Home country pills and room cards, in-room Active Users, Room Profile, Public Profile, and Search user/room results.
+- Kept the existing country options, country values, filtering behavior, and surrounding layouts unchanged. Countries without one of the nine supplied images render no flag rather than an emoji.
+- Images load from the repository's raw public assets through Coil's normal image caching; no country-selection or profile data format was changed.
