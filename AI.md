@@ -448,3 +448,9 @@ Current documentation does not certify that all historical features are build-, 
 - Home room-list automatic full-snapshot refresh interval is five minutes (300 seconds), not 60 seconds.
 - Pulling down from the top of the Home list requests an immediate refresh; the shared cache remains visible while the request runs.
 - Existing UI visuals and room data behavior are preserved.
+
+
+## 2026-11-08 — Room Info owner chat
+- The chat icon in the Room Info white/10 owner card opens the existing native direct-chat screen for the room owner.
+- Room Info closes before opening chat; owner account ID is resolved from accountId, then id, then uid.
+- No owner-card layout or styling changes.
