@@ -465,3 +465,9 @@ Current documentation does not certify that all historical features are build-, 
 - Room Info owner-card chat now resolves the recipient using owner account ID, then owner UID, then owner ID.
 - RoomPage no longer substitutes the room ID into the owner account ID field before the chat tap handler runs.
 - The chat action closes Room Info and opens the existing NativeChatScreen for the resolved owner; no UI changes.
+
+
+## 2026-11-08 — Room Info owner chat navigation fix
+- Room Info owner-card Chat tap now closes other room sheets and opens the direct owner chat as a full-size topmost overlay.
+- Owner receiver ID resolves from account ID, Firebase UID, then owner ID; self-chat is prevented.
+- No Room Info card styling or layout changes.
