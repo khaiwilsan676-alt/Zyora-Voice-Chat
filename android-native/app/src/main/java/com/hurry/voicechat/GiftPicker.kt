@@ -723,6 +723,20 @@ private fun GiftCard(
                     contentScale = if (gift.noMask) ContentScale.Fit else ContentScale.Crop,
                     modifier = Modifier.fillMaxSize(),
                 )
+                // Hot gift artwork uses the same soft mixed fade into the card background.
+                if (activeTab == "Hot") {
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .height(16.dp)
+                            .align(Alignment.BottomCenter)
+                            .background(
+                                Brush.verticalGradient(
+                                    colors = listOf(Color.Transparent, Color(0x99000000))
+                                )
+                            )
+                    )
+                }
             }
 
             Text(
@@ -736,14 +750,15 @@ private fun GiftCard(
                 modifier = Modifier.fillMaxWidth(),
             )
 
-            Spacer(Modifier.height(2.dp))
+            Spacer(Modifier.height(0.dp))
 
             Row(
+                modifier = Modifier.offset(y = (-2).dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,
             ) {
                 AsyncImage(
-                    model = "/file_00000000e56882119c217d508b6733dc.png",
+                    model = giftAssetUrl("/file_00000000e56882119c217d508b6733dc.png"),
                     contentDescription = "Coins",
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
