@@ -909,7 +909,7 @@ fun PublicProfileScreen(
             onDismissRequest = { showActionSheet = false },
             containerColor = Color.Transparent, // Background is strictly transparent for floating look
             contentColor = Color.White,
-            scrimColor = Color.Black.copy(alpha = 0.5f),
+            scrimColor = Color.Transparent,
             dragHandle = null
         ) {
             Column(
