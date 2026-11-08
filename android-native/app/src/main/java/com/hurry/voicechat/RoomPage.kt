@@ -189,23 +189,41 @@ object ZyoraKeptRoomSocketSession {
     @Volatile var socket: Socket? = null
     @Volatile var roomId: String = ""
     @Volatile var accountId: String = ""
+    @Volatile private var silentRejoinPending: Boolean = false
 
     fun retain(value: Socket, room: String, account: String) {
         socket = value
         roomId = room
         accountId = account
+        silentRejoinPending = false
     }
 
     fun take(room: String, account: String): Socket? {
+        if (roomId != room || accountId != account) return null
         val active = socket
-        return if (roomId == room && accountId == account && active?.connected() == true) active else null
+        if (active?.connected() == true) return active
+        // The mini-room was restored after its socket dropped. Rejoin silently,
+        // preserving the existing room-entry event rather than announcing a new entry.
+        silentRejoinPending = true
+        socket = null
+        return null
+    }
+
+    fun consumeSilentRejoin(room: String, account: String): Boolean {
+        if (roomId != room || accountId != account || !silentRejoinPending) return false
+        silentRejoinPending = false
+        roomId = ""
+        accountId = ""
+        socket = null
+        return true
     }
 
     fun clear(value: Socket) {
-        if (socket === value) {
+        if (socket === value || roomId.isNotBlank()) {
             socket = null
             roomId = ""
             accountId = ""
+            silentRejoinPending = false
         }
     }
 }
@@ -1149,7 +1167,7 @@ fun RoomPage(
                 }
             }
         }
-        var joinMessageSent = false
+        var joinMessageSent = reusedKeptRoomSocket || ZyoraKeptRoomSocketSession.consumeSilentRejoin(roomId, accountId)
         val connectListener = Emitter.Listener {
             val profileDb = NativeIndexDatabase(appContext)
             val currentProfile = currentProfileKeys.firstNotNullOfOrNull { profileDb.loadProfile(it) } ?: JSONObject()
