@@ -56,7 +56,7 @@ fun RoomInfo(
     isRoomFollowed:Boolean=false,
     onToggleRoomFollow:(Boolean)->Unit={},
     onShareToUser:(RoomInfoFollower)->Unit={},
-    onOpenOwnerChat:()->Unit={}
+    onOpenOwnerChat:(RoomInfoFollower)->Unit={}
 ) {
     if (!isOpen) return
     val context = LocalContext.current
@@ -305,7 +305,7 @@ fun RoomInfo(
                         AsyncImage(
                             model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261105_125330.png",
                             contentDescription = "Chat",
-                            modifier = Modifier.size(36.dp).clip(CircleShape).clickable { onOpenOwnerChat() },
+                            modifier = Modifier.size(36.dp).clip(CircleShape).clickable { onOpenOwnerChat(RoomInfoFollower(roomOwner.accountId.ifBlank { roomOwner.id }.ifBlank { roomOwner.uid }, ownerDisplayName, ownerDisplayImage, ownerCountry)) },
                             contentScale = ContentScale.Crop
                         )
                     }
