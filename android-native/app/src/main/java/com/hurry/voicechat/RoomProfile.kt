@@ -247,7 +247,7 @@ fun RoomProfile(
     }
 
     val showLeaveSeat = isCurrentUser && user.isInSeat
-    val showModerationRow = canModerate && !isCurrentUser
+    val showModerationRow = canModerate && !isCurrentUser && !isRoomOwner
     val showActions = !isCurrentUser
 
     val authPrefs = remember(context) { context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE) }
