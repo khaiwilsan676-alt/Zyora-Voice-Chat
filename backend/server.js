@@ -2878,14 +2878,14 @@ io.on("connection", (socket) => {
       socket.roomUserId ||
       socket.userId;
 
-    if (socket.roomId && userId) {
-      const room = String(socket.roomId);
-
-      // A transient socket disconnect/reconnect must not release a user's seat.
-      // Seat ownership is independent of the socket connection lifetime.
-    }
-
     if (room && userId) {
+      // Closing the app/socket ends the room session and releases this user's
+      // seat immediately. The socket-id guard prevents an older connection's
+      // delayed disconnect from clearing a seat already rebound to a new socket.
+      if (clearUserSeat(String(room), String(userId), String(socket.id))) {
+        emitRoomSeats(String(room));
+      }
+
       removeUserFromRoom(
         String(room),
         String(userId)
