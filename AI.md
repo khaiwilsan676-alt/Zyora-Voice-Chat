@@ -484,3 +484,8 @@ Current documentation does not certify that all historical features are build-, 
 - Moved the coin icon/value row 2dp upward, closer to the gift name.
 - Added a subtle bottom mixed-fade overlay to Hot gift artwork only; Lucky artwork and other picker controls remain unchanged.
 - Native APK build and device visual verification remain pending.
+
+## 2026-11-08 — Gift Send button brightness
+- GiftPicker.kt: removed the dimming alpha from the Send button, so it stays at its normal full brightness whether or not a gift is selected.
+- The existing click eligibility and send behavior are unchanged; the button remains non-actionable until a gift is selected.
+- Native APK build and device verification remain pending.
