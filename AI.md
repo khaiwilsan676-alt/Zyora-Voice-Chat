@@ -471,3 +471,7 @@ Current documentation does not certify that all historical features are build-, 
 - Room Info owner-card Chat tap now closes other room sheets and opens the direct owner chat as a full-size topmost overlay.
 - Owner receiver ID resolves from account ID, Firebase UID, then owner ID; self-chat is prevented.
 - No Room Info card styling or layout changes.
+
+### Room owner profile moderation visibility
+- Hide the room moderation action row when the viewed profile belongs to the room owner, including when opened by a Room Admin.
+- Keep the existing moderation row behavior for other users and leave profile UI styling unchanged.
