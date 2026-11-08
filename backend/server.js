@@ -1973,8 +1973,8 @@ io.on("connection", (socket) => {
           if (oldRoom !== room || String(oldUser || '') !== accId) {
             socket.leave(`room:${oldRoom}`);
 
-            clearUserSeatGracefully(oldRoom, oldUser, 0);
-
+            // Leaving/switching a room is not an explicit seat-leave action.
+            // Keep the occupied seat until its owner, room owner, or admin clears it.
             removeUserFromRoom(
               oldRoom,
               oldUser
@@ -2363,8 +2363,8 @@ io.on("connection", (socket) => {
 
       socket.leave(`room:${room}`);
 
-      clearUserSeatGracefully(room, id, 0);
-
+      // Explicit room exit removes presence, but does not silently release a seat.
+      // Seat release is handled only by the authorized room_seat_action leave flow.
       removeUserFromRoom(room, id);
 
       socket
@@ -2445,11 +2445,26 @@ io.on("connection", (socket) => {
     };
 
     if (action === "take") {
-      // One user can occupy only one seat.
+      // Validate the requested seat BEFORE releasing the user's current seat.
+      // A tap on a locked/occupied seat must never drop an already-held seat.
+      if (current.isLocked && !current.isOccupied) {
+        emitRoomSeats(roomId);
+        return;
+      }
+
+      if (
+        current.isOccupied &&
+        String(current.user?.accountId || current.user?.userId || "") !== userId
+      ) {
+        emitRoomSeats(roomId);
+        return;
+      }
+
+      // One user can occupy only one seat. Move only after the target is valid.
       for (const [number, seat] of seats.entries()) {
         if (
           seat?.isOccupied &&
-          String(seat?.user?.accountId) === userId &&
+          String(seat?.user?.accountId || seat?.user?.userId || "") === userId &&
           Number(number) !== seatNumber
         ) {
           seats.set(number, {
@@ -2461,22 +2476,6 @@ io.on("connection", (socket) => {
             gif: undefined,
           });
         }
-      }
-
-      if (
-        current.isLocked &&
-        !current.isOccupied
-      ) {
-        emitRoomSeats(roomId);
-        return;
-      }
-
-      if (
-        current.isOccupied &&
-        String(current.user?.accountId) !== userId
-      ) {
-        emitRoomSeats(roomId);
-        return;
       }
 
       seats.set(seatNumber, {
@@ -2936,8 +2935,8 @@ io.on("connection", (socket) => {
     if (socket.roomId && userId) {
       const room = String(socket.roomId);
 
-      // Grace period of 5s before clearing seat on disconnect
-      clearUserSeatGracefully(room, String(userId), 5000, socket.id);
+      // A transient socket disconnect/reconnect must not release a user's seat.
+      // Seat ownership is independent of the socket connection lifetime.
     }
 
     if (room && userId) {
