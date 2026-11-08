@@ -363,11 +363,9 @@ fun GiftPicker(
                     Column(Modifier.fillMaxSize()) {
 
                         // ── MIC / HOUSE buttons (absolute top-right) ──
-                        Box(Modifier.fillMaxWidth()) {
+                        Box(Modifier.fillMaxWidth().height(48.dp)) {
                             Row(
-                                Modifier
-                                    .align(Alignment.TopEnd)
-                                    .offset(y = (-8).dp),
+                                Modifier.align(Alignment.TopEnd),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                             ) {
                                 RecipientButton(
@@ -775,15 +773,16 @@ private fun RecipientButton(
     iconType: RecipientIconType,
 ) {
     val iconColor = if (isActive) Blue500 else Color(0xFF9CA3AF)
-    Box(
-        Modifier
-            .size(38.dp)
-            .clip(CircleShape)
-            .background(if (isActive) Blue500.copy(alpha = 0.20f) else Color(0xFF282D32))
-            .border(2.dp, if (isActive) Blue500 else Color(0xFF6B7280), CircleShape)
-            .clickable { onClick() },
-        contentAlignment = Alignment.Center,
-    ) {
+    Box(Modifier.size(48.dp), contentAlignment = Alignment.TopStart) {
+        Box(
+            Modifier
+                .size(38.dp)
+                .clip(CircleShape)
+                .background(if (isActive) Blue500.copy(alpha = 0.20f) else Color(0xFF282D32))
+                .border(2.dp, if (isActive) Blue500 else Color(0xFF6B7280), CircleShape)
+                .clickable { onClick() },
+            contentAlignment = Alignment.Center,
+        ) {
         Canvas(
             Modifier.size(if (iconType == RecipientIconType.MIC) 18.dp else 20.dp)
         ) {
@@ -840,6 +839,7 @@ private fun RecipientButton(
                 iconPath.close()
             }
             drawPath(path = iconPath, color = iconColor)
+        }
         }
         Surface(
             color = if (isActive) Blue500 else Color(0xFF9CA3AF),
