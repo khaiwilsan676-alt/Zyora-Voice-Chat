@@ -2373,19 +2373,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                 }
             }
         }
-        selectedOfficialChat?.let { chat ->
-            NativeChatScreen(
-                name = chat.second,
-                image = chat.third,
-                receiverId = chat.first,
-                currentUserId = currentUser.uid.ifBlank { currentUser.id },
-                currentAccountIdOverride = currentUser.accountId.ifBlank { currentUser.id },
-                onBack = { selectedOfficialChat = null; pendingRoomInvitationJson = null },
-                onJoinRoom = onJoinRoom,
-                initialRoomInvitation = pendingRoomInvitationJson
-            )
-        }
-        
+
         if (showLuckyBagCenterReveal) {
             Box(
                 Modifier
@@ -2616,6 +2604,21 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                 }
             )
         }
+        // Keep direct chats above every room overlay so the owner chat is visible immediately.
+        selectedOfficialChat?.let { chat ->
+            NativeChatScreen(
+                name = chat.second,
+                image = chat.third,
+                receiverId = chat.first,
+                currentUserId = currentUser.uid.ifBlank { currentUser.id },
+                currentAccountIdOverride = currentUser.accountId.ifBlank { currentUser.id },
+                onBack = { selectedOfficialChat = null; pendingRoomInvitationJson = null },
+                onJoinRoom = onJoinRoom,
+                initialRoomInvitation = pendingRoomInvitationJson
+            )
+        }
+        
+
     }
 }
 
