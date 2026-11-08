@@ -132,19 +132,19 @@ private object NativeRoomMemoryCache {
 // COUNTRY PILL DATA
 // ═══════════════════════════════════════════════════════
 private data class CountryPill(
-    val flag: String?,
+    val country: String?,
     val label: String,
     val value: String
 )
 
 private val countryPills = listOf(
     CountryPill(null, "All",          "all"),
-    CountryPill("🇮🇳", "India",        "India"),
-    CountryPill("🇸🇬", "Singapore",    "Singapore"),
-    CountryPill("🇵🇰", "Pakistan",     "Pakistan"),
-    CountryPill("🇺🇸", "USA",          "USA"),
-    CountryPill("🇿🇦", "South Africa", "South Africa"),
-    CountryPill("🇹🇷", "Turkey",       "Turkey")
+    CountryPill("India", "India",        "India"),
+    CountryPill("Singapore", "Singapore",    "Singapore"),
+    CountryPill("Pakistan", "Pakistan",     "Pakistan"),
+    CountryPill("USA", "USA",          "USA"),
+    CountryPill("South Africa", "South Africa", "South Africa"),
+    CountryPill("Turkey", "Turkey",       "Turkey")
 )
 
 fun countryFlag(country: String): String {
@@ -806,7 +806,7 @@ private fun CountryPillRow(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                if (pill.flag == null) {
+                if (pill.country == null) {
                     androidx.compose.foundation.Canvas(Modifier.size(24.dp)) {
                         val stroke = Stroke(
                             width = 2.dp.toPx(),
@@ -835,7 +835,7 @@ private fun CountryPillRow(
                         )
                     }
                 } else {
-                    Text(pill.flag, fontSize = 14.sp)
+                    CountryFlagImage(pill.country, Modifier.size(20.dp, 14.dp))
                 }
 
                 Text(
@@ -921,7 +921,7 @@ fun RoomListCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(1.dp)
         ) {
-            Text(countryFlag(room.country), fontSize = 16.sp, maxLines = 1)
+            CountryFlagImage(room.country, Modifier.size(20.dp, 14.dp))
             
             val roomName = room.name.takeIf { it.isNotBlank() && !it.equals("null", ignoreCase = true) && !it.equals("undefined", ignoreCase = true) } ?: "Zyora_User"
             
