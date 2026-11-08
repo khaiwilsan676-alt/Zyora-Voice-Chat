@@ -363,7 +363,7 @@ fun GiftPicker(
                     Column(Modifier.fillMaxSize()) {
 
                         // ── MIC / HOUSE buttons (absolute top-right) ──
-                        Box(Modifier.fillMaxWidth().height(48.dp)) {
+                        Box(Modifier.fillMaxWidth().height(56.dp)) {
                             Row(
                                 Modifier.align(Alignment.TopEnd),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -773,7 +773,7 @@ private fun RecipientButton(
     iconType: RecipientIconType,
 ) {
     val iconColor = if (isActive) Blue500 else Color(0xFF9CA3AF)
-    Box(Modifier.size(48.dp), contentAlignment = Alignment.TopStart) {
+    Box(Modifier.width(48.dp).height(54.dp), contentAlignment = Alignment.TopCenter) {
         Box(
             Modifier
                 .size(38.dp)
@@ -845,7 +845,7 @@ private fun RecipientButton(
             color = if (isActive) Blue500 else Color(0xFF9CA3AF),
             shape = RoundedCornerShape(50),
             modifier = Modifier
-                .align(Alignment.BottomEnd)
+                .align(Alignment.BottomCenter)
                 .offset(x = 0.dp, y = 0.dp),
         ) {
             Text(
