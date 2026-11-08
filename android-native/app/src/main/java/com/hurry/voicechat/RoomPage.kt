@@ -1984,10 +1984,12 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
             roomAdmins=roomAdminUsers,
             onOpenProfile={ follower -> selectedChatProfile=NativeRoomMessage("member-profile-" + follower.accountId,"",follower.name,follower.image,follower.accountId);showInfo=false },
             onOpenOwnerChat={ owner ->
-                val ownerChatId = owner.accountId.ifBlank { owner.uid }.ifBlank { owner.id }.trim()
-                if (ownerChatId.isNotBlank()) {
+                val ownerChatId = owner.accountId.trim().ifBlank { owner.uid.trim() }.ifBlank { owner.id.trim() }
+                if (ownerChatId.isNotBlank() && ownerChatId != accountId) {
                     selectedOfficialChat = Triple(ownerChatId, owner.name.ifBlank { "Room Owner" }, owner.image)
                     showInfo = false
+                    showMessageSheet = false
+                    showMenu = false
                 }
             },
             onCopyId={ id -> clipboard.setText(AnnotatedString(id));copiedId=id },
@@ -2606,16 +2608,24 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
         }
         // Keep direct chats above every room overlay so the owner chat is visible immediately.
         selectedOfficialChat?.let { chat ->
-            NativeChatScreen(
-                name = chat.second,
-                image = chat.third,
-                receiverId = chat.first,
-                currentUserId = currentUser.uid.ifBlank { currentUser.id },
-                currentAccountIdOverride = currentUser.accountId.ifBlank { currentUser.id },
-                onBack = { selectedOfficialChat = null; pendingRoomInvitationJson = null },
-                onJoinRoom = onJoinRoom,
-                initialRoomInvitation = pendingRoomInvitationJson
-            )
+            key(chat.first) {
+                Box(
+                    Modifier.fillMaxSize()
+                        .background(Color.White)
+                        .zIndex(500f)
+                ) {
+                    NativeChatScreen(
+                        name = chat.second,
+                        image = chat.third,
+                        receiverId = chat.first,
+                        currentUserId = currentUser.uid.ifBlank { currentUser.id },
+                        currentAccountIdOverride = currentUser.accountId.ifBlank { currentUser.id },
+                        onBack = { selectedOfficialChat = null; pendingRoomInvitationJson = null },
+                        onJoinRoom = onJoinRoom,
+                        initialRoomInvitation = pendingRoomInvitationJson
+                    )
+                }
+            }
         }
         
 
