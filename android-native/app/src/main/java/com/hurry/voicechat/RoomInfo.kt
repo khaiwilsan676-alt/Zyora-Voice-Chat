@@ -117,10 +117,16 @@ fun RoomInfo(
                 async(kotlinx.coroutines.Dispatchers.IO) {
                     limiter.withPermit {
                         val cachedMember = cached[member.accountId]
-                        val base = cachedMember ?: member
+                        // Prefer the latest room-member row for name/avatar; reuse
+                        // cached values only when the incoming row omits them.
+                        val base = member.copy(
+                            name = member.name.ifBlank { cachedMember?.name.orEmpty() },
+                            image = member.image.ifBlank { cachedMember?.image.orEmpty() },
+                            country = cachedMember?.country.orEmpty().ifBlank { member.country }
+                        )
                         val roomProfileCountry = runCatching {
                             loadRoomProfileCountry(context, member.accountId, base.name, base.image, base.country)
-                        }.getOrDefault(base.country)
+                        }.getOrNull()?.takeIf { it.isNotBlank() } ?: base.country
                         val resolved = base.copy(country = roomProfileCountry)
                         runCatching {
                             NativeIndexDatabase(context).saveProfile(
