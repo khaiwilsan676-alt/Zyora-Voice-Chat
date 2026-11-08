@@ -340,7 +340,7 @@ fun RoomProfile(
                             
                             // Country Flag
                             if (displayCountry.isNotBlank()) {
-                                Text(roomProfileCountryFlag(displayCountry), fontSize = 14.sp, modifier = Modifier.padding(start = 4.dp))
+                                CountryFlagImage(displayCountry, Modifier.padding(start = 4.dp).size(18.dp, 12.dp))
                             }
                         }
 
