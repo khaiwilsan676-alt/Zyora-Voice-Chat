@@ -416,3 +416,9 @@ Current documentation does not certify that all historical features are build-, 
 - Kept the existing country options, country values, filtering behavior, and surrounding layouts unchanged. Countries without one of the nine supplied images render no flag rather than an emoji.
 - Images load from the repository's raw public assets through Coil's normal image caching; no country-selection or profile data format was changed.
 - 2026-11-08 follow-up: country flag resolution now handles flag-emoji-only values, embedded flag emoji, country names, and ISO alpha-2/alpha-3 aliases (including codes converted to regional-indicator emoji by the existing country resolver) before loading the matching PNG from GitHub Raw URLs (`https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/`). The shared helper was cleaned up to remove malformed duplicate mapping entries; no screen layout or country-selection behavior was changed.
+
+
+## Active Users sheet caching and role-tag spacing (2026-11-08)
+- Added a 10-minute in-memory cache for resolved Active Users country values so reopening the sheet does not repeatedly fetch the same user profiles; expired entries refresh through the existing profile loader.
+- Reduced Owner and Room Admin tag images in the Active Users sheet from 19dp × 42dp to 16dp × 36dp and tightened the gap beside the username. No other sheet layout or behavior changed.
+- Native APK build and device verification remain pending.
