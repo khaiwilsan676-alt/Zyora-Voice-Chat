@@ -459,3 +459,9 @@ Current documentation does not certify that all historical features are build-, 
 ## 2026-11-08 — Room owner chat visibility
 - Moved the Room Info owner-card chat destination to the topmost layer of the RoomPage overlay stack so NativeChatScreen is not covered by later room overlays.
 - Preserved the existing owner identity, chat screen, and UI.
+
+
+## 2026-11-08 — Room owner chat routing fix
+- Room Info owner-card chat now resolves the recipient using owner account ID, then owner UID, then owner ID.
+- RoomPage no longer substitutes the room ID into the owner account ID field before the chat tap handler runs.
+- The chat action closes Room Info and opens the existing NativeChatScreen for the resolved owner; no UI changes.
