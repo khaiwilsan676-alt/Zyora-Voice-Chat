@@ -442,3 +442,9 @@ Current documentation does not certify that all historical features are build-, 
 - `HurryApi.kt`: room-list HTTP connect/read timeouts are now 5 seconds (previously 12 seconds), non-2xx responses are treated as failed refreshes, and the connection is always disconnected in `finally`. Parsing and room model fields remain unchanged.
 - No UI, navigation, room/voice protocol, or user-facing feature behavior was intentionally changed. This is a focused reduction of Home room-list network traffic; it does not yet establish app-wide online/offline performance parity.
 - Status: source committed. Native APK CI and online/slow-network/offline device checks remain pending.
+
+
+## 2026-11-08 — Home refresh behavior
+- Home room-list automatic full-snapshot refresh interval is five minutes (300 seconds), not 60 seconds.
+- Pulling down from the top of the Home list requests an immediate refresh; the shared cache remains visible while the request runs.
+- Existing UI visuals and room data behavior are preserved.
