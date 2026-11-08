@@ -607,6 +607,7 @@ fun GiftPicker(
 
                                         Box(
                                             Modifier
+                                                .alpha(1f)
                                                 .clip(RoundedCornerShape(topEnd = 50.dp, bottomEnd = 50.dp))
                                                 .background(
                                                     Brush.linearGradient(
