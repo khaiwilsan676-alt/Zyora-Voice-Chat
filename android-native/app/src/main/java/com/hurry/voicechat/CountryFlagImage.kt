@@ -7,58 +7,54 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 
-private const val COUNTRY_FLAG_RAW = "https://zyora-voice-chat.vercel.app/"
+private const val COUNTRY_FLAG_ASSET_BASE = "https://zyora-voice-chat.vercel.app/"
 
 private val countryFlagAssets = mapOf(
     "india" to "IMG_20261108_123655.png",
     "in" to "IMG_20261108_123655.png",
-    "🇮🇳" to "IMG_20261108_123655.png",
     "singapore" to "IMG_20261108_123737.png",
     "sg" to "IMG_20261108_123737.png",
-    "🇸🇬" to "IMG_20261108_123737.png",
     "pakistan" to "IMG_20261108_123805.png",
     "pk" to "IMG_20261108_123805.png",
-    "🇵🇰" to "IMG_20261108_123805.png",
     "usa" to "IMG_20261108_123833.png",
+    "us" to "IMG_20261108_123833.png",
     "united states" to "IMG_20261108_123833.png",
     "united states of america" to "IMG_20261108_123833.png",
-    "us" to "IMG_20261108_123833.png",
-    "🇺🇸" to "IMG_20261108_123833.png",
-    "united states" to "IMG_20261108_123833.png",
     "south africa" to "IMG_20261108_123900.png",
     "za" to "IMG_20261108_123900.png",
-    "🇿🇦" to "IMG_20261108_123900.png",
     "turkey" to "IMG_20261108_123932.png",
     "türkiye" to "IMG_20261108_123932.png",
     "tr" to "IMG_20261108_123932.png",
-    "🇹🇷" to "IMG_20261108_123932.png",
     "uk" to "IMG_20261108_124023.png",
+    "gb" to "IMG_20261108_124023.png",
     "united kingdom" to "IMG_20261108_124023.png",
     "great britain" to "IMG_20261108_124023.png",
-    "united kingdom" to "IMG_20261108_124023.png",
-    "gb" to "IMG_20261108_124023.png",
-    "🇬🇧" to "IMG_20261108_124023.png",
     "uae" to "IMG_20261108_124048.png",
-    "united arab emirates" to "IMG_20261108_124048.png",
-    "united arab emirates" to "IMG_20261108_124048.png",
     "ae" to "IMG_20261108_124048.png",
-    "🇦🇪" to "IMG_20261108_124048.png",
+    "united arab emirates" to "IMG_20261108_124048.png",
     "south korea" to "IMG_20261108_124124.png",
     "korea" to "IMG_20261108_124124.png",
     "republic of korea" to "IMG_20261108_124124.png",
-    "korea, republic of" to "IMG_20261108_124124.png",
-    "kr" to "IMG_20261108_124124.png",
-    "🇰🇷" to "IMG_20261108_124124.png"
+    "korea republic of" to "IMG_20261108_124124.png",
+    "kr" to "IMG_20261108_124124.png"
 )
 
 private fun countryFlagImageUrl(country: String): String? {
     val normalized = country.trim().lowercase()
-        .removePrefix("🇮🇳").removePrefix("🇸🇬").removePrefix("🇵🇰")
-        .removePrefix("🇺🇸").removePrefix("🇿🇦").removePrefix("🇹🇷")
-        .removePrefix("🇬🇧").removePrefix("🇦🇪").removePrefix("🇰🇷")
+        .replace("🇮🇳", " ")
+        .replace("🇸🇬", " ")
+        .replace("🇵🇰", " ")
+        .replace("🇺🇸", " ")
+        .replace("🇿🇦", " ")
+        .replace("🇹🇷", " ")
+        .replace("🇬🇧", " ")
+        .replace("🇦🇪", " ")
+        .replace("🇰🇷", " ")
+        .replace(Regex("[^a-z ]"), " ")
+        .replace(Regex("\\s+"), " ")
         .trim()
     val file = countryFlagAssets[normalized] ?: return null
-    return COUNTRY_FLAG_RAW + file
+    return COUNTRY_FLAG_ASSET_BASE + file
 }
 
 @Composable
