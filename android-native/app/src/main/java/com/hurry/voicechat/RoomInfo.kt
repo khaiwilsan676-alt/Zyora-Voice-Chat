@@ -34,6 +34,7 @@ import coil3.compose.AsyncImage
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.withContext
 
 data class RoomInfoOwner(val id:String="",val uid:String="",val accountId:String="",val name:String,val image:String)
 data class RoomInfoData(val roomName:String,val roomDp:String,val roomAnnouncement:String,val roomId:String)
@@ -65,15 +66,21 @@ fun RoomInfo(
     var showRoomReport by remember { mutableStateOf(false) }
     var roomFans by remember(currentUserId, roomOwner.accountId, roomOwner.id) { mutableStateOf<List<RoomInfoFollower>>(emptyList()) }
     
-    LaunchedEffect(currentUserId, roomOwner.accountId, roomOwner.id, showShareSheet) {
-        if (showShareSheet) {
-            val ownerId = currentUserId.ifBlank { roomOwner.accountId.ifBlank { roomOwner.id.ifBlank { roomOwner.uid } } }
+    LaunchedEffect(currentUserId, showShareSheet) {
+        if (showShareSheet && currentUserId.isNotBlank()) {
             roomFans = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                runCatching {
-                    SocialFollowApi.list(context, ownerId, "fans").map {
-                        RoomInfoFollower(it.accountId.ifBlank { it.uid.ifBlank { it.id } }, it.name, it.image, it.country)
-                    }.filter { it.accountId.isNotBlank() && it.accountId != currentUserId }.distinctBy { it.accountId }
-                }.getOrDefault(emptyList())
+                // Show the union of the signed-in user's Fans and Following lists.
+                // SocialFollowApi persists each list locally, so cached rows remain
+                // available if the network is unavailable or the app is reopened.
+                val fans = SocialFollowApi.list(context, currentUserId, "fans")
+                val following = SocialFollowApi.list(context, currentUserId, "following")
+                (fans + following).map {
+                    RoomInfoFollower(
+                        it.accountId.ifBlank { it.uid.ifBlank { it.id } },
+                        it.name, it.image, it.country
+                    )
+                }.filter { it.accountId.isNotBlank() && it.accountId != currentUserId }
+                    .distinctBy { it.accountId }
             }
         }
     }
@@ -90,15 +97,42 @@ fun RoomInfo(
 
     LaunchedEffect(roomFollowers.map { it.accountId }, roomAdmins.map { it.accountId }) {
         val all = (roomFollowers + roomAdmins).distinctBy { it.accountId }.filter { it.accountId.isNotBlank() }
+        val cached = withContext(kotlinx.coroutines.Dispatchers.IO) {
+            all.mapNotNull { member ->
+                runCatching {
+                    NativeIndexDatabase(context).loadProfile("room_info_member:${member.accountId}")?.let { saved ->
+                        member.accountId to member.copy(
+                            name = saved.optString("name").ifBlank { member.name },
+                            image = saved.optString("image").ifBlank { member.image },
+                            country = saved.optString("country")
+                        )
+                    }
+                }.getOrNull()
+            }.toMap()
+        }
+        if (cached.isNotEmpty()) memberProfiles = cached
         val loaded = kotlinx.coroutines.coroutineScope {
             val limiter = kotlinx.coroutines.sync.Semaphore(4)
             all.map { member ->
                 async(kotlinx.coroutines.Dispatchers.IO) {
                     limiter.withPermit {
+                        val cachedMember = cached[member.accountId]
+                        val base = cachedMember ?: member
                         val roomProfileCountry = runCatching {
-                            loadRoomProfileCountry(context, member.accountId, member.name, member.image)
-                        }.getOrDefault("")
-                        member.accountId to member.copy(country = roomProfileCountry)
+                            loadRoomProfileCountry(context, member.accountId, base.name, base.image, base.country)
+                        }.getOrDefault(base.country)
+                        val resolved = base.copy(country = roomProfileCountry)
+                        runCatching {
+                            NativeIndexDatabase(context).saveProfile(
+                                "room_info_member:${member.accountId}",
+                                org.json.JSONObject()
+                                    .put("name", resolved.name)
+                                    .put("image", resolved.image)
+                                    .put("country", resolved.country)
+                                    .put("updatedAt", System.currentTimeMillis())
+                            )
+                        }
+                        member.accountId to resolved
                     }
                 }
             }.awaitAll().toMap()
