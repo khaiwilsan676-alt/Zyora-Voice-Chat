@@ -54,6 +54,8 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -690,6 +692,14 @@ fun NativeChatScreen(
     var blockedByPeer by remember(receiverId) { mutableStateOf(false) }
     var blockStateReady by remember(receiverId) { mutableStateOf(false) }
     var blockPopupText by remember { mutableStateOf("") }
+    var copyPopupText by remember { mutableStateOf("") }
+    val clipboard = LocalClipboardManager.current
+    LaunchedEffect(copyPopupText) {
+        if (copyPopupText.isNotBlank()) {
+            kotlinx.coroutines.delay(1600)
+            copyPopupText = ""
+        }
+    }
     var replyText by remember { mutableStateOf<String?>(null) }
     var previewImageUrl by remember { mutableStateOf<String?>(null) }
     var roomInvitationSent by remember(receiverId, initialRoomInvitation) { mutableStateOf(false) }
@@ -703,7 +713,14 @@ fun NativeChatScreen(
         }
     }
     LaunchedEffect(blockPopupText) {
-        if (blockPopupText.isNotBlank()) {
+        if (copyPopupText.isNotBlank()) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(copyPopupText, color = Color.White, fontSize = 12.sp,
+                modifier = Modifier.clip(RoundedCornerShape(7.dp)).background(Color.Black.copy(alpha = 0.70f))
+                    .padding(horizontal = 14.dp, vertical = 8.dp))
+        }
+    }
+    if (blockPopupText.isNotBlank()) {
             kotlinx.coroutines.delay(1800)
             blockPopupText = ""
         }
@@ -1456,6 +1473,10 @@ fun NativeChatScreen(
 
                         Column(horizontalAlignment = if (mine) Alignment.End else Alignment.Start) {
                             Surface(
+                                modifier = if (!isImageMessage && !isRoomInvitation) Modifier.twoSecondLongPress {
+                                    clipboard.setText(AnnotatedString(messageText))
+                                    copyPopupText = "Copy to clipboard"
+                                } else Modifier,
                                 color = if (mine) Color(0xFF374151) else Color.White,
                                 shape = if (mine)
                                     RoundedCornerShape(18.dp, 18.dp, 4.dp, 18.dp)
