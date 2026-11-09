@@ -9,7 +9,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.VolumeOff
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.*
@@ -45,7 +44,7 @@ private val fruitItems=listOf(
  FruitItem(4,"Strawberry","fp_img_20260908_191906",15),
  FruitItem(6,"Pear","fp_img_20260908_191930",5)
 )
-private val fruitOrder=listOf(1,5,3,8,2,7,4,6)
+private val fruitOrder=listOf(1,5,3,8,2,7,4,6)\nprivate val fruitGridIds=listOf(1,5,3,8,0,2,7,4,6)
 private val fruitSpinPath=listOf(0,1,2,5,8,7,6,3)
 private val fruitChipValues=listOf(1_000L,50_000L,1_000_000L,5_000_000L)
 private val fruitChipLabels=listOf("1K","50K","1M","5M")
@@ -211,7 +210,7 @@ fun Fruitparty(onClose:()->Unit,onMinimize:(()->Unit)?=null,isMinimized:Boolean=
     Spacer(Modifier.weight(1f))
     Text("?",Modifier.clickable{showRules=true}.padding(4.dp),color=fruitBrown,fontSize=20.sp,fontWeight=FontWeight.Black)
     Text("⌄",Modifier.clickable{minimizedSession=true;onMinimize?.invoke()}.padding(4.dp),color=fruitBrown,fontSize=20.sp)
-    Icon(Icons.Default.History,null,Modifier.size(23.dp).clickable{showHistory=true},tint=fruitBrown)
+    Text("◷",Modifier.clickable{showHistory=true}.padding(4.dp),color=fruitBrown,fontSize=20.sp)
     Icon(Icons.Default.Close,null,Modifier.size(22.dp).clickable{onClose()},tint=fruitBrown)
    }
    Row(Modifier.fillMaxWidth().align(Alignment.BottomCenter).padding(horizontal=22.dp, vertical=18.dp),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){
