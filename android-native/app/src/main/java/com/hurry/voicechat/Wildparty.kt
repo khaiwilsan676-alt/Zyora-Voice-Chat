@@ -249,8 +249,30 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
     Spacer(Modifier.height(12.dp))
     val heading=wpAsset(context,"wp_img_20260913_000423")
     if(heading!=0)Image(painterResource(heading),null,Modifier.fillMaxWidth(.80f).height(70.dp),contentScale=ContentScale.Fit)
-    Spacer(Modifier.height(18.dp))
-    Text("No winners yet.",color=Color.White,fontSize=12.sp)
+    Spacer(Modifier.height(10.dp))
+    Row(
+     Modifier.fillMaxWidth().height(150.dp),
+     horizontalArrangement=Arrangement.spacedBy(4.dp,Alignment.CenterHorizontally),
+     verticalAlignment=Alignment.Bottom
+    ){
+     val frameItems=listOf(
+      Triple("2nd","wp_img_20260912_235156",.84f),
+      Triple("1st","wp_img_20260912_235215",1f),
+      Triple("3rd","wp_img_20260912_235230",.84f)
+     )
+     frameItems.forEachIndexed{index,item->
+      val frame=wpAsset(context,item.second)
+      val animalImage=wpAsset(context,wpAnimals[winnerIndex.coerceIn(0,7)].image)
+      Box(Modifier.weight(1f).fillMaxHeight(if(index==1)1f else .88f),contentAlignment=Alignment.Center){
+       if(frame!=0)Image(painterResource(frame),null,Modifier.fillMaxSize(),contentScale=ContentScale.Fit)
+       if(animalImage!=0)Image(
+        painterResource(animalImage),null,
+        Modifier.align(Alignment.Center).size(if(index==1)48.dp else 40.dp).clip(CircleShape),
+        contentScale=ContentScale.Crop
+       )
+      }
+     }
+    }
    }
   }
  }
