@@ -1,79 +1,323 @@
 package com.hurry.voicechat
 
-import android.annotation.SuppressLint
-import android.webkit.CookieManager
-import android.webkit.JavascriptInterface
-import android.webkit.WebChromeClient
-import android.webkit.WebView
-import android.webkit.WebViewClient
-import androidx.compose.runtime.Composable
-import androidx.compose.foundation.layout.fillMaxSize
+import android.content.Context
+import androidx.compose.foundation.*
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.VolumeOff
+import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.draw.*
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.*
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import org.json.JSONArray
+import org.json.JSONObject
+import kotlin.math.*
 
-/**
- * Loads the real Fruitparty.tsx game UI in the native room.
- * Keep the original web game's artwork, layout, controls and game logic.
- */
-@SuppressLint("SetJavaScriptEnabled")
+private data class FruitItem(val id:Int,val label:String,val image:String,val multiplier:Int)
+private data class FruitHistory(val round:Int,val winnerId:Int,val bets:Map<Int,Long>,val won:Long,val time:Long)
+private enum class FruitPhase { BETTING, SPINNING, RESULT }
+
+private val fruitItems=listOf(
+ FruitItem(1,"Lemon","fp_img_20260908_192143",5),
+ FruitItem(5,"Grapes","fp_img_20260908_192120",10),
+ FruitItem(3,"Orange","fp_img_20260908_192203",5),
+ FruitItem(8,"Cherry","fp_img_20260908_192013",45),
+ FruitItem(2,"Apple","fp_img_20260908_192050",25),
+ FruitItem(7,"Mango","fp_img_20260908_191941",5),
+ FruitItem(4,"Strawberry","fp_img_20260908_191906",15),
+ FruitItem(6,"Pear","fp_img_20260908_191930",5)
+)
+private val fruitOrder=listOf(1,5,3,8,2,7,4,6)
+private val fruitSpinPath=listOf(0,1,2,5,8,7,6,3)
+private val fruitChipValues=listOf(1_000L,50_000L,1_000_000L,5_000_000L)
+private val fruitChipLabels=listOf("1K","50K","1M","5M")
+private val fruitGold=Color(0xFFFFD65A)
+private val fruitBrown=Color(0xFF4A2810)
+private val fruitPurple=Color(0xFF330C36)
+private const val fruitDefaultBalance=82927L
+
+private fun fruitAsset(context:Context,name:String)=context.resources.getIdentifier(name,"drawable",context.packageName)
+private fun fruitRound(now:Long):Int=((now/41_000L)%10_000L).toInt()+1000
+private fun fruitWinner(round:Int):Int {
+ val seed=sin(round.toDouble())*10000.0
+ val random=seed-floor(seed)
+ return when {
+  random<.025->10
+  random<.05->11
+  random<.85->listOf(1,3,7,6)[floor(random*100).toInt()%4]
+  else->listOf(5,2,8,4)[floor(random*100).toInt()%4]
+ }
+}
+private fun fruitMultiplier(id:Int)=fruitItems.firstOrNull{it.id==id}?.multiplier?:when(id){10->20;11->95;else->0}
+private fun fruitImage(id:Int)=when(id){10->"fp_img_20260910_114515";11->"fp_img_20260910_114613";else->fruitItems.firstOrNull{it.id==id}?.image.orEmpty()}
+private fun fruitAward(winner:Int,bets:Map<Int,Long>):Long=when(winner){
+ 10->(bets[10]?:0L)*20L+listOf(1,3,7,6).sumOf{(bets[it]?:0L)*5L}
+ 11->(bets[11]?:0L)*95L+(bets[5]?:0L)*10L+(bets[4]?:0L)*15L+(bets[2]?:0L)*25L+(bets[8]?:0L)*45L
+ else->(bets[winner]?:0L)*fruitMultiplier(winner)
+}
+private fun fruitBoundary(now:Long=System.currentTimeMillis()):Long {
+ val c=java.util.Calendar.getInstance().apply{timeInMillis=now}
+ if(c.get(java.util.Calendar.HOUR_OF_DAY)<5 || (c.get(java.util.Calendar.HOUR_OF_DAY)==5&&c.get(java.util.Calendar.MINUTE)<30)) c.add(java.util.Calendar.DAY_OF_YEAR,-1)
+ c.set(java.util.Calendar.HOUR_OF_DAY,5);c.set(java.util.Calendar.MINUTE,30);c.set(java.util.Calendar.SECOND,0);c.set(java.util.Calendar.MILLISECOND,0)
+ return c.timeInMillis
+}
+private fun fruitFormat(value:Long):String=when{
+ value>=1_000_000_000L->"${"%.1f".format(value/1_000_000_000.0)}B"
+ value>=1_000_000L->"${"%.1f".format(value/1_000_000.0).removeSuffix(".0")}M"
+ value>=1_000L->"${"%.0f".format(value/1_000.0)}K"
+ else->value.toString()
+}
+private fun fruitLoadHistory(context:Context):List<FruitHistory>{
+ val prefs=context.getSharedPreferences("fruit_party_native",Context.MODE_PRIVATE)
+ val boundary=fruitBoundary()
+ val a=JSONArray(prefs.getString("history","[]"))
+ return (0 until a.length()).mapNotNull{i->runCatching{
+  val o=a.getJSONObject(i);val b=o.getJSONObject("bets");val map=mutableMapOf<Int,Long>()
+  b.keys().forEach{k->map[k.toInt()]=b.optLong(k)}
+  FruitHistory(o.optInt("round"),o.optInt("winner"),map,o.optLong("won"),o.optLong("time"))
+ }.getOrNull()}.filter{it.time>=boundary}.sortedByDescending{it.time}.take(50)
+}
+private fun fruitSaveHistory(context:Context,list:List<FruitHistory>){
+ val a=JSONArray()
+ list.take(50).forEach{h->val b=JSONObject();h.bets.forEach{(k,v)->b.put(k.toString(),v)}
+  a.put(JSONObject().put("round",h.round).put("winner",h.winnerId).put("bets",b).put("won",h.won).put("time",h.time))}
+ context.getSharedPreferences("fruit_party_native",Context.MODE_PRIVATE).edit().putString("history",a.toString()).apply()
+}
+
+/** Fully native Fruit Party game. Artwork is bundled in Android drawable resources; no WebView or network page. */
 @Composable
-fun Fruitparty(
-    onClose: () -> Unit,
-    onMinimize: (() -> Unit)? = null,
-    isMinimized: Boolean = false
-) {
-    AndroidView(
-        modifier = Modifier.fillMaxSize(),
-        factory = { context ->
-            WebView(context).apply {
-                setBackgroundColor(android.graphics.Color.BLACK)
-                settings.javaScriptEnabled = true
-                settings.javaScriptCanOpenWindowsAutomatically = true
-                settings.domStorageEnabled = true
-                settings.databaseEnabled = true
-                settings.mediaPlaybackRequiresUserGesture = false
-                settings.useWideViewPort = true
-                settings.loadWithOverviewMode = true
-                settings.setSupportZoom(false)
-                settings.allowFileAccess = false
-                settings.allowContentAccess = true
-                settings.cacheMode = android.webkit.WebSettings.LOAD_DEFAULT
+fun Fruitparty(onClose:()->Unit,onMinimize:(()->Unit)?=null,isMinimized:Boolean=false){
+ val context= LocalContext.current
+ val scope= rememberCoroutineScope()
+ val dao= remember{WalletDatabase.get(context).walletDao()}
+ var balance by remember{mutableLongStateOf(fruitDefaultBalance)}
+ var totalWon by remember{mutableLongStateOf(0L)}
+ var phase by remember{mutableStateOf(FruitPhase.BETTING)}
+ var round by remember{mutableIntStateOf(fruitRound(System.currentTimeMillis()))}
+ var winner by remember{mutableIntStateOf(fruitWinner(fruitRound(System.currentTimeMillis())))}
+ var highlight by remember{mutableIntStateOf(-1)}
+ var handPointer by remember{mutableIntStateOf(0)}
+ var countdown by remember{mutableIntStateOf(30)}
+ var chipIndex by remember{mutableIntStateOf(0)}
+ var bets by remember{mutableStateOf<Map<Int,Long>>(emptyMap())}
+ var history by remember{mutableStateOf<List<FruitHistory>>(emptyList())}
+ var winners by remember{mutableStateOf<List<Int>>(emptyList())}
+ var showHistory by remember{mutableStateOf(false)}
+ var showRules by remember{mutableStateOf(false)}
+ var showResult by remember{mutableStateOf(false)}
+ var muted by remember{mutableStateOf(false)}
+ var vibration by remember{mutableStateOf(true)}
+ var loaded by remember{mutableStateOf(false)}
+ var processedRound by remember{mutableIntStateOf(-1)}
+ var lastBet by remember{mutableLongStateOf(0L)}
+ var lastWin by remember{mutableLongStateOf(0L)}
+ var lastRound by remember{mutableIntStateOf(round)}
+ var minimizedSession by remember{mutableStateOf(false)}
 
-                // The original game uses browser storage and live socket requests.
-                CookieManager.getInstance().setAcceptCookie(true)
-                CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
+ LaunchedEffect(Unit){
+  runCatching{
+   balance=dao.getUserData()?.balance?:fruitDefaultBalance
+   history=fruitLoadHistory(context)
+   totalWon=context.getSharedPreferences("fruit_party_native",Context.MODE_PRIVATE).getLong("totalWon",0L)
+  }
+  delay(200);loaded=true
+ }
+ suspend fun updateWallet(delta:Long,title:String){
+  val old=dao.getUserData()?:UserDataEntity(balance=balance)
+  val next=(old.balance+delta).coerceAtLeast(0L)
+  dao.saveUserData(old.copy(balance=next));balance=next
+  val c=java.util.Calendar.getInstance()
+  val date=String.format("%04d.%02d.%02d %02d:%02d",c.get(java.util.Calendar.YEAR),c.get(java.util.Calendar.MONTH)+1,c.get(java.util.Calendar.DAY_OF_MONTH),c.get(java.util.Calendar.HOUR_OF_DAY),c.get(java.util.Calendar.MINUTE))
+  dao.insertTransaction(TransactionEntity(title=title,amount=delta,date=date,timestamp=System.currentTimeMillis(),type="coin"))
+ }
+ fun placeBet(id:Int){
+  val amount=fruitChipValues[chipIndex]
+  if(phase!=FruitPhase.BETTING||!loaded||balance<amount)return
+  scope.launch{updateWallet(-amount,"Bet placed on Fruit Party");bets=bets.toMutableMap().also{it[id]=(it[id]?:0L)+amount}}
+ }
+ LaunchedEffect(loaded){
+  if(!loaded)return@LaunchedEffect
+  while(true){
+   val now=System.currentTimeMillis();val elapsed=now%41_000L
+   val r=fruitRound(now);val win=fruitWinner(r)
+   round=r;winner=win
+   when{
+    elapsed<30_000L->{phase=FruitPhase.BETTING;countdown=30-(elapsed/1000L).toInt();highlight=-1;handPointer=fruitSpinPath[((elapsed/1000L).toInt())%8];showResult=false}
+    elapsed<36_000L->{
+     phase=FruitPhase.SPINNING;countdown=6-((elapsed-30_000L)/1000L).toInt()
+     val spinElapsed=elapsed-31_000L
+     if(spinElapsed<0)highlight=fruitSpinPath[0] else{
+      val target=fruitSpinPath.indexOf(win).let{if(it<0)0 else it}
+      val progress=(spinElapsed/5000.0).coerceIn(0.0,1.0)
+      val eased=1.0-(1.0-progress).pow(3)
+      val step=(55*eased).roundToInt()
+      val start=(target-(55%8)+80)%8
+      highlight=fruitSpinPath[(start+step)%8]
+     }
+    }
+    else->{phase=FruitPhase.RESULT;countdown=5-((elapsed-36_000L)/1000L).toInt();highlight=win;showResult=elapsed>=36_500L}
+   }
+   delay(50)
+  }
+ }
+ LaunchedEffect(phase,round,loaded){
+  if(!loaded||phase!=FruitPhase.RESULT||processedRound==round)return@LaunchedEffect
+  processedRound=round
+  val current=bets.toMap()
+  val earned=fruitAward(winner,current)
+  val totalBet=current.values.sum()
+  val winningImage=fruitImage(winner)
+  if(winningImage.isNotEmpty()){
+   lastBet=totalBet;lastWin=earned;lastRound=round
+   if(earned>0){updateWallet(earned,"Won in Fruit Party");totalWon+=earned;context.getSharedPreferences("fruit_party_native",Context.MODE_PRIVATE).edit().putLong("totalWon",totalWon).apply()}
+   val record=FruitHistory(round,winner,current,earned,System.currentTimeMillis())
+   if(totalBet>0){history=(listOf(record)+history).take(50);fruitSaveHistory(context,history)}
+   winners=(listOf(winner)+winners).take(18)
+   bets=emptyMap()
+  }
+ }
+ LaunchedEffect(isMinimized){if(isMinimized)minimizedSession=true}
+ if(isMinimized)return
+ BoxWithConstraints(Modifier.fillMaxSize().background(Color.Black),contentAlignment=Alignment.BottomCenter){
+  val screenH=maxHeight
+  val panelH=screenH*.68f
+  Box(Modifier.fillMaxWidth().height(panelH).align(Alignment.BottomCenter).background(fruitPurple)){
+   val bg=fruitAsset(context,"fp_1787413631876_2")
+   if(bg!=0)Image(painterResource(bg),null,Modifier.fillMaxSize(),contentScale=ContentScale.FillBounds)
+   else Box(Modifier.fillMaxSize().background(fruitPurple))
+   Row(Modifier.fillMaxWidth().align(Alignment.TopCenter).padding(horizontal=22.dp, vertical=5.dp),verticalAlignment=Alignment.CenterVertically){
+    Text("◉",Modifier.clickable{vibration=!vibration}.padding(4.dp),color=fruitBrown,fontSize=19.sp)
+    Text(if(vibration)"♧" else "♧̸",Modifier.clickable{vibration=!vibration}.padding(4.dp),color=fruitBrown,fontSize=18.sp)
+    Spacer(Modifier.weight(1f))
+    Text("Round of Today $round",color=Color.White,fontSize=10.sp,fontWeight=FontWeight.Bold)
+    Spacer(Modifier.weight(1f))
+    Text("?",Modifier.clickable{showRules=true}.padding(4.dp),color=fruitBrown,fontSize=20.sp,fontWeight=FontWeight.Black)
+    Text("⌄",Modifier.clickable{minimizedSession=true;onMinimize?.invoke()}.padding(4.dp),color=fruitBrown,fontSize=20.sp)
+    Icon(Icons.Default.History,null,Modifier.size(23.dp).clickable{showHistory=true},tint=fruitBrown)
+    Icon(Icons.Default.Close,null,Modifier.size(22.dp).clickable{onClose()},tint=fruitBrown)
+   }
+   Row(Modifier.fillMaxWidth().align(Alignment.BottomCenter).padding(horizontal=22.dp, vertical=18.dp),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){
+    Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){val coin=fruitAsset(context,"fp_file_00000000e56882119c217d508b6733dc");if(coin!=0)Image(painterResource(coin),null,Modifier.size(20.dp));Text(balance.toString(),color=Color.White,fontSize=12.sp,fontWeight=FontWeight.Bold)}
+    Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){val coin=fruitAsset(context,"fp_file_00000000e56882119c217d508b6733dc");if(coin!=0)Image(painterResource(coin),null,Modifier.size(20.dp));Text(totalWon.toString(),color=Color.White,fontSize=12.sp,fontWeight=FontWeight.Bold)}
+   }
+   Row(Modifier.align(Alignment.BottomCenter).padding(bottom=screenH*.025f).fillMaxWidth().horizontalScroll(rememberScrollState()).padding(start=screenH*.12f),horizontalArrangement=Arrangement.spacedBy(8.dp)){
+    winners.asReversed().forEachIndexed{i,id->Box(Modifier.size(19.dp).clip(CircleShape).background(fruitBrown).border(1.dp,Color(0xFF3A1D09),CircleShape),contentAlignment=Alignment.Center){val res=fruitAsset(context,fruitImage(id));if(res!=0)Image(painterResource(res),null,Modifier.size(14.dp));if(i==0)Text("NEW",Modifier.align(Alignment.BottomCenter).offset(y=7.dp).background(Color(0xFF16A34A)),color=Color.White,fontSize=4.sp,fontWeight=FontWeight.Black)}}
+   }
+   Row(Modifier.align(Alignment.BottomCenter).padding(bottom=screenH*.12f),horizontalArrangement=Arrangement.spacedBy((-8).dp),verticalAlignment=Alignment.Bottom){
+    fruitChipLabels.forEachIndexed{i,label->
+     Box(Modifier.width(82.dp).height(102.dp).clickable{chipIndex=i},contentAlignment=Alignment.Center){
+      val plate=fruitAsset(context,"fp_file_00000000d9b08211b0304c61b802348b")
+      val chip=fruitAsset(context,"fp_file_000000003d24821182882f8ca412d2b6")
+      if(plate!=0)Image(painterResource(plate),null,Modifier.fillMaxSize().padding(top=if(chipIndex==i)9.dp else 0.dp),contentScale=ContentScale.Fit)
+      if(chip!=0)Image(painterResource(chip),null,Modifier.fillMaxSize().padding(top=7.dp),contentScale=ContentScale.Fit)
+      Text(label,Modifier.align(Alignment.Center).offset(y=10.dp),color=Color.White,fontSize=13.sp,fontWeight=FontWeight.Black)
+      if(chipIndex==i)Box(Modifier.align(Alignment.BottomCenter).padding(bottom=1.dp).size(9.dp).clip(CircleShape).background(fruitGold))
+     }
+    }
+   }
+  }
+  // Eight original fruit tiles around the timer.
+  Column(Modifier.fillMaxWidth().padding(horizontal=screenH*.055f).offset(y=-screenH*.30f),verticalArrangement=Arrangement.spacedBy(0.dp)){
+   val rows=listOf(fruitOrder.take(3),listOf(fruitOrder[3],0,fruitOrder[4]),fruitOrder.drop(5))
+   rows.forEachIndexed{rowIndex,row->
+    Row(Modifier.fillMaxWidth().height(screenH*.115f),horizontalArrangement=Arrangement.SpaceEvenly,verticalAlignment=Alignment.CenterVertically){
+     row.forEach{index->
+      if(index==0){
+       Box(Modifier.weight(1f).fillMaxHeight().padding(5.dp).clip(RoundedCornerShape(9.dp)).background(Color(0xFF512451)).border(2.dp,Color(0xFFD7A65B),RoundedCornerShape(9.dp)),contentAlignment=Alignment.Center){
+        Text(when(phase){FruitPhase.BETTING->"BETTING";FruitPhase.SPINNING->"SPINNING";FruitPhase.RESULT->"RESULT"},color=Color.White,fontSize=8.sp,fontWeight=FontWeight.Bold)
+        Text("${countdown}s",Modifier.padding(top=18.dp),color=Color(0xFFFFC34D),fontSize=20.sp,fontWeight=FontWeight.Black)
+       }
+      }else{
+       val item=fruitItems.first{it.id==index}
+       val active=(phase==FruitPhase.BETTING&&handPointer==fruitSpinPath.indexOf(index))||(phase!=FruitPhase.BETTING&&highlight==index)
+       val final=phase==FruitPhase.RESULT&&(winner==index||(winner==10&&index in listOf(1,3,7,6))||(winner==11&&index in listOf(5,4,2,8)))
+       Box(Modifier.weight(1f).fillMaxHeight().padding(3.dp).clip(RoundedCornerShape(8.dp)).background(if(active)Color(0xFF4C8A36)else Color(0xFF5B3A58)).border(if(active||final)2.dp else 1.dp,if(active||final)Color(0xFFB9FF75)else Color(0xFFB18B70),RoundedCornerShape(8.dp)).clickable{placeBet(item.id)},contentAlignment=Alignment.Center){
+        val tile=fruitAsset(context,"fp_file_00000000d0ec820ba666eab8bea30204");if(tile!=0)Image(painterResource(tile),null,Modifier.fillMaxSize(),contentScale=ContentScale.FillBounds)
+        val image=fruitAsset(context,item.image);if(image!=0)Image(painterResource(image),null,Modifier.fillMaxSize(.57f).align(Alignment.Center).padding(bottom=12.dp),contentScale=ContentScale.Fit)
+        Text("×${item.multiplier}",Modifier.align(Alignment.BottomCenter).padding(bottom=5.dp),color=Color.White,fontSize=11.sp,fontWeight=FontWeight.Black)
+        val bet=bets[item.id]?:0L
+        if(bet>0)Row(Modifier.align(Alignment.Center).offset(y=12.dp).clip(RoundedCornerShape(4.dp)).background(Color(0xCC4F65B9)).padding(horizontal=3.dp,vertical=1.dp),verticalAlignment=Alignment.CenterVertically){val coin=fruitAsset(context,"fp_file_00000000e56882119c217d508b6733dc");if(coin!=0)Image(painterResource(coin),null,Modifier.size(10.dp));Text(fruitFormat(bet),color=Color.White,fontSize=7.sp,fontWeight=FontWeight.Bold)}
+       }
+      }
+     }
+    }
+   }
+  }
+  // Left and right mix cards.
+  Row(Modifier.fillMaxWidth().padding(horizontal=screenH*.13f).offset(y=-screenH*.19f),horizontalArrangement=Arrangement.spacedBy(14.dp)){
+   listOf(10,11).forEach{id->
+    Box(Modifier.weight(1f).height(screenH*.105f).clip(RoundedCornerShape(9.dp)).background(Color(0xFF613B42)).border(2.dp,if(phase==FruitPhase.RESULT&&winner==id)fruitGold else Color(0xFFBD8D5A),RoundedCornerShape(9.dp)).clickable{placeBet(id)},contentAlignment=Alignment.Center){
+     val frame=fruitAsset(context,"fp_img_20260910_114625");if(frame!=0)Image(painterResource(frame),null,Modifier.fillMaxSize(),contentScale=ContentScale.FillBounds)
+     val image=fruitAsset(context,fruitImage(id));if(image!=0)Image(painterResource(image),null,Modifier.fillMaxSize(.60f),contentScale=ContentScale.Fit)
+     Text(if(id==10)"MIX ×5" else "MIX ×10–95",Modifier.align(Alignment.BottomCenter).padding(bottom=2.dp),color=Color.White,fontSize=8.sp,fontWeight=FontWeight.Black)
+     val bet=bets[id]?:0L;if(bet>0)Text(fruitFormat(bet),Modifier.align(Alignment.TopCenter).background(Color(0xCC4F65B9)).padding(2.dp),color=Color.White,fontSize=8.sp)
+    }
+   }
+  }
+  if(showResult&&phase==FruitPhase.RESULT){
+   Box(Modifier.fillMaxSize(),contentAlignment=Alignment.BottomCenter){
+    Column(Modifier.fillMaxWidth().fillMaxHeight(.44f).clip(RoundedCornerShape(topStart=8.dp,topEnd=8.dp)).background(Color(0xF0221025)).padding(14.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.SpaceBetween){
+     Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text("Round $round",color=Color.White,fontSize=18.sp,fontWeight=FontWeight.Bold);Text("${countdown}s",color=fruitGold,fontSize=18.sp,fontWeight=FontWeight.Black)}
+     val winImage=fruitAsset(context,fruitImage(winner));if(winImage!=0)Image(painterResource(winImage),null,Modifier.size(70.dp),contentScale=ContentScale.Fit)
+     Column(horizontalAlignment=Alignment.CenterHorizontally){Text("Your Winning Amount   🪙 $lastWin",color=Color(0xFF4ADE80),fontSize=14.sp,fontWeight=FontWeight.Bold);Text("Your Bet Amount   🪙 $lastBet",color=Color(0xFFFDE68A),fontSize=14.sp,fontWeight=FontWeight.Bold)}
+     Column(horizontalAlignment=Alignment.CenterHorizontally){Text("Top winner Of this Round",color=Color(0xFFFFE6A0),fontSize=11.sp,fontWeight=FontWeight.Bold);Text("No winners yet.",color=Color.White,fontSize=12.sp)}
+    }
+   }
+  }
+  if(!loaded)Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=.7f)),contentAlignment=Alignment.Center){CircularProgressIndicator(color=fruitGold)}
+  if(showHistory)FruitNativeSheet("My Records",{showHistory=false}){
+   if(history.isEmpty())Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center){Text("No played records available yet.",color=Color.Gray,fontSize=12.sp)}
+   else LazyColumn(Modifier.fillMaxWidth().weight(1f)){
+    items(history,key={"${it.round}_${it.time}"}){h->
+     Column(Modifier.fillMaxWidth().padding(vertical=9.dp)){
+      Text("Round ${h.round}",color=Color.White,fontWeight=FontWeight.Bold,fontSize=14.sp)
+      Row(verticalAlignment=Alignment.CenterVertically){Text("Award Results: ",color=Color.Gray,fontSize=11.sp);val id=fruitAsset(context,fruitImage(h.winnerId));if(id!=0)Image(painterResource(id),null,Modifier.size(24.dp))}
+      Spacer(Modifier.height(7.dp))
+      Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceAround){Text("Fruit",color=Color.Gray,fontSize=10.sp);Text("Bet",color=Color.Gray,fontSize=10.sp);Text("Award",color=Color.Gray,fontSize=10.sp)}
+      h.bets.filterValues{it>0}.forEach{(fruitId,amount)->
+       val award=when(h.winnerId){10->if(fruitId==10)amount*20 else if(fruitId in listOf(1,3,7,6))amount*5 else 0L;11->when(fruitId){11->amount*95;5->amount*10;4->amount*15;2->amount*25;8->amount*45;else->0L};else->if(fruitId==h.winnerId)amount*fruitMultiplier(fruitId)else 0L}
+       Row(Modifier.fillMaxWidth().padding(vertical=3.dp),horizontalArrangement=Arrangement.SpaceAround,verticalAlignment=Alignment.CenterVertically){
+        val im=fruitAsset(context,fruitImage(fruitId));if(im!=0)Image(painterResource(im),null,Modifier.size(22.dp))
+        Text(fruitFormat(amount),color=Color.White,fontSize=11.sp);Text(fruitFormat(award),color=if(award>0)Color(0xFF4ADE80)else Color.Gray,fontSize=11.sp)
+       }
+      }
+     }
+     HorizontalDivider(color=Color.White.copy(alpha=.12f))
+    }
+   }
+  }
+  if(showRules)FruitNativeSheet("Rules",{showRules=false}){
+   Column(Modifier.verticalScroll(rememberScrollState()).padding(18.dp),verticalArrangement=Arrangement.spacedBy(13.dp)){
+    listOf("You can place bet by Clicking on the Red button and Place the bet On the Fruit Card","10,15,25,45 give you hight coins","You will Receive Coins according to ( Your Bet × Multipler)","Left mix Card Give you all 5 times Coins ( Your Bet × all ×5 Times )","Right Mix card Give you all High Cards ( Your Bet × 10,15,25,45 Times)").forEach{Text("•  $it",color=Color.White,fontSize=13.sp,fontWeight=FontWeight.SemiBold)}
+   }
+  }
+ }
+}
 
-                webChromeClient = WebChromeClient()
-                webViewClient = object : WebViewClient() {
-                    override fun onPageFinished(view: WebView, url: String) {
-                        super.onPageFinished(view, url)
-                        view.evaluateJavascript(
-                            "window.NativeFruitParty = {" +
-                                "close: function(){ NativeFruitPartyBridge.close(); }," +
-                                "minimize: function(){ NativeFruitPartyBridge.minimize(); }" +
-                            "};",
-                            null
-                        )
-                    }
-                }
-                addJavascriptInterface(object {
-                    @JavascriptInterface
-                    fun close() {
-                        post { onClose() }
-                    }
-
-                    @JavascriptInterface
-                    fun minimize() {
-                        post { onMinimize?.invoke() }
-                    }
-                }, "NativeFruitPartyBridge")
-                loadUrl("https://zyora-voice-chat.vercel.app/native-fruitparty")
-            }
-        },
-        update = { view ->
-            if (view.url.isNullOrBlank()) {
-                view.loadUrl("https://zyora-voice-chat.vercel.app/native-fruitparty")
-            }
-        }
-    )
+@Composable
+private fun FruitNativeSheet(title:String,onDismiss:()->Unit,content:@Composable ColumnScope.()->Unit){
+ Box(Modifier.fillMaxSize().background(Color.Transparent).clickable{onDismiss()},contentAlignment=Alignment.BottomCenter){
+  Column(Modifier.fillMaxWidth().fillMaxHeight(.45f).clip(RoundedCornerShape(topStart=8.dp,topEnd=8.dp)).background(Color(0xF20A080B)).clickable(enabled=false){}.padding(horizontal=15.dp,vertical=12.dp)){
+   Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){Text("‹",Modifier.clickable{onDismiss()}.padding(horizontal=8.dp),color=Color.White,fontSize=28.sp);Text(title,Modifier.weight(1f),color=Color.White,fontWeight=FontWeight.Bold,fontSize=16.sp,textAlign=TextAlign.Center);Spacer(Modifier.width(32.dp))}
+   HorizontalDivider(color=Color.White.copy(alpha=.12f));content()
+  }
+ }
 }
