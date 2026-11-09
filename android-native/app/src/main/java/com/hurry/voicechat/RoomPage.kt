@@ -83,7 +83,7 @@ import androidx.compose.ui.window.DialogProperties
 internal fun Modifier.twoSecondLongPress(onLongPress: () -> Unit): Modifier = pointerInput(onLongPress) {
     detectTapGestures(
         onPress = {
-            val released = withTimeoutOrNull(2_000L) { tryAwaitRelease() }
+            val released = withTimeoutOrNull(1_000L) { tryAwaitRelease() }
             if (released == null) onLongPress()
         }
     )
@@ -2022,7 +2022,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
             onClose={showMenu=false},
             onClearChat={
                 messages.clear()
-                roomToastText = "Public message Cleared"
+                roomToastText = "Public message are cleared"
                 showOfficialAnnouncement = false
                 announcement = ""
                 val clearerName = roomDisplayName.ifBlank { "User" }
