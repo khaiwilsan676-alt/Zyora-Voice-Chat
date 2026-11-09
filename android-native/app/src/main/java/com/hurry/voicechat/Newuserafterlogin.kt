@@ -146,30 +146,32 @@ fun Newuserafterlogin(onBack: () -> Unit, onComplete: () -> Unit) {
                             .background(Color(0xFFEEEEEE)),
                         contentAlignment = Alignment.Center
                     ) {
-                        val genderDefaultPhoto = when (gender) {
-                            "Female" -> "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20260804_211013.jpg"
-                            "Male" -> "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20260804_211031.jpg"
-                            else -> ""
-                        }
-                        if (selectedUri != null || avatar.isNotBlank() && avatar != "/default-avatar.png" || genderDefaultPhoto.isNotBlank()) {
+                        val hasCustomAvatar = selectedUri != null ||
+                            (avatar.isNotBlank() && avatar != "/default-avatar.png")
+                        if (hasCustomAvatar) {
                             AsyncImage(
-                                model = selectedUri ?: avatar.takeIf { it.isNotBlank() && it != "/default-avatar.png" } ?: genderDefaultPhoto,
+                                model = selectedUri ?: avatar,
                                 contentDescription = "Profile photo",
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .clip(CircleShape)
                             )
                         } else {
-                            // Agar gender select nahi hua toh existing default logo hi show hoga.
+                            val genderDefaultRes = when (gender) {
+                                "Female" -> R.drawable.img_20260804_211013
+                                "Male" -> R.drawable.img_20260804_211031
+                                else -> R.drawable.hurry_logo
+                            }
                             androidx.compose.foundation.Image(
-                                painter = painterResource(id = R.drawable.hurry_logo),
-                                contentDescription = "Default Logo",
+                                painter = painterResource(id = genderDefaultRes),
+                                contentDescription = "Profile photo",
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .clip(CircleShape),
-                                colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
+                                colorFilter = if (gender.isBlank())
+                                    ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
+                                else null
                             )
-                        }
                     }
                     Box(
                         modifier = Modifier
