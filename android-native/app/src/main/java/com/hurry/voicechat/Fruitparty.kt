@@ -236,7 +236,6 @@ fun Fruitparty(onClose:()->Unit,onMinimize:(()->Unit)?=null,isMinimized:Boolean=
    if(bg!=0)Image(painterResource(bg),null,Modifier.fillMaxSize(),contentScale=ContentScale.FillBounds)
    else Box(Modifier.fillMaxSize().background(fruitPurple))
    Row(Modifier.fillMaxWidth().align(Alignment.TopCenter).padding(horizontal=22.dp, vertical=5.dp),verticalAlignment=Alignment.CenterVertically){
-    Row(horizontalArrangement=Arrangement.spacedBy(2.dp   Row(Modifier.fillMaxWidth().align(Alignment.TopCenter).padding(horizontal=22.dp, vertical=5.dp),verticalAlignment=Alignment.CenterVertically){
     Row(horizontalArrangement=Arrangement.spacedBy(2.dp),verticalAlignment=Alignment.CenterVertically){
      Box(Modifier.size(24.dp).border(2.dp,fruitBrown,CircleShape).clickable{vibration=!vibration},contentAlignment=Alignment.Center){FruitTopGlyph("vibration",!vibration)}
      Box(Modifier.size(24.dp).border(2.dp,fruitBrown,CircleShape).clickable{muted=!muted},contentAlignment=Alignment.Center){FruitTopGlyph("sound",muted)}
@@ -251,7 +250,8 @@ fun Fruitparty(onClose:()->Unit,onMinimize:(()->Unit)?=null,isMinimized:Boolean=
      Box(Modifier.size(24.dp).border(2.dp,fruitBrown,CircleShape).clickable{onClose()},contentAlignment=Alignment.Center){FruitTopGlyph("close")}
     }
    }
-Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){val coin=fruitAsset(context,"fp_file_00000000e56882119c217d508b6733dc");if(coin!=0)Image(painterResource(coin),null,Modifier.size(20.dp));Text(balance.toString(),color=Color.White,fontSize=12.sp,fontWeight=FontWeight.Bold)}
+   Row(Modifier.fillMaxWidth().align(Alignment.TopCenter).padding(top=34.dp,start=26.dp,end=26.dp),horizontalArrangement=Arrangement.SpaceBetween){
+    Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){val coin=fruitAsset(context,"fp_file_00000000e56882119c217d508b6733dc");if(coin!=0)Image(painterResource(coin),null,Modifier.size(20.dp));Text(balance.toString(),color=Color.White,fontSize=12.sp,fontWeight=FontWeight.Bold)}
     Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){val coin=fruitAsset(context,"fp_file_00000000e56882119c217d508b6733dc");if(coin!=0)Image(painterResource(coin),null,Modifier.size(20.dp));Text(totalWon.toString(),color=Color.White,fontSize=12.sp,fontWeight=FontWeight.Bold)}
    }
    Row(Modifier.align(Alignment.BottomCenter).padding(bottom=screenH*.025f).fillMaxWidth().horizontalScroll(rememberScrollState()).padding(start=screenH*.12f),horizontalArrangement=Arrangement.spacedBy(8.dp)){
