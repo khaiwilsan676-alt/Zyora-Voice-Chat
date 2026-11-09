@@ -7,6 +7,10 @@ import android.media.AudioAttributes
 import android.media.AudioManager
 import android.media.MediaPlayer
 import android.media.MediaRecorder
+import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.text.TextRecognition
+import com.google.mlkit.vision.text.latin.TextRecognizerOptions
+import com.google.android.gms.tasks.Tasks
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -814,6 +818,22 @@ fun NativeChatScreen(
         if (uri != null) {
             val messageId = currentUserId + "_" + System.currentTimeMillis()
             chatScope.launch {
+                val containsOtherAppUi = runCatching {
+                    withContext(Dispatchers.IO) {
+                        val image = InputImage.fromFilePath(context, uri)
+                        val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+                        try {
+                            val recognizedText = Tasks.await(recognizer.process(image)).text
+                            containsProhibitedChatText(recognizedText)
+                        } finally {
+                            recognizer.close()
+                        }
+                    }
+                }.getOrDefault(false)
+                if (containsOtherAppUi) {
+                    blockPopupText = "Other application screenshots are blocked"
+                    return@launch
+                }
                 val imageUrl = runCatching { uploadChatImage(context, uri, messageId, "chat-image") }.getOrNull()
                 if (!imageUrl.isNullOrBlank()) {
                     val localImage = "IMAGE::" + imageUrl
