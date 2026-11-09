@@ -2250,7 +2250,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                 },
                 onMute = {
                     val index = seats.indexOfFirst { it.occupied && it.accountId == profileId }
-                    if (index >= 0 && (accountId == roomOwner.accountId || accountId == roomOwner.id || accountId == roomId)) {
+                    if (index >= 0 && (accountId == roomOwner.accountId || accountId == roomOwner.id || accountId == roomOwner.uid || accountId == roomId || roomAdminIds.any { it.trim() == accountId.trim() })) {
                         val nextMuted = !seats[index].muted
                         seats[index] = seats[index].copy(muted = nextMuted)
                         roomSocketRef.value?.emit("room_seat_action", JSONObject().put("roomId", roomId).put("userId", accountId).put("action", "owner_mute").put("seatNumber", seats[index].number).put("isMuted", nextMuted))
@@ -2258,7 +2258,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                 },
                 onLock = {
                     val index = seats.indexOfFirst { it.occupied && it.accountId == profileId }
-                    if (index >= 0 && (accountId == roomOwner.accountId || accountId == roomOwner.id || accountId == roomId)) {
+                    if (index >= 0 && (accountId == roomOwner.accountId || accountId == roomOwner.id || accountId == roomOwner.uid || accountId == roomId || roomAdminIds.any { it.trim() == accountId.trim() })) {
                         val seatNumber = seats[index].number
                         val nextLocked = !seats[index].locked
                         seats[index] = if (nextLocked) NativeRoomSeat(number = seatNumber, locked = true)
@@ -2398,7 +2398,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                 },
                 onLock = {
                     val idx = seats.indexOfFirst { it.number == selectedSeat }
-                    if (idx >= 0 && (accountId == roomOwner.accountId || accountId == roomOwner.id || accountId == roomId)) {
+                    if (idx >= 0 && (accountId == roomOwner.accountId || accountId == roomOwner.id || accountId == roomOwner.uid || accountId == roomId || roomAdminIds.any { it.trim() == accountId.trim() })) {
                         val nextLocked = !seats[idx].locked
                         val lockedSeat = seats[idx]
                         seats[idx] = if (nextLocked) NativeRoomSeat(number = selectedSeat, locked = true)
