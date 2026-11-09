@@ -1694,6 +1694,7 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                         .fillMaxWidth()
                         .zIndex(100f)
                 ) {
+                    Row(
                         Modifier.fillMaxWidth()
                             .background(Color.White)
                             .padding(horizontal=16.dp, vertical=12.dp),
