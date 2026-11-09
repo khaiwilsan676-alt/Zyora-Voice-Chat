@@ -9,6 +9,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.PhoneAndroid
+import androidx.compose.material.icons.filled.AccessTime
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.VolumeOff
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.*
@@ -206,15 +209,32 @@ fun Fruitparty(onClose:()->Unit,onMinimize:(()->Unit)?=null,isMinimized:Boolean=
    if(bg!=0)Image(painterResource(bg),null,Modifier.fillMaxSize(),contentScale=ContentScale.FillBounds)
    else Box(Modifier.fillMaxSize().background(fruitPurple))
    Row(Modifier.fillMaxWidth().align(Alignment.TopCenter).padding(horizontal=22.dp, vertical=5.dp),verticalAlignment=Alignment.CenterVertically){
-    Text(if(muted)"◖×" else "◖))",Modifier.clickable{muted=!muted}.padding(4.dp),color=fruitBrown,fontSize=16.sp)
-    Text(if(vibration)"♧" else "♧̸",Modifier.clickable{vibration=!vibration}.padding(4.dp),color=fruitBrown,fontSize=18.sp)
+    Row(horizontalArrangement=Arrangement.spacedBy(2.dp),verticalAlignment=Alignment.CenterVertically){
+     Box(Modifier.size(24.dp).border(2.dp,fruitBrown,CircleShape).clickable{vibration=!vibration},contentAlignment=Alignment.Center){
+      Icon(Icons.Default.PhoneAndroid,null,Modifier.size(15.dp),tint=fruitBrown)
+      if(!vibration)Canvas(Modifier.size(15.dp)){drawLine(fruitBrown,Offset(size.width*.08f,size.height*.08f),Offset(size.width*.92f,size.height*.92f),strokeWidth=2.dp.toPx())}
+     }
+     Box(Modifier.size(24.dp).border(2.dp,fruitBrown,CircleShape).clickable{muted=!muted},contentAlignment=Alignment.Center){
+      Icon(if(muted)Icons.Default.VolumeOff else Icons.Default.VolumeUp,null,Modifier.size(15.dp),tint=fruitBrown)
+     }
+     Box(Modifier.size(24.dp).border(2.dp,fruitBrown,CircleShape).clickable{showRules=true},contentAlignment=Alignment.Center){
+      Text("?",color=fruitBrown,fontSize=17.sp,fontWeight=FontWeight.Black,fontFamily=androidx.compose.ui.text.font.FontFamily.Serif)
+     }
+    }
     Spacer(Modifier.weight(1f))
     Text("Round of Today $round",color=Color.White,fontSize=10.sp,fontWeight=FontWeight.Bold)
     Spacer(Modifier.weight(1f))
-    Text("?",Modifier.clickable{showRules=true}.padding(4.dp),color=fruitBrown,fontSize=20.sp,fontWeight=FontWeight.Black)
-    Text("⌄",Modifier.clickable{minimizedSession=true;onMinimize?.invoke()}.padding(4.dp),color=fruitBrown,fontSize=20.sp)
-    Text("◷",Modifier.clickable{showHistory=true}.padding(4.dp),color=fruitBrown,fontSize=20.sp)
-    Icon(Icons.Default.Close,null,Modifier.size(22.dp).clickable{onClose()},tint=fruitBrown)
+    Row(horizontalArrangement=Arrangement.spacedBy(2.dp),verticalAlignment=Alignment.CenterVertically){
+     Box(Modifier.size(24.dp).border(2.dp,fruitBrown,CircleShape).clickable{minimizedSession=true;onMinimize?.invoke()},contentAlignment=Alignment.Center){
+      Icon(Icons.Default.KeyboardArrowDown,null,Modifier.size(18.dp),tint=fruitBrown)
+     }
+     Box(Modifier.size(24.dp).border(2.dp,fruitBrown,CircleShape).clickable{showHistory=true},contentAlignment=Alignment.Center){
+      Icon(Icons.Default.AccessTime,null,Modifier.size(16.dp),tint=fruitBrown)
+     }
+     Box(Modifier.size(24.dp).border(2.dp,fruitBrown,CircleShape).clickable{onClose()},contentAlignment=Alignment.Center){
+      Icon(Icons.Default.Close,null,Modifier.size(16.dp),tint=fruitBrown)
+     }
+    }
    }
    Row(Modifier.fillMaxWidth().align(Alignment.BottomCenter).padding(horizontal=22.dp, vertical=18.dp),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){
     Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){val coin=fruitAsset(context,"fp_file_00000000e56882119c217d508b6733dc");if(coin!=0)Image(painterResource(coin),null,Modifier.size(20.dp));Text(balance.toString(),color=Color.White,fontSize=12.sp,fontWeight=FontWeight.Bold)}
