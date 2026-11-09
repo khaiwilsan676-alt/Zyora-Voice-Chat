@@ -831,7 +831,7 @@ fun NativeChatScreen(
                     }
                 }.getOrDefault(false)
                 if (containsOtherAppUi) {
-                    blockPopupText = "Other application screenshots are blocked"
+                    blockPopupText = "Can't Send Image-prohibited"
                     return@launch
                 }
                 val imageUrl = runCatching { uploadChatImage(context, uri, messageId, "chat-image") }.getOrNull()
