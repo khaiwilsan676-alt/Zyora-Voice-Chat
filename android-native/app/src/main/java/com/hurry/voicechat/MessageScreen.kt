@@ -77,13 +77,17 @@ private fun containsProhibitedChatText(value: String): Boolean {
         .map { token -> token.filter { ch -> ch.isLetterOrDigit() } }
         .filter { it.isNotBlank() }
     val prohibited = setOf(
-        "madarchod", "madarchot", "mc", "bhenchod", "behenchod", "bhench0d",
-        "behench0d", "bc", "bhosdike", "bhosdi", "bhosda", "bhosdiwale",
-        "chutiya", "chutia", "chutiye", "chootiya", "gaand", "gandu", "gaanduu",
-        "gaandmara", "lund", "lodu", "lode", "lavde", "laude", "randi",
-        "harami", "haramzada", "kutta", "kamina", "saali", "bitch", "bitches",
-        "fuck", "fucking", "fucker", "motherfucker", "shit", "shitty",
-        "asshole", "bastard", "dick", "dickhead", "pussy", "slut", "whore"
+        "madarchod", "madarchot", "madarchood", "maderchod", "mc", "bhenchod",
+        "behenchod", "bhench0d", "behench0d", "bhench*d", "bc", "bhosdike",
+        "bhosdi", "bhosda", "bhosdiwale", "bhosad", "bhosadike", "bhosrika",
+        "chutiya", "chutia", "chutiye", "chootiya", "chutiaa", "chut", "gaand",
+        "gandu", "gaanduu", "gaandmara", "gaandfat", "lund", "lodu", "lode",
+        "lavde", "laude", "lawde", "lawda", "randi", "rand", "harami",
+        "haramzada", "haraamzada", "kutta", "kutti", "kamina", "kamine",
+        "saali", "saala", "sala", "bitch", "bitches", "bastard", "asshole",
+        "fuck", "fucking", "fucker", "motherfucker", "shit", "shitty", "bullshit",
+        "dick", "dickhead", "pussy", "slut", "whore", "sonofabitch", "dumbass",
+        "idiot", "moron", "piss", "wanker", "twat"
     )
     return words.any { word ->
         val normalized = word.replace('0', 'o').replace('1', 'i').replace('3', 'e').replace('4', 'a').replace('5', 's').replace('8', 'b')
