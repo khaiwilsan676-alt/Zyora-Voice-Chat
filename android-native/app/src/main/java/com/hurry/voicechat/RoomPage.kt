@@ -1690,9 +1690,69 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                         )
                     }
                 }
-                // Exact existing composer footprint: 48dp field + 24dp vertical
-                // padding, plus system navigation inset. This spacer is transparent.
-                Spacer(Modifier.navigationBarsPadding().height(72.dp))
+                // Keep the room chat composer above the black/50 chat layer.
+                Row(
+                    Modifier.fillMaxWidth().navigationBarsPadding()
+                        .background(Color.White)
+                        .padding(horizontal=16.dp, vertical=12.dp)
+                        .zIndex(51f),
+                    verticalAlignment=Alignment.CenterVertically,
+                    horizontalArrangement=Arrangement.spacedBy(10.dp)
+                ) {
+                    IconButton(onClick={roomImagePickerLauncher.launch("image/*")}, modifier=Modifier.size(28.dp)) {
+                        Image(painterResource(R.drawable.ic_hurry_chat_image), contentDescription="Image", modifier=Modifier.size(26.dp))
+                    }
+                    Row(
+                        Modifier.weight(1f).height(48.dp).clip(RoundedCornerShape(24.dp))
+                            .background(Color(0xFFF3F4F6)).padding(start=16.dp, end=6.dp),
+                        verticalAlignment=Alignment.CenterVertically
+                    ) {
+                        androidx.compose.foundation.text.BasicTextField(
+                            value=TextFieldValue(text=input, selection=TextRange(inputSelection.coerceIn(0, input.length))),
+                            onValueChange={ input=it.text; inputSelection=it.selection.start },
+                            singleLine=true,
+                            textStyle=androidx.compose.ui.text.TextStyle(color=Color.Black,fontSize=15.sp),
+                            cursorBrush=SolidColor(Color(0xFF3B82F6)),
+                            modifier=Modifier.weight(1f).fillMaxHeight().focusRequester(chatFocusRequester),
+                            decorationBox={innerTextField ->
+                                Box(Modifier.fillMaxSize(), contentAlignment=Alignment.CenterStart) {
+                                    if(input.isEmpty()) Text("Type a message...",color=Color(0xFF8A8F98),fontSize=15.sp)
+                                    innerTextField()
+                                }
+                            }
+                        )
+                        val isRoomInputBlank = input.isBlank()
+                        Box(
+                            Modifier.size(36.dp).clip(CircleShape)
+                                .background(if(isRoomInputBlank) Color(0xFF9CA3AF) else Color(0xFF3B82F6))
+                                .clickable(enabled=!isRoomInputBlank) {
+                                    if (publicMsgOff && !canSendRoomPublicMessage) {
+                                        showPublicMessageClosedToast = true
+                                    } else {
+                                        val text=input.trim()
+                                        val createdAt=System.currentTimeMillis()
+                                        val messageId="$accountId-$createdAt"
+                                        val mentions=pendingMentions.filter { text.contains("@${it.name}") }
+                                        val outgoing=NativeRoomMessage(messageId,text,roomDisplayName,roomDisplayImage,accountId,createdAt,"message",mentions)
+                                        messages.add(outgoing)
+                                        val mentionsJson=JSONArray().apply { mentions.forEach { put(JSONObject().put("accountId",it.accountId).put("name",it.name)) } }
+                                        roomSocketRef.value?.takeIf{it.connected()}?.emit(
+                                            "room_message",
+                                            JSONObject().put("id",messageId).put("roomId",roomId).put("senderId",accountId)
+                                                .put("senderAccountId",accountId).put("senderName",roomDisplayName)
+                                                .put("senderAvatar",roomDisplayImage).put("senderImage",roomDisplayImage)
+                                                .put("text",text).put("mentions",mentionsJson).put("type","message").put("createdAt",createdAt)
+                                        )
+                                        input=""; inputSelection=0
+                                        pendingMentions=emptyList()
+                                    }
+                                },
+                            contentAlignment=Alignment.Center
+                        ) {
+                            Icon(Icons.Default.Send,null,tint=Color.White,modifier=Modifier.size(18.dp).padding(start=2.dp))
+                        }
+                    }
+                }
             }
         }
 
