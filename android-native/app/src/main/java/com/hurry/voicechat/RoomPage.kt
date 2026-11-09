@@ -782,11 +782,9 @@ fun RoomPage(
     val density = LocalDensity.current
     val screenWidthPx = remember(configuration, density) { with(density) { configuration.screenWidthDp.dp.roundToPx() } }
     
-    LaunchedEffect(showChat, imeVisible) {
-        if (!showChat) keyboardShownForChat = false
-        else if (imeVisible) keyboardShownForChat = true
-        else if (keyboardShownForChat) { showChat = false; keyboardShownForChat = false }
-    }
+    // Keep room chat open while the keyboard switches between letters and emoji.
+    // The IME can briefly report hidden during that transition; only the close
+    // button should dismiss the chat composer.
     val roomSocketRef=remember{mutableStateOf<io.socket.client.Socket?>(null)}
 
     LaunchedEffect(showChat, roomSocketRef.value) {
