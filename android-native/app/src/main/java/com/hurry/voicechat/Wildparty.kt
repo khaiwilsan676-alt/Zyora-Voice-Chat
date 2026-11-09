@@ -247,7 +247,7 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
     Text("Winning Amount   ${winAmount}",color=wpGold,fontWeight=FontWeight.Black,fontSize=17.sp)
     Text("Bet Amount   ${betAmount}",color=Color.White,fontSize=13.sp)
     Spacer(Modifier.height(12.dp))
-    val heading=wpAsset(context,"wp_IMG_20260913_000423")
+    val heading=wpAsset(context,"wp_img_20260913_000423")
     if(heading!=0)Image(painterResource(heading),null,Modifier.fillMaxWidth(.80f).height(70.dp),contentScale=ContentScale.Fit)
     Spacer(Modifier.height(18.dp))
     Text("No winners yet.",color=Color.White,fontSize=12.sp)
