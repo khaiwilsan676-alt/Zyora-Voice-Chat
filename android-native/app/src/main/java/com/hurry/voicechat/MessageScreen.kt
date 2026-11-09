@@ -70,6 +70,27 @@ import java.util.Locale
 
 private const val RAW_MSG = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/"
 
+
+private fun containsProhibitedChatText(value: String): Boolean {
+    val words = value.lowercase(Locale.ROOT)
+        .split(Regex("[^\\p{L}\\p{N}]+"))
+        .map { it.filter(Char::isLetterOrDigit) }
+        .filter { it.isNotBlank() }
+    val prohibited = setOf(
+        "madarchod", "madarchot", "mc", "bhenchod", "behenchod", "bhench0d",
+        "behench0d", "bc", "bhosdike", "bhosdi", "bhosda", "bhosdiwale",
+        "chutiya", "chutia", "chutiye", "chootiya", "gaand", "gandu", "gaanduu",
+        "gaandmara", "lund", "lodu", "lode", "lavde", "laude", "randi",
+        "harami", "haramzada", "kutta", "kamina", "saali", "bitch", "bitches",
+        "fuck", "fucking", "fucker", "motherfucker", "shit", "shitty",
+        "asshole", "bastard", "dick", "dickhead", "pussy", "slut", "whore"
+    )
+    return words.any { word ->
+        val normalized = word.replace('0', 'o').replace('1', 'i').replace('3', 'e').replace('4', 'a').replace('5', 's').replace('8', 'b')
+        normalized in prohibited || (normalized.length >= 5 && prohibited.any { normalized.contains(it) })
+    }
+}
+
 data class ZyoraIncomingMessageBanner(
     val messageId: String,
     val senderId: String,
@@ -1636,6 +1657,10 @@ fun NativeChatScreen(
                                                     return@clickable
                                                 }
                                                 val outgoingText = text.trim()
+                                                if (containsProhibitedChatText(outgoingText)) {
+                                                    blockPopupText = "Can't send text-prohibited"
+                                                    return@clickable
+                                                }
                                                 val outgoingId = "${currentUserId}_${System.currentTimeMillis()}"
                                                 val outgoing = JSONObject()
                                                     .put("id", outgoingId)
