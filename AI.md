@@ -497,8 +497,8 @@ Current documentation does not certify that all historical features are build-, 
 
 
 ### Private chat prohibited-word filter (2026-11-09)
-- Native Message ChatPage checks outgoing text before emitting `private_message`.
-- Common Hindi/Hinglish and English abusive terms and common leetspeak substitutions are blocked; rejected text is not emitted and the draft remains available for correction.
-- Rejection uses the existing small centered Black/70 toast styling with the exact text: `Can't send text-prohibited`.
+- Native `MessageScreen.kt` checks outgoing private-chat text before emitting `private_message`.
+- Expanded the blocked Hindi/Hinglish and English profanity list, including common spelling variants. Common leetspeak substitutions are still checked only as part of matching abusive words; ordinary digits and letters (including standalone `0` and `o`) remain allowed.
+- Rejected text is not emitted and remains in the draft for correction. The existing small centered Black/70 toast still displays exactly: `Can't send text-prohibited`.
 - No other chat UI or message behavior is intentionally changed.
 - Status: source committed; native build and runtime verification pending.
