@@ -58,9 +58,27 @@ val copyGenderAssets = tasks.register<Copy>("copyGenderAssets") {
             "file_00000000330c8211b80be136b631b3e0.png", "file_000000009d808211b8ffb7c2183b4ef5.png",
             "1787344138649~2.jpg", "file_00000000e56882119c217d508b6733dc.png",
             "IMG_20260913_000423.png", "IMG_20260912_235156.png", "IMG_20260912_235215.png",
-            "IMG_20260912_235230.png"
+            "IMG_20260912_235230.png",
+            "IMG_20260908_192143.png", "IMG_20260908_192120.png",
+            "IMG_20260908_192203.png", "IMG_20260908_192013.png",
+            "IMG_20260908_192050.png", "IMG_20260908_191941.png",
+            "IMG_20260908_191906.png", "IMG_20260908_191930.png",
+            "IMG_20260910_114515.png", "IMG_20260910_114613.png",
+            "IMG_20260910_114625.png", "file_00000000d0ec820ba666eab8bea30204.png",
+            "file_000000000f0c820b95490c9d927692d9.png",
+            "file_0000000023cc8230baec62632d74e698.png",
+            "file_00000000d9b08211b0304c61b802348b.png",
+            "file_000000003d24821182882f8ca412d2b6.png",
+            "1787413631876~2.jpg", "file_00000000ced481fa9117afc4fa91791e.png",
+            "file_00000000eb0081f4885ade7d7db3bef8.png", "fruit-party-logo.jpg"
         )
-        rename { fileName -> if (fileName.startsWith("IMG_20261031") || fileName.startsWith("IMG_20260804")) fileName.lowercase() else "wp_" + fileName.lowercase().replace("~", "_").replace("-", "_").replace(" ", "_") }
+        rename { fileName ->
+            when {
+                fileName in setOf("IMG_20260908_192143.png", "IMG_20260908_192120.png", "IMG_20260908_192203.png", "IMG_20260908_192013.png", "IMG_20260908_192050.png", "IMG_20260908_191941.png", "IMG_20260908_191906.png", "IMG_20260908_191930.png", "IMG_20260910_114515.png", "IMG_20260910_114613.png", "IMG_20260910_114625.png", "file_00000000d0ec820ba666eab8bea30204.png", "file_000000000f0c820b95490c9d927692d9.png", "file_0000000023cc8230baec62632d74e698.png", "file_00000000d9b08211b0304c61b802348b.png", "file_000000003d24821182882f8ca412d2b6.png", "1787413631876~2.jpg", "file_00000000ced481fa9117afc4fa91791e.png", "file_00000000eb0081f4885ade7d7db3bef8.png", "fruit-party-logo.jpg") -> "fp_" + fileName.lowercase().replace("~", "_").replace("-", "_").replace(" ", "_")
+                fileName.startsWith("IMG_20261031") || fileName.startsWith("IMG_20260804") -> fileName.lowercase()
+                else -> "wp_" + fileName.lowercase().replace("~", "_").replace("-", "_").replace(" ", "_")
+            }
+        }
     }
     into(generatedGenderResources.map { it.dir("drawable") })
 }
