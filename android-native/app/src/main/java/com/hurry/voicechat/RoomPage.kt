@@ -1089,10 +1089,10 @@ fun RoomPage(
                         ))
                     }
                     val ownerIds = setOf(roomOwner.accountId, roomOwner.id, roomOwner.uid, roomId).filter { it.isNotBlank() }.toSet()
-                    if (accountId in ownerIds && ownerAutoSeatAttempted.compareAndSet(false, true)) {
-                        val firstSeat = parsed.firstOrNull { it.number == 1 }
+                    val firstSeat = parsed.firstOrNull { it.number == 1 }
+                    if (accountId in ownerIds && firstSeat != null && ownerAutoSeatAttempted.compareAndSet(false, true)) {
                         val ownerAlreadySeated = parsed.any { it.occupied && it.accountId in ownerIds }
-                        if (firstSeat != null && !firstSeat.occupied && !firstSeat.locked && !ownerAlreadySeated) {
+                        if (!firstSeat.occupied && !firstSeat.locked && !ownerAlreadySeated) {
                             val ownerUser = JSONObject()
                                 .put("name", latestRoomDisplayName.ifBlank { "User" })
                                 .put("image", latestRoomDisplayImage.ifBlank { "https://zyora-server.onrender.com/default-avatar.png" })
