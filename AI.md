@@ -510,3 +510,10 @@ Current documentation does not certify that all historical features are build-, 
 - Native APK build and multi-account runtime verification remain pending.
 
 - Native room owner auto-seat: on the first valid seat snapshot after entering a room, the owner is placed in seat 1 only when seat 1 is empty and unlocked and the owner is not already seated. If seat 1 is occupied, the existing seat display/behavior is preserved. A missing seat-1 entry no longer consumes the one-time auto-seat attempt. No UI changes.
+
+
+## 15. Chat message copy and clear feedback (2026-11-10)
+- Native room chat messages and private MessageScreen chat bubbles support clipboard copy after a two-second press-and-hold; the small centered black/70 confirmation reads `Copy to clipboard`.
+- Clearing room chat shows the black/70 confirmation `Public message Cleared`.
+- Tapping the room chat black/50 layer closes it using the same state change as the top down-arrow control.
+- No chat layout, colors, message delivery, or storage behavior is intentionally changed.
