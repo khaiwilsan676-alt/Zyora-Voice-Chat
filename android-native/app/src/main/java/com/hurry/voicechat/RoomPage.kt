@@ -1752,9 +1752,6 @@ Column(Modifier.align(Alignment.BottomStart).padding(bottom=LocalConfiguration.c
                         Row(Modifier.fillMaxWidth(0.80f).clip(RoundedCornerShape(topStart=50.dp,bottomStart=50.dp,topEnd=0.dp,bottomEnd=0.dp)).background(Brush.horizontalGradient(listOf(Color(0xCC2563EB),Color(0x802563EB),Color.Transparent))).padding(start=10.dp,end=10.dp,top=2.dp,bottom=2.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(6.dp)) {
                             FallbackAsyncImage(model=toast.image,contentDescription=toast.name,modifier=Modifier.size(24.dp).clip(CircleShape),contentScale=ContentScale.Crop)
                             Text(toast.name,color=Color.White,fontSize=13.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold,maxLines=1,modifier=Modifier.weight(1f, fill=false))
-                            if (toast.accountId in roomAdminIds) {
-                                AsyncImage(model=ROOM_ADMIN_TAG, contentDescription="Room Admin", contentScale=ContentScale.Fit, modifier=Modifier.height(16.dp))
-                            }
                             Text("Enter the Room",color=Color.White,fontSize=12.sp,fontWeight=FontWeight.Bold,maxLines=1)
                             if (toast.vehicleVideo.isNotBlank()) {
                                 val vehicleUrl = if (toast.vehicleVideo.startsWith("http", true)) toast.vehicleVideo else "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/" + toast.vehicleVideo
@@ -2720,6 +2717,8 @@ private fun RoomChatMessages(
                                             Text(message.sender,color=Color.White.copy(alpha=.95f),fontSize=12.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold)
                                             if (message.senderAccountId == roomOwnerId) {
                                                 AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261027_235537.png", contentDescription="Owner", contentScale=ContentScale.Fit, modifier=Modifier.height(16.dp))
+                                            } else if (message.senderAccountId in roomAdminIds) {
+                                                AsyncImage(model=ROOM_ADMIN_TAG, contentDescription="Room Admin", contentScale=ContentScale.Fit, modifier=Modifier.height(16.dp))
                                             }
                                             
 
