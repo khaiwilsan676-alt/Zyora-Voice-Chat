@@ -50,6 +50,11 @@ jobs:
           yes | sdkmanager --licenses >/dev/null || true
           sdkmanager "platforms;android-36" "build-tools;36.0.0"
 
+      - name: Install WebP artwork optimizer
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y webp
+
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
