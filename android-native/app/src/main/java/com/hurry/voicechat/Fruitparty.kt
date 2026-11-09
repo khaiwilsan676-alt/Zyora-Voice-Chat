@@ -188,9 +188,9 @@ fun Fruitparty(onClose:()->Unit,onMinimize:(()->Unit)?=null,isMinimized:Boolean=
   if(winningImage.isNotEmpty()){
    lastBet=totalBet;lastWin=earned;lastRound=round
    if(earned>0){updateWallet(earned,"Won in Fruit Party");totalWon+=earned;context.getSharedPreferences("fruit_party_native",Context.MODE_PRIVATE).edit().putLong("totalWon",totalWon).apply()}
-   val record=FruitHistory(round,winner,current,earned,System.currentTimeMillis())
+   val record=FruitHistory(round,winnerId,current,earned,System.currentTimeMillis())
    if(totalBet>0){history=(listOf(record)+history).take(50);fruitSaveHistory(context,history)}
-   winners=(listOf(winner)+winners).take(18)
+   winners=(listOf(winnerId)+winners).take(18)
    bets=emptyMap()
   }
  }
@@ -276,7 +276,7 @@ fun Fruitparty(onClose:()->Unit,onMinimize:(()->Unit)?=null,isMinimized:Boolean=
    Box(Modifier.fillMaxSize(),contentAlignment=Alignment.BottomCenter){
     Column(Modifier.fillMaxWidth().fillMaxHeight(.44f).clip(RoundedCornerShape(topStart=8.dp,topEnd=8.dp)).background(Color(0xF0221025)).padding(14.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.SpaceBetween){
      Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text("Round $round",color=Color.White,fontSize=18.sp,fontWeight=FontWeight.Bold);Text("${countdown}s",color=fruitGold,fontSize=18.sp,fontWeight=FontWeight.Black)}
-     val winImage=fruitAsset(context,fruitImage(winner));if(winImage!=0)Image(painterResource(winImage),null,Modifier.size(70.dp),contentScale=ContentScale.Fit)
+     val winImage=fruitAsset(context,fruitImage(fruitWinnerId(winner)));if(winImage!=0)Image(painterResource(winImage),null,Modifier.size(70.dp),contentScale=ContentScale.Fit)
      Column(horizontalAlignment=Alignment.CenterHorizontally){Text("Your Winning Amount   🪙 $lastWin",color=Color(0xFF4ADE80),fontSize=14.sp,fontWeight=FontWeight.Bold);Text("Your Bet Amount   🪙 $lastBet",color=Color(0xFFFDE68A),fontSize=14.sp,fontWeight=FontWeight.Bold)}
      Column(horizontalAlignment=Alignment.CenterHorizontally){Text("Top winner Of this Round",color=Color(0xFFFFE6A0),fontSize=11.sp,fontWeight=FontWeight.Bold);Text("No winners yet.",color=Color.White,fontSize=12.sp)}
     }
