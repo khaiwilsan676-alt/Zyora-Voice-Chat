@@ -529,12 +529,6 @@ fun RoomPage(
     val isRoomOwner = accountId == roomOwnerAccountId || roomAdminIds.any { it.trim() == accountId.trim() }
     val canSendRoomPublicMessage = isRoomOwner || roomAdminIds.any { it == accountId }
     LaunchedEffect(showPublicMessageClosedToast) {
-        if (roomToastText.isNotBlank()) {
-            Text(roomToastText, color = Color.White, fontSize = 12.sp,
-                modifier = Modifier.align(Alignment.Center).zIndex(102f)
-                    .clip(RoundedCornerShape(8.dp)).background(Color.Black.copy(alpha = 0.70f))
-                    .padding(horizontal = 14.dp, vertical = 8.dp))
-        }
         if (showPublicMessageClosedToast) {
             kotlinx.coroutines.delay(1800)
             showPublicMessageClosedToast = false
@@ -1339,6 +1333,16 @@ fun RoomPage(
     }
 
     Box(Modifier.fillMaxSize().background(Color.Black)){
+        if (roomToastText.isNotBlank()) {
+            Text(
+                text = roomToastText,
+                color = Color.White,
+                fontSize = 12.sp,
+                modifier = Modifier.align(Alignment.Center).zIndex(102f)
+                    .clip(RoundedCornerShape(8.dp)).background(Color.Black.copy(alpha = 0.70f))
+                    .padding(horizontal = 14.dp, vertical = 8.dp)
+            )
+        }
         if (showRoomOwnerBlockedToast) {
             Text(
                 text = "You're blocked by Room owner",
