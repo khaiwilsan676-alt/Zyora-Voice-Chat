@@ -87,11 +87,21 @@ private fun containsProhibitedChatText(value: String): Boolean {
         "saali", "saala", "sala", "bitch", "bitches", "bastard", "asshole",
         "fuck", "fucking", "fucker", "motherfucker", "shit", "shitty", "bullshit",
         "dick", "dickhead", "pussy", "slut", "whore", "sonofabitch", "dumbass",
-        "idiot", "moron", "piss", "wanker", "twat"
+        "idiot", "moron", "piss", "wanker", "twat",
+        // Additional common Hindi/Hinglish spellings and abbreviations.
+        "bsdk", "bhosdike", "bhosdika", "bhosdiki", "bhosd", "bhosra",
+        "behnchod", "bhench0d", "bhenchood", "bhenchut", "bhenkelode",
+        "mkc", "mkl", "bkl", "lodu", "chodu", "ch00tiya", "ch00t",
+        "gand", "gandu", "gandfat", "gandmara", "gaandichut", "jhaatu",
+        "jhatu", "jhaant", "jhant", "tatte", "tatta", "suar", "suwar",
+        "rakhail", "raand", "randwa", "haramkhor", "haramkhoron",
+        "kamjat", "kameena", "kameeni", "kutte", "kuttiya", "kutti",
+        "besharam", "nalayak", "chamaar", "chamar", "neech", "gadha",
+        "gadhi", "pig", "cunt", "cocksucker", "prick", "jerkoff"
     )
     return words.any { word ->
         val normalized = word.replace('0', 'o').replace('1', 'i').replace('3', 'e').replace('4', 'a').replace('5', 's').replace('8', 'b')
-        normalized in prohibited || (normalized.length >= 5 && prohibited.any { normalized.contains(it) })
+        normalized in prohibited || (normalized.length >= 5 && prohibited.any { it.length >= 5 && normalized.contains(it) })
     }
 }
 
