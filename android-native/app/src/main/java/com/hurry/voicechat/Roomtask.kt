@@ -76,10 +76,10 @@ private data class NativeRoomTaskRow(val title:String,val reward:String,val icon
     
     Box(Modifier.fillMaxSize().background(Color(0xFF380308))){
         
-        // Pura page ek sath scroll karega ab (Background aur content dono)
+        // Pura page ek sath scroll karega
         Box(Modifier.fillMaxSize().verticalScroll(scrollState)) {
             
-            // Background Image Header - Ye ab page ke sath scroll hoga
+            // Background Image Header
             Box(modifier = Modifier.fillMaxWidth().height(480.dp)){
                 AsyncImage(model=raw+"file_00000000cb748211bf0120855b80f449.png",contentDescription=null,modifier=Modifier.fillMaxSize().drawWithContent {
                     drawContent()
@@ -108,18 +108,17 @@ private data class NativeRoomTaskRow(val title:String,val reward:String,val icon
                     }
                 }
                 
-                // Pura spacer wahi rakha hai taaki design bilkul waisi dikhe
                 Spacer(modifier = Modifier.height(305.dp))
 
                 // Rewards image
                 AsyncImage(model=raw+"file_00000000f2908208a7b6a2b73c3bbf36.png",contentDescription="Room task rewards",modifier=Modifier.padding(horizontal = 8.dp).fillMaxWidth().height(138.dp),contentScale=ContentScale.Fit)
                 
-                // ROOM TASK FRAME (wrapContentWidth(unbounded = true) se compose ab isey zabardasti wide hone dega)
+                // ROOM TASK FRAME (Ab sirf 1.08f rakha hai, halka sa wide bas)
                 Box(Modifier.fillMaxWidth().wrapContentWidth(unbounded = true), contentAlignment=Alignment.Center){
                     AsyncImage(
                         model=raw+"file_00000000680881faa3dfdb17cce60858.png",
                         contentDescription="Room Task frame",
-                        modifier=Modifier.fillMaxWidth(1.40f), // 1.40f kar diya hai jo limit se bahar jayega
+                        modifier=Modifier.fillMaxWidth(1.08f), 
                         contentScale=ContentScale.FillWidth 
                     )
                     Text("ROOM TASK",color=Color.White,fontSize=16.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Black,letterSpacing=1.2.sp, modifier=Modifier.offset(y=(-4).dp).shadow(4.dp, spotColor=Color.Black.copy(alpha=0.9f)))
@@ -142,7 +141,7 @@ private data class NativeRoomTaskRow(val title:String,val reward:String,val icon
                     tasks.forEach { task ->
                         Box(Modifier.fillMaxWidth().height(175.dp)){
                             
-                            // Left and Right Border Image (Aur left/right kiya aur thora ooper shift mara)
+                            // Left and Right Border Image
                             AsyncImage(
                                 model=raw+"IMG_20260903_105647.png",
                                 contentDescription=null,
@@ -156,7 +155,7 @@ private data class NativeRoomTaskRow(val title:String,val reward:String,val icon
                                 contentScale=ContentScale.FillBounds
                             )
                             
-                            // Task Card Background (Ye borders ke ooper mast overlap karega)
+                            // Task Card Background
                             Box(Modifier.fillMaxSize().padding(horizontal=10.dp)) {
                                 AsyncImage(model=raw+"file_000000004fd0821198ed4e26d5008b16.png",contentDescription="Task background",modifier=Modifier.fillMaxSize(),contentScale=ContentScale.FillBounds)
                                 
@@ -202,12 +201,12 @@ private data class NativeRoomTaskRow(val title:String,val reward:String,val icon
                     }
                 }
                 
-                // Sabse aakhiri wali bottom frame - Ekdam wide kar diya aur unbounded laga diya takki cut na ho bas bahar nikal jaye
+                // Sabse aakhiri wali bottom frame (Ab isko bhi sirf 1.08f rakha hai)
                 Box(Modifier.fillMaxWidth().offset(y=(-65).dp).wrapContentWidth(unbounded = true), contentAlignment = Alignment.Center){
                     AsyncImage(
                         model=raw+"file_0000000066c88211aa777b1f6da8683f.png",
                         contentDescription="Frame Bottom Border",
-                        modifier=Modifier.fillMaxWidth(1.40f), 
+                        modifier=Modifier.fillMaxWidth(1.08f), 
                         contentScale=ContentScale.FillWidth
                     )
                 }
@@ -216,7 +215,7 @@ private data class NativeRoomTaskRow(val title:String,val reward:String,val icon
             }
         }
         
-        // RULES DIALOG - Close button hata diya
+        // RULES DIALOG 
         if(rules) Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=.70f)).clickable{rules=false},contentAlignment=Alignment.BottomCenter){
             Column(Modifier.fillMaxWidth().heightIn(max=620.dp).background(Brush.verticalGradient(listOf(Color(0xFF4A0A10),Color(0xFF380308))),RoundedCornerShape(topStart=16.dp,topEnd=16.dp)).padding(horizontal=20.dp,vertical=18.dp)){
                 Text("ROOM TASK RULES",color=Color.White,fontSize=18.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Black,modifier=Modifier.align(Alignment.CenterHorizontally).padding(bottom=14.dp))
@@ -236,7 +235,6 @@ private data class NativeRoomTaskRow(val title:String,val reward:String,val icon
                     }
                 }
                 Text("Regards, Zyora Team",color=Color(0xFFFFD700),fontSize=13.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Bold,modifier=Modifier.align(Alignment.End).padding(top=8.dp))
-                // Close button ka code yaha se permanently hata diya gaya hai.
             }
         }
     }
