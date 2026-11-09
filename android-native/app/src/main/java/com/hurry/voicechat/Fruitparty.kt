@@ -12,6 +12,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.*
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
@@ -255,19 +256,17 @@ Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangeme
    Row(Modifier.align(Alignment.BottomCenter).padding(bottom=screenH*.025f).fillMaxWidth().horizontalScroll(rememberScrollState()).padding(start=screenH*.12f),horizontalArrangement=Arrangement.spacedBy(8.dp)){
     winners.asReversed().forEachIndexed{i,id->Box(Modifier.size(19.dp).clip(CircleShape).background(fruitBrown).border(1.dp,Color(0xFF3A1D09),CircleShape),contentAlignment=Alignment.Center){val res=fruitAsset(context,fruitImage(id));if(res!=0)Image(painterResource(res),null,Modifier.size(14.dp));if(i==0)Text("NEW",Modifier.align(Alignment.BottomCenter).offset(y=7.dp).background(Color(0xFF16A34A)),color=Color.White,fontSize=4.sp,fontWeight=FontWeight.Black)}}
    }
-   Row(Modifier.align(Alignment.BottomCenter).padding(bottom=screenH*.12f),horizontalArrangement=Arrangement.spacedBy((-8).dp),verticalAlignment=Alignment.Bottom){
+   Row(Modifier.align(Alignment.BottomCenter).padding(bottom=screenH*.14f),horizontalArrangement=Arrangement.spacedBy((-10).dp),verticalAlignment=Alignment.Bottom){
     fruitChipLabels.forEachIndexed{i,label->
-     Box(Modifier.width(82.dp).height(102.dp).clickable{chipIndex=i},contentAlignment=Alignment.Center){
+     Box(Modifier.width(100.dp).height(120.dp).clickable{chipIndex=i},contentAlignment=Alignment.TopCenter){
       val plate=fruitAsset(context,"fp_file_00000000d9b08211b0304c61b802348b")
       val chip=fruitAsset(context,"fp_file_000000003d24821182882f8ca412d2b6")
-      if(plate!=0)Image(painterResource(plate),null,Modifier.fillMaxSize().padding(top=if(chipIndex==i)9.dp else 0.dp),contentScale=ContentScale.Fit)
-      if(chip!=0)Image(painterResource(chip),null,Modifier.fillMaxSize().padding(top=7.dp),contentScale=ContentScale.Fit)
-      Text(label,Modifier.align(Alignment.Center).offset(y=10.dp),color=Color.White,fontSize=13.sp,fontWeight=FontWeight.Black)
-      if(chipIndex==i)Box(Modifier.align(Alignment.BottomCenter).padding(bottom=1.dp).size(9.dp).clip(CircleShape).background(fruitGold))
+      if(plate!=0)Image(painterResource(plate),null,Modifier.width(105.dp).offset(y=if(chipIndex==i)44.dp else 36.dp).zIndex(if(chipIndex==i)0f else 1f),contentScale=ContentScale.Fit)
+      if(chip!=0)Image(painterResource(chip),null,Modifier.width(115.dp).offset(y=42.dp).zIndex(if(chipIndex==i)1f else 0f),contentScale=ContentScale.Fit)
+      Text(label,Modifier.align(Alignment.BottomCenter).padding(bottom=42.dp).zIndex(2f),color=Color.White,fontSize=14.sp,fontWeight=FontWeight.Bold)
      }
     }
    }
-  }
   // Eight original fruit tiles around the timer.
   Column(Modifier.fillMaxWidth().padding(horizontal=screenH*.055f).offset(y=-screenH*.30f),verticalArrangement=Arrangement.spacedBy(0.dp)){
    val rows=listOf(fruitOrder.take(3),listOf(fruitOrder[3],0,fruitOrder[4]),fruitOrder.drop(5))
