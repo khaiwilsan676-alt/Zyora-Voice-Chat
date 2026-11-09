@@ -172,6 +172,7 @@ fun Newuserafterlogin(onBack: () -> Unit, onComplete: () -> Unit) {
                                     ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
                                 else null
                             )
+                        }
                     }
                     Box(
                         modifier = Modifier
