@@ -70,7 +70,7 @@ val copyGenderAssets = tasks.register<Copy>("copyGenderAssets") {
             "file_00000000d9b08211b0304c61b802348b.png",
             "file_000000003d24821182882f8ca412d2b6.png",
             "1787413631876~2.jpg", "file_00000000ced481fa9117afc4fa91791e.png",
-            "file_00000000eb0081f4885ade7d7db3bef8.png", "fruit-party-logo.jpg"
+            "file_00000000eb0081f4885ade7d7db3bef8.png", "fruit-party-logo.jpg", "file_000000009d808211b8ffb7c2183b4ef5.png", "file_00000000c9e08211ab3e8c4d511b7965.png", "file_000000009d808211b8ffb7c2183b4ef5.png", "file_00000000c9e08211ab3e8c4d511b7965.png"
         )
         rename { fileName ->
             when {
