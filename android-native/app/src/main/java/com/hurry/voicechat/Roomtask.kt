@@ -76,7 +76,7 @@ private data class NativeRoomTaskRow(val title:String,val reward:String,val icon
     
     Box(Modifier.fillMaxSize().background(Color(0xFF380308))){
         
-        // Background Image Header Fixed (Piche wali image edge to edge aur kichi nhi hogi)
+        // Background Image Header Fixed
         Box(modifier = Modifier.fillMaxWidth().height(480.dp)){
             AsyncImage(model=raw+"file_00000000cb748211bf0120855b80f449.png",contentDescription=null,modifier=Modifier.fillMaxSize().drawWithContent {
                 drawContent()
@@ -107,25 +107,25 @@ private data class NativeRoomTaskRow(val title:String,val reward:String,val icon
             
             Column(Modifier.fillMaxWidth(), horizontalAlignment=Alignment.CenterHorizontally){
                 
-                // Spacer image ko push karne ke liye
-                Spacer(modifier = Modifier.height(280.dp))
+                // Thora offset diya hai jisse background ke context mein fit rahe
+                Spacer(modifier = Modifier.height(305.dp))
 
                 // Rewards image
                 AsyncImage(model=raw+"file_00000000f2908208a7b6a2b73c3bbf36.png",contentDescription="Room task rewards",modifier=Modifier.padding(horizontal = 8.dp).fillMaxWidth().height(138.dp),contentScale=ContentScale.Fit)
                 
-                // ROOM TASK FRAME (Edge to Edge chipkaya bina scale kichi-kich huye)
+                // ROOM TASK FRAME
                 Box(Modifier.fillMaxWidth(), contentAlignment=Alignment.Center){
                     AsyncImage(
                         model=raw+"file_00000000680881faa3dfdb17cce60858.png",
                         contentDescription="Room Task frame",
-                        modifier=Modifier.fillMaxWidth(), // Poora width bina scaleX hack ke
-                        contentScale=ContentScale.FillWidth // Aspect ratio maintained, no stretch
+                        modifier=Modifier.fillMaxWidth(1.04f), 
+                        contentScale=ContentScale.FillWidth 
                     )
                     Text("ROOM TASK",color=Color.White,fontSize=16.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Black,letterSpacing=1.2.sp, modifier=Modifier.offset(y=(-4).dp).shadow(4.dp, spotColor=Color.Black.copy(alpha=0.9f)))
                 }
                 
-                // Countdown
-                Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(3.dp),modifier=Modifier.padding(vertical=5.dp)){
+                // Countdown - Upar shift kiya gaya hai taaki frame ke nazdeek aaye
+                Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(3.dp),modifier=Modifier.offset(y=(-15).dp).padding(vertical=0.dp)){
                     Text("Countdown",color=Color(0xFFF5B8B8),fontSize=10.sp)
                     listOf(hour to "Hour",minute to "Minute",second to "Second").forEach{pair->
                         Box(Modifier.background(Brush.verticalGradient(listOf(Color(0xFF8F1A1A),Color(0xFF470A0A))),RoundedCornerShape(4.dp)).padding(horizontal=5.dp,vertical=3.dp)){Text(pair.first.toString(),color=Color(0xFFFFE0E0),fontSize=11.sp)}
@@ -133,19 +133,19 @@ private data class NativeRoomTaskRow(val title:String,val reward:String,val icon
                     }
                 }
                 
-                // Tasks List (Saare tasks vertically map kiye without LazyColumn for perfect scrolling)
+                // Tasks List - Offset dekar upar kiya taaki top frame se joint / chipki hui lage
                 Column(
-                    modifier = Modifier.fillMaxWidth(), // No horizontal padding here so Pillars touch extreme left-right
-                    verticalArrangement = Arrangement.spacedBy((-60).dp) // Pehle ki tarah overlapping
+                    modifier = Modifier.fillMaxWidth().offset(y=(-25).dp), 
+                    verticalArrangement = Arrangement.spacedBy((-60).dp) 
                 ) {
                     tasks.forEach { task ->
                         Box(Modifier.fillMaxWidth().height(175.dp)){
                             
-                            // Left and Right Border Image: Yaha loop mein hain toh neeche tak ekdam repeat hongi, aur edge to edge (0 padding) chipki rahengi.
-                            AsyncImage(model=raw+"IMG_20260903_105647.png",contentDescription=null,modifier=Modifier.align(Alignment.CenterStart).width(34.dp).fillMaxHeight(),contentScale=ContentScale.FillBounds)
-                            AsyncImage(model=raw+"IMG_20260903_105705.png",contentDescription=null,modifier=Modifier.align(Alignment.CenterEnd).width(34.dp).fillMaxHeight(),contentScale=ContentScale.FillBounds)
+                            // Left and Right Border Image
+                            AsyncImage(model=raw+"IMG_20260903_105647.png",contentDescription=null,modifier=Modifier.align(Alignment.CenterStart).offset(x = (-3).dp).width(34.dp).fillMaxHeight(),contentScale=ContentScale.FillBounds)
+                            AsyncImage(model=raw+"IMG_20260903_105705.png",contentDescription=null,modifier=Modifier.align(Alignment.CenterEnd).offset(x = 3.dp).width(34.dp).fillMaxHeight(),contentScale=ContentScale.FillBounds)
                             
-                            // Task Card Background (Andar 10.dp ki space taki card aur pillar mix na ho)
+                            // Task Card Background
                             Box(Modifier.fillMaxSize().padding(horizontal=10.dp)) {
                                 AsyncImage(model=raw+"file_000000004fd0821198ed4e26d5008b16.png",contentDescription="Task background",modifier=Modifier.fillMaxSize(),contentScale=ContentScale.FillBounds)
                                 
@@ -156,7 +156,6 @@ private data class NativeRoomTaskRow(val title:String,val reward:String,val icon
                                     val isGift = lowerTitle.contains("gift")
                                     val isUserOrFollower = lowerTitle.contains("user") || lowerTitle.contains("follower")
 
-                                    // User/Follower ke liye nayi image add kar di
                                     val iconPath = when {
                                         isMic -> "IMG_20261109_003921.png"
                                         isShare -> "IMG_20261109_003805.png"
@@ -165,7 +164,6 @@ private data class NativeRoomTaskRow(val title:String,val reward:String,val icon
                                         else -> task.icon
                                     }
 
-                                    // Simple aur clear icon, bache huye faltu effects sab saaf
                                     AsyncImage(
                                         model=raw+iconPath,
                                         contentDescription=task.title,
@@ -193,22 +191,21 @@ private data class NativeRoomTaskRow(val title:String,val reward:String,val icon
                     }
                 }
                 
-                // Sabse aakhiri wali bottom frame, Ekdam edge-to-edge, bina kichi-kich huye stretch free
-                Box(Modifier.fillMaxWidth().offset(y=(-40).dp)){
+                // Sabse aakhiri wali bottom frame - Ekdam wide (1.06f) aur aur upar (-65.dp) kar diya hai
+                Box(Modifier.fillMaxWidth().offset(y=(-65).dp), contentAlignment = Alignment.Center){
                     AsyncImage(
                         model=raw+"file_0000000066c88211aa777b1f6da8683f.png",
                         contentDescription="Frame Bottom Border",
-                        modifier=Modifier.fillMaxWidth(), 
+                        modifier=Modifier.fillMaxWidth(1.06f), 
                         contentScale=ContentScale.FillWidth
                     )
                 }
                 
-                // Extra space below bottom image to let user easily see it all
-                Spacer(Modifier.height(24.dp))
+                Spacer(Modifier.height(10.dp))
             }
         }
         
-        // RULES DIALOG EXACT SAME AS BEFORE, TOUCH BHI NHI KIYA
+        // RULES DIALOG EXACT SAME
         if(rules) Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=.70f)).clickable{rules=false},contentAlignment=Alignment.BottomCenter){
             Column(Modifier.fillMaxWidth().heightIn(max=620.dp).background(Brush.verticalGradient(listOf(Color(0xFF4A0A10),Color(0xFF380308))),RoundedCornerShape(topStart=16.dp,topEnd=16.dp)).padding(horizontal=20.dp,vertical=18.dp)){
                 Text("ROOM TASK RULES",color=Color.White,fontSize=18.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Black,modifier=Modifier.align(Alignment.CenterHorizontally).padding(bottom=14.dp))
