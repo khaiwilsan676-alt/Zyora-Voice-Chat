@@ -1656,7 +1656,7 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
         // row (48dp field + original padding/width) completely untouched.
         if (showChat) {
             Column(
-                Modifier.fillMaxSize().zIndex(50f)
+                Modifier.fillMaxSize().imePadding().zIndex(50f)
             ) {
                 Column(
                     Modifier.weight(1f).fillMaxWidth()
