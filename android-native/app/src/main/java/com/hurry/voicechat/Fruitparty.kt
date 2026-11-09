@@ -345,6 +345,7 @@ fun Fruitparty(onClose:()->Unit,onMinimize:(()->Unit)?=null,isMinimized:Boolean=
     listOf("You can place bet by Clicking on the Red button and Place the bet On the Fruit Card","10,15,25,45 give you hight coins","You will Receive Coins according to ( Your Bet × Multipler)","Left mix Card Give you all 5 times Coins ( Your Bet × all ×5 Times )","Right Mix card Give you all High Cards ( Your Bet × 10,15,25,45 Times)").forEach{Text("•  $it",color=Color.White,fontSize=13.sp,fontWeight=FontWeight.SemiBold)}
    }
   }
+  }
  }
 }
 
