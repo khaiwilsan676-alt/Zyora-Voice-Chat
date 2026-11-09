@@ -108,8 +108,20 @@ private fun containsProhibitedChatText(value: String): Boolean {
         "a55hole", "b1tch", "d1ck",
         "लंड", "लौड़ा", "लौडे", "चूतिया", "चूत", "भोसड़ी",
         "भोसड़ीके", "मादरचोद", "बहनचोद", "गांडू", "रंडी",
-        // Other voice-chat/application names requested by the user.
-        "sama", "wafa", "yoyo"
+        // Other voice-chat and social-room application names.
+        "sama", "wafa", "yoyo", "sugo", "sugolite", "xena", "timo",
+        "achat", "funplay", "soulchill", "yaahlan", "layla", "hala",
+        "yoho", "tikko", "saada", "amar", "baat", "yalla", "friendchat",
+        "nivi", "starchat", "yooy", "clubhouse", "yubo", "nahki",
+        "lamalite", "fofochat", "amo", "yari", "opalive", "falla",
+        "funni", "ume", "habi", "oichat", "ahlan", "songora",
+        "mico", "weplay", "hago", "wakie", "zello", "guilded",
+        "teamspeak", "beela", "paltalk", "frnd", "chamet",
+        "connecto", "zeep", "livetalk", "dostt", "vibly",
+        "voiceclub", "videovibe", "discord", "telegram", "whatsapp",
+        "viber", "xspaces", "spoon", "tandem", "hellotalk",
+        "roblox", "vrchat", "recroom", "guilded", "steam",
+        "xbox", "playstation", "pal talk", "free4talk"
     )
     return words.any { word ->
         val normalized = word.replace('0', 'o').replace('1', 'i').replace('3', 'e').replace('4', 'a').replace('5', 's').replace('8', 'b')
