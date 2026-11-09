@@ -84,8 +84,26 @@ val copyGenderAssets = tasks.register<Copy>("copyGenderAssets") {
 }
 
 android.sourceSets.getByName("main").res.srcDir(generatedGenderResources)
-tasks.named("preBuild").configure {
+
+// Compress only Android-bundled artwork to lossless-capable WebP at build time.
+// Drawable names stay identical, so Kotlin getIdentifier()/painterResource calls do not change.
+val optimizeGeneratedArtwork = tasks.register("optimizeGeneratedArtwork") {
     dependsOn(copyGenderAssets)
+    doLast {
+        val drawableDir = generatedGenderResources.get().dir("drawable").asFile
+        drawableDir.walkTopDown()
+            .filter { it.isFile && it.extension.lowercase() in setOf("png", "jpg", "jpeg") }
+            .forEach { source ->
+                val webp = source.resolveSibling(source.nameWithoutExtension + ".webp")
+                exec {
+                    commandLine("cwebp", "-quiet", "-q", "82", source.absolutePath, "-o", webp.absolutePath)
+                }
+                source.delete()
+            }
+    }
+}
+tasks.named("preBuild").configure {
+    dependsOn(optimizeGeneratedArtwork)
 }
 
 kotlin {
