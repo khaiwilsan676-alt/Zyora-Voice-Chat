@@ -97,7 +97,17 @@ private fun containsProhibitedChatText(value: String): Boolean {
         "rakhail", "raand", "randwa", "haramkhor", "haramkhoron",
         "kamjat", "kameena", "kameeni", "kutte", "kuttiya", "kutti",
         "besharam", "nalayak", "chamaar", "chamar", "neech", "gadha",
-        "gadhi", "pig", "cunt", "cocksucker", "prick", "jerkoff"
+        "gadhi", "pig", "cunt", "cocksucker", "prick", "jerkoff",
+        "chhinal", "chinal", "chhinar", "bhosdiwala", "bhosdiwali",
+        "bhosdikee", "bhosadchod", "bhosdichod", "bhosdichut",
+        "gaandchatu", "gandchatu", "gaandphatu", "gandphatu",
+        "chutmar", "chutmaar", "chutiyapa", "chutiyapan",
+        "madarch00d", "madarch0d", "m4darchod", "bhench0dd",
+        "bhosd1ke", "bh0sdike", "chut1ya", "g4ndu", "l0du",
+        "fuk", "fuker", "fuking", "fck", "fcking", "sh1t",
+        "a55hole", "b1tch", "d1ck",
+        "लंड", "लौड़ा", "लौडे", "चूतिया", "चूत", "भोसड़ी",
+        "भोसड़ीके", "मादरचोद", "बहनचोद", "गांडू", "रंडी"
     )
     return words.any { word ->
         val normalized = word.replace('0', 'o').replace('1', 'i').replace('3', 'e').replace('4', 'a').replace('5', 's').replace('8', 'b')
