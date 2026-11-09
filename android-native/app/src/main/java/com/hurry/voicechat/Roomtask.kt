@@ -3,12 +3,11 @@ package com.hurry.voicechat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -18,7 +17,6 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.border
-import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
@@ -35,6 +33,8 @@ private data class NativeRoomTaskRow(val title:String,val reward:String,val icon
     var hour by remember{mutableIntStateOf(0)}
     var minute by remember{mutableIntStateOf(0)}
     var second by remember{mutableIntStateOf(0)}
+    val scrollState = rememberScrollState()
+
     LaunchedEffect(Unit){
         while(true){
             val now=Calendar.getInstance()
@@ -48,6 +48,7 @@ private data class NativeRoomTaskRow(val title:String,val reward:String,val icon
             delay(1000)
         }
     }
+    
     val tasks=listOf(
         NativeRoomTaskRow("10 Users Enter the Room","10,000","file_00000000858082118b5c81b85cd6d2a8.png"),
         NativeRoomTaskRow("5 Users Enter the Room for Two Consecutive Days","20,000","file_00000000858082118b5c81b85cd6d2a8.png"),
@@ -72,45 +73,58 @@ private data class NativeRoomTaskRow(val title:String,val reward:String,val icon
         NativeRoomTaskRow("3 Users on Mic at the Same Time for 10 Minutes","10,000","file_00000000f8d88211ba5ff45c06383e5f.png"),
         NativeRoomTaskRow("Send 1 Gift","1,000","file_0000000081f48211afe58f6348196b55.png")
     )
+    
     Box(Modifier.fillMaxSize().background(Color(0xFF380308))){
+        
+        // Background Image Header Fixed (Piche wali image edge to edge aur kichi nhi hogi)
         Box(modifier = Modifier.fillMaxWidth().height(480.dp)){
             AsyncImage(model=raw+"file_00000000cb748211bf0120855b80f449.png",contentDescription=null,modifier=Modifier.fillMaxSize().drawWithContent {
                 drawContent()
                 drawRect(
                     brush = Brush.verticalGradient(
-                        colors = listOf(Color.Transparent, Color(0xFF380308).copy(alpha=0.6f), Color(0xFF380308)),
-                        startY = size.height * 0.4f,
-                        endY = size.height * 0.85f
-                    ),
-                    blendMode = androidx.compose.ui.graphics.BlendMode.DstOut
-                )
-                drawRect(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(Color(0xFF380308).copy(alpha=0f), Color(0xFF380308).copy(alpha=0.2f), Color(0xFF380308).copy(alpha=0.7f), Color(0xFF380308)),
-                        startY = 0f,
+                        colors = listOf(Color.Transparent, Color(0xFF380308)),
+                        startY = size.height * 0.95f,
                         endY = size.height
                     )
                 )
             },contentScale=ContentScale.Crop,alignment=Alignment.TopCenter)
         }
-        Column(Modifier.fillMaxSize()){
-            Box(Modifier.fillMaxWidth().padding(top=24.dp,start=2.dp,end=8.dp)){
-                IconButton(onClick=onBack, modifier=Modifier.align(Alignment.CenterStart).size(40.dp)){ androidx.compose.foundation.Canvas(Modifier.size(32.dp).shadow(4.dp, shape=androidx.compose.foundation.shape.CircleShape, clip=false)){ val gold=Color(0xFFFFD700); drawCircle(Color.Black.copy(alpha=0.5f), radius=10.dp.toPx()); drawCircle(Color.Transparent, radius=10.dp.toPx(), style=androidx.compose.ui.graphics.drawscope.Stroke(width=1.5.dp.toPx())); drawLine(gold, androidx.compose.ui.geometry.Offset(size.width*0.62f,size.height*0.5f), androidx.compose.ui.geometry.Offset(size.width*0.35f,size.height*0.5f), strokeWidth=2.dp.toPx(), cap=androidx.compose.ui.graphics.StrokeCap.Round); drawLine(gold, androidx.compose.ui.geometry.Offset(size.width*0.35f,size.height*0.5f), androidx.compose.ui.geometry.Offset(size.width*0.48f,size.height*0.35f), strokeWidth=2.dp.toPx(), cap=androidx.compose.ui.graphics.StrokeCap.Round); drawLine(gold, androidx.compose.ui.geometry.Offset(size.width*0.35f,size.height*0.5f), androidx.compose.ui.geometry.Offset(size.width*0.48f,size.height*0.65f), strokeWidth=2.dp.toPx(), cap=androidx.compose.ui.graphics.StrokeCap.Round) } }
-                IconButton(onClick={rules=true}, modifier=Modifier.align(Alignment.CenterEnd).size(40.dp)){ androidx.compose.foundation.Canvas(Modifier.size(32.dp).shadow(4.dp, shape=androidx.compose.foundation.shape.CircleShape, clip=false)){ val gold=Color(0xFFFFD700); drawCircle(Color.Black.copy(alpha=0.5f), radius=10.dp.toPx()); drawCircle(Color.Transparent, radius=10.dp.toPx(), style=androidx.compose.ui.graphics.drawscope.Stroke(width=1.5.dp.toPx())); drawContext.canvas.nativeCanvas.drawText("?", center.x, center.y + 5.dp.toPx(), android.graphics.Paint().apply{color=android.graphics.Color.parseColor("#FFD700"); textSize=14.sp.toPx(); textAlign=android.graphics.Paint.Align.CENTER; isFakeBoldText=true}) } }
-            }
-            Column(Modifier.fillMaxSize().padding(horizontal=8.dp),horizontalAlignment=Alignment.CenterHorizontally){
-                AsyncImage(model=raw+"file_00000000f2908208a7b6a2b73c3bbf36.png",contentDescription="Room task rewards",modifier=Modifier.fillMaxWidth().height(138.dp),contentScale=ContentScale.Fit)
-                Text("0",color=Color(0xFFFFD700),fontSize=24.sp)
-                Button(onClick={},modifier=Modifier.padding(top=8.dp).width(90.dp).height(28.dp).shadow(elevation=7.dp, shape=RoundedCornerShape(14.dp), spotColor=Color(0xFFFFD700).copy(alpha=0.55f)),contentPadding=PaddingValues(0.dp),shape=RoundedCornerShape(14.dp),border=androidx.compose.foundation.BorderStroke(2.dp,Color(0xFFF5E6A8)),colors=ButtonDefaults.buttonColors(containerColor=Color.Transparent)){
-                    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFFF7DFA0),Color(0xFFE0A92A))),RoundedCornerShape(14.dp)),contentAlignment=Alignment.Center){
-                        Text("COLLECT",color=Color(0xFF4A1F00),fontSize=11.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Black, letterSpacing=1.sp)
+        
+        // Ab Pura Page Scroll Karega Yaha Se!
+        Column(Modifier.fillMaxSize().verticalScroll(scrollState)){
+            
+            // Top Bar
+            Box(Modifier.fillMaxWidth().padding(top=24.dp,start=8.dp,end=12.dp)){
+                IconButton(onClick=onBack, modifier=Modifier.align(Alignment.CenterStart)){
+                    Icon(imageVector = Icons.Filled.ArrowBack, contentDescription = "Back", tint = Color.White, modifier = Modifier.size(28.dp))
+                }
+                IconButton(onClick={rules=true}, modifier=Modifier.align(Alignment.CenterEnd)){
+                    Box(modifier = Modifier.size(24.dp).border(1.5.dp, Color.White, androidx.compose.foundation.shape.CircleShape), contentAlignment = Alignment.Center) {
+                        Text("?", color = Color.White, fontSize = 14.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
                     }
                 }
-                Text("*If anyone sends gifts in the room, the room owner can get 5%coins worth the gift value.",color=Color.White,fontSize=11.sp,modifier=Modifier.padding(vertical=8.dp))
-                Box(Modifier.fillMaxWidth().height(45.dp),contentAlignment=Alignment.Center){
-                    AsyncImage(model=raw+"file_00000000680881faa3dfdb17cce60858.png",contentDescription="Room Task frame",modifier=Modifier.fillMaxSize().graphicsLayer{scaleX=1.12f},contentScale=ContentScale.FillBounds)
-                    Text("ROOM TASK",color=Color.White,fontSize=16.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Black,letterSpacing=1.2.sp, modifier=Modifier.offset(y=(-8).dp).shadow(4.dp, spotColor=Color.Black.copy(alpha=0.9f)))
+            }
+            
+            Column(Modifier.fillMaxWidth(), horizontalAlignment=Alignment.CenterHorizontally){
+                
+                // Spacer image ko push karne ke liye
+                Spacer(modifier = Modifier.height(280.dp))
+
+                // Rewards image
+                AsyncImage(model=raw+"file_00000000f2908208a7b6a2b73c3bbf36.png",contentDescription="Room task rewards",modifier=Modifier.padding(horizontal = 8.dp).fillMaxWidth().height(138.dp),contentScale=ContentScale.Fit)
+                
+                // ROOM TASK FRAME (Edge to Edge chipkaya bina scale kichi-kich huye)
+                Box(Modifier.fillMaxWidth(), contentAlignment=Alignment.Center){
+                    AsyncImage(
+                        model=raw+"file_00000000680881faa3dfdb17cce60858.png",
+                        contentDescription="Room Task frame",
+                        modifier=Modifier.fillMaxWidth(), // Poora width bina scaleX hack ke
+                        contentScale=ContentScale.FillWidth // Aspect ratio maintained, no stretch
+                    )
+                    Text("ROOM TASK",color=Color.White,fontSize=16.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Black,letterSpacing=1.2.sp, modifier=Modifier.offset(y=(-4).dp).shadow(4.dp, spotColor=Color.Black.copy(alpha=0.9f)))
                 }
+                
+                // Countdown
                 Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(3.dp),modifier=Modifier.padding(vertical=5.dp)){
                     Text("Countdown",color=Color(0xFFF5B8B8),fontSize=10.sp)
                     listOf(hour to "Hour",minute to "Minute",second to "Second").forEach{pair->
@@ -118,40 +132,59 @@ private data class NativeRoomTaskRow(val title:String,val reward:String,val icon
                         Text(pair.second,color=Color(0xFFF5B8B8),fontSize=10.sp)
                     }
                 }
-                Box(Modifier.fillMaxWidth().weight(1f)) {
-                AsyncImage(model=raw+"IMG_20260903_105647.png",contentDescription=null,modifier=Modifier.align(Alignment.CenterStart).width(34.dp).fillMaxHeight(),contentScale=ContentScale.FillBounds)
-                AsyncImage(model=raw+"IMG_20260903_105705.png",contentDescription=null,modifier=Modifier.align(Alignment.CenterEnd).width(34.dp).fillMaxHeight(),contentScale=ContentScale.FillBounds)
-                LazyColumn(Modifier.fillMaxSize().padding(horizontal=10.dp),contentPadding=PaddingValues(bottom=24.dp),verticalArrangement=Arrangement.spacedBy((-60).dp)){
-                    items(tasks){task->
+                
+                // Tasks List (Saare tasks vertically map kiye without LazyColumn for perfect scrolling)
+                Column(
+                    modifier = Modifier.fillMaxWidth(), // No horizontal padding here so Pillars touch extreme left-right
+                    verticalArrangement = Arrangement.spacedBy((-60).dp) // Pehle ki tarah overlapping
+                ) {
+                    tasks.forEach { task ->
                         Box(Modifier.fillMaxWidth().height(175.dp)){
-                            AsyncImage(model=raw+"file_000000004fd0821198ed4e26d5008b16.png",contentDescription="Task background",modifier=Modifier.fillMaxSize(),contentScale=ContentScale.FillBounds)
-                            Row(Modifier.fillMaxSize().padding(start=8.dp,end=16.dp),verticalAlignment=Alignment.CenterVertically){
-                                val lowerTitle = task.title.lowercase()
-                                val isMic = lowerTitle.contains("mic")
-                                val isShare = lowerTitle.contains("share")
-                                val isGift = lowerTitle.contains("gift")
-                                val isUserOrFollower = lowerTitle.contains("user") || lowerTitle.contains("follower")
+                            
+                            // Left and Right Border Image: Yaha loop mein hain toh neeche tak ekdam repeat hongi, aur edge to edge (0 padding) chipki rahengi.
+                            AsyncImage(model=raw+"IMG_20260903_105647.png",contentDescription=null,modifier=Modifier.align(Alignment.CenterStart).width(34.dp).fillMaxHeight(),contentScale=ContentScale.FillBounds)
+                            AsyncImage(model=raw+"IMG_20260903_105705.png",contentDescription=null,modifier=Modifier.align(Alignment.CenterEnd).width(34.dp).fillMaxHeight(),contentScale=ContentScale.FillBounds)
+                            
+                            // Task Card Background (Andar 10.dp ki space taki card aur pillar mix na ho)
+                            Box(Modifier.fillMaxSize().padding(horizontal=10.dp)) {
+                                AsyncImage(model=raw+"file_000000004fd0821198ed4e26d5008b16.png",contentDescription="Task background",modifier=Modifier.fillMaxSize(),contentScale=ContentScale.FillBounds)
+                                
+                                Row(Modifier.fillMaxSize().padding(start=8.dp,end=16.dp),verticalAlignment=Alignment.CenterVertically){
+                                    val lowerTitle = task.title.lowercase()
+                                    val isMic = lowerTitle.contains("mic")
+                                    val isShare = lowerTitle.contains("share")
+                                    val isGift = lowerTitle.contains("gift")
+                                    val isUserOrFollower = lowerTitle.contains("user") || lowerTitle.contains("follower")
 
-                                val (iconPath, iconSize, iconPadding) = when {
-                                    isMic -> Triple("file_00000000f8d88211ba5ff45c06383e5f.png", 80.dp, 0.dp)
-                                    isShare -> Triple("file_0000000019a0821193463686d6fc9184.png", 58.dp, 8.dp)
-                                    isGift -> Triple("file_0000000081f48211afe58f6348196b55.png", 80.dp, 0.dp)
-                                    isUserOrFollower -> Triple("file_00000000858082118b5c81b85cd6d2a8.png", 80.dp, 0.dp)
-                                    else -> Triple(task.icon, 40.dp, 0.dp)
-                                }
-                                val iconMod = if (iconPath != task.icon) Modifier.size(iconSize).padding(start=iconPadding) else Modifier.size(iconSize).padding(start=iconPadding).shadow(4.dp, shape = androidx.compose.foundation.shape.CircleShape, clip = false)
-
-                                AsyncImage(model=raw+iconPath,contentDescription=task.title,modifier=iconMod,contentScale=ContentScale.Fit)
-                                Text(task.title,color=Color.White,fontSize=16.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Bold,modifier=Modifier.weight(1f).padding(start=2.dp), maxLines=3, style=androidx.compose.ui.text.TextStyle(shadow = androidx.compose.ui.graphics.Shadow(color = Color.Black.copy(alpha=0.5f), blurRadius = 4f, offset = androidx.compose.ui.geometry.Offset(0f,2f))), lineHeight=18.sp)
-                                Column(horizontalAlignment=Alignment.CenterHorizontally){
-                                    Row(verticalAlignment=Alignment.CenterVertically){
-                                        AsyncImage(model=raw+"file_00000000e56882119c217d508b6733dc.png",contentDescription="Coins",modifier=Modifier.size(24.dp))
-                                        val rewardClean = task.reward.replace(Regex("coins", RegexOption.IGNORE_CASE), "").trim()
-                                        Text(rewardClean,color=Color(0xFFFFD700),fontSize=14.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.ExtraBold)
+                                    // User/Follower ke liye nayi image add kar di
+                                    val iconPath = when {
+                                        isMic -> "IMG_20261109_003921.png"
+                                        isShare -> "IMG_20261109_003805.png"
+                                        isGift -> "IMG_20261109_003851.png"
+                                        isUserOrFollower -> "IMG_20261109_122201.png"
+                                        else -> task.icon
                                     }
-                                    Button(onClick={},modifier=Modifier.width(85.dp).height(28.dp).shadow(elevation=4.dp, shape=RoundedCornerShape(18.dp), spotColor=Color(0xFFFFD700).copy(alpha=0.55f)),contentPadding=PaddingValues(0.dp),shape=RoundedCornerShape(18.dp),border=androidx.compose.foundation.BorderStroke(2.dp,Color(0xFFF5E6A8)),colors=ButtonDefaults.buttonColors(containerColor=Color.Transparent)){
-                                        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFFF7DFA0),Color(0xFFE0A92A))),RoundedCornerShape(18.dp)),contentAlignment=Alignment.Center){
-                                            Text("CLAIM",color=Color(0xFF4A1F00),fontSize=11.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Black, letterSpacing=1.sp)
+
+                                    // Simple aur clear icon, bache huye faltu effects sab saaf
+                                    AsyncImage(
+                                        model=raw+iconPath,
+                                        contentDescription=task.title,
+                                        modifier=Modifier.size(54.dp).padding(start=8.dp),
+                                        contentScale=ContentScale.Fit
+                                    )
+                                    
+                                    Text(task.title,color=Color.White,fontSize=16.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Bold,modifier=Modifier.weight(1f).padding(start=12.dp), maxLines=3, style=androidx.compose.ui.text.TextStyle(shadow = androidx.compose.ui.graphics.Shadow(color = Color.Black.copy(alpha=0.5f), blurRadius = 4f, offset = androidx.compose.ui.geometry.Offset(0f,2f))), lineHeight=18.sp)
+                                    
+                                    Column(horizontalAlignment=Alignment.CenterHorizontally){
+                                        Row(verticalAlignment=Alignment.CenterVertically){
+                                            AsyncImage(model=raw+"file_00000000e56882119c217d508b6733dc.png",contentDescription="Coins",modifier=Modifier.size(24.dp))
+                                            val rewardClean = task.reward.replace(Regex("coins", RegexOption.IGNORE_CASE), "").trim()
+                                            Text(rewardClean,color=Color(0xFFFFD700),fontSize=14.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.ExtraBold)
+                                        }
+                                        Button(onClick={},modifier=Modifier.width(85.dp).height(28.dp).shadow(elevation=4.dp, shape=RoundedCornerShape(18.dp), spotColor=Color(0xFFFFD700).copy(alpha=0.55f)),contentPadding=PaddingValues(0.dp),shape=RoundedCornerShape(18.dp),border=androidx.compose.foundation.BorderStroke(2.dp,Color(0xFFF5E6A8)),colors=ButtonDefaults.buttonColors(containerColor=Color.Transparent)){
+                                            Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFFF7DFA0),Color(0xFFE0A92A))),RoundedCornerShape(18.dp)),contentAlignment=Alignment.Center){
+                                                Text("CLAIM",color=Color(0xFF4A1F00),fontSize=11.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Black, letterSpacing=1.sp)
+                                            }
                                         }
                                     }
                                 }
@@ -159,12 +192,23 @@ private data class NativeRoomTaskRow(val title:String,val reward:String,val icon
                         }
                     }
                 }
+                
+                // Sabse aakhiri wali bottom frame, Ekdam edge-to-edge, bina kichi-kich huye stretch free
+                Box(Modifier.fillMaxWidth().offset(y=(-40).dp)){
+                    AsyncImage(
+                        model=raw+"file_0000000066c88211aa777b1f6da8683f.png",
+                        contentDescription="Frame Bottom Border",
+                        modifier=Modifier.fillMaxWidth(), 
+                        contentScale=ContentScale.FillWidth
+                    )
                 }
-                Box(Modifier.fillMaxWidth().height(40.dp).offset(y=(-48).dp)){
-                    AsyncImage(model=raw+"file_0000000066c88211aa777b1f6da8683f.png",contentDescription="Frame Bottom Border",modifier=Modifier.fillMaxSize().graphicsLayer{scaleX=1.12f},contentScale=ContentScale.FillBounds)
-                }
+                
+                // Extra space below bottom image to let user easily see it all
+                Spacer(Modifier.height(24.dp))
             }
         }
+        
+        // RULES DIALOG EXACT SAME AS BEFORE, TOUCH BHI NHI KIYA
         if(rules) Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=.70f)).clickable{rules=false},contentAlignment=Alignment.BottomCenter){
             Column(Modifier.fillMaxWidth().heightIn(max=620.dp).background(Brush.verticalGradient(listOf(Color(0xFF4A0A10),Color(0xFF380308))),RoundedCornerShape(topStart=16.dp,topEnd=16.dp)).padding(horizontal=20.dp,vertical=18.dp)){
                 Text("ROOM TASK RULES",color=Color.White,fontSize=18.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Black,modifier=Modifier.align(Alignment.CenterHorizontally).padding(bottom=14.dp))
