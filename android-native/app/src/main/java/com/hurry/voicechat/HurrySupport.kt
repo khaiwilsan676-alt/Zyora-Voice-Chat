@@ -192,19 +192,17 @@ fun HurrySupport(onBack: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = onBack, modifier = Modifier.size(36.dp)) {
-                Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+                Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.Black)
             }
             Spacer(Modifier.width(6.dp)) // Spacing thoda adjust kiya hai bss UI balance ke liye
-            Box(Modifier.size(42.dp).clip(CircleShape).background(Brush.horizontalGradient(listOf(Color(0xFFF472B6), Color(0xFFA855F7)))).border(2.dp, Color.White.copy(alpha = 0.3f), CircleShape), contentAlignment = Alignment.Center) {
-                AsyncImage(model = DAISY_IMAGE, contentDescription = "Daisy", modifier = Modifier.fillMaxSize().clip(CircleShape), contentScale = ContentScale.Crop)
-            }
+            AsyncImage(model = DAISY_IMAGE, contentDescription = "Daisy", modifier = Modifier.size(42.dp).clip(CircleShape), contentScale = ContentScale.Crop)
             Spacer(Modifier.width(10.dp))
             Column {
-                Text("Daisy", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, lineHeight = 21.sp)
+                Text("Daisy", color = Color.Black, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, lineHeight = 21.sp)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.size(7.dp).clip(CircleShape).background(Color(0xFF4ADE80)))
                     Spacer(Modifier.width(5.dp))
-                    Text("Online", color = Color(0xFFDBEAFE), fontSize = 12.sp)
+                    Text("Online", color = Color.Black, fontSize = 12.sp)
                 }
             }
         }
