@@ -508,3 +508,5 @@ Current documentation does not certify that all historical features are build-, 
 - `RoomPage.kt`: room admins now receive the same seat Lock/Unlock and occupied-seat Mute/Unmute authorization as the room owner from both the seat action sheet and seated-user profile moderation callbacks.
 - Empty-seat locking continues to use the existing `room_seat_action` `lock` event; the backend already validates owner/admin permissions and broadcasts the authoritative seat snapshot. No unrelated room, voice, chat, or UI behavior was changed.
 - Native APK build and multi-account runtime verification remain pending.
+
+- Native room owner auto-seat: on the first valid seat snapshot after entering a room, the owner is placed in seat 1 only when seat 1 is empty and unlocked and the owner is not already seated. If seat 1 is occupied, the existing seat display/behavior is preserved. A missing seat-1 entry no longer consumes the one-time auto-seat attempt. No UI changes.
