@@ -121,11 +121,34 @@ private fun containsProhibitedChatText(value: String): Boolean {
         "voiceclub", "videovibe", "discord", "telegram", "whatsapp",
         "viber", "xspaces", "spoon", "tandem", "hellotalk",
         "roblox", "vrchat", "recroom", "guilded", "steam",
-        "xbox", "playstation", "pal talk", "free4talk"
+        "xbox", "playstation", "pal talk", "free4talk",
+        // Additional voice-chat, social-audio and stranger-chat app names.
+        "litmatch", "vibely", "dostify", "mychatclub", "helloyo",
+        "halame", "wafaludo", "yallaludo", "hawachat", "starmaker",
+        "airtalk", "talkwithstranger", "maum", "mindfuse", "whisperly",
+        "hear me", "hearme", "dostify", "dostt", "connecto",
+        "voiceclub", "vibely", "litmatch", "beela chat", "beelachat",
+        "star chat", "starchat", "x spaces", "xspaces", "club house",
+        "hello yo", "hello you", "yalla ludo", "wafa ludo",
+        "nintendo gamechat", "gamechat", "messenger rooms", "facebook messenger",
+        "instagram live", "tiktok live", "bigo live", "bigo",
+        "livu", "azeus", "tumile", " omi", "ome tv", "ometv",
+        "chatous", "monkey", "azarlive", "azar", "chatrandom",
+        "chatroulette", "camsurf", "tinychat", "paltalk", "camfrog",
+        "skout", "meetme", "tagged", "hily", "litmatch"
     )
+    val compactInput = value.lowercase(Locale.ROOT)
+        .filter { it.isLetterOrDigit() }
+        .replace('0', 'o').replace('1', 'i').replace('3', 'e')
+        .replace('4', 'a').replace('5', 's').replace('8', 'b')
     return words.any { word ->
         val normalized = word.replace('0', 'o').replace('1', 'i').replace('3', 'e').replace('4', 'a').replace('5', 's').replace('8', 'b')
         normalized in prohibited || (normalized.length >= 5 && prohibited.any { it.length >= 5 && normalized.contains(it) })
+    } || prohibited.any { entry ->
+        val compactEntry = entry.filter { it.isLetterOrDigit() }
+            .replace('0', 'o').replace('1', 'i').replace('3', 'e')
+            .replace('4', 'a').replace('5', 's').replace('8', 'b')
+        compactEntry.length >= 5 && compactInput.contains(compactEntry)
     }
 }
 
