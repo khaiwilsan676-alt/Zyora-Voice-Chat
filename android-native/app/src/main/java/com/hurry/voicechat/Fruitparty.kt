@@ -61,16 +61,17 @@ private fun fruitWinner(round:Int):Int {
  return when {
   random<.025->10
   random<.05->11
-  random<.85->listOf(1,3,7,6)[floor(random*100).toInt()%4]
-  else->listOf(5,2,8,4)[floor(random*100).toInt()%4]
+  random<.85->listOf(0,2,8,6)[floor(random*100).toInt()%4]
+  else->listOf(1,5,7,3)[floor(random*100).toInt()%4]
  }
 }
 private fun fruitMultiplier(id:Int)=fruitItems.firstOrNull{it.id==id}?.multiplier?:when(id){10->20;11->95;else->0}
 private fun fruitImage(id:Int)=when(id){10->"fp_img_20260910_114515";11->"fp_img_20260910_114613";else->fruitItems.firstOrNull{it.id==id}?.image.orEmpty()}
-private fun fruitAward(winner:Int,bets:Map<Int,Long>):Long=when(winner){
+private fun fruitWinnerId(index:Int)=if(index==10||index==11)index else fruitGridIds.getOrNull(index)?:0
+private fun fruitAward(winnerIndex:Int,bets:Map<Int,Long>):Long=when(winnerIndex){
  10->(bets[10]?:0L)*20L+listOf(1,3,7,6).sumOf{(bets[it]?:0L)*5L}
  11->(bets[11]?:0L)*95L+(bets[5]?:0L)*10L+(bets[4]?:0L)*15L+(bets[2]?:0L)*25L+(bets[8]?:0L)*45L
- else->(bets[winner]?:0L)*fruitMultiplier(winner)
+ else->{val id=fruitWinnerId(winnerIndex);(bets[id]?:0L)*fruitMultiplier(id)}
 }
 private fun fruitBoundary(now:Long=System.currentTimeMillis()):Long {
  val c=java.util.Calendar.getInstance().apply{timeInMillis=now}
@@ -181,9 +182,10 @@ fun Fruitparty(onClose:()->Unit,onMinimize:(()->Unit)?=null,isMinimized:Boolean=
   if(!loaded||phase!=FruitPhase.RESULT||processedRound==round)return@LaunchedEffect
   processedRound=round
   val current=bets.toMap()
+  val winnerId=fruitWinnerId(winner)
   val earned=fruitAward(winner,current)
   val totalBet=current.values.sum()
-  val winningImage=fruitImage(winner)
+  val winningImage=fruitImage(winnerId)
   if(winningImage.isNotEmpty()){
    lastBet=totalBet;lastWin=earned;lastRound=round
    if(earned>0){updateWallet(earned,"Won in Fruit Party");totalWon+=earned;context.getSharedPreferences("fruit_party_native",Context.MODE_PRIVATE).edit().putLong("totalWon",totalWon).apply()}
@@ -203,7 +205,7 @@ fun Fruitparty(onClose:()->Unit,onMinimize:(()->Unit)?=null,isMinimized:Boolean=
    if(bg!=0)Image(painterResource(bg),null,Modifier.fillMaxSize(),contentScale=ContentScale.FillBounds)
    else Box(Modifier.fillMaxSize().background(fruitPurple))
    Row(Modifier.fillMaxWidth().align(Alignment.TopCenter).padding(horizontal=22.dp, vertical=5.dp),verticalAlignment=Alignment.CenterVertically){
-    Text("◉",Modifier.clickable{vibration=!vibration}.padding(4.dp),color=fruitBrown,fontSize=19.sp)
+    Text(if(muted)"◖×" else "◖))",Modifier.clickable{muted=!muted}.padding(4.dp),color=fruitBrown,fontSize=16.sp)
     Text(if(vibration)"♧" else "♧̸",Modifier.clickable{vibration=!vibration}.padding(4.dp),color=fruitBrown,fontSize=18.sp)
     Spacer(Modifier.weight(1f))
     Text("Round of Today $round",color=Color.White,fontSize=10.sp,fontWeight=FontWeight.Bold)
@@ -246,11 +248,13 @@ fun Fruitparty(onClose:()->Unit,onMinimize:(()->Unit)?=null,isMinimized:Boolean=
        }
       }else{
        val item=fruitItems.first{it.id==index}
-       val active=(phase==FruitPhase.BETTING&&handPointer==fruitSpinPath.indexOf(index))||(phase!=FruitPhase.BETTING&&highlight==index)
-       val final=phase==FruitPhase.RESULT&&(winner==index||(winner==10&&index in listOf(1,3,7,6))||(winner==11&&index in listOf(5,4,2,8)))
+       val gridIndex=fruitGridIds.indexOf(item.id)
+       val active=(phase==FruitPhase.BETTING&&handPointer==gridIndex)||(phase!=FruitPhase.BETTING&&highlight==gridIndex)
+       val final=phase==FruitPhase.RESULT&&(winner==gridIndex||(winner==10&&gridIndex in listOf(0,2,6,8))||(winner==11&&gridIndex in listOf(1,3,5,7)))
        Box(Modifier.weight(1f).fillMaxHeight().padding(3.dp).clip(RoundedCornerShape(8.dp)).background(if(active)Color(0xFF4C8A36)else Color(0xFF5B3A58)).border(if(active||final)2.dp else 1.dp,if(active||final)Color(0xFFB9FF75)else Color(0xFFB18B70),RoundedCornerShape(8.dp)).clickable{placeBet(item.id)},contentAlignment=Alignment.Center){
         val tile=fruitAsset(context,"fp_file_00000000d0ec820ba666eab8bea30204");if(tile!=0)Image(painterResource(tile),null,Modifier.fillMaxSize(),contentScale=ContentScale.FillBounds)
         val image=fruitAsset(context,item.image);if(image!=0)Image(painterResource(image),null,Modifier.fillMaxSize(.57f).align(Alignment.Center).padding(bottom=12.dp),contentScale=ContentScale.Fit)
+        if(phase==FruitPhase.BETTING&&handPointer==gridIndex){val pointer=fruitAsset(context,"fp_file_000000000f0c820b95490c9d927692d9");if(pointer!=0)Image(painterResource(pointer),null,Modifier.align(Alignment.BottomEnd).size(40.dp).graphicsLayer{rotationZ=-45f},contentScale=ContentScale.Fit)}
         Text("×${item.multiplier}",Modifier.align(Alignment.BottomCenter).padding(bottom=5.dp),color=Color.White,fontSize=11.sp,fontWeight=FontWeight.Black)
         val bet=bets[item.id]?:0L
         if(bet>0)Row(Modifier.align(Alignment.Center).offset(y=12.dp).clip(RoundedCornerShape(4.dp)).background(Color(0xCC4F65B9)).padding(horizontal=3.dp,vertical=1.dp),verticalAlignment=Alignment.CenterVertically){val coin=fruitAsset(context,"fp_file_00000000e56882119c217d508b6733dc");if(coin!=0)Image(painterResource(coin),null,Modifier.size(10.dp));Text(fruitFormat(bet),color=Color.White,fontSize=7.sp,fontWeight=FontWeight.Bold)}
