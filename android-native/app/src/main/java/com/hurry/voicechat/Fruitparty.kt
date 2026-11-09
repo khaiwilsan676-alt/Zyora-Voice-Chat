@@ -7,19 +7,16 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.PhoneAndroid
-import androidx.compose.material.icons.filled.AccessTime
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.VolumeOff
-import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.*
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -104,6 +101,34 @@ private fun fruitSaveHistory(context:Context,list:List<FruitHistory>){
  list.take(50).forEach{h->val b=JSONObject();h.bets.forEach{(k,v)->b.put(k.toString(),v)}
   a.put(JSONObject().put("round",h.round).put("winner",h.winnerId).put("bets",b).put("won",h.won).put("time",h.time))}
  context.getSharedPreferences("fruit_party_native",Context.MODE_PRIVATE).edit().putString("history",a.toString()).apply()
+}
+
+
+@Composable
+private fun FruitTopGlyph(kind:String, disabled:Boolean=false){
+ Canvas(Modifier.size(15.dp)){
+  val sx=size.width/24f; val sy=size.height/24f
+  fun pt(x:Float,y:Float)=Offset(x*sx,y*sy)
+  fun ln(x1:Float,y1:Float,x2:Float,y2:Float,w:Float=1.8f){drawLine(fruitBrown,pt(x1,y1),pt(x2,y2),w*sx,cap=StrokeCap.Round)}
+  when(kind){
+   "vibration"->{
+    val p=Path().apply{moveTo(8f*sx,1f*sy);lineTo(16f*sx,1f*sy);quadraticTo(18f*sx,1f*sy,18f*sx,3f*sy);lineTo(18f*sx,21f*sy);quadraticTo(18f*sx,23f*sy,16f*sx,23f*sy);lineTo(8f*sx,23f*sy);quadraticTo(6f*sx,23f*sy,6f*sx,21f*sy);lineTo(6f*sx,3f*sy);quadraticTo(6f*sx,1f*sy,8f*sx,1f*sy);close()}
+    drawPath(p,fruitBrown,style=Stroke(1.8f*sx,join=StrokeJoin.Round));ln(9f,4f,15f,4f,1.2f);ln(9f,20f,15f,20f,1.2f)
+    if(disabled)ln(2f,2f,22f,22f,2f) else {ln(3f,7f,3f,17f);ln(21f,7f,21f,17f)}
+   }
+   "sound"->{
+    val p=Path().apply{moveTo(3f*sx,9f*sy);lineTo(7f*sx,9f*sy);lineTo(12f*sx,4f*sy);lineTo(12f*sx,20f*sy);lineTo(7f*sx,15f*sy);lineTo(3f*sx,15f*sy);close()}
+    drawPath(p,fruitBrown)
+    if(disabled){ln(15f,9f,21f,15f);ln(21f,9f,15f,15f)}else{
+     val w=Path().apply{moveTo(15f*sx,8f*sy);quadraticTo(19f*sx,12f*sy,15f*sx,16f*sy);moveTo(17f*sx,4f*sy);quadraticTo(24f*sx,12f*sy,17f*sx,20f*sy)}
+     drawPath(w,fruitBrown,style=Stroke(1.7f*sx,cap=StrokeCap.Round,join=StrokeJoin.Round))
+    }
+   }
+   "minimize"->{val p=Path().apply{moveTo(6f*sx,9f*sy);lineTo(12f*sx,15f*sy);lineTo(18f*sx,9f*sy)};drawPath(p,fruitBrown,style=Stroke(4f*sx,cap=StrokeCap.Round,join=StrokeJoin.Round))}
+   "history"->{drawCircle(fruitBrown,10f*sx,pt(12f,12f),style=Stroke(1.8f*sx));ln(12f,6f,12f,12f);ln(12f,12f,17f,15f)}
+   "close"->{ln(6f,6f,18f,18f,2f);ln(18f,6f,6f,18f,2f)}
+  }
+ }
 }
 
 /** Fully native Fruit Party game. Artwork is bundled in Android drawable resources; no WebView or network page. */
@@ -209,35 +234,22 @@ fun Fruitparty(onClose:()->Unit,onMinimize:(()->Unit)?=null,isMinimized:Boolean=
    if(bg!=0)Image(painterResource(bg),null,Modifier.fillMaxSize(),contentScale=ContentScale.FillBounds)
    else Box(Modifier.fillMaxSize().background(fruitPurple))
    Row(Modifier.fillMaxWidth().align(Alignment.TopCenter).padding(horizontal=22.dp, vertical=5.dp),verticalAlignment=Alignment.CenterVertically){
+    Row(horizontalArrangement=Arrangement.spacedBy(2.dp   Row(Modifier.fillMaxWidth().align(Alignment.TopCenter).padding(horizontal=22.dp, vertical=5.dp),verticalAlignment=Alignment.CenterVertically){
     Row(horizontalArrangement=Arrangement.spacedBy(2.dp),verticalAlignment=Alignment.CenterVertically){
-     Box(Modifier.size(24.dp).border(2.dp,fruitBrown,CircleShape).clickable{vibration=!vibration},contentAlignment=Alignment.Center){
-      Icon(Icons.Default.PhoneAndroid,null,Modifier.size(15.dp),tint=fruitBrown)
-      if(!vibration)Canvas(Modifier.size(15.dp)){drawLine(fruitBrown,Offset(size.width*.08f,size.height*.08f),Offset(size.width*.92f,size.height*.92f),strokeWidth=2.dp.toPx())}
-     }
-     Box(Modifier.size(24.dp).border(2.dp,fruitBrown,CircleShape).clickable{muted=!muted},contentAlignment=Alignment.Center){
-      Icon(if(muted)Icons.Default.VolumeOff else Icons.Default.VolumeUp,null,Modifier.size(15.dp),tint=fruitBrown)
-     }
-     Box(Modifier.size(24.dp).border(2.dp,fruitBrown,CircleShape).clickable{showRules=true},contentAlignment=Alignment.Center){
-      Text("?",color=fruitBrown,fontSize=17.sp,fontWeight=FontWeight.Black,fontFamily=androidx.compose.ui.text.font.FontFamily.Serif)
-     }
+     Box(Modifier.size(24.dp).border(2.dp,fruitBrown,CircleShape).clickable{vibration=!vibration},contentAlignment=Alignment.Center){FruitTopGlyph("vibration",!vibration)}
+     Box(Modifier.size(24.dp).border(2.dp,fruitBrown,CircleShape).clickable{muted=!muted},contentAlignment=Alignment.Center){FruitTopGlyph("sound",muted)}
+     Box(Modifier.size(24.dp).border(2.dp,fruitBrown,CircleShape).clickable{showRules=true},contentAlignment=Alignment.Center){Text("?",color=fruitBrown,fontSize=18.sp,fontWeight=FontWeight.Black,fontFamily=androidx.compose.ui.text.font.FontFamily.Serif)}
     }
     Spacer(Modifier.weight(1f))
     Text("Round of Today $round",color=Color.White,fontSize=10.sp,fontWeight=FontWeight.Bold)
     Spacer(Modifier.weight(1f))
     Row(horizontalArrangement=Arrangement.spacedBy(2.dp),verticalAlignment=Alignment.CenterVertically){
-     Box(Modifier.size(24.dp).border(2.dp,fruitBrown,CircleShape).clickable{minimizedSession=true;onMinimize?.invoke()},contentAlignment=Alignment.Center){
-      Icon(Icons.Default.KeyboardArrowDown,null,Modifier.size(18.dp),tint=fruitBrown)
-     }
-     Box(Modifier.size(24.dp).border(2.dp,fruitBrown,CircleShape).clickable{showHistory=true},contentAlignment=Alignment.Center){
-      Icon(Icons.Default.AccessTime,null,Modifier.size(16.dp),tint=fruitBrown)
-     }
-     Box(Modifier.size(24.dp).border(2.dp,fruitBrown,CircleShape).clickable{onClose()},contentAlignment=Alignment.Center){
-      Icon(Icons.Default.Close,null,Modifier.size(16.dp),tint=fruitBrown)
-     }
+     Box(Modifier.size(24.dp).border(2.dp,fruitBrown,CircleShape).clickable{minimizedSession=true;onMinimize?.invoke()},contentAlignment=Alignment.Center){FruitTopGlyph("minimize")}
+     Box(Modifier.size(24.dp).border(2.dp,fruitBrown,CircleShape).clickable{showHistory=true},contentAlignment=Alignment.Center){FruitTopGlyph("history")}
+     Box(Modifier.size(24.dp).border(2.dp,fruitBrown,CircleShape).clickable{onClose()},contentAlignment=Alignment.Center){FruitTopGlyph("close")}
     }
    }
-   Row(Modifier.fillMaxWidth().align(Alignment.BottomCenter).padding(horizontal=22.dp, vertical=18.dp),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){
-    Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){val coin=fruitAsset(context,"fp_file_00000000e56882119c217d508b6733dc");if(coin!=0)Image(painterResource(coin),null,Modifier.size(20.dp));Text(balance.toString(),color=Color.White,fontSize=12.sp,fontWeight=FontWeight.Bold)}
+Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){val coin=fruitAsset(context,"fp_file_00000000e56882119c217d508b6733dc");if(coin!=0)Image(painterResource(coin),null,Modifier.size(20.dp));Text(balance.toString(),color=Color.White,fontSize=12.sp,fontWeight=FontWeight.Bold)}
     Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){val coin=fruitAsset(context,"fp_file_00000000e56882119c217d508b6733dc");if(coin!=0)Image(painterResource(coin),null,Modifier.size(20.dp));Text(totalWon.toString(),color=Color.White,fontSize=12.sp,fontWeight=FontWeight.Bold)}
    }
    Row(Modifier.align(Alignment.BottomCenter).padding(bottom=screenH*.025f).fillMaxWidth().horizontalScroll(rememberScrollState()).padding(start=screenH*.12f),horizontalArrangement=Arrangement.spacedBy(8.dp)){
