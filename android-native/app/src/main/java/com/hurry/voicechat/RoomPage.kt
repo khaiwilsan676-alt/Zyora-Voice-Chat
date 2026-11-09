@@ -845,6 +845,8 @@ fun RoomPage(
     }
     val entryToasts=remember{mutableStateListOf<NativeEntryToast>()}
     val seats=remember{mutableStateListOf<NativeRoomSeat>().apply{for(i in 1..15)add(NativeRoomSeat(i))}}
+    // The owner gets one automatic attempt on the first authoritative seat snapshot only.
+    val ownerAutoSeatAttempted = remember(roomId, accountId) { java.util.concurrent.atomic.AtomicBoolean(false) }
     // Preserve live speaker state across room_seats snapshots.
     val activeVoiceSpeakerIds=remember(roomId){mutableStateSetOf<String>()}
     val backendRoomUsers=remember{mutableStateListOf<ActiveUserNative>()}
@@ -1085,6 +1087,22 @@ fun RoomPage(
                         seats.add(incoming.copy(
                             speaking = !incoming.muted && (incoming.speaking || incoming.accountId in activeVoiceSpeakerIds)
                         ))
+                    }
+                    val ownerIds = setOf(roomOwner.accountId, roomOwner.id, roomOwner.uid, roomId).filter { it.isNotBlank() }.toSet()
+                    if (accountId in ownerIds && ownerAutoSeatAttempted.compareAndSet(false, true)) {
+                        val firstSeat = parsed.firstOrNull { it.number == 1 }
+                        val ownerAlreadySeated = parsed.any { it.occupied && it.accountId in ownerIds }
+                        if (firstSeat != null && !firstSeat.occupied && !firstSeat.locked && !ownerAlreadySeated) {
+                            val ownerUser = JSONObject()
+                                .put("name", latestRoomDisplayName.ifBlank { "User" })
+                                .put("image", latestRoomDisplayImage.ifBlank { "https://zyora-server.onrender.com/default-avatar.png" })
+                                .put("accountId", accountId)
+                            roomSocket.emit(
+                                "room_seat_action",
+                                JSONObject().put("roomId", roomId).put("userId", accountId)
+                                    .put("action", "take").put("seatNumber", 1).put("user", ownerUser)
+                            )
+                        }
                     }
                 }
             }
