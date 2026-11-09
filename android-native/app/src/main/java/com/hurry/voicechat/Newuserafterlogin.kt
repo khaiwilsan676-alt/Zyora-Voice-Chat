@@ -146,16 +146,21 @@ fun Newuserafterlogin(onBack: () -> Unit, onComplete: () -> Unit) {
                             .background(Color(0xFFEEEEEE)),
                         contentAlignment = Alignment.Center
                     ) {
-                        if (avatar.isNotBlank() && avatar != "/default-avatar.png") {
+                        val genderDefaultPhoto = when (gender) {
+                            "Female" -> "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20260804_211013.jpg"
+                            "Male" -> "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20260804_211031.jpg"
+                            else -> ""
+                        }
+                        if (selectedUri != null || avatar.isNotBlank() && avatar != "/default-avatar.png" || genderDefaultPhoto.isNotBlank()) {
                             AsyncImage(
-                                model = selectedUri ?: avatar,
+                                model = selectedUri ?: avatar.takeIf { it.isNotBlank() && it != "/default-avatar.png" } ?: genderDefaultPhoto,
                                 contentDescription = "Profile photo",
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .clip(CircleShape)
                             )
                         } else {
-                            // Agar DP nahi hai toh App Logo Colorless mode me show karega
+                            // Agar gender select nahi hua toh existing default logo hi show hoga.
                             androidx.compose.foundation.Image(
                                 painter = painterResource(id = R.drawable.hurry_logo),
                                 contentDescription = "Default Logo",
