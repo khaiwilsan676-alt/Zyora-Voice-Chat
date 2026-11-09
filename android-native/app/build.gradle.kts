@@ -48,9 +48,19 @@ val copyGenderAssets = tasks.register<Copy>("copyGenderAssets") {
     from(rootProject.layout.projectDirectory.dir("../public")) {
         include(
             "IMG_20261031_121547.png", "IMG_20261031_121627.png",
-            "IMG_20260804_211013.jpg", "IMG_20260804_211031.jpg"
+            "IMG_20260804_211013.jpg", "IMG_20260804_211031.jpg",
+            "IMG_20260822_143032.png", "1787389350745~2.jpg", "IMG_20260822_143348.png",
+            "IMG_20260822_143408.png", "IMG_20260822_143422~2.jpg",
+            "IMG_20260822_011134.png", "IMG_20260822_011118.png", "IMG_20260822_011103.png",
+            "IMG_20260822_011041.png", "IMG_20260822_011151.png", "IMG_20260822_011205.png",
+            "IMG_20260822_011218.png", "IMG_20260822_011028.png", "1787337855180~2.jpg",
+            "IMG_20260822_011000.png", "file_00000000993c8208ae462545f9ccb0ba.png",
+            "file_00000000330c8211b80be136b631b3e0.png", "file_000000009d808211b8ffb7c2183b4ef5.png",
+            "1787344138649~2.jpg", "file_00000000e56882119c217d508b6733dc.png",
+            "IMG_20260913_000423.png", "IMG_20260912_235156.png", "IMG_20260912_235215.png",
+            "IMG_20260912_235230.png"
         )
-        rename { fileName -> fileName.lowercase() }
+        rename { fileName -> fileName.lowercase().replace("~", "_").replace("-", "_").replace(" ", "_") }
     }
     into(generatedGenderResources.map { it.dir("drawable") })
 }
