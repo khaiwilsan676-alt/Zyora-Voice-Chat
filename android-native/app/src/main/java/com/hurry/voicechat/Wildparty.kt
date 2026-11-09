@@ -164,6 +164,25 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
   Box(Modifier.fillMaxWidth().height(h).background(Color(0xFF28180D))){
    val bg=wpAsset(context,"wp_1787337855180_2")
    if(bg!=0)Image(painterResource(bg),null,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
+   // Original TSX top multiplier badges (same artwork and placement).
+   val multiplierBg=wpAsset(context,"wp_file_00000000330c8211b80be136b631b3e0")
+   @Composable fun MultiplierBadge(big:Boolean){
+    Box(Modifier.size(65.dp),contentAlignment=Alignment.Center){
+     if(multiplierBg!=0)Image(painterResource(multiplierBg),null,Modifier.fillMaxSize(),contentScale=ContentScale.Fit)
+     val names=if(big) listOf("Eagle","Bear","Tiger","Lion") else listOf("Dog","Deer","Zebra","Fox")
+     names.forEachIndexed{index,name->
+      val animal=wpAnimals.first{it.name==name}
+      val id=wpAsset(context,animal.image)
+      val x=if(index%2==0)(-13).dp else 13.dp
+      val y=if(index<2)(-13).dp else 13.dp
+      if(id!=0)Image(painterResource(id),name,Modifier.offset(x,y).size(if(index<2)32.dp else 34.dp),contentScale=ContentScale.Fit)
+     }
+    }
+   }
+   Row(Modifier.fillMaxWidth().padding(horizontal=4.dp).padding(top=80.dp),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.Top){
+    MultiplierBadge(true)
+    MultiplierBadge(false)
+   }
    Column(Modifier.fillMaxWidth().align(Alignment.TopCenter).padding(top=8.dp)){
     Row(Modifier.fillMaxWidth().padding(horizontal=10.dp),verticalAlignment=Alignment.CenterVertically){
      Text("WILD PARTY",Modifier.weight(1f),color=wpGold,fontSize=17.sp,fontWeight=FontWeight.Black)
@@ -178,11 +197,14 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
      Text(when(phase){WpPhase.BETTING->"Betting";WpPhase.SPINNING->"Spinning";WpPhase.RESULT->"Result"}+"  $countdown s",color=wpGold,fontWeight=FontWeight.Bold,fontSize=13.sp)
     }
    }
-   Box(Modifier.align(Alignment.Center).size(280.dp),contentAlignment=Alignment.Center){
+   Box(Modifier.align(Alignment.Center).size(320.dp),contentAlignment=Alignment.Center){
+    // Original TSX decorative wheel image behind all animal icons.
+    val wheelBg=wpAsset(context,"wp_1787344138649_2")
+    if(wheelBg!=0)Image(painterResource(wheelBg),null,Modifier.fillMaxSize(),contentScale=ContentScale.Fit)
     Box(Modifier.size(260.dp).clip(CircleShape).background(Color(0xCC311D0C)).border(5.dp,Color(0xFFFFD16B),CircleShape))
     Canvas(Modifier.size(250.dp)){drawCircle(Color(0xFF6B3B14),style=androidx.compose.ui.graphics.drawscope.Stroke(5.dp.toPx()));for(i in 0..7){val a=Math.toRadians(i*45.0-90);val c=size.width/2;drawLine(Color(0xFFFFD56A),androidx.compose.ui.geometry.Offset(c,c),androidx.compose.ui.geometry.Offset(c+cos(a).toFloat()*size.width*.48f,c+sin(a).toFloat()*size.height*.48f),2.dp.toPx())}}
     wpAnimals.forEachIndexed{i,a->
-     val rad=Math.toRadians(a.angle.toDouble());val x=(cos(rad)*100).dp+a.dx.dp;val y=(sin(rad)*100).dp+a.dy.dp
+     val rad=Math.toRadians(a.angle.toDouble());val x=(cos(rad)*130).dp+a.dx.dp;val y=(sin(rad)*130).dp+a.dy.dp
      val active=highlight==i||(phase==WpPhase.RESULT&&((mode==WpMode.MIX_BIG&&i>=4)||(mode==WpMode.MIX_SMALL&&i<4)))
      val image=wpAsset(context,a.image)
      Box(Modifier.offset(x,y).size(a.size.dp).clip(CircleShape).background(Color(0xFF4A2B13)).border(if(active)3.dp else 1.dp,if(active)wpGold else Color(0xFFB8864B),CircleShape).clickable{place(a.name)}.padding(4.dp),contentAlignment=Alignment.Center){
