@@ -74,7 +74,7 @@ private const val RAW_MSG = "https://raw.githubusercontent.com/khaiwilsan676-alt
 private fun containsProhibitedChatText(value: String): Boolean {
     val words = value.lowercase(Locale.ROOT)
         .split(Regex("[^\\p{L}\\p{N}]+"))
-        .map { it.filter(Char::isLetterOrDigit) }
+        .map { token -> token.filter { ch -> ch.isLetterOrDigit() } }
         .filter { it.isNotBlank() }
     val prohibited = setOf(
         "madarchod", "madarchot", "mc", "bhenchod", "behenchod", "bhench0d",
