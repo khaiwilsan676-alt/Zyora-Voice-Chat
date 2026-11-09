@@ -44,7 +44,8 @@ private val fruitItems=listOf(
  FruitItem(4,"Strawberry","fp_img_20260908_191906",15),
  FruitItem(6,"Pear","fp_img_20260908_191930",5)
 )
-private val fruitOrder=listOf(1,5,3,8,2,7,4,6)\nprivate val fruitGridIds=listOf(1,5,3,8,0,2,7,4,6)
+private val fruitOrder=listOf(1,5,3,8,2,7,4,6)
+private val fruitGridIds=listOf(1,5,3,8,0,2,7,4,6)
 private val fruitSpinPath=listOf(0,1,2,5,8,7,6,3)
 private val fruitChipValues=listOf(1_000L,50_000L,1_000_000L,5_000_000L)
 private val fruitChipLabels=listOf("1K","50K","1M","5M")
