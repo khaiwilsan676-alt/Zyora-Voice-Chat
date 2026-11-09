@@ -713,14 +713,7 @@ fun NativeChatScreen(
         }
     }
     LaunchedEffect(blockPopupText) {
-        if (copyPopupText.isNotBlank()) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text(copyPopupText, color = Color.White, fontSize = 12.sp,
-                modifier = Modifier.clip(RoundedCornerShape(7.dp)).background(Color.Black.copy(alpha = 0.70f))
-                    .padding(horizontal = 14.dp, vertical = 8.dp))
-        }
-    }
-    if (blockPopupText.isNotBlank()) {
+        if (blockPopupText.isNotBlank()) {
             kotlinx.coroutines.delay(1800)
             blockPopupText = ""
         }
@@ -1844,6 +1837,13 @@ fun NativeChatScreen(
         onDispose {
             socket?.off("private_message_sent", sentListener)
             socket?.off("private_message_error", blockedListener)
+        }
+    }
+    if (copyPopupText.isNotBlank()) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(copyPopupText, color = Color.White, fontSize = 12.sp,
+                modifier = Modifier.clip(RoundedCornerShape(7.dp)).background(Color.Black.copy(alpha = 0.70f))
+                    .padding(horizontal = 14.dp, vertical = 8.dp))
         }
     }
     if (blockPopupText.isNotBlank()) {
