@@ -3193,7 +3193,9 @@ private val Int.percentHeight: androidx.compose.ui.unit.Dp
 }
 
 @Composable private fun GamesSheet(onClose:()->Unit,onWildParty:()->Unit,onFruitParty:()->Unit){
-    val raw="https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/"
+    val context=LocalContext.current
+    val wildIcon=context.resources.getIdentifier("fp_file_000000009d808211b8ffb7c2183b4ef5","drawable",context.packageName)
+    val fruitIcon=context.resources.getIdentifier("fp_file_00000000c9e08211ab3e8c4d511b7965","drawable",context.packageName)
     Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=.30f)).clickable{onClose()},contentAlignment=Alignment.BottomCenter){
         Surface(Modifier.fillMaxWidth().clickable(enabled=false){},color=Color.Black.copy(alpha=0.92f),shape=RoundedCornerShape(topStart=15.dp,topEnd=15.dp)){
             Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(start=16.dp,end=16.dp,top=12.dp,bottom=24.dp)){
@@ -3201,12 +3203,12 @@ private val Int.percentHeight: androidx.compose.ui.unit.Dp
                 Spacer(Modifier.height(16.dp))
                 Row(horizontalArrangement=Arrangement.spacedBy(20.dp),verticalAlignment=Alignment.Top){
                     Column(Modifier.clickable{onWildParty()}, horizontalAlignment=Alignment.CenterHorizontally){
-                        AsyncImage(model=raw+"file_000000009d808211b8ffb7c2183b4ef5.png",contentDescription="Wild party",modifier=Modifier.size(56.dp),contentScale=ContentScale.Fit)
+                        if(wildIcon!=0) Image(painterResource(wildIcon),contentDescription="Wild party",modifier=Modifier.size(56.dp),contentScale=ContentScale.Fit)
                         Spacer(Modifier.height(2.dp))
                         Text("Wild party",color=Color.White,fontSize=10.sp,maxLines=1,softWrap=false)
                     }
                     Column(Modifier.clickable{onFruitParty()}, horizontalAlignment=Alignment.CenterHorizontally){
-                        AsyncImage(model=raw+"file_00000000c9e08211ab3e8c4d511b7965.png",contentDescription="Fruit party",modifier=Modifier.size(54.dp).clip(RoundedCornerShape(6.dp)),contentScale=ContentScale.Fit)
+                        if(fruitIcon!=0) Image(painterResource(fruitIcon),contentDescription="Fruit party",modifier=Modifier.size(54.dp).clip(RoundedCornerShape(6.dp)),contentScale=ContentScale.Fit)
                         Spacer(Modifier.height(2.dp))
                         Text("Fruit party",color=Color.White,fontSize=10.sp,maxLines=1,softWrap=false)
                     }
