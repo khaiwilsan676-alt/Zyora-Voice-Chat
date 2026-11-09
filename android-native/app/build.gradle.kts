@@ -46,7 +46,10 @@ android {
 val generatedGenderResources = layout.buildDirectory.dir("generated/res/genderAssets")
 val copyGenderAssets = tasks.register<Copy>("copyGenderAssets") {
     from(rootProject.layout.projectDirectory.dir("../public")) {
-        include("IMG_20261031_121547.png", "IMG_20261031_121627.png")
+        include(
+            "IMG_20261031_121547.png", "IMG_20261031_121627.png",
+            "IMG_20260804_211013.jpg", "IMG_20260804_211031.jpg"
+        )
         rename { fileName -> fileName.lowercase() }
     }
     into(generatedGenderResources.map { it.dir("drawable") })
