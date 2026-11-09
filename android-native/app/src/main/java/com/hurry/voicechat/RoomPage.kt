@@ -15,6 +15,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
@@ -63,6 +65,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.withContext
 import androidx.compose.ui.graphics.asImageBitmap
 import android.os.Handler
@@ -77,6 +80,33 @@ import androidx.compose.foundation.basicMarquee
 import coil3.compose.AsyncImage
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+
+// Copy only after a deliberate two-second hold; movement or release cancels the gesture.
+internal fun Modifier.twoSecondLongPress(onLongPress: () -> Unit): Modifier = pointerInput(onLongPress) {
+    awaitEachGesture {
+        val down = awaitFirstDown(requireUnconsumed = false)
+        val heldForTwoSeconds = withTimeoutOrNull(2_000L) {
+            var stillHeld = true
+            while (stillHeld) {
+                val event = awaitPointerEvent()
+                val change = event.changes.firstOrNull { it.id == down.id }
+                if (change == null || !change.pressed || (change.position - down.position).getDistance() > viewConfiguration.touchSlop) {
+                    stillHeld = false
+                }
+            }
+            false
+        } ?: true
+        if (heldForTwoSeconds) {
+            onLongPress()
+            while (true) {
+                val event = awaitPointerEvent()
+                val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                change.consume()
+                if (!change.pressed) break
+            }
+        }
+    }
+}
 
 // Room Admin Tag image kept in code for future use
 const val ROOM_ADMIN_TAG = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261107_154649.png"
@@ -507,10 +537,23 @@ fun RoomPage(
     var localVoiceSpeaking by remember { mutableStateOf(false) }
     var publicMsgOff by remember(roomId){mutableStateOf(true)}
     var showPublicMessageClosedToast by remember { mutableStateOf(false) }
+    var roomToastText by remember { mutableStateOf("") }
+    LaunchedEffect(roomToastText) {
+        if (roomToastText.isNotBlank()) {
+            kotlinx.coroutines.delay(1600)
+            roomToastText = ""
+        }
+    }
     var showRoomOwnerBlockedToast by remember { mutableStateOf(false) }
     val isRoomOwner = accountId == roomOwnerAccountId || roomAdminIds.any { it.trim() == accountId.trim() }
     val canSendRoomPublicMessage = isRoomOwner || roomAdminIds.any { it == accountId }
     LaunchedEffect(showPublicMessageClosedToast) {
+        if (roomToastText.isNotBlank()) {
+            Text(roomToastText, color = Color.White, fontSize = 12.sp,
+                modifier = Modifier.align(Alignment.Center).zIndex(102f)
+                    .clip(RoundedCornerShape(8.dp)).background(Color.Black.copy(alpha = 0.70f))
+                    .padding(horizontal = 14.dp, vertical = 8.dp))
+        }
         if (showPublicMessageClosedToast) {
             kotlinx.coroutines.delay(1800)
             showPublicMessageClosedToast = false
@@ -1560,7 +1603,11 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                             roomOwnerId = roomOwner.accountId.ifBlank { roomOwner.id },
                             roomAdminIds = roomAdminIds,
                             onSelectMessage = { selectedChatProfile = it },
-                            onSelectMention = { mention -> selectedChatProfile = NativeRoomMessage("mention-profile-${mention.accountId}", "", mention.name, "", mention.accountId) }
+                            onSelectMention = { mention -> selectedChatProfile = NativeRoomMessage("mention-profile-${mention.accountId}", "", mention.name, "", mention.accountId) },
+                            onCopyMessage = { text ->
+                                clipboard.setText(AnnotatedString(text))
+                                roomToastText = "Copy to clipboard"
+                            }
                         )
                     }
                 }
@@ -1679,6 +1726,7 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                 Column(
                     Modifier.weight(1f).fillMaxWidth()
                         .background(Color.Black.copy(alpha = 0.50f))
+                        .clickable { showChat = false; keyboardController?.hide() }
                 ) {
                     Box(Modifier.fillMaxWidth().height(80.dp)) {
                         IconButton(
@@ -1704,7 +1752,11 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                             roomOwnerId = roomOwner.accountId.ifBlank { roomOwner.id },
                             roomAdminIds = roomAdminIds,
                             onSelectMessage = { selectedChatProfile = it },
-                            onSelectMention = { mention -> selectedChatProfile = NativeRoomMessage("mention-profile-${mention.accountId}", "", mention.name, "", mention.accountId) }
+                            onSelectMention = { mention -> selectedChatProfile = NativeRoomMessage("mention-profile-${mention.accountId}", "", mention.name, "", mention.accountId) },
+                            onCopyMessage = { text ->
+                                clipboard.setText(AnnotatedString(text))
+                                roomToastText = "Copy to clipboard"
+                            }
                         )
                     }
                 }
@@ -1985,6 +2037,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
             onClose={showMenu=false},
             onClearChat={
                 messages.clear()
+                roomToastText = "Public message Cleared"
                 showOfficialAnnouncement = false
                 announcement = ""
                 val clearerName = roomDisplayName.ifBlank { "User" }
@@ -2741,7 +2794,8 @@ private fun RoomChatMessages(
     roomOwnerId: String,
     roomAdminIds: List<String> = emptyList(),
     onSelectMessage: (NativeRoomMessage) -> Unit,
-    onSelectMention: (NativeMention) -> Unit = {}
+    onSelectMention: (NativeMention) -> Unit = {},
+    onCopyMessage: (String) -> Unit = {}
 ) {
     LazyColumn(
         state = state,
@@ -2810,7 +2864,7 @@ private fun RoomChatMessages(
                                         }
                                         Text("Enter the room",color=Color.White,fontSize=12.sp,fontWeight=FontWeight.Bold, modifier=Modifier.padding(start=2.dp).clickable { onSelectMessage(message) })
                                     }
-                                } else NativeMessage(message, roomOwnerId = roomOwnerId, roomAdminIds = roomAdminIds, onAvatarClick = { onSelectMessage(message) }, onMentionClick = onSelectMention)
+                                } else NativeMessage(message, roomOwnerId = roomOwnerId, roomAdminIds = roomAdminIds, onAvatarClick = { onSelectMessage(message) }, onMentionClick = onSelectMention, onCopyMessage = onCopyMessage)
                             }
                             items(kickNotices, key = { it.id }) { notice ->
                                 Column(Modifier.fillMaxWidth().padding(start=4.dp, top=0.dp, end=82.dp, bottom=2.dp)) {
@@ -3112,7 +3166,7 @@ private fun RoomSeatInviteDialog(
     }
 }
 
-@Composable private fun NativeMessage(m:NativeRoomMessage, roomOwnerId: String, roomAdminIds: List<String> = emptyList(), onAvatarClick: () -> Unit = {}, onMentionClick: (NativeMention) -> Unit = {}){
+@Composable private fun NativeMessage(m:NativeRoomMessage, roomOwnerId: String, roomAdminIds: List<String> = emptyList(), onAvatarClick: () -> Unit = {}, onMentionClick: (NativeMention) -> Unit = {}, onCopyMessage: (String) -> Unit = {}){
     val context = LocalContext.current
     var showRoomImagePreview by remember(m.id) { mutableStateOf(false) }
     val profileDb = remember(context) { NativeIndexDatabase(context) }
@@ -3208,7 +3262,7 @@ private fun RoomSeatInviteDialog(
                         }
                     }
                 }
-            } else Box(Modifier.align(Alignment.Start).clip(RoundedCornerShape(topStart=2.dp,topEnd=12.dp,bottomStart=12.dp,bottomEnd=12.dp)).background(Color.Black.copy(alpha=.40f)).border(0.5.dp,Color.White.copy(alpha=.15f),RoundedCornerShape(topStart=2.dp,topEnd=12.dp,bottomStart=12.dp,bottomEnd=12.dp)).padding(horizontal=10.dp,vertical=8.dp)){
+            } else Box(Modifier.align(Alignment.Start).twoSecondLongPress { if (m.text.isNotBlank()) onCopyMessage(m.text) }.clip(RoundedCornerShape(topStart=2.dp,topEnd=12.dp,bottomStart=12.dp,bottomEnd=12.dp)).background(Color.Black.copy(alpha=.40f)).border(0.5.dp,Color.White.copy(alpha=.15f),RoundedCornerShape(topStart=2.dp,topEnd=12.dp,bottomStart=12.dp,bottomEnd=12.dp)).padding(horizontal=10.dp,vertical=8.dp)){
                 if (m.mentions.isEmpty()) {
                     Text(m.text,color=Color.White,fontSize=13.sp,lineHeight=18.sp,softWrap=true)
                 } else {
