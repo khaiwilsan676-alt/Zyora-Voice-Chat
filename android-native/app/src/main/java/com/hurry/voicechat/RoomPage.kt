@@ -15,8 +15,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
@@ -81,31 +79,14 @@ import coil3.compose.AsyncImage
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 
-// Copy only after a deliberate two-second hold; movement or release cancels the gesture.
+// Copy only after a deliberate two-second hold; release/cancel before then does nothing.
 internal fun Modifier.twoSecondLongPress(onLongPress: () -> Unit): Modifier = pointerInput(onLongPress) {
-    awaitEachGesture {
-        val down = awaitFirstDown(requireUnconsumed = false)
-        val heldForTwoSeconds = withTimeoutOrNull(2_000L) {
-            var stillHeld = true
-            while (stillHeld) {
-                val event = awaitPointerEvent()
-                val change = event.changes.firstOrNull { it.id == down.id }
-                if (change == null || !change.pressed || (change.position - down.position).getDistance() > viewConfiguration.touchSlop) {
-                    stillHeld = false
-                }
-            }
-            false
-        } ?: true
-        if (heldForTwoSeconds) {
-            onLongPress()
-            while (true) {
-                val event = awaitPointerEvent()
-                val change = event.changes.firstOrNull { it.id == down.id } ?: break
-                change.consume()
-                if (!change.pressed) break
-            }
+    detectTapGestures(
+        onPress = {
+            val released = withTimeoutOrNull(2_000L) { tryAwaitRelease() }
+            if (released == null) onLongPress()
         }
-    }
+    )
 }
 
 // Room Admin Tag image kept in code for future use
