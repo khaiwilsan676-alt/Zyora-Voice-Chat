@@ -107,7 +107,9 @@ private fun containsProhibitedChatText(value: String): Boolean {
         "fuk", "fuker", "fuking", "fck", "fcking", "sh1t",
         "a55hole", "b1tch", "d1ck",
         "लंड", "लौड़ा", "लौडे", "चूतिया", "चूत", "भोसड़ी",
-        "भोसड़ीके", "मादरचोद", "बहनचोद", "गांडू", "रंडी"
+        "भोसड़ीके", "मादरचोद", "बहनचोद", "गांडू", "रंडी",
+        // Other voice-chat/application names requested by the user.
+        "sama", "wafa", "yoyo"
     )
     return words.any { word ->
         val normalized = word.replace('0', 'o').replace('1', 'i').replace('3', 'e').replace('4', 'a').replace('5', 's').replace('8', 'b')
