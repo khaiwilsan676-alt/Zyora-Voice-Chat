@@ -60,7 +60,7 @@ val copyGenderAssets = tasks.register<Copy>("copyGenderAssets") {
             "IMG_20260913_000423.png", "IMG_20260912_235156.png", "IMG_20260912_235215.png",
             "IMG_20260912_235230.png"
         )
-        rename { fileName -> "wp_" + fileName.lowercase().replace("~", "_").replace("-", "_").replace(" ", "_") }
+        rename { fileName -> if (fileName.startsWith("IMG_20261031") || fileName.startsWith("IMG_20260804")) fileName.lowercase() else "wp_" + fileName.lowercase().replace("~", "_").replace("-", "_").replace(" ", "_") }
     }
     into(generatedGenderResources.map { it.dir("drawable") })
 }
