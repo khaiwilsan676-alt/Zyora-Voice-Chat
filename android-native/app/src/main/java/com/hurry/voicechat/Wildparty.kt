@@ -170,18 +170,22 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
     Box(Modifier.size(65.dp),contentAlignment=Alignment.Center){
      if(multiplierBg!=0)Image(painterResource(multiplierBg),null,Modifier.fillMaxSize(),contentScale=ContentScale.Fit)
      val names=if(big) listOf("Eagle","Bear","Tiger","Lion") else listOf("Dog","Deer","Zebra","Fox")
+     val positions=listOf(
+      Triple((-9).dp,(-8).dp,-10f),
+      Triple(9.dp,(-8).dp,10f),
+      Triple((-14).dp,12.dp,-15f),
+      Triple(14.dp,12.dp,10f)
+     )
      names.forEachIndexed{index,name->
-      val animal=wpAnimals.first{it.name==name}
-      val id=wpAsset(context,animal.image)
-      val x=if(index%2==0)(-13).dp else 13.dp
-      val y=if(index<2)(-13).dp else 13.dp
-      if(id!=0)Image(painterResource(id),name,Modifier.offset(x,y).size(if(index<2)32.dp else 34.dp),contentScale=ContentScale.Fit)
+      val id=wpAsset(context,wpAnimals.first{it.name==name}.image)
+      val (x,y,rotation)=positions[index]
+      if(id!=0)Image(painterResource(id),name,Modifier.offset(x,y).size(if(index<2)32.dp else 34.dp).graphicsLayer{rotationZ=rotation},contentScale=ContentScale.Crop)
      }
     }
    }
-   Row(Modifier.fillMaxWidth().padding(horizontal=4.dp).padding(top=80.dp),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.Top){
-    MultiplierBadge(true)
-    MultiplierBadge(false)
+   Box(Modifier.fillMaxWidth().padding(top=88.dp)){
+    Box(Modifier.align(Alignment.TopStart).padding(start=4.dp)){MultiplierBadge(true)}
+    Box(Modifier.align(Alignment.TopEnd).padding(end=4.dp)){MultiplierBadge(false)}
    }
    Column(Modifier.fillMaxWidth().align(Alignment.TopCenter).padding(top=8.dp)){
     Row(Modifier.fillMaxWidth().padding(horizontal=10.dp),verticalAlignment=Alignment.CenterVertically){
@@ -237,7 +241,18 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
    Row(Modifier.fillMaxWidth().padding(vertical=7.dp),horizontalArrangement=Arrangement.SpaceAround){Text("Round",color=wpGold,fontSize=10.sp);wpAnimals.forEach{val id=wpAsset(context,it.image);if(id!=0)Image(painterResource(id),null,Modifier.size(23.dp))}}
    LazyColumn(Modifier.fillMaxWidth().weight(1f)){items(history.reversed(),key={it.round}){r->Row(Modifier.fillMaxWidth().padding(vertical=7.dp),horizontalArrangement=Arrangement.SpaceAround,verticalAlignment=Alignment.CenterVertically){Text("#${r.round}",color=Color.White,fontSize=10.sp);wpAnimals.forEachIndexed{i,a->val yes=r.winner==a.name||(r.winner=="Mix Big"&&i>=4)||(r.winner=="Mix Small"&&i<4);Text(if(yes)"✓" else "✕",color=if(yes)Color(0xFF34D399)else Color(0xFF9F5360),fontSize=12.sp)}};HorizontalDivider(color=Color.White.copy(alpha=.06f))}}}
   if(rulesOpen)WpSheet("Rules",{rulesOpen=false}){Column(Modifier.verticalScroll(rememberScrollState()).padding(18.dp),verticalArrangement=Arrangement.spacedBy(13.dp)){listOf("Select your Chip and Choose the animals.","If Lion wins you will receive 45 times × your Bet.","For placing bet click on the Animals.","All 5 time gives 5 × your bet.","45, 25, 15, 10 TIME gives you × your bet.","Mix Big gives rewards on Eagle, Bear, Tiger, Lion. Mix Small rewards Deer, Dog, Zebra, Fox.").forEach{Text("•  $it",color=Color.White,fontSize=13.sp,fontWeight=FontWeight.SemiBold)}}}
-  if(winnerOpen)WpSheet("Wild Party Winners",{winnerOpen=false}){Column(Modifier.fillMaxWidth().padding(22.dp),horizontalAlignment=Alignment.CenterHorizontally){Text("${winnerTimer}s",color=Color.White,fontWeight=FontWeight.Black);Text("Winning Amount   ${winAmount}",color=wpGold,fontWeight=FontWeight.Black,fontSize=17.sp);Text("Bet Amount   ${betAmount}",color=Color.White,fontSize=13.sp);Spacer(Modifier.height(22.dp));Text("No winners yet.",color=Color.White,fontSize=12.sp)}}
+  if(winnerOpen)WpSheet("Wild Party Winners",{winnerOpen=false}){
+   Column(Modifier.fillMaxWidth().fillMaxHeight().verticalScroll(rememberScrollState()).padding(horizontal=16.dp,vertical=12.dp),horizontalAlignment=Alignment.CenterHorizontally){
+    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.End){Text("${winnerTimer}s",color=Color.White,fontWeight=FontWeight.Black,fontSize=12.sp)}
+    Text("Winning Amount   ${winAmount}",color=wpGold,fontWeight=FontWeight.Black,fontSize=17.sp)
+    Text("Bet Amount   ${betAmount}",color=Color.White,fontSize=13.sp)
+    Spacer(Modifier.height(12.dp))
+    val heading=wpAsset(context,"wp_IMG_20260913_000423")
+    if(heading!=0)Image(painterResource(heading),null,Modifier.fillMaxWidth(.80f).height(70.dp),contentScale=ContentScale.Fit)
+    Spacer(Modifier.height(18.dp))
+    Text("No winners yet.",color=Color.White,fontSize=12.sp)
+   }
+  }
  }
 }
 
