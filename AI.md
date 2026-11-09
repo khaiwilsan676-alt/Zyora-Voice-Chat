@@ -494,3 +494,11 @@ Current documentation does not certify that all historical features are build-, 
 - GiftPicker.kt: keep the Send button at full alpha (1f) whether or not a gift is selected. The existing click guard remains: sending is only actionable when a gift is selected and a send is not already in progress.
 - No button colors, gradient, sizing, or layout changed.
 - Native APK build and device verification remain pending.
+
+
+### Private chat prohibited-word filter (2026-11-09)
+- Native Message ChatPage checks outgoing text before emitting `private_message`.
+- Common Hindi/Hinglish and English abusive terms and common leetspeak substitutions are blocked; rejected text is not emitted and the draft remains available for correction.
+- Rejection uses the existing small centered Black/70 toast styling with the exact text: `Can't send text-prohibited`.
+- No other chat UI or message behavior is intentionally changed.
+- Status: source committed; native build and runtime verification pending.
