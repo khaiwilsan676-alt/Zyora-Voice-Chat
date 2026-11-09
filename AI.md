@@ -502,3 +502,9 @@ Current documentation does not certify that all historical features are build-, 
 - Rejected text is not emitted and remains in the draft for correction. The existing small centered Black/70 toast still displays exactly: `Can't send text-prohibited`.
 - No other chat UI or message behavior is intentionally changed.
 - Status: source committed; native build and runtime verification pending.
+
+
+## 2026-11-10 — Room admin seat moderation
+- `RoomPage.kt`: room admins now receive the same seat Lock/Unlock and occupied-seat Mute/Unmute authorization as the room owner from both the seat action sheet and seated-user profile moderation callbacks.
+- Empty-seat locking continues to use the existing `room_seat_action` `lock` event; the backend already validates owner/admin permissions and broadcasts the authoritative seat snapshot. No unrelated room, voice, chat, or UI behavior was changed.
+- Native APK build and multi-account runtime verification remain pending.
