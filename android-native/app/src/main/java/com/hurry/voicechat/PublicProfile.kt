@@ -209,7 +209,6 @@ fun PublicProfileScreen(
     var selectedAvatarUri by remember(profileCacheKey, cachedProfile) {
         mutableStateOf<String?>(sequenceOf("image", "avatar", "profileImageUrl").map { cachedProfile?.optString(it, "").orEmpty() }.firstOrNull { it.isNotBlank() && it != "null" })
     }
-    var ownedFrames by remember { mutableStateOf(listOf<String>()) } // Dummy for UI
     var receivedGifts by remember { mutableStateOf(listOf<String>()) } // Dummy for UI
 
     var showEditSheet by remember { mutableStateOf(false) }
@@ -414,11 +413,7 @@ fun PublicProfileScreen(
                     )
                     NativeAvatarFrameOverlay(
                         userId = targetUser?.accountId?.takeIf { it.isNotBlank() } ?: targetUser?.uid?.takeIf { it.isNotBlank() } ?: targetUser?.id.orEmpty(),
-                        modifier = Modifier.align(Alignment.BottomStart).padding(start = 16.dp).offset(y = (-20).dp).size(86.dp) // 🔥 Changed to -20.dp
-                    )
-                    NativeAvatarFrameOverlay(
-                        userId = targetUser?.accountId?.takeIf { it.isNotBlank() } ?: targetUser?.uid?.takeIf { it.isNotBlank() } ?: targetUser?.id.orEmpty(),
-                        modifier = Modifier.align(Alignment.BottomStart).padding(start = 16.dp).offset(y = (-20).dp).size(86.dp) // 🔥 Changed to -20.dp
+                        modifier = Modifier.align(Alignment.BottomStart).padding(start = 16.dp).offset(y = (-20).dp).size(86.dp)
                     )
 
                     // Top Bar
@@ -662,15 +657,11 @@ fun PublicProfileScreen(
                     // Frame
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         SectionHeader("Frame")
-                        if (ownedFrames.isNotEmpty()) {
-                            LazyVerticalGrid(columns = GridCells.Fixed(4), modifier = Modifier.height(88.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                items(ownedFrames.size) { idx ->
-                                    AsyncImage(model = profileAsset(ownedFrames[idx]), contentDescription = "Frame", contentScale = ContentScale.Fit, modifier = Modifier.fillMaxWidth().aspectRatio(1f))
-                                }
-                            }
-                        } else {
-                            AsyncImage(model = profileAsset("/1785091457562.png"), contentDescription = "Frame", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxWidth().height(112.dp).clip(RoundedCornerShape(16.dp)))
-                        }
+                        NativeOwnedFrameShowcase(
+                            userId = targetUser?.accountId?.takeIf { it.isNotBlank() }
+                                ?: targetUser?.uid?.takeIf { it.isNotBlank() }
+                                ?: targetUser?.id.orEmpty()
+                        )
                     }
 
                     Spacer(modifier = Modifier.height(20.dp))
