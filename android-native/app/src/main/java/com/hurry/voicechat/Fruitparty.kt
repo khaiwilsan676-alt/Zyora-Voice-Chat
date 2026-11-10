@@ -235,7 +235,7 @@ fun Fruitparty(onClose:()->Unit,onMinimize:(()->Unit)?=null,isMinimized:Boolean=
   val panelH=screenH*.68f
   Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=.5f)).clickable(interactionSource=null,indication=null){onClose()})
   Box(Modifier.fillMaxWidth().height(panelH).align(Alignment.BottomCenter).background(fruitPurple)){
-   val bg=fruitAsset(context,"fp_1787413631876_2")
+   val bg=fruitAsset(context,"fp_file_000000005f948210bbb51c62a68f797a")
    if(bg!=0)Image(painterResource(bg),null,Modifier.fillMaxSize(),contentScale=ContentScale.FillBounds)
    else Box(Modifier.fillMaxSize().background(fruitPurple))
    Row(Modifier.fillMaxWidth().align(Alignment.TopCenter).padding(horizontal=22.dp, vertical=5.dp),verticalAlignment=Alignment.CenterVertically){
