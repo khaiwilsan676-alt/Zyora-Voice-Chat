@@ -240,10 +240,6 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
      }
     }
    }
-   Row(Modifier.align(Alignment.BottomStart).padding(start=10.dp,bottom=12.dp),verticalAlignment=Alignment.CenterVertically){
-    val coin=wpAsset(context,"wp_file_00000000e56882119c217d508b6733dc");if(coin!=0)Image(painterResource(coin),null,Modifier.size(20.dp))
-    Text(balance.toString(),color=wpGold,fontSize=12.sp,fontWeight=FontWeight.Black)
-   }
    // Original TSX bottom decoration sits behind the balance and chip controls.
    val bottomDecor=wpAsset(context,"wp_img_20260822_011000")
    if(bottomDecor!=0)Image(
@@ -252,6 +248,10 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
     contentScale=ContentScale.Fit,
     alignment=Alignment.BottomCenter
    )
+   Row(Modifier.align(Alignment.BottomStart).padding(start=10.dp,bottom=12.dp),verticalAlignment=Alignment.CenterVertically){
+    val coin=wpAsset(context,"wp_file_00000000e56882119c217d508b6733dc");if(coin!=0)Image(painterResource(coin),null,Modifier.size(20.dp))
+    Text(balance.toString(),color=wpGold,fontSize=12.sp,fontWeight=FontWeight.Black)
+   }
    Row(Modifier.align(Alignment.BottomEnd).padding(end=8.dp,bottom=8.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){
     Text("Repeat",Modifier.clip(RoundedCornerShape(6.dp)).background(Color.White.copy(alpha=.2f)).clickable{scope.launch{val cost=lastBets.values.sum();if(phase==WpPhase.BETTING&&cost>0&&balance>=cost){walletChange(-cost,"Repeat Bet in Wild Party");bets=bets.toMutableMap().also{m->lastBets.forEach{(k,v)->m[k]=(m[k]?:0L)+v}}}}}.padding(horizontal=7.dp,vertical=7.dp),color=Color.White,fontSize=9.sp,fontWeight=FontWeight.Black)
     wpChips.forEachIndexed{i,c->val id=wpAsset(context,c.image);Box(Modifier.size(34.dp).graphicsLayer{val scale=if(chipIndex==i)1.08f else 1f;scaleX=scale;scaleY=scale;translationY=if(chipIndex==i)-8.dp.toPx() else 0f}.border(if(chipIndex==i)2.dp else 0.dp,wpGold,CircleShape).clip(CircleShape).background(Color(0xFF54351C)).clickable{chipIndex=i},contentAlignment=Alignment.Center){if(id!=0)Image(painterResource(id),c.label,Modifier.fillMaxSize(),contentScale=ContentScale.Fit)else Text(c.label,color=Color.White,fontSize=8.sp)}}
