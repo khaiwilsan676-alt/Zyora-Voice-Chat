@@ -2233,6 +2233,8 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
             val newlyAddedAdminName = newlyAddedAdminId?.let { id ->
                 followedRoomUsers.firstOrNull { it.accountId == id }?.name
                     ?: roomAdminUsers.firstOrNull { it.accountId == id }?.name
+                    ?: activeRoomUsers.firstOrNull { it.accountId == id }?.name
+                    ?: id
             }.orEmpty()
             roomName=saved.roomName;roomImage=saved.roomDp;announcement=saved.announcement;showRoomSettingsAnnouncementInChat=saved.announcement.isNotBlank();appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).edit().putBoolean("announcement_chat_visible_$roomId", showRoomSettingsAnnouncementInChat).apply();roomMicMode=saved.micMode;roomTheme=saved.theme;roomCustomThemeUrl=saved.customTheme;roomAdminIds=saved.admin;locked=saved.isLocked;roomPassword=saved.roomPassword
             appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).edit().putInt("micMode_$roomId", saved.micMode).putString("theme_$roomId", saved.theme).putString("customTheme_$roomId", saved.customTheme).putBoolean("room_locked_$roomId", saved.isLocked).putString("room_password_$roomId", saved.roomPassword).apply()
