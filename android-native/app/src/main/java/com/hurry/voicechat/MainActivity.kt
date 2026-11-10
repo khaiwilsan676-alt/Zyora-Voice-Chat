@@ -496,6 +496,8 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
             roomAccessPromptRoom = null
             roomAccessPassword = ""
             roomAccessError = false
+            // Record only after the server confirms that this account may enter.
+            RecentRoomHistory.record(context, joiningAccountId, room)
             openedRoom = room
         }
     }
