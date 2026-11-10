@@ -1210,7 +1210,7 @@ fun RoomPage(
                         if (addedAdminId.isNotBlank()) {
                             val noticeId = "admin-added-$roomId-$addedAdminId-${payload.optLong("updatedAt")}"
                             if (messages.none { it.id == noticeId }) {
-                                messages.add(NativeRoomMessage(noticeId, "Set $addedAdminName as Admin", "System", "", "system", payload.optLong("updatedAt", System.currentTimeMillis()), "admin_added"))
+                                messages.add(NativeRoomMessage(noticeId, "Set $addedAdminName as Admin", latestRoomDisplayName, latestRoomDisplayImage, accountId, payload.optLong("updatedAt", System.currentTimeMillis()), "message"))
                             }
                         }
                     }
@@ -2882,14 +2882,7 @@ private fun RoomChatMessages(
                                 }
                             }
                             items(messages,key={it.id}){message ->
-                                if(message.type=="admin_added") {
-                                    Column(Modifier.fillMaxWidth().padding(start=4.dp, top=2.dp, end=82.dp, bottom=2.dp)) {
-                                        Column(Modifier.wrapContentWidth().clip(RoundedCornerShape(8.dp)).background(Color.Black.copy(alpha=.30f)).padding(horizontal=12.dp, vertical=8.dp)) {
-                                            Text("System", color=Color(0xFFD1D1D1), fontSize=12.sp, fontWeight=FontWeight.Medium)
-                                            Text(message.text, color=Color(0xFFE2C67D), fontSize=13.sp, fontWeight=FontWeight.SemiBold)
-                                        }
-                                    }
-                                } else if(message.type=="join") {
+                                if(message.type=="join") {
                                     Column(Modifier.padding(vertical=2.dp).wrapContentWidth().clip(RoundedCornerShape(8.dp)).background(Color.Black.copy(alpha=.30f)).padding(horizontal=12.dp,vertical=4.dp),horizontalAlignment=Alignment.Start,verticalArrangement=Arrangement.spacedBy(2.dp)){
                                         Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp), modifier=Modifier.clickable { onSelectMessage(message) }){
                                             FallbackAsyncImage(model=message.senderImage,contentDescription=message.sender,modifier=Modifier.size(24.dp).clip(CircleShape),contentScale=ContentScale.Crop)
