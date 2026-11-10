@@ -461,7 +461,7 @@ fun RoomPage(
                             if (name.isNotBlank()) roomName = name
                             if (!isLogoRoom && image.isNotBlank()) roomImage = image
                             announcement = message
-                            showRoomSettingsAnnouncementInChat = message.isNotBlank()
+                            showRoomSettingsAnnouncementInChat = message.isNotBlank() && appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).getBoolean("announcement_chat_visible_$roomId", true)
                             roomMicMode = savedMicMode
                             roomTheme = savedTheme
                             if (savedAdmins != null) roomAdminIds = savedAdmins
@@ -992,6 +992,7 @@ fun RoomPage(
                     messages.clear()
                     kickNotices.clear()
                     showRoomSettingsAnnouncementInChat = false
+                    appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).edit().putBoolean("announcement_chat_visible_$roomId", false).apply()
                     showOfficialAnnouncement = false
                     // Clearing public chat must never clear the persistent Room Settings announcement.
                     clearedBy = payload.optString("userName").ifBlank { backendRoomUsers.firstOrNull { it.accountId == payload.optString("userId") }?.name ?: "Admin" }
@@ -1199,6 +1200,7 @@ fun RoomPage(
                     if (hasAnnouncement) {
                         announcement = updatedAnnouncement
                         showRoomSettingsAnnouncementInChat = updatedAnnouncement.isNotBlank()
+                        appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).edit().putBoolean("announcement_chat_visible_$roomId", showRoomSettingsAnnouncementInChat).apply()
                     }
                     if (payload.has("publicMsgOff")) publicMsgOff = payload.optBoolean("publicMsgOff", true)
                     if (payload.has("roomName")) roomName = payload.optString("roomName", latestRoomName)
@@ -2036,6 +2038,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                 messages.clear()
                 kickNotices.clear()
                 showRoomSettingsAnnouncementInChat = false
+                appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).edit().putBoolean("announcement_chat_visible_$roomId", false).apply()
                 roomToastText = "Public message are cleared"
                 showOfficialAnnouncement = false
                 // Keep the Room Settings announcement; this action only clears chat messages.
@@ -2213,7 +2216,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
             }
         )
         if(showSettings && accountId.isNotBlank() && accountId == roomOwner.accountId.ifBlank { roomOwner.id }) RoomSettingPage(initial = RoomSettingsDataNative(roomName=roomName,roomDp=roomImage,announcement=announcement,micMode=roomMicMode,theme=roomTheme,isLocked=locked,roomPassword=roomPassword,admin=roomAdminIds,customTheme=appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).getString("customTheme_$roomId", "").orEmpty()),roomOwnerId=roomId,currentUserId=accountId,roomMembers=followedRoomUsers,onBack={showSettings=false},onSave={saved->
-            roomName=saved.roomName;roomImage=saved.roomDp;announcement=saved.announcement;showRoomSettingsAnnouncementInChat=saved.announcement.isNotBlank();roomMicMode=saved.micMode;roomTheme=saved.theme;roomCustomThemeUrl=saved.customTheme;roomAdminIds=saved.admin;locked=saved.isLocked;roomPassword=saved.roomPassword
+            roomName=saved.roomName;roomImage=saved.roomDp;announcement=saved.announcement;showRoomSettingsAnnouncementInChat=saved.announcement.isNotBlank();appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).edit().putBoolean("announcement_chat_visible_$roomId", showRoomSettingsAnnouncementInChat).apply();roomMicMode=saved.micMode;roomTheme=saved.theme;roomCustomThemeUrl=saved.customTheme;roomAdminIds=saved.admin;locked=saved.isLocked;roomPassword=saved.roomPassword
             appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).edit().putInt("micMode_$roomId", saved.micMode).putString("theme_$roomId", saved.theme).putString("customTheme_$roomId", saved.customTheme).putBoolean("room_locked_$roomId", saved.isLocked).putString("room_password_$roomId", saved.roomPassword).apply()
             CoroutineScope(Dispatchers.IO).launch { NativeIndexDatabase(appContext).saveRoomLock(roomId, saved.isLocked, saved.roomPassword) }
             roomSocketRef.value?.takeIf { it.connected() }?.emit("room_settings_update", JSONObject()
