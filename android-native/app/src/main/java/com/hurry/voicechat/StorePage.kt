@@ -475,7 +475,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                                                         ownedIds.add(item.id)
                                                         if (bought != null) expiryById[item.id] = bought.optLong("expiresAt")
                                                         purchaseMessage = "Purchase successful"
-                                                    }.onFailure { purchaseMessage = it.message ?: "Purchase failed" }
+                                                    }.onFailure { purchaseMessage = if (it.message?.contains("insufficient", ignoreCase = true) == true) "Insufficient balance" else it.message ?: "Purchase failed" }
                                                     purchaseBusy = false
                                                 }
                                             } else if (userId.isBlank()) purchaseMessage = "Please sign in to buy"
@@ -513,8 +513,22 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
 
     purchaseMessage?.let { message ->
         LaunchedEffect(message) { delay(2500); if (purchaseMessage == message) purchaseMessage = null }
-        Box(Modifier.fillMaxWidth().padding(12.dp), contentAlignment = Alignment.BottomCenter) {
-            Text(message, color = Color.White, modifier = Modifier.background(Color(0xFF242424), RoundedCornerShape(8.dp)).padding(horizontal=14.dp, vertical=9.dp))
+        if (message == "Insufficient balance") {
+            Dialog(onDismissRequest = { purchaseMessage = null }) {
+                Box(
+                    Modifier.fillMaxWidth().padding(horizontal = 48.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color.Black.copy(alpha = 0.70f))
+                        .padding(horizontal = 22.dp, vertical = 17.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("Insufficient balance", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
+                }
+            }
+        } else {
+            Box(Modifier.fillMaxWidth().padding(12.dp), contentAlignment = Alignment.BottomCenter) {
+                Text(message, color = Color.White, modifier = Modifier.background(Color(0xFF242424), RoundedCornerShape(8.dp)).padding(horizontal=14.dp, vertical=9.dp))
+            }
         }
     }
 
@@ -630,7 +644,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                                     if (bought != null) expiryById[item.id] = bought.optLong("expiresAt")
                                     purchaseMessage = "Purchase successful"
                                     selectedItem = null
-                                }.onFailure { purchaseMessage = it.message ?: "Purchase failed" }
+                                }.onFailure { purchaseMessage = if (it.message?.contains("insufficient", ignoreCase = true) == true) "Insufficient balance" else it.message ?: "Purchase failed" }
                                 purchaseBusy = false
                             }
                         }
