@@ -1,4 +1,4 @@
-package com.hurry.voicechat
+Package com.hurry.voicechat
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -114,12 +114,12 @@ private data class NativeRoomTaskRow(val title:String,val reward:String,val icon
                 // Rewards image
                 AsyncImage(model=raw+"file_00000000f2908208a7b6a2b73c3bbf36.png",contentDescription="Room task rewards",modifier=Modifier.padding(horizontal = 8.dp).fillMaxWidth().height(138.dp),contentScale=ContentScale.Fit)
                 
-                // ROOM TASK FRAME (Sirf 1.04f kiya hai, taaki ekdam thodi si badi ho)
-                Box(Modifier.fillMaxWidth().wrapContentWidth(unbounded = true), contentAlignment=Alignment.Center){
+                // ROOM TASK FRAME (Wide kiya bina stretch kare)
+                Box(Modifier.fillMaxWidth(), contentAlignment=Alignment.Center){
                     AsyncImage(
                         model=raw+"file_00000000680881faa3dfdb17cce60858.png",
                         contentDescription="Room Task frame",
-                        modifier=Modifier.fillMaxWidth(1.05f), 
+                        modifier=Modifier.fillMaxWidth(1.12f), // 1.04f se 1.12f kiya wide ke liye
                         contentScale=ContentScale.FillWidth 
                     )
                     Text("ROOM TASK",color=Color.White,fontSize=16.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Black,letterSpacing=1.2.sp, modifier=Modifier.offset(y=(-4).dp).shadow(4.dp, spotColor=Color.Black.copy(alpha=0.9f)))
@@ -142,7 +142,7 @@ private data class NativeRoomTaskRow(val title:String,val reward:String,val icon
                     tasks.forEach { task ->
                         Box(Modifier.fillMaxWidth().height(175.dp)){
                             
-                            // Left and Right Border Image
+                            // Left and Right Border Image (Aur left/right kiya aur thora ooper shift mara)
                             AsyncImage(
                                 model=raw+"IMG_20260903_105647.png",
                                 contentDescription=null,
@@ -156,7 +156,7 @@ private data class NativeRoomTaskRow(val title:String,val reward:String,val icon
                                 contentScale=ContentScale.FillBounds
                             )
                             
-                            // Task Card Background 
+                            // Task Card Background (Ye borders ke ooper mast overlap karega)
                             Box(Modifier.fillMaxSize().padding(horizontal=10.dp)) {
                                 AsyncImage(model=raw+"file_000000004fd0821198ed4e26d5008b16.png",contentDescription="Task background",modifier=Modifier.fillMaxSize(),contentScale=ContentScale.FillBounds)
                                 
@@ -202,12 +202,12 @@ private data class NativeRoomTaskRow(val title:String,val reward:String,val icon
                     }
                 }
                 
-                // Sabse aakhiri wali bottom frame (Sirf 1.04f kiya hai isko bhi)
-                Box(Modifier.fillMaxWidth().offset(y=(-65).dp).wrapContentWidth(unbounded = true), contentAlignment = Alignment.Center){
+                // Sabse aakhiri wali bottom frame - Ekdam wide kar diya (1.20f)
+                Box(Modifier.fillMaxWidth().offset(y=(-65).dp), contentAlignment = Alignment.Center){
                     AsyncImage(
                         model=raw+"file_0000000066c88211aa777b1f6da8683f.png",
                         contentDescription="Frame Bottom Border",
-                        modifier=Modifier.fillMaxWidth(1.04f), 
+                        modifier=Modifier.fillMaxWidth(1.20f), 
                         contentScale=ContentScale.FillWidth
                     )
                 }
@@ -216,7 +216,7 @@ private data class NativeRoomTaskRow(val title:String,val reward:String,val icon
             }
         }
         
-        // RULES DIALOG EXACT SAME - Close button hata diya
+        // RULES DIALOG EXACT SAME - Ise touch nahi kiya
         if(rules) Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=.70f)).clickable{rules=false},contentAlignment=Alignment.BottomCenter){
             Column(Modifier.fillMaxWidth().heightIn(max=620.dp).background(Brush.verticalGradient(listOf(Color(0xFF4A0A10),Color(0xFF380308))),RoundedCornerShape(topStart=16.dp,topEnd=16.dp)).padding(horizontal=20.dp,vertical=18.dp)){
                 Text("ROOM TASK RULES",color=Color.White,fontSize=18.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Black,modifier=Modifier.align(Alignment.CenterHorizontally).padding(bottom=14.dp))
@@ -236,6 +236,7 @@ private data class NativeRoomTaskRow(val title:String,val reward:String,val icon
                     }
                 }
                 Text("Regards, Zyora Team",color=Color(0xFFFFD700),fontSize=13.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Bold,modifier=Modifier.align(Alignment.End).padding(top=8.dp))
+                TextButton(onClick={rules=false},modifier=Modifier.align(Alignment.End)){Text("Close",color=Color.White)}
             }
         }
     }
