@@ -455,7 +455,15 @@ fun RoomPage(
                         val savedRoomPassword = saved.optString("roomPassword", roomPassword).takeUnless { it == "null" }.orEmpty()
                         val savedAdminsJson = saved.optJSONArray("admin") ?: saved.optJSONArray("admins")
                         val savedAdmins = savedAdminsJson?.let { adminsJson ->
-                            (0 until adminsJson.length()).mapNotNull { i -> adminsJson.optString(i).takeIf { it.isNotBlank() && it != "null" } }.distinct()
+                            (0 until adminsJson.length()).flatMap { i ->
+                                val entry = adminsJson.opt(i)
+                                when (entry) {
+                                    is JSONObject -> listOf("accountId", "userId", "id", "uid")
+                                        .mapNotNull { key -> entry.optString(key).trim().takeIf { it.isNotBlank() && it != "null" } }
+                                    is String -> listOf(entry.trim()).filter { it.isNotBlank() && it != "null" }
+                                    else -> emptyList()
+                                }
+                            }.distinct()
                         }
                         launch(Dispatchers.Main) {
                             if (name.isNotBlank()) roomName = name
@@ -1219,9 +1227,15 @@ fun RoomPage(
                     }
                     if (payload.has("admin") && payload.optJSONArray("admin") != null) {
                         val adminsJson = payload.optJSONArray("admin")!!
-                        roomAdminIds = (0 until adminsJson.length())
-                            .mapNotNull { index -> adminsJson.optString(index).trim().takeIf { it.isNotBlank() && it != "null" } }
-                            .distinct()
+                        roomAdminIds = (0 until adminsJson.length()).flatMap { index ->
+                            val entry = adminsJson.opt(index)
+                            when (entry) {
+                                is JSONObject -> listOf("accountId", "userId", "id", "uid")
+                                    .mapNotNull { key -> entry.optString(key).trim().takeIf { it.isNotBlank() && it != "null" } }
+                                is String -> listOf(entry.trim()).filter { it.isNotBlank() && it != "null" }
+                                else -> emptyList()
+                            }
+                        }.distinct()
                     }
                 }
             }
@@ -1520,9 +1534,11 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                     Row(modifier = Modifier.padding(start = 4.dp).height(26.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {}
                     
                     // Seat tap policy: only owner/admin opens the seat action sheet; regular users take an available seat directly.
-                    val canManageRoomSeats = accountId.isNotBlank() && (
-                        accountId in setOf(roomOwner.accountId, roomOwner.id, roomOwner.uid, roomId) ||
-                        roomAdminIds.any { it.trim() == accountId.trim() }
+                    val seatActorIds = setOf(accountId, currentUser.uid, currentUser.id, currentUser.accountId)
+                        .map { it.trim() }.filter { it.isNotBlank() }.toSet()
+                    val canManageRoomSeats = seatActorIds.isNotEmpty() && (
+                        seatActorIds.any { it in setOf(roomOwner.accountId, roomOwner.id, roomOwner.uid, roomId).map(String::trim).filter(String::isNotBlank).toSet() } ||
+                        roomAdminIds.any { it.trim() in seatActorIds }
                     )
                     val handleSeatTap: (NativeRoomSeat) -> Unit = { tappedSeat ->
                         selectedSeat = tappedSeat.number
