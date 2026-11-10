@@ -715,6 +715,9 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                                             }
                                         }
                                     }
+                                    // A newly created room is entered immediately; include this entry in Recent too.
+                                    val recentOwnerAccountId = authPrefs.getString("accountId", userId).orEmpty().ifBlank { userId }
+                                    RecentRoomHistory.record(context, recentOwnerAccountId, room)
                                     openedRoom = room
                                 },
                                 mineCreatedRoom = mineCreatedRoom,
