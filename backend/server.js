@@ -1510,7 +1510,12 @@ app.get("/api/store/inventory/:userId", async (req, res) => {
   }
 });
 app.post("/api/store/purchase", async (req, res) => {
+  let purchaseLockId = "";
+  let debited = false;
+  let purchasePrice = 0;
+  let purchaseUserId = "";
   try {
+    if (!db) return res.status(503).json({ error: "Wallet unavailable" });
     const userId = String(req.body?.userId || "").trim();
     const itemId = String(req.body?.itemId || "").trim();
     const name = String(req.body?.name || "").slice(0, 100);
@@ -1522,25 +1527,60 @@ app.post("/api/store/purchase", async (req, res) => {
     const prices = {v1:1000000,v10:1200000,v2:600000,v3:549999,v4:500000,v5:259000,v6:890999,v7:425000,v8:525000,v9:359999,a1:250000,a2:500000,a3:750000,a4:700000,a5:249000,a6:300000,a7:199000,a8:500000,t1:2700000,t2:2400000,t3:2700000,t4:2400000,t5:2700000,t6:2400000,t7:899999,t8:700000,t9:1000000,c1:500000,c2:250000,c3:300000,c4:246000,c5:159000,c6:200000,i1:10000000};
     const expectedTab = itemId.startsWith("v") ? "Vehicle" : itemId.startsWith("a") ? "Avatar Frame" : itemId.startsWith("t") ? "Theme" : itemId.startsWith("c") ? "Chat Bubble" : itemId === "i1" ? "ID" : "";
     const expectedDuration = itemId.startsWith("v") ? "5D" : itemId.startsWith("a") || itemId.startsWith("c") && itemId !== "c2" || itemId === "i1" ? "3D" : itemId === "c2" ? "2D" : itemId.startsWith("t") ? "30D" : "";
-    if (!userId || !prices[itemId] || prices[itemId] !== price || tab !== expectedTab || duration !== expectedDuration || !name || !image) return res.status(400).json({ error: "Invalid store item" });
+    if (!userId || !prices[itemId] || prices[itemId] !== price || tab !== expectedTab || duration !== expectedDuration || !name || !image) {
+      return res.status(400).json({ error: "Invalid store item" });
+    }
+
+    purchaseUserId = userId;
+    purchasePrice = price;
     const now = Date.now();
     const inventory = db.collection("storeInventory");
     const existing = await inventory.findOne({ userId, itemId, expiresAt: { $gt: now } });
     if (existing) return res.status(409).json({ error: "Item already owned", balance: await walletBalance(userId), item: existing });
-    const debit = await debitWallet(userId, price);
-    if (!debit) return res.status(409).json({ error: "Insufficient coins", balance: await walletBalance(userId) });
-    const item = { userId, itemId, name, tab, image, video, duration, price, purchasedAt: now, expiresAt: now + Number(duration.slice(0, -1)) * 86400000, equipped: false };
+
+    // A unique MongoDB _id lock makes simultaneous taps/retries for the same
+    // user + item mutually exclusive, even across multiple backend instances.
+    purchaseLockId = userId + ":" + itemId;
     try {
-      await inventory.updateOne({ userId, itemId }, { $set: item }, { upsert: true });
-      await db.collection("walletTransactions").insertOne({ userId, type: "store_purchase", amount: -price, itemId, createdAt: now });
-    } catch (error) {
-      await creditLuckyBagWallet(userId, price);
-      throw error;
+      await db.collection("storePurchaseLocks").insertOne({ _id: purchaseLockId, userId, itemId, createdAt: now });
+    } catch (lockError) {
+      if (lockError?.code === 11000) {
+        return res.status(409).json({ error: "Purchase already processing", balance: await walletBalance(userId) });
+      }
+      throw lockError;
     }
-    res.json({ success: true, item, balance: await walletBalance(userId) });
+
+    // Debit only the selected item's server-validated price. Wallet update is
+    // conditional/atomic, so concurrent purchases cannot overspend the balance.
+    debited = await debitWallet(userId, price);
+    if (!debited) {
+      return res.status(409).json({ error: "Insufficient balance", balance: await walletBalance(userId) });
+    }
+
+    const item = { userId, itemId, name, tab, image, video, duration, price, purchasedAt: now, expiresAt: now + Number(duration.slice(0, -1)) * 86400000, equipped: false };
+    await inventory.updateOne(
+      { userId, itemId },
+      { $set: item },
+      { upsert: true }
+    );
+    await db.collection("walletTransactions").insertOne({ userId, type: "store_purchase", amount: -price, itemId, createdAt: now });
+    debited = false;
+    res.set("Cache-Control", "no-store");
+    return res.json({ success: true, item, balance: await walletBalance(userId) });
   } catch (error) {
+    // If inventory/transaction persistence fails after debit, restore the exact
+    // amount before returning an error; never leave a paid item missing.
+    if (debited && purchaseUserId && purchasePrice > 0) {
+      try { await creditWallet(purchaseUserId, purchasePrice); }
+      catch (refundError) { console.error("Store purchase refund failed:", refundError.message); }
+    }
     console.error("POST /api/store/purchase error:", error.message);
-    res.status(503).json({ error: "Store purchase failed" });
+    return res.status(503).json({ error: "Store purchase failed" });
+  } finally {
+    if (purchaseLockId && db) {
+      try { await db.collection("storePurchaseLocks").deleteOne({ _id: purchaseLockId }); }
+      catch (lockCleanupError) { console.error("Store purchase lock cleanup failed:", lockCleanupError.message); }
+    }
   }
 });
 app.post("/api/store/equip", async (req, res) => {
