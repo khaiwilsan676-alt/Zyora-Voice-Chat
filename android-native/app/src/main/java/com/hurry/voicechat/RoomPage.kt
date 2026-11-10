@@ -3193,7 +3193,7 @@ private fun RoomSeatInviteDialog(
             if(seat.muted) Box(Modifier.align(Alignment.BottomEnd).clip(CircleShape).background(Color.White).padding(2.dp)) { Icon(Icons.Default.MicOff,null,tint=Color.Black,modifier=Modifier.size(12.dp)) }
         }
         
-        if (seat.occupied && (seat.accountId == ownerId || seat.currentUserSeatIds.any { it in roomAdminIds })) {
+        if (seat.occupied && (seat.accountId == ownerId || seat.accountId in roomAdminIds)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
                 AsyncImage(
                     model = if (seat.accountId == ownerId) "https://zyora-voice-chat.vercel.app/IMG_20261027_235537.png" else ROOM_ADMIN_TAG,
