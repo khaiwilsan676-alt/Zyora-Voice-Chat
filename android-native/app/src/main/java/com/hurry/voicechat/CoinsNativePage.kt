@@ -282,10 +282,9 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int, onChat: (Strin
                 .apply()
         }
 
-        // Avoid repeating the same wallet request when the page is reopened rapidly.
-        val lastSync = walletCachePrefs.getLong(syncKey, 0L)
-        if (System.currentTimeMillis() - lastSync < 15_000L) return@LaunchedEffect
-
+        // Always refresh from the server-owned wallet whenever this page opens.
+        // A short cache throttle could keep a stale local zero visible after a credit.
+        // If the request fails, keep the last known snapshot untouched.
         val wallet = fetchCanonicalWallet(walletUserId) ?: return@LaunchedEffect
         val serverBalance = wallet.optLong("balance").coerceAtLeast(0L)
         val serverDiamonds = wallet.optLong("diamonds").coerceAtLeast(0L)
