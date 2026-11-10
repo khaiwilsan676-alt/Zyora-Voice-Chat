@@ -263,7 +263,13 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
     Text("Repeat",Modifier.clip(RoundedCornerShape(6.dp)).background(Color.White.copy(alpha=.2f)).clickable{scope.launch{val cost=lastBets.values.sum();if(phase==WpPhase.BETTING&&cost>0&&balance>=cost){walletChange(-cost,"Repeat Bet in Wild Party");bets=bets.toMutableMap().also{m->lastBets.forEach{(k,v)->m[k]=(m[k]?:0L)+v}}}}}.padding(horizontal=7.dp,vertical=7.dp),color=Color.White,fontSize=9.sp,fontWeight=FontWeight.Black)
     wpChips.forEachIndexed{i,c->val id=wpAsset(context,c.image);Box(Modifier.size(34.dp).graphicsLayer{val scale=if(chipIndex==i)1.08f else 1f;scaleX=scale;scaleY=scale;translationY=if(chipIndex==i)-8.dp.toPx() else 0f}.border(if(chipIndex==i)2.dp else 0.dp,wpGold,CircleShape).clip(CircleShape).background(Color(0xFF54351C)).clickable{chipIndex=i},contentAlignment=Alignment.Center){if(id!=0)Image(painterResource(id),c.label,Modifier.fillMaxSize(),contentScale=ContentScale.Fit)else Text(c.label,color=Color.White,fontSize=8.sp)}}
    }
-   if(loading)Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=.8f)),contentAlignment=Alignment.Center){CircularProgressIndicator(color=wpGold)}
+   if(loading)Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=.8f)),contentAlignment=Alignment.Center){
+    Column(horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(24.dp)){
+     val loadingArt=wpAsset(context,"wp_file_000000009d808211b8ffb7c2183b4ef5")
+     if(loadingArt!=0)Image(painterResource(loadingArt),null,Modifier.size(96.dp),contentScale=ContentScale.Fit)
+     CircularProgressIndicator(color=wpGold)
+    }
+   }
   }
   if(historyOpen)WpSheet("History",{historyOpen=false}){
    Row(Modifier.fillMaxWidth().padding(vertical=7.dp),horizontalArrangement=Arrangement.SpaceAround){Text("Round",color=wpGold,fontSize=10.sp);wpAnimals.forEach{val id=wpAsset(context,it.image);if(id!=0)Image(painterResource(id),null,Modifier.size(23.dp))}}
