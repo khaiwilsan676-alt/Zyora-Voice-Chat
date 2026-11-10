@@ -381,10 +381,19 @@ fun HomeScreen(
     val listState = rememberLazyListState()
     val countrySticky by remember { derivedStateOf { listState.firstVisibleItemIndex >= 3 } }
 
+    // Official room owned by ID 100002 is permanently pinned above every other room.
+    // Match both room ID and owner account ID because server payloads may use either.
     val filteredRooms = remember(rooms, selectedCountry) {
-        val list = rooms ?: emptyList()
-        if (selectedCountry == "all") list
-        else list.filter { countryMatches(it.country, selectedCountry) }
+        val allRooms = rooms ?: emptyList()
+        val officialRoom = allRooms.firstOrNull {
+            it.id.trim() == "100002" || it.accountId.trim() == "100002"
+        }
+        val otherRooms = allRooms.filterNot {
+            it.id.trim() == "100002" || it.accountId.trim() == "100002"
+        }
+        val visibleOthers = if (selectedCountry == "all") otherRooms
+            else otherRooms.filter { countryMatches(it.country, selectedCountry) }
+        if (officialRoom != null) listOf(officialRoom) + visibleOthers else visibleOthers
     }
 
     val roomRows = remember(filteredRooms) { filteredRooms.chunked(2) }
