@@ -245,7 +245,7 @@ data class NativeRoomSeat(val number:Int,val occupied:Boolean=false,val locked:B
 data class NativeMention(val accountId: String, val name: String)
 data class NativeRoomMessage(val id:String,val text:String,val sender:String,val senderImage:String,val senderAccountId:String="",val timestamp:Long=System.currentTimeMillis(),val type:String="message",val mentions: List<NativeMention> = emptyList(),val imageUrl:String="")
 data class NativeEntryToast(val id:String,val name:String,val image:String,val vehicleVideo:String="",val accountId:String="")
-data class NativeRoomKickNotice(val id:String,val targetName:String,val targetImage:String,val actorName:String,val actorImage:String,val actorRole:String)
+data class NativeRoomKickNotice(val id:String,val targetName:String,val targetImage:String,val actorName:String,val actorImage:String,val actorRole:String,val timestamp:Long=System.currentTimeMillis())
 
 @Composable
 fun RoomPage(
@@ -987,6 +987,7 @@ fun RoomPage(
             if(payload!=null && payload.optString("roomId")==roomId) {
                 mainHandler.post {
                     messages.clear()
+                    kickNotices.clear()
                     showOfficialAnnouncement = false
                     // Clearing public chat must never clear the persistent Room Settings announcement.
                     clearedBy = payload.optString("userName").ifBlank { backendRoomUsers.firstOrNull { it.accountId == payload.optString("userId") }?.name ?: "Admin" }
@@ -1003,11 +1004,13 @@ fun RoomPage(
                 targetImage = payload.optString("targetImage"),
                 actorName = payload.optString("actorName").ifBlank { "Admin" },
                 actorImage = payload.optString("actorImage"),
-                actorRole = if (payload.optString("actorRole") == "admin") "Room Admin" else "Room Owner"
+                actorRole = if (payload.optString("actorRole") == "admin") "Room Admin" else "Room Owner",
+                timestamp = payload.optLong("timestamp", System.currentTimeMillis())
             )
-            // Kick notices are private to the kicked account. The target receives
-            // room_kicked and MainActivity shows the single acknowledgement card.
-            // Do not render a kick popup/card in the room chat for other members.
+            // Add the system notice to the same visible chat timeline.
+            mainHandler.post {
+                if (kickNotices.none { it.id == notice.id }) kickNotices.add(notice)
+            }
         }
         val seatInviteResultListener = Emitter.Listener { args ->
             val payload = args.firstOrNull() as? JSONObject ?: return@Listener
@@ -2022,6 +2025,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
             onClose={showMenu=false},
             onClearChat={
                 messages.clear()
+                kickNotices.clear()
                 roomToastText = "Public message are cleared"
                 showOfficialAnnouncement = false
                 // Keep the Room Settings announcement; this action only clears chat messages.
@@ -2824,6 +2828,28 @@ private fun RoomChatMessages(
                                     }
                                 }
                             }
+                            items(kickNotices, key = { it.id }) { notice ->
+                                Column(Modifier.fillMaxWidth().padding(start=4.dp, top=0.dp, end=82.dp, bottom=2.dp)) {
+                                    Column(Modifier.wrapContentWidth().clip(RoundedCornerShape(12.dp)).background(Color.Black.copy(alpha=.30f)).padding(horizontal=12.dp, vertical=8.dp), verticalArrangement=Arrangement.spacedBy(4.dp)) {
+                                        Row(verticalAlignment=Alignment.CenterVertically, horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+                                            Box(Modifier.size(24.dp).clip(CircleShape).background(Color(0xFF00C853)), contentAlignment=Alignment.Center) {
+                                                Icon(Icons.Default.Notifications, contentDescription="System", tint=Color.White, modifier=Modifier.size(16.dp))
+                                            }
+                                            Text("System", color=Color(0xFFD1D1D1), fontSize=15.sp, fontWeight=FontWeight.Medium)
+                                        }
+                                        Row(verticalAlignment=Alignment.CenterVertically, horizontalArrangement=Arrangement.spacedBy(4.dp)) {
+                                            FallbackAsyncImage(model=notice.targetImage, contentDescription=notice.targetName, modifier=Modifier.size(22.dp).clip(CircleShape), contentScale=ContentScale.Crop)
+                                            Text(notice.targetName, color=Color(0xFFE2C67D), fontSize=13.sp, fontWeight=FontWeight.Bold, maxLines=1, softWrap=false, overflow=TextOverflow.Ellipsis)
+                                            Text("are kicked out of Room by", color=Color.White, fontSize=13.sp, maxLines=1, softWrap=false)
+                                        }
+                                        Row(verticalAlignment=Alignment.CenterVertically, horizontalArrangement=Arrangement.spacedBy(4.dp)) {
+                                            FallbackAsyncImage(model=notice.actorImage, contentDescription=notice.actorName, modifier=Modifier.size(22.dp).clip(CircleShape), contentScale=ContentScale.Crop)
+                                            Text(notice.actorName, color=Color(0xFFE2C67D), fontSize=13.sp, fontWeight=FontWeight.Bold, maxLines=1, softWrap=false, overflow=TextOverflow.Ellipsis)
+                                            Text("(${notice.actorRole})", color=Color.White, fontSize=13.sp, fontWeight=FontWeight.Normal)
+                                        }
+                                    }
+                                }
+                            }
                             items(messages,key={it.id}){message ->
                                 if(message.type=="join") {
                                     Column(Modifier.padding(vertical=2.dp).wrapContentWidth().clip(RoundedCornerShape(8.dp)).background(Color.Black.copy(alpha=.30f)).padding(horizontal=12.dp,vertical=4.dp),horizontalAlignment=Alignment.Start,verticalArrangement=Arrangement.spacedBy(2.dp)){
@@ -2850,28 +2876,6 @@ private fun RoomChatMessages(
                                         Text("Enter the room",color=Color.White,fontSize=12.sp,fontWeight=FontWeight.Bold, modifier=Modifier.padding(start=2.dp).clickable { onSelectMessage(message) })
                                     }
                                 } else NativeMessage(message, roomOwnerId = roomOwnerId, roomAdminIds = roomAdminIds, onAvatarClick = { onSelectMessage(message) }, onMentionClick = onSelectMention, onCopyMessage = onCopyMessage)
-                            }
-                            items(kickNotices, key = { it.id }) { notice ->
-                                Column(Modifier.fillMaxWidth().padding(start=4.dp, top=0.dp, end=82.dp, bottom=2.dp)) {
-                                    Column(Modifier.wrapContentWidth().clip(RoundedCornerShape(12.dp)).background(Color.Black.copy(alpha=.30f)).padding(horizontal=12.dp, vertical=8.dp), verticalArrangement=Arrangement.spacedBy(4.dp)) {
-                                        Row(verticalAlignment=Alignment.CenterVertically, horizontalArrangement=Arrangement.spacedBy(6.dp)) {
-                                            Box(Modifier.size(24.dp).clip(CircleShape).background(Color(0xFF00C853)), contentAlignment=Alignment.Center) {
-                                                Icon(Icons.Default.Notifications, contentDescription="System", tint=Color.White, modifier=Modifier.size(16.dp))
-                                            }
-                                            Text("System", color=Color(0xFFD1D1D1), fontSize=15.sp, fontWeight=FontWeight.Medium)
-                                        }
-                                        Row(verticalAlignment=Alignment.CenterVertically, horizontalArrangement=Arrangement.spacedBy(4.dp)) {
-                                            FallbackAsyncImage(model=notice.targetImage, contentDescription=notice.targetName, modifier=Modifier.size(22.dp).clip(CircleShape), contentScale=ContentScale.Crop)
-                                            Text(notice.targetName, color=Color(0xFFE2C67D), fontSize=13.sp, fontWeight=FontWeight.Bold, maxLines=1, softWrap=false, overflow=TextOverflow.Ellipsis)
-                                            Text("are kicked out of Room by", color=Color.White, fontSize=13.sp, maxLines=1, softWrap=false)
-                                        }
-                                        Row(verticalAlignment=Alignment.CenterVertically, horizontalArrangement=Arrangement.spacedBy(4.dp)) {
-                                            FallbackAsyncImage(model=notice.actorImage, contentDescription=notice.actorName, modifier=Modifier.size(22.dp).clip(CircleShape), contentScale=ContentScale.Crop)
-                                            Text(notice.actorName, color=Color(0xFFE2C67D), fontSize=13.sp, fontWeight=FontWeight.Bold, maxLines=1, softWrap=false, overflow=TextOverflow.Ellipsis)
-                                            Text("(${notice.actorRole})", color=Color.White, fontSize=13.sp, fontWeight=FontWeight.Normal)
-                                        }
-                                    }
-                                }
                             }
                         }
 }
