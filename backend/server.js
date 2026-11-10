@@ -2432,18 +2432,33 @@ io.on("connection", (socket) => {
           $or: [{ accountId: roomId }, { roomId }, { id: roomId }]
         });
         const rawAdmins = Array.isArray(roomDoc?.admin) ? roomDoc.admin : [];
-        roomAdmins = rawAdmins.map(value => String(
-          typeof value === "object" ? (value.accountId || value.userId || value.id || "") : value
-        )).filter(Boolean);
+        // Admin entries have existed as account IDs, Firebase UIDs, and objects
+        // containing either identifier. Keep every identifier instead of selecting
+        // only the first field, so the same admin is recognized on every device.
+        roomAdmins = rawAdmins.flatMap(value => {
+          if (value && typeof value === "object") {
+            return [value.accountId, value.userId, value.id, value.uid]
+              .map(id => String(id || "").trim()).filter(Boolean);
+          }
+          return [String(value || "").trim()].filter(Boolean);
+        });
       } catch (error) {
         console.warn("Room seat permission lookup failed:", error.message);
         // Fail closed for privileged seat actions if admin permissions cannot be verified.
       }
     }
 
-    const ownerIds = [String(socket.roomOwnerId || ""), String(roomId)];
-    const isRoomOwner = ownerIds.includes(actorId);
-    const isRoomAdmin = roomAdmins.includes(actorId);
+    // Socket room identity may be a Firebase UID while the UI sends accountId.
+    // Match both canonical and socket-bound identities for owner/admin moderation.
+    const actorIdentityIds = new Set([
+      actorId, socket.roomAccountId, socket.accountId,
+      socket.roomUserId, socket.userId
+    ].map(value => String(value || "").trim()).filter(Boolean));
+    const ownerIds = new Set([
+      socket.roomOwnerId, roomId
+    ].map(value => String(value || "").trim()).filter(Boolean));
+    const isRoomOwner = [...actorIdentityIds].some(id => ownerIds.has(id));
+    const isRoomAdmin = roomAdmins.some(id => actorIdentityIds.has(id));
     const canModerateSeats = isRoomOwner || isRoomAdmin;
 
     if (!roomSeats.has(roomId)) roomSeats.set(roomId, new Map());
