@@ -529,3 +529,10 @@ Current documentation does not certify that all historical features are build-, 
 - `backend/server.js`: profile writes now strip wallet-owned fields (`coins`, `diamonds`, legacy `balance`, wallet timestamps, and daily-check-in credit keys). Wallet endpoints and atomic wallet operations remain the only balance writers; Mine → Wallet continues to use MongoDB `users.coins` as its canonical balance.
 - `CoinsNativePage.kt`: every wallet page open now refreshes from the canonical server endpoint instead of allowing a 15-second local sync throttle to retain a stale zero. Failed refreshes leave the last known cached snapshot intact.
 - UI unchanged. Backend deployment, native APK build, and multi-account balance persistence tests remain pending.
+
+## 2026-11-10 — Live Render wallet reset fix (Zyora-Server)
+- Correct live backend repository is `khaiwilsan676-alt/Zyora-Server` (Render service `zyora-server`, `render.yaml` confirms `npm start`, `autoDeploy: true`). Earlier wallet protection changes in this app repository's `backend/server.js` were not the deployed Render source.
+- Live root cause: `Zyora-Server/server.js` `PUT /api/users` merged stale client wallet fields into a replacement MongoDB user document via `replaceOne()`, allowing profile saves to reset `coins`/wallet metadata. Profile writes now strip server-owned wallet fields before replacement.
+- Migration root cause: first wallet access without `walletStorageMigratedAt` could replace an already-present MongoDB balance with a stale legacy GitHub wallet value (including zero). Migration now preserves any valid existing MongoDB coins/diamonds value and consults legacy sources only when the MongoDB field is absent/invalid.
+- Wallet credit/debit, diamond exchange, and gift recipient credit/rollback now mutate the exact resolved MongoDB user document by `_id`, avoiding a broad legacy-ID `$or` query accidentally selecting a different user document.
+- Live backend commit: `1ccb235f9589345e2bc26a523529dcf1a4e710da`. Render auto-deploy is configured, but deployment completion, existing-balance recovery, and live persistence testing must still be verified. No UI changes.
