@@ -253,7 +253,7 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
    if(bottomLeftDecor!=0)Image(
     painterResource(bottomLeftDecor),null,
     Modifier.align(Alignment.BottomStart).padding(start=8.dp,bottom=60.dp).size(width=40.dp,height=55.dp),
-    contentScale=ContentScale.Fit
+    contentScale=ContentScale.FillBounds
    )
    Row(Modifier.align(Alignment.BottomStart).padding(start=10.dp,bottom=12.dp),verticalAlignment=Alignment.CenterVertically){
     val coin=wpAsset(context,"wp_file_00000000e56882119c217d508b6733dc");if(coin!=0)Image(painterResource(coin),null,Modifier.size(20.dp))
