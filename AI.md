@@ -551,3 +551,9 @@ Current documentation does not certify that all historical features are build-, 
 - POST now matches the native payload (`userId` only), credits the configured 7-day coin rewards to the canonical MongoDB wallet using a deterministic idempotency marker, persists reward transaction records, and grants day 3/5/6/7 permanent inventory rewards idempotently. Retry repairs an interrupted credit without double-crediting; repeat claims on the same India calendar day do not advance the streak or pay twice.
 - Actual Render backend commit: `7e32f062b0e119057053d9c112d7d4b6c5595797` in `khaiwilsan676-alt/Zyora-Server/server.js`. No UI changes.
 - Verification: source committed; Render deployment and live device/MongoDB end-to-end claim still need verification. Do not claim production behavior is verified until deployed and tested.
+
+## Mine tab recent-room history (2026-11-10)
+- `android-native/app/src/main/java/com/hurry/voicechat/MineScreen.kt`: reduced the Mine header Search/House icon spacing to 3dp and removed the Following/Recent selected underline without changing the tab labels or room-card styling.
+- Added per-account persistent Recent history. A room is recorded only after the room-access API confirms entry; revisiting the same room moves it to the top and refreshes its visit time.
+- Recent history expires each room two hours after its latest successful entry, keeps at most 15 unique rooms, and displays newest first in the existing two-column room-card layout. Expired entries are cleaned when the list is loaded.
+- `MainActivity.kt` records successful room entry; SharedPreferences stores the recent-room list locally per account. Build/device behavior has not been run-verified in this change.
