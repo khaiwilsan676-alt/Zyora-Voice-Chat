@@ -18,6 +18,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -305,7 +306,7 @@ fun TransparentSeatVideoPlayer(
         AndroidView(
             modifier = Modifier
                 .fillMaxSize()
-                .then(if (firstFrameReady) Modifier else Modifier.size(0.dp)),
+                .alpha(if (firstFrameReady) 1f else 0f),
             factory = { playerView },
             update = { it.player = player }
         )
