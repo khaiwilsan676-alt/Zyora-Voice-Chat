@@ -305,6 +305,8 @@ fun RoomPage(
     var roomName by remember{mutableStateOf(roomOwner.name.ifBlank{"Room"})}
     var roomImage by remember{mutableStateOf(roomOwner.image)}
     var announcement by remember{mutableStateOf("")}
+    // Chat visibility is transient; the Room Settings announcement remains persisted.
+    var showRoomSettingsAnnouncementInChat by remember(roomId) { mutableStateOf(false) }
     var roomAdminIds by remember(roomId) { mutableStateOf<List<String>>(emptyList()) }
     // Some seat snapshots identify the signed-in user by UID while admin lists use accountId.
     val currentUserSeatIds = setOf(accountId, currentUser.uid, currentUser.id).filter { it.isNotBlank() }.toSet()
@@ -459,6 +461,7 @@ fun RoomPage(
                             if (name.isNotBlank()) roomName = name
                             if (!isLogoRoom && image.isNotBlank()) roomImage = image
                             announcement = message
+                            showRoomSettingsAnnouncementInChat = message.isNotBlank()
                             roomMicMode = savedMicMode
                             roomTheme = savedTheme
                             if (savedAdmins != null) roomAdminIds = savedAdmins
@@ -988,6 +991,7 @@ fun RoomPage(
                 mainHandler.post {
                     messages.clear()
                     kickNotices.clear()
+                    showRoomSettingsAnnouncementInChat = false
                     showOfficialAnnouncement = false
                     // Clearing public chat must never clear the persistent Room Settings announcement.
                     clearedBy = payload.optString("userName").ifBlank { backendRoomUsers.firstOrNull { it.accountId == payload.optString("userId") }?.name ?: "Admin" }
@@ -1192,7 +1196,10 @@ fun RoomPage(
                         appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE)
                             .edit().putInt("micMode_$roomId", updatedMicMode).apply()
                     }
-                    if (hasAnnouncement) announcement = updatedAnnouncement
+                    if (hasAnnouncement) {
+                        announcement = updatedAnnouncement
+                        showRoomSettingsAnnouncementInChat = updatedAnnouncement.isNotBlank()
+                    }
                     if (payload.has("publicMsgOff")) publicMsgOff = payload.optBoolean("publicMsgOff", true)
                     if (payload.has("roomName")) roomName = payload.optString("roomName", latestRoomName)
                     if (payload.has("admin") && payload.optJSONArray("admin") != null) {
@@ -1588,6 +1595,7 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                             showOfficialAnnouncement = showOfficialAnnouncement,
                             clearedBy = clearedBy,
                             announcement = announcement,
+                            showRoomSettingsAnnouncementInChat = showRoomSettingsAnnouncementInChat,
                             roomOwnerId = roomOwner.accountId.ifBlank { roomOwner.id },
                             roomAdminIds = roomAdminIds,
                             onSelectMessage = { selectedChatProfile = it },
@@ -1737,6 +1745,7 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                             showOfficialAnnouncement = showOfficialAnnouncement,
                             clearedBy = clearedBy,
                             announcement = announcement,
+                            showRoomSettingsAnnouncementInChat = showRoomSettingsAnnouncementInChat,
                             roomOwnerId = roomOwner.accountId.ifBlank { roomOwner.id },
                             roomAdminIds = roomAdminIds,
                             onSelectMessage = { selectedChatProfile = it },
@@ -2026,6 +2035,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
             onClearChat={
                 messages.clear()
                 kickNotices.clear()
+                showRoomSettingsAnnouncementInChat = false
                 roomToastText = "Public message are cleared"
                 showOfficialAnnouncement = false
                 // Keep the Room Settings announcement; this action only clears chat messages.
@@ -2203,7 +2213,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
             }
         )
         if(showSettings && accountId.isNotBlank() && accountId == roomOwner.accountId.ifBlank { roomOwner.id }) RoomSettingPage(initial = RoomSettingsDataNative(roomName=roomName,roomDp=roomImage,announcement=announcement,micMode=roomMicMode,theme=roomTheme,isLocked=locked,roomPassword=roomPassword,admin=roomAdminIds,customTheme=appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).getString("customTheme_$roomId", "").orEmpty()),roomOwnerId=roomId,currentUserId=accountId,roomMembers=followedRoomUsers,onBack={showSettings=false},onSave={saved->
-            roomName=saved.roomName;roomImage=saved.roomDp;announcement=saved.announcement;roomMicMode=saved.micMode;roomTheme=saved.theme;roomCustomThemeUrl=saved.customTheme;roomAdminIds=saved.admin;locked=saved.isLocked;roomPassword=saved.roomPassword
+            roomName=saved.roomName;roomImage=saved.roomDp;announcement=saved.announcement;showRoomSettingsAnnouncementInChat=saved.announcement.isNotBlank();roomMicMode=saved.micMode;roomTheme=saved.theme;roomCustomThemeUrl=saved.customTheme;roomAdminIds=saved.admin;locked=saved.isLocked;roomPassword=saved.roomPassword
             appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).edit().putInt("micMode_$roomId", saved.micMode).putString("theme_$roomId", saved.theme).putString("customTheme_$roomId", saved.customTheme).putBoolean("room_locked_$roomId", saved.isLocked).putString("room_password_$roomId", saved.roomPassword).apply()
             CoroutineScope(Dispatchers.IO).launch { NativeIndexDatabase(appContext).saveRoomLock(roomId, saved.isLocked, saved.roomPassword) }
             roomSocketRef.value?.takeIf { it.connected() }?.emit("room_settings_update", JSONObject()
@@ -2780,6 +2790,7 @@ private fun RoomChatMessages(
     showOfficialAnnouncement: Boolean,
     clearedBy: String,
     announcement: String,
+    showRoomSettingsAnnouncementInChat: Boolean,
     roomOwnerId: String,
     roomAdminIds: List<String> = emptyList(),
     onSelectMessage: (NativeRoomMessage) -> Unit,
@@ -2819,7 +2830,7 @@ private fun RoomChatMessages(
                                     }
                                 }
                             }
-                            if(announcement.isNotBlank()) {
+                            if(showRoomSettingsAnnouncementInChat && announcement.isNotBlank()) {
                                 item {
                                     Column(Modifier.fillMaxWidth().padding(start=4.dp, end=82.dp, bottom=2.dp)) {
                                         Column(Modifier.fillMaxWidth(.92f).clip(RoundedCornerShape(8.dp)).background(Color.Black.copy(alpha=.30f)).padding(horizontal=14.dp,vertical=12.dp)) {
