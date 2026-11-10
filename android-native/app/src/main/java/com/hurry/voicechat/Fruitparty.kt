@@ -15,6 +15,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.*
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
@@ -228,9 +230,10 @@ fun Fruitparty(onClose:()->Unit,onMinimize:(()->Unit)?=null,isMinimized:Boolean=
  }
  LaunchedEffect(isMinimized){if(isMinimized)minimizedSession=true}
  if(isMinimized)return
- BoxWithConstraints(Modifier.fillMaxSize().background(Color.Black),contentAlignment=Alignment.BottomCenter){
+ BoxWithConstraints(Modifier.fillMaxSize().background(Color.Transparent),contentAlignment=Alignment.BottomCenter){
   val screenH=maxHeight
   val panelH=screenH*.68f
+  Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=.5f)).clickable(interactionSource=null,indication=null){onClose()})
   Box(Modifier.fillMaxWidth().height(panelH).align(Alignment.BottomCenter).background(fruitPurple)){
    val bg=fruitAsset(context,"fp_1787413631876_2")
    if(bg!=0)Image(painterResource(bg),null,Modifier.fillMaxSize(),contentScale=ContentScale.FillBounds)
@@ -295,8 +298,14 @@ fun Fruitparty(onClose:()->Unit,onMinimize:(()->Unit)?=null,isMinimized:Boolean=
        val gridIndex=fruitGridIds.indexOf(item.id)
        val active=(phase==FruitPhase.BETTING&&handPointer==gridIndex)||(phase!=FruitPhase.BETTING&&highlight==gridIndex)
        val final=phase==FruitPhase.RESULT&&(winner==gridIndex||(winner==10&&gridIndex in listOf(0,2,6,8))||(winner==11&&gridIndex in listOf(1,3,5,7)))
+       val applyGreen=active||final
+       val highlightMatrix=ColorMatrix().apply{
+        val hue=ColorMatrix().apply{setToRotate(0,-150f)}
+        val saturation=ColorMatrix().apply{setToSaturation(2f)}
+        setToConcat(hue,saturation)
+       }
        Box(Modifier.weight(1f).fillMaxHeight().padding(3.dp).clickable(interactionSource=null,indication=null){placeBet(item.id)},contentAlignment=Alignment.Center){
-        val tile=fruitAsset(context,"fp_file_00000000d0ec820ba666eab8bea30204");if(tile!=0)Image(painterResource(tile),null,Modifier.fillMaxSize(),contentScale=ContentScale.FillBounds)
+        val tile=fruitAsset(context,"fp_file_00000000d0ec820ba666eab8bea30204");if(tile!=0)Image(painterResource(tile),null,Modifier.fillMaxSize(),contentScale=ContentScale.FillBounds,colorFilter=if(applyGreen)ColorFilter.colorMatrix(highlightMatrix)else null)
         val image=fruitAsset(context,item.image);if(image!=0)Image(painterResource(image),null,Modifier.fillMaxSize(.57f).align(Alignment.Center).padding(bottom=12.dp),contentScale=ContentScale.Fit)
         if(phase==FruitPhase.BETTING&&handPointer==gridIndex){val pointer=fruitAsset(context,"fp_file_000000000f0c820b95490c9d927692d9");if(pointer!=0)Image(painterResource(pointer),null,Modifier.align(Alignment.BottomEnd).size(40.dp).graphicsLayer{rotationZ=-45f},contentScale=ContentScale.Fit)}
         Text("×${item.multiplier}",Modifier.align(Alignment.BottomCenter).padding(bottom=5.dp),color=Color.White,fontSize=11.sp,fontWeight=FontWeight.Black)
