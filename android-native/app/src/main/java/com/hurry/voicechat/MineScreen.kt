@@ -21,41 +21,49 @@ import org.json.JSONArray
 import org.json.JSONObject
 import coil3.compose.AsyncImage
 
-/** Recent rooms are persisted per account, newest first, with a rolling two-hour lifetime. */
+/** Recent rooms are persisted in the app's shared index.db, per account, newest first. */
 object RecentRoomHistory {
-    private const val PREFS = "zyora_recent_rooms"
     private const val MAX_ROOMS = 15
-    private const val MAX_AGE_MS = 2L * 60L * 60L * 1000L
+    private const val KEY_PREFIX = "recent_rooms:"
     var version by mutableIntStateOf(0)
         private set
 
-    private fun key(accountId: String) = "rooms_${accountId.ifBlank { "guest" }}"
+    private fun key(accountId: String) = KEY_PREFIX + accountId.ifBlank { "guest" }
 
     @Synchronized
     fun record(context: android.content.Context, accountId: String, room: HurryRoom) {
-        val prefs = context.getSharedPreferences(PREFS, android.content.Context.MODE_PRIVATE)
-        val now = System.currentTimeMillis()
-        val existing = readArray(prefs.getString(key(accountId), "[]").orEmpty())
-        val kept = existing.filter { now - it.second < MAX_AGE_MS && it.first.id != room.id }
-        save(prefs, key(accountId), (listOf(room to now) + kept).take(MAX_ROOMS))
+        val roomId = room.id.ifBlank { room.accountId }.trim()
+        if (roomId.isBlank()) return
+        val db = NativeIndexDatabase(context)
+        val saved = db.loadProfile(key(accountId))?.optJSONArray("rooms")
+        val existing = parseRooms(saved)
+        val updated = listOf(room.copy(id = roomId) to System.currentTimeMillis()) +
+            existing.filterNot { it.first.id == roomId }
+        val rows = JSONArray()
+        updated.take(MAX_ROOMS).forEach { (item, visitedAt) ->
+            rows.put(JSONObject()
+                .put("id", item.id)
+                .put("name", item.name)
+                .put("image", item.image)
+                .put("country", item.country)
+                .put("accountId", item.accountId)
+                .put("visitedAt", visitedAt))
+        }
+        db.saveProfile(key(accountId), JSONObject().put("rooms", rows))
         version++
     }
 
     @Synchronized
     fun load(context: android.content.Context, accountId: String): List<HurryRoom> {
-        val prefs = context.getSharedPreferences(PREFS, android.content.Context.MODE_PRIVATE)
-        val now = System.currentTimeMillis()
-        val storageKey = key(accountId)
-        val existing = readArray(prefs.getString(storageKey, "[]").orEmpty())
-        val valid = existing.filter { now - it.second < MAX_AGE_MS }
-            .distinctBy { it.first.id }.take(MAX_ROOMS)
-        if (valid.size != existing.size) save(prefs, storageKey, valid)
-        return valid.map { it.first }
+        val db = NativeIndexDatabase(context)
+        val rows = db.loadProfile(key(accountId))?.optJSONArray("rooms")
+        val valid = parseRooms(rows).take(MAX_ROOMS).map { it.first }
+        return valid
     }
 
-    private fun readArray(raw: String): List<Pair<HurryRoom, Long>> = runCatching {
-        val array = JSONArray(raw)
-        (0 until array.length()).mapNotNull { index ->
+    private fun parseRooms(array: JSONArray?): List<Pair<HurryRoom, Long>> {
+        if (array == null) return emptyList()
+        return (0 until array.length()).mapNotNull { index ->
             val item = array.optJSONObject(index) ?: return@mapNotNull null
             val id = item.optString("id").trim()
             if (id.isBlank()) return@mapNotNull null
@@ -66,20 +74,9 @@ object RecentRoomHistory {
                 country = item.optString("country", ""),
                 accountId = item.optString("accountId", "")
             ) to item.optLong("visitedAt", 0L)
-        }
-    }.getOrDefault(emptyList())
-
-    private fun save(prefs: android.content.SharedPreferences, key: String, rooms: List<Pair<HurryRoom, Long>>) {
-        val array = JSONArray()
-        rooms.forEach { (room, visitedAt) ->
-            array.put(JSONObject().put("id", room.id).put("name", room.name)
-                .put("image", room.image).put("country", room.country)
-                .put("accountId", room.accountId).put("visitedAt", visitedAt))
-        }
-        prefs.edit().putString(key, array.toString()).apply()
+        }.distinctBy { it.first.id }.sortedByDescending { it.second }
     }
 }
-
 @Composable
 fun MineNativePage(onBack: () -> Unit, createdRoom: HurryRoom? = null, followingRooms: List<HurryRoom> = emptyList(), onOpenRoom: (HurryRoom) -> Unit = {}, onCreateRoom: () -> Unit = {}, onSearch: () -> Unit = {}, languageCode: String = "en") {
     var recent by remember { mutableStateOf(false) }
