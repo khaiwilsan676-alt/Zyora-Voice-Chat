@@ -187,24 +187,37 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
     Box(Modifier.align(Alignment.TopStart).padding(start=4.dp)){MultiplierBadge(true)}
     Box(Modifier.align(Alignment.TopEnd).padding(end=4.dp)){MultiplierBadge(false)}
    }
-   Column(Modifier.fillMaxWidth().align(Alignment.TopCenter).padding(top=8.dp)){
-    Row(Modifier.fillMaxWidth().padding(horizontal=8.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.SpaceBetween){
-     Row(horizontalArrangement=Arrangement.spacedBy(4.dp),verticalAlignment=Alignment.CenterVertically){
-      Box(Modifier.size(24.dp).clip(RoundedCornerShape(6.dp)).background(Color.White.copy(alpha=.20f)).border(1.dp,Color.White.copy(alpha=.40f),RoundedCornerShape(6.dp)).clickable{muted=!muted},contentAlignment=Alignment.Center){Icon(if(muted)Icons.Default.VolumeOff else Icons.Default.VolumeUp,null,Modifier.size(16.dp),tint=if(muted)Color.White.copy(alpha=.5f) else Color.White)}
-      Box(Modifier.size(24.dp).clip(RoundedCornerShape(6.dp)).background(Color.White.copy(alpha=.20f)).border(1.dp,Color.White.copy(alpha=.40f),RoundedCornerShape(6.dp)).clickable{rulesOpen=true},contentAlignment=Alignment.Center){Text("?",color=Color.White,fontSize=14.sp,fontWeight=FontWeight.Black)}
+   Box(Modifier.fillMaxWidth().align(Alignment.TopCenter).padding(top=8.dp)){
+    Row(Modifier.align(Alignment.TopStart).padding(start=8.dp),horizontalArrangement=Arrangement.spacedBy(4.dp),verticalAlignment=Alignment.CenterVertically){
+     Box(Modifier.size(24.dp).clip(RoundedCornerShape(6.dp)).background(Color.White.copy(alpha=.20f)).border(1.dp,Color.White.copy(alpha=.40f),RoundedCornerShape(6.dp)).clickable{muted=!muted},contentAlignment=Alignment.Center){
+      Canvas(Modifier.size(16.dp)){val p=androidx.compose.ui.graphics.Path().apply{moveTo(1.dp.toPx(),5.dp.toPx());lineTo(5.dp.toPx(),5.dp.toPx());lineTo(10.dp.toPx(),1.dp.toPx());lineTo(10.dp.toPx(),15.dp.toPx());lineTo(5.dp.toPx(),11.dp.toPx());lineTo(1.dp.toPx(),11.dp.toPx());close()};drawPath(p,Color.White.copy(alpha=if(muted).5f else 1f));if(muted){drawLine(Color.White,androidx.compose.ui.geometry.Offset(2.dp.toPx(),2.dp.toPx()),androidx.compose.ui.geometry.Offset(14.dp.toPx(),14.dp.toPx()),1.7.dp.toPx(),cap=androidx.compose.ui.graphics.StrokeCap.Round)}else{drawArc(Color.White,-55f,110f,false,topLeft=androidx.compose.ui.geometry.Offset(7.dp.toPx(),2.dp.toPx()),size=androidx.compose.ui.geometry.Size(9.dp.toPx(),12.dp.toPx()),style=androidx.compose.ui.graphics.drawscope.Stroke(1.5.dp.toPx()))}}
      }
-     Text("Wild Party",color=Color.White,fontSize=18.sp,fontWeight=FontWeight.Black,fontStyle=androidx.compose.ui.text.font.FontStyle.Italic)
-     Row(horizontalArrangement=Arrangement.spacedBy(4.dp),verticalAlignment=Alignment.CenterVertically){
-      Box(Modifier.size(24.dp).clip(RoundedCornerShape(6.dp)).background(Color.White.copy(alpha=.20f)).border(1.dp,Color.White.copy(alpha=.40f),RoundedCornerShape(6.dp)).clickable{historyOpen=true},contentAlignment=Alignment.Center){
-       Column(verticalArrangement=Arrangement.spacedBy(2.dp),horizontalAlignment=Alignment.CenterHorizontally){repeat(2){Box(Modifier.width(14.dp).height(2.dp).clip(RoundedCornerShape(2.dp)).background(Color.White))};Row(horizontalArrangement=Arrangement.spacedBy(2.dp)){Box(Modifier.width(9.dp).height(2.dp).clip(RoundedCornerShape(2.dp)).background(Color.White));Box(Modifier.size(3.dp,2.dp).clip(RoundedCornerShape(2.dp)).background(Color.White))}}
+     Box(Modifier.size(24.dp).clip(RoundedCornerShape(6.dp)).background(Color.White.copy(alpha=.20f)).border(1.dp,Color.White.copy(alpha=.40f),RoundedCornerShape(6.dp)).clickable{rulesOpen=true},contentAlignment=Alignment.Center){Text("?",color=Color.White,fontSize=14.sp,fontWeight=FontWeight.ExtraBold)}
+    }
+    Text("Wild Party",Modifier.align(Alignment.TopCenter),color=Color.White,fontSize=18.sp,fontWeight=FontWeight.Black,fontStyle=androidx.compose.ui.text.font.FontStyle.Italic)
+    Row(Modifier.align(Alignment.TopEnd).padding(end=8.dp),horizontalArrangement=Arrangement.spacedBy(4.dp),verticalAlignment=Alignment.CenterVertically){
+     Box(Modifier.size(24.dp).clip(RoundedCornerShape(6.dp)).background(Color.White.copy(alpha=.20f)).border(1.dp,Color.White.copy(alpha=.40f),RoundedCornerShape(6.dp)).clickable{historyOpen=true},contentAlignment=Alignment.Center){
+      Column(verticalArrangement=Arrangement.spacedBy(2.dp),horizontalAlignment=Alignment.CenterHorizontally){repeat(2){Box(Modifier.width(16.dp).height(2.5.dp).clip(RoundedCornerShape(2.dp)).background(Color.White))};Row(horizontalArrangement=Arrangement.spacedBy(1.dp)){Box(Modifier.width(10.dp).height(2.5.dp).clip(RoundedCornerShape(2.dp)).background(Color.White));Box(Modifier.width(3.dp).height(2.5.dp).clip(RoundedCornerShape(2.dp)).background(Color.White))}}
+     }
+     Box(Modifier.size(24.dp).clip(RoundedCornerShape(6.dp)).background(Color.White.copy(alpha=.20f)).border(1.dp,Color.White.copy(alpha=.40f),RoundedCornerShape(6.dp)).clickable{onMinimize()},contentAlignment=Alignment.Center){Canvas(Modifier.size(16.dp)){val p=androidx.compose.ui.graphics.Path().apply{moveTo(1.dp.toPx(),4.dp.toPx());lineTo(15.dp.toPx(),4.dp.toPx());lineTo(8.dp.toPx(),14.dp.toPx());close()};drawPath(p,Color.White)}}
+     Box(Modifier.size(24.dp).clip(RoundedCornerShape(6.dp)).background(Color.White.copy(alpha=.20f)).border(1.dp,Color.White.copy(alpha=.40f),RoundedCornerShape(6.dp)).clickable{onClose()},contentAlignment=Alignment.Center){Canvas(Modifier.size(16.dp)){val a=3.dp.toPx();val b=13.dp.toPx();drawLine(Color.White,androidx.compose.ui.geometry.Offset(a,a),androidx.compose.ui.geometry.Offset(b,b),2.2.dp.toPx(),cap=androidx.compose.ui.graphics.StrokeCap.Round);drawLine(Color.White,androidx.compose.ui.geometry.Offset(b,a),androidx.compose.ui.geometry.Offset(a,b),2.2.dp.toPx(),cap=androidx.compose.ui.graphics.StrokeCap.Round)}}
+    }
+   }
+   Row(Modifier.fillMaxWidth().padding(top=44.dp,start=8.dp,end=8.dp).heightIn(min=28.dp).clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha=.25f)).border(1.dp,Color.White.copy(alpha=.20f),RoundedCornerShape(50)).padding(horizontal=10.dp,vertical=3.dp),horizontalArrangement=Arrangement.spacedBy(5.dp),verticalAlignment=Alignment.CenterVertically){
+    if(history.isEmpty())Text("History",color=Color.White.copy(alpha=.5f),fontSize=10.sp,fontStyle=androidx.compose.ui.text.font.FontStyle.Italic)
+    else history.takeLast(9).forEach{record->
+     val mixBig=record.winner=="Mix Big";val mixSmall=record.winner=="Mix Small"
+     if(mixBig||mixSmall){
+      Box(Modifier.size(24.dp),contentAlignment=Alignment.Center){
+       if(multiplierBg!=0)Image(painterResource(multiplierBg),null,Modifier.fillMaxSize(),contentScale=ContentScale.Fit)
+       val group=if(mixBig)listOf("Eagle","Bear","Tiger","Lion") else listOf("Dog","Deer","Zebra","Fox")
+       group.forEachIndexed{idx,n->val aid=wpAsset(context,wpAnimals.first{it.name==n}.image);if(aid!=0)Image(painterResource(aid),null,Modifier.align(when(idx){0->Alignment.TopStart;1->Alignment.TopEnd;2->Alignment.BottomStart;else->Alignment.BottomEnd}).size(12.dp),contentScale=ContentScale.Crop)}
       }
-      Box(Modifier.size(24.dp).clip(RoundedCornerShape(6.dp)).background(Color.White.copy(alpha=.20f)).border(1.dp,Color.White.copy(alpha=.40f),RoundedCornerShape(6.dp)).clickable{onMinimize()},contentAlignment=Alignment.Center){Text("⌄",color=Color.White,fontSize=19.sp,fontWeight=FontWeight.Bold)}
-      Box(Modifier.size(24.dp).clip(RoundedCornerShape(6.dp)).background(Color.White.copy(alpha=.20f)).border(1.dp,Color.White.copy(alpha=.40f),RoundedCornerShape(6.dp)).clickable{onClose()},contentAlignment=Alignment.Center){Canvas(Modifier.size(13.dp)){val w=size.width;val h=size.height;drawLine(Color.White,androidx.compose.ui.geometry.Offset(1.dp.toPx(),1.dp.toPx()),androidx.compose.ui.geometry.Offset(w-1.dp.toPx(),h-1.dp.toPx()),2.dp.toPx(),cap=androidx.compose.ui.graphics.StrokeCap.Round);drawLine(Color.White,androidx.compose.ui.geometry.Offset(w-1.dp.toPx(),1.dp.toPx()),androidx.compose.ui.geometry.Offset(1.dp.toPx(),h-1.dp.toPx()),2.dp.toPx(),cap=androidx.compose.ui.graphics.StrokeCap.Round)}}
-     }
+     }else{val aid=wpAsset(context,wpAnimals.firstOrNull{it.name==record.winner}?.image?: "");if(aid!=0)Image(painterResource(aid),record.winner,Modifier.size(24.dp),contentScale=ContentScale.Fit)}
     }
-    Row(Modifier.fillMaxWidth().padding(top=12.dp),horizontalArrangement=Arrangement.Center,verticalAlignment=Alignment.CenterVertically){
-     Text("Round #$round  •  "+when(phase){WpPhase.BETTING->"Betting";WpPhase.SPINNING->"Spinning";WpPhase.RESULT->"Result"}+"  $countdown s",color=wpGold,fontWeight=FontWeight.Bold,fontSize=12.sp)
-    }
+   }
+   Row(Modifier.fillMaxWidth().padding(top=78.dp),horizontalArrangement=Arrangement.Center,verticalAlignment=Alignment.CenterVertically){
+    Text("Round #$round  •  "+when(phase){WpPhase.BETTING->"Betting";WpPhase.SPINNING->"Spinning";WpPhase.RESULT->"Result"}+"  $countdown s",color=wpGold,fontWeight=FontWeight.Bold,fontSize=12.sp)
    }
    Box(Modifier.align(Alignment.Center).size(320.dp),contentAlignment=Alignment.Center){
     // Original TSX decorative wheel image behind all animal icons.
