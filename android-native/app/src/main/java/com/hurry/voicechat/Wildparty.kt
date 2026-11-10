@@ -217,7 +217,9 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
     }
    }
    Box(Modifier.align(Alignment.Center).size(320.dp),contentAlignment=Alignment.Center){
-    // Keep the native wheel artwork clean; do not layer the extra wheel-tune image.
+    // Keep the original wheel background image; remove only the unwanted extra wheel-tune overlay.
+    val wheelBg=wpAsset(context,"wp_1787344138649_2")
+    if(wheelBg!=0)Image(painterResource(wheelBg),null,Modifier.fillMaxSize(),contentScale=ContentScale.Fit)
     Box(Modifier.size(260.dp).clip(CircleShape).background(Color(0xCC311D0C)).border(5.dp,Color(0xFFFFD16B),CircleShape))
     Canvas(Modifier.size(250.dp)){drawCircle(Color(0xFF6B3B14),style=androidx.compose.ui.graphics.drawscope.Stroke(5.dp.toPx()));for(i in 0..7){val a=Math.toRadians(i*45.0-90);val c=size.width/2;drawLine(Color(0xFFFFD56A),androidx.compose.ui.geometry.Offset(c,c),androidx.compose.ui.geometry.Offset(c+cos(a).toFloat()*size.width*.48f,c+sin(a).toFloat()*size.height*.48f),2.dp.toPx())}}
     wpAnimals.forEachIndexed{i,a->
