@@ -254,8 +254,14 @@ fun Fruitparty(onClose:()->Unit,onMinimize:(()->Unit)?=null,isMinimized:Boolean=
     Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){val coin=fruitAsset(context,"fp_file_00000000e56882119c217d508b6733dc");if(coin!=0)Image(painterResource(coin),null,Modifier.size(20.dp));Text(balance.toString(),color=Color.White,fontSize=12.sp,fontWeight=FontWeight.Bold)}
     Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){val coin=fruitAsset(context,"fp_file_00000000e56882119c217d508b6733dc");if(coin!=0)Image(painterResource(coin),null,Modifier.size(20.dp));Text(totalWon.toString(),color=Color.White,fontSize=12.sp,fontWeight=FontWeight.Bold)}
    }
-   Row(Modifier.align(Alignment.BottomCenter).padding(bottom=screenH*.025f).fillMaxWidth().horizontalScroll(rememberScrollState()).padding(start=screenH*.12f),horizontalArrangement=Arrangement.spacedBy(8.dp)){
-    winners.asReversed().forEachIndexed{i,id->Box(Modifier.size(19.dp).clip(CircleShape).background(fruitBrown).border(1.dp,Color(0xFF3A1D09),CircleShape),contentAlignment=Alignment.Center){val res=fruitAsset(context,fruitImage(id));if(res!=0)Image(painterResource(res),null,Modifier.size(14.dp));if(i==0)Text("NEW",Modifier.align(Alignment.BottomCenter).offset(y=7.dp).background(Color(0xFF16A34A)),color=Color.White,fontSize=4.sp,fontWeight=FontWeight.Black)}}
+   Row(Modifier.align(Alignment.BottomCenter).padding(bottom=(screenH*.025f-2.dp)).fillMaxWidth().horizontalScroll(rememberScrollState()).padding(start=(screenH*.12f-8.dp)),horizontalArrangement=Arrangement.spacedBy(8.dp)){
+    winners.asReversed().forEachIndexed{i,id->
+     Box(Modifier.size(19.dp).border(1.dp,Color(0xFF3A1D09),CircleShape),contentAlignment=Alignment.Center){
+      val res=fruitAsset(context,fruitImage(id))
+      if(res!=0)Image(painterResource(res),null,Modifier.size(19.dp).clip(CircleShape),contentScale=ContentScale.Crop)
+      if(i==0)Text("NEW",Modifier.align(Alignment.BottomCenter).offset(y=7.dp).background(Color(0xFF16A34A),RoundedCornerShape(2.dp)).padding(horizontal=2.dp,vertical=0.dp),color=Color.White,fontSize=5.sp,fontWeight=FontWeight.Black)
+     }
+    }
    }
    // Keep all four betting chips on one evenly spaced row; prevent the 5M chip from slipping behind adjacent artwork.
    Row(Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal=4.dp).padding(bottom=screenH*.14f),horizontalArrangement=Arrangement.SpaceEvenly,verticalAlignment=Alignment.Bottom){
