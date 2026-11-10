@@ -4,7 +4,7 @@ import android.graphics.BitmapFactory
 import android.graphics.Bitmap
 import android.util.LruCache
 import android.graphics.PixelFormat
-import android.view.TextureView
+import android.view.SurfaceView
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.compose.foundation.Image
@@ -250,6 +250,8 @@ fun TransparentSeatVideoPlayer(
     val latestOnFinished by rememberUpdatedState(onVideoFinished)
     var firstFrameReady by remember(videoUrl) { mutableStateOf(false) }
 
+    // Keep the original chroma-key renderer: green pixels are removed by
+    // ChromaKeyVideoView's GLES shader. Only the video source is disk-cached.
     val player = remember(context, videoUrl) {
         val appContext = context.applicationContext
         val httpFactory = DefaultHttpDataSource.Factory()
@@ -269,16 +271,11 @@ fun TransparentSeatVideoPlayer(
                 repeatMode = Player.REPEAT_MODE_OFF
                 playWhenReady = true
                 addListener(object : Player.Listener {
-                    override fun onRenderedFirstFrame() {
-                        firstFrameReady = true
-                    }
-
                     override fun onPlaybackStateChanged(playbackState: Int) {
                         if (playbackState == Player.STATE_ENDED) latestOnFinished()
                     }
 
                     override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
-                        // Never expose PlayerView's black shutter/error surface.
                         firstFrameReady = false
                     }
                 })
@@ -286,27 +283,28 @@ fun TransparentSeatVideoPlayer(
             }
     }
 
-    // Attach the decoder directly to a TextureView. PlayerView does not expose
-    // setVideoTextureView; ExoPlayer owns the TextureView surface API.
-    val textureView = remember(context, player) {
-        TextureView(context).also { player.setVideoTextureView(it) }
-    }
-
-    Box(modifier = modifier.fillMaxSize()) {
-        AndroidView(
-            modifier = Modifier
-                .fillMaxSize()
-                .alpha(if (firstFrameReady) 1f else 0f),
-            factory = { textureView }
+    val chromaView = remember(context, player, videoUrl) {
+        ChromaKeyVideoView(
+            context,
+            onVideoSurfaceReady = { surface -> player.setVideoSurface(surface) },
+            onFirstFrameAvailable = { firstFrameReady = true }
         )
     }
 
-    DisposableEffect(player, textureView) {
+    AndroidView(
+        modifier = modifier
+            .fillMaxSize()
+            .alpha(if (firstFrameReady) 1f else 0f),
+        factory = { chromaView }
+    )
+
+    DisposableEffect(player, chromaView) {
         onDispose {
-            player.clearVideoTextureView(textureView)
+            player.clearVideoSurface()
             player.stop()
             player.clearMediaItems()
             player.release()
+            chromaView.release()
         }
     }
 }
