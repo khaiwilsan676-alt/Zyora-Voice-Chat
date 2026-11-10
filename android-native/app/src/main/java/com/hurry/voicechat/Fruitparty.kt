@@ -276,16 +276,20 @@ fun Fruitparty(onClose:()->Unit,onMinimize:(()->Unit)?=null,isMinimized:Boolean=
     Row(Modifier.fillMaxWidth().height(screenH*.115f),horizontalArrangement=Arrangement.SpaceEvenly,verticalAlignment=Alignment.CenterVertically){
      row.forEach{index->
       if(index==0){
-       Box(Modifier.weight(1f).fillMaxHeight().padding(5.dp).clip(RoundedCornerShape(9.dp)).background(Color(0xFF512451)).border(2.dp,Color(0xFFD7A65B),RoundedCornerShape(9.dp)),contentAlignment=Alignment.Center){
-        Text(when(phase){FruitPhase.BETTING->"BETTING";FruitPhase.SPINNING->"SPINNING";FruitPhase.RESULT->"RESULT"},color=Color.White,fontSize=8.sp,fontWeight=FontWeight.Bold)
-        Text("${countdown}s",Modifier.padding(top=18.dp),color=Color(0xFFFFC34D),fontSize=20.sp,fontWeight=FontWeight.Black)
+       Box(Modifier.weight(1f).fillMaxHeight().padding(5.dp),contentAlignment=Alignment.Center){
+        val timerTile=fruitAsset(context,"fp_file_0000000023cc8230baec62632d74e698")
+        if(timerTile!=0)Image(painterResource(timerTile),null,Modifier.fillMaxSize(),contentScale=ContentScale.FillBounds)
+        Column(horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(2.dp)){
+         Text(when(phase){FruitPhase.BETTING->"BETTING";FruitPhase.SPINNING->"SPINNING";FruitPhase.RESULT->"RESULT"},color=Color.White,fontSize=8.sp,fontWeight=FontWeight.Bold)
+         Text("${countdown}s",color=Color(0xFFFFC34D),fontSize=20.sp,fontWeight=FontWeight.Black)
+        }
        }
       }else{
        val item=fruitItems.first{it.id==index}
        val gridIndex=fruitGridIds.indexOf(item.id)
        val active=(phase==FruitPhase.BETTING&&handPointer==gridIndex)||(phase!=FruitPhase.BETTING&&highlight==gridIndex)
        val final=phase==FruitPhase.RESULT&&(winner==gridIndex||(winner==10&&gridIndex in listOf(0,2,6,8))||(winner==11&&gridIndex in listOf(1,3,5,7)))
-       Box(Modifier.weight(1f).fillMaxHeight().padding(3.dp).clip(RoundedCornerShape(8.dp)).background(if(active)Color(0xFF4C8A36)else Color(0xFF5B3A58)).border(if(active||final)2.dp else 1.dp,if(active||final)Color(0xFFB9FF75)else Color(0xFFB18B70),RoundedCornerShape(8.dp)).clickable(interactionSource=null,indication=null){placeBet(item.id)},contentAlignment=Alignment.Center){
+       Box(Modifier.weight(1f).fillMaxHeight().padding(3.dp).clickable(interactionSource=null,indication=null){placeBet(item.id)},contentAlignment=Alignment.Center){
         val tile=fruitAsset(context,"fp_file_00000000d0ec820ba666eab8bea30204");if(tile!=0)Image(painterResource(tile),null,Modifier.fillMaxSize(),contentScale=ContentScale.FillBounds)
         val image=fruitAsset(context,item.image);if(image!=0)Image(painterResource(image),null,Modifier.fillMaxSize(.57f).align(Alignment.Center).padding(bottom=12.dp),contentScale=ContentScale.Fit)
         if(phase==FruitPhase.BETTING&&handPointer==gridIndex){val pointer=fruitAsset(context,"fp_file_000000000f0c820b95490c9d927692d9");if(pointer!=0)Image(painterResource(pointer),null,Modifier.align(Alignment.BottomEnd).size(40.dp).graphicsLayer{rotationZ=-45f},contentScale=ContentScale.Fit)}
@@ -301,7 +305,7 @@ fun Fruitparty(onClose:()->Unit,onMinimize:(()->Unit)?=null,isMinimized:Boolean=
   // Left and right mix cards.
   Row(Modifier.fillMaxWidth().padding(horizontal=screenH*.13f).offset(y=-screenH*.19f),horizontalArrangement=Arrangement.spacedBy(14.dp)){
    listOf(10,11).forEach{id->
-    Box(Modifier.weight(1f).height(screenH*.105f).clip(RoundedCornerShape(9.dp)).background(Color(0xFF613B42)).border(2.dp,if(phase==FruitPhase.RESULT&&winner==id)fruitGold else Color(0xFFBD8D5A),RoundedCornerShape(9.dp)).clickable(interactionSource=null,indication=null){placeBet(id)},contentAlignment=Alignment.Center){
+    Box(Modifier.weight(1f).height(screenH*.105f).clickable(interactionSource=null,indication=null){placeBet(id)},contentAlignment=Alignment.Center){
      val frame=fruitAsset(context,"fp_img_20260910_114625");if(frame!=0)Image(painterResource(frame),null,Modifier.fillMaxSize(),contentScale=ContentScale.FillBounds)
      val image=fruitAsset(context,fruitImage(id));if(image!=0)Image(painterResource(image),null,Modifier.fillMaxSize(.60f),contentScale=ContentScale.Fit)
      Text(if(id==10)"MIX ×5" else "MIX ×10–95",Modifier.align(Alignment.BottomCenter).padding(bottom=2.dp),color=Color.White,fontSize=8.sp,fontWeight=FontWeight.Black)
