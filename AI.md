@@ -564,3 +564,10 @@ Current documentation does not certify that all historical features are build-, 
 - A room is recorded only after the existing room-access check confirms entry. Re-entering the same room moves it to the top; history contains at most 15 unique rooms, newest first, with older entries dropped. No time-based expiry.
 - Mine header Search/House spacing remains 3dp, and Following/Recent selected underlines remain removed. Room-card layout and styling are unchanged.
 - Native build and device persistence verification remain pending.
+
+
+## 2026-11-11 — Avatar frame rendering
+- Native `NativeAvatarFrameOverlay` now renders equipped Avatar Frame videos with the same Store preview green-screen removal and top-fade behavior; static frame images remain fit-scaled.
+- The shared overlay is used by Me, Public Profile, Room Profile, and occupied room seats. Removed the duplicate overlay call from Public Profile so a frame is not drawn twice.
+- Public Profile's Frame section now loads the target user's unexpired Avatar Frame inventory and shows the actual Store image/video preview with its star row only, without an extra card.
+- Store Buy and Send flows were not changed. Native build and device verification remain pending.
