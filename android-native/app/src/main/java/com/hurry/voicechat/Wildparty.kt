@@ -216,13 +216,8 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
      }else{val aid=wpAsset(context,wpAnimals.firstOrNull{it.name==record.winner}?.image?: "");if(aid!=0)Image(painterResource(aid),record.winner,Modifier.size(24.dp),contentScale=ContentScale.Fit)}
     }
    }
-   Row(Modifier.fillMaxWidth().padding(top=78.dp),horizontalArrangement=Arrangement.Center,verticalAlignment=Alignment.CenterVertically){
-    Text("Round #$round  •  "+when(phase){WpPhase.BETTING->"Betting";WpPhase.SPINNING->"Spinning";WpPhase.RESULT->"Result"}+"  $countdown s",color=wpGold,fontWeight=FontWeight.Bold,fontSize=12.sp)
-   }
    Box(Modifier.align(Alignment.Center).size(320.dp),contentAlignment=Alignment.Center){
-    // Original TSX decorative wheel image behind all animal icons.
-    val wheelBg=wpAsset(context,"wp_1787344138649_2")
-    if(wheelBg!=0)Image(painterResource(wheelBg),null,Modifier.fillMaxSize(),contentScale=ContentScale.Fit)
+    // Keep the native wheel artwork clean; do not layer the extra wheel-tune image.
     Box(Modifier.size(260.dp).clip(CircleShape).background(Color(0xCC311D0C)).border(5.dp,Color(0xFFFFD16B),CircleShape))
     Canvas(Modifier.size(250.dp)){drawCircle(Color(0xFF6B3B14),style=androidx.compose.ui.graphics.drawscope.Stroke(5.dp.toPx()));for(i in 0..7){val a=Math.toRadians(i*45.0-90);val c=size.width/2;drawLine(Color(0xFFFFD56A),androidx.compose.ui.geometry.Offset(c,c),androidx.compose.ui.geometry.Offset(c+cos(a).toFloat()*size.width*.48f,c+sin(a).toFloat()*size.height*.48f),2.dp.toPx())}}
     wpAnimals.forEachIndexed{i,a->
@@ -235,7 +230,13 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
       if(amount>0)Text(wpFormat(amount),Modifier.align(Alignment.BottomCenter).clip(CircleShape).background(Color(0xFFF6D7B0)).padding(horizontal=5.dp,vertical=1.dp),color=Color(0xFF65330E),fontSize=8.sp,fontWeight=FontWeight.Black)
      }
     }
-    Box(Modifier.size(56.dp).clip(CircleShape).background(Color(0xFF8B4D16)).border(3.dp,wpGold,CircleShape),contentAlignment=Alignment.Center){Text(if(phase==WpPhase.SPINNING)"SPIN" else "WP",color=Color.White,fontWeight=FontWeight.Black)}
+    Box(Modifier.size(68.dp).clip(CircleShape).background(Color(0xFF8B4D16)).border(3.dp,wpGold,CircleShape),contentAlignment=Alignment.Center){
+     Column(horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){
+      Text("${countdown}s",color=Color.White,fontWeight=FontWeight.Black,fontSize=19.sp,lineHeight=20.sp)
+      Text(when(phase){WpPhase.BETTING->"BETTING";WpPhase.SPINNING->"SPINNING";WpPhase.RESULT->"RESULT"},color=wpGold,fontWeight=FontWeight.ExtraBold,fontSize=7.sp)
+      Text("ROUND #$round",color=Color.White.copy(alpha=.9f),fontWeight=FontWeight.Bold,fontSize=6.sp)
+     }
+    }
    }
    Row(Modifier.align(Alignment.BottomStart).padding(start=10.dp,bottom=12.dp),verticalAlignment=Alignment.CenterVertically){
     val coin=wpAsset(context,"wp_file_00000000e56882119c217d508b6733dc");if(coin!=0)Image(painterResource(coin),null,Modifier.size(20.dp))
