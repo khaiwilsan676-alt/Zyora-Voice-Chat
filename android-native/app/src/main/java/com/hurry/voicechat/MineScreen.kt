@@ -16,11 +16,79 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
+import org.json.JSONArray
+import org.json.JSONObject
 import coil3.compose.AsyncImage
+
+/** Recent rooms are persisted per account, newest first, with a rolling two-hour lifetime. */
+object RecentRoomHistory {
+    private const val PREFS = "zyora_recent_rooms"
+    private const val MAX_ROOMS = 15
+    private const val MAX_AGE_MS = 2L * 60L * 60L * 1000L
+    var version by mutableIntStateOf(0)
+        private set
+
+    private fun key(accountId: String) = "rooms_${accountId.ifBlank { "guest" }}"
+
+    @Synchronized
+    fun record(context: android.content.Context, accountId: String, room: HurryRoom) {
+        val prefs = context.getSharedPreferences(PREFS, android.content.Context.MODE_PRIVATE)
+        val now = System.currentTimeMillis()
+        val existing = readArray(prefs.getString(key(accountId), "[]").orEmpty())
+        val kept = existing.filter { now - it.second < MAX_AGE_MS && it.first.id != room.id }
+        save(prefs, key(accountId), (listOf(room to now) + kept).take(MAX_ROOMS))
+        version++
+    }
+
+    @Synchronized
+    fun load(context: android.content.Context, accountId: String): List<HurryRoom> {
+        val prefs = context.getSharedPreferences(PREFS, android.content.Context.MODE_PRIVATE)
+        val now = System.currentTimeMillis()
+        val storageKey = key(accountId)
+        val existing = readArray(prefs.getString(storageKey, "[]").orEmpty())
+        val valid = existing.filter { now - it.second < MAX_AGE_MS }
+            .distinctBy { it.first.id }.take(MAX_ROOMS)
+        if (valid.size != existing.size) save(prefs, storageKey, valid)
+        return valid.map { it.first }
+    }
+
+    private fun readArray(raw: String): List<Pair<HurryRoom, Long>> = runCatching {
+        val array = JSONArray(raw)
+        (0 until array.length()).mapNotNull { index ->
+            val item = array.optJSONObject(index) ?: return@mapNotNull null
+            val id = item.optString("id").trim()
+            if (id.isBlank()) return@mapNotNull null
+            HurryRoom(
+                id = id,
+                name = item.optString("name", "Room"),
+                image = item.optString("image", ""),
+                country = item.optString("country", ""),
+                accountId = item.optString("accountId", "")
+            ) to item.optLong("visitedAt", 0L)
+        }
+    }.getOrDefault(emptyList())
+
+    private fun save(prefs: android.content.SharedPreferences, key: String, rooms: List<Pair<HurryRoom, Long>>) {
+        val array = JSONArray()
+        rooms.forEach { (room, visitedAt) ->
+            array.put(JSONObject().put("id", room.id).put("name", room.name)
+                .put("image", room.image).put("country", room.country)
+                .put("accountId", room.accountId).put("visitedAt", visitedAt))
+        }
+        prefs.edit().putString(key, array.toString()).apply()
+    }
+}
 
 @Composable
 fun MineNativePage(onBack: () -> Unit, createdRoom: HurryRoom? = null, followingRooms: List<HurryRoom> = emptyList(), onOpenRoom: (HurryRoom) -> Unit = {}, onCreateRoom: () -> Unit = {}, onSearch: () -> Unit = {}, languageCode: String = "en") {
     var recent by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val authPrefs = remember { context.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE) }
+    val recentAccountId = authPrefs.getString("accountId", null)?.takeIf { it.isNotBlank() }
+        ?: authPrefs.getString("uid", "").orEmpty()
+    val recentRevision = RecentRoomHistory.version
+    val recentRooms = remember(recentRevision, recentAccountId) { RecentRoomHistory.load(context, recentAccountId) }
     val card = Modifier.fillMaxWidth().height(112.dp)
     
     LazyColumn(
@@ -81,7 +149,7 @@ fun MineNativePage(onBack: () -> Unit, createdRoom: HurryRoom? = null, following
                     // Gap bilkul HomeScreen jaisa (8.dp) kar diya hai
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp) 
+                        horizontalArrangement = Arrangement.spacedBy(3.dp)
                     ) {
                         Box(
                             modifier = Modifier.clickable(
@@ -124,16 +192,15 @@ fun MineNativePage(onBack: () -> Unit, createdRoom: HurryRoom? = null, following
             Row(Modifier.padding(horizontal = 12.dp).padding(top=12.dp), horizontalArrangement=Arrangement.spacedBy(16.dp)) {
                 Column(Modifier.clickable { recent=false }, horizontalAlignment=Alignment.Start) {
                     Text("Following", fontSize=14.sp, color=if(!recent) Color(0xFF111827) else Color(0xFF9CA3AF))
-                    if (!recent) Box(Modifier.padding(top=2.dp).width(48.dp).height(2.dp).clip(RoundedCornerShape(2.dp)).background(Color(0xFF111827)))
                 }
                 Column(Modifier.clickable { recent=true }, horizontalAlignment=Alignment.Start) {
                     Text("Recent", fontSize=14.sp, color=if(recent) Color(0xFF111827) else Color(0xFF9CA3AF))
-                    if (recent) Box(Modifier.padding(top=2.dp).width(38.dp).height(2.dp).clip(RoundedCornerShape(2.dp)).background(Color(0xFF111827)))
                 }
             }
         }
-        if (!recent && followingRooms.isNotEmpty()) {
-            items(followingRooms.chunked(2)) { pair ->
+        val visibleRooms = if (recent) recentRooms else followingRooms
+        if (visibleRooms.isNotEmpty()) {
+            items(visibleRooms.chunked(2)) { pair ->
                 Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     RoomListCard(pair[0], onOpenRoom, Modifier.weight(1f))
                     if (pair.size > 1) RoomListCard(pair[1], onOpenRoom, Modifier.weight(1f))
