@@ -4,7 +4,7 @@ import android.graphics.BitmapFactory
 import android.graphics.Bitmap
 import android.util.LruCache
 import android.graphics.PixelFormat
-import android.view.SurfaceView
+import android.view.TextureView
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.compose.foundation.Image
@@ -26,8 +26,17 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
+import androidx.media3.datasource.cache.CacheDataSource
+import androidx.media3.database.StandaloneDatabaseProvider
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
+import androidx.media3.datasource.DefaultDataSource
+import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
+import androidx.media3.datasource.cache.SimpleCache
+import java.io.File
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -217,6 +226,21 @@ private fun Tab(label: String, selected: Boolean, onClick: () -> Unit) {
 // TUMHARI SEAT VIDEO LOGIC EKDAM WAHI HAI, KOI CHANGE NAHI
 // =========================================================================================
 
+// Shared bounded disk cache for seat emoji MP4s. Reuses downloaded bytes
+// across room re-entry and player recreation; evicts least-recently-used data.
+private object SeatEmojiVideoCache {
+    @Volatile private var instance: SimpleCache? = null
+
+    fun get(context: android.content.Context): SimpleCache =
+        instance ?: synchronized(this) {
+            instance ?: SimpleCache(
+                File(context.cacheDir, "seat-emoji-video-cache"),
+                LeastRecentlyUsedCacheEvictor(100L * 1024L * 1024L),
+                StandaloneDatabaseProvider(context.applicationContext)
+            ).also { instance = it }
+        }
+}
+
 @Composable
 fun TransparentSeatVideoPlayer(
     videoUrl: String,
@@ -225,35 +249,74 @@ fun TransparentSeatVideoPlayer(
 ) {
     val context = LocalContext.current
     val latestOnFinished by rememberUpdatedState(onVideoFinished)
+    var firstFrameReady by remember(videoUrl) { mutableStateOf(false) }
+
     val player = remember(context, videoUrl) {
-        ExoPlayer.Builder(context).build().apply {
-            setMediaItem(MediaItem.fromUri(videoUrl))
-            repeatMode = Player.REPEAT_MODE_OFF
-            playWhenReady = true
-            addListener(object : Player.Listener {
-                override fun onPlaybackStateChanged(playbackState: Int) {
-                    if (playbackState == Player.STATE_ENDED) latestOnFinished()
-                }
-            })
-            prepare()
+        val appContext = context.applicationContext
+        val httpFactory = DefaultHttpDataSource.Factory()
+            .setConnectTimeoutMs(10_000)
+            .setReadTimeoutMs(15_000)
+            .setAllowCrossProtocolRedirects(true)
+        val upstreamFactory = DefaultDataSource.Factory(appContext, httpFactory)
+        val cacheFactory = CacheDataSource.Factory()
+            .setCache(SeatEmojiVideoCache.get(appContext))
+            .setUpstreamDataSourceFactory(upstreamFactory)
+            .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
+
+        ExoPlayer.Builder(appContext)
+            .setMediaSourceFactory(DefaultMediaSourceFactory(cacheFactory))
+            .build().apply {
+                setMediaItem(MediaItem.fromUri(videoUrl))
+                repeatMode = Player.REPEAT_MODE_OFF
+                playWhenReady = true
+                addListener(object : Player.Listener {
+                    override fun onRenderedFirstFrame() {
+                        firstFrameReady = true
+                    }
+
+                    override fun onPlaybackStateChanged(playbackState: Int) {
+                        if (playbackState == Player.STATE_ENDED) latestOnFinished()
+                    }
+
+                    override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                        // Never expose PlayerView's black shutter/error surface.
+                        firstFrameReady = false
+                    }
+                })
+                prepare()
+            }
+    }
+
+    val playerView = remember(context, player) {
+        PlayerView(context).apply {
+            useController = false
+            setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)
+            setBackgroundColor(android.graphics.Color.TRANSPARENT)
+            setKeepContentOnPlayerReset(false)
+            resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+            // TextureView avoids the black SurfaceView layer/composition issue
+            // seen in Compose room-seat overlays on affected Android devices.
+            setVideoTextureView(TextureView(context))
+            player = player
         }
     }
-    val chromaView = remember(context, player) {
-        ChromaKeyVideoView(context, onVideoSurfaceReady = { surface -> player.setVideoSurface(surface) })
+
+    Box(modifier = modifier.fillMaxSize()) {
+        AndroidView(
+            modifier = Modifier
+                .fillMaxSize()
+                .then(if (firstFrameReady) Modifier else Modifier.size(0.dp)),
+            factory = { playerView },
+            update = { it.player = player }
+        )
     }
 
-    AndroidView(
-        modifier = modifier.fillMaxSize(),
-        factory = { chromaView }
-    )
-
-    DisposableEffect(player, chromaView) {
+    DisposableEffect(player, playerView) {
         onDispose {
-            player.clearVideoSurface()
+            playerView.player = null
             player.stop()
             player.clearMediaItems()
             player.release()
-            chromaView.release()
         }
     }
 }
