@@ -257,13 +257,14 @@ fun Fruitparty(onClose:()->Unit,onMinimize:(()->Unit)?=null,isMinimized:Boolean=
    Row(Modifier.align(Alignment.BottomCenter).padding(bottom=screenH*.025f).fillMaxWidth().horizontalScroll(rememberScrollState()).padding(start=screenH*.12f),horizontalArrangement=Arrangement.spacedBy(8.dp)){
     winners.asReversed().forEachIndexed{i,id->Box(Modifier.size(19.dp).clip(CircleShape).background(fruitBrown).border(1.dp,Color(0xFF3A1D09),CircleShape),contentAlignment=Alignment.Center){val res=fruitAsset(context,fruitImage(id));if(res!=0)Image(painterResource(res),null,Modifier.size(14.dp));if(i==0)Text("NEW",Modifier.align(Alignment.BottomCenter).offset(y=7.dp).background(Color(0xFF16A34A)),color=Color.White,fontSize=4.sp,fontWeight=FontWeight.Black)}}
    }
-   Row(Modifier.align(Alignment.BottomCenter).padding(bottom=screenH*.14f),horizontalArrangement=Arrangement.spacedBy((-10).dp),verticalAlignment=Alignment.Bottom){
+   // Keep all four betting chips on one evenly spaced row; prevent the 5M chip from slipping behind adjacent artwork.
+   Row(Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal=4.dp).padding(bottom=screenH*.14f),horizontalArrangement=Arrangement.SpaceEvenly,verticalAlignment=Alignment.Bottom){
     fruitChipLabels.forEachIndexed{i,label->
-     Box(Modifier.width(100.dp).height(120.dp).clickable{chipIndex=i},contentAlignment=Alignment.TopCenter){
+     Box(Modifier.weight(1f).height(120.dp).clickable{chipIndex=i},contentAlignment=Alignment.TopCenter){
       val plate=fruitAsset(context,"fp_file_00000000d9b08211b0304c61b802348b")
       val chip=fruitAsset(context,"fp_file_000000003d24821182882f8ca412d2b6")
-      if(plate!=0)Image(painterResource(plate),null,Modifier.width(105.dp).offset(y=if(chipIndex==i)44.dp else 36.dp).zIndex(if(chipIndex==i)0f else 1f),contentScale=ContentScale.Fit)
-      if(chip!=0)Image(painterResource(chip),null,Modifier.width(115.dp).offset(y=42.dp).zIndex(if(chipIndex==i)1f else 0f),contentScale=ContentScale.Fit)
+      if(plate!=0)Image(painterResource(plate),null,Modifier.fillMaxWidth().offset(y=if(chipIndex==i)44.dp else 36.dp).zIndex(if(chipIndex==i)0f else 1f),contentScale=ContentScale.Fit)
+      if(chip!=0)Image(painterResource(chip),null,Modifier.fillMaxWidth().offset(y=42.dp).zIndex(if(chipIndex==i)1f else 0f),contentScale=ContentScale.Fit)
       Text(label,Modifier.align(Alignment.BottomCenter).padding(bottom=42.dp).zIndex(2f),color=Color.White,fontSize=14.sp,fontWeight=FontWeight.Bold)
      }
     }
