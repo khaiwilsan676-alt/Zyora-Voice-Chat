@@ -1512,6 +1512,7 @@ app.get("/api/store/inventory/:userId", async (req, res) => {
 app.post("/api/store/purchase", async (req, res) => {
   let purchaseLockId = "";
   let debited = false;
+  let inventorySaved = false;
   let purchasePrice = 0;
   let purchaseUserId = "";
   try {
@@ -1563,6 +1564,7 @@ app.post("/api/store/purchase", async (req, res) => {
       { $set: item },
       { upsert: true }
     );
+    inventorySaved = true;
     await db.collection("walletTransactions").insertOne({ userId, type: "store_purchase", amount: -price, itemId, createdAt: now });
     debited = false;
     res.set("Cache-Control", "no-store");
@@ -1571,6 +1573,10 @@ app.post("/api/store/purchase", async (req, res) => {
     // If inventory/transaction persistence fails after debit, restore the exact
     // amount before returning an error; never leave a paid item missing.
     if (debited && purchaseUserId && purchasePrice > 0) {
+      if (inventorySaved) {
+        try { await db.collection("storeInventory").deleteOne({ userId: purchaseUserId, itemId: String(req.body?.itemId || "").trim() }); }
+        catch (inventoryRollbackError) { console.error("Store inventory rollback failed:", inventoryRollbackError.message); }
+      }
       try { await creditWallet(purchaseUserId, purchasePrice); }
       catch (refundError) { console.error("Store purchase refund failed:", refundError.message); }
     }
