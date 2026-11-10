@@ -1204,6 +1204,16 @@ fun RoomPage(
                     }
                     if (payload.has("publicMsgOff")) publicMsgOff = payload.optBoolean("publicMsgOff", true)
                     if (payload.has("roomName")) roomName = payload.optString("roomName", latestRoomName)
+                    if (payload.has("addedAdminId")) {
+                        val addedAdminId = payload.optString("addedAdminId").trim()
+                        val addedAdminName = payload.optString("addedAdminName").trim().ifBlank { "User" }
+                        if (addedAdminId.isNotBlank()) {
+                            val noticeId = "admin-added-$roomId-$addedAdminId-${payload.optLong("updatedAt")}"
+                            if (messages.none { it.id == noticeId }) {
+                                messages.add(NativeRoomMessage(noticeId, "Set $addedAdminName as Admin", "System", "", "system", payload.optLong("updatedAt", System.currentTimeMillis()), "admin_added"))
+                            }
+                        }
+                    }
                     if (payload.has("admin") && payload.optJSONArray("admin") != null) {
                         val adminsJson = payload.optJSONArray("admin")!!
                         roomAdminIds = (0 until adminsJson.length())
@@ -2216,6 +2226,11 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
             }
         )
         if(showSettings && accountId.isNotBlank() && accountId == roomOwner.accountId.ifBlank { roomOwner.id }) RoomSettingPage(initial = RoomSettingsDataNative(roomName=roomName,roomDp=roomImage,announcement=announcement,micMode=roomMicMode,theme=roomTheme,isLocked=locked,roomPassword=roomPassword,admin=roomAdminIds,customTheme=appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).getString("customTheme_$roomId", "").orEmpty()),roomOwnerId=roomId,currentUserId=accountId,roomMembers=followedRoomUsers,onBack={showSettings=false},onSave={saved->
+            val newlyAddedAdminId = saved.admin.firstOrNull { it !in roomAdminIds }
+            val newlyAddedAdminName = newlyAddedAdminId?.let { id ->
+                followedRoomUsers.firstOrNull { it.accountId == id }?.name
+                    ?: roomAdminUsers.firstOrNull { it.accountId == id }?.name
+            }.orEmpty()
             roomName=saved.roomName;roomImage=saved.roomDp;announcement=saved.announcement;showRoomSettingsAnnouncementInChat=saved.announcement.isNotBlank();appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).edit().putBoolean("announcement_chat_visible_$roomId", showRoomSettingsAnnouncementInChat).apply();roomMicMode=saved.micMode;roomTheme=saved.theme;roomCustomThemeUrl=saved.customTheme;roomAdminIds=saved.admin;locked=saved.isLocked;roomPassword=saved.roomPassword
             appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).edit().putInt("micMode_$roomId", saved.micMode).putString("theme_$roomId", saved.theme).putString("customTheme_$roomId", saved.customTheme).putBoolean("room_locked_$roomId", saved.isLocked).putString("room_password_$roomId", saved.roomPassword).apply()
             CoroutineScope(Dispatchers.IO).launch { NativeIndexDatabase(appContext).saveRoomLock(roomId, saved.isLocked, saved.roomPassword) }
@@ -2224,6 +2239,8 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                 .put("micMode", saved.micMode).put("roomName", saved.roomName).put("roomDp", saved.roomDp)
                 .put("announcement", saved.announcement).put("theme", saved.theme)
                 .put("admin", JSONArray(saved.admin))
+                .put("addedAdminId", newlyAddedAdminId ?: "")
+                .put("addedAdminName", newlyAddedAdminName.ifBlank { "User" })
                 .put("isLocked", saved.isLocked)
                 .put("updatedAt", System.currentTimeMillis()))
         })
@@ -2865,7 +2882,14 @@ private fun RoomChatMessages(
                                 }
                             }
                             items(messages,key={it.id}){message ->
-                                if(message.type=="join") {
+                                if(message.type=="admin_added") {
+                                    Column(Modifier.fillMaxWidth().padding(start=4.dp, top=2.dp, end=82.dp, bottom=2.dp)) {
+                                        Column(Modifier.wrapContentWidth().clip(RoundedCornerShape(8.dp)).background(Color.Black.copy(alpha=.30f)).padding(horizontal=12.dp, vertical=8.dp)) {
+                                            Text("System", color=Color(0xFFD1D1D1), fontSize=12.sp, fontWeight=FontWeight.Medium)
+                                            Text(message.text, color=Color(0xFFE2C67D), fontSize=13.sp, fontWeight=FontWeight.SemiBold)
+                                        }
+                                    }
+                                } else if(message.type=="join") {
                                     Column(Modifier.padding(vertical=2.dp).wrapContentWidth().clip(RoundedCornerShape(8.dp)).background(Color.Black.copy(alpha=.30f)).padding(horizontal=12.dp,vertical=4.dp),horizontalAlignment=Alignment.Start,verticalArrangement=Arrangement.spacedBy(2.dp)){
                                         Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp), modifier=Modifier.clickable { onSelectMessage(message) }){
                                             FallbackAsyncImage(model=message.senderImage,contentDescription=message.sender,modifier=Modifier.size(24.dp).clip(CircleShape),contentScale=ContentScale.Crop)
