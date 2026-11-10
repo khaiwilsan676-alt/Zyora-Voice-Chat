@@ -151,10 +151,92 @@ fun NativeAvatarFrameOverlay(userId: String, modifier: Modifier = Modifier) {
     if (selected != null) {
         val video = selected.optString("video", "")
         if (video.isNotBlank()) {
-            StoreVideoPreview(url = StoreAssetBase + video, modifier = modifier, pause = false, topFade = 0f, bottomFade = 0f, removeGreenScreen = true, mute = true)
+            val frameId = selected.optString("itemId", "")
+            val frameMute = frameId == "a8"
+            StoreVideoPreview(
+                url = StoreAssetBase + video,
+                modifier = modifier,
+                pause = false,
+                topFade = 0.1f,
+                bottomFade = 0f,
+                removeGreenScreen = true,
+                mute = frameMute
+            )
         } else {
             val image = selected.optString("image", "")
             if (image.isNotBlank()) AsyncImage(model = StoreAssetBase + image, contentDescription = "Equipped avatar frame", modifier = modifier, contentScale = ContentScale.Fit)
+        }
+    }
+}
+
+@Composable
+fun NativeOwnedFrameShowcase(userId: String) {
+    var frames by remember(userId) { mutableStateOf<List<JSONObject>>(emptyList()) }
+    LaunchedEffect(userId) {
+        frames = emptyList()
+        if (userId.isNotBlank()) withContext(Dispatchers.IO) {
+            runCatching {
+                val encoded = URLEncoder.encode(userId, "UTF-8")
+                val c = (URL("https://zyora-server.onrender.com/api/store/inventory/$encoded").openConnection() as HttpURLConnection).apply {
+                    connectTimeout = 8000
+                    readTimeout = 8000
+                }
+                val code = c.responseCode
+                val stream = if (code in 200..299) c.inputStream else c.errorStream
+                val json = JSONObject(stream.bufferedReader().use { it.readText() })
+                c.disconnect()
+                if (code !in 200..299) throw IllegalStateException("Inventory unavailable")
+                val items = json.optJSONArray("items") ?: JSONArray()
+                (0 until items.length()).map { items.getJSONObject(it) }
+                    .filter { it.optString("tab") == "Avatar Frame" && it.optLong("expiresAt") > System.currentTimeMillis() }
+            }.onSuccess { frames = it }
+        }
+    }
+    if (frames.isNotEmpty()) {
+        Row(
+            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.Top
+        ) {
+            frames.forEach { owned ->
+                val item = nativeStoreItems.firstOrNull { it.id == owned.optString("itemId") } ?: return@forEach
+                Column(
+                    Modifier.width(76.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    val video = owned.optString("video", item.video.orEmpty()).ifBlank { item.image }
+                    if (video.substringBefore("?").endsWith(".mp4", ignoreCase = true)) {
+                        StoreVideoPreview(
+                            url = StoreAssetBase + video,
+                            modifier = Modifier.fillMaxWidth().height(76.dp),
+                            pause = false,
+                            topFade = 0.1f,
+                            bottomFade = 0f,
+                            removeGreenScreen = true,
+                            mute = item.id == "a8"
+                        )
+                    } else {
+                        AsyncImage(
+                            model = StoreAssetBase + owned.optString("image", item.image),
+                            contentDescription = "Owned avatar frame",
+                            modifier = Modifier.fillMaxWidth().height(76.dp),
+                            contentScale = ContentScale.Fit
+                        )
+                    }
+                    Row(
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        repeat(item.stars) {
+                            AsyncImage(
+                                model = StoreAssetBase + "file_0000000004e881fa84e61b8616f8eaf8.png",
+                                contentDescription = "Star",
+                                modifier = Modifier.size(12.dp)
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }
