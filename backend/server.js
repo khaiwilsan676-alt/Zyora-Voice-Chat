@@ -2173,6 +2173,19 @@ io.on("connection", (socket) => {
       // Broadcast only after room membership and lock checks succeed.
       if (isNewRoomJoin && !suppressEntry && socketIsInRoom(socket, room)) {
         const entryTimestamp = Date.now();
+        let equippedVehicle = null;
+        if (db) {
+          try {
+            equippedVehicle = await db.collection("storeInventory").findOne(
+              { userId: accId, tab: "Vehicle", equipped: true, expiresAt: { $gt: entryTimestamp } },
+              { projection: { _id: 0, itemId: 1, video: 1, expiresAt: 1 } }
+            );
+            if (!equippedVehicle || !String(equippedVehicle.video || "").trim()) equippedVehicle = null;
+          } catch (vehicleError) {
+            console.error("Room entry vehicle lookup failed:", vehicleError.message);
+            equippedVehicle = null;
+          }
+        }
         const entryMessage = {
           id: `${accId}-${entryTimestamp}`,
           roomId: room,
@@ -2184,8 +2197,18 @@ io.on("connection", (socket) => {
           text: "Enter the Room",
           type: "join",
           createdAt: entryTimestamp,
+          equippedVehicle: equippedVehicle ? {
+            itemId: String(equippedVehicle.itemId || ""),
+            video: String(equippedVehicle.video || ""),
+            expiresAt: Number(equippedVehicle.expiresAt || 0)
+          } : null
         };
-        socket.to(`room:${room}`).emit("room_message", entryMessage);
+        io.to(`room:${room}`).emit("room_message", entryMessage);
+        io.to(`room:${room}`).emit("room_vehicle_entry", {
+          roomId: room, entryId: entryMessage.id, userId: accId,
+          senderName: entryMessage.senderName, senderImage: entryMessage.senderImage,
+          vehicle: entryMessage.equippedVehicle
+        });
       }
     }
   );
