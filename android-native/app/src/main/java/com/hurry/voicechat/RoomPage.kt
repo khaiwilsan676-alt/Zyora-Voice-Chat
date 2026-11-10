@@ -461,7 +461,7 @@ fun RoomPage(
                             if (name.isNotBlank()) roomName = name
                             if (!isLogoRoom && image.isNotBlank()) roomImage = image
                             announcement = message
-                            showRoomSettingsAnnouncementInChat = message.isNotBlank() && appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).getBoolean("announcement_chat_visible_$roomId", true)
+                            showRoomSettingsAnnouncementInChat = message.isNotBlank() && saved.optBoolean("announcementChatVisible", true)
                             roomMicMode = savedMicMode
                             roomTheme = savedTheme
                             if (savedAdmins != null) roomAdminIds = savedAdmins
@@ -1199,7 +1199,7 @@ fun RoomPage(
                     }
                     if (hasAnnouncement) {
                         announcement = updatedAnnouncement
-                        showRoomSettingsAnnouncementInChat = updatedAnnouncement.isNotBlank()
+                        showRoomSettingsAnnouncementInChat = if (payload.has("announcementChatVisible")) payload.optBoolean("announcementChatVisible") else updatedAnnouncement.isNotBlank()
                         appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).edit().putBoolean("announcement_chat_visible_$roomId", showRoomSettingsAnnouncementInChat).apply()
                     }
                     if (payload.has("publicMsgOff")) publicMsgOff = payload.optBoolean("publicMsgOff", true)
