@@ -1210,7 +1210,10 @@ fun RoomPage(
                         if (addedAdminId.isNotBlank()) {
                             val noticeId = "admin-added-$roomId-$addedAdminId-${payload.optLong("updatedAt")}"
                             if (messages.none { it.id == noticeId }) {
-                                messages.add(NativeRoomMessage(noticeId, "Set $addedAdminName as Admin", latestRoomDisplayName, latestRoomDisplayImage, accountId, payload.optLong("updatedAt", System.currentTimeMillis()), "message"))
+                                val ownerName = payload.optString("actorName").trim().ifBlank { latestRoomDisplayName.ifBlank { "Room Owner" } }
+                                val ownerImage = payload.optString("actorImage").trim().ifBlank { latestRoomDisplayImage }
+                                val ownerId = payload.optString("actorId").trim().ifBlank { roomOwner.accountId.ifBlank { roomOwner.id.ifBlank { roomId } } }
+                                messages.add(NativeRoomMessage(noticeId, "Set $addedAdminName as Admin", ownerName, ownerImage, ownerId, payload.optLong("updatedAt", System.currentTimeMillis()), "message"))
                             }
                         }
                     }
@@ -2240,7 +2243,10 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                 .put("announcement", saved.announcement).put("theme", saved.theme)
                 .put("admin", JSONArray(saved.admin))
                 .put("addedAdminId", newlyAddedAdminId ?: "")
-                .put("addedAdminName", newlyAddedAdminName.ifBlank { "User" })
+                .put("addedAdminName", newlyAddedAdminName)
+                .put("actorId", accountId)
+                .put("actorName", latestRoomDisplayName.ifBlank { "Room Owner" })
+                .put("actorImage", latestRoomDisplayImage)
                 .put("isLocked", saved.isLocked)
                 .put("updatedAt", System.currentTimeMillis()))
         })
