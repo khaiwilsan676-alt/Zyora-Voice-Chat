@@ -719,15 +719,10 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                                 val isEquipped = equippedIds.contains(item.id)
                                 Button(
                                     onClick = {
-                                        if (isOwned) {
-                                            if (isEquipped) equippedIds.remove(item.id) else {
-                                                equippedIds.removeAll { id -> nativeStoreItems.find { it.id == id }?.tab == item.tab }
-                                                equippedIds.add(item.id)
-                                            }
-                                        } else if (balance >= item.price) {
-                                            balance -= item.price
-                                            ownedIds.add(item.id)
-                                        }
+                                        // Route preview actions through the same server-backed
+                                        // purchase/equip sheet as the Store card. Never mutate
+                                        // wallet or inventory locally from the preview.
+                                        selectedItem = item
                                         tryItem = null
                                     },
                                     modifier = Modifier.fillMaxWidth().height(42.dp),
@@ -807,10 +802,8 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
 
                             Button(
                                 onClick = {
-                                    if (!ownedIds.contains(item.id) && balance >= item.price) {
-                                        balance -= item.price
-                                        ownedIds.add(item.id)
-                                    }
+                                    // Use the canonical server-backed purchase flow.
+                                    selectedItem = item
                                     tryItem = null
                                 },
                                 modifier = Modifier.fillMaxWidth().height(42.dp),
