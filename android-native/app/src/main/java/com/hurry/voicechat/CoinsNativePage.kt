@@ -288,16 +288,20 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int, onChat: (Strin
         val wallet = fetchCanonicalWallet(walletUserId) ?: return@LaunchedEffect
         val serverBalance = wallet.optLong("balance").coerceAtLeast(0L)
         val serverDiamonds = wallet.optLong("diamonds").coerceAtLeast(0L)
+        // Temporary local recharge credits stay visible until a real payment
+        // gateway is connected. They are device-local and are not server verified.
+        val localRechargeCredits = walletCachePrefs.getLong("local_recharge_credits_$walletUserId", 0L).coerceAtLeast(0L)
+        val displayedBalance = serverBalance + localRechargeCredits
 
-        dao.saveUserData(UserDataEntity(balance = serverBalance, diamonds = serverDiamonds))
+        dao.saveUserData(UserDataEntity(balance = displayedBalance, diamonds = serverDiamonds))
         walletCachePrefs.edit()
-            .putLong(balanceKey, serverBalance)
+            .putLong(balanceKey, displayedBalance)
             .putLong(diamondsKey, serverDiamonds)
             .putLong(syncKey, System.currentTimeMillis())
             .apply()
 
         // Update only the balance fields; the rest of the wallet UI stays mounted.
-        if (coins != serverBalance) coins = serverBalance
+        if (coins != displayedBalance) coins = displayedBalance
         if (diamonds != serverDiamonds) diamonds = serverDiamonds
     }
 
@@ -520,6 +524,27 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int, onChat: (Strin
             PaySheet(onClose = { showPayUsingSheet = false },
                 onSelect = {
                     scope.launch {
+                        // Temporary demo recharge: selecting any UPI option credits
+                        // the displayed package amount plus its advertised bonus.
+                        // This is intentionally local-only until payment verification
+                        // and server-side wallet credit are integrated.
+                        val packageCoins = 1_000_000L
+                        val packageBonus = 30_000L
+                        val credit = packageCoins + packageBonus
+                        val creditKey = "local_recharge_credits_$walletUserId"
+                        val accumulated = (walletCachePrefs.getLong(creditKey, 0L) + credit)
+                            .coerceAtLeast(0L)
+                        val newBalance = coins + credit
+                        withContext(Dispatchers.IO) {
+                            dao.saveUserData(UserDataEntity(balance = newBalance, diamonds = diamonds))
+                            recordTransaction(dao, "Recharge (Demo)", credit, "coin")
+                        }
+                        walletCachePrefs.edit()
+                            .putLong(creditKey, accumulated)
+                            .putLong("balance_$walletUserId", newBalance)
+                            .putLong("last_sync_$walletUserId", System.currentTimeMillis())
+                            .apply()
+                        coins = newBalance
                         showPayUsingSheet = false
                     }
                 })
