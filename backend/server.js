@@ -1260,6 +1260,16 @@ app.put("/api/users", async (req, res) => {
     delete profileData.removeFields;
     removeFields.forEach((field) => delete profileData[field]);
 
+    // Wallet values are server-owned financial state. Profile saves often come
+    // from stale clients/cache snapshots; accepting coins: 0 (or an old balance)
+    // here silently overwrites the permanent wallet after every profile update.
+    // Only wallet endpoints and atomic wallet operations may mutate these fields.
+    const protectedWalletFields = [
+      "coins", "diamonds", "balance", "walletBalance", "walletUpdatedAt",
+      "walletInitializedAt", "dailyCheckInCredits"
+    ];
+    protectedWalletFields.forEach((field) => delete profileData[field]);
+
     const uid = String(
       data.uid ||
       data.id ||
