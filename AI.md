@@ -517,3 +517,9 @@ Current documentation does not certify that all historical features are build-, 
 - Clearing room chat shows the black/70 confirmation `Public message Cleared`.
 - Tapping the room chat black/50 layer closes it using the same state change as the top down-arrow control.
 - No chat layout, colors, message delivery, or storage behavior is intentionally changed.
+
+## 2026-11-10 room admin seat lock permission fix
+- `backend/server.js`: room seat moderation now matches the acting socket against all available account-ID and Firebase-UID aliases.
+- Admin records are normalized across string IDs and object records, retaining `accountId`, `userId`, `id`, and `uid` instead of discarding all but the first populated field.
+- Fixes the server rejecting a legitimate room admin's `room_seat_action` lock/unlock request, which caused the client seat state to revert and appear to unlock repeatedly.
+- No UI, seat layout, or unrelated room behavior changed.
