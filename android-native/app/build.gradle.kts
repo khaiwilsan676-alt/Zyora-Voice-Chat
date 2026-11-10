@@ -45,6 +45,13 @@ android {
 // with Android-safe lowercase resource names before resource processing.
 val generatedGenderResources = layout.buildDirectory.dir("generated/res/genderAssets")
 val copyGenderAssets = tasks.register<Copy>("copyGenderAssets") {
+    // APK and AAB tasks share this generated resource directory. Rebuild it from
+    // source assets each time so previously converted WebP files cannot be
+    // copied alongside freshly converted files as duplicate Android resources.
+    doFirst {
+        generatedGenderResources.get().asFile.deleteRecursively()
+    }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     from(rootProject.layout.projectDirectory.dir("../public")) {
         include(
             "IMG_20261031_121547.png", "IMG_20261031_121627.png",
