@@ -31,8 +31,6 @@ import androidx.media3.datasource.cache.CacheDataSource
 import androidx.media3.database.StandaloneDatabaseProvider
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
-import androidx.media3.ui.AspectRatioFrameLayout
-import androidx.media3.ui.PlayerView
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
@@ -288,18 +286,10 @@ fun TransparentSeatVideoPlayer(
             }
     }
 
-    val playerView = remember(context, player) {
-        PlayerView(context).apply {
-            useController = false
-            setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)
-            setBackgroundColor(android.graphics.Color.TRANSPARENT)
-            setKeepContentOnPlayerReset(false)
-            resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
-            // TextureView avoids the black SurfaceView layer/composition issue
-            // seen in Compose room-seat overlays on affected Android devices.
-            setVideoTextureView(TextureView(context))
-            player = player
-        }
+    // Attach the decoder directly to a TextureView. PlayerView does not expose
+    // setVideoTextureView; ExoPlayer owns the TextureView surface API.
+    val textureView = remember(context, player) {
+        TextureView(context).also { player.setVideoTextureView(it) }
     }
 
     Box(modifier = modifier.fillMaxSize()) {
@@ -307,14 +297,13 @@ fun TransparentSeatVideoPlayer(
             modifier = Modifier
                 .fillMaxSize()
                 .alpha(if (firstFrameReady) 1f else 0f),
-            factory = { playerView },
-            update = { it.player = player }
+            factory = { textureView }
         )
     }
 
-    DisposableEffect(player, playerView) {
+    DisposableEffect(player, textureView) {
         onDispose {
-            playerView.player = null
+            player.clearVideoTextureView(textureView)
             player.stop()
             player.clearMediaItems()
             player.release()
