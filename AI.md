@@ -523,3 +523,9 @@ Current documentation does not certify that all historical features are build-, 
 - Admin records are normalized across string IDs and object records, retaining `accountId`, `userId`, `id`, and `uid` instead of discarding all but the first populated field.
 - Fixes the server rejecting a legitimate room admin's `room_seat_action` lock/unlock request, which caused the client seat state to revert and appear to unlock repeatedly.
 - No UI, seat layout, or unrelated room behavior changed.
+
+## 2026-11-10 — Prevent wallet balance resets from profile saves
+- Root cause: `PUT /api/users` spread the entire client profile payload into MongoDB `$set`, so stale profile snapshots could overwrite the server-owned `coins` / `diamonds` fields with zero or old values.
+- `backend/server.js`: profile writes now strip wallet-owned fields (`coins`, `diamonds`, legacy `balance`, wallet timestamps, and daily-check-in credit keys). Wallet endpoints and atomic wallet operations remain the only balance writers; Mine → Wallet continues to use MongoDB `users.coins` as its canonical balance.
+- `CoinsNativePage.kt`: every wallet page open now refreshes from the canonical server endpoint instead of allowing a 15-second local sync throttle to retain a stale zero. Failed refreshes leave the last known cached snapshot intact.
+- UI unchanged. Backend deployment, native APK build, and multi-account balance persistence tests remain pending.
