@@ -537,7 +537,7 @@ fun RoomPage(
         }
     }
     var showRoomOwnerBlockedToast by remember { mutableStateOf(false) }
-    val isRoomOwner = accountId == roomOwnerAccountId || roomAdminIds.any { it.trim() == accountId.trim() }
+    val isRoomOwner = accountId == roomOwnerAccountId || roomAdminIds.any { it.trim() in currentUserSeatIds }
     val canSendRoomPublicMessage = isRoomOwner || roomAdminIds.any { it == accountId }
     LaunchedEffect(showPublicMessageClosedToast) {
         if (showPublicMessageClosedToast) {
@@ -2077,9 +2077,9 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                 showMenu=false
             },
             publicMsgOff=publicMsgOff,
-            isRoomOwner=isRoomOwner || accountId in roomAdminIds,
+            isRoomOwner=isRoomOwner || currentUserSeatIds.any { it in roomAdminIds },
             onTogglePublicMsg={
-                if (isRoomOwner || accountId in roomAdminIds) {
+                if (isRoomOwner || currentUserSeatIds.any { it in roomAdminIds }) {
                     publicMsgOff = !publicMsgOff
                     roomSocketRef.value?.takeIf { it.connected() }?.emit("room_settings_update", JSONObject()
                         .put("roomId", roomId).put("userId", accountId).put("publicMsgOff", publicMsgOff))
@@ -2313,7 +2313,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                 ),
                 isCurrentUser = profileId == accountId,
                 isRoomOwner = profileId == roomOwner.accountId.ifBlank { roomOwner.id },
-                canModerate = accountId == roomId || accountId == roomOwnerAccountId || accountId in roomAdminIds,
+                canModerate = currentUserSeatIds.any { it == roomId || it == roomOwnerAccountId || it in roomAdminIds },
                 onClose = { selectedChatProfile = null },
                 onOpenPublicProfile = { profile -> selectedChatProfile = null; selectedSeat = 0; showSeatSheet = false; keepingRoomForMini = true; onOpenPublicProfile(profile) },
                 onCopyId = { if (profileId.isNotBlank()) clipboard.setText(AnnotatedString(profileId)) },
@@ -2364,7 +2364,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                 },
                 onMute = {
                     val index = seats.indexOfFirst { it.occupied && it.accountId == profileId }
-                    if (index >= 0 && (accountId == roomOwner.accountId || accountId == roomOwner.id || accountId == roomOwner.uid || accountId == roomId || roomAdminIds.any { it.trim() == accountId.trim() })) {
+                    if (index >= 0 && (accountId == roomOwner.accountId || accountId == roomOwner.id || accountId == roomOwner.uid || accountId == roomId || roomAdminIds.any { it.trim() in currentUserSeatIds })) {
                         val nextMuted = !seats[index].muted
                         seats[index] = seats[index].copy(muted = nextMuted)
                         roomSocketRef.value?.emit("room_seat_action", JSONObject().put("roomId", roomId).put("userId", accountId).put("action", "owner_mute").put("seatNumber", seats[index].number).put("isMuted", nextMuted))
@@ -2372,7 +2372,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                 },
                 onLock = {
                     val index = seats.indexOfFirst { it.occupied && it.accountId == profileId }
-                    if (index >= 0 && (accountId == roomOwner.accountId || accountId == roomOwner.id || accountId == roomOwner.uid || accountId == roomId || roomAdminIds.any { it.trim() == accountId.trim() })) {
+                    if (index >= 0 && (accountId == roomOwner.accountId || accountId == roomOwner.id || accountId == roomOwner.uid || accountId == roomId || roomAdminIds.any { it.trim() in currentUserSeatIds })) {
                         val seatNumber = seats[index].number
                         val nextLocked = !seats[index].locked
                         seats[index] = if (nextLocked) NativeRoomSeat(number = seatNumber, locked = true)
@@ -2393,7 +2393,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                         .put("durationMs", durationMs).put("targetName", profileMessage.sender)
                         .put("targetImage", profileMessage.senderImage)
                         .put("actorName", roomDisplayName).put("actorImage", roomDisplayImage)
-                        .put("actorRole", if (accountId in roomAdminIds) "admin" else "owner")
+                        .put("actorRole", if (currentUserSeatIds.any { it in roomAdminIds }) "admin" else "owner")
                         .put("ownerName", roomDisplayName).put("ownerImage", roomDisplayImage))
                     selectedChatProfile = null
                 }
@@ -2403,9 +2403,9 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
             val seatIndex = seats.indexOfFirst { it.number == selectedSeat }
             val seat = seats.getOrNull(seatIndex)
             val isRoomOwner = accountId.isNotBlank() &&
-                accountId in setOf(roomOwner.accountId, roomOwner.id, roomOwner.uid, roomId)
+                currentUserSeatIds.any { it in setOf(roomOwner.accountId, roomOwner.id, roomOwner.uid, roomId).map(String::trim) }
             val isRoomAdmin = accountId.isNotBlank() &&
-                roomAdminIds.any { it.trim() == accountId.trim() }
+                roomAdminIds.any { it.trim() in currentUserSeatIds }
             if(seat!=null && (isRoomOwner || isRoomAdmin)) SeatActionSheet(
                 seat=seat,
                 isOwner=isRoomOwner || isRoomAdmin,
@@ -2459,7 +2459,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                 ),
                 isCurrentUser = profileSeat.accountId == accountId,
                 isRoomOwner = profileSeat.accountId == roomOwner.accountId.ifBlank { roomOwner.id },
-                canModerate = accountId == roomId || accountId == roomOwnerAccountId || accountId in roomAdminIds,
+                canModerate = currentUserSeatIds.any { it == roomId || it == roomOwnerAccountId || it in roomAdminIds },
                 onClose = { selectedSeat = 0 },
                 onOpenPublicProfile = { profile -> selectedSeat = 0; showSeatSheet = false; keepingRoomForMini = true; onOpenPublicProfile(profile) },
                 onMention = { name, targetId ->
@@ -2512,7 +2512,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                 },
                 onLock = {
                     val idx = seats.indexOfFirst { it.number == selectedSeat }
-                    if (idx >= 0 && (accountId == roomOwner.accountId || accountId == roomOwner.id || accountId == roomOwner.uid || accountId == roomId || roomAdminIds.any { it.trim() == accountId.trim() })) {
+                    if (idx >= 0 && (accountId == roomOwner.accountId || accountId == roomOwner.id || accountId == roomOwner.uid || accountId == roomId || roomAdminIds.any { it.trim() in currentUserSeatIds })) {
                         val nextLocked = !seats[idx].locked
                         val lockedSeat = seats[idx]
                         seats[idx] = if (nextLocked) NativeRoomSeat(number = selectedSeat, locked = true)
@@ -2535,7 +2535,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                         .put("seatNumber", selectedSeat).put("durationMs", durationMs)
                         .put("targetName", profileSeat.userName).put("targetImage", profileSeat.userImage)
                         .put("actorName", roomDisplayName).put("actorImage", roomDisplayImage)
-                        .put("actorRole", if (accountId in roomAdminIds) "admin" else "owner")
+                        .put("actorRole", if (currentUserSeatIds.any { it in roomAdminIds }) "admin" else "owner")
                         .put("ownerName", roomDisplayName).put("ownerImage", roomDisplayImage))
                     val idx = seats.indexOfFirst { it.number == selectedSeat }
                     if (idx >= 0) seats[idx] = NativeRoomSeat(number = selectedSeat)
@@ -3193,7 +3193,7 @@ private fun RoomSeatInviteDialog(
             if(seat.muted) Box(Modifier.align(Alignment.BottomEnd).clip(CircleShape).background(Color.White).padding(2.dp)) { Icon(Icons.Default.MicOff,null,tint=Color.Black,modifier=Modifier.size(12.dp)) }
         }
         
-        if (seat.occupied && (seat.accountId == ownerId || seat.accountId in roomAdminIds)) {
+        if (seat.occupied && (seat.accountId == ownerId || seat.currentUserSeatIds.any { it in roomAdminIds })) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
                 AsyncImage(
                     model = if (seat.accountId == ownerId) "https://zyora-voice-chat.vercel.app/IMG_20261027_235537.png" else ROOM_ADMIN_TAG,
