@@ -722,6 +722,10 @@ app.put("/api/rooms", async (req, res) => {
       roomDp: incomingDp || savedDp || "/default-avatar.png",
       country: firstText(data.country, data.Country, existingRoom.country, existingRoom.Country) || "🇮🇳",
       message: incomingMessage,
+      // Chat visibility is separate from the saved Room Settings announcement.
+      announcementChatVisible: hasIncomingMessage
+        ? incomingMessage.length > 0
+        : existingRoom.announcementChatVisible !== false,
       theme: incomingTheme || firstText(existingRoom.theme, existingRoom.roomTheme, existingRoom["Room Theme"]) || "forest-night",
       customTheme: incomingCustomTheme,
       themeImage: incomingCustomTheme,
@@ -2586,6 +2590,16 @@ io.on("connection", (socket) => {
 
     // Settings are persisted by PUT /api/rooms; Socket.IO distributes confirmed
     // values to all clients currently joined to this room.
+    if (Object.prototype.hasOwnProperty.call(data, "announcement") || Object.prototype.hasOwnProperty.call(data, "message")) {
+      const announcementText = String(data.announcement !== undefined ? data.announcement : (data.message || "")).trim();
+      if (db) {
+        db.collection("rooms").updateOne(
+          { $or: [{ accountId: roomId }, { id: roomId }, { roomId }] },
+          { $set: { announcementChatVisible: announcementText.length > 0, announcementChatUpdatedAt: Date.now() } }
+        ).catch((error) => console.error("Persist room announcement chat visibility failed:", error));
+      }
+      normalizedData.announcementChatVisible = announcementText.length > 0;
+    }
     io.to(`room:${roomId}`).emit("room_settings_updated", normalizedData);
 
     if (locked) {
@@ -2621,14 +2635,24 @@ io.on("connection", (socket) => {
     io.to(`room:${roomId}`).emit("room_message", message);
   });
 
-  socket.on("room_clear_chat", (data = {}) => {
+  socket.on("room_clear_chat", async (data = {}) => {
     const roomId = data?.roomId ? String(data.roomId) : "";
     if (!roomId || !socketIsInRoom(socket, roomId)) return;
     if (data.userId && !socketOwnsIdentity(socket, data.userId)) return;
-    io.to(`room:${roomId}`).emit("room_chat_cleared", {
-      roomId,
-      timestamp: Date.now(),
-    });
+    const clearedAt = Date.now();
+    // Hide it from chat for every member without deleting the saved Room Settings value.
+    if (db) {
+      try {
+        await db.collection("rooms").updateOne(
+          { $or: [{ accountId: roomId }, { id: roomId }, { roomId }] },
+          { $set: { announcementChatVisible: false, announcementChatClearedAt: clearedAt } }
+        );
+        if (redis) await redis.del("rooms:list:v1");
+      } catch (error) {
+        console.error("Persist room chat clear state failed:", error);
+      }
+    }
+    io.to(`room:${roomId}`).emit("room_chat_cleared", { roomId, timestamp: clearedAt });
   });
 
   socket.on("private_message", async (message = {}) => {
