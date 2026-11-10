@@ -299,11 +299,13 @@ fun Fruitparty(onClose:()->Unit,onMinimize:(()->Unit)?=null,isMinimized:Boolean=
        val active=(phase==FruitPhase.BETTING&&handPointer==gridIndex)||(phase!=FruitPhase.BETTING&&highlight==gridIndex)
        val final=phase==FruitPhase.RESULT&&(winner==gridIndex||(winner==10&&gridIndex in listOf(0,2,6,8))||(winner==11&&gridIndex in listOf(1,3,5,7)))
        val applyGreen=active||final
-       val highlightMatrix=ColorMatrix().apply{
-        val hue=ColorMatrix().apply{setToRotate(0,-150f)}
-        val saturation=ColorMatrix().apply{setToSaturation(2f)}
-        setToConcat(hue,saturation)
-       }
+       val highlightMatrix=ColorMatrix(
+        android.graphics.ColorMatrix().apply {
+         val hue=android.graphics.ColorMatrix().apply { setRotate(0,-150f) }
+         val saturation=android.graphics.ColorMatrix().apply { setSaturation(2f) }
+         setConcat(hue,saturation)
+        }.array
+       )
        Box(Modifier.weight(1f).fillMaxHeight().padding(3.dp).clickable(interactionSource=null,indication=null){placeBet(item.id)},contentAlignment=Alignment.Center){
         val tile=fruitAsset(context,"fp_file_00000000d0ec820ba666eab8bea30204");if(tile!=0)Image(painterResource(tile),null,Modifier.fillMaxSize(),contentScale=ContentScale.FillBounds,colorFilter=if(applyGreen)ColorFilter.colorMatrix(highlightMatrix)else null)
         val image=fruitAsset(context,item.image);if(image!=0)Image(painterResource(image),null,Modifier.fillMaxSize(.57f).align(Alignment.Center).padding(bottom=12.dp),contentScale=ContentScale.Fit)
