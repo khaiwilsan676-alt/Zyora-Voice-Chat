@@ -1244,6 +1244,7 @@ fun RoomPage(
                     if (messages.none { it.id == joinId }) messages.add(nativeJoin)
                     if (entryToasts.none { it.id == joinId }) { entryToasts.add(NativeEntryToast(joinId,joinName,joinImage,accountId=accountId)); mainHandler.postDelayed({ entryToasts.removeAll { it.id == joinId } },4000) }
                 }
+            }
             roomSocket.emit("room_presence_request",JSONObject().put("roomId",roomId))
             roomSocket.emit("room_seats_request",JSONObject().put("roomId",roomId))
         }
@@ -1864,7 +1865,7 @@ Column(Modifier.align(Alignment.BottomStart).padding(bottom=LocalConfiguration.c
                             Text("Enter the Room",color=Color.White,fontSize=12.sp,fontWeight=FontWeight.Bold,maxLines=1)
                             if (toast.vehicleVideo.isNotBlank()) {
                                 val vehicleUrl = if (toast.vehicleVideo.startsWith("http", true)) toast.vehicleVideo else "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/" + toast.vehicleVideo
-                                val vehicleItemId = when {
+                                val vehicleItemId = toast.vehicleItemId.ifBlank { when {
                                     toast.vehicleVideo.contains("VID_20260905_095157_269_bsl.mp4", true) -> "v1"
                                     toast.vehicleVideo.contains("Screenrecorder-2026-10-23-16-01-27-317~2.mp4", true) -> "v10"
                                     toast.vehicleVideo.contains("alioss_19_2025090317293759938~2.mp4", true) -> "v2"
@@ -1876,7 +1877,7 @@ Column(Modifier.align(Alignment.BottomStart).padding(bottom=LocalConfiguration.c
                                     toast.vehicleVideo.contains("alioss_16_2025092202291646319~2.mp4", true) -> "v8"
                                     toast.vehicleVideo.contains("alioss_17_2025041211424496804~2.mp4", true) -> "v9"
                                     else -> ""
-                                }
+                                } }
                                 val isV1 = vehicleItemId == "v1"
                                 val topFade = when (vehicleItemId) {
                                     "v10" -> 0.05f
@@ -1891,12 +1892,12 @@ Column(Modifier.align(Alignment.BottomStart).padding(bottom=LocalConfiguration.c
                                 }
                                 StoreVideoPreview(
                                     url = vehicleUrl,
-                                    modifier = Modifier.width(100.dp).height(66.dp),
+                                    modifier = Modifier.width(100.dp).wrapContentHeight(),
                                     pause = false,
                                     topFade = topFade,
                                     bottomFade = bottomFade,
                                     removeGreenScreen = isV1,
-                                    mute = true
+                                    mute = false
                                 )
                             }
                         }
