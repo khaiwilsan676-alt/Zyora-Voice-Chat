@@ -241,19 +241,19 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
     }
    }
    // Original TSX bottom decoration sits behind the balance and chip controls.
-   // TSX Bottom Left Decor: separate artwork above the bottom decoration (not the coin).
-   val bottomLeftDecor=wpAsset(context,"wp_file_00000000993c8208ae462545f9ccb0ba")
-   if(bottomLeftDecor!=0)Image(
-    painterResource(bottomLeftDecor),null,
-    Modifier.align(Alignment.BottomStart).padding(start=8.dp,bottom=60.dp).size(width=40.dp,height=55.dp),
-    contentScale=ContentScale.Fit
-   )
    val bottomDecor=wpAsset(context,"wp_img_20260822_011000")
    if(bottomDecor!=0)Image(
     painterResource(bottomDecor),null,
     Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(112.dp),
     contentScale=ContentScale.Fit,
     alignment=Alignment.BottomCenter
+   )
+   // TSX Bottom Left Decor: separate artwork above the bottom decoration (not the coin).
+   val bottomLeftDecor=wpAsset(context,"wp_file_00000000993c8208ae462545f9ccb0ba")
+   if(bottomLeftDecor!=0)Image(
+    painterResource(bottomLeftDecor),null,
+    Modifier.align(Alignment.BottomStart).padding(start=8.dp,bottom=60.dp).size(width=40.dp,height=55.dp),
+    contentScale=ContentScale.Fit
    )
    Row(Modifier.align(Alignment.BottomStart).padding(start=10.dp,bottom=12.dp),verticalAlignment=Alignment.CenterVertically){
     val coin=wpAsset(context,"wp_file_00000000e56882119c217d508b6733dc");if(coin!=0)Image(painterResource(coin),null,Modifier.size(20.dp))
