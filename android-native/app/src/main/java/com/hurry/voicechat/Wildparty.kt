@@ -159,8 +159,9 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
  }
  LaunchedEffect(winnerOpen){if(winnerOpen){repeat(5){delay(1000);winnerTimer=4-it};winnerOpen=false}}
  fun place(name:String){scope.launch{val amount=wpChips[chipIndex].value;if(phase==WpPhase.BETTING&&balance>=amount){walletChange(-amount,"Bet on $name in Wild Party");bets=bets.toMutableMap().also{it[name]=(it[name]?:0L)+amount}}}}
- BoxWithConstraints(modifier.fillMaxSize().background(Color.Black),contentAlignment=Alignment.BottomCenter){
+ BoxWithConstraints(modifier.fillMaxSize().background(Color.Transparent),contentAlignment=Alignment.BottomCenter){
   val h=maxHeight*.65f
+  Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=.5f)))
   Box(Modifier.fillMaxWidth().height(h).background(Color(0xFF28180D))){
    val bg=wpAsset(context,"wp_1787337855180_2")
    if(bg!=0)Image(painterResource(bg),null,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
