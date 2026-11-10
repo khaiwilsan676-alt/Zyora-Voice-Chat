@@ -557,3 +557,10 @@ Current documentation does not certify that all historical features are build-, 
 - Added per-account persistent Recent history. A room is recorded only after the room-access API confirms entry; revisiting the same room moves it to the top and refreshes its visit time.
 - Recent history expires each room two hours after its latest successful entry, keeps at most 15 unique rooms, and displays newest first in the existing two-column room-card layout. Expired entries are cleaned when the list is loaded.
 - `MainActivity.kt` records successful room entry; SharedPreferences stores the recent-room list locally per account. Build/device behavior has not been run-verified in this change.
+
+
+## 2026-11-10 — Mine Recent rooms IndexDB persistence
+- `MineScreen.kt`: Recent room history now uses the shared native `index.db` (`profile_cache`) through `NativeIndexDatabase`, keyed separately for each signed-in account; it no longer stores this feature in SharedPreferences.
+- A room is recorded only after the existing room-access check confirms entry. Re-entering the same room moves it to the top; history contains at most 15 unique rooms, newest first, with older entries dropped. No time-based expiry.
+- Mine header Search/House spacing remains 3dp, and Following/Recent selected underlines remain removed. Room-card layout and styling are unchanged.
+- Native build and device persistence verification remain pending.
