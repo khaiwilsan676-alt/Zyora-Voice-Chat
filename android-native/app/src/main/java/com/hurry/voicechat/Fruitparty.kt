@@ -320,7 +320,7 @@ fun Fruitparty(onClose:()->Unit,onMinimize:(()->Unit)?=null,isMinimized:Boolean=
    }
   }
   // Left and right mix cards.
-  Row(Modifier.fillMaxWidth().padding(horizontal=screenH*.13f).offset(y=-screenH*.19f),horizontalArrangement=Arrangement.spacedBy(14.dp)){
+  Row(Modifier.fillMaxWidth().align(Alignment.BottomCenter).padding(horizontal=screenH*.13f).offset(y=-screenH*.19f),horizontalArrangement=Arrangement.spacedBy(14.dp)){
    listOf(10,11).forEach{id->
     Box(Modifier.weight(1f).height(screenH*.105f).clickable(interactionSource=null,indication=null){placeBet(id)},contentAlignment=Alignment.Center){
      val frame=fruitAsset(context,"fp_img_20260910_114625");if(frame!=0)Image(painterResource(frame),null,Modifier.fillMaxSize(),contentScale=ContentScale.FillBounds)
