@@ -543,3 +543,11 @@ Current documentation does not certify that all historical features are build-, 
 - Actual Render backend is `khaiwilsan676-alt/Zyora-Server/server.js`. `ensureWalletUser` now resolves `auth_accounts` first, prefers the Firebase UID profile, falls back to the mapped permanent account ID, then uses legacy aliases only as a last resort. It rebinds the resolved profile to the canonical identity and all balance writes continue targeting that exact MongoDB document.
 - Backend commit: `767f1a0216f9b0fa07e096eab739a2edc7ed2e21`.
 - Verification: source committed; Render deployment, actual account's MongoDB document, and repeated wallet refresh on device still require live verification. Do not claim the zero-balance issue is fully verified until those checks pass.
+
+
+## Daily Check-in repeated sign-in root-cause fix (2026-11-10)
+- Root cause was a native/live-backend API contract mismatch. Native `HomeScreen.kt` GET parser expects `claimedToday`, but the deployed `Zyora-Server/server.js` GET route did not return it, so the UI kept treating an already-claimed day as unclaimed. Native POST sends only `userId`, while the deployed backend required `dateKey` and `currentDay`, so claims failed validation. The live route also only advanced a counter and did not credit the configured reward wallet/items.
+- Replaced the actual Render backend daily-check-in routes with server-derived India date (`Asia/Kolkata`), canonical Firebase UID/permanent Zyora account identity resolution, persisted `claimedDate`/7-day progress, and a `claimedToday` GET response with `Cache-Control: no-store`.
+- POST now matches the native payload (`userId` only), credits the configured 7-day coin rewards to the canonical MongoDB wallet using a deterministic idempotency marker, persists reward transaction records, and grants day 3/5/6/7 permanent inventory rewards idempotently. Retry repairs an interrupted credit without double-crediting; repeat claims on the same India calendar day do not advance the streak or pay twice.
+- Actual Render backend commit: `7e32f062b0e119057053d9c112d7d4b6c5595797` in `khaiwilsan676-alt/Zyora-Server/server.js`. No UI changes.
+- Verification: source committed; Render deployment and live device/MongoDB end-to-end claim still need verification. Do not claim production behavior is verified until deployed and tested.
