@@ -175,8 +175,17 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
     var purchaseBusy by remember { mutableStateOf(false) }
     var purchaseMessage by remember { mutableStateOf<String?>(null) }
     val storeScope = rememberCoroutineScope()
-    // Expiry is event-driven: wake only at the next item expiry instead of
-    // invalidating/recomposing the entire Store screen every second.
+    var clockNow by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    // Refresh only the Bag countdown once per second; Store cards stay unchanged.
+    LaunchedEffect(currentView) {
+        if (currentView == "bag") {
+            while (true) {
+                clockNow = System.currentTimeMillis()
+                delay(1000L)
+            }
+        }
+    }
+    // Remove expired items from the local Bag as soon as their expiry is reached.
     LaunchedEffect(expiryById.toMap()) {
         while (true) {
             val now = System.currentTimeMillis()
@@ -221,7 +230,6 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
         }
     }
     val isBag = currentView == "bag"
-    val clockNow = System.currentTimeMillis()
     val visibleItems = nativeStoreItems.filter { it.tab == activeTab && (!isBag || ownedIds.contains(it.id)) }
 
     // Dark theme glossy blue background
@@ -410,7 +418,17 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                                 Spacer(Modifier.width(4.dp))
                                 // Text color updated for dark theme & Added Duration next to price
                                 Text("%,d".format(item.price), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1)
-                                Text(" / " + if (isBag) expiryById[item.id]?.let { expiry -> val sec = ((expiry - clockNow).coerceAtLeast(0L) / 1000L); "${sec / 86400}d ${(sec % 86400) / 3600}h ${(sec % 3600) / 60}m" } ?: item.duration else item.duration, color = Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                                val remainingLabel = if (isBag) {
+                                    expiryById[item.id]?.let { expiry ->
+                                        val totalSeconds = ((expiry - clockNow).coerceAtLeast(0L) / 1000L)
+                                        val days = totalSeconds / 86400L
+                                        val hours = (totalSeconds % 86400L) / 3600L
+                                        val minutes = (totalSeconds % 3600L) / 60L
+                                        val seconds = totalSeconds % 60L
+                                        "%dd %02dh %02dm %02ds".format(days, hours, minutes, seconds)
+                                    } ?: "Expired"
+                                } else item.duration
+                                Text(" / " + remainingLabel, color = Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Medium)
                             }
                             Row(
                                 Modifier.fillMaxWidth().height(30.dp)
@@ -482,7 +500,13 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                                         },
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Text(if (owned) if (equipped) "Using" else "Use" else if (purchaseBusy) "..." else "Buy", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    Text(
+                                        if (owned) {
+                                            if (isBag) if (equipped) "Remove" else "Use"
+                                            else if (equipped) "Using" else "Use"
+                                        } else if (purchaseBusy) "..." else "Buy",
+                                        color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold
+                                    )
                                 }
                             }
                         }
