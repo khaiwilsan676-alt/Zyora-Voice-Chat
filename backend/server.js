@@ -2203,7 +2203,7 @@ io.on("connection", (socket) => {
             expiresAt: Number(equippedVehicle.expiresAt || 0)
           } : null
         };
-        io.to(`room:${room}`).emit("room_message", entryMessage);
+        socket.to(`room:${room}`).emit("room_message", entryMessage);
         io.to(`room:${room}`).emit("room_vehicle_entry", {
           roomId: room, entryId: entryMessage.id, userId: accId,
           senderName: entryMessage.senderName, senderImage: entryMessage.senderImage,
