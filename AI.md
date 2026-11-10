@@ -536,3 +536,10 @@ Current documentation does not certify that all historical features are build-, 
 - Migration root cause: first wallet access without `walletStorageMigratedAt` could replace an already-present MongoDB balance with a stale legacy GitHub wallet value (including zero). Migration now preserves any valid existing MongoDB coins/diamonds value and consults legacy sources only when the MongoDB field is absent/invalid.
 - Wallet credit/debit, diamond exchange, and gift recipient credit/rollback now mutate the exact resolved MongoDB user document by `_id`, avoiding a broad legacy-ID `$or` query accidentally selecting a different user document.
 - Live backend commit: `1ccb235f9589345e2bc26a523529dcf1a4e710da`. Render auto-deploy is configured, but deployment completion, existing-balance recovery, and live persistence testing must still be verified. No UI changes.
+
+
+## Wallet canonical identity resolution follow-up (2026-11-10)
+- Root cause: wallet lookup used a broad unordered MongoDB `$or` across Firebase UID, legacy IDs, and public Zyora account IDs. When duplicate/legacy profile documents existed, `findOne` could resolve the wrong document and return a zero balance even when the canonical wallet was stored on another profile.
+- Actual Render backend is `khaiwilsan676-alt/Zyora-Server/server.js`. `ensureWalletUser` now resolves `auth_accounts` first, prefers the Firebase UID profile, falls back to the mapped permanent account ID, then uses legacy aliases only as a last resort. It rebinds the resolved profile to the canonical identity and all balance writes continue targeting that exact MongoDB document.
+- Backend commit: `767f1a0216f9b0fa07e096eab739a2edc7ed2e21`.
+- Verification: source committed; Render deployment, actual account's MongoDB document, and repeated wallet refresh on device still require live verification. Do not claim the zero-balance issue is fully verified until those checks pass.
