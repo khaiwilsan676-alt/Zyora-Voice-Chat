@@ -270,7 +270,7 @@ fun Fruitparty(onClose:()->Unit,onMinimize:(()->Unit)?=null,isMinimized:Boolean=
     }
    }
   // Eight original fruit tiles around the timer.
-  Column(Modifier.fillMaxWidth().padding(horizontal=screenH*.055f).offset(y=-screenH*.30f),verticalArrangement=Arrangement.spacedBy(0.dp)){
+  Column(Modifier.fillMaxWidth().padding(horizontal=screenH*.055f).offset(y=screenH*.045f),verticalArrangement=Arrangement.spacedBy(0.dp)){
    val rows=listOf(fruitOrder.take(3),listOf(fruitOrder[3],0,fruitOrder[4]),fruitOrder.drop(5))
    rows.forEachIndexed{rowIndex,row->
     Row(Modifier.fillMaxWidth().height(screenH*.115f),horizontalArrangement=Arrangement.SpaceEvenly,verticalAlignment=Alignment.CenterVertically){
@@ -311,11 +311,36 @@ fun Fruitparty(onClose:()->Unit,onMinimize:(()->Unit)?=null,isMinimized:Boolean=
   }
   if(showResult&&phase==FruitPhase.RESULT){
    Box(Modifier.fillMaxSize(),contentAlignment=Alignment.BottomCenter){
-    Column(Modifier.fillMaxWidth().fillMaxHeight(.44f).clip(RoundedCornerShape(topStart=8.dp,topEnd=8.dp)).background(Color(0xF0221025)).padding(14.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.SpaceBetween){
-     Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text("Round $round",color=Color.White,fontSize=18.sp,fontWeight=FontWeight.Bold);Text("${countdown}s",color=fruitGold,fontSize=18.sp,fontWeight=FontWeight.Black)}
-     val winImage=fruitAsset(context,fruitImage(fruitWinnerId(winner)));if(winImage!=0)Image(painterResource(winImage),null,Modifier.size(70.dp),contentScale=ContentScale.Fit)
-     Column(horizontalAlignment=Alignment.CenterHorizontally){Text("Your Winning Amount   🪙 $lastWin",color=Color(0xFF4ADE80),fontSize=14.sp,fontWeight=FontWeight.Bold);Text("Your Bet Amount   🪙 $lastBet",color=Color(0xFFFDE68A),fontSize=14.sp,fontWeight=FontWeight.Bold)}
-     Column(horizontalAlignment=Alignment.CenterHorizontally){Text("Top winner Of this Round",color=Color(0xFFFFE6A0),fontSize=11.sp,fontWeight=FontWeight.Bold);Text("No winners yet.",color=Color.White,fontSize=12.sp)}
+    Box(Modifier.fillMaxWidth().fillMaxHeight(.647f).clip(RoundedCornerShape(topStart=8.dp,topEnd=8.dp))){
+     val resultBg=fruitAsset(context,"fp_file_00000000ced481fa9117afc4fa91791e")
+     if(resultBg!=0)Image(painterResource(resultBg),null,Modifier.fillMaxSize(),contentScale=ContentScale.FillBounds) else Box(Modifier.fillMaxSize().background(Color(0xF0221025)))
+     Row(Modifier.fillMaxWidth().align(Alignment.TopCenter).padding(horizontal=16.dp,vertical=12.dp),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){
+      Text("Round $round",color=Color.White,fontSize=18.sp,fontWeight=FontWeight.Bold)
+      Text("${countdown}s",color=Color(0xFFFFC34D),fontSize=18.sp,fontWeight=FontWeight.Black)
+     }
+     Box(Modifier.align(Alignment.TopCenter).padding(top=42.dp).size(width=200.dp,height=145.dp),contentAlignment=Alignment.Center){
+      val winFrame=fruitAsset(context,"fp_file_00000000eb0081f4885ade7d7db3bef8")
+      if(winFrame!=0)Image(painterResource(winFrame),null,Modifier.fillMaxSize(),contentScale=ContentScale.Fit)
+      val winImage=fruitAsset(context,fruitImage(fruitWinnerId(winner)))
+      if(winImage!=0)Image(painterResource(winImage),null,Modifier.size(50.dp),contentScale=ContentScale.Fit)
+     }
+     Column(Modifier.align(Alignment.Center).padding(top=32.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(3.dp)){
+      Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(5.dp)){
+       Text("Your Winning Amount",color=Color.White,fontSize=14.sp,fontWeight=FontWeight.Bold)
+       val coin=fruitAsset(context,"fp_file_00000000e56882119c217d508b6733dc");if(coin!=0)Image(painterResource(coin),null,Modifier.size(16.dp))
+       Text(fruitFormat(lastWin),color=Color(0xFF4ADE80),fontSize=14.sp,fontWeight=FontWeight.Bold)
+      }
+      Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(5.dp)){
+       Text("Your Bet Amount",color=Color.White,fontSize=14.sp,fontWeight=FontWeight.Bold)
+       val coin=fruitAsset(context,"fp_file_00000000e56882119c217d508b6733dc");if(coin!=0)Image(painterResource(coin),null,Modifier.size(16.dp))
+       Text(fruitFormat(lastBet),color=Color(0xFFFDE68A),fontSize=14.sp,fontWeight=FontWeight.Bold)
+      }
+     }
+     Column(Modifier.fillMaxWidth().align(Alignment.BottomCenter).padding(bottom=10.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(4.dp)){
+      Box(Modifier.fillMaxWidth(.85f).height(1.dp).background(Color.White.copy(alpha=.2f)))
+      Text("Top winner Of this Round",color=Color(0xFFFFE6A0),fontSize=10.sp,fontWeight=FontWeight.ExtraBold)
+      Text("No winners yet.",color=Color.White,fontSize=12.sp,fontWeight=FontWeight.Bold)
+     }
     }
    }
   }
