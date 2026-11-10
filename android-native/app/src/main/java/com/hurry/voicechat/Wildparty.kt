@@ -204,7 +204,7 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
      Box(Modifier.size(24.dp).clip(RoundedCornerShape(6.dp)).background(Color.White.copy(alpha=.20f)).border(1.dp,Color.White.copy(alpha=.40f),RoundedCornerShape(6.dp)).clickable{onClose()},contentAlignment=Alignment.Center){Canvas(Modifier.size(16.dp)){val a=3.dp.toPx();val b=13.dp.toPx();drawLine(Color.White,androidx.compose.ui.geometry.Offset(a,a),androidx.compose.ui.geometry.Offset(b,b),2.2.dp.toPx(),cap=androidx.compose.ui.graphics.StrokeCap.Round);drawLine(Color.White,androidx.compose.ui.geometry.Offset(b,a),androidx.compose.ui.geometry.Offset(a,b),2.2.dp.toPx(),cap=androidx.compose.ui.graphics.StrokeCap.Round)}}
     }
    }
-   Row(Modifier.fillMaxWidth().padding(top=44.dp,start=8.dp,end=8.dp).heightIn(min=28.dp).clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha=.25f)).border(1.dp,Color.White.copy(alpha=.20f),RoundedCornerShape(50)).padding(horizontal=10.dp,vertical=3.dp),horizontalArrangement=Arrangement.spacedBy(5.dp),verticalAlignment=Alignment.CenterVertically){
+   Row(Modifier.fillMaxWidth().padding(top=44.dp,start=8.dp,end=8.dp).heightIn(min=28.dp).horizontalScroll(rememberScrollState()).clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha=.25f)).border(1.dp,Color.White.copy(alpha=.20f),RoundedCornerShape(50)).padding(horizontal=10.dp,vertical=3.dp),horizontalArrangement=Arrangement.spacedBy(6.dp),verticalAlignment=Alignment.CenterVertically){
     if(history.isEmpty())Text("History",color=Color.White.copy(alpha=.5f),fontSize=10.sp,fontStyle=androidx.compose.ui.text.font.FontStyle.Italic)
     else history.takeLast(9).forEach{record->
      val mixBig=record.winner=="Mix Big";val mixSmall=record.winner=="Mix Small"
