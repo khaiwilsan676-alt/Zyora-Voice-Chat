@@ -244,7 +244,7 @@ data class RoomPageCurrentUser(val id:String="",val uid:String="",val accountId:
 data class NativeRoomSeat(val number:Int,val occupied:Boolean=false,val locked:Boolean=false,val muted:Boolean=false,val selfMuted:Boolean=false,val speaking:Boolean=false,val userName:String="",val userImage:String="",val accountId:String="",val gifSrc:String="",val gifTimestamp:Long=0L)
 data class NativeMention(val accountId: String, val name: String)
 data class NativeRoomMessage(val id:String,val text:String,val sender:String,val senderImage:String,val senderAccountId:String="",val timestamp:Long=System.currentTimeMillis(),val type:String="message",val mentions: List<NativeMention> = emptyList(),val imageUrl:String="")
-data class NativeEntryToast(val id:String,val name:String,val image:String,val vehicleVideo:String="",val accountId:String="")
+data class NativeEntryToast(val id:String,val name:String,val image:String,val vehicleVideo:String="",val accountId:String="",val vehicleItemId:String="")
 data class NativeRoomKickNotice(val id:String,val targetName:String,val targetImage:String,val actorName:String,val actorImage:String,val actorRole:String,val timestamp:Long=System.currentTimeMillis())
 
 @Composable
@@ -953,43 +953,26 @@ fun RoomPage(
                 mainHandler.post {
                     if(messages.none{it.id==message.id}) messages.add(message)
                     if(type=="join" && entryToasts.none{it.id==id}) {
-                        entryToasts.add(NativeEntryToast(id,sender,image))
+                        entryToasts.add(NativeEntryToast(id,sender,image,accountId=senderId))
                         mainHandler.postDelayed({entryToasts.removeAll{it.id==id}},4000)
                     }
                 }
-                // The local user's join event is handled by connectListener; avoid a duplicate inventory request.
-                if (type == "join" && senderId.isNotBlank() && senderId != accountId) {
-                    roomIoScope.launch {
-                        val vehicleVideo = runCatching {
-                            val encodedUser = java.net.URLEncoder.encode(senderId, "UTF-8")
-                            val conn = (java.net.URL("https://zyora-server.onrender.com/api/store/inventory/$encodedUser").openConnection() as java.net.HttpURLConnection).apply {
-                                connectTimeout = 8000
-                                readTimeout = 8000
-                            }
-                            try {
-                                if (conn.responseCode !in 200..299) ""
-                                else {
-                                    val inventory = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
-                                    val items = inventory.optJSONArray("items") ?: JSONArray()
-                                    (0 until items.length()).map { items.getJSONObject(it) }
-                                        .firstOrNull {
-                                            it.optString("tab") == "Vehicle" &&
-                                            it.optBoolean("equipped") &&
-                                            it.optLong("expiresAt") > System.currentTimeMillis()
-                                        }?.optString("video", "").orEmpty()
-                                }
-                            } finally { conn.disconnect() }
-                        }.getOrDefault("")
-                        if (vehicleVideo.isNotBlank()) mainHandler.post {
-                            val index = entryToasts.indexOfFirst { it.id == id }
-                            if (index >= 0) {
-                                entryToasts[index] = entryToasts[index].copy(vehicleVideo = vehicleVideo)
-                            } else {
-                                entryToasts.add(NativeEntryToast(id, sender, image, vehicleVideo))
-                                mainHandler.postDelayed({ entryToasts.removeAll { it.id == id } }, 4000)
-                            }
-                        }
-                    }
+            }
+        }
+        val vehicleEntryListener = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
+            if (payload.optString("roomId") != roomId) return@Listener
+            val user = payload.optString("userId")
+            val vehicle = payload.optJSONObject("vehicle") ?: return@Listener
+            val video = vehicle.optString("video").trim()
+            if (user.isBlank() || video.isBlank() || vehicle.optLong("expiresAt") <= System.currentTimeMillis()) return@Listener
+            val entryId = payload.optString("entryId")
+            mainHandler.post {
+                val index = entryToasts.indexOfFirst { it.accountId == user || it.id == entryId }
+                if (index >= 0) {
+                    entryToasts[index] = entryToasts[index].copy(vehicleVideo = video, vehicleItemId = vehicle.optString("itemId"))
+                } else {
+                    entryToasts.add(NativeEntryToast(entryId, payload.optString("senderName", "User"), payload.optString("senderImage", ""), video, user, vehicle.optString("itemId")))
                 }
             }
         }
@@ -1261,42 +1244,11 @@ fun RoomPage(
                     if (messages.none { it.id == joinId }) messages.add(nativeJoin)
                     if (entryToasts.none { it.id == joinId }) { entryToasts.add(NativeEntryToast(joinId,joinName,joinImage,accountId=accountId)); mainHandler.postDelayed({ entryToasts.removeAll { it.id == joinId } },4000) }
                 }
-                roomIoScope.launch {
-                    val vehicleVideo = runCatching {
-                        val encodedUser = java.net.URLEncoder.encode(accountId, "UTF-8")
-                        val conn = (java.net.URL("https://zyora-server.onrender.com/api/store/inventory/$encodedUser").openConnection() as java.net.HttpURLConnection).apply {
-                            connectTimeout = 8000
-                            readTimeout = 8000
-                        }
-                        try {
-                            if (conn.responseCode !in 200..299) ""
-                            else {
-                                val inventory = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
-                                val items = inventory.optJSONArray("items") ?: JSONArray()
-                                (0 until items.length()).map { items.getJSONObject(it) }
-                                    .firstOrNull {
-                                        it.optString("tab") == "Vehicle" &&
-                                        it.optBoolean("equipped") &&
-                                        it.optLong("expiresAt") > System.currentTimeMillis()
-                                    }?.optString("video", "").orEmpty()
-                            }
-                        } finally { conn.disconnect() }
-                    }.getOrDefault("")
-                    if (vehicleVideo.isNotBlank()) mainHandler.post {
-                        val index = entryToasts.indexOfFirst { it.id == joinId }
-                        if (index >= 0) {
-                            entryToasts[index] = entryToasts[index].copy(vehicleVideo = vehicleVideo)
-                        } else {
-                            entryToasts.add(NativeEntryToast(joinId, joinName, joinImage, vehicleVideo, accountId))
-                            mainHandler.postDelayed({ entryToasts.removeAll { it.id == joinId } }, 4000)
-                        }
-                    }
-                }
-            }
             roomSocket.emit("room_presence_request",JSONObject().put("roomId",roomId))
             roomSocket.emit("room_seats_request",JSONObject().put("roomId",roomId))
         }
         roomSocket.on("room_presence",presenceListener)
+        roomSocket.on("room_vehicle_entry", vehicleEntryListener)
         roomSocket.on("room_seat_invite", seatInviteListener)
         roomSocket.on("room_kicked", roomKickedListener)
         roomSocket.on("room_kick_blocked", roomKickBlockedListener)
@@ -1344,6 +1296,7 @@ fun RoomPage(
                 roomSocket.emit("room_leave",JSONObject().put("roomId",roomId).put("userId",accountId).put("accountId",accountId))
             }
             roomSocket.off("room_presence",presenceListener)
+            roomSocket.off("room_vehicle_entry", vehicleEntryListener)
             roomSocket.off("room_seat_invite", seatInviteListener)
             roomSocket.off("room_kicked", roomKickedListener)
             roomSocket.off("room_kick_blocked", roomKickBlockedListener)
@@ -1925,15 +1878,25 @@ Column(Modifier.align(Alignment.BottomStart).padding(bottom=LocalConfiguration.c
                                     else -> ""
                                 }
                                 val isV1 = vehicleItemId == "v1"
-                                val bottomFade = if (vehicleItemId in setOf("v2", "v4", "v6")) 0.15f else 0.1f
+                                val topFade = when (vehicleItemId) {
+                                    "v10" -> 0.05f
+                                    "v9", "v7", "v6" -> 0.15f
+                                    else -> 0.10f
+                                }
+                                val bottomFade = when (vehicleItemId) {
+                                    "v10" -> 0.05f
+                                    "v2", "v4", "v6" -> 0.15f
+                                    "v9", "v7" -> 0f
+                                    else -> 0.10f
+                                }
                                 StoreVideoPreview(
                                     url = vehicleUrl,
-                                    modifier = Modifier.width(72.dp).height(48.dp),
+                                    modifier = Modifier.width(100.dp).height(66.dp),
                                     pause = false,
-                                    topFade = 0.1f,
+                                    topFade = topFade,
                                     bottomFade = bottomFade,
                                     removeGreenScreen = isV1,
-                                    mute = false
+                                    mute = true
                                 )
                             }
                         }
