@@ -988,7 +988,7 @@ fun RoomPage(
                 mainHandler.post {
                     messages.clear()
                     showOfficialAnnouncement = false
-                    announcement = ""
+                    // Clearing public chat must never clear the persistent Room Settings announcement.
                     clearedBy = payload.optString("userName").ifBlank { backendRoomUsers.firstOrNull { it.accountId == payload.optString("userId") }?.name ?: "Admin" }
                 }
             }
@@ -2024,7 +2024,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                 messages.clear()
                 roomToastText = "Public message are cleared"
                 showOfficialAnnouncement = false
-                announcement = ""
+                // Keep the Room Settings announcement; this action only clears chat messages.
                 val clearerName = roomDisplayName.ifBlank { "User" }
                 clearedBy = clearerName
                 roomSocketRef.value?.emit("room_clear_chat",JSONObject().put("roomId",roomId).put("userId",accountId).put("userName",clearerName).put("timestamp",System.currentTimeMillis()))
