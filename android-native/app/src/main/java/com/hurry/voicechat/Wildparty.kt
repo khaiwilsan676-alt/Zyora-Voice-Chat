@@ -188,17 +188,22 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
     Box(Modifier.align(Alignment.TopEnd).padding(end=4.dp)){MultiplierBadge(false)}
    }
    Column(Modifier.fillMaxWidth().align(Alignment.TopCenter).padding(top=8.dp)){
-    Row(Modifier.fillMaxWidth().padding(horizontal=10.dp),verticalAlignment=Alignment.CenterVertically){
-     Text("WILD PARTY",Modifier.weight(1f),color=wpGold,fontSize=17.sp,fontWeight=FontWeight.Black)
-     Text("Round #$round",color=Color.White,fontSize=11.sp)
-     IconButton(onClick={muted=!muted},modifier=Modifier.size(34.dp)){Icon(if(muted)Icons.Default.VolumeOff else Icons.Default.VolumeUp,null,tint=Color.White)}
-     Text("－",Modifier.clickable{onMinimize()}.padding(6.dp),color=Color.White,fontSize=20.sp)
-     Icon(Icons.Default.Close,null,Modifier.clickable{onClose()}.padding(6.dp),tint=Color.White)
+    Row(Modifier.fillMaxWidth().padding(horizontal=8.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.SpaceBetween){
+     Row(horizontalArrangement=Arrangement.spacedBy(4.dp),verticalAlignment=Alignment.CenterVertically){
+      Box(Modifier.size(24.dp).clip(RoundedCornerShape(6.dp)).background(Color.White.copy(alpha=.20f)).border(1.dp,Color.White.copy(alpha=.40f),RoundedCornerShape(6.dp)).clickable{muted=!muted},contentAlignment=Alignment.Center){Icon(if(muted)Icons.Default.VolumeOff else Icons.Default.VolumeUp,null,Modifier.size(16.dp),tint=if(muted)Color.White.copy(alpha=.5f) else Color.White)}
+      Box(Modifier.size(24.dp).clip(RoundedCornerShape(6.dp)).background(Color.White.copy(alpha=.20f)).border(1.dp,Color.White.copy(alpha=.40f),RoundedCornerShape(6.dp)).clickable{rulesOpen=true},contentAlignment=Alignment.Center){Text("?",color=Color.White,fontSize=14.sp,fontWeight=FontWeight.Black)}
+     }
+     Text("Wild Party",color=Color.White,fontSize=18.sp,fontWeight=FontWeight.Black,fontStyle=androidx.compose.ui.text.font.FontStyle.Italic)
+     Row(horizontalArrangement=Arrangement.spacedBy(4.dp),verticalAlignment=Alignment.CenterVertically){
+      Box(Modifier.size(24.dp).clip(RoundedCornerShape(6.dp)).background(Color.White.copy(alpha=.20f)).border(1.dp,Color.White.copy(alpha=.40f),RoundedCornerShape(6.dp)).clickable{historyOpen=true},contentAlignment=Alignment.Center){
+       Column(verticalArrangement=Arrangement.spacedBy(2.dp),horizontalAlignment=Alignment.CenterHorizontally){repeat(2){Box(Modifier.width(14.dp).height(2.dp).clip(RoundedCornerShape(2.dp)).background(Color.White))};Row(horizontalArrangement=Arrangement.spacedBy(2.dp)){Box(Modifier.width(9.dp).height(2.dp).clip(RoundedCornerShape(2.dp)).background(Color.White));Box(Modifier.size(3.dp,2.dp).clip(RoundedCornerShape(2.dp)).background(Color.White))}}
+      }
+      Box(Modifier.size(24.dp).clip(RoundedCornerShape(6.dp)).background(Color.White.copy(alpha=.20f)).border(1.dp,Color.White.copy(alpha=.40f),RoundedCornerShape(6.dp)).clickable{onMinimize()},contentAlignment=Alignment.Center){Text("⌄",color=Color.White,fontSize=19.sp,fontWeight=FontWeight.Bold)}
+      Box(Modifier.size(24.dp).clip(RoundedCornerShape(6.dp)).background(Color.White.copy(alpha=.20f)).border(1.dp,Color.White.copy(alpha=.40f),RoundedCornerShape(6.dp)).clickable{onClose()},contentAlignment=Alignment.Center){Canvas(Modifier.size(13.dp)){val w=size.width;val h=size.height;drawLine(Color.White,androidx.compose.ui.geometry.Offset(1.dp.toPx(),1.dp.toPx()),androidx.compose.ui.geometry.Offset(w-1.dp.toPx(),h-1.dp.toPx()),2.dp.toPx(),cap=androidx.compose.ui.graphics.StrokeCap.Round);drawLine(Color.White,androidx.compose.ui.geometry.Offset(w-1.dp.toPx(),1.dp.toPx()),androidx.compose.ui.geometry.Offset(1.dp.toPx(),h-1.dp.toPx()),2.dp.toPx(),cap=androidx.compose.ui.graphics.StrokeCap.Round)}}
+     }
     }
-    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.Center,verticalAlignment=Alignment.CenterVertically){
-     Text("History",Modifier.clickable{historyOpen=true}.padding(7.dp),color=Color.White,fontSize=12.sp)
-     Text("Rules",Modifier.clickable{rulesOpen=true}.padding(7.dp),color=Color.White,fontSize=12.sp)
-     Text(when(phase){WpPhase.BETTING->"Betting";WpPhase.SPINNING->"Spinning";WpPhase.RESULT->"Result"}+"  $countdown s",color=wpGold,fontWeight=FontWeight.Bold,fontSize=13.sp)
+    Row(Modifier.fillMaxWidth().padding(top=12.dp),horizontalArrangement=Arrangement.Center,verticalAlignment=Alignment.CenterVertically){
+     Text("Round #$round  •  "+when(phase){WpPhase.BETTING->"Betting";WpPhase.SPINNING->"Spinning";WpPhase.RESULT->"Result"}+"  $countdown s",color=wpGold,fontWeight=FontWeight.Bold,fontSize=12.sp)
     }
    }
    Box(Modifier.align(Alignment.Center).size(320.dp),contentAlignment=Alignment.Center){
