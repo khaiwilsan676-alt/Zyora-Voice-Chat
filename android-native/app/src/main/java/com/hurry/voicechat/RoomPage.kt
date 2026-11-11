@@ -2292,6 +2292,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                 .put("roomId", roomId).put("userId", accountId).put("roomOwnerId", roomId)
                 .put("micMode", saved.micMode).put("roomName", saved.roomName).put("roomDp", saved.roomDp)
                 .put("announcement", saved.announcement).put("theme", saved.theme)
+                 .put("customTheme", saved.customTheme)
                 .put("admin", JSONArray(saved.admin))
                 .put("addedAdminId", newlyAddedAdminId ?: "")
                 .put("addedAdminName", newlyAddedAdminName)
