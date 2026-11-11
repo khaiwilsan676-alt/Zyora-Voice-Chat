@@ -20,7 +20,7 @@ permissions:
 
 concurrency:
   group: zyora-native-apk-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   build-native-apk:
@@ -126,22 +126,6 @@ jobs:
           echo "## Zyora Native Browser Preview" >> "$GITHUB_STEP_SUMMARY"
           echo "Open the actual Android app in your browser: https://appetize.io/app/${{ steps.appetize.outputs.publicKey }}" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Upload Native APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: zyora-native-debug
-          path: android-native/app/build/outputs/apk/debug/*.apk
-          if-no-files-found: error
-          retention-days: 30
-
-      - name: Upload Native AAB
-        uses: actions/upload-artifact@v4
-        with:
-          name: zyora-native-debug-aab
-          path: android-native/app/build/outputs/bundle/debug/app-debug.aab
-          if-no-files-found: error
-          retention-days: 30
-
       - name: Publish Native APK release
         if: github.event_name != 'pull_request'
         uses: softprops/action-gh-release@v2
@@ -150,3 +134,27 @@ jobs:
           name: Zyora Native ${{ github.run_number }}
           body: Actual Kotlin/Jetpack Compose Native APK from android-native, commit ${{ github.sha }}.
           files: android-native/app/build/outputs/apk/debug/app-debug.apk
+
+      # GitHub artifact storage can intermittently return an HTML error page.
+      # Keep the APK available through the release and prevent artifact retries
+      # from occupying the native-build concurrency slot indefinitely.
+      - name: Upload Native APK
+        uses: actions/upload-artifact@v4.6.2
+        continue-on-error: true
+        timeout-minutes: 3
+        with:
+          name: zyora-native-debug
+          path: android-native/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload Native AAB
+        uses: actions/upload-artifact@v4.6.2
+        continue-on-error: true
+        timeout-minutes: 3
+        with:
+          name: zyora-native-debug-aab
+          path: android-native/app/build/outputs/bundle/debug/app-debug.aab
+          if-no-files-found: error
+          retention-days: 30
+
