@@ -585,3 +585,11 @@ Current documentation does not certify that all historical features are build-, 
 - Native `RoomPage.kt` listens for `avatar_frame_updated` and refreshes the affected user's seat overlay. The listener is removed with the room socket lifecycle.
 - Backend `Zyora-Server/server.js`: after the inventory equip write succeeds, the server emits `avatar_frame_updated` to the owner's personal socket room and to active room(s) containing that user. Payload: `{ userId, itemId, equipped, updatedAt }`; no media URLs or wallet data are broadcast.
 - Store Buy/Send behavior and existing UI layout are unchanged. Native build, Render deployment, and two-account runtime verification remain pending until confirmed by CI/deployment/device tests.
+
+## 2026-11-11 — Store Theme ownership, Room Settings and expiry
+- Room Settings now loads every unexpired purchased Store Theme from the account inventory, not only themes marked equipped. Purchased themes remain listed whether currently applied to a room or not.
+- The Room Theme picker shows each purchased theme's live expiry countdown and hides it as soon as it expires. The existing built-in and custom theme choices are unchanged.
+- RoomPage automatically switches an applied purchased theme back to Forest Night when its ownership expires or the inventory record is no longer valid.
+- Actual Render backend `Zyora-Server/server.js`: inventory reads purge expired store inventory records in MongoDB and return only active items with `Cache-Control: no-store`. Room reads also validate a selected Store Theme against its active inventory record and persist the default theme when the purchase has expired.
+- Store purchase and Bag countdown already use the shared inventory response; Theme purchases therefore appear in the Theme Bag tab with the same countdown as other owned items.
+- Status: source committed. Native APK compilation, Render deployment, and real-account purchase/expiry/room-background verification remain pending.
