@@ -618,3 +618,10 @@ Current documentation does not certify that all historical features are build-, 
 - Store inventory reads exclude incomplete pending reservations and remain non-cacheable; equip requests require an active, unexpired owned item and clear competing equipped items only within the same tab.
 - `StorePage.kt`: inventory refresh requests bypass HTTP caches and successful purchases replace the local owned ID rather than appending duplicate entries.
 - UI unchanged. Android build and live Render deployment/runtime verification are still pending.
+
+
+## 2026-11-11 — Lucky Bag wallet identity fix
+- `RoomPage.kt` now resolves the Lucky Bag sender and claimant identity using the same authenticated `hurry_auth.uid` priority as Mine > Wallet, falling back to the room account ID only when the authenticated UID is unavailable. This prevents Lucky Bag debits/claims from targeting a different wallet identity than the Wallet page.
+- `luckybag.kt` no longer reads or sends the stale local Room wallet balance; the server's canonical wallet balance is authoritative for Lucky Bag send validation and debit.
+- Lucky Bag amount deduction remains server-side and atomic; successful claims credit the claimant's canonical wallet, one claim per user, and unclaimed bags are refunded after the existing five-minute expiry.
+- Status: source committed. Android APK build, Render deployment, and two-account live send/claim/refund verification remain pending.
