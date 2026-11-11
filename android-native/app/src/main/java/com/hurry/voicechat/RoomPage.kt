@@ -1241,6 +1241,20 @@ fun RoomPage(
                         appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE)
                             .edit().putInt("micMode_$roomId", updatedMicMode).apply()
                     }
+                    if (payload.has("theme")) {
+                        val updatedTheme = payload.optString("theme").trim()
+                        if (updatedTheme.isNotBlank() && updatedTheme != "null") {
+                            roomTheme = updatedTheme
+                            appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE)
+                                .edit().putString("theme_$roomId", updatedTheme).apply()
+                        }
+                    }
+                    if (payload.has("customTheme")) {
+                        val updatedCustomTheme = payload.optString("customTheme").trim()
+                        roomCustomThemeUrl = updatedCustomTheme
+                        appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE)
+                            .edit().putString("customTheme_$roomId", updatedCustomTheme).apply()
+                    }
                     if (hasAnnouncement) {
                         announcement = updatedAnnouncement
                         showRoomSettingsAnnouncementInChat = if (payload.has("announcementChatVisible")) payload.optBoolean("announcementChatVisible") else updatedAnnouncement.isNotBlank()
