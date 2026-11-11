@@ -50,10 +50,8 @@ jobs:
           yes | sdkmanager --licenses >/dev/null || true
           sdkmanager "platforms;android-36" "build-tools;36.0.0"
 
-      - name: Install WebP artwork optimizer
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y webp
+      # Artwork optimization is optional; never block APK compilation on
+      # Ubuntu apt mirrors or external WebP package availability.
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -110,7 +108,7 @@ jobs:
           SHA1=$(sed -n 's/.*certificate SHA-1 digest: //p' /tmp/zyora-apk-certificate.txt | head -n 1)
           echo "## Google OAuth Android certificate" >> "$GITHUB_STEP_SUMMARY"
           echo "Package: com.hawa.app" >> "$GITHUB_STEP_SUMMARY"
-          echo "APK signing SHA-1: \`$SHA1\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "APK signing SHA-1: `$SHA1`" >> "$GITHUB_STEP_SUMMARY"
           echo "Compare this SHA-1 with the Android OAuth client registered in Google Cloud."
 
       - name: Stream Native APK in browser with Appetize
