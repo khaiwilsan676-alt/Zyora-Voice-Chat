@@ -92,11 +92,26 @@ val copyGenderAssets = tasks.register<Copy>("copyGenderAssets") {
 
 android.sourceSets.getByName("main").res.srcDir(generatedGenderResources)
 
-// Compress only Android-bundled artwork to lossless-capable WebP at build time.
-// Drawable names stay identical, so Kotlin getIdentifier()/painterResource calls do not change.
+// WebP conversion is an optional size optimization, not a build requirement.
+// Android natively packages PNG/JPG drawables, so keep originals when cwebp is
+// unavailable rather than failing the APK build on a missing host executable.
 val optimizeGeneratedArtwork = tasks.register("optimizeGeneratedArtwork") {
     dependsOn(copyGenderAssets)
     doLast {
+        val cwebpAvailable = try {
+            val probe = ProcessBuilder("cwebp", "-version")
+                .redirectErrorStream(true)
+                .start()
+            probe.inputStream.close()
+            probe.waitFor() == 0
+        } catch (_: Exception) {
+            false
+        }
+        if (!cwebpAvailable) {
+            logger.lifecycle("cwebp not installed; keeping original PNG/JPG artwork.")
+            return@doLast
+        }
+
         val drawableDir = generatedGenderResources.get().dir("drawable").asFile
         drawableDir.walkTopDown()
             .filter { it.isFile && it.extension.lowercase() in setOf("png", "jpg", "jpeg") }
@@ -143,8 +158,8 @@ dependencies {
     implementation("io.coil-kt.coil3:coil:3.3.0")
     implementation("io.coil-kt.coil3:coil-compose:3.3.0")
     // Coil does not animate GIFs unless its GIF decoder is explicitly installed.
-    implementation("io.coil-kt.coil3:coil-gif:3.3.0")
-    implementation("io.coil-kt.coil3:coil-network-okhttp:3.3.0")
+    implementation("io.coil-kt.coil-gif:3.3.0")
+    implementation("io.coil-kt.coil-network-okhttp:3.3.0")
     implementation("io.socket:socket.io-client:2.1.1")
     implementation("androidx.room:room-runtime:2.8.4")
     implementation("androidx.room:room-ktx:2.8.4")
