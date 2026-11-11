@@ -571,3 +571,10 @@ Current documentation does not certify that all historical features are build-, 
 - The shared overlay is used by Me, Public Profile, Room Profile, and occupied room seats. Removed the duplicate overlay call from Public Profile so a frame is not drawn twice.
 - Public Profile's Frame section now loads the target user's unexpired Avatar Frame inventory and shows the actual Store image/video preview with its star row only, without an extra card.
 - Store Buy and Send flows were not changed. Native build and device verification remain pending.
+
+## 2026-11-11 — Complete Bag frame equip flow
+- Native `StorePage.kt`: opening Bag now selects the Avatar Frame tab by default; switching back to Store restores Vehicle as the default tab. Existing Store card layout and Buy/Send behavior are unchanged.
+- Bag Use/Remove now waits for a successful `/api/store/equip` response before changing the local equipped state. Failed requests leave the displayed equipped item unchanged, and duplicate taps are blocked while the request is active.
+- Public Profile's owned-frame showcase now falls back to the exact catalog video/image when the inventory response omits or returns an empty media field, matching the Store asset for each frame.
+- Existing duration countdown, expiry removal, Store purchase endpoint, and shared avatar overlay surfaces remain in place.
+- Verification: source committed; native APK build and real-account Bag/profile/seat runtime checks remain pending.
