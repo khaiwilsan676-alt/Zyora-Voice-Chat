@@ -319,14 +319,17 @@ fun RoomPage(
     var roomMicMode by remember(roomId) { mutableIntStateOf(appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).getInt("micMode_$roomId", 10)) }
     var roomTheme by remember(roomId) { mutableStateOf(appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).getString("theme_$roomId", "forest-night") ?: "forest-night") }
     var purchasedRoomThemeImage by remember(roomId) { mutableStateOf("") }
+    var purchasedRoomThemeExpiresAt by remember(roomId) { mutableLongStateOf(0L) }
     var roomCustomThemeUrl by remember(roomId) {
         mutableStateOf(appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).getString("customTheme_$roomId", "").orEmpty())
     }
 
     LaunchedEffect(roomId, roomTheme) {
         purchasedRoomThemeImage = ""
+        purchasedRoomThemeExpiresAt = 0L
         if (roomTheme.isNotBlank() && roomTheme !in setOf("forest-night", "mood-light", "custom")) {
-            withContext(Dispatchers.IO) {
+            val selectedThemeId = roomTheme
+            val purchased = withContext(Dispatchers.IO) {
                 runCatching {
                     val encoded = java.net.URLEncoder.encode(roomOwner.accountId.ifBlank { roomOwner.id.ifBlank { roomOwner.uid } }, "UTF-8")
                     val conn = (java.net.URL("https://zyora-server.onrender.com/api/store/inventory/$encoded").openConnection() as java.net.HttpURLConnection).apply {
@@ -334,17 +337,35 @@ fun RoomPage(
                         readTimeout = 8000
                     }
                     try {
-                        if (conn.responseCode !in 200..299) ""
+                        if (conn.responseCode !in 200..299) null
                         else {
                             val root = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
                             val items = root.optJSONArray("items") ?: JSONArray()
                             (0 until items.length()).map { items.getJSONObject(it) }
-                                .firstOrNull { it.optString("itemId") == roomTheme && it.optString("tab") == "Theme" && it.optLong("expiresAt") > System.currentTimeMillis() }
-                                ?.optString("image", "").orEmpty()
+                                .firstOrNull { it.optString("itemId") == selectedThemeId && it.optString("tab") == "Theme" && it.optLong("expiresAt") > System.currentTimeMillis() }
+                                ?.let { it.optString("image", "") to it.optLong("expiresAt") }
                         }
                     } finally { conn.disconnect() }
-                }.getOrDefault("")
-            }.let { image -> purchasedRoomThemeImage = image }
+                }.getOrNull()
+            }
+            if (purchased == null || purchased.first.isBlank()) {
+                if (roomTheme == selectedThemeId) {
+                    roomTheme = "forest-night"
+                    appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE)
+                        .edit().putString("theme_$roomId", "forest-night").apply()
+                }
+            } else {
+                purchasedRoomThemeImage = purchased.first
+                purchasedRoomThemeExpiresAt = purchased.second
+                delay((purchased.second - System.currentTimeMillis()).coerceAtLeast(0L))
+                if (roomTheme == selectedThemeId && purchasedRoomThemeExpiresAt == purchased.second) {
+                    roomTheme = "forest-night"
+                    purchasedRoomThemeImage = ""
+                    purchasedRoomThemeExpiresAt = 0L
+                    appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE)
+                        .edit().putString("theme_$roomId", "forest-night").apply()
+                }
+            }
         }
     }
     
