@@ -260,6 +260,9 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int, onChat: (Strin
 
     var showPaymentSheet by remember { mutableStateOf(false) }
     var showPayUsingSheet by remember { mutableStateOf(false) }
+    var selectedPrice by remember { mutableStateOf(100) }
+    var selectedCoins by remember { mutableStateOf(1_000_000L) }
+    var selectedBonus by remember { mutableStateOf(30_000L) }
     var showDetails by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(walletUserId) {
@@ -428,7 +431,12 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int, onChat: (Strin
                 }
 
                 when (tab) {
-                    0 -> CoinsContent(onBuy = { showPaymentSheet = true })
+                    0 -> CoinsContent(onBuy = { price, packageCoins, bonus ->
+                        selectedPrice = price
+                        selectedCoins = packageCoins
+                        selectedBonus = bonus
+                        showPaymentSheet = true
+                    })
                     1 -> DiamondsContent(
                         din = din, cin = cin, rate = rate, diamonds = diamonds,
                         onDinChange = { v -> din = v; cin = ((v.toLongOrNull() ?: 0L) * 33 / 100).toString() },
@@ -516,7 +524,8 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int, onChat: (Strin
         }
 
         if (showPaymentSheet) {
-            PaymentSheet(onClose = { showPaymentSheet = false },
+            PaymentSheet(price = selectedPrice, coins = selectedCoins + selectedBonus,
+                onClose = { showPaymentSheet = false },
                 onRecharge = { showPaymentSheet = false; showPayUsingSheet = true })
         }
 
@@ -528,16 +537,14 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int, onChat: (Strin
                         // the displayed package amount plus its advertised bonus.
                         // This is intentionally local-only until payment verification
                         // and server-side wallet credit are integrated.
-                        val packageCoins = 1_000_000L
-                        val packageBonus = 30_000L
-                        val credit = packageCoins + packageBonus
+                        val credit = selectedCoins + selectedBonus
                         val creditKey = "local_recharge_credits_$walletUserId"
                         val accumulated = (walletCachePrefs.getLong(creditKey, 0L) + credit)
                             .coerceAtLeast(0L)
                         val newBalance = coins + credit
                         withContext(Dispatchers.IO) {
                             dao.saveUserData(UserDataEntity(balance = newBalance, diamonds = diamonds))
-                            recordTransaction(dao, "Recharge (Demo)", credit, "coin")
+                            recordTransaction(dao, "Recharge", credit, "coin")
                         }
                         walletCachePrefs.edit()
                             .putLong(creditKey, accumulated)
@@ -611,9 +618,20 @@ private fun DetailsNativePage(type: String, onBack: () -> Unit) {
 // TAB CONTENT
 // ═══════════════════════════════════════════════════════
 @Composable
-private fun CoinsContent(onBuy: () -> Unit) {
-    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 20.dp)) {
-        Pack("1,000,000", "₹ 100", "+Bounce 30,000", Modifier.width(120.dp), onBuy)
+private fun CoinsContent(onBuy: (Int, Long, Long) -> Unit) {
+    val cardModifier = Modifier.weight(1f)
+    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Pack("1,000,000", "₹ 100", "+Bounce 30,000", cardModifier) { onBuy(100, 1_000_000L, 30_000L) }
+            Pack("2,000,000", "₹ 200", "+Bounce 60,000", cardModifier) { onBuy(200, 2_000_000L, 60_000L) }
+            Pack("5,000,000", "₹ 500", "+Bounce 150,000", cardModifier) { onBuy(500, 5_000_000L, 150_000L) }
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Pack("10,000,000", "₹ 1,000", "+Bounce 300,000", cardModifier) { onBuy(1000, 10_000_000L, 300_000L) }
+            Pack("8,000,000", "₹ 800", "+Bounce 240,000", cardModifier) { onBuy(800, 8_000_000L, 240_000L) }
+            Spacer(cardModifier)
+        }
     }
 }
 
@@ -960,7 +978,7 @@ private fun DiamondInputBox(
 // SHEETS
 // ═══════════════════════════════════════════════════════
 @Composable
-private fun PaymentSheet(onClose: () -> Unit, onRecharge: () -> Unit) {
+private fun PaymentSheet(price: Int, coins: Long, onClose: () -> Unit, onRecharge: () -> Unit) {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
         Column(Modifier.fillMaxWidth()
             .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
@@ -989,13 +1007,13 @@ private fun PaymentSheet(onClose: () -> Unit, onRecharge: () -> Unit) {
                     Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                         AsyncImage(RAW_WALLET + "file_00000000e56882119c217d508b6733dc.png",
                             null, Modifier.size(20.dp), contentScale = ContentScale.Fit)
-                        Text("1,030,000", Modifier.padding(start = 6.dp),
+                        Text(String.format(java.util.Locale.US, "%,d", coins), Modifier.padding(start = 6.dp),
                             fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF111827))
                     }
                 }
                 Column(horizontalAlignment = Alignment.End) {
                     Text("Price", fontSize = 13.sp, color = Color(0xFF6B7280), fontWeight = FontWeight.Medium)
-                    Text("₹100.00", Modifier.padding(top = 4.dp),
+                    Text("₹${String.format(java.util.Locale.US, "%,d", price)}.00", Modifier.padding(top = 4.dp),
                         fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF111827))
                 }
             }
