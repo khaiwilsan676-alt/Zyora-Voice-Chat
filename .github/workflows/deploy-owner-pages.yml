@@ -4,6 +4,16 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'app/**'
+      - 'components/**'
+      - 'public/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'next.config.*'
+      - 'tsconfig.json'
+      - 'postcss.config.*'
+      - 'tailwind.config.*'
   workflow_dispatch:
 
 permissions:
