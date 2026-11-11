@@ -706,7 +706,7 @@ export default function StaffPanel() {
               hurryId: String(u.accountId || u.displayUserNumber || u.appLongId || u.hurryId || u.id || '—'),
               email: u.email || u.gmail || u.emailPhone || '—',
               role: u.role || 'NORMAL',
-              image: u.image || u.photo || u.avatar || u.photoURL || ''
+              image: [u.image, u.dp, u.photo, u.photoURL, u.photoUrl, u.avatar, u.avatarUrl, u.profileImage, u.profileImageUrl, u.profile_image, u.imageUrl].find((value: any) => typeof value === 'string' && value.trim() && value.trim() !== 'null' && value.trim() !== 'undefined')?.trim() || ''
             }));
           }
         } catch (err) {
@@ -915,14 +915,24 @@ export default function StaffPanel() {
             hurryId: String(u.accountId || u.displayUserNumber || u.appLongId || u.hurryId || u.id || '—'),
             email: u.email || u.gmail || u.emailPhone || '—',
             role: u.role || 'NORMAL',
-            image: u.image || u.photo || u.avatar || u.photoURL || ''
+            image: [u.image, u.dp, u.photo, u.photoURL, u.photoUrl, u.avatar, u.avatarUrl, u.profileImage, u.profileImageUrl, u.profile_image, u.imageUrl].find((value: any) => typeof value === 'string' && value.trim() && value.trim() !== 'null' && value.trim() !== 'undefined')?.trim() || ''
           }));
 
           setUsers(prev => {
             const newUsers = [...prev];
-            fetchedList.forEach((u: any) => {
-              if (!newUsers.some(existing => existing.id === u.id)) {
-                newUsers.push(u);
+            fetchedList.forEach((incoming: UserRecord) => {
+              const existingIndex = newUsers.findIndex(existing => existing.id === incoming.id || (incoming.hurryId && incoming.hurryId !== '—' && existing.hurryId === incoming.hurryId));
+              if (existingIndex < 0) {
+                newUsers.push(incoming);
+              } else {
+                const existing = newUsers[existingIndex];
+                newUsers[existingIndex] = {
+                  ...existing, ...incoming,
+                  name: incoming.name && incoming.name !== 'User' ? incoming.name : existing.name,
+                  username: incoming.username || existing.username,
+                  email: incoming.email && incoming.email !== '—' ? incoming.email : existing.email,
+                  image: incoming.image || existing.image || '',
+                };
               }
             });
             return newUsers;
