@@ -598,3 +598,9 @@ Current documentation does not certify that all historical features are build-, 
 - Backend `GET /api/store/inventory/:userId` now deletes expired inventory records before returning only unexpired purchases and sends explicit no-cache headers. This prevents stale inventory snapshots from restoring expired Store themes in Bag or Room Settings.
 - Native `RoomSettingPage.kt` now removes purchased themes from its live theme list at their exact expiry time while the settings screen remains open; applying a purchased theme remains a separate room-background choice and does not control whether the purchase appears in the list.
 - Existing Store countdown and RoomPage active-theme expiry fallback are preserved. APK build and real-account purchase/expiry verification are still required.
+
+
+## 2026-11-11 — Purchased room theme inventory refresh
+- Native `RoomSettingPage.kt`: refreshes the account's server-authoritative Store inventory whenever the Room Theme picker opens, and explicitly bypasses HTTP caches. This prevents a one-time screen-entry inventory snapshot from hiding a newly purchased Theme or showing stale ownership.
+- Purchased Theme entries remain independent of the equipped flag; Room Settings lists every unexpired owned Theme, and expiry filtering removes entries when their server-provided expiry is reached.
+- Verification: source committed; native APK build and live purchase/apply/expiry checks remain pending.
