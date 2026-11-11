@@ -1,1 +1,5 @@
-export { default } from "./owner/page";
+import OwnerPage from "./owner/page";
+
+export default function HomePage() {
+  return <OwnerPage />;
+}
