@@ -73,6 +73,7 @@ private val StoreBg = Color(0xFFF5F6F8)
 private val StoreCyan = Color(0xFF00B4D8)
 private val CardGrey = Color(0xFF242424) // Halka grey for cards
 private const val StoreAssetBase = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/"
+private val nativeAvatarFrameRefreshVersions = mutableStateMapOf<String, Long>()
 
 private data class NativeStoreTab(val id: String, val label: String, val icon: String)
 private data class NativeStoreItem(
@@ -132,7 +133,8 @@ private val nativeStoreItems = listOf(
 @Composable
 fun NativeAvatarFrameOverlay(userId: String, modifier: Modifier = Modifier) {
     var frame by remember(userId) { mutableStateOf<JSONObject?>(null) }
-    LaunchedEffect(userId) {
+    val refreshVersion = nativeAvatarFrameRefreshVersions[userId] ?: 0L
+    LaunchedEffect(userId, refreshVersion) {
         frame = null
         if (userId.isNotBlank()) withContext(Dispatchers.IO) {
             runCatching {
@@ -146,6 +148,12 @@ fun NativeAvatarFrameOverlay(userId: String, modifier: Modifier = Modifier) {
                     .firstOrNull { it.optString("tab") == "Avatar Frame" && it.optBoolean("equipped") && it.optLong("expiresAt") > System.currentTimeMillis() }
             }.onSuccess { frame = it }
         }
+    }
+    LaunchedEffect(frame) {
+        val expiresAt = frame?.optLong("expiresAt") ?: return@LaunchedEffect
+        val remaining = (expiresAt - System.currentTimeMillis()).coerceAtLeast(0L)
+        if (remaining > 0L) delay(remaining)
+        frame = null
     }
     val selected = frame
     if (selected != null) {
@@ -173,7 +181,8 @@ fun NativeAvatarFrameOverlay(userId: String, modifier: Modifier = Modifier) {
 @Composable
 fun NativeOwnedFrameShowcase(userId: String) {
     var frames by remember(userId) { mutableStateOf<List<JSONObject>>(emptyList()) }
-    LaunchedEffect(userId) {
+    val refreshVersion = nativeAvatarFrameRefreshVersions[userId] ?: 0L
+    LaunchedEffect(userId, refreshVersion) {
         frames = emptyList()
         if (userId.isNotBlank()) withContext(Dispatchers.IO) {
             runCatching {
@@ -191,6 +200,15 @@ fun NativeOwnedFrameShowcase(userId: String) {
                 (0 until items.length()).map { items.getJSONObject(it) }
                     .filter { it.optString("tab") == "Avatar Frame" && it.optLong("expiresAt") > System.currentTimeMillis() }
             }.onSuccess { frames = it }
+        }
+    }
+    LaunchedEffect(frames) {
+        while (frames.isNotEmpty()) {
+            val nextExpiry = frames.minOfOrNull { it.optLong("expiresAt") } ?: break
+            val remaining = (nextExpiry - System.currentTimeMillis()).coerceAtLeast(0L)
+            if (remaining > 0L) delay(remaining)
+            val now = System.currentTimeMillis()
+            frames = frames.filter { it.optLong("expiresAt") > now }
         }
     }
     if (frames.isNotEmpty()) {
@@ -552,6 +570,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                                                                 equippedIds.removeAll { id -> nativeStoreItems.find { it.id == id }?.tab == item.tab }
                                                                 equippedIds.add(item.id)
                                                             } else equippedIds.remove(item.id)
+                                                            if (item.tab == "Avatar Frame") nativeAvatarFrameRefreshVersions[userId] = (nativeAvatarFrameRefreshVersions[userId] ?: 0L) + 1L
                                                         }.onFailure { purchaseMessage = it.message ?: "Could not use item" }
                                                         purchaseBusy = false
                                                     }
@@ -725,6 +744,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                                         equippedIds.removeAll { id -> nativeStoreItems.find { it.id == id }?.tab == item.tab }
                                         equippedIds.add(item.id)
                                     } else equippedIds.remove(item.id)
+                                    if (item.tab == "Avatar Frame") nativeAvatarFrameRefreshVersions[userId] = (nativeAvatarFrameRefreshVersions[userId] ?: 0L) + 1L
                                     selectedItem = null
                                 }.onFailure { purchaseMessage = it.message ?: "Could not use item" }
                                 purchaseBusy = false
