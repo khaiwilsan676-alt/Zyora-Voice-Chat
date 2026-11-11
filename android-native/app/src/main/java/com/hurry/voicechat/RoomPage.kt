@@ -325,12 +325,26 @@ fun RoomPage(
         mutableStateOf(appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).getString("customTheme_$roomId", "").orEmpty())
     }
 
+    // Built-in themes must never be checked against the paid Store inventory.
+    // Previously every ID except Forest Night, Moon Light and Custom was treated
+    // as a purchased theme. That made Lantern Tree / Northern Light / Sword Ruins
+    // look "unowned" and silently overwrite the saved choice with Forest Night.
+    val builtInRoomThemeIds = remember {
+        setOf(
+            "forest-night", "mood-light", "lantern-tree", "northern-light",
+            "sword-ruins", "cornfield-portal", "deer-moonlight",
+            "moon-light-new", "dark-night-flower", "custom"
+        )
+    }
+
     LaunchedEffect(roomId, roomTheme) {
         purchasedRoomThemeImage = ""
         purchasedRoomThemeExpiresAt = 0L
-        if (roomTheme.isNotBlank() && roomTheme !in setOf("forest-night", "mood-light", "custom")) {
+        if (roomTheme.isNotBlank() && roomTheme !in builtInRoomThemeIds) {
             val selectedThemeId = roomTheme
-            val purchased = withContext(Dispatchers.IO) {
+            // Distinguish a confirmed missing/expired purchase from a network or
+            // server error. A temporary inventory failure must not erase a theme.
+            val inventoryLookup = withContext(Dispatchers.IO) {
                 runCatching {
                     val encoded = java.net.URLEncoder.encode(roomOwner.accountId.ifBlank { roomOwner.id.ifBlank { roomOwner.uid } }, "UTF-8")
                     val conn = (java.net.URL("https://zyora-server.onrender.com/api/store/inventory/$encoded").openConnection() as java.net.HttpURLConnection).apply {
@@ -341,33 +355,34 @@ fun RoomPage(
                         setRequestProperty("Pragma", "no-cache")
                     }
                     try {
-                        if (conn.responseCode !in 200..299) null
-                        else {
-                            val root = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
-                            val items = root.optJSONArray("items") ?: JSONArray()
-                            (0 until items.length()).map { items.getJSONObject(it) }
-                                .firstOrNull { it.optString("itemId") == selectedThemeId && it.optString("tab") == "Theme" && it.optLong("expiresAt") > System.currentTimeMillis() }
-                                ?.let { it.optString("image", "") to it.optLong("expiresAt") }
-                        }
+                        if (conn.responseCode !in 200..299) error("Theme inventory unavailable")
+                        val root = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
+                        val items = root.optJSONArray("items") ?: JSONArray()
+                        (0 until items.length()).map { items.getJSONObject(it) }
+                            .firstOrNull { it.optString("itemId") == selectedThemeId && it.optString("tab") == "Theme" && it.optLong("expiresAt") > System.currentTimeMillis() }
+                            ?.let { it.optString("image", "") to it.optLong("expiresAt") }
                     } finally { conn.disconnect() }
-                }.getOrNull()
-            }
-            if (purchased == null || purchased.first.isBlank()) {
-                if (roomTheme == selectedThemeId) {
-                    roomTheme = "forest-night"
-                    appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE)
-                        .edit().putString("theme_$roomId", "forest-night").apply()
                 }
-            } else {
-                purchasedRoomThemeImage = purchased.first
-                purchasedRoomThemeExpiresAt = purchased.second
-                delay((purchased.second - System.currentTimeMillis()).coerceAtLeast(0L))
-                if (roomTheme == selectedThemeId && purchasedRoomThemeExpiresAt == purchased.second) {
-                    roomTheme = "forest-night"
-                    purchasedRoomThemeImage = ""
-                    purchasedRoomThemeExpiresAt = 0L
-                    appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE)
-                        .edit().putString("theme_$roomId", "forest-night").apply()
+            }
+            if (inventoryLookup.isSuccess) {
+                val purchased = inventoryLookup.getOrNull()
+                if (purchased == null || purchased.first.isBlank()) {
+                    if (roomTheme == selectedThemeId) {
+                        roomTheme = "forest-night"
+                        appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE)
+                            .edit().putString("theme_$roomId", "forest-night").apply()
+                    }
+                } else {
+                    purchasedRoomThemeImage = purchased.first
+                    purchasedRoomThemeExpiresAt = purchased.second
+                    delay((purchased.second - System.currentTimeMillis()).coerceAtLeast(0L))
+                    if (roomTheme == selectedThemeId && purchasedRoomThemeExpiresAt == purchased.second) {
+                        roomTheme = "forest-night"
+                        purchasedRoomThemeImage = ""
+                        purchasedRoomThemeExpiresAt = 0L
+                        appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE)
+                            .edit().putString("theme_$roomId", "forest-night").apply()
+                    }
                 }
             }
         }
