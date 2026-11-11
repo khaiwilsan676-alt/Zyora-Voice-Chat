@@ -383,6 +383,18 @@ fun RoomSettingPage(
             roomThemeChoices + storeRoomThemes.toList()
     }
 
+    // Keep the purchased-theme list live while Room Settings remains open.
+    // Remove expired entries at their exact expiry without requiring a screen reload.
+    LaunchedEffect(storeRoomThemes.toList()) {
+        while (storeRoomThemes.isNotEmpty()) {
+            val nextExpiry = storeRoomThemes.minOfOrNull { it.expiresAt } ?: break
+            val waitMs = (nextExpiry - System.currentTimeMillis()).coerceAtLeast(0L)
+            if (waitMs > 0L) delay(waitMs)
+            val now = System.currentTimeMillis()
+            storeRoomThemes.removeAll { it.expiresAt > 0L && it.expiresAt <= now }
+        }
+    }
+
 
     Box(Modifier.fillMaxSize().background(Color.White)) {
         Column(Modifier.fillMaxSize()) {
