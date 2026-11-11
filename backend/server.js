@@ -1447,19 +1447,36 @@ async function creditLuckyBagWallet(userId, amount) {
   await creditWallet(userId, amount);
 }
 async function refundLuckyBag(bagId) {
-  const bag = await luckyBags().findOne({ bagId: String(bagId), status: "open", claimedCount: 0 });
+  const id = String(bagId);
+  let bag = await luckyBags().findOne({ bagId: id, status: { $in: ["open", "refunding"] }, claimedCount: 0 });
   if (!bag) return false;
-  const result = await luckyBags().updateOne(
-    { bagId: String(bagId), status: "open", claimedCount: 0 },
-    { $set: { status: "refunded", refundedAt: Date.now() } }
+
+  // Claim the refund state first. A concurrent claim can no longer win after this CAS.
+  if (bag.status === "open") {
+    const lock = await luckyBags().updateOne(
+      { bagId: id, status: "open", claimedCount: 0 },
+      { $set: { status: "refunding", refundStartedAt: Date.now() } }
+    );
+    if (!lock.modifiedCount) return false;
+    bag = await luckyBags().findOne({ bagId: id, status: "refunding", claimedCount: 0 });
+    if (!bag) return false;
+  }
+
+  // Idempotency key makes retries/restarts safe if the process stops between credit and status update.
+  await creditWalletOnce(bag.senderId, Number(bag.amount), "luckybag-refund:" + id);
+  await luckyBagTransactions().updateOne(
+    { bagId: id, userId: bag.senderId, type: "lucky_bag_refund" },
+    { $setOnInsert: { userId: bag.senderId, type: "lucky_bag_refund", amount: bag.amount, bagId: id, createdAt: Date.now() } },
+    { upsert: true }
   );
-  if (!result.modifiedCount) return false;
-  await creditLuckyBagWallet(bag.senderId, bag.amount);
-  await luckyBagTransactions().insertOne({
-    userId: bag.senderId, type: "lucky_bag_refund", amount: bag.amount,
-    bagId: bag.bagId, createdAt: Date.now()
-  });
-  io.emit("lucky_bag_refunded", { bagId: bag.bagId, senderId: bag.senderId, amount: bag.amount });
+  await luckyBags().updateOne(
+    { bagId: id, status: "refunding", claimedCount: 0 },
+    { $set: { status: "refunded", refundedAt: Date.now() }, $unset: { refundStartedAt: "" } }
+  );
+  const timer = luckyBagTimers.get(id);
+  if (timer) clearTimeout(timer);
+  luckyBagTimers.delete(id);
+  io.emit("lucky_bag_refunded", { bagId: id, senderId: bag.senderId, amount: bag.amount });
   return true;
 }
 function scheduleLuckyBagRefund(bag) {
@@ -1714,22 +1731,41 @@ app.post("/api/lucky-bag/claim", async (req, res) => {
       if (bag.status === "open" && bag.claimedCount === 0) await refundLuckyBag(bagId);
       return res.status(410).json({ error: "Lucky Bag expired or closed" });
     }
-    const claimKey = { bagId, userId };
-    const existing = await luckyBags().findOne({ bagId, claims: { $elemMatch: { userId } } }, { projection: { claims: 1 } });
-    if (existing) return res.status(409).json({ error: "Already claimed this Lucky Bag" });
+    const existing = await luckyBags().findOne(
+      { bagId, claims: { $elemMatch: { userId } } },
+      { projection: { claims: 1, recipients: 1, claimedCount: 1 } }
+    );
+    if (existing) {
+      const priorClaim = (existing.claims || []).find((claim) => String(claim.userId) === userId);
+      if (!priorClaim || Number(priorClaim.amount) <= 0) return res.status(409).json({ error: "Already claimed this Lucky Bag" });
+      await creditWalletOnce(userId, Number(priorClaim.amount), "luckybag-claim:" + bagId + ":" + userId);
+      await luckyBagTransactions().updateOne(
+        { bagId, userId, type: "lucky_bag_claim" },
+        { $setOnInsert: { userId, type: "lucky_bag_claim", amount: Number(priorClaim.amount), bagId, createdAt: priorClaim.claimedAt || Date.now() } },
+        { upsert: true }
+      );
+      return res.json({ success: true, amount: Number(priorClaim.amount), balance: await walletBalance(userId), claimedCount: existing.claimedCount || 1, recipients: existing.recipients || bag.recipients, alreadyClaimed: true });
+    }
     const current = await luckyBags().findOne({ bagId, status: "open" });
     if (!current || current.claimedCount >= current.recipients) return res.status(409).json({ error: "Lucky Bag is empty" });
     const slotsLeft = current.recipients - current.claimedCount;
     const coinsLeft = current.amount - current.claimedTotal;
-    const share = slotsLeft <= 1 ? coinsLeft : Math.max(1, Math.floor(Math.random() * Math.max(2, Math.floor(coinsLeft / slotsLeft) * 2)));
-    const amount = Math.min(coinsLeft, share);
+    // Keep at least one coin reserved for every remaining recipient.
+    if (!Number.isSafeInteger(coinsLeft) || coinsLeft < slotsLeft) return res.status(409).json({ error: "Lucky Bag has no distributable coins" });
+    const maxShare = coinsLeft - (slotsLeft - 1);
+    const amount = slotsLeft <= 1 ? coinsLeft : 1 + Math.floor(Math.random() * maxShare);
     const claimUpdate = await luckyBags().updateOne(
       { bagId, status: "open", claimedCount: current.claimedCount, claimedTotal: current.claimedTotal, claims: { $not: { $elemMatch: { userId } } } },
       { $inc: { claimedCount: 1, claimedTotal: amount }, $push: { claims: { userId, amount, claimedAt: Date.now() } } }
     );
     if (!claimUpdate.modifiedCount) return res.status(409).json({ error: "Another claim was processed; try again" });
-    await creditLuckyBagWallet(userId, amount);
-    await luckyBagTransactions().insertOne({ userId, type: "lucky_bag_claim", amount, bagId, createdAt: Date.now() });
+    // Credit once per bag/user so a retried HTTP request cannot duplicate coins.
+    await creditWalletOnce(userId, amount, "luckybag-claim:" + bagId + ":" + userId);
+    await luckyBagTransactions().updateOne(
+      { bagId, userId, type: "lucky_bag_claim" },
+      { $setOnInsert: { userId, type: "lucky_bag_claim", amount, bagId, createdAt: Date.now() } },
+      { upsert: true }
+    );
     const after = await luckyBags().findOne({ bagId });
     if (after && after.claimedCount >= after.recipients) {
       await luckyBags().updateOne({ bagId, status: "open" }, { $set: { status: "claimed", completedAt: Date.now() } });
@@ -3310,9 +3346,9 @@ async function connectGitHubDatabase() {
     await databaseClient.connect();
     db = databaseClient.db();
     console.log("GitHub document database ready");
-    const pendingBags = await db.collection("luckyBags").find({ status: "open" }).toArray();
+    const pendingBags = await db.collection("luckyBags").find({ status: { $in: ["open", "refunding"] } }).toArray();
     for (const bag of pendingBags) {
-      if (Number(bag.expiresAt) <= Date.now() && Number(bag.claimedCount || 0) === 0) {
+      if ((bag.status === "refunding" || Number(bag.expiresAt) <= Date.now()) && Number(bag.claimedCount || 0) === 0) {
         await refundLuckyBag(bag.bagId);
       } else if (Number(bag.expiresAt) > Date.now()) {
         scheduleLuckyBagRefund(bag);
