@@ -809,7 +809,20 @@ export default function StaffPanel() {
         }
 
         if (isMounted) {
-          setUsers(fetchedList);
+          // Render users progressively in small batches so the table becomes
+          // visible immediately instead of waiting for the complete list.
+          setUsers([]);
+          if (fetchedList.length) {
+            const firstBatch = fetchedList.slice(0, 2);
+            setUsers(firstBatch);
+            setLoadingUsers(false);
+            for (let offset = 2; offset < fetchedList.length; offset += 2) {
+              await new Promise(resolve => window.setTimeout(resolve, 120));
+              if (!isMounted) return;
+              const nextBatch = fetchedList.slice(offset, offset + 2);
+              setUsers(prev => [...prev, ...nextBatch]);
+            }
+          }
         }
       } catch (error) {
         console.error('Error loading users:', error);
