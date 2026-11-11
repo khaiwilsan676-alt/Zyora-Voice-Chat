@@ -1385,16 +1385,19 @@ async function ensureWalletUser(userId) {
     } }, { upsert: true });
     user = await users.findOne(walletUserQuery(userId));
   }
-  if (user && !Number.isFinite(Number(user.coins))) {
+  // MongoDB numeric comparisons are type-sensitive. Older wallet records can
+  // contain coins as a numeric string (for example "50000"): walletBalance()
+  // displays Number("50000") correctly, but debitWallet's { coins: { $gte: n } }
+  // will not match that string. Normalize the canonical wallet field before
+  // any balance/debit operation so the displayed balance and atomic debit agree.
+  if (user && (user.coins == null || typeof user.coins !== "number" || !Number.isFinite(user.coins))) {
     const legacy = await db.collection("luckyBagWallets").findOne({ userId: String(userId) });
-    const initialCoins = Math.max(Number(user.balance || 0), Number(legacy?.balance || 0));
-    await users.updateOne({ _id: user._id }, { $set: { coins: Math.max(0, initialCoins) } });
-    user.coins = Math.max(0, initialCoins);
-  } else if (user && user.coins == null) {
-    const legacy = await db.collection("luckyBagWallets").findOne({ userId: String(userId) });
-    const initialCoins = Number(user.balance ?? legacy?.balance ?? 0);
-    await users.updateOne({ _id: user._id }, { $set: { coins: Math.max(0, initialCoins) } });
-    user.coins = Math.max(0, initialCoins);
+    const parsedCoins = Number(user.coins);
+    const initialCoins = user.coins != null && Number.isFinite(parsedCoins)
+      ? Math.max(0, Math.floor(parsedCoins))
+      : Math.max(Number(user.balance || 0), Number(legacy?.balance || 0), 0);
+    await users.updateOne({ _id: user._id }, { $set: { coins: initialCoins } });
+    user.coins = initialCoins;
   }
   return user;
 }
