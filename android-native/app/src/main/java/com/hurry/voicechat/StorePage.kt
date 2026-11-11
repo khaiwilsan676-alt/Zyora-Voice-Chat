@@ -308,7 +308,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
         withContext(Dispatchers.IO) {
             runCatching {
                 val encoded = URLEncoder.encode(userId, "UTF-8")
-                val c = (URL("https://zyora-server.onrender.com/api/store/inventory/$encoded").openConnection() as HttpURLConnection).apply { connectTimeout=15000; readTimeout=15000; setRequestProperty("Cache-Control", "no-cache"); setRequestProperty("Pragma", "no-cache") }
+                val c = (URL("https://zyora-server.onrender.com/api/store/inventory/$encoded").openConnection() as HttpURLConnection).apply { connectTimeout=15000; readTimeout=15000; useCaches=false; setRequestProperty("Cache-Control", "no-cache, no-store"); setRequestProperty("Pragma", "no-cache") }
                 val code = c.responseCode
                 val stream = if (code in 200..299) c.inputStream else c.errorStream
                 val json = JSONObject(stream.bufferedReader().use { it.readText() }); c.disconnect()
