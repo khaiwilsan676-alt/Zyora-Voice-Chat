@@ -1502,8 +1502,16 @@ app.get("/api/store/inventory/:userId", async (req, res) => {
   try {
     const userId = String(req.params.userId || "").trim();
     if (!userId) return res.status(400).json({ error: "userId required" });
-    const items = await db.collection("storeInventory").find({ userId }).toArray();
-    res.json({ items, balance: await walletBalance(userId) });
+    const now = Date.now();
+    const inventory = db.collection("storeInventory");
+    // Expired purchases must never leak back into Bag or Room Settings,
+    // even when a client/cache still holds an older inventory snapshot.
+    await inventory.deleteMany({ userId, expiresAt: { $lte: now } });
+    const items = await inventory.find({ userId, expiresAt: { $gt: now } }).toArray();
+    res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+    res.set("Pragma", "no-cache");
+    res.set("Expires", "0");
+    return res.json({ items, balance: await walletBalance(userId) });
   } catch (error) {
     console.error("GET /api/store/inventory error:", error.message);
     res.status(503).json({ error: "Store inventory unavailable" });
