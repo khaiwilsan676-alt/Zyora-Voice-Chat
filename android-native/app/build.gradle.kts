@@ -158,8 +158,8 @@ dependencies {
     implementation("io.coil-kt.coil3:coil:3.3.0")
     implementation("io.coil-kt.coil3:coil-compose:3.3.0")
     // Coil does not animate GIFs unless its GIF decoder is explicitly installed.
-    implementation("io.coil-kt.coil-gif:3.3.0")
-    implementation("io.coil-kt.coil-network-okhttp:3.3.0")
+    implementation("io.coil-kt.coil3:coil-gif:3.3.0")
+    implementation("io.coil-kt.coil3:coil-network-okhttp:3.3.0")
     implementation("io.socket:socket.io-client:2.1.1")
     implementation("androidx.room:room-runtime:2.8.4")
     implementation("androidx.room:room-ktx:2.8.4")
