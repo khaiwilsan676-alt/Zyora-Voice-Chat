@@ -917,7 +917,7 @@ private fun PillTab(t: String, selected: Boolean, m: Modifier, onClick: () -> Un
 @Composable
 private fun Pack(c: String, p: String, b: String, m: Modifier, onClick: () -> Unit) {
     Column(
-        m.width(120.dp).aspectRatio(1f)
+        m.fillMaxWidth().aspectRatio(1f)
             .clip(RoundedCornerShape(6.dp)).background(Color.White)
             .clickable { onClick() }.padding(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -1034,7 +1034,7 @@ private fun PaymentSheet(price: Int, coins: Long, onClose: () -> Unit, onRecharg
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     AsyncImage(RAW_WALLET + "file_00000000e56882119c217d508b6733dc.png",
                         null, Modifier.size(16.dp), contentScale = ContentScale.Fit)
-                    Text("1,030,000", Modifier.padding(start = 4.dp),
+                    Text(String.format(java.util.Locale.US, "%,d", coins), Modifier.padding(start = 4.dp),
                         fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF111827))
                 }
                 
