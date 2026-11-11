@@ -268,11 +268,11 @@ fun RoomPage(
     val clipboard = LocalClipboardManager.current
     val appContext = LocalContext.current
     var roomWalletBalance by remember(accountId) { mutableLongStateOf(0L) }
-    LaunchedEffect(accountId) {
-        if (accountId.isBlank() || accountId == "guest") return@LaunchedEffect
+    LaunchedEffect(canonicalWalletUserId) {
+        if (canonicalWalletUserId.isBlank() || canonicalWalletUserId == "guest") return@LaunchedEffect
         val serverBalance = withContext(Dispatchers.IO) {
             runCatching {
-                val encoded = java.net.URLEncoder.encode(accountId, "UTF-8")
+                val encoded = java.net.URLEncoder.encode(canonicalWalletUserId, "UTF-8")
                 val conn = (java.net.URL("https://zyora-server.onrender.com/api/lucky-bag/wallet/" + encoded).openConnection() as java.net.HttpURLConnection).apply {
                     connectTimeout = 10000
                     readTimeout = 10000
@@ -373,14 +373,13 @@ fun RoomPage(
         }
     }
     
-    // Lucky Bag must use the exact identity used by the Mine > Wallet screen.
-    // CoinsNativePage loads the canonical wallet with accountId; preferring the
-    // auth uid here can create/read a different zero-balance wallet document.
-    val canonicalWalletUserId = accountId.ifBlank {
-        appContext.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE)
-            .getString("uid", null)?.takeIf { it.isNotBlank() }
-            ?: currentUser.uid.ifBlank { currentUser.id }
-    }
+    // Use exactly the same wallet identity priority as CoinsNativePage.
+    // The wallet page keys MongoDB balances by Firebase UID first, then accountId.
+    // Using accountId here created a separate zero-balance wallet, so Lucky Bag
+    // incorrectly rejected sends even while Mine > Wallet showed sufficient coins.
+    val canonicalWalletUserId = appContext.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE)
+        .getString("uid", null)?.takeIf { it.isNotBlank() }
+        ?: accountId.ifBlank { currentUser.uid.ifBlank { currentUser.id } }
 
     var showFloatingLuckyBag by remember { mutableStateOf(false) }
     var showLuckyBagCenterReveal by remember { mutableStateOf(false) }
@@ -1102,7 +1101,7 @@ fun RoomPage(
         }
         val walletBalanceListener = Emitter.Listener { args ->
             val payload = args.firstOrNull() as? JSONObject ?: return@Listener
-            if (payload.optString("userId") == accountId) {
+            if (payload.optString("userId") == canonicalWalletUserId) {
                 val updated = payload.optLong("balance", -1L)
                 if (updated >= 0L) mainHandler.post { roomWalletBalance = updated }
             }
