@@ -149,7 +149,8 @@ fun NativeAvatarFrameOverlay(userId: String, modifier: Modifier = Modifier) {
     }
     val selected = frame
     if (selected != null) {
-        val video = selected.optString("video", "")
+        val selectedItem = nativeStoreItems.firstOrNull { it.id == selected.optString("itemId") }
+        val video = selected.optString("video", selectedItem?.video.orEmpty()).ifBlank { selectedItem?.video.orEmpty() }
         if (video.isNotBlank()) {
             val frameId = selected.optString("itemId", "")
             val frameMute = frameId == "a8"
@@ -157,13 +158,13 @@ fun NativeAvatarFrameOverlay(userId: String, modifier: Modifier = Modifier) {
                 url = StoreAssetBase + video,
                 modifier = modifier,
                 pause = false,
-                topFade = 0.1f,
+                topFade = 0f,
                 bottomFade = 0f,
                 removeGreenScreen = true,
                 mute = frameMute
             )
         } else {
-            val image = selected.optString("image", "")
+            val image = selected.optString("image", selectedItem?.image.orEmpty()).ifBlank { selectedItem?.image.orEmpty() }
             if (image.isNotBlank()) AsyncImage(model = StoreAssetBase + image, contentDescription = "Equipped avatar frame", modifier = modifier, contentScale = ContentScale.Fit)
         }
     }
@@ -210,7 +211,7 @@ fun NativeOwnedFrameShowcase(userId: String) {
                             url = StoreAssetBase + video,
                             modifier = Modifier.fillMaxWidth().height(76.dp),
                             pause = false,
-                            topFade = 0.1f,
+                            topFade = 0f,
                             bottomFade = 0f,
                             removeGreenScreen = true,
                             mute = item.id == "a8"
