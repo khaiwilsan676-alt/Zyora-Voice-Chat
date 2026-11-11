@@ -628,8 +628,8 @@ private fun CoinsContent(onBuy: (Int, Long, Long) -> Unit) {
             Pack("5,000,000", "₹ 500", "+Bounce 150,000", cardModifier) { onBuy(500, 5_000_000L, 150_000L) }
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Pack("10,000,000", "₹ 1,000", "+Bounce 300,000", cardModifier) { onBuy(1000, 10_000_000L, 300_000L) }
             Pack("8,000,000", "₹ 800", "+Bounce 240,000", cardModifier) { onBuy(800, 8_000_000L, 240_000L) }
+            Pack("10,000,000", "₹ 1,000", "+Bounce 300,000", cardModifier) { onBuy(1000, 10_000_000L, 300_000L) }
             Spacer(cardModifier)
         }
     }
