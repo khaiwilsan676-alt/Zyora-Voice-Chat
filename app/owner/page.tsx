@@ -695,22 +695,30 @@ export default function StaffPanel() {
         let fetchedList: UserRecord[] = [];
 
         try {
-          const res = await fetch(apiUrl('/api/users'), { cache: 'no-store' });
-          if (res.ok) {
-            const data = await res.json();
-            const rawUsers = Array.isArray(data) ? data : (Array.isArray(data?.users) ? data.users : Array.isArray(data?.data) ? data.data : []);
-            fetchedList = rawUsers.map((u: any, index: number) => ({
-              id: String(u._id || u.id || u.uid || index + 1),
-              name: u.name || u.displayName || u.userName || 'User',
-              username: u.username || u.userName || `@${(u.name || 'user').toLowerCase().replace(/\s+/g, '')}`,
-              hurryId: String(u.accountId || u.accountNumber || u.displayAccountNumber || u.displayUserNumber || u["Account ID"] || u["Account Number"] || u.hurryId || u.zyoraId || u.publicUserId || u.id || u.uid || u.appLongId || u._id || '—'),
-              email: u.email || u.gmail || u.emailPhone || u.emailAddress || '—',
-              role: u.role || 'NORMAL',
-              image: [u.image, u.dp, u.photo, u.photoURL, u.photoUrl, u.avatar, u.avatarUrl, u.profileImage, u.profileImageUrl, u.profile_image, u.imageUrl].find((value: any) => typeof value === 'string' && value.trim() && value.trim() !== 'null' && value.trim() !== 'undefined')?.trim() || ''
-            }));
-          }
+          const data: any = await new Promise((resolve, reject) => {
+            const timeout = window.setTimeout(() => reject(new Error('User list request timed out')), 12000);
+            const request = () => socket.emit('owner_users_request', (result: any) => {
+              window.clearTimeout(timeout);
+              resolve(result);
+            });
+            if (socket.connected) request();
+            else {
+              socket.once('connect', request);
+              socket.connect();
+            }
+          });
+          const rawUsers = Array.isArray(data?.users) ? data.users : [];
+          fetchedList = rawUsers.map((u: any, index: number) => ({
+            id: String(u._id || u.id || u.uid || index + 1),
+            name: u.name || u.displayName || u.userName || 'User',
+            username: u.username || u.userName || `@${(u.name || 'user').toLowerCase().replace(/\\s+/g, '')}`,
+            hurryId: String(u.accountId || u.accountNumber || u.displayAccountNumber || u.displayUserNumber || u["Account ID"] || u["Account Number"] || u.hurryId || u.zyoraId || u.publicUserId || u.id || u.uid || u.appLongId || u._id || '—'),
+            email: u.email || u.gmail || u.emailPhone || u.emailAddress || '—',
+            role: u.role || 'NORMAL',
+            image: [u.image, u.dp, u.photo, u.photoURL, u.photoUrl, u.avatar, u.avatarUrl, u.profileImage, u.profileImageUrl, u.profile_image, u.imageUrl].find((value: any) => typeof value === 'string' && value.trim() && value.trim() !== 'null' && value.trim() !== 'undefined')?.trim() || ''
+          }));
         } catch (err) {
-          console.warn('API users fetch fallback:', err);
+          console.warn('Socket.IO owner users load failed:', err);
         }
 
         let currentUserEmail = '';
@@ -779,6 +787,11 @@ export default function StaffPanel() {
 
     loadRealUsers();
 
+    const handleOwnerUsersChanged = () => {
+      if (isMounted) void loadRealUsers();
+    };
+    socket.on('owner_users_changed', handleOwnerUsersChanged);
+
     const unsubscribe = onAuthStateChanged(auth, (authUser) => {
       if (authUser?.email) {
         setUsers(prev => prev.map(u => {
@@ -792,6 +805,7 @@ export default function StaffPanel() {
 
     return () => {
       isMounted = false;
+      socket.off('owner_users_changed', handleOwnerUsersChanged);
       unsubscribe();
     };
   }, []);
