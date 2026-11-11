@@ -31,7 +31,6 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GITHUB_PAGES: "true"
-      NEXT_PUBLIC_BACKEND_URL: "https://zyora-server.onrender.com"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
