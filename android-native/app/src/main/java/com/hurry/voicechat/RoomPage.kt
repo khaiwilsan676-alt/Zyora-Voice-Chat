@@ -976,6 +976,13 @@ fun RoomPage(
                 }
             }
         }
+        val avatarFrameUpdatedListener = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
+            val updatedUserId = payload.optString("userId").trim()
+            if (updatedUserId.isNotBlank()) mainHandler.post {
+                nativeAvatarFrameRefreshVersions[updatedUserId] = (nativeAvatarFrameRefreshVersions[updatedUserId] ?: 0L) + 1L
+            }
+        }
         val clearedListener = Emitter.Listener { args ->
             val payload=args.firstOrNull() as? JSONObject
             if(payload!=null && payload.optString("roomId")==roomId) {
@@ -1250,6 +1257,7 @@ fun RoomPage(
         }
         roomSocket.on("room_presence",presenceListener)
         roomSocket.on("room_vehicle_entry", vehicleEntryListener)
+        roomSocket.on("avatar_frame_updated", avatarFrameUpdatedListener)
         roomSocket.on("room_seat_invite", seatInviteListener)
         roomSocket.on("room_kicked", roomKickedListener)
         roomSocket.on("room_kick_blocked", roomKickBlockedListener)
@@ -1298,6 +1306,7 @@ fun RoomPage(
             }
             roomSocket.off("room_presence",presenceListener)
             roomSocket.off("room_vehicle_entry", vehicleEntryListener)
+            roomSocket.off("avatar_frame_updated", avatarFrameUpdatedListener)
             roomSocket.off("room_seat_invite", seatInviteListener)
             roomSocket.off("room_kicked", roomKickedListener)
             roomSocket.off("room_kick_blocked", roomKickBlockedListener)
