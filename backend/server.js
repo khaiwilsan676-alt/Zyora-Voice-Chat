@@ -1496,6 +1496,25 @@ function scheduleLuckyBagRefund(bag) {
   if (typeof timer.unref === "function") timer.unref();
   luckyBagTimers.set(String(bag.bagId), timer);
 }
+// Recover open bags after backend restarts and refund expired bags even when
+// no client is currently inside the room. MongoDB remains the source of truth.
+const luckyBagRecoveryTimer = setInterval(async () => {
+  if (!db) return;
+  try {
+    const openBags = await luckyBags().find({ status: "open" }).toArray();
+    for (const bag of openBags) {
+      if (Number(bag.expiresAt) <= Date.now()) {
+        await refundLuckyBag(bag.bagId);
+      } else if (!luckyBagTimers.has(String(bag.bagId))) {
+        scheduleLuckyBagRefund(bag);
+      }
+    }
+  } catch (error) {
+    console.error("Lucky Bag recovery sweep failed:", error.message);
+  }
+}, 30000);
+if (typeof luckyBagRecoveryTimer.unref === "function") luckyBagRecoveryTimer.unref();
+
 app.post("/api/wallet/initialize", async (req, res) => {
   try {
     if (!db) return res.status(503).json({ error: "GitHub storage is not connected" });
