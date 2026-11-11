@@ -324,9 +324,13 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                 }
                 Triple(json.optInt("balance",0), owned, Pair(equipped,expiries))
             }.onSuccess { result ->
-                balance=result.first; ownedIds.clear(); ownedIds.addAll(result.second)
-                equippedIds.clear(); equippedIds.addAll(result.third.first)
-                expiryById.clear(); expiryById.putAll(result.third.second)
+                balance = result.first
+                // Inventory GET may have started before a Buy request and finish after it.
+                // Merge server-owned IDs instead of clearing a newer successful local purchase.
+                result.second.forEach { id -> if (!ownedIds.contains(id)) ownedIds.add(id) }
+                equippedIds.clear()
+                equippedIds.addAll(result.third.first)
+                result.third.second.forEach { (id, expiry) -> expiryById[id] = expiry }
             }.onFailure { purchaseMessage = it.message ?: "Wallet unavailable" }
         }
     }
