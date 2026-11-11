@@ -73,7 +73,7 @@ private val StoreBg = Color(0xFFF5F6F8)
 private val StoreCyan = Color(0xFF00B4D8)
 private val CardGrey = Color(0xFF242424) // Halka grey for cards
 private const val StoreAssetBase = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/"
-private val nativeAvatarFrameRefreshVersions = mutableStateMapOf<String, Long>()
+internal val nativeAvatarFrameRefreshVersions = mutableStateMapOf<String, Long>()
 
 private data class NativeStoreTab(val id: String, val label: String, val icon: String)
 private data class NativeStoreItem(
