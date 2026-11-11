@@ -693,6 +693,7 @@ export default function StaffPanel() {
       try {
         setLoadingUsers(true);
         let fetchedList: UserRecord[] = [];
+        let rawUsers: any[] = [];
 
         try {
           const data: any = await new Promise((resolve, reject) => {
@@ -707,7 +708,7 @@ export default function StaffPanel() {
               socket.connect();
             }
           });
-          let rawUsers = Array.isArray(data?.users) ? data.users : [];
+          rawUsers = Array.isArray(data?.users) ? data.users : [];
           // Socket event may not exist on an older Render instance during rollout.
           // Fall back to the already-supported no-query users API instead of
           // silently showing an empty Owner list.
@@ -731,7 +732,31 @@ export default function StaffPanel() {
             image: [u.image, u.dp, u.photo, u.photoURL, u.photoUrl, u.avatar, u.avatarUrl, u.profileImage, u.profileImageUrl, u.profile_image, u.imageUrl].find((value: any) => typeof value === 'string' && value.trim() && value.trim() !== 'null' && value.trim() !== 'undefined')?.trim() || ''
           }));
         } catch (err) {
-          console.warn('Socket.IO owner users load failed:', err);
+          console.warn('Socket.IO owner users load failed; trying HTTP users API:', err);
+        }
+
+        // Always recover through the REST endpoint when Socket.IO timed out,
+        // returned an error, or returned an empty snapshot.
+        if (!rawUsers.length) {
+          const response = await fetch(apiUrl('/api/users'), {
+            method: 'GET',
+            cache: 'no-store',
+            headers: { Accept: 'application/json' }
+          });
+          if (!response.ok) throw new Error(`Users API failed: ${response.status}`);
+          const apiData = await response.json();
+          rawUsers = Array.isArray(apiData?.users) ? apiData.users : [];
+        }
+        if (rawUsers.length) {
+          fetchedList = rawUsers.map((u: any, index: number) => ({
+            id: String(u._id || u.id || u.uid || index + 1),
+            name: String(u.name || u.displayName || u.userName || 'User'),
+            username: String(u.username || u.userName || `@${String(u.name || 'user').toLowerCase().replace(/\\s+/g, '')}`),
+            hurryId: String(u.accountId || u.accountNumber || u.displayAccountNumber || u.displayUserNumber || u["Account ID"] || u["Account Number"] || u.hurryId || u.zyoraId || u.publicUserId || u.id || u.uid || u.appLongId || u._id || '—'),
+            email: String(u.email || u.gmail || u.emailPhone || u.emailAddress || '—'),
+            role: String(u.role || 'NORMAL'),
+            image: [u.image, u.dp, u.photo, u.photoURL, u.photoUrl, u.avatar, u.avatarUrl, u.profileImage, u.profileImageUrl, u.profile_image, u.imageUrl].find((value: any) => typeof value === 'string' && value.trim() && value.trim() !== 'null' && value.trim() !== 'undefined')?.trim() || ''
+          }));
         }
 
         let currentUserEmail = '';
