@@ -593,3 +593,8 @@ Current documentation does not certify that all historical features are build-, 
 - Actual Render backend `Zyora-Server/server.js`: inventory reads purge expired store inventory records in MongoDB and return only active items with `Cache-Control: no-store`. Room reads also validate a selected Store Theme against its active inventory record and persist the default theme when the purchase has expired.
 - Store purchase and Bag countdown already use the shared inventory response; Theme purchases therefore appear in the Theme Bag tab with the same countdown as other owned items.
 - Status: source committed. Native APK compilation, Render deployment, and real-account purchase/expiry/room-background verification remain pending.
+
+## 2026-11-11 — Store theme ownership and expiry consistency
+- Backend `GET /api/store/inventory/:userId` now deletes expired inventory records before returning only unexpired purchases and sends explicit no-cache headers. This prevents stale inventory snapshots from restoring expired Store themes in Bag or Room Settings.
+- Native `RoomSettingPage.kt` now removes purchased themes from its live theme list at their exact expiry time while the settings screen remains open; applying a purchased theme remains a separate room-background choice and does not control whether the purchase appears in the list.
+- Existing Store countdown and RoomPage active-theme expiry fallback are preserved. APK build and real-account purchase/expiry verification are still required.
