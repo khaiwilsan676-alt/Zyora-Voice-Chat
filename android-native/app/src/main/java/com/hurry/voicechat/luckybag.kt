@@ -167,6 +167,23 @@ fun LuckyBag(senderId: String, senderName: String, senderImage: String, roomId: 
                                 }
                                 sending = false
                                 result.onSuccess { json ->
+                                    val serverBalance = json.optLong("balance", -1L)
+                                    if (serverBalance >= 0L) {
+                                        runCatching {
+                                            val dao = WalletDatabase.get(context).walletDao()
+                                            val current = dao.getUserData() ?: UserDataEntity()
+                                            dao.saveUserData(current.copy(balance = serverBalance))
+                                            val authPrefs = context.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE)
+                                            val walletUserId = authPrefs.getString("uid", null)?.takeIf { it.isNotBlank() }
+                                                ?: authPrefs.getString("accountId", senderId).orEmpty()
+                                            context.getSharedPreferences("zyora_wallet_cache", android.content.Context.MODE_PRIVATE)
+                                                .edit()
+                                                .putLong("balance_$walletUserId", serverBalance)
+                                                .putLong("local_recharge_credits_$walletUserId", 0L)
+                                                .putLong("last_sync_$walletUserId", System.currentTimeMillis())
+                                                .apply()
+                                        }
+                                    }
                                     onSent(senderName, senderImage, selectedCoins.toLong(), recipients, json.optString("bagId"))
                                     showClaim = false
                                     onClose()
