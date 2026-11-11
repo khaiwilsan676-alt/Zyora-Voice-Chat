@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { MoreVertical, X, ChevronDown, Search, Star, Sparkles, Gamepad2, Timer, Send, ImageIcon, Megaphone, CheckCircle2, MessageSquare, Bot, ArrowLeft, User, Key, Lock, Camera, ShieldAlert, Eye, EyeOff } from 'lucide-react';
+import { X, ChevronDown, Search, Star, Sparkles, Gamepad2, Timer, Send, ImageIcon, Megaphone, CheckCircle2, MessageSquare, Bot, ArrowLeft, User, Key, Lock, Camera, ShieldAlert, Eye, EyeOff } from 'lucide-react';
 import { auth } from '@/src/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { socket } from '@/src/lib/socket';
@@ -250,7 +250,6 @@ const SidebarCategory = ({ icon, title, items, activeItem, setActiveItem, setIsS
               key={item.id}
               onClick={() => {
                 setActiveItem(item.id);
-                if (window.innerWidth < 768) setIsSidebarOpen(false);
               }}
               className={`flex items-center gap-3 px-6 py-2.5 pl-[52px] text-[13px] font-bold transition-colors w-full text-left
                 ${activeItem === item.id
@@ -408,7 +407,7 @@ export default function StaffPanel() {
   };
 
   const [activeTab, setActiveTab] = useState('manage_users');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
@@ -513,11 +512,6 @@ export default function StaffPanel() {
   const [officialHistory, setOfficialHistory] = useState<any[]>([]);
   const officialFileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    if (typeof window !== 'undefined' && window.innerWidth >= 768) {
-      setIsSidebarOpen(true);
-    }
-  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -1029,20 +1023,13 @@ export default function StaffPanel() {
   return (
     <div className="flex h-screen bg-white font-sans overflow-hidden">
 
-      {isSidebarOpen && (
-        <div className="fixed inset-0 bg-black/50 z-40 md:hidden" onClick={() => setIsSidebarOpen(false)} />
-      )}
-
-      <aside className={`fixed inset-y-0 left-0 z-50 w-[260px] bg-[#1a1c29] flex flex-col flex-shrink-0 h-full overflow-y-auto border-r border-[#2a2d3e] transition-transform duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <aside className="fixed inset-y-0 left-0 z-50 w-[260px] bg-[#1a1c29] flex flex-col flex-shrink-0 h-full overflow-y-auto border-r border-[#2a2d3e] translate-x-0">
 
         <div className="p-6 pb-4 flex items-center justify-between">
           <div>
             <h1 className="text-white text-[19px] font-extrabold tracking-wide drop-shadow-md">Zyora</h1>
             <p className="text-[10px] text-gray-300 font-bold tracking-widest mt-0.5">STAFF CONTROL PANEL</p>
           </div>
-          <button onClick={() => setIsSidebarOpen(false)} className="text-gray-400 hover:text-white">
-            <X className="w-5 h-5" />
-          </button>
         </div>
 
         <nav className="flex-1 mt-2 space-y-1 pb-6">
@@ -1102,25 +1089,7 @@ export default function StaffPanel() {
         </nav>
       </aside>
 
-      <main
-        className={`flex-1 flex flex-col h-full bg-[#f8f9fa] overflow-hidden transition-all duration-300 ${isSidebarOpen ? 'md:pl-[260px]' : 'md:pl-0'}`}
-        onClick={(e) => {
-          const target = e.target as HTMLElement;
-          if (target.closest('button, a, input, select, textarea, [role="button"]')) return;
-          if (typeof window !== 'undefined' && window.innerWidth >= 768 && isSidebarOpen) {
-            setIsSidebarOpen(false);
-          }
-        }}
-      >
-
-        <header className="bg-white p-3 border-b border-slate-200 flex items-center sticky top-0 z-30 shadow-sm">
-          <button
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg active:scale-95 transition-transform"
-          >
-            <MoreVertical className="w-6 h-6" />
-          </button>
-        </header>
+      <main className="flex-1 flex flex-col h-full bg-[#f8f9fa] overflow-hidden md:pl-[260px]">
 
         {activeTab === 'manage_users' && (
           <div className="flex flex-col h-full bg-white">
