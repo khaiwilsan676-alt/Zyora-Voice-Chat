@@ -9,6 +9,17 @@ android {
     namespace = "com.hurry.voicechat"
     compileSdk = 36
 
+    // Keep APKs device-specific: the universal APK was packaging both ARM
+    // native libraries and caused the jump in download size.
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("arm64-v8a", "armeabi-v7a")
+            isUniversalApk = false
+        }
+    }
+
     defaultConfig {
         applicationId = "com.hawa.app"
         // Support Android 6.0 (Marshmallow) and newer devices.
