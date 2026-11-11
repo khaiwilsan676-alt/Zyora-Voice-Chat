@@ -205,7 +205,7 @@ fun NativeOwnedFrameShowcase(userId: String) {
                     Modifier.width(76.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    val video = owned.optString("video", item.video.orEmpty()).ifBlank { item.image }
+                    val video = owned.optString("video").ifBlank { item.video.orEmpty() }.ifBlank { owned.optString("image", item.image).ifBlank { item.image } }
                     if (video.substringBefore("?").endsWith(".mp4", ignoreCase = true)) {
                         StoreVideoPreview(
                             url = StoreAssetBase + video,
@@ -246,7 +246,7 @@ fun NativeOwnedFrameShowcase(userId: String) {
 @Composable
 fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: String = "") {
     var currentView by remember { mutableStateOf(if (initialView.equals("bag", true)) "bag" else "store") }
-    var activeTab by remember { mutableStateOf("Vehicle") }
+    var activeTab by remember { mutableStateOf(if (initialView.equals("bag", true)) "Avatar Frame" else "Vehicle") }
     var selectedItem by remember { mutableStateOf<NativeStoreItem?>(null) }
     var tryItem by remember { mutableStateOf<NativeStoreItem?>(null) }
     var sendItem by remember { mutableStateOf<NativeStoreItem?>(null) }
@@ -330,7 +330,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Box(Modifier.size(36.dp).clip(CircleShape).clickable {
-                    if (isBag) currentView = "store" else onBack()
+                    if (isBag) { currentView = "store"; activeTab = "Vehicle" } else onBack()
                 }, contentAlignment = Alignment.Center) {
                     Icon(Icons.Default.ArrowBack, "Back", tint = Color.White, modifier = Modifier.size(26.dp))
                 }
@@ -338,7 +338,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                 Text(
                     if (isBag) "Store" else "Bag", color = Color(0xFF60A5FA), fontSize = 15.sp,
                     fontWeight = FontWeight.Bold, modifier = Modifier.clip(RoundedCornerShape(6.dp))
-                        .clickable { currentView = if (isBag) "store" else "bag" }.padding(5.dp)
+                        .clickable { if (isBag) { currentView = "store"; activeTab = "Vehicle" } else { currentView = "bag"; activeTab = "Avatar Frame" } }.padding(5.dp)
                 )
             }
             Row(
@@ -531,25 +531,31 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                                         .background(StoreBlue)
                                         .clickable {
                                             if (owned) {
-                                                val nextEquipped = !equipped
-                                                if (nextEquipped) {
-                                                    equippedIds.removeAll { id -> nativeStoreItems.find { it.id == id }?.tab == item.tab }
-                                                    equippedIds.add(item.id)
-                                                } else equippedIds.remove(item.id)
-                                                if (userId.isNotBlank()) storeScope.launch {
-                                                    withContext(Dispatchers.IO) { runCatching {
-                                                        val c = (URL("https://zyora-server.onrender.com/api/store/equip").openConnection() as HttpURLConnection).apply {
-                                                            requestMethod="POST"; doOutput=true; connectTimeout=10000; readTimeout=10000
-                                                            setRequestProperty("Content-Type", "application/json")
-                                                        }
-                                                        val body = JSONObject().put("userId", userId).put("itemId", item.id).put("equipped", nextEquipped).toString()
-                                                        c.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
-                                                        val code = c.responseCode
-                                                        val stream = if (code in 200..299) c.inputStream else c.errorStream
-                                                        val json = JSONObject(stream.bufferedReader().use { it.readText() }); c.disconnect()
-                                                        if (code !in 200..299) throw IllegalStateException(json.optString("error", "Could not use item"))
-                                                    } }.onFailure { purchaseMessage = it.message ?: "Could not use item" }
-                                                }
+                                                if (!purchaseBusy && userId.isNotBlank()) {
+                                                    val nextEquipped = !equipped
+                                                    purchaseBusy = true
+                                                    storeScope.launch {
+                                                        val result = withContext(Dispatchers.IO) { runCatching {
+                                                            val c = (URL("https://zyora-server.onrender.com/api/store/equip").openConnection() as HttpURLConnection).apply {
+                                                                requestMethod="POST"; doOutput=true; connectTimeout=10000; readTimeout=10000
+                                                                setRequestProperty("Content-Type", "application/json")
+                                                            }
+                                                            val body = JSONObject().put("userId", userId).put("itemId", item.id).put("equipped", nextEquipped).toString()
+                                                            c.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
+                                                            val code = c.responseCode
+                                                            val stream = if (code in 200..299) c.inputStream else c.errorStream
+                                                            val json = JSONObject(stream.bufferedReader().use { it.readText() }); c.disconnect()
+                                                            if (code !in 200..299 || !json.optBoolean("success")) throw IllegalStateException(json.optString("error", "Could not use item"))
+                                                        } }
+                                                        result.onSuccess {
+                                                            if (nextEquipped) {
+                                                                equippedIds.removeAll { id -> nativeStoreItems.find { it.id == id }?.tab == item.tab }
+                                                                equippedIds.add(item.id)
+                                                            } else equippedIds.remove(item.id)
+                                                        }.onFailure { purchaseMessage = it.message ?: "Could not use item" }
+                                                        purchaseBusy = false
+                                                    }
+                                                } else if (userId.isBlank()) purchaseMessage = "Please sign in to use items"
                                             } else if (!purchaseBusy && userId.isNotBlank()) {
                                                 purchaseBusy = true
                                                 storeScope.launch {
