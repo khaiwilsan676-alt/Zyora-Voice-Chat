@@ -372,10 +372,14 @@ fun RoomPage(
         }
     }
     
-    // Match Mine > Wallet identity exactly: wallet page prefers the authenticated uid, not the room accountId alias.
-    val canonicalWalletUserId = appContext.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE)
-        .getString("uid", null)?.takeIf { it.isNotBlank() }
-        ?: accountId.ifBlank { currentUser.uid.ifBlank { currentUser.id } }
+    // Lucky Bag must use the exact identity used by the Mine > Wallet screen.
+    // CoinsNativePage loads the canonical wallet with accountId; preferring the
+    // auth uid here can create/read a different zero-balance wallet document.
+    val canonicalWalletUserId = accountId.ifBlank {
+        appContext.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE)
+            .getString("uid", null)?.takeIf { it.isNotBlank() }
+            ?: currentUser.uid.ifBlank { currentUser.id }
+    }
 
     var showFloatingLuckyBag by remember { mutableStateOf(false) }
     var showLuckyBagCenterReveal by remember { mutableStateOf(false) }
