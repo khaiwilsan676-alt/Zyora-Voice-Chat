@@ -372,7 +372,10 @@ fun RoomPage(
         }
     }
     
-    val canonicalWalletUserId = accountId.ifBlank { currentUser.uid.ifBlank { currentUser.id } }
+    // Match Mine > Wallet identity exactly: wallet page prefers the authenticated uid, not the room accountId alias.
+    val canonicalWalletUserId = appContext.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE)
+        .getString("uid", null)?.takeIf { it.isNotBlank() }
+        ?: accountId.ifBlank { currentUser.uid.ifBlank { currentUser.id } }
 
     var showFloatingLuckyBag by remember { mutableStateOf(false) }
     var showLuckyBagCenterReveal by remember { mutableStateOf(false) }
@@ -2624,7 +2627,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                                     luckyBagClaimError = null
                                     CoroutineScope(Dispatchers.IO).launch {
                                         val result = runCatching {
-                                            val payload = JSONObject().put("bagId", luckyBagId).put("userId", accountId)
+                                            val payload = JSONObject().put("bagId", luckyBagId).put("userId", canonicalWalletUserId)
                                             val connection = (java.net.URL("https://zyora-server.onrender.com/api/lucky-bag/claim").openConnection() as java.net.HttpURLConnection).apply {
                                                 requestMethod = "POST"
                                                 connectTimeout = 12000
