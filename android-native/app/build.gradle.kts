@@ -9,16 +9,6 @@ android {
     namespace = "com.hurry.voicechat"
     compileSdk = 36
 
-    // Build device-specific APKs instead of one oversized universal APK.
-    // Keep both 64-bit and 32-bit ARM support for broad Android compatibility.
-    splits {
-        abi {
-            isEnable = true
-            reset()
-            include("arm64-v8a", "armeabi-v7a")
-            isUniversalApk = false
-        }
-    }
     defaultConfig {
         applicationId = "com.hawa.app"
         // Support Android 6.0 (Marshmallow) and newer devices.
