@@ -85,6 +85,7 @@ private data class NativeSettingMember(val accountId: String, val name: String, 
 
 private const val SETTINGS_API = "https://zyora-server.onrender.com"
 private const val RAW_SETTINGS = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/"
+private const val STORE_THEME_ASSET_BASE = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/"
 
 private val roomThemeChoices = listOf(
     RoomThemeChoice("forest-night", "Forest Night", RAW_SETTINGS + "1784875884052~2.jpg"),
@@ -372,7 +373,7 @@ fun RoomSettingPage(
                             val expiry = item.optLong("expiresAt")
                             if (item.optString("tab") == "Theme" && id.isNotBlank() && expiry > System.currentTimeMillis()) {
                                 val image = item.optString("image")
-                                if (image.isNotBlank()) RoomThemeChoice(id, item.optString("name", id), RAW_SETTINGS + image, expiry) else null
+                                if (image.isNotBlank()) RoomThemeChoice(id, item.optString("name", id), STORE_THEME_ASSET_BASE + image, expiry) else null
                             } else null
                         }
                     }
