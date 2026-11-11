@@ -611,3 +611,10 @@ Current documentation does not certify that all historical features are build-, 
 - Purchased theme previews now use the same public asset repository as Store catalog images; previously Room Settings and the room background resolved Store image filenames against the Zyora asset repository, causing broken/missing theme images.
 - Room background inventory lookups also bypass HTTP caches and use the Store asset source for purchased theme backgrounds. Existing purchase duration (30 days), Bag countdown, and server-side expiry filtering remain authoritative.
 - Verification: source changes committed; native APK build and real-account purchase/apply/expiry checks still require CI/device verification.
+
+
+## 2026-11-11 — Store purchase and inventory hardening
+- `Zyora-Server/server.js`: Store purchases now reserve the unique user/item inventory slot before wallet debit, preventing parallel Buy taps from charging twice; failed debits clear the reservation, and failed persistence after debit triggers a wallet refund.
+- Store inventory reads exclude incomplete pending reservations and remain non-cacheable; equip requests require an active, unexpired owned item and clear competing equipped items only within the same tab.
+- `StorePage.kt`: inventory refresh requests bypass HTTP caches and successful purchases replace the local owned ID rather than appending duplicate entries.
+- UI unchanged. Android build and live Render deployment/runtime verification are still pending.
