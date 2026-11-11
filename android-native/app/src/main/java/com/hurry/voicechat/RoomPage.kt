@@ -2436,10 +2436,20 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                 },
                 onLock={
                     if(isRoomOwner || isRoomAdmin) {
-                        val nextLocked=!seat.locked
-                        if(seatIndex>=0) seats[seatIndex]=if(nextLocked) NativeRoomSeat(number=seat.number,locked=true) else seat.copy(locked=false)
-                        roomSocketRef.value?.emit("room_seat_action",JSONObject().put("roomId",roomId).put("userId",accountId).put("action","lock").put("seatNumber",seat.number).put("isLocked",nextLocked))
-                        showSeatSheet=false;selectedSeat=0
+                        // Read the latest seat state at tap time; the sheet's captured
+                        // seat can be stale after a room_seats broadcast.
+                        val currentSeat = seats.getOrNull(seatIndex)
+                        if (currentSeat != null) {
+                            val nextLocked = !currentSeat.locked
+                            roomSocketRef.value?.takeIf { it.connected() }?.emit(
+                                "room_seat_action",
+                                JSONObject().put("roomId", roomId).put("userId", accountId)
+                                    .put("action", "lock").put("seatNumber", currentSeat.number)
+                                    .put("isLocked", nextLocked)
+                            )
+                            showSeatSheet = false
+                            selectedSeat = 0
+                        }
                     }
                 },
                 onInvite={
