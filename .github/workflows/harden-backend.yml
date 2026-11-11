@@ -3,6 +3,8 @@ name: Harden Hurry backend
 on:
   push:
     branches: [main]
+    paths:
+      - 'backend/**'
 
 permissions:
   contents: write
