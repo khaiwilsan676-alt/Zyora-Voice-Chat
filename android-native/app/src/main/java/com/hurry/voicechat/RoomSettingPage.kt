@@ -346,14 +346,20 @@ fun RoomSettingPage(
     }
 
     val storeRoomThemes = remember { mutableStateListOf<RoomThemeChoice>() }
-    LaunchedEffect(currentUserId) {
+    // Refresh from the server whenever the Theme picker is opened. A one-time
+    // screen-entry snapshot could miss a purchase made moments earlier or retain
+    // an outdated inventory response while Room Settings stays alive.
+    LaunchedEffect(currentUserId, sheet == "theme") {
         if (currentUserId.isBlank()) return@LaunchedEffect
         withContext(Dispatchers.IO) {
             runCatching {
                 val encoded = java.net.URLEncoder.encode(currentUserId, "UTF-8")
                 val conn = (URL("$SETTINGS_API/api/store/inventory/$encoded").openConnection() as HttpURLConnection).apply {
-                    connectTimeout = 8000
-                    readTimeout = 8000
+                    connectTimeout = 10000
+                    readTimeout = 10000
+                    setRequestProperty("Accept", "application/json")
+                    setRequestProperty("Cache-Control", "no-cache, no-store")
+                    setRequestProperty("Pragma", "no-cache")
                 }
                 try {
                     if (conn.responseCode !in 200..299) emptyList()
