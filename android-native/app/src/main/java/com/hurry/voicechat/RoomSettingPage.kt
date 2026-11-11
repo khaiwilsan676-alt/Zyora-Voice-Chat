@@ -1151,6 +1151,14 @@ private fun ThemeFullScreen(
     onUploadCustom: () -> Unit
 ) {
     var selectedTheme by remember(current) { mutableStateOf(current) }
+    var clockNow by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(items) {
+        while (true) {
+            clockNow = System.currentTimeMillis()
+            delay(1000L)
+        }
+    }
+    val visibleThemes = items.filter { it.expiresAt <= 0L || it.expiresAt > clockNow }
     
     Dialog(
         onDismissRequest = onBack,
@@ -1220,15 +1228,7 @@ private fun ThemeFullScreen(
                         }
                     }
                 }
-                var clockNow by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    LaunchedEffect(items) {
-        while (true) {
-            clockNow = System.currentTimeMillis()
-            delay(1000L)
-        }
-    }
-    val visibleThemes = items.filter { it.expiresAt <= 0L || it.expiresAt > clockNow }
-    gridItems(visibleThemes) { theme ->
+                gridItems(visibleThemes) { theme ->
                     Column(
                         Modifier.fillMaxWidth()
                             .clip(RoundedCornerShape(8.dp))
