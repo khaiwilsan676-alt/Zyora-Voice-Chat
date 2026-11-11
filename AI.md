@@ -631,3 +631,10 @@ Current documentation does not certify that all historical features are build-, 
 - Corrected Coil 3 GIF and OkHttp network artifact coordinates in `android-native/app/build.gradle.kts` to the `io.coil-kt.coil3` group. The previous coordinates referenced nonexistent modules and failed `:app:checkDebugAarMetadata`.
 - Preserved all app UI and behavior; no screen/layout changes.
 - The next `Build Zyora Native APK` run must confirm dependency resolution, APK compilation, and AAB packaging.
+
+
+## 2026-11-12 — Native Kotlin compile fixes (build #2478)
+- Moved coin-pack `Modifier.weight` declarations into their respective `RowScope`, preventing the Float/weight invocation compile error while preserving the same 3-column layout.
+- Added the missing `kotlinx.coroutines.delay` import in `RoomPage.kt`.
+- Moved theme expiry timer state and `LaunchedEffect` out of the `LazyVerticalGrid` DSL receiver and into `ThemeFullScreen` composable scope; grid still receives the filtered theme list and countdown display is unchanged.
+- No UI redesign or feature changes.
