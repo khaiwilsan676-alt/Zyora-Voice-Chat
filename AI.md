@@ -625,3 +625,9 @@ Current documentation does not certify that all historical features are build-, 
 - `luckybag.kt` no longer reads or sends the stale local Room wallet balance; the server's canonical wallet balance is authoritative for Lucky Bag send validation and debit.
 - Lucky Bag amount deduction remains server-side and atomic; successful claims credit the claimant's canonical wallet, one claim per user, and unclaimed bags are refunded after the existing five-minute expiry.
 - Status: source committed. Android APK build, Render deployment, and two-account live send/claim/refund verification remain pending.
+
+
+## 2026-11-12 — Native APK dependency coordinate fix
+- Corrected Coil 3 GIF and OkHttp network artifact coordinates in `android-native/app/build.gradle.kts` to the `io.coil-kt.coil3` group. The previous coordinates referenced nonexistent modules and failed `:app:checkDebugAarMetadata`.
+- Preserved all app UI and behavior; no screen/layout changes.
+- The next `Build Zyora Native APK` run must confirm dependency resolution, APK compilation, and AAB packaging.
