@@ -695,7 +695,7 @@ export default function StaffPanel() {
         let fetchedList: UserRecord[] = [];
 
         try {
-          const res = await fetch(apiUrl('/api/users'));
+          const res = await fetch(apiUrl('/api/users'), { cache: 'no-store' });
           if (res.ok) {
             const data = await res.json();
             const rawUsers = Array.isArray(data) ? data : (Array.isArray(data?.users) ? data.users : Array.isArray(data?.data) ? data.data : []);
@@ -703,7 +703,7 @@ export default function StaffPanel() {
               id: String(u._id || u.id || u.uid || index + 1),
               name: u.name || u.displayName || u.userName || 'User',
               username: u.username || u.userName || `@${(u.name || 'user').toLowerCase().replace(/\s+/g, '')}`,
-              hurryId: String(u.accountId || u.accountNumber || u["Account ID"] || u["Account Number"] || u.displayAccountNumber || u.displayUserNumber || u.hurryId || u.id || u.uid || u.appLongId || u._id || '—'),
+              hurryId: String(u.accountId || u.accountNumber || u.displayAccountNumber || u.displayUserNumber || u["Account ID"] || u["Account Number"] || u.hurryId || u.zyoraId || u.publicUserId || u.id || u.uid || u.appLongId || u._id || '—'),
               email: u.email || u.gmail || u.emailPhone || u.emailAddress || '—',
               role: u.role || 'NORMAL',
               image: [u.image, u.dp, u.photo, u.photoURL, u.photoUrl, u.avatar, u.avatarUrl, u.profileImage, u.profileImageUrl, u.profile_image, u.imageUrl].find((value: any) => typeof value === 'string' && value.trim() && value.trim() !== 'null' && value.trim() !== 'undefined')?.trim() || ''
@@ -748,17 +748,7 @@ export default function StaffPanel() {
             u.hurryId === currentUserId ||
             u.id === currentUserId
           );
-          if (!exists) {
-            fetchedList.unshift({
-              id: currentUserId || 'auth-current-user',
-              name: currentUserName || 'Verified User',
-              username: currentUserName ? `@${currentUserName.toLowerCase().replace(/\s+/g, '')}` : '@active_user',
-              hurryId: currentUserId || '88100293',
-              email: currentUserEmail || '—',
-              role: 'NORMAL',
-              image: currentUserPhoto || ''
-            });
-          } else {
+          if (exists) {
             fetchedList = fetchedList.map(u => {
               if (
                 (u.id === currentUserId || u.hurryId === currentUserId) &&
@@ -912,7 +902,7 @@ export default function StaffPanel() {
             id: String(u._id || u.id || u.uid || index + 1),
             name: u.name || u.displayName || u.userName || 'User',
             username: u.username || u.userName || `@${(u.name || 'user').toLowerCase().replace(/\s+/g, '')}`,
-            hurryId: String(u.accountId || u.displayUserNumber || u.appLongId || u.hurryId || u.id || '—'),
+            hurryId: String(u.accountId || u.accountNumber || u.displayAccountNumber || u.displayUserNumber || u["Account ID"] || u["Account Number"] || u.hurryId || u.zyoraId || u.publicUserId || u.id || u.uid || u.appLongId || u._id || '—'),
             email: u.email || u.gmail || u.emailPhone || '—',
             role: u.role || 'NORMAL',
             image: [u.image, u.dp, u.photo, u.photoURL, u.photoUrl, u.avatar, u.avatarUrl, u.profileImage, u.profileImageUrl, u.profile_image, u.imageUrl].find((value: any) => typeof value === 'string' && value.trim() && value.trim() !== 'null' && value.trim() !== 'undefined')?.trim() || ''
