@@ -1106,7 +1106,7 @@ export default function StaffPanel() {
             <div className="px-8 py-6 pb-4 border-b border-gray-100 flex items-center justify-between">
               <div>
                 <h2 className="text-xl font-bold text-slate-800">Users</h2>
-                <p className="text-xs text-slate-400 mt-0.5">Real user database records with Firebase Gmail authentication</p>
+                <p className="text-xs text-slate-400 mt-0.5">Registered users</p>
               </div>
               <span className="text-xs font-semibold px-3 py-1 bg-slate-100 text-slate-600 rounded-full">
                 Total Users: {users.length}
@@ -1151,8 +1151,8 @@ export default function StaffPanel() {
                       <tr className="border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                         <th className="py-4 pl-4 pr-2 w-12">S.No</th>
                         <th className="py-4 px-2 w-1/3">User Profile & Avatar</th>
-                        <th className="py-4 px-2">User ID (MongoDB)</th>
-                        <th className="py-4 px-2">Email (Firebase Gmail)</th>
+                        <th className="py-4 px-2">User ID</th>
+                        <th className="py-4 px-2">Email</th>
                         <th className="py-4 px-2">Role</th>
                         <th className="py-4 pr-4 text-right">Actions</th>
                       </tr>
