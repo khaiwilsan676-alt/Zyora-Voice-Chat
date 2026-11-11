@@ -619,18 +619,19 @@ private fun DetailsNativePage(type: String, onBack: () -> Unit) {
 // ═══════════════════════════════════════════════════════
 @Composable
 private fun CoinsContent(onBuy: (Int, Long, Long) -> Unit) {
-    val cardModifier = Modifier.weight(1f)
     Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 20.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            val cardModifier = Modifier.weight(1f)
             Pack("1,000,000", "₹ 100", "+Bounce 30,000", cardModifier) { onBuy(100, 1_000_000L, 30_000L) }
             Pack("2,000,000", "₹ 200", "+Bounce 60,000", cardModifier) { onBuy(200, 2_000_000L, 60_000L) }
             Pack("5,000,000", "₹ 500", "+Bounce 150,000", cardModifier) { onBuy(500, 5_000_000L, 150_000L) }
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            val cardModifier = Modifier.weight(1f)
             Pack("8,000,000", "₹ 800", "+Bounce 240,000", cardModifier) { onBuy(800, 8_000_000L, 240_000L) }
             Pack("10,000,000", "₹ 1,000", "+Bounce 300,000", cardModifier) { onBuy(1000, 10_000_000L, 300_000L) }
-            Spacer(cardModifier)
+            Spacer(Modifier.weight(1f))
         }
     }
 }
