@@ -80,7 +80,7 @@ data class RoomSettingsDataNative(
     val customTheme: String = ""
 )
 
-private data class RoomThemeChoice(val id: String, val name: String, val image: String)
+private data class RoomThemeChoice(val id: String, val name: String, val image: String, val expiresAt: Long = 0L)
 private data class NativeSettingMember(val accountId: String, val name: String, val image: String)
 
 private const val SETTINGS_API = "https://zyora-server.onrender.com"
@@ -364,9 +364,9 @@ fun RoomSettingPage(
                             val item = arr.optJSONObject(index) ?: return@mapNotNull null
                             val id = item.optString("itemId")
                             val expiry = item.optLong("expiresAt")
-                            if (item.optString("tab") == "Theme" && item.optBoolean("equipped") && id.isNotBlank() && expiry > System.currentTimeMillis()) {
+                            if (item.optString("tab") == "Theme" && id.isNotBlank() && expiry > System.currentTimeMillis()) {
                                 val image = item.optString("image")
-                                if (image.isNotBlank()) RoomThemeChoice(id, item.optString("name", id), RAW_SETTINGS + image) else null
+                                if (image.isNotBlank()) RoomThemeChoice(id, item.optString("name", id), RAW_SETTINGS + image, expiry) else null
                             } else null
                         }
                     }
@@ -1124,7 +1124,15 @@ private fun ThemeFullScreen(
                         }
                     }
                 }
-                gridItems(items) { theme ->
+                var clockNow by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(items) {
+        while (true) {
+            clockNow = System.currentTimeMillis()
+            delay(1000L)
+        }
+    }
+    val visibleThemes = items.filter { it.expiresAt <= 0L || it.expiresAt > clockNow }
+    gridItems(visibleThemes) { theme ->
                     Column(
                         Modifier.fillMaxWidth()
                             .clip(RoundedCornerShape(8.dp))
@@ -1155,6 +1163,14 @@ private fun ThemeFullScreen(
                             modifier = Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 4.dp),
                             maxLines = 1, overflow = TextOverflow.Ellipsis
                         )
+                        if (theme.expiresAt > 0L) {
+                            val seconds = ((theme.expiresAt - clockNow).coerceAtLeast(0L) / 1000L)
+                            Text(
+                                "%dd %02dh %02dm %02ds".format(seconds / 86400L, (seconds % 86400L) / 3600L, (seconds % 3600L) / 60L, seconds % 60L),
+                                fontSize = 10.sp, color = gray500, textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp)
+                            )
+                        }
                     }
                 }
             }
