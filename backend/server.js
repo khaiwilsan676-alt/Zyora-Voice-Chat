@@ -892,7 +892,7 @@ app.get("/api/users", async (req, res) => {
         displayUserNumber: numberId,
         name: user.name || user.displayName || user.userName || "User",
         email: user.email || user.gmail || user.emailPhone || user.emailAddress || user.Email || "",
-        image: user.image || user.avatar || user.profileImageUrl || "/default-avatar.png",
+        image: [user.image, user.dp, user.photo, user.photoURL, user.photoUrl, user.avatar, user.avatarUrl, user.profileImage, user.profileImageUrl, user.profile_image, user.imageUrl].find((value) => typeof value === "string" && value.trim() && value.trim() !== "null" && value.trim() !== "undefined") || "/default-avatar.png",
         country: user.country || "🇮🇳",
       };
     };
