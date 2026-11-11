@@ -39,7 +39,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
 
       - name: Install web dependencies
         run: npm install --no-audit --no-fund
