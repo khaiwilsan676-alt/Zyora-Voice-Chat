@@ -335,6 +335,9 @@ fun RoomPage(
                     val conn = (java.net.URL("https://zyora-server.onrender.com/api/store/inventory/$encoded").openConnection() as java.net.HttpURLConnection).apply {
                         connectTimeout = 8000
                         readTimeout = 8000
+                        useCaches = false
+                        setRequestProperty("Cache-Control", "no-cache, no-store")
+                        setRequestProperty("Pragma", "no-cache")
                     }
                     try {
                         if (conn.responseCode !in 200..299) null
@@ -1401,7 +1404,7 @@ fun RoomPage(
             "moon-light-new" -> "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_0000000050288211aecacc1c105240c7.png"
             "dark-night-flower" -> "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_000000006ec4821182b483795db2d94c.png"
             "custom" -> roomCustomThemeUrl.takeIf { it.startsWith("https://") } ?: "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/1784875884052~2.jpg"
-            else -> if (purchasedRoomThemeImage.isNotBlank()) "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/$purchasedRoomThemeImage" else "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/1784875884052~2.jpg"
+            else -> if (purchasedRoomThemeImage.isNotBlank()) "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/$purchasedRoomThemeImage" else "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/1784875884052~2.jpg"
         },contentDescription="Room theme background",modifier=Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
 
         // CUP AND MUSIC PILLS REVERTED TO ORIGINAL TOP LEFT OVERLAY POSITION
