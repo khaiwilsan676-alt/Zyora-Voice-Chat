@@ -604,3 +604,10 @@ Current documentation does not certify that all historical features are build-, 
 - Native `RoomSettingPage.kt`: refreshes the account's server-authoritative Store inventory whenever the Room Theme picker opens, and explicitly bypasses HTTP caches. This prevents a one-time screen-entry inventory snapshot from hiding a newly purchased Theme or showing stale ownership.
 - Purchased Theme entries remain independent of the equipped flag; Room Settings lists every unexpired owned Theme, and expiry filtering removes entries when their server-provided expiry is reached.
 - Verification: source committed; native APK build and live purchase/apply/expiry checks remain pending.
+
+
+## 2026-11-11 — Purchased Store themes in Room Settings
+- Room Settings refreshes the signed-in user's Store inventory whenever the Theme picker is opened, with HTTP caching disabled, so newly purchased themes appear even when they have not been applied yet.
+- Purchased theme previews now use the same public asset repository as Store catalog images; previously Room Settings and the room background resolved Store image filenames against the Zyora asset repository, causing broken/missing theme images.
+- Room background inventory lookups also bypass HTTP caches and use the Store asset source for purchased theme backgrounds. Existing purchase duration (30 days), Bag countdown, and server-side expiry filtering remain authoritative.
+- Verification: source changes committed; native APK build and real-account purchase/apply/expiry checks still require CI/device verification.
