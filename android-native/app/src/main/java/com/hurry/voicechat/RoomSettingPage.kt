@@ -605,9 +605,86 @@ fun RoomSettingPage(
             hasCustom = customTheme.isNotBlank(),
             onBack = { sheet = "" },
             onPick = { id -> performSave(state.copy(theme = id)); sheet = "" },
-            onUploadCustom = { pendingPicker = "theme"; picker.launch("image/*") }
+            onUploadCustom = { sheet = "customized-theme" }
         )
-        
+
+        "customized-theme" -> BottomSheetModal(
+            scrimAlpha = 0.55f,
+            heightFraction = 0.70f,
+            dark = true,
+            cornerRadius = 12.dp,
+            onDismiss = { sheet = "theme" }
+        ) {
+            Column(
+                Modifier.fillMaxSize().background(Color.Black)
+                    .navigationBarsPadding()
+                    .padding(horizontal = 18.dp)
+            ) {
+                Text(
+                    "Customized Theme",
+                    Modifier.fillMaxWidth().padding(top = 18.dp, bottom = 24.dp),
+                    color = Color.White, fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold, textAlign = TextAlign.Center
+                )
+                Box(
+                    Modifier.size(104.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .border(1.5.dp, blue500, RoundedCornerShape(12.dp))
+                        .clickable {
+                            pendingPicker = "theme"
+                            picker.launch("image/*")
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("+", color = blue500, fontSize = 34.sp, fontWeight = FontWeight.Normal)
+                        Text("Upload Image", color = blue400, fontSize = 11.sp)
+                    }
+                }
+                Spacer(Modifier.height(22.dp))
+                Text("Rule:", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(10.dp))
+                listOf(
+                    "Upload Any Image For Customized Room Background.",
+                    "Make sure Do Not Upload Any Vulgar Image.",
+                    "Image Review / Approval Time Is 24 To 48 Hours.",
+                    "If Your Room Theme Is Rejected, The Coin Amount Will Be Returned To Your Coin Wallet."
+                ).forEach { rule ->
+                    Row(
+                        Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Text("•", color = Color.White, fontSize = 13.sp)
+                        Text(
+                            rule,
+                            Modifier.weight(1f).padding(start = 8.dp),
+                            color = Color(0xFFE5E7EB), fontSize = 12.sp,
+                            lineHeight = 18.sp
+                        )
+                    }
+                }
+                Spacer(Modifier.weight(1f))
+                Box(
+                    Modifier.fillMaxWidth().padding(bottom = 14.dp)
+                        .height(48.dp).clip(CircleShape)
+                        .background(blue500)
+                        .clickable {
+                            pendingPicker = "theme"
+                            picker.launch("image/*")
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Confirm", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.width(10.dp))
+                        Text("🪙", fontSize = 17.sp)
+                        Spacer(Modifier.width(5.dp))
+                        Text("5,00,000", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+
         "mic" -> BottomSheetModal(scrimAlpha = 0.3f, heightFraction = 0.50f, onDismiss = { sheet = "" }) { // Height increased to 0.50f
             Column(Modifier.fillMaxSize()) {
                 Row(
