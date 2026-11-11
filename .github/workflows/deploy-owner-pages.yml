@@ -2,17 +2,8 @@ name: Deploy Zyora Owner UI to GitHub Pages
 
 on:
   push:
-    branches: [main]
-    paths:
-      - "app/**"
-      - "components/**"
-      - "src/**"
-      - "public/**"
-      - "next.config.ts"
-      - "package.json"
-      - "package-lock.json"
-      - "tsconfig.json"
-      - ".github/workflows/deploy-owner-pages.yml"
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
@@ -21,8 +12,8 @@ permissions:
   id-token: write
 
 concurrency:
-  group: github-pages
-  cancel-in-progress: true
+  group: zyora-owner-pages
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -30,22 +21,35 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
+
       - name: Install dependencies
-        run: npm install
-      - name: Build static Next.js site
+        run: npm install --no-audit --no-fund
+
+      - name: Build static Owner UI
         run: npm run build
         env:
           GITHUB_PAGES: "true"
+
+      - name: Verify exported routes
+        run: |
+          test -f out/index.html
+          test -f out/owner/index.html
+          touch out/.nojekyll
+
       - name: Configure Pages
         uses: actions/configure-pages@v5
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: out
+
   deploy:
     environment:
       name: github-pages
