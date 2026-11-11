@@ -926,13 +926,16 @@ private fun Pack(c: String, p: String, b: String, m: Modifier, onClick: () -> Un
     ) {
         AsyncImage(RAW_WALLET + "file_00000000e56882119c217d508b6733dc.png", null,
             Modifier.size(32.dp), contentScale = ContentScale.Fit)
-        Text(c, Modifier.padding(top = 6.dp), fontSize = 17.sp,
-            fontWeight = FontWeight.Bold, color = Color(0xFF111827), lineHeight = 17.sp)
+        Text(c, Modifier.padding(top = 6.dp),
+            fontSize = if (c == "10,000,000") 14.sp else 17.sp,
+            fontWeight = FontWeight.Bold, color = Color(0xFF111827),
+            lineHeight = if (c == "10,000,000") 15.sp else 17.sp)
         Text(b, Modifier.padding(top = 5.dp)
             .background(Color(0xFFEF4444), RoundedCornerShape(4.dp))
             .padding(horizontal = 5.dp, vertical = 3.dp),
             fontSize = 9.sp, color = Color.White, fontWeight = FontWeight.Bold, lineHeight = 9.sp)
-        Text(p, Modifier.padding(top = 6.dp), fontSize = 14.sp,
+        Text(if (p.trimStart().startsWith("₹")) p else "₹ $p",
+            Modifier.padding(top = 6.dp), fontSize = 14.sp,
             color = Color(0xFF6B7280), fontWeight = FontWeight.Medium, lineHeight = 14.sp)
     }
 }
