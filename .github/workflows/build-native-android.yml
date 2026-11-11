@@ -102,7 +102,7 @@ jobs:
       - name: Report APK signing certificate fingerprint for Google OAuth
         if: ${{ success() }}
         run: |
-          APK="android-native/app/build/outputs/apk/debug/app-debug.apk"
+          APK="android-native/app/build/outputs/apk/debug/app-arm64-v8a-debug.apk"
           APKSIGNER="$ANDROID_HOME/build-tools/36.0.0/apksigner"
           "$APKSIGNER" verify --print-certs "$APK" | tee /tmp/zyora-apk-certificate.txt
           SHA1=$(sed -n 's/.*certificate SHA-1 digest: //p' /tmp/zyora-apk-certificate.txt | head -n 1)
@@ -118,7 +118,7 @@ jobs:
         with:
           apiToken: ${{ env.APPETIZE_API_TOKEN }}
           publicKey: ${{ env.APPETIZE_PUBLIC_KEY }}
-          appFile: android-native/app/build/outputs/apk/debug/app-debug.apk
+          appFile: android-native/app/build/outputs/apk/debug/app-arm64-v8a-debug.apk
           platform: android
           note: Zyora native commit ${{ github.sha }}
           timeout: '600'
@@ -129,11 +129,11 @@ jobs:
           echo "## Zyora Native Browser Preview" >> "$GITHUB_STEP_SUMMARY"
           echo "Open the actual Android app in your browser: https://appetize.io/app/${{ steps.appetize.outputs.publicKey }}" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Upload Native APK
+      - name: Upload Native ABI APKs
         uses: actions/upload-artifact@v4
         with:
           name: zyora-native-debug
-          path: android-native/app/build/outputs/apk/debug/app-debug.apk
+          path: android-native/app/build/outputs/apk/debug/app-*-debug.apk
           if-no-files-found: error
           retention-days: 30
 
@@ -152,4 +152,4 @@ jobs:
           tag_name: zyora-native-${{ github.run_number }}
           name: Zyora Native ${{ github.run_number }}
           body: Actual Kotlin/Jetpack Compose Native APK from android-native, commit ${{ github.sha }}.
-          files: android-native/app/build/outputs/apk/debug/app-debug.apk
+          files: android-native/app/build/outputs/apk/debug/app-*-debug.apk
