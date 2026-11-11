@@ -578,3 +578,10 @@ Current documentation does not certify that all historical features are build-, 
 - Public Profile's owned-frame showcase now falls back to the exact catalog video/image when the inventory response omits or returns an empty media field, matching the Store asset for each frame.
 - Existing duration countdown, expiry removal, Store purchase endpoint, and shared avatar overlay surfaces remain in place.
 - Verification: source committed; native APK build and real-account Bag/profile/seat runtime checks remain pending.
+
+## 2026-11-11 — Realtime avatar frame refresh and expiry
+- Native `StorePage.kt`: a successful Avatar Frame equip/remove increments the account's shared Compose refresh version. Me and profile overlays reload the server-authoritative equipped frame without requiring the screen to be recreated.
+- Native `NativeAvatarFrameOverlay` and `NativeOwnedFrameShowcase` now clear equipped overlays and owned-frame showcase entries when their server expiry timestamp is reached.
+- Native `RoomPage.kt` listens for `avatar_frame_updated` and refreshes the affected user's seat overlay. The listener is removed with the room socket lifecycle.
+- Backend `Zyora-Server/server.js`: after the inventory equip write succeeds, the server emits `avatar_frame_updated` to the owner's personal socket room and to active room(s) containing that user. Payload: `{ userId, itemId, equipped, updatedAt }`; no media URLs or wallet data are broadcast.
+- Store Buy/Send behavior and existing UI layout are unchanged. Native build, Render deployment, and two-account runtime verification remain pending until confirmed by CI/deployment/device tests.
