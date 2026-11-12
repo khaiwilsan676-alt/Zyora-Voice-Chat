@@ -271,6 +271,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
     val authPrefs = remember { appContext.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE) }
     val walletCachePrefs = remember { appContext.getSharedPreferences("zyora_wallet_cache", android.content.Context.MODE_PRIVATE) }
     val storeUserId = remember(userId) { authPrefs.getString("uid", null)?.takeIf { it.isNotBlank() } ?: userId.ifBlank { authPrefs.getString("accountId", "").orEmpty() } }
+    val storeInventoryUserId = remember(userId) { userId.ifBlank { authPrefs.getString("accountId", "").orEmpty() } }
     var tryItem by remember { mutableStateOf<NativeStoreItem?>(null) }
     var sendItem by remember { mutableStateOf<NativeStoreItem?>(null) }
     var searchQuery by remember { mutableStateOf("") }
@@ -313,7 +314,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
         if (storeUserId.isBlank()) return@LaunchedEffect
         withContext(Dispatchers.IO) {
             runCatching {
-                val encoded = URLEncoder.encode(storeUserId, "UTF-8")
+                val encoded = URLEncoder.encode(storeInventoryUserId, "UTF-8")
                 val c = (URL("https://zyora-server.onrender.com/api/store/inventory/$encoded").openConnection() as HttpURLConnection).apply { connectTimeout=15000; readTimeout=15000; useCaches=false; setRequestProperty("Cache-Control", "no-cache, no-store"); setRequestProperty("Pragma", "no-cache") }
                 val code = c.responseCode
                 val stream = if (code in 200..299) c.inputStream else c.errorStream
@@ -598,7 +599,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                                         .background(StoreBlue)
                                         .clickable {
                                             if (owned) {
-                                                if (!purchaseBusy && storeUserId.isNotBlank()) {
+                                                if (!purchaseBusy && storeInventoryUserId.isNotBlank()) {
                                                     val nextEquipped = !equipped
                                                     purchaseBusy = true
                                                     storeScope.launch {
@@ -607,7 +608,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                                                                 requestMethod="POST"; doOutput=true; connectTimeout=10000; readTimeout=10000
                                                                 setRequestProperty("Content-Type", "application/json")
                                                             }
-                                                            val body = JSONObject().put("userId", storeUserId).put("itemId", item.id).put("equipped", nextEquipped).toString()
+                                                            val body = JSONObject().put("userId", storeInventoryUserId).put("itemId", item.id).put("equipped", nextEquipped).toString()
                                                             c.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
                                                             val code = c.responseCode
                                                             val stream = if (code in 200..299) c.inputStream else c.errorStream
@@ -619,12 +620,12 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                                                                 equippedIds.removeAll { id -> nativeStoreItems.find { it.id == id }?.tab == item.tab }
                                                                 equippedIds.add(item.id)
                                                             } else equippedIds.remove(item.id)
-                                                            if (item.tab == "Avatar Frame") nativeAvatarFrameRefreshVersions[storeUserId] = (nativeAvatarFrameRefreshVersions[storeUserId] ?: 0L) + 1L
+                                                            if (item.tab == "Avatar Frame") nativeAvatarFrameRefreshVersions[storeInventoryUserId] = (nativeAvatarFrameRefreshVersions[storeInventoryUserId] ?: 0L) + 1L
                                                         }.onFailure { purchaseMessage = it.message ?: "Could not use item" }
                                                         purchaseBusy = false
                                                     }
                                                 } else if (storeUserId.isBlank()) purchaseMessage = "Please sign in to use items"
-                                            } else if (!purchaseBusy && storeUserId.isNotBlank()) {
+                                            } else if (!purchaseBusy && storeInventoryUserId.isNotBlank()) {
                                                 // Buy exactly this card immediately; no purchase sheet.
                                                 purchaseBusy = true
                                                 purchaseItemId = item.id
@@ -635,7 +636,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                                                                 requestMethod = "POST"; doOutput = true; connectTimeout = 12000; readTimeout = 12000
                                                                 setRequestProperty("Content-Type", "application/json")
                                                             }
-                                                            val body = JSONObject().put("userId", storeUserId).put("itemId", item.id)
+                                                            val body = JSONObject().put("userId", storeInventoryUserId).put("itemId", item.id)
                                                                 .put("name", item.name).put("tab", item.tab).put("image", item.image)
                                                                 .put("video", item.video ?: "").put("duration", item.duration).put("price", item.price).toString()
                                                             c.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
