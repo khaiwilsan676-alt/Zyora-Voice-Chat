@@ -513,8 +513,9 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             if (!theme) {
-                                val vehicleVideoInBag = isBag && isVehicle && !item.video.isNullOrBlank()
-                                val previewVideo = if (vehicleVideoInBag) item.video!! else item.image
+                                // Bag mirrors the Store card preview. Vehicle MP4s are reserved
+                                // for the existing room-entry toast, never played inside Bag.
+                                val previewVideo = item.image
                                 if (previewVideo.endsWith(".mp4", ignoreCase = true)) {
                                     val isV1 = item.id == "v1"
                                     val removeGreen = if (isVehicle) isV1 else true
@@ -532,7 +533,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                                     StoreVideoPreview(
                                         url = StoreAssetBase + previewVideo,
                                         modifier = mediaModifier,
-                                        pause = !vehicleVideoInBag,
+                                        pause = true,
                                         topFade = if (isVehicle) 0.1f else 0f,
                                         bottomFade = gridBottomFade,
                                         removeGreenScreen = removeGreen,
