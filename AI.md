@@ -686,3 +686,8 @@ Current documentation does not certify that all historical features are build-, 
 - RoomPage already listens for `room_vehicle_entry` and renders the supplied video inside the existing room-entry card using `StoreVideoPreview`; no new Room UI or separate vehicle control was added.
 - Root cause for vehicle video not appearing: the server never emitted the `room_vehicle_entry` event when a user entered a room. Zyora-Server now looks up that user's active, unexpired, equipped Vehicle in `storeInventory` and emits its exact stored video/item ID alongside the existing entry card. The Store inventory remains the only source of selection/control; the video plays for other room members when the equipped user enters.
 - Server commit: `4e50fbed070b70459b05a90287548800068d880e`. Render deployment and in-room runtime verification remain pending.
+
+
+## 2026-11-12 — Gender tags show icon only
+- Native `PublicProfile.kt` and `RoomProfile.kt`: removed the numeric age text (and its spacing) from the compact Gender tag. The tag now renders only the existing male/female gender icon. Age data, profile age editing/display outside the Gender tag, and all other UI remain unchanged.
+- Commits: `2c9eed8c52860cea5e935430184e78b7cbd30213` and `53074336e74e6ad31dcf7ac0c707252e42e51a33`. Native Build 2 compilation and device verification pending.
