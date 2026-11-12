@@ -641,7 +641,11 @@ fun PublicProfileScreen(
                     // Vehicle
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         SectionHeader("Vehicle")
-                        AsyncImage(model = profileAsset("/1785091443553.png"), contentDescription = "Vehicle", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxWidth().height(112.dp).clip(RoundedCornerShape(16.dp)))
+                        NativeOwnedVehicleShowcase(
+                            userId = targetUser?.accountId?.takeIf { it.isNotBlank() }
+                                ?: targetUser?.uid?.takeIf { it.isNotBlank() }
+                                ?: targetUser?.id.orEmpty()
+                        )
                     }
 
                     Spacer(modifier = Modifier.height(20.dp))
