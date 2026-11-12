@@ -266,7 +266,6 @@ fun NativeOwnedFrameShowcase(userId: String) {
 fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: String = "") {
     var currentView by remember { mutableStateOf(if (initialView.equals("bag", true)) "bag" else "store") }
     var activeTab by remember { mutableStateOf(if (initialView.equals("bag", true)) "Avatar Frame" else "Vehicle") }
-    var selectedItem by remember { mutableStateOf<NativeStoreItem?>(null) }
     val appContext = LocalContext.current
     val authPrefs = remember { appContext.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE) }
     val walletCachePrefs = remember { appContext.getSharedPreferences("zyora_wallet_cache", android.content.Context.MODE_PRIVATE) }
@@ -792,7 +791,6 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                                         // Route preview actions through the same server-backed
                                         // purchase/equip sheet as the Store card. Never mutate
                                         // wallet or inventory locally from the preview.
-                                        selectedItem = item
                                         tryItem = null
                                     },
                                     modifier = Modifier.fillMaxWidth().height(42.dp),
@@ -873,7 +871,6 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                             Button(
                                 onClick = {
                                     // Use the canonical server-backed purchase flow.
-                                    selectedItem = item
                                     tryItem = null
                                 },
                                 modifier = Modifier.fillMaxWidth().height(42.dp),
