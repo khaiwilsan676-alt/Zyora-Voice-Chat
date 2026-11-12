@@ -142,6 +142,25 @@ private suspend fun fetchCanonicalWallet(userId: String): JSONObject? = withCont
     }.getOrNull()
 }
 
+private suspend fun rechargeCanonicalWallet(userId: String, price: Int): JSONObject? = withContext(Dispatchers.IO) {
+    runCatching {
+        val connection = (URL("https://zyora-server.onrender.com/api/wallet/demo-recharge").openConnection() as HttpURLConnection).apply {
+            requestMethod = "POST"
+            connectTimeout = 12000
+            readTimeout = 12000
+            doOutput = true
+            setRequestProperty("Content-Type", "application/json; charset=utf-8")
+        }
+        try {
+            connection.outputStream.bufferedWriter().use {
+                it.write(JSONObject().put("userId", userId).put("price", price).toString())
+            }
+            if (connection.responseCode !in 200..299) return@runCatching null
+            JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
+        } finally { connection.disconnect() }
+    }.getOrNull()
+}
+
 private suspend fun exchangeCanonicalWallet(userId: String, diamonds: Long): JSONObject? = withContext(Dispatchers.IO) {
     runCatching {
         val connection = (URL("https://zyora-server.onrender.com/api/wallet/exchange").openConnection() as HttpURLConnection).apply {
@@ -532,26 +551,23 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int, onChat: (Strin
             PaySheet(onClose = { showPayUsingSheet = false },
                 onSelect = {
                     scope.launch {
-                        // Temporary demo recharge: selecting any UPI option credits
-                        // the displayed package amount plus its advertised bonus.
-                        // This is intentionally local-only until payment verification
-                        // and server-side wallet credit are integrated.
                         val credit = selectedCoins + selectedBonus
-                        val creditKey = "local_recharge_credits_$walletUserId"
-                        val accumulated = (walletCachePrefs.getLong(creditKey, 0L) + credit)
-                            .coerceAtLeast(0L)
-                        val newBalance = coins + credit
-                        withContext(Dispatchers.IO) {
-                            dao.saveUserData(UserDataEntity(balance = newBalance, diamonds = diamonds))
-                            recordTransaction(dao, "Recharge", credit, "coin")
+                        val wallet = rechargeCanonicalWallet(walletUserId, selectedPrice)
+                        if (wallet != null) {
+                            val newBalance = wallet.optLong("balance", -1L)
+                            if (newBalance >= 0L) {
+                                withContext(Dispatchers.IO) {
+                                    dao.saveUserData(UserDataEntity(balance = newBalance, diamonds = diamonds))
+                                    recordTransaction(dao, "Recharge", credit, "coin")
+                                }
+                                walletCachePrefs.edit()
+                                    .putLong("balance_$walletUserId", newBalance)
+                                    .putLong("last_sync_$walletUserId", System.currentTimeMillis())
+                                    .apply()
+                                coins = newBalance
+                                showPayUsingSheet = false
+                            }
                         }
-                        walletCachePrefs.edit()
-                            .putLong(creditKey, accumulated)
-                            .putLong("balance_$walletUserId", newBalance)
-                            .putLong("last_sync_$walletUserId", System.currentTimeMillis())
-                            .apply()
-                        coins = newBalance
-                        showPayUsingSheet = false
                     }
                 })
         }
