@@ -1942,10 +1942,10 @@ Column(Modifier.align(Alignment.BottomStart).padding(bottom=LocalConfiguration.c
 
         RoomPageBlock {
             if (roomVehiclePreview.isNotBlank()) {
-                // Match the Store Vehicle preview exactly: full available width, per-vehicle
-                // vertical placement/fades, and the same v1-only green-screen removal rule.
+                // Keep the Room playback presentation identical to the Store full-screen
+                // Vehicle preview: same full width, vertical alignment, fades and V1 keying.
                 val previewItemId = roomVehiclePreviewItemId
-                val alignBottom = previewItemId in setOf("v9", "v7", "v2", "v10")
+                val alignBottom = previewItemId == "v9" || previewItemId == "v7" || previewItemId == "v2" || previewItemId == "v10"
                 val topFade = when (previewItemId) {
                     "v10" -> 0.05f
                     "v9", "v7", "v6" -> 0.15f
@@ -1969,7 +1969,11 @@ Column(Modifier.align(Alignment.BottomStart).padding(bottom=LocalConfiguration.c
                     bottomFade = bottomFade,
                     removeGreenScreen = previewItemId == "v1",
                     mute = false,
-                    loop = true
+                    loop = false,
+                    onComplete = {
+                        roomVehiclePreview = ""
+                        roomVehiclePreviewItemId = ""
+                    }
                 )
             }
         }
