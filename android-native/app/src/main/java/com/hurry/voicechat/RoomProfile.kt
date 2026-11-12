@@ -334,8 +334,6 @@ fun RoomProfile(
                                     horizontalArrangement = Arrangement.Center
                                 ) {
                                     CustomGenderIcon(isFemale = displayGender.equals("female", true) || displayGender.equals("f", true) || displayGender == "♀", modifier = Modifier.size(8.dp))
-                                    Spacer(modifier = Modifier.width(2.dp))
-                                    Text(displayAge.toString(), color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Bold)
                                 }
                             }
                             
