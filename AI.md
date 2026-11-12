@@ -664,3 +664,9 @@ Current documentation does not certify that all historical features are build-, 
 - Store purchase, inventory load, and equip now use the same canonical wallet identity as CoinsNativePage (Firebase UID first, then account ID), fixing inventory/Bag lookups against a different identity.
 - Store and Bag header now display the canonical wallet coin balance; balance is refreshed from the wallet endpoint while open and persisted to the same `zyora_wallet_cache` balance key, including local recharge credits.
 - Latest StorePage commit: `bd7abdcb12cec755aa4dceda838a0e56d3d731c4`. Native Build 2 compilation and live purchase/Bag verification remain pending.
+
+
+## Store identity alignment correction — 2026-11-12
+- Store inventory records must stay keyed by the permanent Zyora account ID because profile/room frame overlays and other Bag surfaces request inventory with that ID.
+- Wallet reads use Firebase UID (same priority as CoinsNativePage); the server's `ensureWalletUser` resolves either UID or account ID to the same canonical MongoDB wallet document. Store purchase/equip/inventory use the account ID for inventory ownership while the server resolves its wallet debit to that canonical wallet.
+- This corrects the earlier note that Store inventory itself should be keyed by Firebase UID.
