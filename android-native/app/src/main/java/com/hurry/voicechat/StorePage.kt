@@ -274,7 +274,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
     var tryItem by remember { mutableStateOf<NativeStoreItem?>(null) }
     var sendItem by remember { mutableStateOf<NativeStoreItem?>(null) }
     var searchQuery by remember { mutableStateOf("") }
-    var balance by remember { mutableIntStateOf(0) }
+    var balance by remember(storeUserId) { mutableIntStateOf(walletCachePrefs.getLong("balance_$storeUserId", 0L).coerceAtLeast(0L).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()) }
     val ownedIds = remember { mutableStateListOf<String>() }
     val equippedIds = remember { mutableStateListOf<String>() }
     val expiryById = remember { mutableStateMapOf<String, Long>() }
@@ -329,7 +329,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                     }
                 }
                 val walletEncoded = URLEncoder.encode(storeUserId, "UTF-8")
-                val walletConn = (URL("https://zyora-server.onrender.com/api/lucky-bag/wallet/$walletEncoded").openConnection() as HttpURLConnection).apply { connectTimeout=12000; readTimeout=12000; useCaches=false; setRequestProperty("Cache-Control", "no-cache, no-store") }
+                val walletConn = (URL("https://zyora-server.onrender.com/api/lucky-bag/wallet/$walletEncoded").openConnection() as HttpURLConnection).apply { connectTimeout=12000; readTimeout=12000; useCaches=false; setRequestProperty("Cache-Control", "no-cache, no-store"); setRequestProperty("Pragma", "no-cache") }
                 val walletCode = walletConn.responseCode
                 val walletJson = JSONObject((if (walletCode in 200..299) walletConn.inputStream else walletConn.errorStream).bufferedReader().use { it.readText() })
                 walletConn.disconnect()
