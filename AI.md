@@ -651,3 +651,9 @@ Current documentation does not certify that all historical features are build-, 
 - Apply the server-returned wallet balance on both successful and rejected purchase responses, so a stale displayed balance is corrected after an insufficient-coins response.
 - The live `Zyora-Server/server.js` purchase endpoint already validates the fixed price against the selected item ID and serializes purchases per account; it does not bulk-purchase other cards. No catalog, price, or visual layout changes.
 - Native source commit: `59f16cbdf215584c7e74ccf93cf6e7958714aac9`. Build and live wallet purchase verification are still pending.
+
+
+## 2026-11-12 — Native Store single-item confirmation and wallet debit normalization
+- `android-native/app/src/main/java/com/hurry/voicechat/StorePage.kt`: grid-card Buy now selects that exact item and opens the existing purchase sheet; the grid no longer sends a direct purchase request. The confirmation sheet is the single purchase submission path.
+- `Zyora-Server/server.js`: normalize legacy MongoDB `coins` and `diamonds` values to non-negative integer BSON numbers during wallet resolution. A numeric string could display as a valid balance in the app but fail MongoDB's numeric `$gte` debit condition, falsely returning Insufficient coins.
+- Commits: native `82f1c2d1e2e5b6ec29991084faf480a2641c482a`; server `340c68162b156552be71aaa32b7167be5fb1d0cd`. Render deployment and Native Build 2/live purchase verification remain pending.
