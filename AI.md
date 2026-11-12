@@ -727,3 +727,10 @@ Current documentation does not certify that all historical features are build-, 
 - `backend/server.js`: room-entry vehicle lookup now checks both the app account ID and Firebase UID used by Store Bag inventory. This fixes the identity mismatch that could prevent an equipped vehicle video from being included in the `room_vehicle_entry` event.
 - Vehicle playback remains tied to the existing room-entry event and `StoreVideoPreview`; Store/Bag remains the only place to select, use, or remove a vehicle. No room layout redesign or separate vehicle controls were added.
 - Verification: source changes committed; Native APK CI, Render deployment, and real-device multi-account vehicle playback tests are still pending.
+
+
+## 2026-11-13 — Vehicle video now belongs to the Enter the Room banner
+- Root cause: the room page played the vehicle in a separate center overlay instead of the `NativeEntryToast`; the toast model already had vehicle fields but the event handler never populated or rendered them. This detached the video from the Enter the Room card and made it appear absent/misaligned.
+- `RoomPage.kt`: correlate `room_vehicle_entry` by account ID, buffer the video if it arrives before the toast, update the matching toast, and render `StoreVideoPreview` directly inside that same entry banner. The banner remains until playback completes; ordinary entries without a vehicle still dismiss automatically.
+- Store/Bag remains the only place to equip or remove vehicles. No separate room vehicle controls were added.
+- Verification: source committed; APK compilation, Render deployment of the earlier backend identity fallback, and real-device playback remain unverified.
