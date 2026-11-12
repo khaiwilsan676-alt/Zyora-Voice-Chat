@@ -741,3 +741,9 @@ Current documentation does not certify that all historical features are build-, 
 - Playback starts automatically and is explicitly non-looping. On the first playback completion, the room preview URL and item ID are cleared so the video disappears; no replay or loop is started.
 - The Enter the Room toast remains separate and contains no video. Store/Bag remains the only place to select, equip, and remove Vehicles.
 - Source committed; Native APK build and real-device visual/playback verification remain pending.
+
+
+## 2026-11-13 — Native APK compile root-cause fix
+- `RoomPage.kt`: closed the Enter-the-Room toast `RoomPageBlock` before starting the separate Vehicle preview block. The missing closing brace had accidentally nested subsequent room overlays and helper composables inside the toast block/RoomPage scope, causing a cascade of unresolved composables, invalid local declarations, and misleading NativeSeat argument errors.
+- No UI behavior or layout changes; this is a Kotlin scope/brace correction only.
+- Verification: source committed; the Native 2 GitHub Actions build must complete to confirm APK compilation.
