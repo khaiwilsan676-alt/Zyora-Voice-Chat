@@ -679,3 +679,10 @@ Current documentation does not certify that all historical features are build-, 
 - Root cause of false Insufficient balance: Store inventory/purchase identity is the permanent Zyora account ID, while Mine > Wallet reads the canonical MongoDB wallet by Firebase UID. Passing only the inventory ID made Store debit depend on the auth-account alias mapping and could resolve a different/zero wallet document. Store purchase now sends both IDs; `Zyora-Server/server.js` keeps inventory keyed by account ID but reads/debits/refunds and broadcasts wallet balance using the exact Firebase UID used by Mine > Wallet.
 - Store purchase balance refresh now uses only the server-owned MongoDB balance; device-local recharge credits are not treated as spendable server coins. UI layout otherwise remains unchanged.
 - Commits: app `919d7e25f781b630c1e242d6dc732f9d0671d756`; server `f38ad8f87b8529cf99f7f17a5006dd4ac3552e4a`. Render deployment, Native Build 2 compilation, and real-wallet purchase/Bag runtime verification remain pending.
+
+
+## 2026-11-12 — Store equip toggle drives existing room-entry vehicle video
+- Bag equip action is a toggle: after a successful Use request the Store inventory marks that item equipped and the Bag button reads Remove; after Remove it is unequipped and the button reads Use. Only one item per Store tab remains equipped through the existing `/api/store/equip` endpoint.
+- RoomPage already listens for `room_vehicle_entry` and renders the supplied video inside the existing room-entry card using `StoreVideoPreview`; no new Room UI or separate vehicle control was added.
+- Root cause for vehicle video not appearing: the server never emitted the `room_vehicle_entry` event when a user entered a room. Zyora-Server now looks up that user's active, unexpired, equipped Vehicle in `storeInventory` and emits its exact stored video/item ID alongside the existing entry card. The Store inventory remains the only source of selection/control; the video plays for other room members when the equipped user enters.
+- Server commit: `4e50fbed070b70459b05a90287548800068d880e`. Render deployment and in-room runtime verification remain pending.
