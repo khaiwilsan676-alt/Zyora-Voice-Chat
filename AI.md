@@ -672,3 +672,10 @@ Current documentation does not certify that all historical features are build-, 
 - This corrects the earlier note that Store inventory itself should be keyed by Firebase UID.
 
 - Final cleanup commit for the direct-buy flow (removed the unused purchase-sheet state/hooks): `806d6396f928503a8c6de32eacd7e89980431ace`. Native 2 workflow watches `android-native/**` on main, so this native commit should start its build automatically.
+
+
+## 2026-11-12 — Store canonical wallet debit and Bag-only actions
+- Native `StorePage.kt`: Store/Bag header no longer displays a coin amount. Bag cards no longer expose Send; owned cards retain only Use/Remove. Active-item expiry countdown is shown directly beneath the star row in Bag.
+- Root cause of false Insufficient balance: Store inventory/purchase identity is the permanent Zyora account ID, while Mine > Wallet reads the canonical MongoDB wallet by Firebase UID. Passing only the inventory ID made Store debit depend on the auth-account alias mapping and could resolve a different/zero wallet document. Store purchase now sends both IDs; `Zyora-Server/server.js` keeps inventory keyed by account ID but reads/debits/refunds and broadcasts wallet balance using the exact Firebase UID used by Mine > Wallet.
+- Store purchase balance refresh now uses only the server-owned MongoDB balance; device-local recharge credits are not treated as spendable server coins. UI layout otherwise remains unchanged.
+- Commits: app `919d7e25f781b630c1e242d6dc732f9d0671d756`; server `f38ad8f87b8529cf99f7f17a5006dd4ac3552e4a`. Render deployment, Native Build 2 compilation, and real-wallet purchase/Bag runtime verification remain pending.
