@@ -134,22 +134,42 @@ private val nativeStoreItems = listOf(
 )
 
 @Composable
-fun NativeAvatarFrameOverlay(userId: String, modifier: Modifier = Modifier) {
-    var frame by remember(userId) { mutableStateOf<JSONObject?>(null) }
-    val refreshVersion = nativeAvatarFrameRefreshVersions[userId] ?: 0L
-    LaunchedEffect(userId, refreshVersion) {
+fun NativeAvatarFrameOverlay(
+    userId: String,
+    modifier: Modifier = Modifier,
+    fallbackUserIds: List<String> = emptyList()
+) {
+    var frame by remember(userId, fallbackUserIds) { mutableStateOf<JSONObject?>(null) }
+    val lookupIds = remember(userId, fallbackUserIds) { (listOf(userId) + fallbackUserIds).filter { it.isNotBlank() }.distinct() }
+    val refreshVersion = lookupIds.maxOfOrNull { nativeAvatarFrameRefreshVersions[it] ?: 0L } ?: 0L
+    LaunchedEffect(lookupIds, refreshVersion) {
         frame = null
-        if (userId.isNotBlank()) withContext(Dispatchers.IO) {
-            runCatching {
-                val encoded = URLEncoder.encode(userId, "UTF-8")
-                val c = (URL("https://zyora-server.onrender.com/api/store/inventory/$encoded").openConnection() as HttpURLConnection).apply { connectTimeout=8000; readTimeout=8000 }
-                val code = c.responseCode
-                if (code !in 200..299) throw IllegalStateException("Inventory unavailable")
-                val json = JSONObject(c.inputStream.bufferedReader().use { it.readText() }); c.disconnect()
-                val items = json.optJSONArray("items") ?: JSONArray()
-                (0 until items.length()).map { items.getJSONObject(it) }
-                    .firstOrNull { it.optString("tab") == "Avatar Frame" && it.optBoolean("equipped") && it.optLong("expiresAt") > System.currentTimeMillis() }
-            }.onSuccess { frame = it }
+        if (lookupIds.isNotEmpty()) {
+            val equippedFrame = withContext(Dispatchers.IO) {
+                lookupIds.firstNotNullOfOrNull { lookupId ->
+                    runCatching {
+                        val encoded = URLEncoder.encode(lookupId, "UTF-8")
+                        val connection = (URL("https://zyora-server.onrender.com/api/store/inventory/$encoded").openConnection() as HttpURLConnection).apply {
+                            connectTimeout = 8000
+                            readTimeout = 8000
+                            useCaches = false
+                            setRequestProperty("Cache-Control", "no-cache, no-store")
+                            setRequestProperty("Pragma", "no-cache")
+                        }
+                        val code = connection.responseCode
+                        if (code !in 200..299) {
+                            connection.disconnect()
+                            return@runCatching null
+                        }
+                        val json = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
+                        connection.disconnect()
+                        val items = json.optJSONArray("items") ?: JSONArray()
+                        (0 until items.length()).map { items.getJSONObject(it) }
+                            .firstOrNull { it.optString("tab") == "Avatar Frame" && it.optBoolean("equipped") && it.optLong("expiresAt") > System.currentTimeMillis() }
+                    }.getOrNull()
+                }
+            }
+            frame = equippedFrame
         }
     }
     LaunchedEffect(frame) {
@@ -165,8 +185,9 @@ fun NativeAvatarFrameOverlay(userId: String, modifier: Modifier = Modifier) {
         if (video.isNotBlank()) {
             val frameId = selected.optString("itemId", "")
             val frameMute = frameId == "a8"
+            val videoUrl = if (video.startsWith("http://", true) || video.startsWith("https://", true)) video else StoreAssetBase + video
             StoreVideoPreview(
-                url = StoreAssetBase + video,
+                url = videoUrl,
                 modifier = modifier.graphicsLayer {
                     scaleX = 1.08f
                     scaleY = 1.08f
@@ -189,7 +210,7 @@ fun NativeAvatarFrameOverlay(userId: String, modifier: Modifier = Modifier) {
 @Composable
 fun NativeOwnedFrameShowcase(userId: String) {
     var frames by remember(userId) { mutableStateOf<List<JSONObject>>(emptyList()) }
-    val refreshVersion = nativeAvatarFrameRefreshVersions[userId] ?: 0L
+    val refreshVersion = lookupIds.maxOfOrNull { nativeAvatarFrameRefreshVersions[it] ?: 0L } ?: 0L
     LaunchedEffect(userId, refreshVersion) {
         frames = emptyList()
         if (userId.isNotBlank()) withContext(Dispatchers.IO) {
