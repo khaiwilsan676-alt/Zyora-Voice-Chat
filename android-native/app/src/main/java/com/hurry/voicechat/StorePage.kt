@@ -274,6 +274,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
     val equippedIds = remember { mutableStateListOf<String>() }
     val expiryById = remember { mutableStateMapOf<String, Long>() }
     var purchaseBusy by remember { mutableStateOf(false) }
+    var purchaseItemId by remember { mutableStateOf<String?>(null) }
     var purchaseMessage by remember { mutableStateOf<String?>(null) }
     val storeScope = rememberCoroutineScope()
     var clockNow by remember { mutableLongStateOf(System.currentTimeMillis()) }
@@ -556,6 +557,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                                                 if (!purchaseBusy && userId.isNotBlank()) {
                                                     val nextEquipped = !equipped
                                                     purchaseBusy = true
+                                                    purchaseItemId = item.id
                                                     storeScope.launch {
                                                         val result = withContext(Dispatchers.IO) { runCatching {
                                                             val c = (URL("https://zyora-server.onrender.com/api/store/equip").openConnection() as HttpURLConnection).apply {
@@ -581,6 +583,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                                                 } else if (userId.isBlank()) purchaseMessage = "Please sign in to use items"
                                             } else if (!purchaseBusy && userId.isNotBlank()) {
                                                 purchaseBusy = true
+                                                purchaseItemId = item.id
                                                 storeScope.launch {
                                                     val result = withContext(Dispatchers.IO) {
                                                         runCatching {
@@ -595,6 +598,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                                                             val code = c.responseCode
                                                             val stream = if (code in 200..299) c.inputStream else c.errorStream
                                                             val json = JSONObject(stream.bufferedReader().use { it.readText() }); c.disconnect()
+                                                            if (json.has("balance")) withContext(Dispatchers.Main) { balance = json.optInt("balance", balance) }
                                                             if (code !in 200..299 || !json.optBoolean("success")) throw IllegalStateException(json.optString("error", "Purchase failed"))
                                                             json
                                                         }
@@ -608,6 +612,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                                                         purchaseMessage = "Purchase successful"
                                                     }.onFailure { purchaseMessage = if (it.message?.contains("insufficient", ignoreCase = true) == true) "Insufficient balance" else it.message ?: "Purchase failed" }
                                                     purchaseBusy = false
+                                                    purchaseItemId = null
                                                 }
                                             } else if (userId.isBlank()) purchaseMessage = "Please sign in to buy"
                                         },
@@ -617,7 +622,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                                         if (owned) {
                                             if (isBag) if (equipped) "Remove" else "Use"
                                             else if (equipped) "Using" else "Use"
-                                        } else if (purchaseBusy) "..." else "Buy",
+                                        } else if (purchaseBusy && purchaseItemId == item.id) "..." else "Buy",
                                         color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold
                                     )
                                 }
@@ -771,6 +776,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                                         val stream = if (code in 200..299) c.inputStream else c.errorStream
                                         val json = JSONObject(stream.bufferedReader().use { it.readText() })
                                         c.disconnect()
+                                        if (json.has("balance")) withContext(Dispatchers.Main) { balance = json.optInt("balance", balance) }
                                         if (code !in 200..299 || !json.optBoolean("success")) throw IllegalStateException(json.optString("error", "Purchase failed"))
                                         json
                                     }
@@ -784,6 +790,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                                     selectedItem = null
                                 }.onFailure { purchaseMessage = if (it.message?.contains("insufficient", ignoreCase = true) == true) "Insufficient balance" else it.message ?: "Purchase failed" }
                                 purchaseBusy = false
+                                purchaseItemId = null
                             }
                         }
                     }, enabled = !purchaseBusy, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = StoreCyan, contentColor = Color.White)) {
