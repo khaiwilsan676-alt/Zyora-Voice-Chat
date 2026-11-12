@@ -702,3 +702,10 @@ Current documentation does not certify that all historical features are build-, 
 - Native `RoomPage.kt`: removed vehicle video from the entry toast. The equipped vehicle video now plays once in the Room main area after the `room_vehicle_entry` event and hides when playback completes.
 - Native `StorePage.kt`: the shared `StoreVideoPreview` supports optional looping/completion; Store previews retain their existing looping default. Store remains the only place to select, preview, Use, or Remove a vehicle.
 - No separate Room video controls or settings were added. Native Build 2 and device playback verification remain pending.
+
+## 2026-11-13 — Avatar frame preview and profile visibility
+- Native Public Profile's Frame showcase now always displays the still catalogue image from the Store item; it no longer plays the frame MP4 inside the showcase. Equipped frame videos continue playing as transparent overlays on avatars.
+- Equipped avatar-frame video playback is cached in the app cache directory and reuses the local file on later displays. The overlay is enlarged slightly and shifted upward by 4dp.
+- Native avatar-frame inventory lookup now tries the account ID plus available UID/ID aliases with no-cache requests, fixing equipped-frame visibility when profile surfaces use different account identifiers. Applied to Me, Public Profile, and Room Profile; occupied room seats inherit the shared enlarged/cached video overlay.
+- Store purchase, equip, expiry, and other profile/room UI behavior remain unchanged. Native build and device verification pending.
+
