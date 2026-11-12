@@ -94,7 +94,7 @@ fun RoomInfo(
         mutableStateOf(if (isLogoOwner) "https://zyora-voice-chat.vercel.app/logo.png" else roomOwner.image)
     }
     var ownerCountry by remember(roomOwner.accountId) { mutableStateOf("") }
-    var memberProfiles by remember { mutableStateOf<Map<String, RoomInfoFollower>>(emptyMap()) }
+    var memberProfiles by remember { mutableStateOf>(emptyMap()) }
 
     LaunchedEffect(roomFollowers.map { it.accountId }, roomAdmins.map { it.accountId }) {
         val all = (roomFollowers + roomAdmins).distinctBy { it.accountId }.filter { it.accountId.isNotBlank() }
@@ -473,10 +473,12 @@ private fun MemberRow(
             contentScale = ContentScale.Crop
         )
         Column(Modifier.padding(start = 11.dp).weight(1f), verticalArrangement = Arrangement.spacedBy(0.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                // Yahan se `fill = false` nikal diya hai jisse row full stretch hogi aur badge static position pe rahega, hilega nahi.
+            Row(
+                modifier = Modifier.offset(y = 2.dp), // Yahan thora niche kiya LV.1 ki taraf
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Text(name.ifBlank { "User" },
-                    modifier = Modifier.weight(1f), 
+                    modifier = Modifier.weight(1f, fill = false), // fill = false lagaya taki tag name ke theek baad aaye, right mein na bhage
                     fontSize = 13.sp, fontWeight = FontWeight.Medium,
                     color = Color.White, maxLines = 2, softWrap = true)
                 
