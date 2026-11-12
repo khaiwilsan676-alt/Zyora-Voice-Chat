@@ -687,6 +687,11 @@ Current documentation does not certify that all historical features are build-, 
 - Root cause for vehicle video not appearing: the server never emitted the `room_vehicle_entry` event when a user entered a room. Zyora-Server now looks up that user's active, unexpired, equipped Vehicle in `storeInventory` and emits its exact stored video/item ID alongside the existing entry card. The Store inventory remains the only source of selection/control; the video plays for other room members when the equipped user enters.
 - Server commit: `4e50fbed070b70459b05a90287548800068d880e`. Render deployment and in-room runtime verification remain pending.
 
+## 2026-11-13 — Vehicle Bag preview and room-entry-only playback
+- Native `StorePage.kt`: Vehicle cards in Bag now render the exact same catalog image/preview as their Store cards; Bag no longer starts the vehicle MP4. Store card appearance and Store preview behavior are unchanged.
+- Vehicle MP4 playback remains exclusively in the existing room-entry toast/card when an equipped, unexpired vehicle owner enters the room. Store inventory equip/Remove remains the only control; no separate Room video settings or player were added.
+- Verification: source commit only; Native Build 2 and device room-entry playback checks remain pending.
+
 
 ## 2026-11-12 — Gender tags show icon only
 - Native `PublicProfile.kt` and `RoomProfile.kt`: removed the numeric age text (and its spacing) from the compact Gender tag. The tag now renders only the existing male/female gender icon. Age data, profile age editing/display outside the Gender tag, and all other UI remain unchanged.
