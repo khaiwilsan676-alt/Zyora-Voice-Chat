@@ -348,6 +348,33 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
             }.onFailure { purchaseMessage = it.message ?: "Wallet unavailable" }
         }
     }
+    LaunchedEffect(storeUserId) {
+        if (storeUserId.isBlank()) return@LaunchedEffect
+        while (true) {
+            delay(5000L)
+            val latest = withContext(Dispatchers.IO) {
+                runCatching {
+                    val encoded = URLEncoder.encode(storeUserId, "UTF-8")
+                    val c = (URL("https://zyora-server.onrender.com/api/lucky-bag/wallet/$encoded").openConnection() as HttpURLConnection).apply {
+                        connectTimeout = 8000; readTimeout = 8000; useCaches = false
+                        setRequestProperty("Cache-Control", "no-cache, no-store")
+                    }
+                    val code = c.responseCode
+                    val stream = if (code in 200..299) c.inputStream else c.errorStream
+                    val json = JSONObject(stream.bufferedReader().use { it.readText() })
+                    c.disconnect()
+                    if (code !in 200..299) error("Wallet unavailable")
+                    (json.optLong("balance", 0L).coerceAtLeast(0L) +
+                        walletCachePrefs.getLong("local_recharge_credits_$storeUserId", 0L).coerceAtLeast(0L))
+                        .coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+                }.getOrNull()
+            }
+            if (latest != null && latest != balance) {
+                balance = latest
+                walletCachePrefs.edit().putLong("balance_$storeUserId", latest.toLong()).apply()
+            }
+        }
+    }
     val isBag = currentView == "bag"
     val visibleItems = nativeStoreItems.filter { it.tab == activeTab && (!isBag || ownedIds.contains(it.id)) }
 
