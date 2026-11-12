@@ -20,7 +20,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -29,7 +28,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-
 
 internal fun updateZyoraUserBlock(context: Context, blockerId: String, blockedId: String, block: Boolean): Boolean {
     if (blockerId.isBlank() || blockedId.isBlank()) return false
@@ -91,22 +89,12 @@ fun UserReport(
         var reportDescription by remember { mutableStateOf("") }
         var reportSubmitted by remember { mutableStateOf(false) }
         
-        // Aapka purana logic aur items same hain
+        // Removed Nudity, Spam, Fake account as requested
         val reportReasons = listOf(
             "Harassment",
             "Hate speech",
             "Violence",
-            "Nudity",
-            "Spam or scam",
-            "Fake account",
             "Other"
-        )
-
-        // Top 3% Blue gradient fading into Grey
-        val gradientBrush = Brush.verticalGradient(
-            colors = listOf(Color(0xFFE0EFFF), Color(0xFFF7F8FA)),
-            startY = 0f,
-            endY = 300f 
         )
 
         Box(
@@ -114,12 +102,12 @@ fun UserReport(
                 .fillMaxSize()
                 .background(Color(0xFFF7F8FA))
         ) {
-            // Gradient Background at Top
+            // Gradient remove karke same as Submit Button wala color laga diya
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(150.dp)
-                    .background(gradientBrush)
+                    .background(Color(0xFF237BEE))
             )
 
             Column(
@@ -127,7 +115,7 @@ fun UserReport(
                     .fillMaxSize()
                     .windowInsetsPadding(WindowInsets.statusBars)
             ) {
-                // Top Bar (Image jaisa same)
+                // Top Bar
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -135,14 +123,15 @@ fun UserReport(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color(0xFF202633))
+                        // Icon color white kiya taki blue background pe dikhe
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
                     }
                     Text(
                         "Report",
-                        modifier = Modifier.weight(1f).padding(end = 48.dp), // end padding to center text
+                        modifier = Modifier.weight(1f).padding(end = 48.dp),
                         fontSize = 19.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFF202633),
+                        color = Color.White, // Text color white kiya taki clearly dikhe
                         textAlign = TextAlign.Center
                     )
                 }
@@ -182,7 +171,7 @@ fun UserReport(
                         ) { Text("Done", color = Color.White, fontWeight = FontWeight.SemiBold) }
                     }
                 } else {
-                    // Form UI (Image ke design ke according set kiya hua)
+                    // Form UI (Baki sab as it is rakha hai)
                     Column(
                         modifier = Modifier
                             .weight(1f)
