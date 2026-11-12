@@ -638,3 +638,9 @@ Current documentation does not certify that all historical features are build-, 
 - Added the missing `kotlinx.coroutines.delay` import in `RoomPage.kt`.
 - Moved theme expiry timer state and `LaunchedEffect` out of the `LazyVerticalGrid` DSL receiver and into `ThemeFullScreen` composable scope; grid still receives the filtered theme list and countdown display is unchanged.
 - No UI redesign or feature changes.
+
+## Store wallet canonical identity fix — 2026-11-12
+- `backend/server.js`: `POST /api/wallet/initialize` now resolves/creates the wallet through the same deterministic `ensureWalletUser(userId)` path used by Store inventory reads and purchase debits. Removed its broad `$or` lookup, which could select a different duplicate legacy user document and make the displayed wallet balance disagree with the Store purchase debit.
+- Store purchase endpoint remains server-authoritative: item ID, category, duration, and fixed price are validated; only the selected item is debited and written to inventory.
+- No Store UI/layout changes. Native Build 2 remains the only native workflow present in `.github/workflows`; no Native 1 workflow file was present to remove.
+- Backend deployment and live purchase verification are pending.
