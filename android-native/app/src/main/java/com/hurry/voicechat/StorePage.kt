@@ -557,7 +557,6 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                                                 if (!purchaseBusy && userId.isNotBlank()) {
                                                     val nextEquipped = !equipped
                                                     purchaseBusy = true
-                                                    purchaseItemId = item.id
                                                     storeScope.launch {
                                                         val result = withContext(Dispatchers.IO) { runCatching {
                                                             val c = (URL("https://zyora-server.onrender.com/api/store/equip").openConnection() as HttpURLConnection).apply {
@@ -761,6 +760,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                             }
                         } else if (!purchaseBusy) {
                             purchaseBusy = true
+                            purchaseItemId = item.id
                             storeScope.launch {
                                 val result = withContext(Dispatchers.IO) {
                                     runCatching {
