@@ -36,6 +36,7 @@ import androidx.compose.ui.graphics.PathOperation
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -109,7 +110,6 @@ private val luckyGifts = listOf(
     GiftPickerGift(103, "Hi", 999, "/IMG_20260927_213946.png", noMask = true),
     GiftPickerGift(104, "Rose", 3999, "/IMG_20260927_214121.png", noMask = true),
     GiftPickerGift(105, "Kiss", 1600, "/IMG_20260927_214139.png", noMask = true),
-    GiftPickerGift(106, "Balloon", 4000, "/IMG_20260927_214220.png", noMask = true),
     GiftPickerGift(107, "Dragon", 7000, "/IMG_20260927_221521.png", noMask = true),
     GiftPickerGift(108, "Nine Hands", 10999, "/IMG_20260927_221544.png", noMask = true),
     GiftPickerGift(109, "Coffin", 8999, "/IMG_20260927_221559.png", noMask = true),
@@ -120,7 +120,6 @@ private val luckyGifts = listOf(
     GiftPickerGift(114, "Dancing Girl", 12000, "/IMG_20260927_221722.png", noMask = true),
     GiftPickerGift(115, "Whale", 7899, "/IMG_20260927_221742.png", noMask = true),
     GiftPickerGift(116, "Star", 9800, "/file_0000000066f482118f772ed6fab4ad1f.png", noMask = true),
-    GiftPickerGift(117, "Fire Bird", 13000, "/file_00000000fe088211b7be0110e2d3f878.png", noMask = true),
 )
 
 private fun giftAssetUrl(path: String): String {
@@ -342,7 +341,7 @@ fun GiftPicker(
                 dialogWindow?.setBackgroundDrawableResource(android.R.color.transparent)
                 dialogWindow?.decorView?.setBackgroundColor(android.graphics.Color.TRANSPARENT)
                 dialogWindow?.setDimAmount(0f)
-                dialogWindow?.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+                dialogWindow?.clearFlags(WindowManager.LayoutParams.FLAGDIM_BEHIND)
             }
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
                 BoxWithConstraints(
@@ -350,14 +349,14 @@ fun GiftPicker(
                         .fillMaxWidth()
                         .fillMaxHeight(0.52f)
                         .background(Color(0xEB000000))
-                        .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp)) 
+                        .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)) // strictly 12dp curve
                         .border(
                             1.dp,
                             Color.White.copy(alpha = 0.10f),
-                            RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp),
+                            RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp),
                         )
-                        .navigationBarsPadding() // FIX: Niche ka half space cover karne ke liye
-                        .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 12.dp), // Bottom proper padding
+                        .navigationBarsPadding()
+                        .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 12.dp),
                 ) {
                     Column(Modifier.fillMaxSize()) {
 
@@ -404,8 +403,9 @@ fun GiftPicker(
 
                             // ── MIC / HOUSE buttons ──
                             Row(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                                horizontalArrangement = Arrangement.spacedBy(4.dp), // Gap decreased
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(start = 8.dp) // Mic right side slightly shifted
                             ) {
                                 RecipientButton(
                                     isActive = recipientMode == RecipientMode.MIC,
@@ -541,43 +541,55 @@ fun GiftPicker(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                             ) {
                                 Box {
-                                    // Dropdown (Option Sheet) - FIX: Patli si aur perfectly aligned
+                                    // Dropdown fixed with Layout to take exactly 0x0 measurement and perfectly float
                                     if (showMultipliers) {
-                                        Surface(
-                                            color = Color(0xFF0C1418),
-                                            shape = RoundedCornerShape(6.dp),
-                                            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.15f)),
-                                            shadowElevation = 8.dp,
-                                            modifier = Modifier
-                                                .align(Alignment.BottomStart) // Ab start (1x) ke upar khulegi
-                                                .offset(y = (-48).dp) // Send button ke exact upar float karne ke liye
-                                                .wrapContentWidth(), // FIX: Patli si option sheet bas text jitni wide
-                                        ) {
-                                            Column(Modifier.padding(2.dp)) {
-                                                multipliers.forEach { m ->
-                                                    val active = selectedMultiplier == m
-                                                    Box(
-                                                        Modifier
-                                                            .clip(RoundedCornerShape(4.dp))
-                                                            .background(
-                                                                if (active) Blue600 else Color.Transparent
-                                                            )
-                                                            .clickable {
-                                                                selectedMultiplier = m
-                                                                showMultipliers = false
+                                        Layout(
+                                            content = {
+                                                Surface(
+                                                    color = Color(0xFF0C1418),
+                                                    shape = RoundedCornerShape(6.dp),
+                                                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.15f)),
+                                                    shadowElevation = 8.dp,
+                                                    modifier = Modifier.wrapContentWidth()
+                                                ) {
+                                                    Column(Modifier.padding(2.dp)) {
+                                                        multipliers.forEach { m ->
+                                                            val active = selectedMultiplier == m
+                                                            Box(
+                                                                Modifier
+                                                                    .fillMaxWidth()
+                                                                    .clickable {
+                                                                        selectedMultiplier = m
+                                                                        showMultipliers = false
+                                                                    }
+                                                                    .padding(vertical = 4.dp), 
+                                                                contentAlignment = Alignment.Center,
+                                                            ) {
+                                                                // Highlight specific to text, not covering full width
+                                                                Box(
+                                                                    Modifier
+                                                                        .clip(RoundedCornerShape(4.dp))
+                                                                        .background(if (active) Blue600 else Color.Transparent)
+                                                                        .padding(horizontal = 10.dp, vertical = 4.dp) 
+                                                                ) {
+                                                                    Text(
+                                                                        text = m,
+                                                                        color = if (active) Color.White else Color(0xFFD1D5DB),
+                                                                        fontSize = 12.sp,
+                                                                        fontWeight = FontWeight.Medium,
+                                                                    )
+                                                                }
                                                             }
-                                                            .padding(horizontal = 10.dp, vertical = 6.dp), // Chhoti padding
-                                                        contentAlignment = Alignment.Center,
-                                                    ) {
-                                                        Text(
-                                                            text = m,
-                                                            color = if (active) Color.White
-                                                            else Color(0xFFD1D5DB),
-                                                            fontSize = 12.sp,
-                                                            fontWeight = FontWeight.Medium,
-                                                        )
+                                                        }
                                                     }
                                                 }
+                                            }
+                                        ) { measurables, constraints ->
+                                            val placeable = measurables.first().measure(constraints)
+                                            // report 0x0 size so parent layout is completely unaffected!
+                                            layout(0, 0) {
+                                                // Place exactly above the send button area
+                                                placeable.place(0, -placeable.height - 15)
                                             }
                                         }
                                     }
@@ -585,9 +597,9 @@ fun GiftPicker(
                                     // Main Button Container (3D Look base)
                                     Row(
                                         Modifier
-                                            .shadow(elevation = 6.dp, shape = RoundedCornerShape(50)) // FIX: 3D shadow 
+                                            .shadow(elevation = 6.dp, shape = RoundedCornerShape(50)) 
                                             .clip(RoundedCornerShape(50))
-                                            .background(Color(0xFF1E293B)) // Inner dark shade for 3D depth
+                                            .background(Color(0xFF1E293B)) 
                                             .border(1.dp, Blue500.copy(alpha = 0.6f), RoundedCornerShape(50)),
                                     ) {
                                         // 1x Multiplier Part
@@ -614,25 +626,25 @@ fun GiftPicker(
                                             )
                                         }
 
-                                        // Send Part (3D Gradient and Highlight) - FIX: Fully 3D
+                                        // Send Part (3D Gradient and Highlight)
                                         Box(
                                             Modifier
                                                 .alpha(1f)
                                                 .clip(RoundedCornerShape(topEnd = 50.dp, bottomEnd = 50.dp))
                                                 .background(
                                                     Brush.verticalGradient(
-                                                        colors = listOf(Color(0xFF60A5FA), Color(0xFF1D4ED8)) // FIX: 3D Top light & Bottom dark
+                                                        colors = listOf(Color(0xFF60A5FA), Color(0xFF1D4ED8)) 
                                                     )
                                                 )
                                                 .border(
                                                     width = 0.5.dp,
-                                                    color = Color.White.copy(alpha = 0.4f), // Top shiny reflection for 3D effect
+                                                    color = Color.White.copy(alpha = 0.4f), 
                                                     shape = RoundedCornerShape(topEnd = 50.dp, bottomEnd = 50.dp)
                                                 )
                                                 .clickable(enabled = selectedGift != null && !sending) {
                                                     handleSend()
                                                 }
-                                                .padding(horizontal = 26.dp, vertical = 8.dp), // Perfectly height matched
+                                                .padding(horizontal = 26.dp, vertical = 8.dp), 
                                             contentAlignment = Alignment.Center,
                                         ) {
                                             Text(
@@ -673,7 +685,7 @@ fun GiftPicker(
 }
 
 // ============================================================
-// GIFT CARD (MODIFIED AS REQUESTED)
+// GIFT CARD
 // ============================================================
 @Composable
 private fun GiftCard(
@@ -686,7 +698,7 @@ private fun GiftCard(
         Modifier
             .clip(RoundedCornerShape(8.dp))
             .background(
-                if (isSelected) Color.Gray.copy(alpha = 0.35f) else Color.Transparent // Yahan bas ek grey cover diya, koi blue border nahi!
+                if (isSelected) Color.Gray.copy(alpha = 0.35f) else Color.Transparent 
             )
             .clickable { onClick() }
             .padding(horizontal = 2.dp, vertical = 6.dp),
@@ -717,7 +729,6 @@ private fun GiftCard(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             val size = if (gift.noMask) 60.dp else 64.dp
-            // Sirf Teddy (id=1) aur Arab King (id=3) ko Circle karna hai
             val isHotCircle = activeTab == "Hot" && (gift.id == 1 || gift.id == 3) 
 
             Box(
@@ -725,7 +736,7 @@ private fun GiftCard(
                     .size(size)
                     .clip(
                         when {
-                            isHotCircle -> CircleShape // Teddy and King ab Circle mein aayenge
+                            isHotCircle -> CircleShape 
                             gift.sideFade -> RoundedCornerShape(12.dp)
                             else -> RoundedCornerShape(0.dp)
                         }
@@ -738,7 +749,6 @@ private fun GiftCard(
                     modifier = Modifier.fillMaxSize(),
                 )
 
-                // 1% fade mix from edges into background specifically for the circle images
                 if (isHotCircle) {
                     Box(
                         Modifier
@@ -746,7 +756,7 @@ private fun GiftCard(
                             .background(
                                 Brush.radialGradient(
                                     0.90f to Color.Transparent, 
-                                    1.0f to Color.Black.copy(alpha = 0.6f) // Ekdam borders se 1% dark fade blend mix hoga
+                                    1.0f to Color.Black.copy(alpha = 0.6f) 
                                 )
                             )
                     )
@@ -900,15 +910,17 @@ private fun RecipientButton(
             shape = RoundedCornerShape(50),
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .offset(x = (-2).dp, y = (-2).dp), 
+                .offset(x = (-2).dp, y = (-2).dp)
+                .height(13.dp), // Height strictly reduced 
         ) {
-            Text(
-                text = "All",
-                color = Color.White,
-                fontSize = 8.sp,
-                fontWeight = FontWeight.Medium,
-                modifier = Modifier.padding(horizontal = 4.dp, vertical = 0.dp),
-            )
+            Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(horizontal = 4.dp)) {
+                Text(
+                    text = "All",
+                    color = Color.White,
+                    fontSize = 7.sp, // Font size chota kar diya uske according
+                    fontWeight = FontWeight.Medium,
+                )
+            }
         }
     }
 }
