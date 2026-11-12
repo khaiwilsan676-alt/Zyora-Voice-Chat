@@ -920,7 +920,6 @@ fun RoomPage(
     }
     val entryToasts=remember{mutableStateListOf<NativeEntryToast>()}
     // Keep the vehicle video as an independent room-screen preview, not inside the entry banner.
-    val roomVehicleByUser = remember(roomId) { mutableStateMapOf<String, Pair<String, String>>() }
     var roomVehiclePreview by remember(roomId) { mutableStateOf("") }
     var roomVehiclePreviewItemId by remember(roomId) { mutableStateOf("") }
     val seats=remember{mutableStateListOf<NativeRoomSeat>().apply{for(i in 1..15)add(NativeRoomSeat(i))}}
@@ -1019,7 +1018,6 @@ fun RoomPage(
             val videoUrl = if (video.startsWith("http", true)) video else "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/" + video
             val itemId = vehicle.optString("itemId").trim()
             mainHandler.post {
-                roomVehicleByUser[user] = videoUrl to itemId
                 roomVehiclePreview = videoUrl
                 roomVehiclePreviewItemId = itemId
             }
