@@ -94,7 +94,7 @@ fun RoomInfo(
         mutableStateOf(if (isLogoOwner) "https://zyora-voice-chat.vercel.app/logo.png" else roomOwner.image)
     }
     var ownerCountry by remember(roomOwner.accountId) { mutableStateOf("") }
-    var memberProfiles by remember { mutableStateOf>(emptyMap()) }
+    var memberProfiles by remember { mutableStateOf<Map<String, RoomInfoFollower>>(emptyMap()) }
 
     LaunchedEffect(roomFollowers.map { it.accountId }, roomAdmins.map { it.accountId }) {
         val all = (roomFollowers + roomAdmins).distinctBy { it.accountId }.filter { it.accountId.isNotBlank() }
