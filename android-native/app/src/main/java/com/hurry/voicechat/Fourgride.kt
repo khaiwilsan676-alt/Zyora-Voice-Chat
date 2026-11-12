@@ -264,14 +264,16 @@ fun Fourgride(
                     ToolCell(Modifier.weight(1f), "Clear-Chat", base + "IMG_20261028_182124.png", onClick = onClearChat)
                     ToolCell(Modifier.weight(1f), "Public msg", base + "IMG_20261028_182153.png", toggle = !publicMsgOff, onClick = onTogglePublicMsg)
                 }
-                ToolCell(Modifier.weight(1f), "Entry Effect", base + "IMG_20261028_182218.png", toggle = entryEffect, onClick = {
-                    entryEffect = !entryEffect
-                    prefs.edit().putBoolean("entry_effect", entryEffect).apply()
-                })
-                ToolCell(Modifier.weight(1f), "Gift Effect", base + "IMG_20261028_182239.png", toggle = giftEffect, onClick = {
-                    giftEffect = !giftEffect
-                    prefs.edit().putBoolean("gift_effect", giftEffect).apply()
-                })
+                if (isRoomOwner) {
+                    ToolCell(Modifier.weight(1f), "Entry Effect", base + "IMG_20261028_182218.png", toggle = entryEffect, onClick = {
+                        entryEffect = !entryEffect
+                        prefs.edit().putBoolean(entryEffectKey, entryEffect).apply()
+                    })
+                    ToolCell(Modifier.weight(1f), "Gift Effect", base + "IMG_20261028_182239.png", toggle = giftEffect, onClick = {
+                        giftEffect = !giftEffect
+                        prefs.edit().putBoolean(giftEffectKey, giftEffect).apply()
+                    })
+                }
             }
 
             Row(Modifier.fillMaxWidth().padding(bottom = 16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
