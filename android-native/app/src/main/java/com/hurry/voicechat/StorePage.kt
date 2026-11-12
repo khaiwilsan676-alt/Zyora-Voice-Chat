@@ -581,38 +581,8 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                                                     }
                                                 } else if (userId.isBlank()) purchaseMessage = "Please sign in to use items"
                                             } else if (!purchaseBusy && userId.isNotBlank()) {
-                                                purchaseBusy = true
-                                                purchaseItemId = item.id
-                                                storeScope.launch {
-                                                    val result = withContext(Dispatchers.IO) {
-                                                        runCatching {
-                                                            val c = (URL("https://zyora-server.onrender.com/api/store/purchase").openConnection() as HttpURLConnection).apply {
-                                                                requestMethod="POST"; doOutput=true; connectTimeout=10000; readTimeout=10000
-                                                                setRequestProperty("Content-Type", "application/json")
-                                                            }
-                                                            val body = JSONObject().put("userId", userId).put("itemId", item.id)
-                                                                .put("name", item.name).put("tab", item.tab).put("image", item.image)
-                                                                .put("video", item.video ?: "").put("duration", item.duration).put("price", item.price).toString()
-                                                            c.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
-                                                            val code = c.responseCode
-                                                            val stream = if (code in 200..299) c.inputStream else c.errorStream
-                                                            val json = JSONObject(stream.bufferedReader().use { it.readText() }); c.disconnect()
-                                                            if (json.has("balance")) withContext(Dispatchers.Main) { balance = json.optInt("balance", balance) }
-                                                            if (code !in 200..299 || !json.optBoolean("success")) throw IllegalStateException(json.optString("error", "Purchase failed"))
-                                                            json
-                                                        }
-                                                    }
-                                                    result.onSuccess { json ->
-                                                        balance = json.optInt("balance", balance)
-                                                        val bought = json.optJSONObject("item")
-                                                        ownedIds.remove(item.id)
-                                                        ownedIds.add(item.id)
-                                                        if (bought != null) expiryById[item.id] = bought.optLong("expiresAt")
-                                                        purchaseMessage = "Purchase successful"
-                                                    }.onFailure { purchaseMessage = if (it.message?.contains("insufficient", ignoreCase = true) == true) "Insufficient balance" else it.message ?: "Purchase failed" }
-                                                    purchaseBusy = false
-                                                    purchaseItemId = null
-                                                }
+                                                // Route all grid Buy taps through the one-item confirmation sheet.
+                                                selectedItem = item
                                             } else if (userId.isBlank()) purchaseMessage = "Please sign in to buy"
                                         },
                                     contentAlignment = Alignment.Center
