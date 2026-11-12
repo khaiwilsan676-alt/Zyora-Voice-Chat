@@ -2189,10 +2189,26 @@ io.on("connection", (socket) => {
         let equippedVehicle = null;
         if (db) {
           try {
+            const vehicleProjection = { projection: { _id: 0, itemId: 1, video: 1, expiresAt: 1 } };
+            const activeVehicleFilter = {
+              tab: "Vehicle",
+              equipped: true,
+              expiresAt: { $gt: entryTimestamp }
+            };
+            // Store Bag inventory is keyed by its supplied userId (often Firebase UID),
+            // while room presence is keyed by accountId. Resolve both identities so an
+            // equipped vehicle is not silently missed when those IDs differ.
             equippedVehicle = await db.collection("storeInventory").findOne(
-              { userId: accId, tab: "Vehicle", equipped: true, expiresAt: { $gt: entryTimestamp } },
-              { projection: { _id: 0, itemId: 1, video: 1, expiresAt: 1 } }
+              { ...activeVehicleFilter, userId: accId },
+              vehicleProjection
             );
+            const inventoryUserId = String(userId || "").trim();
+            if (!equippedVehicle && inventoryUserId && inventoryUserId !== accId) {
+              equippedVehicle = await db.collection("storeInventory").findOne(
+                { ...activeVehicleFilter, userId: inventoryUserId },
+                vehicleProjection
+              );
+            }
             if (!equippedVehicle || !String(equippedVehicle.video || "").trim()) equippedVehicle = null;
           } catch (vehicleError) {
             console.error("Room entry vehicle lookup failed:", vehicleError.message);
