@@ -28,9 +28,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathOperation
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -121,7 +123,6 @@ private val luckyGifts = listOf(
     GiftPickerGift(117, "Fire Bird", 13000, "/file_00000000fe088211b7be0110e2d3f878.png", noMask = true),
 )
 
-// Resolve web-app public assets to absolute URLs so Coil can load gift artwork in native Android.
 private fun giftAssetUrl(path: String): String {
     if (path.startsWith("https://") || path.startsWith("http://") || path.startsWith("file:") || path.startsWith("content:")) return path
     return "https://zyora-voice-chat.vercel.app/" + path.trimStart('/')
@@ -278,9 +279,6 @@ fun GiftPicker(
                     "recipientMode" to recipientMode.name.lowercase(),
                 ))
 
-                // The server credits recipient diamonds in MongoDB after the coin debit.
-                // Never credit the sender locally here; that caused duplicate/stale balances.
-
                 if (selectedGiftObj.video != null && !isLuckyGiftTab) {
                     onSendGiftVideoPlay(mapOf(
                         "roomId" to roomId,
@@ -344,29 +342,70 @@ fun GiftPicker(
                 dialogWindow?.setBackgroundDrawableResource(android.R.color.transparent)
                 dialogWindow?.decorView?.setBackgroundColor(android.graphics.Color.TRANSPARENT)
                 dialogWindow?.setDimAmount(0f)
-                dialogWindow?.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+                dialogWindow?.clearFlags(WindowManager.LayoutParams.FLAGDIM_BEHIND)
             }
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
                 BoxWithConstraints(
                     Modifier
                         .fillMaxWidth()
-                        .fillMaxHeight(0.57f)
-                        .background(Color(0xEB000000)) // rgba(0,0,0,0.92)
-                        .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp)) // ⬅️ 6.dp curved
+                        .fillMaxHeight(0.52f)
+                        .background(Color(0xEB000000))
+                        .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp)) 
                         .border(
                             1.dp,
                             Color.White.copy(alpha = 0.10f),
                             RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp),
                         )
-                        .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 8.dp),
+                        .navigationBarsPadding() // FIX: Niche ka half space cover karne ke liye
+                        .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 12.dp), // Bottom proper padding
                 ) {
                     Column(Modifier.fillMaxSize()) {
 
-                        // ── MIC / HOUSE buttons (absolute top-right) ──
-                        Box(Modifier.fillMaxWidth().height(56.dp)) {
+                        // ── AVATARS aur MIC/HOUSE ek sath ──
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 6.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically 
+                        ) {
+                            // ── Seat avatar row ──
+                            LazyRow(
+                                Modifier
+                                    .weight(1f)
+                                    .padding(end = 8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            ) {
+                                items(seats.filter { it.occupied && it.accountId.isNotBlank() },
+                                    key = { it.accountId }) { seat ->
+                                    val uid = seat.accountId
+                                    val selected = selectedTargets.contains(uid)
+                                    AsyncImage(
+                                        model = seat.userImage,
+                                        contentDescription = seat.userName,
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier
+                                            .size(44.dp)
+                                            .clip(CircleShape)
+                                            .border(
+                                                width = 2.5.dp,
+                                                color = if (selected) Blue500 else Color.Transparent,
+                                                shape = CircleShape,
+                                            )
+                                            .clickable {
+                                                selectedTargets = if (selected)
+                                                    selectedTargets.filter { it != uid }
+                                                else selectedTargets + uid
+                                                recipientMode = RecipientMode.SINGLE
+                                            },
+                                    )
+                                }
+                            }
+
+                            // ── MIC / HOUSE buttons ──
                             Row(
-                                Modifier.align(Alignment.TopEnd),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
                                 RecipientButton(
                                     isActive = recipientMode == RecipientMode.MIC,
@@ -384,39 +423,6 @@ fun GiftPicker(
                                         recipientMode = RecipientMode.ROOM
                                     },
                                     iconType = RecipientIconType.HOUSE,
-                                )
-                            }
-                        }
-
-                        // ── Seat avatar row ──
-                        LazyRow(
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(top = 4.dp, bottom = 8.dp),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        ) {
-                            items(seats.filter { it.occupied && it.accountId.isNotBlank() },
-                                key = { it.accountId }) { seat ->
-                                val uid = seat.accountId
-                                val selected = selectedTargets.contains(uid)
-                                AsyncImage(
-                                    model = seat.userImage,
-                                    contentDescription = seat.userName,
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier
-                                        .size(44.dp)
-                                        .clip(CircleShape)
-                                        .border(
-                                            width = 2.5.dp,
-                                            color = if (selected) Blue500 else Color.Transparent,
-                                            shape = CircleShape,
-                                        )
-                                        .clickable {
-                                            selectedTargets = if (selected)
-                                                selectedTargets.filter { it != uid }
-                                            else selectedTargets + uid
-                                            recipientMode = RecipientMode.SINGLE
-                                        },
                                 )
                             }
                         }
@@ -535,25 +541,24 @@ fun GiftPicker(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                             ) {
                                 Box {
-                                    // Dropdown
+                                    // Dropdown (Option Sheet) - FIX: Patli si aur perfectly aligned
                                     if (showMultipliers) {
                                         Surface(
                                             color = Color(0xFF0C1418),
                                             shape = RoundedCornerShape(6.dp),
-                                            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.10f)),
-                                            shadowElevation = 12.dp,
+                                            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.15f)),
+                                            shadowElevation = 8.dp,
                                             modifier = Modifier
-                                                .align(Alignment.BottomEnd)
-                                                .offset(y = (-44).dp)
-                                                .widthIn(min = 50.dp),
+                                                .align(Alignment.BottomStart) // Ab start (1x) ke upar khulegi
+                                                .offset(y = (-48).dp) // Send button ke exact upar float karne ke liye
+                                                .wrapContentWidth(), // FIX: Patli si option sheet bas text jitni wide
                                         ) {
-                                            Column(Modifier.padding(4.dp)) {
+                                            Column(Modifier.padding(2.dp)) {
                                                 multipliers.forEach { m ->
                                                     val active = selectedMultiplier == m
                                                     Box(
                                                         Modifier
-                                                            .fillMaxWidth()
-                                                            .clip(RoundedCornerShape(6.dp))
+                                                            .clip(RoundedCornerShape(4.dp))
                                                             .background(
                                                                 if (active) Blue600 else Color.Transparent
                                                             )
@@ -561,7 +566,7 @@ fun GiftPicker(
                                                                 selectedMultiplier = m
                                                                 showMultipliers = false
                                                             }
-                                                            .padding(horizontal = 10.dp, vertical = 2.dp),
+                                                            .padding(horizontal = 10.dp, vertical = 6.dp), // Chhoti padding
                                                         contentAlignment = Alignment.Center,
                                                     ) {
                                                         Text(
@@ -577,22 +582,26 @@ fun GiftPicker(
                                         }
                                     }
 
+                                    // Main Button Container (3D Look base)
                                     Row(
                                         Modifier
+                                            .shadow(elevation = 6.dp, shape = RoundedCornerShape(50)) // FIX: 3D shadow 
                                             .clip(RoundedCornerShape(50))
-                                            .border(1.dp, Blue500, RoundedCornerShape(50)),
+                                            .background(Color(0xFF1E293B)) // Inner dark shade for 3D depth
+                                            .border(1.dp, Blue500.copy(alpha = 0.6f), RoundedCornerShape(50)),
                                     ) {
+                                        // 1x Multiplier Part
                                         Row(
                                             Modifier
                                                 .clickable { showMultipliers = !showMultipliers }
-                                                .padding(horizontal = 12.dp, vertical = 6.dp),
+                                                .padding(horizontal = 14.dp, vertical = 8.dp),
                                             verticalAlignment = Alignment.CenterVertically,
                                             horizontalArrangement = Arrangement.spacedBy(4.dp),
                                         ) {
                                             Text(
                                                 text = selectedMultiplier,
                                                 color = Color.White,
-                                                fontSize = 12.sp,
+                                                fontSize = 13.sp,
                                                 fontWeight = FontWeight.Bold,
                                             )
                                             Icon(
@@ -605,25 +614,31 @@ fun GiftPicker(
                                             )
                                         }
 
+                                        // Send Part (3D Gradient and Highlight) - FIX: Fully 3D
                                         Box(
                                             Modifier
                                                 .alpha(1f)
                                                 .clip(RoundedCornerShape(topEnd = 50.dp, bottomEnd = 50.dp))
                                                 .background(
-                                                    Brush.linearGradient(
-                                                        listOf(Blue500, Blue600)
+                                                    Brush.verticalGradient(
+                                                        colors = listOf(Color(0xFF60A5FA), Color(0xFF1D4ED8)) // FIX: 3D Top light & Bottom dark
                                                     )
+                                                )
+                                                .border(
+                                                    width = 0.5.dp,
+                                                    color = Color.White.copy(alpha = 0.4f), // Top shiny reflection for 3D effect
+                                                    shape = RoundedCornerShape(topEnd = 50.dp, bottomEnd = 50.dp)
                                                 )
                                                 .clickable(enabled = selectedGift != null && !sending) {
                                                     handleSend()
                                                 }
-                                                .padding(horizontal = 24.dp, vertical = 4.dp),
+                                                .padding(horizontal = 26.dp, vertical = 8.dp), // Perfectly height matched
                                             contentAlignment = Alignment.Center,
                                         ) {
                                             Text(
                                                 text = if (sending) "send" else "Send",
                                                 color = Color.White,
-                                                fontSize = 12.sp,
+                                                fontSize = 13.sp,
                                                 fontWeight = FontWeight.Bold,
                                             )
                                         }
@@ -658,7 +673,7 @@ fun GiftPicker(
 }
 
 // ============================================================
-// GIFT CARD
+// GIFT CARD (MODIFIED AS REQUESTED)
 // ============================================================
 @Composable
 private fun GiftCard(
@@ -671,12 +686,7 @@ private fun GiftCard(
         Modifier
             .clip(RoundedCornerShape(8.dp))
             .background(
-                if (isSelected) Blue500.copy(alpha = 0.05f) else Color.Transparent
-            )
-            .border(
-                2.dp,
-                if (isSelected) Blue500 else Color.Transparent,
-                RoundedCornerShape(8.dp),
+                if (isSelected) Color.Gray.copy(alpha = 0.35f) else Color.Transparent // Yahan bas ek grey cover diya, koi blue border nahi!
             )
             .clickable { onClick() }
             .padding(horizontal = 2.dp, vertical = 6.dp),
@@ -707,11 +717,18 @@ private fun GiftCard(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             val size = if (gift.noMask) 60.dp else 64.dp
+            // Sirf Teddy (id=1) aur Arab King (id=3) ko Circle karna hai
+            val isHotCircle = activeTab == "Hot" && (gift.id == 1 || gift.id == 3) 
+
             Box(
                 Modifier
                     .size(size)
                     .clip(
-                        if (gift.sideFade) RoundedCornerShape(12.dp) else RoundedCornerShape(0.dp)
+                        when {
+                            isHotCircle -> CircleShape // Teddy and King ab Circle mein aayenge
+                            gift.sideFade -> RoundedCornerShape(12.dp)
+                            else -> RoundedCornerShape(0.dp)
+                        }
                     ),
             ) {
                 AsyncImage(
@@ -720,7 +737,21 @@ private fun GiftCard(
                     contentScale = if (gift.noMask) ContentScale.Fit else ContentScale.Crop,
                     modifier = Modifier.fillMaxSize(),
                 )
-                // Hot gift artwork uses the same soft mixed fade into the card background.
+
+                // 1% fade mix from edges into background specifically for the circle images
+                if (isHotCircle) {
+                    Box(
+                        Modifier
+                            .fillMaxSize()
+                            .background(
+                                Brush.radialGradient(
+                                    0.90f to Color.Transparent, 
+                                    1.0f to Color.Black.copy(alpha = 0.6f) // Ekdam borders se 1% dark fade blend mix hoga
+                                )
+                            )
+                    )
+                }
+
                 if (activeTab == "Hot") {
                     Box(
                         Modifier
@@ -785,7 +816,7 @@ private fun RecipientButton(
     iconType: RecipientIconType,
 ) {
     val iconColor = if (isActive) Blue500 else Color(0xFF9CA3AF)
-    Box(Modifier.width(48.dp).height(54.dp), contentAlignment = Alignment.TopCenter) {
+    Box(Modifier.width(52.dp).height(50.dp), contentAlignment = Alignment.TopCenter) {
         Box(
             Modifier
                 .size(38.dp)
@@ -795,77 +826,88 @@ private fun RecipientButton(
                 .clickable { onClick() },
             contentAlignment = Alignment.Center,
         ) {
-        Canvas(
-            Modifier.size(if (iconType == RecipientIconType.MIC) 18.dp else 20.dp)
-        ) {
-            val iconPath = androidx.compose.ui.graphics.Path()
-            if (iconType == RecipientIconType.MIC) {
-                // Exact solid microphone silhouette used by the reference GiftPicker.tsx.
-                val sx = size.width / 24f
-                val sy = size.height / 24f
-                iconPath.moveTo(12f * sx, 14f * sy)
-                iconPath.cubicTo(13.66f * sx, 14f * sy, 15f * sx, 12.66f * sy, 15f * sx, 11f * sy)
-                iconPath.lineTo(15f * sx, 5f * sy)
-                iconPath.cubicTo(15f * sx, 3.34f * sy, 13.66f * sx, 2f * sy, 12f * sx, 2f * sy)
-                iconPath.cubicTo(10.34f * sx, 2f * sy, 9f * sx, 3.34f * sy, 9f * sx, 5f * sy)
-                iconPath.lineTo(9f * sx, 11f * sy)
-                iconPath.cubicTo(9f * sx, 12.66f * sy, 10.34f * sx, 14f * sy, 12f * sx, 14f * sy)
-                iconPath.close()
-                iconPath.moveTo(17.91f * sx, 11f * sy)
-                iconPath.cubicTo(17.42f * sx, 11f * sy, 17.01f * sx, 11.39f * sy, 17.01f * sx, 11.88f * sy)
-                iconPath.cubicTo(17.01f * sx, 14.64f * sy, 14.77f * sx, 16.88f * sy, 12.01f * sx, 16.88f * sy)
-                iconPath.cubicTo(9.25f * sx, 16.88f * sy, 7.01f * sx, 14.64f * sy, 7.01f * sx, 11.88f * sy)
-                iconPath.cubicTo(7.01f * sx, 11.39f * sy, 6.6f * sx, 11f * sy, 6.11f * sx, 11f * sy)
-                iconPath.cubicTo(5.62f * sx, 11f * sy, 5.21f * sx, 11.39f * sy, 5.21f * sx, 11.88f * sy)
-                iconPath.cubicTo(5.21f * sx, 15.54f * sy, 8.06f * sx, 18.54f * sy, 11.61f * sx, 18.96f * sy)
-                iconPath.lineTo(11.61f * sx, 21.88f * sy)
-                iconPath.lineTo(13.41f * sx, 21.88f * sy)
-                iconPath.lineTo(13.41f * sx, 18.96f * sy)
-                iconPath.cubicTo(16.96f * sx, 18.54f * sy, 19.81f * sx, 15.54f * sy, 19.81f * sx, 11.88f * sy)
-                iconPath.cubicTo(19.81f * sx, 11.39f * sy, 19.4f * sx, 11f * sy, 18.91f * sx, 11f * sy)
-                iconPath.close()
-            } else {
-                // Exact solid house/hound silhouette used by the reference GiftPicker.tsx.
-                val sx = size.width / 512f
-                val sy = size.height / 512f
-                iconPath.moveTo(80f * sx, 235f * sy)
-                iconPath.lineTo(222f * sx, 105f * sy)
-                iconPath.quadraticTo(256f * sx, 75f * sy, 290f * sx, 105f * sy)
-                iconPath.lineTo(432f * sx, 235f * sy)
-                iconPath.quadraticTo(445f * sx, 247f * sy, 432f * sx, 260f * sy)
-                iconPath.lineTo(405f * sx, 290f * sy)
-                iconPath.lineTo(405f * sx, 405f * sy)
-                iconPath.quadraticTo(405f * sx, 425f * sy, 385f * sx, 425f * sy)
-                iconPath.lineTo(127f * sx, 425f * sy)
-                iconPath.quadraticTo(107f * sx, 425f * sy, 107f * sx, 405f * sy)
-                iconPath.lineTo(107f * sx, 290f * sy)
-                iconPath.lineTo(80f * sx, 260f * sy)
-                iconPath.quadraticTo(67f * sx, 247f * sy, 80f * sx, 235f * sy)
-                iconPath.close()
-                iconPath.moveTo(210f * sx, 425f * sy)
-                iconPath.lineTo(210f * sx, 300f * sy)
-                iconPath.quadraticTo(210f * sx, 280f * sy, 230f * sx, 280f * sy)
-                iconPath.lineTo(282f * sx, 280f * sy)
-                iconPath.quadraticTo(302f * sx, 280f * sy, 302f * sx, 300f * sy)
-                iconPath.lineTo(302f * sx, 425f * sy)
-                iconPath.close()
+            Canvas(
+                Modifier.size(if (iconType == RecipientIconType.MIC) 18.dp else 20.dp)
+            ) {
+                val iconPath = androidx.compose.ui.graphics.Path()
+                if (iconType == RecipientIconType.MIC) {
+                    val sx = size.width / 24f
+                    val sy = size.height / 24f
+                    iconPath.moveTo(12f * sx, 14f * sy)
+                    iconPath.cubicTo(13.66f * sx, 14f * sy, 15f * sx, 12.66f * sy, 15f * sx, 11f * sy)
+                    iconPath.lineTo(15f * sx, 5f * sy)
+                    iconPath.cubicTo(15f * sx, 3.34f * sy, 13.66f * sx, 2f * sy, 12f * sx, 2f * sy)
+                    iconPath.cubicTo(10.34f * sx, 2f * sy, 9f * sx, 3.34f * sy, 9f * sx, 5f * sy)
+                    iconPath.lineTo(9f * sx, 11f * sy)
+                    iconPath.cubicTo(9f * sx, 12.66f * sy, 10.34f * sx, 14f * sy, 12f * sx, 14f * sy)
+                    iconPath.close()
+                    iconPath.moveTo(17.91f * sx, 11f * sy)
+                    iconPath.cubicTo(17.42f * sx, 11f * sy, 17.01f * sx, 11.39f * sy, 17.01f * sx, 11.88f * sy)
+                    iconPath.cubicTo(17.01f * sx, 14.64f * sy, 14.77f * sx, 16.88f * sy, 12.01f * sx, 16.88f * sy)
+                    iconPath.cubicTo(9.25f * sx, 16.88f * sy, 7.01f * sx, 14.64f * sy, 7.01f * sx, 11.88f * sy)
+                    iconPath.cubicTo(7.01f * sx, 11.39f * sy, 6.6f * sx, 11f * sy, 6.11f * sx, 11f * sy)
+                    iconPath.cubicTo(5.62f * sx, 11f * sy, 5.21f * sx, 11.39f * sy, 5.21f * sx, 11.88f * sy)
+                    iconPath.cubicTo(5.21f * sx, 15.54f * sy, 8.06f * sx, 18.54f * sy, 11.61f * sx, 18.96f * sy)
+                    iconPath.lineTo(11.61f * sx, 21.88f * sy)
+                    iconPath.lineTo(13.41f * sx, 21.88f * sy)
+                    iconPath.lineTo(13.41f * sx, 18.96f * sy)
+                    iconPath.cubicTo(16.96f * sx, 18.54f * sy, 19.81f * sx, 15.54f * sy, 19.81f * sx, 11.88f * sy)
+                    iconPath.cubicTo(19.81f * sx, 11.39f * sy, 19.4f * sx, 11f * sy, 18.91f * sx, 11f * sy)
+                    iconPath.close()
+                    drawPath(path = iconPath, color = iconColor)
+                } else {
+                    val sx = size.width / 512f
+                    val sy = size.height / 512f
+                    iconPath.moveTo(80f * sx, 235f * sy)
+                    iconPath.lineTo(222f * sx, 105f * sy)
+                    iconPath.quadraticTo(256f * sx, 75f * sy, 290f * sx, 105f * sy)
+                    iconPath.lineTo(432f * sx, 235f * sy)
+                    iconPath.quadraticTo(445f * sx, 247f * sy, 432f * sx, 260f * sy)
+                    iconPath.lineTo(405f * sx, 290f * sy)
+                    iconPath.lineTo(405f * sx, 405f * sy)
+                    iconPath.quadraticTo(405f * sx, 425f * sy, 385f * sx, 425f * sy)
+                    iconPath.lineTo(127f * sx, 425f * sy)
+                    iconPath.quadraticTo(107f * sx, 425f * sy, 107f * sx, 405f * sy)
+                    iconPath.lineTo(107f * sx, 290f * sy)
+                    iconPath.lineTo(80f * sx, 260f * sy)
+                    iconPath.quadraticTo(67f * sx, 247f * sy, 80f * sx, 235f * sy)
+                    iconPath.close()
+                    iconPath.moveTo(210f * sx, 425f * sy)
+                    iconPath.lineTo(210f * sx, 300f * sy)
+                    iconPath.quadraticTo(210f * sx, 280f * sy, 230f * sx, 280f * sy)
+                    iconPath.lineTo(282f * sx, 280f * sy)
+                    iconPath.quadraticTo(302f * sx, 280f * sy, 302f * sx, 300f * sy)
+                    iconPath.lineTo(302f * sx, 425f * sy)
+                    iconPath.close()
+
+                    // DOOR PATH
+                    val doorPath = androidx.compose.ui.graphics.Path()
+                    doorPath.moveTo(226f * sx, 425f * sy)
+                    doorPath.lineTo(226f * sx, 340f * sy)
+                    doorPath.quadraticTo(256f * sx, 290f * sy, 286f * sx, 340f * sy)
+                    doorPath.lineTo(286f * sx, 425f * sy)
+                    doorPath.close()
+
+                    val finalPath = androidx.compose.ui.graphics.Path()
+                    finalPath.op(iconPath, doorPath, PathOperation.Difference)
+                    drawPath(path = finalPath, color = iconColor)
+                }
             }
-            drawPath(path = iconPath, color = iconColor)
         }
-        }
+        
         Surface(
             color = if (isActive) Blue500 else Color(0xFF9CA3AF),
             shape = RoundedCornerShape(50),
             modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .offset(x = 0.dp, y = 0.dp),
+                .align(Alignment.BottomEnd)
+                .offset(x = (-2).dp, y = (-2).dp), 
         ) {
             Text(
                 text = "All",
                 color = Color.White,
-                fontSize = 9.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp),
+                fontSize = 8.sp,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.padding(horizontal = 4.dp, vertical = 0.dp),
             )
         }
     }
@@ -1121,4 +1163,3 @@ fun LuckyComboButton(
         }
     }
 }
-
