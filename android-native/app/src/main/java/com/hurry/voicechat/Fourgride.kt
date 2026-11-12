@@ -136,20 +136,22 @@ fun Fourgride(
     luckyBagRoomId: String = "",
     luckyBagRoomName: String = "Room",
     onLuckyBagSent: ((String, String, Long, Int, String) -> Unit)? = null,
-    isRoomOwner: Boolean = false
+    isRoomOwner: Boolean = false,
+    roomId: String = ""
 ) {
     val context = LocalContext.current
-    val prefs = remember { context.getSharedPreferences("hurry_room_tools", android.content.Context.MODE_PRIVATE) }
+    val prefs = remember(roomId) { context.getSharedPreferences("hurry_room_tools", android.content.Context.MODE_PRIVATE) }
+    val entryEffectKey = "entry_effect_$roomId"
+    val giftEffectKey = "gift_effect_$roomId"
+    var entryEffect by remember(roomId) { mutableStateOf(prefs.getBoolean(entryEffectKey, true)) }
+    var giftEffect by remember(roomId) { mutableStateOf(prefs.getBoolean(giftEffectKey, true)) }
     val musicPrefs = remember { context.getSharedPreferences("zyora_phone_music", android.content.Context.MODE_PRIVATE) }
     var musicTracks by remember { mutableStateOf(emptyList<NativeMusicTrack>()) }
-    var entryEffect by remember { mutableStateOf(false) }
-    var giftEffect by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) {
-        // Initialize the two room effects as OFF before exposing their controls.
-        entryEffect = false
-        giftEffect = false
-        prefs.edit().putBoolean("entry_effect", false).putBoolean("gift_effect", false).apply()
+    LaunchedEffect(roomId) {
+        // New rooms start with effects ON. Existing owner choices are preserved.
+        if (!prefs.contains(entryEffectKey)) prefs.edit().putBoolean(entryEffectKey, true).apply()
+        if (!prefs.contains(giftEffectKey)) prefs.edit().putBoolean(giftEffectKey, true).apply()
         musicTracks = musicPrefs.getStringSet("uris", emptySet()).orEmpty().mapNotNull { raw ->
             runCatching {
                 val uri = Uri.parse(raw)
@@ -227,11 +229,11 @@ fun Fourgride(
         ToolItem("Public msg", "IMG_20261028_182153.png") { onTogglePublicMsg() },
         ToolItem("Entry Effect", "IMG_20261028_182218.png") {
             entryEffect = !entryEffect
-            prefs.edit().putBoolean("entry_effect", entryEffect).apply()
+            prefs.edit().putBoolean(entryEffectKey, entryEffect).apply()
         },
         ToolItem("Gift Effect", "IMG_20261028_182239.png") {
             giftEffect = !giftEffect
-            prefs.edit().putBoolean("gift_effect", giftEffect).apply()
+            prefs.edit().putBoolean(giftEffectKey, giftEffect).apply()
         },
         ToolItem("Music", "IMG_20261028_182305.png") { MusicPlaybackState.wasPlayedOnMusicPage = false; MusicPlaybackState.musicPageBackPressed = false; showMusic = true },
         ToolItem("Speaker", "IMG_20261028_182329.png") { onToggleSpeaker() },
