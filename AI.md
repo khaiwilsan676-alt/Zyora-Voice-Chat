@@ -689,10 +689,16 @@ Current documentation does not certify that all historical features are build-, 
 
 ## 2026-11-13 — Vehicle Bag preview and room-entry-only playback
 - Native `StorePage.kt`: Vehicle cards in Bag now render the exact same catalog image/preview as their Store cards; Bag no longer starts the vehicle MP4. Store card appearance and Store preview behavior are unchanged.
-- Vehicle MP4 playback remains exclusively in the existing room-entry toast/card when an equipped, unexpired vehicle owner enters the room. Store inventory equip/Remove remains the only control; no separate Room video settings or player were added.
+- Vehicle MP4 playback is shown in the Room's main content when an equipped, unexpired vehicle owner enters; it plays once and hides on completion. The entry toast remains avatar/name only. Store inventory equip/Remove remains the only control; no separate Room video settings or player were added.
 - Verification: source commit only; Native Build 2 and device room-entry playback checks remain pending.
 
 
 ## 2026-11-12 — Gender tags show icon only
 - Native `PublicProfile.kt` and `RoomProfile.kt`: removed the numeric age text (and its spacing) from the compact Gender tag. The tag now renders only the existing male/female gender icon. Age data, profile age editing/display outside the Gender tag, and all other UI remain unchanged.
 - Commits: `2c9eed8c52860cea5e935430184e78b7cbd30213` and `53074336e74e6ad31dcf7ac0c707252e42e51a33`. Native Build 2 compilation and device verification pending.
+
+
+## 2026-11-13 — Move vehicle playback from entry toast into Room
+- Native `RoomPage.kt`: removed vehicle video from the entry toast. The equipped vehicle video now plays once in the Room main area after the `room_vehicle_entry` event and hides when playback completes.
+- Native `StorePage.kt`: the shared `StoreVideoPreview` supports optional looping/completion; Store previews retain their existing looping default. Store remains the only place to select, preview, Use, or Remove a vehicle.
+- No separate Room video controls or settings were added. Native Build 2 and device playback verification remain pending.
