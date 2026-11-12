@@ -567,7 +567,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                                         .background(StoreBlue)
                                         .clickable {
                                             if (owned) {
-                                                if (!purchaseBusy && userId.isNotBlank()) {
+                                                if (!purchaseBusy && storeUserId.isNotBlank()) {
                                                     val nextEquipped = !equipped
                                                     purchaseBusy = true
                                                     storeScope.launch {
@@ -576,7 +576,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                                                                 requestMethod="POST"; doOutput=true; connectTimeout=10000; readTimeout=10000
                                                                 setRequestProperty("Content-Type", "application/json")
                                                             }
-                                                            val body = JSONObject().put("userId", userId).put("itemId", item.id).put("equipped", nextEquipped).toString()
+                                                            val body = JSONObject().put("userId", storeUserId).put("itemId", item.id).put("equipped", nextEquipped).toString()
                                                             c.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
                                                             val code = c.responseCode
                                                             val stream = if (code in 200..299) c.inputStream else c.errorStream
@@ -613,7 +613,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                                                             val json = JSONObject(stream.bufferedReader().use { it.readText() })
                                                             c.disconnect()
                                                             if (json.has("balance")) withContext(Dispatchers.Main) {
-                                                                balance = json.optInt("balance", balance)
+                                                                balance = (json.optLong("balance", balance.toLong()) + walletCachePrefs.getLong("local_recharge_credits_$storeUserId", 0L).coerceAtLeast(0L)).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
                                                                 walletCachePrefs.edit().putLong("balance_$storeUserId", balance.toLong()).apply()
                                                             }
                                                             if (code !in 200..299 || !json.optBoolean("success")) throw IllegalStateException(json.optString("error", "Purchase failed"))
@@ -621,7 +621,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                                                         }
                                                     }
                                                     result.onSuccess { json ->
-                                                        balance = json.optInt("balance", balance)
+                                                        balance = (json.optLong("balance", balance.toLong()) + walletCachePrefs.getLong("local_recharge_credits_$storeUserId", 0L).coerceAtLeast(0L)).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
                                                         walletCachePrefs.edit().putLong("balance_$storeUserId", balance.toLong()).apply()
                                                         val bought = json.optJSONObject("item")
                                                         if (!ownedIds.contains(item.id)) ownedIds.add(item.id)
