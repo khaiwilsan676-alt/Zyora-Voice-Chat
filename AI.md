@@ -670,3 +670,5 @@ Current documentation does not certify that all historical features are build-, 
 - Store inventory records must stay keyed by the permanent Zyora account ID because profile/room frame overlays and other Bag surfaces request inventory with that ID.
 - Wallet reads use Firebase UID (same priority as CoinsNativePage); the server's `ensureWalletUser` resolves either UID or account ID to the same canonical MongoDB wallet document. Store purchase/equip/inventory use the account ID for inventory ownership while the server resolves its wallet debit to that canonical wallet.
 - This corrects the earlier note that Store inventory itself should be keyed by Firebase UID.
+
+- Final cleanup commit for the direct-buy flow (removed the unused purchase-sheet state/hooks): `806d6396f928503a8c6de32eacd7e89980431ace`. Native 2 workflow watches `android-native/**` on main, so this native commit should start its build automatically.
