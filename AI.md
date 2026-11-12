@@ -644,3 +644,10 @@ Current documentation does not certify that all historical features are build-, 
 - Store purchase endpoint remains server-authoritative: item ID, category, duration, and fixed price are validated; only the selected item is debited and written to inventory.
 - No Store UI/layout changes. Native Build 2 remains the only native workflow present in `.github/workflows`; no Native 1 workflow file was present to remove.
 - Backend deployment and live purchase verification are pending.
+
+
+## 2026-11-12 — Native Store single-item purchase feedback fix
+- `android-native/app/src/main/java/com/hurry/voicechat/StorePage.kt`: scope the in-progress indicator to the exact selected item ID, so unrelated Store cards never appear to be purchasing when one card is tapped.
+- Apply the server-returned wallet balance on both successful and rejected purchase responses, so a stale displayed balance is corrected after an insufficient-coins response.
+- The live `Zyora-Server/server.js` purchase endpoint already validates the fixed price against the selected item ID and serializes purchases per account; it does not bulk-purchase other cards. No catalog, price, or visual layout changes.
+- Native source commit: `59f16cbdf215584c7e74ccf93cf6e7958714aac9`. Build and live wallet purchase verification are still pending.
