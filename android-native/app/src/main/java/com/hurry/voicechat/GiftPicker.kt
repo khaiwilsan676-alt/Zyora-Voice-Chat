@@ -342,7 +342,7 @@ fun GiftPicker(
                 dialogWindow?.setBackgroundDrawableResource(android.R.color.transparent)
                 dialogWindow?.decorView?.setBackgroundColor(android.graphics.Color.TRANSPARENT)
                 dialogWindow?.setDimAmount(0f)
-                dialogWindow?.clearFlags(WindowManager.LayoutParams.FLAGDIM_BEHIND)
+                dialogWindow?.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
             }
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
                 BoxWithConstraints(
