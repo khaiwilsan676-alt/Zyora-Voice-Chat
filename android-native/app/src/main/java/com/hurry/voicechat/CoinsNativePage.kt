@@ -291,10 +291,9 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int, onChat: (Strin
         val wallet = fetchCanonicalWallet(walletUserId) ?: return@LaunchedEffect
         val serverBalance = wallet.optLong("balance").coerceAtLeast(0L)
         val serverDiamonds = wallet.optLong("diamonds").coerceAtLeast(0L)
-        // Temporary local recharge credits stay visible until a real payment
-        // gateway is connected. They are device-local and are not server verified.
-        val localRechargeCredits = walletCachePrefs.getLong("local_recharge_credits_$walletUserId", 0L).coerceAtLeast(0L)
-        val displayedBalance = serverBalance + localRechargeCredits
+        // Only MongoDB-confirmed coins are spendable. Device-only recharge credits
+        // must never inflate the wallet balance or disagree with Store purchases.
+        val displayedBalance = serverBalance
 
         dao.saveUserData(UserDataEntity(balance = displayedBalance, diamonds = serverDiamonds))
         walletCachePrefs.edit()
