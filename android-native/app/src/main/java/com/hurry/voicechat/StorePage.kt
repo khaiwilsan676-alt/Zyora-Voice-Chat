@@ -139,7 +139,7 @@ fun NativeAvatarFrameOverlay(userId: String, modifier: Modifier = Modifier) {
         frame = null
         if (userId.isNotBlank()) withContext(Dispatchers.IO) {
             runCatching {
-                val encoded = URLEncoder.encode(storeUserId, "UTF-8")
+                val encoded = URLEncoder.encode(userId, "UTF-8")
                 val c = (URL("https://zyora-server.onrender.com/api/store/inventory/$encoded").openConnection() as HttpURLConnection).apply { connectTimeout=8000; readTimeout=8000 }
                 val code = c.responseCode
                 if (code !in 200..299) throw IllegalStateException("Inventory unavailable")
@@ -313,7 +313,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
         if (storeUserId.isBlank()) return@LaunchedEffect
         withContext(Dispatchers.IO) {
             runCatching {
-                val encoded = URLEncoder.encode(userId, "UTF-8")
+                val encoded = URLEncoder.encode(storeUserId, "UTF-8")
                 val c = (URL("https://zyora-server.onrender.com/api/store/inventory/$encoded").openConnection() as HttpURLConnection).apply { connectTimeout=15000; readTimeout=15000; useCaches=false; setRequestProperty("Cache-Control", "no-cache, no-store"); setRequestProperty("Pragma", "no-cache") }
                 val code = c.responseCode
                 val stream = if (code in 200..299) c.inputStream else c.errorStream
