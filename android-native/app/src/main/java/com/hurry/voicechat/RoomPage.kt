@@ -2063,6 +2063,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
             onDismiss={showExitMenu=false}
         )
         if(showMenu) Fourgride(
+            roomId = roomId,
             openMusicPageRequest = openMusicPageFromController,
             onClose={showMenu=false},
             onClearChat={
