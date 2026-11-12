@@ -45,6 +45,7 @@ import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.platform.LocalContext
 import android.net.Uri
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -138,7 +139,7 @@ fun NativeAvatarFrameOverlay(userId: String, modifier: Modifier = Modifier) {
         frame = null
         if (userId.isNotBlank()) withContext(Dispatchers.IO) {
             runCatching {
-                val encoded = URLEncoder.encode(userId, "UTF-8")
+                val encoded = URLEncoder.encode(storeUserId, "UTF-8")
                 val c = (URL("https://zyora-server.onrender.com/api/store/inventory/$encoded").openConnection() as HttpURLConnection).apply { connectTimeout=8000; readTimeout=8000 }
                 val code = c.responseCode
                 if (code !in 200..299) throw IllegalStateException("Inventory unavailable")
@@ -266,6 +267,10 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
     var currentView by remember { mutableStateOf(if (initialView.equals("bag", true)) "bag" else "store") }
     var activeTab by remember { mutableStateOf(if (initialView.equals("bag", true)) "Avatar Frame" else "Vehicle") }
     var selectedItem by remember { mutableStateOf<NativeStoreItem?>(null) }
+    val appContext = LocalContext.current
+    val authPrefs = remember { appContext.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE) }
+    val walletCachePrefs = remember { appContext.getSharedPreferences("zyora_wallet_cache", android.content.Context.MODE_PRIVATE) }
+    val storeUserId = remember(userId) { authPrefs.getString("uid", null)?.takeIf { it.isNotBlank() } ?: userId.ifBlank { authPrefs.getString("accountId", "").orEmpty() } }
     var tryItem by remember { mutableStateOf<NativeStoreItem?>(null) }
     var sendItem by remember { mutableStateOf<NativeStoreItem?>(null) }
     var searchQuery by remember { mutableStateOf("") }
@@ -304,8 +309,8 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
             delay((nextExpiry - now).coerceAtLeast(1L))
         }
     }
-    LaunchedEffect(userId) {
-        if (userId.isBlank()) return@LaunchedEffect
+    LaunchedEffect(storeUserId) {
+        if (storeUserId.isBlank()) return@LaunchedEffect
         withContext(Dispatchers.IO) {
             runCatching {
                 val encoded = URLEncoder.encode(userId, "UTF-8")
@@ -323,9 +328,17 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                         if (item.optBoolean("equipped")) equipped.add(id)
                     }
                 }
-                Triple(json.optInt("balance",0), owned, Pair(equipped,expiries))
+                val walletConn = (URL("https://zyora-server.onrender.com/api/lucky-bag/wallet/$encoded").openConnection() as HttpURLConnection).apply { connectTimeout=12000; readTimeout=12000; useCaches=false; setRequestProperty("Cache-Control", "no-cache, no-store") }
+                val walletCode = walletConn.responseCode
+                val walletJson = JSONObject((if (walletCode in 200..299) walletConn.inputStream else walletConn.errorStream).bufferedReader().use { it.readText() })
+                walletConn.disconnect()
+                if (walletCode !in 200..299) throw IllegalStateException("Wallet unavailable")
+                val serverCoins = walletJson.optLong("balance", 0L).coerceAtLeast(0L)
+                val localCredits = walletCachePrefs.getLong("local_recharge_credits_$storeUserId", 0L).coerceAtLeast(0L)
+                Triple((serverCoins + localCredits).coerceAtMost(Int.MAX_VALUE.toLong()).toInt(), owned, Pair(equipped,expiries))
             }.onSuccess { result ->
                 balance = result.first
+                walletCachePrefs.edit().putLong("balance_$storeUserId", result.first.toLong()).apply()
                 // Inventory GET may have started before a Buy request and finish after it.
                 // Merge server-owned IDs instead of clearing a newer successful local purchase.
                 result.second.forEach { id -> if (!ownedIds.contains(id)) ownedIds.add(id) }
@@ -575,22 +588,60 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                                                                 equippedIds.removeAll { id -> nativeStoreItems.find { it.id == id }?.tab == item.tab }
                                                                 equippedIds.add(item.id)
                                                             } else equippedIds.remove(item.id)
-                                                            if (item.tab == "Avatar Frame") nativeAvatarFrameRefreshVersions[userId] = (nativeAvatarFrameRefreshVersions[userId] ?: 0L) + 1L
+                                                            if (item.tab == "Avatar Frame") nativeAvatarFrameRefreshVersions[storeUserId] = (nativeAvatarFrameRefreshVersions[storeUserId] ?: 0L) + 1L
                                                         }.onFailure { purchaseMessage = it.message ?: "Could not use item" }
                                                         purchaseBusy = false
                                                     }
-                                                } else if (userId.isBlank()) purchaseMessage = "Please sign in to use items"
-                                            } else if (!purchaseBusy && userId.isNotBlank()) {
-                                                // Route all grid Buy taps through the one-item confirmation sheet.
-                                                selectedItem = item
-                                            } else if (userId.isBlank()) purchaseMessage = "Please sign in to buy"
+                                                } else if (storeUserId.isBlank()) purchaseMessage = "Please sign in to use items"
+                                            } else if (!purchaseBusy && storeUserId.isNotBlank()) {
+                                                // Buy exactly this card immediately; no purchase sheet.
+                                                purchaseBusy = true
+                                                purchaseItemId = item.id
+                                                storeScope.launch {
+                                                    val result = withContext(Dispatchers.IO) {
+                                                        runCatching {
+                                                            val c = (URL("https://zyora-server.onrender.com/api/store/purchase").openConnection() as HttpURLConnection).apply {
+                                                                requestMethod = "POST"; doOutput = true; connectTimeout = 12000; readTimeout = 12000
+                                                                setRequestProperty("Content-Type", "application/json")
+                                                            }
+                                                            val body = JSONObject().put("userId", storeUserId).put("itemId", item.id)
+                                                                .put("name", item.name).put("tab", item.tab).put("image", item.image)
+                                                                .put("video", item.video ?: "").put("duration", item.duration).put("price", item.price).toString()
+                                                            c.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
+                                                            val code = c.responseCode
+                                                            val stream = if (code in 200..299) c.inputStream else c.errorStream
+                                                            val json = JSONObject(stream.bufferedReader().use { it.readText() })
+                                                            c.disconnect()
+                                                            if (json.has("balance")) withContext(Dispatchers.Main) {
+                                                                balance = json.optInt("balance", balance)
+                                                                walletCachePrefs.edit().putLong("balance_$storeUserId", balance.toLong()).apply()
+                                                            }
+                                                            if (code !in 200..299 || !json.optBoolean("success")) throw IllegalStateException(json.optString("error", "Purchase failed"))
+                                                            json
+                                                        }
+                                                    }
+                                                    result.onSuccess { json ->
+                                                        balance = json.optInt("balance", balance)
+                                                        walletCachePrefs.edit().putLong("balance_$storeUserId", balance.toLong()).apply()
+                                                        val bought = json.optJSONObject("item")
+                                                        if (!ownedIds.contains(item.id)) ownedIds.add(item.id)
+                                                        if (bought != null) expiryById[item.id] = bought.optLong("expiresAt")
+                                                        purchaseMessage = "Purchase successful"
+                                                        if (item.tab == "Avatar Frame") nativeAvatarFrameRefreshVersions[storeUserId] = (nativeAvatarFrameRefreshVersions[storeUserId] ?: 0L) + 1L
+                                                    }.onFailure {
+                                                        purchaseMessage = if (it.message?.contains("insufficient", ignoreCase = true) == true) "Insufficient balance" else it.message ?: "Purchase failed"
+                                                    }
+                                                    purchaseBusy = false
+                                                    purchaseItemId = null
+                                                }
+                                            } else if (storeUserId.isBlank()) purchaseMessage = "Please sign in to buy"
                                         },
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
                                         if (owned) {
                                             if (isBag) if (equipped) "Remove" else "Use"
-                                            else if (equipped) "Using" else "Use"
+                                            else "Owned"
                                         } else if (purchaseBusy && purchaseItemId == item.id) "..." else "Buy",
                                         color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold
                                     )
@@ -639,134 +690,6 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
         } else {
             Box(Modifier.fillMaxWidth().padding(12.dp), contentAlignment = Alignment.BottomCenter) {
                 Text(message, color = Color.White, modifier = Modifier.background(Color(0xFF242424), RoundedCornerShape(8.dp)).padding(horizontal=14.dp, vertical=9.dp))
-            }
-        }
-    }
-
-    if (selectedItem != null) {
-        val item = selectedItem!!
-        ModalBottomSheet(onDismissRequest = { selectedItem = null }, containerColor = Color(0xFF1E1E1E), dragHandle = {
-            BottomSheetDefaults.DragHandle(color = Color(0xFF6B7280))
-        }) {
-            Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Purchase", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
-                val previewSource = item.video ?: item.image
-                if (previewSource.endsWith(".mp4", ignoreCase = true)) {
-                    val isV1 = item.id == "v1"
-                    val removeGreen = if (item.tab == "Vehicle") isV1 else true
-                    val previewModifier = if (item.tab == "Vehicle" && !isV1) Modifier.width(180.dp).wrapContentHeight() else Modifier.size(180.dp)
-                    
-                    val sheetBottomFade = if (item.tab == "Vehicle") {
-                        when (item.id) {
-                            "v2", "v4", "v6" -> 0.15f
-                            else -> 0.1f
-                        }
-                    } else 0f
-                    
-                    StoreVideoPreview(
-                        url = StoreAssetBase + previewSource,
-                        modifier = previewModifier,
-                        pause = false,
-                        topFade = if (item.tab == "Vehicle") 0.1f else 0f,
-                        bottomFade = sheetBottomFade,
-                        removeGreenScreen = removeGreen,
-                        mute = item.id == "a8"
-                    )
-                } else {
-                    AsyncImage(model = StoreAssetBase + previewSource, contentDescription = item.name, modifier = Modifier.size(180.dp))
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("%,d".format(item.price), color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                    Spacer(Modifier.width(6.dp))
-                    AsyncImage(model = StoreAssetBase + "file_00000000e56882119c217d508b6733dc.png", contentDescription = "Coins", modifier = Modifier.size(24.dp))
-                }
-                Text(item.name, Modifier.fillMaxWidth().padding(top = 8.dp), fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                Row(Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 8.dp), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
-                    Text("Balance: ", fontSize = 13.sp, color = Color(0xFF9CA3AF), fontWeight = FontWeight.SemiBold)
-                    AsyncImage(model = StoreAssetBase + "file_00000000e56882119c217d508b6733dc.png", contentDescription = "Coins", modifier = Modifier.size(16.dp))
-                    Text("%,d".format(balance), fontSize = 13.sp, color = Color(0xFF9CA3AF), fontWeight = FontWeight.SemiBold)
-                }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Box(Modifier.weight(1f).clip(CircleShape).background(Color(0xFF33271C)).padding(vertical = 9.dp), contentAlignment = Alignment.Center) {
-                        Text("✓  3days", color = Color(0xFFF97316), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                    }
-                    Box(Modifier.weight(1f).clip(CircleShape).background(Color(0xFF2A2A2A)).padding(vertical = 9.dp), contentAlignment = Alignment.Center) {
-                        Text("7days", color = Color(0xFF9CA3AF), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                    }
-                }
-                Row(Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 22.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Button(onClick = { sendItem = item; selectedItem = null }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E3A8A), contentColor = Color(0xFF60A5FA))) { Text("Send", fontWeight = FontWeight.Bold) }
-                    Button(onClick = {
-                        if (userId.isBlank()) {
-                            purchaseMessage = "Please sign in to buy or use items"
-                        } else if (!purchaseBusy && ownedIds.contains(item.id)) {
-                            val nextEquipped = !equippedIds.contains(item.id)
-                            purchaseBusy = true
-                            storeScope.launch {
-                                val result = withContext(Dispatchers.IO) {
-                                    runCatching {
-                                        val c = (URL("https://zyora-server.onrender.com/api/store/equip").openConnection() as HttpURLConnection).apply {
-                                            requestMethod = "POST"; doOutput = true; connectTimeout = 10000; readTimeout = 10000
-                                            setRequestProperty("Content-Type", "application/json")
-                                        }
-                                        val body = JSONObject().put("userId", userId).put("itemId", item.id).put("equipped", nextEquipped).toString()
-                                        c.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
-                                        val code = c.responseCode
-                                        val stream = if (code in 200..299) c.inputStream else c.errorStream
-                                        val json = JSONObject(stream.bufferedReader().use { it.readText() })
-                                        c.disconnect()
-                                        if (code !in 200..299 || !json.optBoolean("success")) throw IllegalStateException(json.optString("error", "Could not use item"))
-                                    }
-                                }
-                                result.onSuccess {
-                                    if (nextEquipped) {
-                                        equippedIds.removeAll { id -> nativeStoreItems.find { it.id == id }?.tab == item.tab }
-                                        equippedIds.add(item.id)
-                                    } else equippedIds.remove(item.id)
-                                    if (item.tab == "Avatar Frame") nativeAvatarFrameRefreshVersions[userId] = (nativeAvatarFrameRefreshVersions[userId] ?: 0L) + 1L
-                                    selectedItem = null
-                                }.onFailure { purchaseMessage = it.message ?: "Could not use item" }
-                                purchaseBusy = false
-                            }
-                        } else if (!purchaseBusy) {
-                            purchaseBusy = true
-                            purchaseItemId = item.id
-                            storeScope.launch {
-                                val result = withContext(Dispatchers.IO) {
-                                    runCatching {
-                                        val c = (URL("https://zyora-server.onrender.com/api/store/purchase").openConnection() as HttpURLConnection).apply {
-                                            requestMethod = "POST"; doOutput = true; connectTimeout = 10000; readTimeout = 10000
-                                            setRequestProperty("Content-Type", "application/json")
-                                        }
-                                        val body = JSONObject().put("userId", userId).put("itemId", item.id)
-                                            .put("name", item.name).put("tab", item.tab).put("image", item.image)
-                                            .put("video", item.video ?: "").put("duration", item.duration).put("price", item.price).toString()
-                                        c.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
-                                        val code = c.responseCode
-                                        val stream = if (code in 200..299) c.inputStream else c.errorStream
-                                        val json = JSONObject(stream.bufferedReader().use { it.readText() })
-                                        c.disconnect()
-                                        if (json.has("balance")) withContext(Dispatchers.Main) { balance = json.optInt("balance", balance) }
-                                        if (code !in 200..299 || !json.optBoolean("success")) throw IllegalStateException(json.optString("error", "Purchase failed"))
-                                        json
-                                    }
-                                }
-                                result.onSuccess { json ->
-                                    balance = json.optInt("balance", balance)
-                                    val bought = json.optJSONObject("item")
-                                    if (item.id !in ownedIds) ownedIds.add(item.id)
-                                    if (bought != null) expiryById[item.id] = bought.optLong("expiresAt")
-                                    purchaseMessage = "Purchase successful"
-                                    selectedItem = null
-                                }.onFailure { purchaseMessage = if (it.message?.contains("insufficient", ignoreCase = true) == true) "Insufficient balance" else it.message ?: "Purchase failed" }
-                                purchaseBusy = false
-                                purchaseItemId = null
-                            }
-                        }
-                    }, enabled = !purchaseBusy, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = StoreCyan, contentColor = Color.White)) {
-                        Text(if (purchaseBusy) "..." else if (ownedIds.contains(item.id)) if (equippedIds.contains(item.id)) "Using" else "Use" else "Buy", fontWeight = FontWeight.Bold)
-                    }
-                }
             }
         }
     }
