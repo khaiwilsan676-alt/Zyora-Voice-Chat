@@ -747,3 +747,9 @@ Current documentation does not certify that all historical features are build-, 
 - `RoomPage.kt`: closed the Enter-the-Room toast `RoomPageBlock` before starting the separate Vehicle preview block. The missing closing brace had accidentally nested subsequent room overlays and helper composables inside the toast block/RoomPage scope, causing a cascade of unresolved composables, invalid local declarations, and misleading NativeSeat argument errors.
 - No UI behavior or layout changes; this is a Kotlin scope/brace correction only.
 - Verification: source committed; the Native 2 GitHub Actions build must complete to confirm APK compilation.
+
+
+## Room Vehicle Playback Fallback (2026-11-13)
+- Fixed equipped Vehicle playback when opening Room with an already-connected/reused room socket. That path refreshes presence/seats without emitting a fresh `room_join`, so the server's `room_vehicle_entry` broadcast is not guaranteed to run.
+- RoomPage now resolves the signed-in user's equipped, unexpired Vehicle directly from `/api/store/inventory/{userId}` after a fresh join and when reusing an already-connected socket, checking UID/account identity variants and using the same public video asset base as Store.
+- The fallback only fills an empty Room preview, so it does not replace a vehicle event already received from another entrant. Playback remains on the Room screen, outside the entry card, with the existing Store-matched layout and one-shot behavior.
