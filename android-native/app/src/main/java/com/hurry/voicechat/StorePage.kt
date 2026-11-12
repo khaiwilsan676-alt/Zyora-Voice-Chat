@@ -328,14 +328,14 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                         if (item.optBoolean("equipped")) equipped.add(id)
                     }
                 }
-                val walletConn = (URL("https://zyora-server.onrender.com/api/lucky-bag/wallet/$encoded").openConnection() as HttpURLConnection).apply { connectTimeout=12000; readTimeout=12000; useCaches=false; setRequestProperty("Cache-Control", "no-cache, no-store") }
+                val walletEncoded = URLEncoder.encode(storeUserId, "UTF-8")
+                val walletConn = (URL("https://zyora-server.onrender.com/api/lucky-bag/wallet/$walletEncoded").openConnection() as HttpURLConnection).apply { connectTimeout=12000; readTimeout=12000; useCaches=false; setRequestProperty("Cache-Control", "no-cache, no-store") }
                 val walletCode = walletConn.responseCode
                 val walletJson = JSONObject((if (walletCode in 200..299) walletConn.inputStream else walletConn.errorStream).bufferedReader().use { it.readText() })
                 walletConn.disconnect()
                 if (walletCode !in 200..299) throw IllegalStateException("Wallet unavailable")
                 val serverCoins = walletJson.optLong("balance", 0L).coerceAtLeast(0L)
-                val localCredits = walletCachePrefs.getLong("local_recharge_credits_$storeUserId", 0L).coerceAtLeast(0L)
-                Triple((serverCoins + localCredits).coerceAtMost(Int.MAX_VALUE.toLong()).toInt(), owned, Pair(equipped,expiries))
+                Triple(serverCoins.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(), owned, Pair(equipped,expiries))
             }.onSuccess { result ->
                 balance = result.first
                 walletCachePrefs.edit().putLong("balance_$storeUserId", result.first.toLong()).apply()
@@ -364,9 +364,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                     val json = JSONObject(stream.bufferedReader().use { it.readText() })
                     c.disconnect()
                     if (code !in 200..299) error("Wallet unavailable")
-                    (json.optLong("balance", 0L).coerceAtLeast(0L) +
-                        walletCachePrefs.getLong("local_recharge_credits_$storeUserId", 0L).coerceAtLeast(0L))
-                        .coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+                    json.optLong("balance", 0L).coerceAtLeast(0L).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
                 }.getOrNull()
             }
             if (latest != null && latest != balance) {
@@ -398,15 +396,11 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                     Icon(Icons.Default.ArrowBack, "Back", tint = Color.White, modifier = Modifier.size(26.dp))
                 }
                 Text(if (isBag) "Bag" else "Store", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    AsyncImage(model = StoreAssetBase + "file_00000000e56882119c217d508b6733dc.png", contentDescription = "Wallet coins", modifier = Modifier.size(16.dp))
-                    Text("%,d".format(balance), color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-                    Text(
-                        if (isBag) "Store" else "Bag", color = Color(0xFF60A5FA), fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold, modifier = Modifier.clip(RoundedCornerShape(6.dp))
-                            .clickable { if (isBag) { currentView = "store"; activeTab = "Vehicle" } else { currentView = "bag"; activeTab = "Avatar Frame" } }.padding(5.dp)
-                    )
-                }
+                Text(
+                    if (isBag) "Store" else "Bag", color = Color(0xFF60A5FA), fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold, modifier = Modifier.clip(RoundedCornerShape(6.dp))
+                        .clickable { if (isBag) { currentView = "store"; activeTab = "Vehicle" } else { currentView = "bag"; activeTab = "Avatar Frame" } }.padding(5.dp)
+                )
             }
             Row(
                 Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 12.dp),
@@ -562,23 +556,24 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                                     }
                                 }
                             }
-                            
+                            if (isBag) {
+                                val expiry = expiryById[item.id] ?: 0L
+                                val remaining = (expiry - clockNow).coerceAtLeast(0L) / 1000L
+                                val days = remaining / 86400L
+                                val hours = (remaining % 86400L) / 3600L
+                                Text(
+                                    if (expiry > clockNow) "${days}d ${hours}h" else "Expired",
+                                    color = Color.LightGray, fontSize = 11.sp, fontWeight = FontWeight.Medium,
+                                    modifier = Modifier.padding(top = 1.dp, bottom = 2.dp)
+                                )
+                            }
+
                             Row(Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 8.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                                 AsyncImage(model = StoreAssetBase + "file_00000000e56882119c217d508b6733dc.png", contentDescription = "Coins", modifier = Modifier.size(16.dp))
                                 Spacer(Modifier.width(4.dp))
                                 // Text color updated for dark theme & Added Duration next to price
                                 Text("%,d".format(item.price), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1)
-                                val remainingLabel = if (isBag) {
-                                    expiryById[item.id]?.let { expiry ->
-                                        val totalSeconds = ((expiry - clockNow).coerceAtLeast(0L) / 1000L)
-                                        val days = totalSeconds / 86400L
-                                        val hours = (totalSeconds % 86400L) / 3600L
-                                        val minutes = (totalSeconds % 3600L) / 60L
-                                        val seconds = totalSeconds % 60L
-                                        "%dd %02dh %02dm %02ds".format(days, hours, minutes, seconds)
-                                    } ?: "Expired"
-                                } else item.duration
-                                Text(" / " + remainingLabel, color = Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                                if (!isBag) Text(" / " + item.duration, color = Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Medium)
                             }
                             Row(
                                 Modifier.fillMaxWidth().height(30.dp)
@@ -586,12 +581,14 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                                     .border(1.dp, StoreBlue, CircleShape)
                                     .background(CardGrey)
                             ) {
-                                Box(
-                                    Modifier.weight(1f).fillMaxHeight()
-                                        .clickable { sendItem = item },
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text("Send", color = Color(0xFF60A5FA), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                if (!isBag) {
+                                    Box(
+                                        Modifier.weight(1f).fillMaxHeight()
+                                            .clickable { sendItem = item },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text("Send", color = Color(0xFF60A5FA), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    }
                                 }
                                 Box(
                                     Modifier.weight(1f).fillMaxHeight()
@@ -635,7 +632,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                                                                 requestMethod = "POST"; doOutput = true; connectTimeout = 12000; readTimeout = 12000
                                                                 setRequestProperty("Content-Type", "application/json")
                                                             }
-                                                            val body = JSONObject().put("userId", storeInventoryUserId).put("itemId", item.id)
+                                                            val body = JSONObject().put("userId", storeInventoryUserId).put("walletUserId", storeUserId).put("itemId", item.id)
                                                                 .put("name", item.name).put("tab", item.tab).put("image", item.image)
                                                                 .put("video", item.video ?: "").put("duration", item.duration).put("price", item.price).toString()
                                                             c.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
@@ -644,7 +641,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                                                             val json = JSONObject(stream.bufferedReader().use { it.readText() })
                                                             c.disconnect()
                                                             if (json.has("balance")) withContext(Dispatchers.Main) {
-                                                                balance = (json.optLong("balance", balance.toLong()) + walletCachePrefs.getLong("local_recharge_credits_$storeUserId", 0L).coerceAtLeast(0L)).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+                                                                balance = json.optLong("balance", balance.toLong()).coerceAtLeast(0L).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
                                                                 walletCachePrefs.edit().putLong("balance_$storeUserId", balance.toLong()).apply()
                                                             }
                                                             if (code !in 200..299 || !json.optBoolean("success")) throw IllegalStateException(json.optString("error", "Purchase failed"))
@@ -652,7 +649,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                                                         }
                                                     }
                                                     result.onSuccess { json ->
-                                                        balance = (json.optLong("balance", balance.toLong()) + walletCachePrefs.getLong("local_recharge_credits_$storeUserId", 0L).coerceAtLeast(0L)).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+                                                        balance = json.optLong("balance", balance.toLong()).coerceAtLeast(0L).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
                                                         walletCachePrefs.edit().putLong("balance_$storeUserId", balance.toLong()).apply()
                                                         val bought = json.optJSONObject("item")
                                                         if (!ownedIds.contains(item.id)) ownedIds.add(item.id)
