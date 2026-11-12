@@ -734,3 +734,10 @@ Current documentation does not certify that all historical features are build-, 
 - `RoomPage.kt`: correlate `room_vehicle_entry` by account ID, buffer the video if it arrives before the toast, update the matching toast, and render `StoreVideoPreview` directly inside that same entry banner. The banner remains until playback completes; ordinary entries without a vehicle still dismiss automatically.
 - Store/Bag remains the only place to equip or remove vehicles. No separate room vehicle controls were added.
 - Verification: source committed; APK compilation, Render deployment of the earlier backend identity fallback, and real-device playback remain unverified.
+
+
+## 2026-11-13 — Room Vehicle playback matches Store preview exactly
+- Native `RoomPage.kt`: the in-room equipped Vehicle player now mirrors the Store full-screen Vehicle preview: full available width, the same per-item top/bottom fade values, the same bottom-versus-center alignment, and green-screen removal only for Vehicle `v1`.
+- Playback starts automatically and is explicitly non-looping. On the first playback completion, the room preview URL and item ID are cleared so the video disappears; no replay or loop is started.
+- The Enter the Room toast remains separate and contains no video. Store/Bag remains the only place to select, equip, and remove Vehicles.
+- Source committed; Native APK build and real-device visual/playback verification remain pending.
