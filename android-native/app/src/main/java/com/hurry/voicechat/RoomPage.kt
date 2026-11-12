@@ -1939,6 +1939,7 @@ Column(Modifier.align(Alignment.BottomStart).padding(bottom=LocalConfiguration.c
                 }
             }
         }
+        }
 
         RoomPageBlock {
             if (roomVehiclePreview.isNotBlank()) {
