@@ -919,6 +919,7 @@ fun RoomPage(
         }
     }
     val entryToasts=remember{mutableStateListOf<NativeEntryToast>()}
+    var roomVehiclePreview by remember(roomId) { mutableStateOf("") }
     val seats=remember{mutableStateListOf<NativeRoomSeat>().apply{for(i in 1..15)add(NativeRoomSeat(i))}}
     // The owner gets one automatic attempt on the first authoritative seat snapshot only.
     val ownerAutoSeatAttempted = remember(roomId, accountId) { java.util.concurrent.atomic.AtomicBoolean(false) }
@@ -1012,15 +1013,8 @@ fun RoomPage(
             val vehicle = payload.optJSONObject("vehicle") ?: return@Listener
             val video = vehicle.optString("video").trim()
             if (user.isBlank() || video.isBlank() || vehicle.optLong("expiresAt") <= System.currentTimeMillis()) return@Listener
-            val entryId = payload.optString("entryId")
-            mainHandler.post {
-                val index = entryToasts.indexOfFirst { it.accountId == user || it.id == entryId }
-                if (index >= 0) {
-                    entryToasts[index] = entryToasts[index].copy(vehicleVideo = video, vehicleItemId = vehicle.optString("itemId"))
-                } else {
-                    entryToasts.add(NativeEntryToast(entryId, payload.optString("senderName", "User"), payload.optString("senderImage", ""), video, user, vehicle.optString("itemId")))
-                }
-            }
+            val videoUrl = if (video.startsWith("http", true)) video else "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/" + video
+            mainHandler.post { roomVehiclePreview = videoUrl }
         }
         val avatarFrameUpdatedListener = Emitter.Listener { args ->
             val payload = args.firstOrNull() as? JSONObject ?: return@Listener
@@ -1429,6 +1423,16 @@ fun RoomPage(
             )
         }
         JitsiRoomAudio(roomId=roomId,userName=roomDisplayName,canSpeak=seats.any { it.number <= roomMicMode && it.occupied && it.accountId == accountId && !it.muted && !it.selfMuted },roomSocket=roomSocketRef.value,musicUri=miniMusicTrack?.url ?: MusicPlaybackState.currentPlayingUri,musicPlaying=isMusicPlaying,onSpeakingChanged={localVoiceSpeaking=it})
+        if (roomVehiclePreview.isNotBlank()) {
+            StoreVideoPreview(
+                url = roomVehiclePreview,
+                modifier = Modifier.align(Alignment.Center).widthIn(max = 280.dp).fillMaxWidth(0.72f),
+                pause = false,
+                mute = false,
+                loop = false,
+                onComplete = { roomVehiclePreview = "" }
+            )
+        }
         AsyncImage(model=when(roomTheme) {
             "forest-night" -> "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/1784875884052~2.jpg"
             "mood-light" -> "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/1784533036732~2.jpg"
@@ -1932,42 +1936,6 @@ Column(Modifier.align(Alignment.BottomStart).padding(bottom=LocalConfiguration.c
                             FallbackAsyncImage(model=toast.image,contentDescription=toast.name,modifier=Modifier.size(24.dp).clip(CircleShape),contentScale=ContentScale.Crop)
                             Text(toast.name,color=Color.White,fontSize=13.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold,maxLines=1,modifier=Modifier.weight(1f, fill=false))
                             Text("Enter the Room",color=Color.White,fontSize=12.sp,fontWeight=FontWeight.Bold,maxLines=1)
-                            if (toast.vehicleVideo.isNotBlank()) {
-                                val vehicleUrl = if (toast.vehicleVideo.startsWith("http", true)) toast.vehicleVideo else "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/" + toast.vehicleVideo
-                                val vehicleItemId = toast.vehicleItemId.ifBlank { when {
-                                    toast.vehicleVideo.contains("VID_20260905_095157_269_bsl.mp4", true) -> "v1"
-                                    toast.vehicleVideo.contains("Screenrecorder-2026-10-23-16-01-27-317~2.mp4", true) -> "v10"
-                                    toast.vehicleVideo.contains("alioss_19_2025090317293759938~2.mp4", true) -> "v2"
-                                    toast.vehicleVideo.contains("alioss_19_2025120517555513292~2.mp4", true) -> "v3"
-                                    toast.vehicleVideo.contains("alioss_19_2025121720314422497~2.mp4", true) -> "v4"
-                                    toast.vehicleVideo.contains("alioss_19_2026021110563339968~2.mp4", true) -> "v5"
-                                    toast.vehicleVideo.contains("alioss_16_2025092202374953873~2.mp4", true) -> "v6"
-                                    toast.vehicleVideo.contains("alioss_16_2025080802251364763~2.mp4", true) -> "v7"
-                                    toast.vehicleVideo.contains("alioss_16_2025092202291646319~2.mp4", true) -> "v8"
-                                    toast.vehicleVideo.contains("alioss_17_2025041211424496804~2.mp4", true) -> "v9"
-                                    else -> ""
-                                } }
-                                val isV1 = vehicleItemId == "v1"
-                                val topFade = when (vehicleItemId) {
-                                    "v10" -> 0.05f
-                                    "v9", "v7", "v6" -> 0.15f
-                                    else -> 0.10f
-                                }
-                                val bottomFade = when (vehicleItemId) {
-                                    "v10" -> 0.05f
-                                    "v2", "v4", "v6" -> 0.15f
-                                    "v9", "v7" -> 0f
-                                    else -> 0.10f
-                                }
-                                StoreVideoPreview(
-                                    url = vehicleUrl,
-                                    modifier = Modifier.width(100.dp).wrapContentHeight(),
-                                    pause = false,
-                                    topFade = topFade,
-                                    bottomFade = bottomFade,
-                                    removeGreenScreen = isV1,
-                                    mute = false
-                                )
                             }
                         }
                     }
