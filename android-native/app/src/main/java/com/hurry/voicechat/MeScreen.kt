@@ -194,7 +194,8 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
                             }
                             NativeAvatarFrameOverlay(
                                 userId = prefs.getString("accountId", uid).orEmpty().ifBlank { uid },
-                                modifier = Modifier.fillMaxSize()
+                                modifier = Modifier.fillMaxSize(),
+                                fallbackUserIds = listOf(uid)
                             )
                         }
                         Spacer(Modifier.width(16.dp))
