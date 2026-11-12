@@ -510,8 +510,7 @@ fun PublicProfileScreen(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(3.dp)
                                 ) {
-                                    CustomGenderIcon(isFemale = isFemale, modifier = Modifier.size(8.dp)) // Icon chhota
-                                    Text(text = userAge.toString(), color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold) // Text chhota
+                                    CustomGenderIcon(isFemale = isFemale, modifier = Modifier.size(8.dp))
                                 }
                             }
 
