@@ -2833,7 +2833,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
 
 
 @Composable
-private fun RoomPageBlock(content: @Composable () -> Unit) {
+private fun androidx.compose.foundation.layout.BoxScope.RoomPageBlock(content: @Composable androidx.compose.foundation.layout.BoxScope.() -> Unit) {
     content()
 }
 
