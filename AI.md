@@ -719,3 +719,11 @@ Current documentation does not certify that all historical features are build-, 
 - Public Profile Frame inventory now displays owned frame still images in a three-column grid, with additional frames wrapping to following rows; video playback remains limited to equipped avatar overlays.
 - Public Profile Vehicle section now reads the user's unexpired owned Vehicle inventory and displays each owned vehicle's catalogue image in the same three-column row layout. The existing default Vehicle artwork remains when the user owns none.
 - No Store purchase/equip logic, avatar dimensions, profile layout colors, or room/seat sizing were changed. Native APK build and on-device visual verification are still pending.
+
+
+## 2026-11-13 — Four Grid defaults and equipped vehicle identity fix
+- Native `Fourgride.kt`: Entry Effect and Gift Effect now default ON per room, retain the room owner's/admin's ON/OFF choice across reopening, and are only adjustable by room owner/admin.
+- Native `RoomPage.kt`: passes the active room ID into Four Grid so effect preferences do not leak between rooms.
+- `backend/server.js`: room-entry vehicle lookup now checks both the app account ID and Firebase UID used by Store Bag inventory. This fixes the identity mismatch that could prevent an equipped vehicle video from being included in the `room_vehicle_entry` event.
+- Vehicle playback remains tied to the existing room-entry event and `StoreVideoPreview`; Store/Bag remains the only place to select, use, or remove a vehicle. No room layout redesign or separate vehicle controls were added.
+- Verification: source changes committed; Native APK CI, Render deployment, and real-device multi-account vehicle playback tests are still pending.
