@@ -1067,7 +1067,9 @@ fun StoreVideoPreview(
     topFade: Float = 0f,
     bottomFade: Float = 0f,
     removeGreenScreen: Boolean = false,
-    mute: Boolean = false // New Parameter for mute
+    mute: Boolean = false, // New Parameter for mute
+    loop: Boolean = true,
+    onComplete: (() -> Unit)? = null
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     var isVideoReady by remember { mutableStateOf(false) } 
@@ -1139,7 +1141,8 @@ fun StoreVideoPreview(
                             mediaPlayer.setSurface(Surface(surface))
                             try {
                                 mediaPlayer.setDataSource(ctx, Uri.parse(url))
-                                mediaPlayer.isLooping = true
+                                mediaPlayer.isLooping = loop
+                                if (!loop && onComplete != null) mediaPlayer.setOnCompletionListener { onComplete() }
                                 
                                 mediaPlayer.setOnVideoSizeChangedListener { _, w, h ->
                                     if (w > 0 && h > 0) {
