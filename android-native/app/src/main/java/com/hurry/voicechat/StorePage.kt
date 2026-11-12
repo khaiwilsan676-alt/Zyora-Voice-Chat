@@ -65,6 +65,8 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.net.URLEncoder
 import java.net.HttpURLConnection
+import java.io.File
+import java.security.MessageDigest
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -165,12 +167,17 @@ fun NativeAvatarFrameOverlay(userId: String, modifier: Modifier = Modifier) {
             val frameMute = frameId == "a8"
             StoreVideoPreview(
                 url = StoreAssetBase + video,
-                modifier = modifier,
+                modifier = modifier.graphicsLayer {
+                    scaleX = 1.08f
+                    scaleY = 1.08f
+                    translationY = -4.dp.toPx()
+                },
                 pause = false,
                 topFade = 0f,
                 bottomFade = 0f,
                 removeGreenScreen = true,
-                mute = frameMute
+                mute = frameMute,
+                cacheVideo = true
             )
         } else {
             val image = selected.optString("image", selectedItem?.image.orEmpty()).ifBlank { selectedItem?.image.orEmpty() }
@@ -224,25 +231,15 @@ fun NativeOwnedFrameShowcase(userId: String) {
                     Modifier.width(76.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    val video = owned.optString("video").ifBlank { item.video.orEmpty() }.ifBlank { owned.optString("image", item.image).ifBlank { item.image } }
-                    if (video.substringBefore("?").endsWith(".mp4", ignoreCase = true)) {
-                        StoreVideoPreview(
-                            url = StoreAssetBase + video,
-                            modifier = Modifier.fillMaxWidth().height(76.dp),
-                            pause = false,
-                            topFade = 0f,
-                            bottomFade = 0f,
-                            removeGreenScreen = true,
-                            mute = item.id == "a8"
-                        )
-                    } else {
-                        AsyncImage(
-                            model = StoreAssetBase + owned.optString("image", item.image),
-                            contentDescription = "Owned avatar frame",
-                            modifier = Modifier.fillMaxWidth().height(76.dp),
-                            contentScale = ContentScale.Fit
-                        )
-                    }
+                    // The Public Profile showcase is a still-image catalogue view;
+                    // only the equipped avatar overlay plays the Store video.
+                    val frameImage = owned.optString("image").ifBlank { item.image }
+                    AsyncImage(
+                        model = StoreAssetBase + frameImage,
+                        contentDescription = "Owned avatar frame",
+                        modifier = Modifier.fillMaxWidth().height(76.dp),
+                        contentScale = ContentScale.Fit
+                    )
                     Row(
                         horizontalArrangement = Arrangement.Center,
                         verticalAlignment = Alignment.CenterVertically
@@ -1069,10 +1066,44 @@ fun StoreVideoPreview(
     removeGreenScreen: Boolean = false,
     mute: Boolean = false, // New Parameter for mute
     loop: Boolean = true,
-    onComplete: (() -> Unit)? = null
+    onComplete: (() -> Unit)? = null,
+    cacheVideo: Boolean = false
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
-    var isVideoReady by remember { mutableStateOf(false) } 
+    val playbackUrl by produceState(initialValue = if (cacheVideo) "" else url, url, cacheVideo) {
+        if (!cacheVideo) {
+            value = url
+        } else {
+            value = withContext(Dispatchers.IO) {
+                runCatching {
+                    val digest = MessageDigest.getInstance("SHA-256")
+                        .digest(url.toByteArray())
+                        .joinToString("") { "%02x".format(it) }
+                    val cachedFile = File(context.cacheDir, "avatar-frame-$digest.mp4")
+                    if (!cachedFile.exists() || cachedFile.length() <= 0L) {
+                        val tempFile = File(context.cacheDir, "avatar-frame-$digest.tmp")
+                        val connection = URL(url).openConnection().apply {
+                            connectTimeout = 15000
+                            readTimeout = 30000
+                        }
+                        try {
+                            connection.getInputStream().use { input ->
+                                tempFile.outputStream().use { output -> input.copyTo(output) }
+                            }
+                        } finally {
+                            (connection as? HttpURLConnection)?.disconnect()
+                        }
+                        if (!tempFile.renameTo(cachedFile)) {
+                            tempFile.copyTo(cachedFile, overwrite = true)
+                            tempFile.delete()
+                        }
+                    }
+                    cachedFile.toURI().toString()
+                }.getOrElse { url }
+            }
+        }
+    }
+    var isVideoReady by remember(url) { mutableStateOf(false) } 
     var videoRatio by remember { mutableStateOf<Float?>(null) }
 
     val chromaMatrix = remember {
@@ -1127,7 +1158,7 @@ fun StoreVideoPreview(
             },
         contentAlignment = Alignment.Center
     ) {
-        key(url) {
+        if (playbackUrl.isNotBlank()) key(playbackUrl) {
             AndroidView(
                 factory = { ctx ->
                     val textureView = TextureView(ctx)
@@ -1140,7 +1171,7 @@ fun StoreVideoPreview(
                         override fun onSurfaceTextureAvailable(surface: SurfaceTexture, width: Int, height: Int) {
                             mediaPlayer.setSurface(Surface(surface))
                             try {
-                                mediaPlayer.setDataSource(ctx, Uri.parse(url))
+                                mediaPlayer.setDataSource(ctx, Uri.parse(playbackUrl))
                                 mediaPlayer.isLooping = loop
                                 if (!loop && onComplete != null) mediaPlayer.setOnCompletionListener { onComplete() }
                                 
