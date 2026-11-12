@@ -1490,7 +1490,6 @@ app.post("/api/wallet/initialize", async (req, res) => {
   try {
     if (!db) return res.status(503).json({ error: "GitHub storage is not connected" });
     const userId = String(req.body?.userId || "").trim();
-    const localBalance = Math.max(0, Math.floor(Number(req.body?.localBalance) || 0));
     if (!userId) return res.status(400).json({ error: "userId required" });
     // Store inventory, wallet reads, and purchases must resolve the exact same
     // canonical user document. A broad $or lookup here could select a different
