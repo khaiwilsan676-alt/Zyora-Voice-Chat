@@ -1492,20 +1492,11 @@ app.post("/api/wallet/initialize", async (req, res) => {
     const userId = String(req.body?.userId || "").trim();
     const localBalance = Math.max(0, Math.floor(Number(req.body?.localBalance) || 0));
     if (!userId) return res.status(400).json({ error: "userId required" });
-    const users = db.collection("users");
-    let user = await users.findOne(walletUserQuery(userId));
-    if (!user) {
-      const legacy = await db.collection("luckyBagWallets").findOne({ userId });
-      const initialCoins = Math.max(localBalance, Number(legacy?.balance || 0));
-      await users.updateOne({ uid: userId }, { $setOnInsert: {
-        uid: userId, id: userId, appLongId: userId, coins: initialCoins,
-        diamonds: 0, createdAt: Date.now(), walletInitializedAt: Date.now()
-      } }, { upsert: true });
-    } else if (user.coins == null) {
-      const legacy = await db.collection("luckyBagWallets").findOne({ userId });
-      const initialCoins = Math.max(localBalance, Number(user.balance || 0), Number(legacy?.balance || 0));
-      await users.updateOne({ _id: user._id }, { $set: { coins: initialCoins, walletInitializedAt: Date.now() } });
-    }
+    // Store inventory, wallet reads, and purchases must resolve the exact same
+    // canonical user document. A broad $or lookup here could select a different
+    // duplicate legacy record than ensureWalletUser()/debitWallet(), causing the
+    // displayed wallet and the purchase debit to disagree.
+    await ensureWalletUser(userId);
     return res.json({ success: true, balance: await walletBalance(userId) });
   } catch (error) {
     console.error("POST /api/wallet/initialize error:", error.message);
