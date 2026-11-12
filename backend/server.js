@@ -1375,15 +1375,27 @@ const walletUserQuery = (userId) => ({ $or: [
 async function ensureWalletUser(userId) {
   if (!db) throw new Error("GitHub storage is not connected");
   const users = db.collection("users");
-  let user = await users.findOne(walletUserQuery(userId));
+  const key = String(userId);
+  // Resolve one canonical document in a stable identity order. A broad $or
+  // can match duplicate legacy user documents and let balance reads/debits
+  // operate on different records.
+  const identityQueries = [
+    { uid: key }, { id: key }, { appLongId: key },
+    { accountId: key }, { accountNumber: key }, { displayUserNumber: key }
+  ];
+  let user = null;
+  for (const identityQuery of identityQueries) {
+    user = await users.findOne(identityQuery);
+    if (user) break;
+  }
   if (!user) {
-    const legacy = await db.collection("luckyBagWallets").findOne({ userId: String(userId) });
+    const legacy = await db.collection("luckyBagWallets").findOne({ userId: key });
     const initialCoins = Number(legacy?.balance ?? 0);
-    await users.updateOne({ uid: String(userId) }, { $setOnInsert: {
-      uid: String(userId), id: String(userId), appLongId: String(userId),
+    await users.updateOne({ uid: key }, { $setOnInsert: {
+      uid: key, id: key, appLongId: key,
       coins: initialCoins, diamonds: 0, createdAt: Date.now()
     } }, { upsert: true });
-    user = await users.findOne(walletUserQuery(userId));
+    user = await users.findOne({ uid: key });
   }
   // MongoDB numeric comparisons are type-sensitive. Older wallet records can
   // contain coins as a numeric string (for example "50000"): walletBalance()
@@ -1408,8 +1420,8 @@ async function walletBalance(userId) {
 async function creditWallet(userId, amount) {
   const value = Number(amount);
   if (!Number.isFinite(value) || value <= 0) throw new Error("Invalid wallet credit");
-  await ensureWalletUser(userId);
-  const result = await db.collection("users").updateOne(walletUserQuery(userId), {
+  const user = await ensureWalletUser(userId);
+  const result = await db.collection("users").updateOne({ _id: user._id }, {
     $inc: { coins: value }, $set: { walletUpdatedAt: Date.now() }
   });
   if (!result.modifiedCount) throw new Error("Wallet user not found");
@@ -1418,9 +1430,9 @@ async function creditWalletOnce(userId, amount, creditKey) {
   const value = Number(amount);
   const key = String(creditKey || "").trim();
   if (!Number.isFinite(value) || value <= 0 || !key) throw new Error("Invalid idempotent wallet credit");
-  await ensureWalletUser(userId);
+  const user = await ensureWalletUser(userId);
   const result = await db.collection("users").updateOne(
-    { ...walletUserQuery(userId), dailyCheckInCredits: { $ne: key } },
+    { _id: user._id, dailyCheckInCredits: { $ne: key } },
     {
       $inc: { coins: value },
       $addToSet: { dailyCheckInCredits: key },
@@ -1432,9 +1444,9 @@ async function creditWalletOnce(userId, amount, creditKey) {
 async function debitWallet(userId, amount) {
   const value = Number(amount);
   if (!Number.isFinite(value) || value <= 0) return false;
-  await ensureWalletUser(userId);
+  const user = await ensureWalletUser(userId);
   const result = await db.collection("users").updateOne({
-    ...walletUserQuery(userId), coins: { $gte: value }
+    _id: user._id, coins: { $gte: value }
   }, { $inc: { coins: -value }, $set: { walletUpdatedAt: Date.now() } });
   return Boolean(result.modifiedCount);
 }
