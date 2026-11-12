@@ -713,3 +713,9 @@ Current documentation does not certify that all historical features are build-, 
 - Root cause: `RoomPage.kt` created the room-entry vehicle player before the full-screen room-theme `AsyncImage`, so the later theme layer covered the video. The player now uses a small positive z-index so the entry video renders above the theme/background.
 - The existing server-side inventory lookup remains authoritative: only an unexpired, equipped Vehicle with a non-empty video is broadcast on `room_vehicle_entry`. If no Vehicle is equipped (including after removing the last equipped Vehicle), the backend sends no playable vehicle and the client does not invent a fallback.
 - Store Preview, Bag ownership/equip logic, room layout, and other UI are unchanged. Native APK build and real-device room-entry/removal verification remain pending.
+
+## 2026-11-13 — Larger avatar frames and profile inventory rows
+- Shared native `NativeAvatarFrameOverlay` is enlarged to 1.28x for both video and still-image frames. This applies consistently to Me, Public Profile, Room Profile, and occupied room-seat avatars through the shared overlay.
+- Public Profile Frame inventory now displays owned frame still images in a three-column grid, with additional frames wrapping to following rows; video playback remains limited to equipped avatar overlays.
+- Public Profile Vehicle section now reads the user's unexpired owned Vehicle inventory and displays each owned vehicle's catalogue image in the same three-column row layout. The existing default Vehicle artwork remains when the user owns none.
+- No Store purchase/equip logic, avatar dimensions, profile layout colors, or room/seat sizing were changed. Native APK build and on-device visual verification are still pending.
