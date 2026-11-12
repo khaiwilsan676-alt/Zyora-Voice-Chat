@@ -1942,19 +1942,34 @@ Column(Modifier.align(Alignment.BottomStart).padding(bottom=LocalConfiguration.c
 
         RoomPageBlock {
             if (roomVehiclePreview.isNotBlank()) {
+                // Match the Store Vehicle preview exactly: full available width, per-vehicle
+                // vertical placement/fades, and the same v1-only green-screen removal rule.
+                val previewItemId = roomVehiclePreviewItemId
+                val alignBottom = previewItemId in setOf("v9", "v7", "v2", "v10")
+                val topFade = when (previewItemId) {
+                    "v10" -> 0.05f
+                    "v9", "v7", "v6" -> 0.15f
+                    else -> 0.10f
+                }
+                val bottomFade = when (previewItemId) {
+                    "v10" -> 0.05f
+                    "v2", "v4", "v6" -> 0.15f
+                    "v9", "v7" -> 0.0f
+                    else -> 0.10f
+                }
                 StoreVideoPreview(
                     url = roomVehiclePreview,
-                    modifier = Modifier.align(Alignment.Center).zIndex(50f).widthIn(max = 320.dp).fillMaxWidth(0.82f),
+                    modifier = Modifier
+                        .align(if (alignBottom) Alignment.BottomCenter else Alignment.Center)
+                        .zIndex(50f)
+                        .fillMaxWidth()
+                        .wrapContentHeight(),
                     pause = false,
-                    topFade = 0.1f,
-                    bottomFade = if (roomVehiclePreviewItemId in setOf("v2", "v4", "v6")) 0.15f else 0.1f,
-                    removeGreenScreen = true,
+                    topFade = topFade,
+                    bottomFade = bottomFade,
+                    removeGreenScreen = previewItemId == "v1",
                     mute = false,
-                    loop = false,
-                    onComplete = {
-                        roomVehiclePreview = ""
-                        roomVehiclePreviewItemId = ""
-                    }
+                    loop = true
                 )
             }
         }
