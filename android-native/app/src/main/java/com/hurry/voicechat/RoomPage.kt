@@ -1942,7 +1942,6 @@ Column(Modifier.align(Alignment.BottomStart).padding(bottom=LocalConfiguration.c
                 }
             }
         }
-        }
 
         RoomPageBlock {
 if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.isMusicPageOpen && MusicPlaybackState.wasPlayedOnMusicPage && MusicPlaybackState.musicPageBackPressed) {
