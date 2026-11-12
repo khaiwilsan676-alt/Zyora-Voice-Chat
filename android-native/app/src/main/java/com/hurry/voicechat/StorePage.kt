@@ -240,20 +240,22 @@ fun NativeOwnedFrameShowcase(userId: String) {
             frames = frames.filter { it.optLong("expiresAt") > now }
         }
     }
-    if (frames.isNotEmpty()) {
+    val validFrames = frames.mapNotNull { owned ->
+        val item = nativeStoreItems.firstOrNull { it.id == owned.optString("itemId") } ?: return@mapNotNull null
+        owned to item
+    }
+    if (validFrames.isNotEmpty()) {
         Row(
             Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.Top
         ) {
-            frames.forEach { owned ->
-                val item = nativeStoreItems.firstOrNull { it.id == owned.optString("itemId") } ?: return@forEach
+            validFrames.forEach { (owned, item) ->
                 Column(
                     Modifier.width(76.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // The Public Profile showcase is a still-image catalogue view;
-                    // only the equipped avatar overlay plays the Store video.
+                    // Keep the showcase image-only; video playback is reserved for the avatar overlay.
                     val frameImage = owned.optString("image").ifBlank { item.image }
                     AsyncImage(
                         model = StoreAssetBase + frameImage,
@@ -276,6 +278,14 @@ fun NativeOwnedFrameShowcase(userId: String) {
                 }
             }
         }
+    } else {
+        // Same default frame artwork used when a profile has no owned frames.
+        AsyncImage(
+            model = StoreAssetBase + "1785091457562.png",
+            contentDescription = "Default avatar frame",
+            modifier = Modifier.fillMaxWidth().height(112.dp),
+            contentScale = ContentScale.Fit
+        )
     }
 }
 
