@@ -371,11 +371,15 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                     Icon(Icons.Default.ArrowBack, "Back", tint = Color.White, modifier = Modifier.size(26.dp))
                 }
                 Text(if (isBag) "Bag" else "Store", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                Text(
-                    if (isBag) "Store" else "Bag", color = Color(0xFF60A5FA), fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold, modifier = Modifier.clip(RoundedCornerShape(6.dp))
-                        .clickable { if (isBag) { currentView = "store"; activeTab = "Vehicle" } else { currentView = "bag"; activeTab = "Avatar Frame" } }.padding(5.dp)
-                )
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    AsyncImage(model = StoreAssetBase + "file_00000000e56882119c217d508b6733dc.png", contentDescription = "Wallet coins", modifier = Modifier.size(16.dp))
+                    Text("%,d".format(balance), color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                    Text(
+                        if (isBag) "Store" else "Bag", color = Color(0xFF60A5FA), fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold, modifier = Modifier.clip(RoundedCornerShape(6.dp))
+                            .clickable { if (isBag) { currentView = "store"; activeTab = "Vehicle" } else { currentView = "bag"; activeTab = "Avatar Frame" } }.padding(5.dp)
+                    )
+                }
             }
             Row(
                 Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 12.dp),
