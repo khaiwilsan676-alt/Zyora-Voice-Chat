@@ -719,7 +719,7 @@ private fun DiamondsContent(
 private fun AgentContent(onChat: (String, String, String) -> Unit) {
     val context = LocalContext.current
     var sellers by remember { mutableStateOf<List<WalletAgentSeller>>(emptyList()) }
-    var onlineById by remember { mutableStateOf<Map<String, Boolean>>(emptyMap()) }
+    var onlineById by remember { mutableStateOf>(emptyMap()) }
     var loaded by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
@@ -918,25 +918,33 @@ private fun PillTab(t: String, selected: Boolean, m: Modifier, onClick: () -> Un
 @Composable
 private fun Pack(c: String, p: String, b: String, m: Modifier, onClick: () -> Unit) {
     Column(
-        m.fillMaxWidth().aspectRatio(1f)
+        // Yahan par aspectRatio(1f) se badha kar aspectRatio(0.85f) kar diya hai card ki thodi height badhane ke liye
+        m.fillMaxWidth().aspectRatio(0.85f)
             .clip(RoundedCornerShape(6.dp)).background(Color.White)
             .clickable { onClick() }.padding(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
+        // 1st: Image
         AsyncImage(RAW_WALLET + "file_00000000e56882119c217d508b6733dc.png", null,
             Modifier.size(32.dp), contentScale = ContentScale.Fit)
-        Text(c, Modifier.padding(top = 6.dp),
-            fontSize = if (c == "10,000,000") 14.sp else 17.sp,
-            fontWeight = FontWeight.Bold, color = Color(0xFF111827),
-            lineHeight = if (c == "10,000,000") 15.sp else 17.sp)
+        
+        // 2nd: ₹ value in Grey Color
+        Text(if (p.trimStart().startsWith("₹")) p else "₹ $p",
+            Modifier.padding(top = 6.dp), fontSize = 14.sp,
+            color = Color(0xFF6B7280), fontWeight = FontWeight.Medium, lineHeight = 14.sp)
+        
+        // 3rd: Bonus tag (+)
         Text(b, Modifier.padding(top = 5.dp)
             .background(Color(0xFFEF4444), RoundedCornerShape(4.dp))
             .padding(horizontal = 5.dp, vertical = 3.dp),
             fontSize = 9.sp, color = Color.White, fontWeight = FontWeight.Bold, lineHeight = 9.sp)
-        Text(if (p.trimStart().startsWith("₹")) p else "₹ $p",
-            Modifier.padding(top = 6.dp), fontSize = 14.sp,
-            color = Color(0xFF6B7280), fontWeight = FontWeight.Medium, lineHeight = 14.sp)
+            
+        // 4th: Coins value (bold)
+        Text(c, Modifier.padding(top = 6.dp),
+            fontSize = if (c == "10,000,000") 14.sp else 17.sp,
+            fontWeight = FontWeight.Bold, color = Color(0xFF111827),
+            lineHeight = if (c == "10,000,000") 15.sp else 17.sp)
     }
 }
 
