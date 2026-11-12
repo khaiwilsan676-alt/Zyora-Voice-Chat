@@ -254,7 +254,7 @@ export default function OwnerBan() {
   }
 
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto w-full text-slate-900 dark:text-slate-100">
+    <div className="p-4 md:p-8 max-w-7xl mx-auto w-full bg-white text-slate-900 [color-scheme:light]">
       <h2 className="text-2xl font-bold mb-4">Ban</h2>
 
       {/* NEW ON-SCREEN BAN FORM */}
@@ -266,7 +266,7 @@ export default function OwnerBan() {
             type="text"
             value={inlineUserId}
             onChange={(e) => setInlineUserId(e.target.value)}
-            className="w-full p-2 bg-slate-100 dark:bg-slate-800 rounded-md shadow-none border-none outline-none"
+            className="w-full p-2 bg-slate-100 rounded-md shadow-none border-none outline-none"
             placeholder="Enter ID"
           />
         </div>
@@ -277,7 +277,7 @@ export default function OwnerBan() {
             type="text"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            className="w-full p-2 bg-slate-100 dark:bg-slate-800 rounded-md shadow-none border-none outline-none"
+            className="w-full p-2 bg-slate-100 rounded-md shadow-none border-none outline-none"
             placeholder="Reason of ban"
           />
         </div>
@@ -288,18 +288,18 @@ export default function OwnerBan() {
           <div className="relative">
             <div 
               onClick={() => setOpenDropdown(openDropdown === 'inline-member' ? '' : 'inline-member')}
-              className="w-full p-2 bg-slate-100 dark:bg-slate-800 rounded-md flex justify-between items-center cursor-pointer select-none"
+              className="w-full p-2 bg-slate-100 rounded-md flex justify-between items-center cursor-pointer select-none"
             >
               <span>{banBy}</span>
               <ChevronDown className="w-4 h-4 text-slate-500" />
             </div>
             {openDropdown === 'inline-member' && (
-              <div className="absolute top-full left-0 w-full mt-1 bg-slate-200 dark:bg-slate-700 rounded-md z-50 overflow-hidden">
+              <div className="absolute top-full left-0 w-full mt-1 bg-slate-200 rounded-md z-50 overflow-hidden">
                 {['Head', 'Official staff'].map(opt => (
                   <div 
                     key={opt} 
                     onClick={() => { setBanBy(opt); setOpenDropdown(''); }}
-                    className="p-2 hover:bg-slate-300 dark:hover:bg-slate-600 cursor-pointer"
+                    className="p-2 hover:bg-slate-300 cursor-pointer"
                   >
                     {opt}
                   </div>
@@ -316,7 +316,7 @@ export default function OwnerBan() {
             type="text"
             value={memberName}
             onChange={(e) => setMemberName(e.target.value)}
-            className="w-full p-2 bg-slate-100 dark:bg-slate-800 rounded-md shadow-none border-none outline-none"
+            className="w-full p-2 bg-slate-100 rounded-md shadow-none border-none outline-none"
             placeholder="Enter member name"
           />
         </div>
@@ -327,18 +327,18 @@ export default function OwnerBan() {
           <div className="relative">
             <div 
               onClick={() => setOpenDropdown(openDropdown === 'inline-types' ? '' : 'inline-types')}
-              className="w-full p-2 bg-slate-100 dark:bg-slate-800 rounded-md flex justify-between items-center cursor-pointer select-none"
+              className="w-full p-2 bg-slate-100 rounded-md flex justify-between items-center cursor-pointer select-none"
             >
               <span>{banType}</span>
               <ChevronDown className="w-4 h-4 text-slate-500" />
             </div>
             {openDropdown === 'inline-types' && (
-              <div className="absolute top-full left-0 w-full mt-1 bg-slate-200 dark:bg-slate-700 rounded-md z-50 overflow-hidden">
+              <div className="absolute top-full left-0 w-full mt-1 bg-slate-200 rounded-md z-50 overflow-hidden">
                 {['Illegal', 'Violence', 'Fraud', 'Abusing', 'Fake official', 'Others'].map(opt => (
                   <div 
                     key={opt} 
                     onClick={() => { setBanType(opt); setOpenDropdown(''); }}
-                    className="p-2 hover:bg-slate-300 dark:hover:bg-slate-600 cursor-pointer"
+                    className="p-2 hover:bg-slate-300 cursor-pointer"
                   >
                     {opt}
                   </div>
@@ -354,18 +354,18 @@ export default function OwnerBan() {
           <div className="relative">
             <div 
               onClick={() => setOpenDropdown(openDropdown === 'inline-time' ? '' : 'inline-time')}
-              className="w-full p-2 bg-slate-100 dark:bg-slate-800 rounded-md flex justify-between items-center cursor-pointer select-none"
+              className="w-full p-2 bg-slate-100 rounded-md flex justify-between items-center cursor-pointer select-none"
             >
               <span>{timeOption}</span>
               <ChevronDown className="w-4 h-4 text-slate-500" />
             </div>
             {openDropdown === 'inline-time' && (
-              <div className="absolute top-full left-0 w-full mt-1 bg-slate-200 dark:bg-slate-700 rounded-md z-50 overflow-hidden">
+              <div className="absolute top-full left-0 w-full mt-1 bg-slate-200 rounded-md z-50 overflow-hidden">
                 {['2Hours', '24Hours', '7 Days', 'Custom', 'Permanent', 'Device Ban'].map(opt => (
                   <div 
                     key={opt} 
                     onClick={() => { setTimeOption(opt); setOpenDropdown(''); }}
-                    className="p-2 hover:bg-slate-300 dark:hover:bg-slate-600 cursor-pointer"
+                    className="p-2 hover:bg-slate-300 cursor-pointer"
                   >
                     {opt}
                   </div>
@@ -380,14 +380,14 @@ export default function OwnerBan() {
               placeholder="Enter hours"
               value={customTime}
               onChange={(e) => setCustomTime(e.target.value)}
-              className="w-full p-2 mt-2 bg-slate-100 dark:bg-slate-800 rounded-md shadow-none border-none outline-none"
+              className="w-full p-2 mt-2 bg-slate-100 rounded-md shadow-none border-none outline-none"
             />
           )}
         </div>
 
         <div>
           <div className="font-semibold mb-1">Unban Time</div>
-          <div className="w-full p-2 bg-slate-100 dark:bg-slate-800 rounded-md shadow-none border-none outline-none text-slate-500">
+          <div className="w-full p-2 bg-slate-100 rounded-md shadow-none border-none outline-none text-slate-500">
             {unbanTimeStr || 'N/A'}
           </div>
         </div>
@@ -401,13 +401,13 @@ export default function OwnerBan() {
       </div>
 
       {/* SEARCH INPUT BAR - Edge to edge w-full */}
-      <div className="flex gap-2 mb-8 items-center w-full border-t border-slate-200 dark:border-slate-800 pt-6">
+      <div className="flex gap-2 mb-8 items-center w-full border-t border-slate-200 pt-6">
         <input
           type="text"
           placeholder="Search by ID Number (Optional)"
           value={searchId}
           onChange={(e) => setSearchId(e.target.value)}
-          className="flex-1 p-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+          className="flex-1 p-2 border border-slate-300 rounded-lg bg-white text-slate-900"
         />
         <button
           onClick={handleSearch}
@@ -423,7 +423,7 @@ export default function OwnerBan() {
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="border-b border-slate-200 dark:border-slate-800">
+            <tr className="border-b border-slate-200">
               <th className="p-2 font-semibold">S.No</th>
               <th className="p-2 font-semibold">User Dp</th>
               <th className="p-2 font-semibold">ID</th>
@@ -437,7 +437,7 @@ export default function OwnerBan() {
           </thead>
           <tbody>
             {bans.map((ban, index) => (
-              <tr key={index} className="border-b border-slate-100 dark:border-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800/20">
+              <tr key={index} className="border-b border-slate-100 hover:bg-slate-50">
                 <td className="p-2">{index + 1}</td>
                 <td className="p-2">
                   <img src={ban.userImage || '/default-avatar.png'} alt="dp" className="w-8 h-8 rounded-full object-cover" />
@@ -451,7 +451,7 @@ export default function OwnerBan() {
                 <td className="p-2">{new Date(ban.banTime).toLocaleString()}</td>
                 <td className="p-2">{ban.banBy}</td>
                 <td className="p-2">
-                  <button onClick={() => { setSelectedBan(ban); setIsDetailModalOpen(true); }} className="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full">
+                  <button onClick={() => { setSelectedBan(ban); setIsDetailModalOpen(true); }} className="p-1 hover:bg-slate-200 rounded-full">
                     <MoreVertical className="w-5 h-5 text-slate-500" />
                   </button>
                 </td>
@@ -469,9 +469,9 @@ export default function OwnerBan() {
       {/* OLD BAN FORM MODAL (Same custom dropdown logic applied here too) */}
       {isBanFormOpen && targetUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-md w-full max-w-md p-6 overflow-y-auto max-h-[90vh] text-slate-900 dark:text-white shadow-none border-none relative">
+          <div className="bg-white rounded-md w-full max-w-md p-6 overflow-y-auto max-h-[90vh] text-slate-900 shadow-none border-none relative">
             
-            <button onClick={() => setIsBanFormOpen(false)} className="absolute top-4 right-4 text-slate-500 hover:text-slate-800 dark:hover:text-white">
+            <button onClick={() => setIsBanFormOpen(false)} className="absolute top-4 right-4 text-slate-500 hover:text-slate-800">
               <X className="w-6 h-6" />
             </button>
             
@@ -489,7 +489,7 @@ export default function OwnerBan() {
                   type="text" 
                   value={targetUser.accountId} 
                   readOnly 
-                  className="w-full p-2 bg-slate-100 dark:bg-slate-800 rounded-md shadow-none border-none outline-none" 
+                  className="w-full p-2 bg-slate-100 rounded-md shadow-none border-none outline-none" 
                 />
               </div>
 
@@ -499,7 +499,7 @@ export default function OwnerBan() {
                   type="text" 
                   value={description} 
                   onChange={(e) => setDescription(e.target.value)} 
-                  className="w-full p-2 bg-slate-100 dark:bg-slate-800 rounded-md shadow-none border-none outline-none" 
+                  className="w-full p-2 bg-slate-100 rounded-md shadow-none border-none outline-none" 
                   placeholder="Reason of ban" 
                 />
               </div>
@@ -510,18 +510,18 @@ export default function OwnerBan() {
                 <div className="relative">
                   <div 
                     onClick={() => setOpenDropdown(openDropdown === 'modal-member' ? '' : 'modal-member')}
-                    className="w-full p-2 bg-slate-100 dark:bg-slate-800 rounded-md flex justify-between items-center cursor-pointer select-none"
+                    className="w-full p-2 bg-slate-100 rounded-md flex justify-between items-center cursor-pointer select-none"
                   >
                     <span>{banBy}</span>
                     <ChevronDown className="w-4 h-4 text-slate-500" />
                   </div>
                   {openDropdown === 'modal-member' && (
-                    <div className="absolute top-full left-0 w-full mt-1 bg-slate-200 dark:bg-slate-700 rounded-md z-50 overflow-hidden">
+                    <div className="absolute top-full left-0 w-full mt-1 bg-slate-200 rounded-md z-50 overflow-hidden">
                       {['Head', 'Official staff'].map(opt => (
                         <div 
                           key={opt} 
                           onClick={() => { setBanBy(opt); setOpenDropdown(''); }}
-                          className="p-2 hover:bg-slate-300 dark:hover:bg-slate-600 cursor-pointer"
+                          className="p-2 hover:bg-slate-300 cursor-pointer"
                         >
                           {opt}
                         </div>
@@ -537,7 +537,7 @@ export default function OwnerBan() {
                   type="text"
                   value={memberName}
                   onChange={(e) => setMemberName(e.target.value)}
-                  className="w-full p-2 bg-slate-100 dark:bg-slate-800 rounded-md shadow-none border-none outline-none"
+                  className="w-full p-2 bg-slate-100 rounded-md shadow-none border-none outline-none"
                   placeholder="Enter member name"
                 />
               </div>
@@ -548,18 +548,18 @@ export default function OwnerBan() {
                 <div className="relative">
                   <div 
                     onClick={() => setOpenDropdown(openDropdown === 'modal-types' ? '' : 'modal-types')}
-                    className="w-full p-2 bg-slate-100 dark:bg-slate-800 rounded-md flex justify-between items-center cursor-pointer select-none"
+                    className="w-full p-2 bg-slate-100 rounded-md flex justify-between items-center cursor-pointer select-none"
                   >
                     <span>{banType}</span>
                     <ChevronDown className="w-4 h-4 text-slate-500" />
                   </div>
                   {openDropdown === 'modal-types' && (
-                    <div className="absolute top-full left-0 w-full mt-1 bg-slate-200 dark:bg-slate-700 rounded-md z-50 overflow-hidden">
+                    <div className="absolute top-full left-0 w-full mt-1 bg-slate-200 rounded-md z-50 overflow-hidden">
                       {['Illegal', 'Violence', 'Fraud', 'Abusing', 'Fake official', 'Others'].map(opt => (
                         <div 
                           key={opt} 
                           onClick={() => { setBanType(opt); setOpenDropdown(''); }}
-                          className="p-2 hover:bg-slate-300 dark:hover:bg-slate-600 cursor-pointer"
+                          className="p-2 hover:bg-slate-300 cursor-pointer"
                         >
                           {opt}
                         </div>
@@ -575,18 +575,18 @@ export default function OwnerBan() {
                 <div className="relative">
                   <div 
                     onClick={() => setOpenDropdown(openDropdown === 'modal-time' ? '' : 'modal-time')}
-                    className="w-full p-2 bg-slate-100 dark:bg-slate-800 rounded-md flex justify-between items-center cursor-pointer select-none"
+                    className="w-full p-2 bg-slate-100 rounded-md flex justify-between items-center cursor-pointer select-none"
                   >
                     <span>{timeOption}</span>
                     <ChevronDown className="w-4 h-4 text-slate-500" />
                   </div>
                   {openDropdown === 'modal-time' && (
-                    <div className="absolute top-full left-0 w-full mt-1 bg-slate-200 dark:bg-slate-700 rounded-md z-50 overflow-hidden">
+                    <div className="absolute top-full left-0 w-full mt-1 bg-slate-200 rounded-md z-50 overflow-hidden">
                       {['2Hours', '24Hours', '7 Days', 'Custom', 'Permanent', 'Device Ban'].map(opt => (
                         <div 
                           key={opt} 
                           onClick={() => { setTimeOption(opt); setOpenDropdown(''); }}
-                          className="p-2 hover:bg-slate-300 dark:hover:bg-slate-600 cursor-pointer"
+                          className="p-2 hover:bg-slate-300 cursor-pointer"
                         >
                           {opt}
                         </div>
@@ -600,14 +600,14 @@ export default function OwnerBan() {
                     placeholder="Enter hours" 
                     value={customTime} 
                     onChange={(e) => setCustomTime(e.target.value)} 
-                    className="w-full p-2 mt-2 bg-slate-100 dark:bg-slate-800 rounded-md shadow-none border-none outline-none" 
+                    className="w-full p-2 mt-2 bg-slate-100 rounded-md shadow-none border-none outline-none" 
                   />
                 )}
               </div>
 
               <div>
                 <div className="font-semibold mb-1">Unban Time</div>
-                <div className="w-full p-2 bg-slate-100 dark:bg-slate-800 rounded-md shadow-none border-none outline-none text-slate-500">
+                <div className="w-full p-2 bg-slate-100 rounded-md shadow-none border-none outline-none text-slate-500">
                   {unbanTimeStr || 'N/A'}
                 </div>
               </div>
@@ -626,13 +626,13 @@ export default function OwnerBan() {
       {/* DETAIL MODAL */}
       {isDetailModalOpen && selectedBan && !isUnbanConfirmOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-md p-6 text-slate-900 dark:text-white shadow-xl relative">
-            <button onClick={() => setIsDetailModalOpen(false)} className="absolute top-4 right-4 text-slate-500 hover:text-slate-800 dark:hover:text-white">
+          <div className="bg-white rounded-2xl w-full max-w-md p-6 text-slate-900 shadow-xl relative">
+            <button onClick={() => setIsDetailModalOpen(false)} className="absolute top-4 right-4 text-slate-500 hover:text-slate-800">
               <X className="w-6 h-6" />
             </button>
             <h2 className="text-xl font-bold mb-4 text-center">Ban Details</h2>
 
-            <div className="flex items-center gap-3 mb-4 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
+            <div className="flex items-center gap-3 mb-4 p-3 bg-slate-50 rounded-lg">
               <img src={selectedBan.userImage || '/default-avatar.png'} alt="user" className="w-12 h-12 rounded-full object-cover" />
               <div>
                 <div className="font-bold">{selectedBan.userName || 'Unknown'}</div>
@@ -653,7 +653,7 @@ export default function OwnerBan() {
               <button onClick={() => setIsUnbanConfirmOpen(true)} className="flex-1 bg-green-600 text-white font-bold py-2 rounded-lg hover:bg-green-700">
                 Unban
               </button>
-              <button onClick={() => setIsDetailModalOpen(false)} className="flex-1 bg-slate-200 dark:bg-slate-800 font-bold py-2 rounded-lg hover:bg-slate-300 dark:hover:bg-slate-700">
+              <button onClick={() => setIsDetailModalOpen(false)} className="flex-1 bg-slate-200 font-bold py-2 rounded-lg hover:bg-slate-300">
                 Close
               </button>
             </div>
@@ -664,18 +664,18 @@ export default function OwnerBan() {
       {/* UNBAN REASON MODAL */}
       {isUnbanConfirmOpen && selectedBan && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-sm p-6 text-slate-900 dark:text-white shadow-xl relative">
+          <div className="bg-white rounded-2xl w-full max-w-sm p-6 text-slate-900 shadow-xl relative">
             <h2 className="text-lg font-bold mb-4 text-center">Unban Reason</h2>
             <p className="text-sm text-slate-500 mb-4 text-center">Please provide a reason to unban ID {selectedBan.accountId}</p>
             <input
               type="text"
               value={unbanReason}
               onChange={(e) => setUnbanReason(e.target.value)}
-              className="w-full p-2 border rounded-lg dark:border-slate-700 bg-transparent mb-4"
+              className="w-full p-2 border rounded-lg bg-transparent mb-4"
               placeholder="Reason..."
             />
             <div className="flex gap-3">
-              <button onClick={() => setIsUnbanConfirmOpen(false)} className="flex-1 bg-slate-200 dark:bg-slate-800 font-bold py-2 rounded-lg">Cancel</button>
+              <button onClick={() => setIsUnbanConfirmOpen(false)} className="flex-1 bg-slate-200 font-bold py-2 rounded-lg">Cancel</button>
               <button onClick={submitUnban} className="flex-1 bg-green-600 text-white font-bold py-2 rounded-lg hover:bg-green-700">Confirm Unban</button>
             </div>
           </div>
