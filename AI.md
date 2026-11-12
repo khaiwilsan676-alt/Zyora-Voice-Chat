@@ -709,3 +709,7 @@ Current documentation does not certify that all historical features are build-, 
 - Native avatar-frame inventory lookup now tries the account ID plus available UID/ID aliases with no-cache requests, fixing equipped-frame visibility when profile surfaces use different account identifiers. Applied to Me, Public Profile, and Room Profile; occupied room seats inherit the shared enlarged/cached video overlay.
 - Store purchase, equip, expiry, and other profile/room UI behavior remain unchanged. Native build and device verification pending.
 
+## 2026-11-13 — Room entry Vehicle video visibility
+- Root cause: `RoomPage.kt` created the room-entry vehicle player before the full-screen room-theme `AsyncImage`, so the later theme layer covered the video. The player now uses a small positive z-index so the entry video renders above the theme/background.
+- The existing server-side inventory lookup remains authoritative: only an unexpired, equipped Vehicle with a non-empty video is broadcast on `room_vehicle_entry`. If no Vehicle is equipped (including after removing the last equipped Vehicle), the backend sends no playable vehicle and the client does not invent a fallback.
+- Store Preview, Bag ownership/equip logic, room layout, and other UI are unchanged. Native APK build and real-device room-entry/removal verification remain pending.
