@@ -254,7 +254,7 @@ export default function OwnerBan() {
   }
 
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto w-full bg-white text-slate-900 [color-scheme:light]">
+    <div className="p-4 md:p-8 max-w-7xl mx-auto w-full bg-white text-slate-900 [color-scheme:light]" style={{ colorScheme: "light", backgroundColor: "#ffffff", color: "#0f172a" }}>
       <h2 className="text-2xl font-bold mb-4">Ban</h2>
 
       {/* NEW ON-SCREEN BAN FORM */}
