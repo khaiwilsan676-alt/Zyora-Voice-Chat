@@ -1291,6 +1291,60 @@ fun RoomPage(
             }
         }
         var joinMessageSent = reusedKeptRoomSocket || ZyoraKeptRoomSocketSession.consumeSilentRejoin(roomId, accountId)
+        // Room pages can reuse an already-connected room socket. In that path the
+        // server does not emit a new room_vehicle_entry event, so resolve the current
+        // user's equipped Bag vehicle directly as a reliable playback fallback.
+        fun loadEquippedRoomVehicle() {
+            val vehicleLookupIds = listOf(
+                currentUser.uid,
+                currentUser.id,
+                currentUser.accountId,
+                accountId,
+                appContext.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE)
+                    .getString("uid", "").orEmpty()
+            ).filter { it.isNotBlank() && it != "guest" }.distinct()
+            if (vehicleLookupIds.isEmpty()) return
+            CoroutineScope(Dispatchers.IO).launch {
+                val equipped = vehicleLookupIds.firstNotNullOfOrNull { lookupId ->
+                    runCatching {
+                        val encoded = java.net.URLEncoder.encode(lookupId, "UTF-8")
+                        val connection = (java.net.URL("https://zyora-server.onrender.com/api/store/inventory/" + encoded).openConnection() as java.net.HttpURLConnection).apply {
+                            connectTimeout = 10000
+                            readTimeout = 12000
+                            useCaches = false
+                            setRequestProperty("Cache-Control", "no-cache, no-store")
+                            setRequestProperty("Pragma", "no-cache")
+                        }
+                        try {
+                            if (connection.responseCode !in 200..299) return@runCatching null
+                            val root = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
+                            val items = root.optJSONArray("items") ?: JSONArray()
+                            (0 until items.length()).mapNotNull { items.optJSONObject(it) }
+                                .firstOrNull { item ->
+                                    item.optString("tab") == "Vehicle" &&
+                                        item.optBoolean("equipped") &&
+                                        item.optLong("expiresAt") > System.currentTimeMillis() &&
+                                        item.optString("video").isNotBlank()
+                                }
+                        } finally {
+                            connection.disconnect()
+                        }
+                    }.getOrNull()
+                }
+                if (equipped != null) {
+                    val video = equipped.optString("video").trim()
+                    val videoUrl = if (video.startsWith("http://", true) || video.startsWith("https://", true)) video
+                        else "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/" + video
+                    val itemId = equipped.optString("itemId").trim()
+                    mainHandler.post {
+                        if (roomVehiclePreview.isBlank()) {
+                            roomVehiclePreview = videoUrl
+                            roomVehiclePreviewItemId = itemId
+                        }
+                    }
+                }
+            }
+        }
         val connectListener = Emitter.Listener {
             val profileDb = NativeIndexDatabase(appContext)
             val currentProfile = currentProfileKeys.firstNotNullOfOrNull { profileDb.loadProfile(it) } ?: JSONObject()
@@ -1299,6 +1353,7 @@ fun RoomPage(
             currentProfileKeys.forEach { profileDb.saveProfile(it, currentProfile) }
             val joinPayload = JSONObject().put("roomId",roomId).put("userId",currentUser.uid.ifBlank{currentUser.id.ifBlank{accountId}}).put("accountId",accountId).put("roomOwnerId",roomOwner.uid.ifBlank{roomOwner.id.ifBlank{roomOwner.accountId.ifBlank{roomId}}}).put("name",latestRoomDisplayName).put("dp",latestRoomDisplayImage).put("roomName",latestRoomName).put("roomImage",latestRoomImage).put("suppressEntry", joinMessageSent)
             roomSocket.emit("room_join",joinPayload)
+            loadEquippedRoomVehicle()
             if (latestShowChat) roomSocket.emit("room_chat_view", JSONObject().put("roomId", roomId).put("userId", accountId).put("active", true))
             if (!joinMessageSent && accountId != "guest") {
                 joinMessageSent = true
@@ -1346,6 +1401,7 @@ fun RoomPage(
         roomSocket.on("wallet_balance_updated",walletBalanceListener)
         roomSocket.on(Socket.EVENT_CONNECT,connectListener)
         if (roomSocket.connected()) {
+            loadEquippedRoomVehicle()
             // The retained socket is already a room member. Only refresh snapshots;
             // do not emit room_join or generate another "Enter the Room" event.
             roomSocket.emit("room_presence_request", JSONObject().put("roomId", roomId))
