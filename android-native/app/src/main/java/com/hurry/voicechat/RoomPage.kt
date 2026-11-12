@@ -919,8 +919,10 @@ fun RoomPage(
         }
     }
     val entryToasts=remember{mutableStateListOf<NativeEntryToast>()}
-    // Pair the equipped vehicle with its matching Enter the Room banner, even if the event arrives first.
+    // Keep the vehicle video as an independent room-screen preview, not inside the entry banner.
     val roomVehicleByUser = remember(roomId) { mutableStateMapOf<String, Pair<String, String>>() }
+    var roomVehiclePreview by remember(roomId) { mutableStateOf("") }
+    var roomVehiclePreviewItemId by remember(roomId) { mutableStateOf("") }
     val seats=remember{mutableStateListOf<NativeRoomSeat>().apply{for(i in 1..15)add(NativeRoomSeat(i))}}
     // The owner gets one automatic attempt on the first authoritative seat snapshot only.
     val ownerAutoSeatAttempted = remember(roomId, accountId) { java.util.concurrent.atomic.AtomicBoolean(false) }
@@ -1001,9 +1003,8 @@ fun RoomPage(
                 mainHandler.post {
                     if(messages.none{it.id==message.id}) messages.add(message)
                     if(type=="join" && entryToasts.none{it.id==id}) {
-                        val vehicle = roomVehicleByUser[senderId]
-                        entryToasts.add(NativeEntryToast(id,sender,image,vehicleVideo=vehicle?.first.orEmpty(),accountId=senderId,vehicleItemId=vehicle?.second.orEmpty()))
-                        mainHandler.postDelayed({entryToasts.removeAll{it.id==id && it.vehicleVideo.isBlank()}},4000)
+                        entryToasts.add(NativeEntryToast(id,sender,image,accountId=senderId))
+                        mainHandler.postDelayed({entryToasts.removeAll{it.id==id}},4000)
                     }
                 }
             }
@@ -1019,8 +1020,8 @@ fun RoomPage(
             val itemId = vehicle.optString("itemId").trim()
             mainHandler.post {
                 roomVehicleByUser[user] = videoUrl to itemId
-                val toastIndex = entryToasts.indexOfLast { it.accountId == user }
-                if (toastIndex >= 0) entryToasts[toastIndex] = entryToasts[toastIndex].copy(vehicleVideo = videoUrl, vehicleItemId = itemId)
+                roomVehiclePreview = videoUrl
+                roomVehiclePreviewItemId = itemId
             }
         }
         val avatarFrameUpdatedListener = Emitter.Listener { args ->
@@ -1311,9 +1312,8 @@ fun RoomPage(
                 mainHandler.post {
                     if (messages.none { it.id == joinId }) messages.add(nativeJoin)
                     if (entryToasts.none { it.id == joinId }) {
-                        val vehicle = roomVehicleByUser[accountId]
-                        entryToasts.add(NativeEntryToast(joinId,joinName,joinImage,vehicleVideo=vehicle?.first.orEmpty(),accountId=accountId,vehicleItemId=vehicle?.second.orEmpty()))
-                        mainHandler.postDelayed({ entryToasts.removeAll { it.id == joinId && it.vehicleVideo.isBlank() } },4000)
+                        entryToasts.add(NativeEntryToast(joinId,joinName,joinImage,accountId=accountId))
+                        mainHandler.postDelayed({ entryToasts.removeAll { it.id == joinId } },4000)
                     }
                 }
             }
@@ -1933,29 +1933,31 @@ Column(Modifier.align(Alignment.BottomStart).padding(bottom=LocalConfiguration.c
                         enter=slideInHorizontally(initialOffsetX={ _ -> screenWidthPx }, animationSpec = tween(durationMillis = 800, easing = LinearOutSlowInEasing)) + fadeIn(animationSpec = tween(800))
                     ) {
                         // Blue banner - thoda transparent mix aur full username dikhane ke liye weight(1f) add kiya hai
-                        Column(
-                            Modifier.fillMaxWidth(0.80f).clip(RoundedCornerShape(topStart=24.dp,bottomStart=12.dp,topEnd=0.dp,bottomEnd=12.dp)).background(Brush.horizontalGradient(listOf(Color(0xCC2563EB),Color(0x802563EB),Color.Transparent))).padding(start=10.dp,end=10.dp,top=6.dp,bottom=6.dp),
-                            verticalArrangement=Arrangement.spacedBy(5.dp)
-                        ) {
-                            Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(6.dp)) {
-                                FallbackAsyncImage(model=toast.image,contentDescription=toast.name,modifier=Modifier.size(24.dp).clip(CircleShape),contentScale=ContentScale.Crop)
-                                Text(toast.name,color=Color.White,fontSize=13.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold,maxLines=1,modifier=Modifier.weight(1f, fill=false))
-                                Text("Enter the Room",color=Color.White,fontSize=12.sp,fontWeight=FontWeight.Bold,maxLines=1)
-                            }
-                            if (toast.vehicleVideo.isNotBlank()) {
-                                StoreVideoPreview(
-                                    url = toast.vehicleVideo,
-                                    modifier = Modifier.padding(start=30.dp).width(190.dp).height(112.dp).clip(RoundedCornerShape(10.dp)),
-                                    pause = false, topFade = 0.1f,
-                                    bottomFade = if (toast.vehicleItemId in setOf("v2", "v4", "v6")) 0.15f else 0.1f,
-                                    removeGreenScreen = true, mute = false, loop = false,
-                                    onComplete = { entryToasts.removeAll { it.id == toast.id } }
-                                )
-                            }
-                        }
-                        }
-                    }
+                        Row(Modifier.fillMaxWidth(0.80f).clip(RoundedCornerShape(topStart=50.dp,bottomStart=50.dp,topEnd=0.dp,bottomEnd=0.dp)).background(Brush.horizontalGradient(listOf(Color(0xCC2563EB),Color(0x802563EB),Color.Transparent))).padding(start=10.dp,end=10.dp,top=2.dp,bottom=2.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+                            FallbackAsyncImage(model=toast.image,contentDescription=toast.name,modifier=Modifier.size(24.dp).clip(CircleShape),contentScale=ContentScale.Crop)
+                            Text(toast.name,color=Color.White,fontSize=13.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold,maxLines=1,modifier=Modifier.weight(1f, fill=false))
+                            Text("Enter the Room",color=Color.White,fontSize=12.sp,fontWeight=FontWeight.Bold,maxLines=1)
+                        }}
                 }
+            }
+        }
+
+        RoomPageBlock {
+            if (roomVehiclePreview.isNotBlank()) {
+                StoreVideoPreview(
+                    url = roomVehiclePreview,
+                    modifier = Modifier.align(Alignment.Center).zIndex(50f).widthIn(max = 320.dp).fillMaxWidth(0.82f),
+                    pause = false,
+                    topFade = 0.1f,
+                    bottomFade = if (roomVehiclePreviewItemId in setOf("v2", "v4", "v6")) 0.15f else 0.1f,
+                    removeGreenScreen = true,
+                    mute = false,
+                    loop = false,
+                    onComplete = {
+                        roomVehiclePreview = ""
+                        roomVehiclePreviewItemId = ""
+                    }
+                )
             }
         }
 
