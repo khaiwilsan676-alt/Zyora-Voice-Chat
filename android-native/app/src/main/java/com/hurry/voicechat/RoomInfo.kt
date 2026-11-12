@@ -94,7 +94,7 @@ fun RoomInfo(
         mutableStateOf(if (isLogoOwner) "https://zyora-voice-chat.vercel.app/logo.png" else roomOwner.image)
     }
     var ownerCountry by remember(roomOwner.accountId) { mutableStateOf("") }
-    var memberProfiles by remember { mutableStateOf<Map<String, RoomInfoFollower>>(emptyMap()) }
+    var memberProfiles by remember { mutableStateOf>(emptyMap()) }
 
     LaunchedEffect(roomFollowers.map { it.accountId }, roomAdmins.map { it.accountId }) {
         val all = (roomFollowers + roomAdmins).distinctBy { it.accountId }.filter { it.accountId.isNotBlank() }
@@ -474,8 +474,9 @@ private fun MemberRow(
         )
         Column(Modifier.padding(start = 11.dp).weight(1f), verticalArrangement = Arrangement.spacedBy(0.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
+                // Yahan se `fill = false` nikal diya hai jisse row full stretch hogi aur badge static position pe rahega, hilega nahi.
                 Text(name.ifBlank { "User" },
-                    modifier = Modifier.weight(1f, fill = false), 
+                    modifier = Modifier.weight(1f), 
                     fontSize = 13.sp, fontWeight = FontWeight.Medium,
                     color = Color.White, maxLines = 2, softWrap = true)
                 
@@ -498,8 +499,13 @@ private fun MemberRow(
                         contentDescription="Level", 
                         contentScale=ContentScale.FillBounds, modifier=Modifier.fillMaxSize())
                     
-                    Text("Lv.1", color=Color.White, fontSize=8.sp, fontWeight=FontWeight.Bold,
-                        modifier = Modifier.align(Alignment.CenterEnd).padding(end = 4.dp))
+                    // Yahan LV.1 kar diya aur offset(1.dp, -3.dp) lagaya (1dp right, 3dp up)
+                    Text("LV.1", color=Color.White, fontSize=8.sp, fontWeight=FontWeight.Bold,
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .padding(end = 4.dp)
+                            .offset(x = 1.dp, y = (-3).dp)
+                    )
                 }
             }
         }
