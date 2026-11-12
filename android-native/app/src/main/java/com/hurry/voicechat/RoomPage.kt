@@ -1003,7 +1003,7 @@ fun RoomPage(
                     if(type=="join" && entryToasts.none{it.id==id}) {
                         val vehicle = roomVehicleByUser[senderId]
                         entryToasts.add(NativeEntryToast(id,sender,image,vehicleVideo=vehicle?.first.orEmpty(),accountId=senderId,vehicleItemId=vehicle?.second.orEmpty()))
-                        mainHandler.postDelayed({entryToasts.removeAll{it.id==id}},6500)
+                        mainHandler.postDelayed({entryToasts.removeAll{it.id==id && it.vehicleVideo.isBlank()}},4000)
                     }
                 }
             }
@@ -1313,7 +1313,7 @@ fun RoomPage(
                     if (entryToasts.none { it.id == joinId }) {
                         val vehicle = roomVehicleByUser[accountId]
                         entryToasts.add(NativeEntryToast(joinId,joinName,joinImage,vehicleVideo=vehicle?.first.orEmpty(),accountId=accountId,vehicleItemId=vehicle?.second.orEmpty()))
-                        mainHandler.postDelayed({ entryToasts.removeAll { it.id == joinId } },6500)
+                        mainHandler.postDelayed({ entryToasts.removeAll { it.id == joinId && it.vehicleVideo.isBlank() } },4000)
                     }
                 }
             }
