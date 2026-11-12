@@ -739,7 +739,8 @@ fun RoomProfile(
                         )
                         NativeAvatarFrameOverlay(
                             userId = user.accountId.orEmpty().ifBlank { user.uid.orEmpty().ifBlank { user.id.orEmpty() } },
-                            modifier = Modifier.fillMaxSize()
+                            modifier = Modifier.fillMaxSize(),
+                            fallbackUserIds = listOf(user.uid.orEmpty(), user.id.orEmpty())
                         )
                     }
 
