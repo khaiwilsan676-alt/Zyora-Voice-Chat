@@ -657,3 +657,10 @@ Current documentation does not certify that all historical features are build-, 
 - `android-native/app/src/main/java/com/hurry/voicechat/StorePage.kt`: grid-card Buy now selects that exact item and opens the existing purchase sheet; the grid no longer sends a direct purchase request. The confirmation sheet is the single purchase submission path.
 - `Zyora-Server/server.js`: normalize legacy MongoDB `coins` and `diamonds` values to non-negative integer BSON numbers during wallet resolution. A numeric string could display as a valid balance in the app but fail MongoDB's numeric `$gte` debit condition, falsely returning Insufficient coins.
 - Commits: native `82f1c2d1e2e5b6ec29991084faf480a2641c482a`; server `340c68162b156552be71aaa32b7167be5fb1d0cd`. Render deployment and Native Build 2/live purchase verification remain pending.
+
+
+## 2026-11-12 — Native Store direct purchase, Bag ownership, and shared wallet
+- StorePage.kt: removed the Buy confirmation bottom sheet. Tapping Buy on a card now posts a purchase for only that card; after success that same card changes to `Owned`. Bag continues to show owned cards with `Use/Remove` actions.
+- Store purchase, inventory load, and equip now use the same canonical wallet identity as CoinsNativePage (Firebase UID first, then account ID), fixing inventory/Bag lookups against a different identity.
+- Store and Bag header now display the canonical wallet coin balance; balance is refreshed from the wallet endpoint while open and persisted to the same `zyora_wallet_cache` balance key, including local recharge credits.
+- Latest StorePage commit: `bd7abdcb12cec755aa4dceda838a0e56d3d731c4`. Native Build 2 compilation and live purchase/Bag verification remain pending.
