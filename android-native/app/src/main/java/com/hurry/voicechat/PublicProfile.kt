@@ -413,7 +413,8 @@ fun PublicProfileScreen(
                     )
                     NativeAvatarFrameOverlay(
                         userId = targetUser?.accountId?.takeIf { it.isNotBlank() } ?: targetUser?.uid?.takeIf { it.isNotBlank() } ?: targetUser?.id.orEmpty(),
-                        modifier = Modifier.align(Alignment.BottomStart).padding(start = 16.dp).offset(y = (-20).dp).size(86.dp)
+                        modifier = Modifier.align(Alignment.BottomStart).padding(start = 16.dp).offset(y = (-20).dp).size(86.dp),
+                        fallbackUserIds = listOf(targetUser?.uid.orEmpty(), targetUser?.id.orEmpty())
                     )
 
                     // Top Bar
