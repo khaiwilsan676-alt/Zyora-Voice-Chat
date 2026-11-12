@@ -189,9 +189,10 @@ fun NativeAvatarFrameOverlay(
             StoreVideoPreview(
                 url = videoUrl,
                 modifier = modifier.graphicsLayer {
-                    scaleX = 1.08f
-                    scaleY = 1.08f
-                    translationY = -4.dp.toPx()
+                    // Frame must visibly extend beyond the avatar, not sit inside its bounds.
+                    scaleX = 1.28f
+                    scaleY = 1.28f
+                    translationY = -5.dp.toPx()
                 },
                 pause = false,
                 topFade = 0f,
@@ -202,7 +203,7 @@ fun NativeAvatarFrameOverlay(
             )
         } else {
             val image = selected.optString("image", selectedItem?.image.orEmpty()).ifBlank { selectedItem?.image.orEmpty() }
-            if (image.isNotBlank()) AsyncImage(model = StoreAssetBase + image, contentDescription = "Equipped avatar frame", modifier = modifier, contentScale = ContentScale.Fit)
+            if (image.isNotBlank()) AsyncImage(model = StoreAssetBase + image, contentDescription = "Equipped avatar frame", modifier = modifier.graphicsLayer { scaleX = 1.28f; scaleY = 1.28f }, contentScale = ContentScale.Fit)
         }
     }
 }
@@ -245,36 +246,44 @@ fun NativeOwnedFrameShowcase(userId: String) {
         owned to item
     }
     if (validFrames.isNotEmpty()) {
-        Row(
-            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.Top
+        Column(
+            Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            validFrames.forEach { (owned, item) ->
-                Column(
-                    Modifier.width(76.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+            validFrames.chunked(3).forEach { rowFrames ->
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.Top
                 ) {
-                    // Keep the showcase image-only; video playback is reserved for the avatar overlay.
-                    val frameImage = owned.optString("image").ifBlank { item.image }
-                    AsyncImage(
-                        model = StoreAssetBase + frameImage,
-                        contentDescription = "Owned avatar frame",
-                        modifier = Modifier.fillMaxWidth().height(76.dp),
-                        contentScale = ContentScale.Fit
-                    )
-                    Row(
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        repeat(item.stars) {
+                    rowFrames.forEach { (owned, item) ->
+                        Column(
+                            Modifier.weight(1f),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            // Catalogue still image only; equipped videos play only over avatars.
+                            val frameImage = owned.optString("image").ifBlank { item.image }
                             AsyncImage(
-                                model = StoreAssetBase + "file_0000000004e881fa84e61b8616f8eaf8.png",
-                                contentDescription = "Star",
-                                modifier = Modifier.size(12.dp)
+                                model = StoreAssetBase + frameImage,
+                                contentDescription = "Owned avatar frame",
+                                modifier = Modifier.fillMaxWidth().height(92.dp),
+                                contentScale = ContentScale.Fit
                             )
+                            Row(
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                repeat(item.stars) {
+                                    AsyncImage(
+                                        model = StoreAssetBase + "file_0000000004e881fa84e61b8616f8eaf8.png",
+                                        contentDescription = "Star",
+                                        modifier = Modifier.size(12.dp)
+                                    )
+                                }
+                            }
                         }
                     }
+                    repeat(3 - rowFrames.size) { Spacer(Modifier.weight(1f)) }
                 }
             }
         }
@@ -285,6 +294,72 @@ fun NativeOwnedFrameShowcase(userId: String) {
             contentDescription = "Default avatar frame",
             modifier = Modifier.fillMaxWidth().height(112.dp),
             contentScale = ContentScale.Fit
+        )
+    }
+}
+
+
+@Composable
+fun NativeOwnedVehicleShowcase(userId: String) {
+    var vehicles by remember(userId) { mutableStateOf<List<JSONObject>>(emptyList()) }
+    LaunchedEffect(userId) {
+        vehicles = emptyList()
+        if (userId.isNotBlank()) withContext(Dispatchers.IO) {
+            runCatching {
+                val encoded = URLEncoder.encode(userId, "UTF-8")
+                val connection = (URL("https://zyora-server.onrender.com/api/store/inventory/$encoded").openConnection() as HttpURLConnection).apply {
+                    connectTimeout = 8000
+                    readTimeout = 8000
+                    useCaches = false
+                    setRequestProperty("Cache-Control", "no-cache, no-store")
+                }
+                val code = connection.responseCode
+                val stream = if (code in 200..299) connection.inputStream else connection.errorStream
+                val json = JSONObject(stream.bufferedReader().use { it.readText() })
+                connection.disconnect()
+                if (code !in 200..299) throw IllegalStateException("Inventory unavailable")
+                val items = json.optJSONArray("items") ?: JSONArray()
+                (0 until items.length()).map { items.getJSONObject(it) }
+                    .filter { it.optString("tab") == "Vehicle" && it.optLong("expiresAt") > System.currentTimeMillis() }
+            }.onSuccess { vehicles = it }
+        }
+    }
+    LaunchedEffect(vehicles) {
+        while (vehicles.isNotEmpty()) {
+            val nextExpiry = vehicles.minOfOrNull { it.optLong("expiresAt") } ?: break
+            val remaining = (nextExpiry - System.currentTimeMillis()).coerceAtLeast(0L)
+            if (remaining > 0L) delay(remaining)
+            val now = System.currentTimeMillis()
+            vehicles = vehicles.filter { it.optLong("expiresAt") > now }
+        }
+    }
+    val validVehicles = vehicles.mapNotNull { owned ->
+        val item = nativeStoreItems.firstOrNull { it.id == owned.optString("itemId") } ?: return@mapNotNull null
+        owned to item
+    }
+    if (validVehicles.isNotEmpty()) {
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            validVehicles.chunked(3).forEach { rowVehicles ->
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    rowVehicles.forEach { (owned, item) ->
+                        val image = owned.optString("image").ifBlank { item.image }
+                        AsyncImage(
+                            model = StoreAssetBase + image,
+                            contentDescription = "Owned vehicle",
+                            modifier = Modifier.weight(1f).height(92.dp).clip(RoundedCornerShape(12.dp)),
+                            contentScale = ContentScale.Fit
+                        )
+                    }
+                    repeat(3 - rowVehicles.size) { Spacer(Modifier.weight(1f)) }
+                }
+            }
+        }
+    } else {
+        AsyncImage(
+            model = StoreAssetBase + "1785091443553.png",
+            contentDescription = "Vehicle",
+            modifier = Modifier.fillMaxWidth().height(112.dp).clip(RoundedCornerShape(16.dp)),
+            contentScale = ContentScale.Crop
         )
     }
 }
