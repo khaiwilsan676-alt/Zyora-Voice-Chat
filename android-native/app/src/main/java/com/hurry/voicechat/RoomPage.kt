@@ -1426,7 +1426,9 @@ fun RoomPage(
         if (roomVehiclePreview.isNotBlank()) {
             StoreVideoPreview(
                 url = roomVehiclePreview,
-                modifier = Modifier.align(Alignment.Center).widthIn(max = 280.dp).fillMaxWidth(0.72f),
+                // Keep the entry vehicle above the room theme/background; otherwise the
+                // later full-screen theme image covers the player and it appears not to play.
+                modifier = Modifier.align(Alignment.Center).zIndex(1f).widthIn(max = 280.dp).fillMaxWidth(0.72f),
                 pause = false,
                 mute = false,
                 loop = false,
