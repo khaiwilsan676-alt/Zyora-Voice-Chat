@@ -210,7 +210,7 @@ fun NativeAvatarFrameOverlay(
 @Composable
 fun NativeOwnedFrameShowcase(userId: String) {
     var frames by remember(userId) { mutableStateOf<List<JSONObject>>(emptyList()) }
-    val refreshVersion = lookupIds.maxOfOrNull { nativeAvatarFrameRefreshVersions[it] ?: 0L } ?: 0L
+    val refreshVersion = nativeAvatarFrameRefreshVersions[userId] ?: 0L
     LaunchedEffect(userId, refreshVersion) {
         frames = emptyList()
         if (userId.isNotBlank()) withContext(Dispatchers.IO) {
