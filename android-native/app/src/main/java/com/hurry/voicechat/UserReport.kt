@@ -20,6 +20,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -89,7 +90,6 @@ fun UserReport(
         var reportDescription by remember { mutableStateOf("") }
         var reportSubmitted by remember { mutableStateOf(false) }
         
-        // Removed Nudity, Spam, Fake account as requested
         val reportReasons = listOf(
             "Harassment",
             "Hate speech",
@@ -97,17 +97,24 @@ fun UserReport(
             "Other"
         )
 
+        // Submit button wala Blue (0xFF237BEE) mixing into Grey (0xFFF7F8FA)
+        val gradientBrush = Brush.verticalGradient(
+            colors = listOf(Color(0xFF237BEE), Color(0xFFF7F8FA)),
+            startY = 0f,
+            endY = 300f 
+        )
+
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color(0xFFF7F8FA))
         ) {
-            // Gradient remove karke same as Submit Button wala color laga diya
+            // Top Gradient Background
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(150.dp)
-                    .background(Color(0xFF237BEE))
+                    .background(gradientBrush)
             )
 
             Column(
@@ -123,7 +130,6 @@ fun UserReport(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(onClick = onDismiss) {
-                        // Icon color white kiya taki blue background pe dikhe
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
                     }
                     Text(
@@ -131,12 +137,12 @@ fun UserReport(
                         modifier = Modifier.weight(1f).padding(end = 48.dp),
                         fontSize = 19.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color.White, // Text color white kiya taki clearly dikhe
+                        color = Color.White,
                         textAlign = TextAlign.Center
                     )
                 }
 
-                // Success Screen (Aapka purana logic un-touched)
+                // Success Screen
                 if (reportSubmitted) {
                     Column(
                         modifier = Modifier.fillMaxSize().padding(28.dp),
@@ -171,7 +177,7 @@ fun UserReport(
                         ) { Text("Done", color = Color.White, fontWeight = FontWeight.SemiBold) }
                     }
                 } else {
-                    // Form UI (Baki sab as it is rakha hai)
+                    // Form UI
                     Column(
                         modifier = Modifier
                             .weight(1f)
@@ -181,7 +187,6 @@ fun UserReport(
                     ) {
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        // Grid layout for buttons (2 in a row)
                         reportReasons.chunked(2).forEach { rowItems ->
                             Row(
                                 modifier = Modifier
@@ -216,14 +221,12 @@ fun UserReport(
                                         )
                                     }
                                 }
-                                // Empty box if the row has only 1 item (odd count)
                                 if (rowItems.size == 1) {
                                     Spacer(modifier = Modifier.weight(1f))
                                 }
                             }
                         }
 
-                        // Description label
                         Text(
                             text = "Description",
                             fontSize = 14.sp,
@@ -231,7 +234,6 @@ fun UserReport(
                             modifier = Modifier.padding(top = 12.dp, bottom = 8.dp)
                         )
 
-                        // Input Field like Image
                         OutlinedTextField(
                             value = reportDescription,
                             onValueChange = { if (it.length <= 500) reportDescription = it },
@@ -249,7 +251,7 @@ fun UserReport(
                         )
                     }
 
-                    // Bottom Submit Button (Blue instead of Green)
+                    // Bottom Submit Button
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -264,8 +266,8 @@ fun UserReport(
                             enabled = reportCategory.isNotBlank(),
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFF237BEE), // Blue color
-                                disabledContainerColor = Color(0xFF91B8EF) // Light blue when disabled
+                                containerColor = Color(0xFF237BEE),
+                                disabledContainerColor = Color(0xFF91B8EF)
                             )
                         ) {
                             Text(
