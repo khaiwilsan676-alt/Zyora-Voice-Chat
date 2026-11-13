@@ -624,7 +624,14 @@ fun PublicProfileScreen(
                                 ?: targetUser?.displayAccountNumber?.takeIf { it.isNotBlank() }
                                 ?: targetUser?.id?.takeIf { it.isNotBlank() }
                                 ?: targetUser?.uid?.takeIf { it.isNotBlank() }
-                                ?: currentUserId
+                                ?: currentUserId,
+                            emptyContent = {
+                                EmptySectionCard(
+                                    iconPath = "/public/IMG_20261113_121837.png",
+                                    text = "No vehicle yet",
+                                    profileAsset = profileAsset
+                                )
+                            }
                         )
                     }
 
@@ -650,7 +657,14 @@ fun PublicProfileScreen(
                                 ?: targetUser?.displayAccountNumber?.takeIf { it.isNotBlank() }
                                 ?: targetUser?.id?.takeIf { it.isNotBlank() }
                                 ?: targetUser?.uid?.takeIf { it.isNotBlank() }
-                                ?: currentUserId
+                                ?: currentUserId,
+                            emptyContent = {
+                                EmptySectionCard(
+                                    iconPath = "/public/IMG_20261113_121755.png",
+                                    text = "No Frame yet",
+                                    profileAsset = profileAsset
+                                )
+                            }
                         )
                     }
 
