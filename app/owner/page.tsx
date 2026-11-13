@@ -696,32 +696,16 @@ export default function StaffPanel() {
         let rawUsers: any[] = [];
 
         try {
-          const data: any = await new Promise((resolve, reject) => {
-            const timeout = window.setTimeout(() => reject(new Error('User list request timed out')), 12000);
-            const request = () => socket.emit('owner_users_request', (result: any) => {
-              window.clearTimeout(timeout);
-              resolve(result);
-            });
-            if (socket.connected) request();
-            else {
-              socket.once('connect', request);
-              socket.connect();
-            }
+          // MongoDB is the canonical user-profile source. Fetch it directly;
+          // do not wait for an optional Socket.IO event that may not be deployed.
+          const response = await fetch(apiUrl('/api/users'), {
+            method: 'GET',
+            cache: 'no-store',
+            headers: { Accept: 'application/json' }
           });
-          rawUsers = Array.isArray(data?.users) ? data.users : [];
-          // Socket event may not exist on an older Render instance during rollout.
-          // Fall back to the already-supported no-query users API instead of
-          // silently showing an empty Owner list.
-          if (!rawUsers.length || data?.error) {
-            const response = await fetch(apiUrl('/api/users'), {
-              method: 'GET',
-              cache: 'no-store',
-              headers: { Accept: 'application/json' }
-            });
-            if (!response.ok) throw new Error(`Users API failed: ${response.status}`);
-            const apiData = await response.json();
-            rawUsers = Array.isArray(apiData?.users) ? apiData.users : [];
-          }
+          if (!response.ok) throw new Error(`Users API failed: ${response.status}`);
+          const apiData = await response.json();
+          rawUsers = Array.isArray(apiData?.users) ? apiData.users : [];
           fetchedList = rawUsers.map((u: any, index: number) => ({
             id: String(u._id || u.id || u.uid || index + 1),
             name: String(u.name || u.displayName || u.userName || 'User'),
