@@ -1301,8 +1301,7 @@ fun StoreVideoPreview(
                             outputSurface = null
                         }
                     }
-                    textureView.tag = mediaPlayer
-                    textureView.setTag(android.R.id.content, ::releasePlayer)
+                    textureView.tag = ::releasePlayer
 
                     textureView.surfaceTextureListener = object : TextureView.SurfaceTextureListener {
                         override fun onSurfaceTextureAvailable(surface: SurfaceTexture, width: Int, height: Int) {
@@ -1352,7 +1351,7 @@ fun StoreVideoPreview(
                 },
                 modifier = Modifier.fillMaxSize(),
                 onRelease = { view ->
-                    (view.getTag(android.R.id.content) as? (() -> Unit))?.invoke()
+                    (view.tag as? (() -> Unit))?.invoke()
                 }
             )
         }
