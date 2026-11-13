@@ -417,18 +417,6 @@ function markUserOnline(userId, socket, accountId = null) {
   socket.isPresenceRegistered = true;
   socket.emit('presence_status', { userId: id, accountId: account, online: true });
 
-  // Persist the latest successful app login/connection for Owner > Manage Users.
-  if (db) {
-    const loginAt = Date.now();
-    const identities = [...new Set([id, account].filter(Boolean))];
-    const identityFields = ["uid", "userId", "id", "accountId", "accountNumber", "displayAccountNumber", "displayUserNumber", "publicUserId", "zyoraId", "hurryId"];
-    const identityQuery = {
-      $or: identityFields.flatMap((field) => identities.map((value) => ({ [field]: value })))
-    };
-    db.collection("users").updateMany(identityQuery, {
-      $set: { lastLoginAt: loginAt, lastLoginAtISO: new Date(loginAt).toISOString() }
-    }).catch((error) => console.warn("Could not persist user last login:", error.message));
-  }
 }
 
 function markUserOffline(socket) {
@@ -1048,8 +1036,27 @@ app.get("/api/users", async (req, res) => {
       .limit(1000)
       .toArray();
 
+    // Reuse the existing MongoDB auth account timestamp; do not create a
+    // separate last-login field in the profile users collection.
+    const authUids = allUsers.map((user) => String(user.uid || user.id || user.appLongId || "")).filter(Boolean);
+    const authAccounts = authUids.length
+      ? await db.collection("auth_accounts").find(
+          { uid: { $in: authUids } },
+          { projection: { uid: 1, updatedAt: 1, lastLoginAt: 1, lastLogin: 1 } }
+        ).toArray()
+      : [];
+    const authByUid = new Map(authAccounts.map((account) => [String(account.uid), account]));
+    const normalizedUsers = allUsers.map((user) => {
+      const normalized = normalizeUser(user);
+      const authAccount = authByUid.get(String(user.uid || user.id || user.appLongId || ""));
+      return {
+        ...normalized,
+        lastLoginAt: authAccount?.updatedAt || authAccount?.lastLoginAt || authAccount?.lastLogin || user.lastLoginAt || user.lastLogin || "",
+      };
+    });
+
     return res.json({
-      users: allUsers.map(normalizeUser),
+      users: normalizedUsers,
     });
   } catch (error) {
     console.error("GET /api/users error:", error);
