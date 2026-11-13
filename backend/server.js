@@ -1680,6 +1680,20 @@ app.post("/api/seller/transfer", async (req, res) => {
     if (!recipient) return res.status(404).json({ error: "User not found" });
     if (String(recipient._id) === String(sender._id)) return res.status(400).json({ error: "You cannot transfer coins to yourself" });
 
+    // The recipient wallet must use the same numeric canonical users.coins field
+    // as every other wallet operation. Older accounts may still store coins as text.
+    if (recipient.coins == null || typeof recipient.coins !== "number" || !Number.isFinite(recipient.coins)) {
+      const parsedCoins = Number(recipient.coins);
+      const legacy = await db.collection("luckyBagWallets").findOne({
+        userId: String(recipient.uid || recipient.id || recipient.appLongId || recipient.accountId || recipientAccountId)
+      });
+      const initialCoins = recipient.coins != null && Number.isFinite(parsedCoins)
+        ? Math.max(0, Math.floor(parsedCoins))
+        : Math.max(Number(recipient.balance || 0), Number(legacy?.balance || 0), 0);
+      await db.collection("users").updateOne({ _id: recipient._id }, { $set: { coins: initialCoins } });
+      recipient.coins = initialCoins;
+    }
+
     const now = Date.now();
     const senderName = sender.name || sender.displayName || sender.userName || "User";
     const senderAvatar = sender.image || sender.dp || sender.photoURL || sender.avatar || "";
