@@ -2782,7 +2782,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
         }
         
         if (showLuckyBagClaimedCard) {
-            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=0.6f)), contentAlignment = Alignment.Center) {
+            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=0.6f)).clickable { }, contentAlignment = Alignment.Center) {
                 Box(Modifier.fillMaxWidth(0.85f).aspectRatio(0.59f).clickable(enabled=false){}) {
                     Box(Modifier.fillMaxSize().padding(top = 40.dp).clip(RoundedCornerShape(topStart=32.dp, topEnd=32.dp, bottomStart=18.dp, bottomEnd=18.dp)).background(Brush.linearGradient(listOf(Color(0xFFFF6449), Color(0xFFFF263F), Color(0xFFE90037)))))
                     
