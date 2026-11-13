@@ -626,13 +626,25 @@ fun PublicProfileScreen(
                     // Vehicle
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         SectionHeader("Vehicle")
+                        
+                        var hasVehicle by remember { mutableStateOf(false) }
+                        
                         NativeOwnedVehicleShowcase(
                             userId = targetUser?.accountId?.takeIf { it.isNotBlank() }
                                 ?: targetUser?.displayAccountNumber?.takeIf { it.isNotBlank() }
                                 ?: targetUser?.id?.takeIf { it.isNotBlank() }
                                 ?: targetUser?.uid?.takeIf { it.isNotBlank() }
                                 ?: currentUserId,
+                            onDataLoaded = { hasData -> hasVehicle = hasData }
                         )
+
+                        if (!hasVehicle) {
+                            EmptySectionCard(
+                                iconPath = "/public/IMG_20261113_121837.png",
+                                text = "No vehicle yet",
+                                profileAsset = profileAsset
+                            )
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(20.dp))
@@ -652,13 +664,25 @@ fun PublicProfileScreen(
                     // Frame
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         SectionHeader("Frame")
+                        
+                        var hasFrame by remember { mutableStateOf(false) }
+
                         NativeOwnedFrameShowcase(
                             userId = targetUser?.accountId?.takeIf { it.isNotBlank() }
                                 ?: targetUser?.displayAccountNumber?.takeIf { it.isNotBlank() }
                                 ?: targetUser?.id?.takeIf { it.isNotBlank() }
                                 ?: targetUser?.uid?.takeIf { it.isNotBlank() }
                                 ?: currentUserId,
+                            onDataLoaded = { hasData -> hasFrame = hasData }
                         )
+                        
+                        if (!hasFrame) {
+                            EmptySectionCard(
+                                iconPath = "/public/IMG_20261113_121755.png",
+                                text = "No Frame yet",
+                                profileAsset = profileAsset
+                            )
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(20.dp))
