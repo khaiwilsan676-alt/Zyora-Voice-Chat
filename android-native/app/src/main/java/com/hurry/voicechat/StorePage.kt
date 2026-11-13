@@ -1021,7 +1021,8 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                                     bottomFade = bottomFadeVal,
                                     removeGreenScreen = isV1,
                                     mute = item.id == "a8",
-                                    loop = item.tab != "Vehicle"
+                                    loop = item.tab != "Vehicle",
+                                    cacheVideo = item.tab == "Vehicle"
                                 )
                             } else {
                                 AsyncImage(model = StoreAssetBase + source, contentDescription = item.name, modifier = Modifier.fillMaxWidth())
