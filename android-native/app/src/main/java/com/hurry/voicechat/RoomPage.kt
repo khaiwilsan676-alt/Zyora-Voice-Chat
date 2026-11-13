@@ -2027,6 +2027,7 @@ Column(Modifier.align(Alignment.BottomStart).padding(bottom=LocalConfiguration.c
                     removeGreenScreen = previewItemId == "v1",
                     mute = false,
                     loop = false,
+                    cacheVideo = true,
                     onComplete = {
                         roomVehiclePreview = ""
                         roomVehiclePreviewItemId = ""
