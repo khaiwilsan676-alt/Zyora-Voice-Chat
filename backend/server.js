@@ -890,9 +890,9 @@ app.get("/api/users", async (req, res) => {
         accountId: numberId,
         accountNumber: numberId,
         displayUserNumber: numberId,
-        name: user.name || user.displayName || user.userName || "User",
+        name: user.name || user.displayName || user.userName || user.profile?.name || user.profile?.displayName || user.userData?.name || "User",
         email: user.email || user.gmail || user.emailPhone || user.emailAddress || user.Email || "",
-        image: [user.image, user.dp, user.photo, user.photoURL, user.photoUrl, user.avatar, user.avatarUrl, user.profileImage, user.profileImageUrl, user.profile_image, user.imageUrl].find((value) => typeof value === "string" && value.trim() && value.trim() !== "null" && value.trim() !== "undefined") || "/default-avatar.png",
+        image: [user.image, user.dp, user.photo, user.photoURL, user.photoUrl, user.avatar, user.avatarUrl, user.profileImage, user.profileImageUrl, user.profile_image, user.imageUrl, user.picture, user.profile?.image, user.profile?.avatar, user.profile?.photo, user.userData?.image, user.userData?.avatar].find((value) => typeof value === "string" && value.trim() && value.trim() !== "null" && value.trim() !== "undefined") || "/default-avatar.png",
         country: user.country || "🇮🇳",
       };
     };
