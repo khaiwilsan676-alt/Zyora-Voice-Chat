@@ -1637,7 +1637,8 @@ app.get("/api/seller/user/:accountId", async (req, res) => {
     const user = await db.collection("users").findOne({ $or: [
       { accountId }, { accountNumber: accountId }, { "Account Number": accountId },
       { "Account ID": accountId }, { displayAccountNumber: accountId },
-      { displayUserNumber: accountId }
+      { displayUserNumber: accountId },
+      ...(Number.isSafeInteger(Number(accountId)) ? [{ accountId: Number(accountId) }, { accountNumber: Number(accountId) }, { "Account ID": Number(accountId) }, { displayAccountNumber: Number(accountId) }, { displayUserNumber: Number(accountId) }] : [])
     ] });
     if (!user) return res.status(404).json({ error: "User not found" });
     const uid = String(user.uid || user.id || user.appLongId || user._id || "");
@@ -1673,7 +1674,8 @@ app.post("/api/seller/transfer", async (req, res) => {
     recipient = await db.collection("users").findOne({ $or: [
       { accountId: recipientAccountId }, { accountNumber: recipientAccountId },
       { "Account Number": recipientAccountId }, { "Account ID": recipientAccountId },
-      { displayAccountNumber: recipientAccountId }, { displayUserNumber: recipientAccountId }
+      { displayAccountNumber: recipientAccountId }, { displayUserNumber: recipientAccountId },
+      ...(Number.isSafeInteger(Number(recipientAccountId)) ? [{ accountId: Number(recipientAccountId) }, { accountNumber: Number(recipientAccountId) }, { "Account ID": Number(recipientAccountId) }, { displayAccountNumber: Number(recipientAccountId) }, { displayUserNumber: Number(recipientAccountId) }] : [])
     ] });
     if (!recipient) return res.status(404).json({ error: "User not found" });
     if (String(recipient._id) === String(sender._id)) return res.status(400).json({ error: "You cannot transfer coins to yourself" });
