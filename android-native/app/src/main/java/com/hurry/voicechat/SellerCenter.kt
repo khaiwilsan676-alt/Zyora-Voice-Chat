@@ -256,8 +256,26 @@ fun SellerCenter(
                             isChecking = true; selectedUser = null; statusMessage = ""
                             runCatching {
                                 val encoded = URLEncoder.encode(targetId, "UTF-8")
-                                val found = sellerRequest("/api/seller/user/$encoded").getJSONObject("user")
-                                selectedUser = sellerUser(found)
+                                val search = sellerRequest("/api/users?accountId=$encoded")
+                                val candidates = buildList {
+                                    search.optJSONObject("user")?.let(::add)
+                                    val users = search.optJSONArray("users")
+                                    if (users != null) {
+                                        for (index in 0 until users.length()) users.optJSONObject(index)?.let(::add)
+                                    }
+                                }
+                                val found = candidates.firstOrNull { profile ->
+                                    sequenceOf("accountId", "accountNumber", "displayAccountNumber", "displayUserNumber", "Account Number", "Account ID")
+                                        .map { profile.optString(it, "").trim() }
+                                        .any { it == targetId }
+                                } ?: throw IllegalStateException("User not found")
+                                selectedUser = sellerUser(JSONObject()
+                                    .put("uid", found.optString("uid", found.optString("id")))
+                                    .put("accountId", targetId)
+                                    .put("name", found.optString("name", found.optString("displayName", found.optString("userName", "User"))))
+                                    .put("avatar", sequenceOf("image", "dp", "photo", "photoURL", "avatar", "avatarUrl", "profileImage", "picture")
+                                        .map { found.optString(it, "") }.firstOrNull { it.isNotBlank() && it != "null" }.orEmpty())
+                                    .put("idImage", found.optString("idImage", found.optString("idCardImage"))))
                             }.onFailure { statusMessage = it.message ?: "User not found" }
                             isChecking = false
                         }
