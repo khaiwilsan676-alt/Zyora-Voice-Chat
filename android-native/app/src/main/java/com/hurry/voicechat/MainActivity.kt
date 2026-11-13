@@ -742,7 +742,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                                 "Medal" -> MedalScreen(onBack = { openedMePage = null })
                                 "Store" -> StorePage(onBack = { openedMePage = null }, userId = authPrefs.getString("accountId", userId).orEmpty().ifBlank { userId })
                                 "Bag" -> StorePage(onBack = { openedMePage = null }, initialView = "bag", userId = authPrefs.getString("accountId", userId).orEmpty().ifBlank { userId })
-                                "Seller Center" -> SellerCenter(onBack = { openedMePage = null })
+                                "Seller Center" -> SellerCenter(onBack = { openedMePage = null }, userId = userId, accountId = authPrefs.getString("accountId", "").orEmpty(), ownerName = authPrefs.getString("name", "").orEmpty(), ownerAvatar = authPrefs.getString("image", "").orEmpty())
                                 "SVIP" -> SvipPage(onBack = { openedMePage = null })
                                 "Language Setting" -> LanguagePage(selectedLanguage = languageCode, onLanguageSelected = { code -> languageCode = code; languagePrefs.edit().putString("appLanguage", code).apply() }, onBack = { openedMePage = null })
                                 "Settings" -> SettingsPage(languageCode = languageCode, onBack = { openedMePage = null }, onLogout = {
