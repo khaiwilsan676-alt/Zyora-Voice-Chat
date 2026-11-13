@@ -1715,13 +1715,18 @@ app.post("/api/lucky-bag/claim", async (req, res) => {
     const bag = await luckyBags().findOne({ bagId });
     if (!bag) return res.status(404).json({ error: "Lucky Bag not found" });
     if (bag.senderId === userId) return res.status(403).json({ error: "Sender cannot claim own Lucky Bag" });
+
+    // Re-opening the reveal for the same user returns their reserved amount;
+    // it never credits the wallet. Only /confirm can do that.
+    const prior = (bag.claims || []).find((claim) => claim.userId === userId);
+    if (prior) {
+      if (prior.status === "confirmed") return res.status(409).json({ error: "Already confirmed this Lucky Bag" });
+      return res.json({ success: true, pending: true, amount: Number(prior.amount || 0), claimedCount: bag.claimedCount, recipients: bag.recipients });
+    }
     if (bag.status !== "open" || Date.now() >= bag.expiresAt) {
       if (bag.status === "open" && bag.claimedCount === 0) await refundLuckyBag(bagId);
       return res.status(410).json({ error: "Lucky Bag expired or closed" });
     }
-    const claimKey = { bagId, userId };
-    const existing = await luckyBags().findOne({ bagId, claims: { $elemMatch: { userId } } }, { projection: { claims: 1 } });
-    if (existing) return res.status(409).json({ error: "Already claimed this Lucky Bag" });
     const current = await luckyBags().findOne({ bagId, status: "open" });
     if (!current || current.claimedCount >= current.recipients) return res.status(409).json({ error: "Lucky Bag is empty" });
     const slotsLeft = current.recipients - current.claimedCount;
@@ -1730,11 +1735,10 @@ app.post("/api/lucky-bag/claim", async (req, res) => {
     const amount = Math.min(coinsLeft, share);
     const claimUpdate = await luckyBags().updateOne(
       { bagId, status: "open", claimedCount: current.claimedCount, claimedTotal: current.claimedTotal, claims: { $not: { $elemMatch: { userId } } } },
-      { $inc: { claimedCount: 1, claimedTotal: amount }, $push: { claims: { userId, amount, claimedAt: Date.now() } } }
+      { $inc: { claimedCount: 1, claimedTotal: amount }, $push: { claims: { userId, amount, status: "pending_confirmation", claimedAt: Date.now() } } }
     );
     if (!claimUpdate.modifiedCount) return res.status(409).json({ error: "Another claim was processed; try again" });
-    await creditLuckyBagWallet(userId, amount);
-    await luckyBagTransactions().insertOne({ userId, type: "lucky_bag_claim", amount, bagId, createdAt: Date.now() });
+
     const after = await luckyBags().findOne({ bagId });
     if (after && after.claimedCount >= after.recipients) {
       await luckyBags().updateOne({ bagId, status: "open" }, { $set: { status: "claimed", completedAt: Date.now() } });
@@ -1742,12 +1746,44 @@ app.post("/api/lucky-bag/claim", async (req, res) => {
       if (timer) clearTimeout(timer);
       luckyBagTimers.delete(bagId);
     }
-    io.emit("lucky_bag_claimed", { bagId, userId, amount, claimedCount: after?.claimedCount || 1, recipients: current.recipients });
-    const balance = await walletBalance(userId);
-    res.json({ success: true, amount, balance, claimedCount: after?.claimedCount || 1, recipients: current.recipients });
+    io.emit("lucky_bag_claim_reserved", { bagId, userId, amount, claimedCount: after?.claimedCount || 1, recipients: current.recipients });
+    // IMPORTANT: no wallet mutation occurs here.
+    return res.json({ success: true, pending: true, amount, balance: await walletBalance(userId), claimedCount: after?.claimedCount || 1, recipients: current.recipients });
   } catch (err) {
     console.error("POST /api/lucky-bag/claim error:", err.message);
-    res.status(503).json({ error: "Could not claim Lucky Bag" });
+    return res.status(503).json({ error: "Could not open Lucky Bag" });
+  }
+});
+
+app.post("/api/lucky-bag/confirm", async (req, res) => {
+  try {
+    const bagId = String(req.body?.bagId || "").trim();
+    const userId = String(req.body?.userId || "").trim();
+    if (!bagId || !userId) return res.status(400).json({ error: "bagId and userId required" });
+    const bag = await luckyBags().findOne({ bagId });
+    if (!bag) return res.status(404).json({ error: "Lucky Bag not found" });
+    const claim = (bag.claims || []).find((entry) => entry.userId === userId);
+    if (!claim) return res.status(409).json({ error: "Open the Lucky Bag before confirming" });
+    const amount = Number(claim.amount);
+    if (!Number.isSafeInteger(amount) || amount <= 0) return res.status(409).json({ error: "Invalid Lucky Bag reward" });
+
+    // Idempotency key is persisted atomically on the canonical wallet user.
+    // Retrying Confirm after a timeout cannot credit the same reward twice.
+    const creditedNow = await creditWalletOnce(userId, amount, `luckybag:${bagId}:${userId}`);
+    await luckyBags().updateOne(
+      { bagId, claims: { $elemMatch: { userId } } },
+      { $set: { "claims.$.status": "confirmed", "claims.$.confirmedAt": Date.now() } }
+    );
+    if (creditedNow) {
+      await luckyBagTransactions().insertOne({ userId, type: "lucky_bag_claim", amount, bagId, createdAt: Date.now() });
+      io.emit("lucky_bag_claimed", { bagId, userId, amount, claimedCount: bag.claimedCount || 1, recipients: bag.recipients });
+    }
+    const balance = await walletBalance(userId);
+    io.emit("wallet_balance_updated", { userId, balance, reason: "lucky_bag_confirm", bagId });
+    return res.json({ success: true, alreadyConfirmed: !creditedNow, amount, balance });
+  } catch (err) {
+    console.error("POST /api/lucky-bag/confirm error:", err.message);
+    return res.status(503).json({ error: "Could not confirm Lucky Bag reward" });
   }
 });
 app.get("/api/lucky-bag/room/:roomId", async (req, res) => {

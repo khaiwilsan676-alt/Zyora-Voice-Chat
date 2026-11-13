@@ -761,3 +761,19 @@ Current documentation does not certify that all historical features are build-, 
 - Native Android does not provide browser IndexedDB; the equivalent device-persistent cache is the app-private files directory. Each device downloads the shared public MP4 once and then reuses its local copy; the video bytes are not transferred between users' devices.
 - Store inventory remains server-authoritative. The existing inventory GET deletes expired rows and returns only active, unexpired purchases; the Bag expiry timer removes expired cards locally so Store changes from Owned back to Buy after expiry/refresh.
 - Verification: source commits `182d0dab`, `f618237a`, and `f7c3615f`; Native Build 2 and real-device first-download/cached-playback timing still need verification.
+
+
+## 2026-11-13 — Lucky Bag notification artwork overlay
+- `android-native/app/src/main/java/com/hurry/voicechat/LuckyBagNotificationSlider.kt`: removed the dark translucent row scrim so sender, amount, room name, countdown, and GO content overlay directly on the notification artwork.
+- Switched the banner artwork to `ContentScale.Fit` so the source image is not cropped; added only a subtle warm edge blend. Removed the countdown circle border.
+- Restyled GO as a smaller brown/gold raised button and shifted it slightly right.
+- Verification: source committed on a focused branch. Native APK build and device appearance remain unverified. The room-side Lucky Bag reveal/claim/Confirm flow and authoritative wallet credit timing were not changed in this commit and still require a separate end-to-end fix/test.
+
+
+## 2026-11-13 — Lucky Bag Confirm-gated wallet credit and room placement
+- The received Lucky Bag artwork now occupies its own right-aligned row immediately before the room side-banner column.
+- Tapping Open reserves a per-user reward and opens the reward card; the claim endpoint does not change wallet coins.
+- Coins are credited only by the explicit Confirm action through `POST /api/lucky-bag/confirm`.
+- Server credit uses an idempotency key scoped to bag + user, so retrying Confirm cannot credit the same reward twice. Wallet balance updates are broadcast after confirmation.
+- The confirmation card cannot be dismissed by tapping the backdrop; failed confirmation keeps the card visible and shows an error for retry.
+- Verification still required: backend deployment, native APK build, and multi-user/retry testing against MongoDB.

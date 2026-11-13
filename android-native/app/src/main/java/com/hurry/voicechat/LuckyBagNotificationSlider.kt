@@ -6,13 +6,13 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -106,28 +106,26 @@ fun LuckyBagNotificationSlider(currentUserId: String, onGoToRoom: (String, Strin
                 .fillMaxWidth()
                 .statusBarsPadding()
                 .padding(top = 2.dp)
-                .padding(horizontal = 8.dp)
         ) {
             val item = banner
             if (item != null) {
-                Box(
-                    Modifier.fillMaxWidth().height(76.dp).clip(RoundedCornerShape(13.dp))
-                ) {
+                // Original artwork is the notification surface itself: no card,
+                // rounded container, border, scrim, or separate background.
+                Box(Modifier.fillMaxWidth().height(76.dp)) {
                     AsyncImage(
                         model = LUCKY_BAG_BANNER_IMAGE,
                         contentDescription = null,
                         modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
+                        contentScale = ContentScale.FillBounds
                     )
                     Row(
-                        Modifier.fillMaxSize().background(Color(0xA91B1730)).padding(horizontal = 8.dp),
+                        Modifier.fillMaxSize().padding(start = 8.dp, end = 3.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         AsyncImage(
                             model = item.senderImage.takeIf { it.isNotBlank() } ?: "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/default-avatar.png",
                             contentDescription = "Sender avatar",
-                            modifier = Modifier.size(43.dp).clip(RoundedCornerShape(8.dp))
-                                .background(Color(0xFF55466B)),
+                            modifier = Modifier.size(43.dp).clip(RoundedCornerShape(8.dp)),
                             contentScale = ContentScale.Crop
                         )
                         Spacer(Modifier.width(8.dp))
@@ -143,15 +141,12 @@ fun LuckyBagNotificationSlider(currentUserId: String, onGoToRoom: (String, Strin
                                     modifier = Modifier.weight(1f, fill = false)
                                 )
                                 Spacer(Modifier.width(5.dp))
-                                Box(
-                                    Modifier.size(23.dp).border(1.5.dp, Color(0xFFFFD36A), CircleShape),
-                                    contentAlignment = Alignment.Center
-                                ) {
+                                Box(Modifier.size(23.dp), contentAlignment = Alignment.Center) {
                                     Text(seconds.toString(), color = Color(0xFFFFE6A0), fontSize = 10.sp, fontWeight = FontWeight.Bold)
                                 }
                             }
                             Text(
-                                "Sent ${item.amount} Coins Lucky Bag",
+                                "Sent ${item.amount} Coins Lucky Bag · ${item.roomName}",
                                 color = Color(0xFFFFE5A1),
                                 fontSize = 12.sp,
                                 maxLines = 1,
@@ -159,10 +154,14 @@ fun LuckyBagNotificationSlider(currentUserId: String, onGoToRoom: (String, Strin
                                 modifier = Modifier.basicMarquee(iterations = Int.MAX_VALUE)
                             )
                         }
-                        Spacer(Modifier.width(7.dp))
+                        Spacer(Modifier.width(5.dp))
                         Box(
-                            Modifier.height(34.dp).width(56.dp).clip(RoundedCornerShape(50))
-                                .background(Color(0xFFFFC84B))
+                            Modifier
+                                .offset(x = 5.dp)
+                                .padding(end = 2.dp)
+                                .size(width = 54.dp, height = 32.dp)
+                                .background(Color(0xFFD7A46A))
+                                .border(1.5.dp, Color(0xFF80502F))
                                 .clickable {
                                     onGoToRoom(item.roomId, item.roomName)
                                     visible = false
@@ -172,19 +171,12 @@ fun LuckyBagNotificationSlider(currentUserId: String, onGoToRoom: (String, Strin
                         ) {
                             Text(
                                 "GO",
-                                color = Color(0xFF5B3210),
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                modifier = Modifier
+                                color = Color(0xFF80502F),
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.ExtraBold
                             )
                         }
                     }
-                    // Keep the hit target on top of the decorative banner.
-                    Box(
-                        Modifier.align(Alignment.CenterEnd).width(64.dp).fillMaxHeight()
-                            .clip(RoundedCornerShape(topEnd = 13.dp, bottomEnd = 13.dp))
-                            .background(Color.Transparent)
-                    )
                 }
             }
         }
