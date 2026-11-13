@@ -1779,6 +1779,7 @@ app.post("/api/lucky-bag/confirm", async (req, res) => {
       io.emit("lucky_bag_claimed", { bagId, userId, amount, claimedCount: bag.claimedCount || 1, recipients: bag.recipients });
     }
     const balance = await walletBalance(userId);
+    io.emit("wallet_balance_updated", { userId, balance, reason: "lucky_bag_confirm", bagId });
     return res.json({ success: true, alreadyConfirmed: !creditedNow, amount, balance });
   } catch (err) {
     console.error("POST /api/lucky-bag/confirm error:", err.message);
