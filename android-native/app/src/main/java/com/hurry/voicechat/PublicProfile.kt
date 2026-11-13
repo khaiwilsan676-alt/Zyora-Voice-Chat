@@ -208,6 +208,9 @@ fun PublicProfileScreen(
         targetValue = if (isScrolled) 1f else 0f,
         animationSpec = tween(300)
     )
+    
+    // Smooth transition from White (0) to Black (1)
+    val iconTint = androidx.compose.ui.graphics.lerp(Color.White, Color.Black, topBarAlpha)
 
     var coverPhotos by remember(profileCacheKey, cachedProfile, targetUser?.coverPhoto) {
         mutableStateOf(ProfilePersistence.stringList(cachedProfile?.optString("coverPhotos", "")).ifEmpty { cachedProfile?.optString("coverPhoto")?.takeIf { it.isNotBlank() && it != "null" }?.let { listOf(it) } ?: targetUser?.coverPhoto?.takeIf { it.isNotBlank() }?.let { listOf(it) } ?: emptyList() }.map { profileAsset(it) })
@@ -616,7 +619,7 @@ fun PublicProfileScreen(
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         SectionHeader("Vehicle")
                         
-                        var hasVehicle by remember { mutableStateOf(false) }
+                        var hasVehicle by remember { mutableStateOf(true) }
                         
                         NativeOwnedVehicleShowcase(
                             userId = targetUser?.accountId?.takeIf { it.isNotBlank() }
@@ -654,7 +657,7 @@ fun PublicProfileScreen(
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         SectionHeader("Frame")
                         
-                        var hasFrame by remember { mutableStateOf(false) }
+                        var hasFrame by remember { mutableStateOf(true) }
 
                         NativeOwnedFrameShowcase(
                             userId = targetUser?.accountId?.takeIf { it.isNotBlank() }
@@ -721,7 +724,7 @@ fun PublicProfileScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = onBack) {
-                    Icon(Icons.Default.ArrowBack, "Back", tint = Color.Black)
+                    Icon(Icons.Default.ArrowBack, "Back", tint = iconTint)
                 }
                 
                 Text(
@@ -737,11 +740,11 @@ fun PublicProfileScreen(
 
                 if (isOtherUser) {
                     IconButton(onClick = { showActionSheet = true }) {
-                        LucidePublicProfileIcon(warning = true, modifier = Modifier.size(24.dp))
+                        LucidePublicProfileIcon(warning = true, modifier = Modifier.size(24.dp), tint = iconTint)
                     }
                 } else {
                     IconButton(onClick = { showEditSheet = true }) {
-                        LucidePublicProfileIcon(warning = false, modifier = Modifier.size(22.dp))
+                        LucidePublicProfileIcon(warning = false, modifier = Modifier.size(22.dp), tint = iconTint)
                     }
                 }
             }
@@ -953,7 +956,7 @@ fun PublicProfileScreen(
         ModalBottomSheet(
             onDismissRequest = { showActionSheet = false },
             containerColor = Color.Transparent, 
-            contentColor = Color.Black,
+            contentColor = Color.White,
             scrimColor = Color.Transparent,
             dragHandle = null
         ) {
@@ -968,7 +971,7 @@ fun PublicProfileScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(12.dp))
-                        .background(Color.White) 
+                        .background(Color(0xFF1E1E1E)) 
                 ) {
                     Text(
                         "Report",
@@ -979,12 +982,12 @@ fun PublicProfileScreen(
                                 showUserReport = true
                             }
                             .padding(vertical = 18.dp),
-                        color = Color.Black,
+                        color = Color.White,
                         fontSize = 18.sp,
                         textAlign = TextAlign.Center,
                         fontWeight = FontWeight.Medium
                     )
-                    Divider(color = Color.LightGray, thickness = 0.5.dp)
+                    Divider(color = Color.DarkGray, thickness = 0.5.dp)
                     Text(
                         if (isUserBlocked) "Unblock" else "Block",
                         modifier = Modifier
@@ -1006,7 +1009,7 @@ fun PublicProfileScreen(
                                 }
                             }
                             .padding(vertical = 18.dp),
-                        color = Color.Black,
+                        color = Color.White,
                         fontSize = 18.sp,
                         textAlign = TextAlign.Center,
                         fontWeight = FontWeight.Medium
@@ -1452,7 +1455,7 @@ fun EmptySectionCard(
             .fillMaxWidth()
             .height(72.dp)
             .clip(RoundedCornerShape(12.dp))
-            .background(Color.Black.copy(alpha = 0.3f))
+            .background(Color(0xFFF3F4F6))
             .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -1466,7 +1469,7 @@ fun EmptySectionCard(
         Spacer(modifier = Modifier.width(12.dp))
         Text(
             text = text,
-            color = Color.Black.copy(alpha = 0.8f),
+            color = Color.Black.copy(alpha = 0.6f),
             fontSize = 14.sp,
             fontWeight = FontWeight.Medium
         )
