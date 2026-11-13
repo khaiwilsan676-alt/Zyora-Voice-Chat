@@ -1274,11 +1274,6 @@ export default function StaffPanel() {
                             </span>
                           </td>
                           <td className="py-3 px-2">
-                            <span className="text-xs font-semibold text-slate-600 whitespace-nowrap">
-                              {u.registerTime && !Number.isNaN(new Date(u.registerTime).getTime()) ? new Date(u.registerTime).toLocaleString() : '—'}
-                            </span>
-                          </td>
-                          <td className="py-3 px-2">
                             <span className={`px-2 py-1 rounded-md text-[10px] font-bold shadow-sm ${
                               u.role === 'HOST' ? 'bg-purple-50 text-purple-600 border border-purple-100' :
                               u.role === 'AGENCY' ? 'bg-orange-50 text-orange-600 border border-orange-100' :
@@ -1286,6 +1281,11 @@ export default function StaffPanel() {
                               'bg-blue-50 text-blue-600 border border-blue-100'
                             }`}>
                               {u.role}
+                            </span>
+                          </td>
+                          <td className="py-3 px-2">
+                            <span className="text-xs font-semibold text-slate-600 whitespace-nowrap">
+                              {u.registerTime && !Number.isNaN(new Date(u.registerTime).getTime()) ? new Date(u.registerTime).toLocaleString() : '—'}
                             </span>
                           </td>
                           <td className="py-3 pr-4 text-right">
