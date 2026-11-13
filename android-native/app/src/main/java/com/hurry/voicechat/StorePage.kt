@@ -210,7 +210,7 @@ fun NativeAvatarFrameOverlay(
 }
 
 @Composable
-fun NativeOwnedFrameShowcase(userId: String) {
+fun NativeOwnedFrameShowcase(userId: String, onDataLoaded: ((Boolean) -> Unit)? = null) {
     var frames by remember(userId) { mutableStateOf<List<JSONObject>>(emptyList()) }
     var showcaseClock by remember(userId) { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(userId) { while (true) { showcaseClock = System.currentTimeMillis(); delay(1000L) } }
@@ -232,7 +232,7 @@ fun NativeOwnedFrameShowcase(userId: String) {
                 val items = json.optJSONArray("items") ?: JSONArray()
                 (0 until items.length()).map { items.getJSONObject(it) }
                     .filter { it.optString("tab") == "Avatar Frame" && it.optLong("expiresAt") > System.currentTimeMillis() }
-            }.onSuccess { frames = it }
+            }.onSuccess { frames = it; onDataLoaded?.invoke(it.isNotEmpty()) }
         }
     }
     LaunchedEffect(frames) {
@@ -310,7 +310,7 @@ fun NativeOwnedFrameShowcase(userId: String) {
 
 
 @Composable
-fun NativeOwnedVehicleShowcase(userId: String) {
+fun NativeOwnedVehicleShowcase(userId: String, onDataLoaded: ((Boolean) -> Unit)? = null) {
     var vehicles by remember(userId) { mutableStateOf<List<JSONObject>>(emptyList()) }
     var showcaseClock by remember(userId) { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(userId) { while (true) { showcaseClock = System.currentTimeMillis(); delay(1000L) } }
@@ -333,7 +333,7 @@ fun NativeOwnedVehicleShowcase(userId: String) {
                 val items = json.optJSONArray("items") ?: JSONArray()
                 (0 until items.length()).map { items.getJSONObject(it) }
                     .filter { it.optString("tab") == "Vehicle" && it.optLong("expiresAt") > System.currentTimeMillis() }
-            }.onSuccess { vehicles = it }
+            }.onSuccess { vehicles = it; onDataLoaded?.invoke(it.isNotEmpty()) }
         }
     }
     LaunchedEffect(vehicles) {
