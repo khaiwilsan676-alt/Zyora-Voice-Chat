@@ -772,24 +772,54 @@ export default function StaffPanel() {
           }
         }
 
-        if (currentUserEmail || currentUserId) {
-          const exists = fetchedList.some(u =>
-            (currentUserEmail && u.email === currentUserEmail) ||
-            u.hurryId === currentUserId ||
-            u.id === currentUserId
-          );
-          if (exists) {
-            fetchedList = fetchedList.map(u => {
-              if (
-                (u.id === currentUserId || u.hurryId === currentUserId) &&
-                currentUserEmail &&
-                (!u.email || u.email === '—' || u.email.endsWith('@hurry.app') || u.email === 'user@gmail.com')
-              ) {
-                return { ...u, email: currentUserEmail };
-              }
-              return u;
-            });
+        // The Owner panel uses its own staff login, so Firebase auth may be empty.
+        // Resolve the actual app user from the persisted session and always hydrate
+        // that account's profile into Manage Users (including avatar/name/account ID).
+        let currentAccountId = '';
+        let currentUserUsername = '';
+        if (typeof window !== 'undefined') {
+          const localUserData = localStorage.getItem('userData') || localStorage.getItem('user');
+          if (localUserData) {
+            try {
+              const parsed = JSON.parse(localUserData);
+              currentAccountId = String(parsed.accountId || parsed.accountNumber || parsed.displayAccountNumber || parsed.zyoraId || parsed.hurryId || parsed.publicUserId || '');
+              currentUserId = String(parsed.uid || parsed.userId || currentUserId || '');
+              currentUserName = String(parsed.name || parsed.displayName || parsed.userName || currentUserName || '');
+              currentUserUsername = String(parsed.username || parsed.userName || '');
+              currentUserPhoto = String(parsed.image || parsed.dp || parsed.photoURL || parsed.photoUrl || parsed.avatar || parsed.avatarUrl || parsed.profileImage || currentUserPhoto || '');
+              if (parsed.email || parsed.gmail) currentUserEmail = String(parsed.email || parsed.gmail);
+            } catch (e) {}
           }
+        }
+
+        const identityMatches = (u: UserRecord) =>
+          (!!currentAccountId && u.hurryId === currentAccountId) ||
+          (!!currentUserId && (u.id === currentUserId || u.hurryId === currentUserId)) ||
+          (!!currentUserEmail && u.email.toLowerCase() === currentUserEmail.toLowerCase());
+
+        const matchedIndex = fetchedList.findIndex(identityMatches);
+        const sessionRecord: UserRecord = {
+          id: currentUserId || currentAccountId || currentUserEmail || 'current-session-user',
+          name: currentUserName || 'User',
+          username: currentUserUsername || (currentUserName ? `@${currentUserName.toLowerCase().replace(/\\s+/g, '')}` : ''),
+          hurryId: currentAccountId || currentUserId || '—',
+          email: currentUserEmail || '—',
+          role: 'NORMAL',
+          image: currentUserPhoto
+        };
+
+        if (matchedIndex >= 0) {
+          const existing = fetchedList[matchedIndex];
+          fetchedList[matchedIndex] = {
+            ...existing,
+            name: (!existing.name || existing.name === 'User') && sessionRecord.name !== 'User' ? sessionRecord.name : existing.name,
+            username: existing.username || sessionRecord.username,
+            hurryId: (!existing.hurryId || existing.hurryId === '—') ? sessionRecord.hurryId : existing.hurryId,
+            email: (!existing.email || existing.email === '—' || existing.email.endsWith('@hurry.app') || existing.email === 'user@gmail.com') ? sessionRecord.email : existing.email,
+            image: existing.image || sessionRecord.image
+          };
+        } else if (currentAccountId || currentUserId || currentUserEmail) {
+          fetchedList = [sessionRecord, ...fetchedList];
         }
 
         if (isMounted) {
