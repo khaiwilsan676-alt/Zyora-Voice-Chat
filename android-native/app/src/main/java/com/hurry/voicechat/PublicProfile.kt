@@ -294,9 +294,16 @@ fun PublicProfileScreen(
     val myFollowIdentity = followPrefs.getString("accountId", "").orEmpty().ifBlank { followPrefs.getString("uid", "").orEmpty() }
     val targetFollowIdentity = targetUser?.accountId?.takeIf { it.isNotBlank() } ?: targetUser?.uid?.takeIf { it.isNotBlank() } ?: targetUser?.id.orEmpty()
     LaunchedEffect(myFollowIdentity, targetFollowIdentity) {
-        if (myFollowIdentity.isNotBlank() && targetFollowIdentity.isNotBlank() && myFollowIdentity != targetFollowIdentity) {
-            SocialFollowApi.cachedSnapshot(context, targetFollowIdentity)?.let { isFollowing = it.isFollowing; followersCount = it.followers }
-            SocialFollowApi.snapshot(context, myFollowIdentity, targetFollowIdentity)?.let { isFollowing = it.isFollowing; followersCount = it.followers }
+        if (myFollowIdentity.isNotBlank() && targetFollowIdentity.isNotBlank()) {
+            val isOwnProfile = myFollowIdentity == targetFollowIdentity
+            SocialFollowApi.cachedSnapshot(context, targetFollowIdentity)?.let {
+                isFollowing = if (isOwnProfile) false else it.isFollowing
+                followersCount = it.followers
+            }
+            SocialFollowApi.snapshot(context, myFollowIdentity, targetFollowIdentity)?.let {
+                isFollowing = if (isOwnProfile) false else it.isFollowing
+                followersCount = it.followers
+            }
         }
     }
 
