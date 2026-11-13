@@ -256,26 +256,24 @@ fun SellerCenter(
                             isChecking = true; selectedUser = null; statusMessage = ""
                             runCatching {
                                 val encoded = URLEncoder.encode(targetId, "UTF-8")
-                                val search = sellerRequest("/api/users?accountId=$encoded")
-                                val candidates = buildList {
-                                    search.optJSONObject("user")?.let(::add)
-                                    val users = search.optJSONArray("users")
-                                    if (users != null) {
-                                        for (index in 0 until users.length()) users.optJSONObject(index)?.let(::add)
-                                    }
-                                }
-                                val found = candidates.firstOrNull { profile ->
-                                    sequenceOf("accountId", "accountNumber", "displayAccountNumber", "displayUserNumber", "Account Number", "Account ID")
-                                        .map { profile.optString(it, "").trim() }
-                                        .any { it == targetId }
-                                } ?: throw IllegalStateException("User not found")
-                                selectedUser = sellerUser(JSONObject()
-                                    .put("uid", found.optString("uid", found.optString("id")))
-                                    .put("accountId", targetId)
-                                    .put("name", found.optString("name", found.optString("displayName", found.optString("userName", "User"))))
-                                    .put("avatar", sequenceOf("image", "dp", "photo", "photoURL", "avatar", "avatarUrl", "profileImage", "picture")
-                                        .map { found.optString(it, "") }.firstOrNull { it.isNotBlank() && it != "null" }.orEmpty())
-                                    .put("idImage", found.optString("idImage", found.optString("idCardImage"))))
+                                // Same endpoint and parameters used by app/owner/page.tsx.
+                                val search = sellerRequest("/api/users?search=$encoded&accountId=$encoded")
+                                val rawUsers = search.optJSONArray("users")
+                                val found = search.optJSONObject("user")
+                                    ?: rawUsers?.optJSONObject(0)
+                                    ?: throw IllegalStateException("User not found")
+                                val foundId = sequenceOf("accountId", "accountNumber", "displayAccountNumber", "displayUserNumber", "Account ID", "Account Number", "hurryId", "zyoraId", "publicUserId", "id", "uid", "appLongId", "_id")
+                                    .map { found.optString(it, "").trim() }
+                                    .firstOrNull { it.isNotBlank() && it != "null" && it != "undefined" }
+                                    ?: targetId
+                                selectedUser = SellerUser(
+                                    uid = found.optString("uid", found.optString("id", found.optString("_id"))),
+                                    accountId = foundId,
+                                    name = found.optString("name", found.optString("displayName", found.optString("userName", "User"))),
+                                    avatar = sequenceOf("image", "dp", "photo", "photoURL", "photoUrl", "avatar", "avatarUrl", "profileImage", "profileImageUrl", "profile_image", "imageUrl", "picture")
+                                        .map { found.optString(it, "") }.firstOrNull { it.isNotBlank() && it != "null" && it != "undefined" }.orEmpty(),
+                                    idImage = found.optString("idImage", found.optString("idCardImage"))
+                                )
                             }.onFailure { statusMessage = it.message ?: "User not found" }
                             isChecking = false
                         }
