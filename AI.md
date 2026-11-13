@@ -792,3 +792,9 @@ Current documentation does not certify that all historical features are build-, 
 - Both sections use three images per row, with remaining items continuing on the next row. Store star artwork appears below each image and the same day/hour expiry countdown style used in the Store Bag appears below the stars.
 - Vehicle showcase now includes the Store star row; both showcases update countdowns every second and remove items at expiry. Store purchase/equip behavior and unrelated profile UI remain unchanged.
 - Verification: GitHub source commits only; Native Build 2 and device visual verification remain pending.
+
+
+## 2026-11-13 — Restore original empty Vehicle/Frame cards
+- Public Profile owned Vehicle and Frame showcases now render the original white/10 translucent EmptySectionCard with their original artwork/text whenever inventory is empty or unavailable.
+- Removed the newly introduced full-width default Store artwork fallbacks. Owned inventory image grid, stars, countdowns, and three-column layout remain unchanged.
+- Verification: source commit only; Native Build 2 and device verification pending.
