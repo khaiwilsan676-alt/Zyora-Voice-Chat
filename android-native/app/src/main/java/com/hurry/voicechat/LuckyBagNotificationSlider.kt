@@ -1,6 +1,5 @@
 package com.hurry.voicechat
 
-
 import androidx.compose.foundation.Canvas
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Path
@@ -22,6 +21,9 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -125,7 +127,7 @@ fun LuckyBagNotificationSlider(currentUserId: String, onGoToRoom: (String, Strin
                         model = LUCKY_BAG_BANNER_IMAGE,
                         contentDescription = null,
                         modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.FillBounds
+                        contentScale = ContentScale.Fit // Yahi change kiya hai bas (FillBounds ko hata ke Fit lagaya)
                     )
                     Row(
                         Modifier.fillMaxSize().padding(start = 8.dp, end = 3.dp),
@@ -169,8 +171,8 @@ fun LuckyBagNotificationSlider(currentUserId: String, onGoToRoom: (String, Strin
                                 .offset(x = 5.dp)
                                 .padding(end = 2.dp)
                                 .size(width = 54.dp, height = 32.dp)
-                                .background(Color(0xFFD7A46A), RoundedCornerShape(50))
-                                .border(1.5.dp, Color(0xFF80502F), RoundedCornerShape(50))
+                                // GO button 3D Golden Color bina border ke
+                                .background(Brush.verticalGradient(listOf(Color(0xFFFFF2A2), Color(0xFFFFD28A), Color(0xFFC78426))), RoundedCornerShape(50))
                                 .clickable {
                                     onGoToRoom(item.roomId, item.roomName)
                                     visible = false
@@ -257,7 +259,8 @@ fun LuckyBagOpenConfirmCards(
                     
                     Box(
                         modifier = Modifier
-                             .offset(y = 4.dp)
+                             // Open Button 6dp upar shift kar diya (-2.dp)
+                             .offset(y = (-2).dp)
                             .width(190.dp)
                             .height(72.dp)
                             .clip(RoundedCornerShape(50))
@@ -323,8 +326,10 @@ fun LuckyBagOpenConfirmCards(
         
         if (showLuckyBagClaimedCard) {
             Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=0.6f)).clickable { }, contentAlignment = Alignment.Center) {
-                Box(Modifier.fillMaxWidth(0.85f).aspectRatio(0.59f).clickable(enabled=false){}) {
-                    Box(Modifier.fillMaxSize().padding(top = 40.dp).clip(RoundedCornerShape(topStart=32.dp, topEnd=32.dp, bottomStart=18.dp, bottomEnd=18.dp)).background(Brush.linearGradient(listOf(Color(0xFFFF6449), Color(0xFFFF263F), Color(0xFFE90037)))))
+                // Confirm Card parent box: Ekdum niche se exactly 15dp curve fix kar diya hai clip lagake
+                Box(Modifier.fillMaxWidth(0.85f).aspectRatio(0.59f).clip(RoundedCornerShape(topStart=32.dp, topEnd=32.dp, bottomStart=15.dp, bottomEnd=15.dp)).clickable(enabled=false){}) {
+                    
+                    Box(Modifier.fillMaxSize().padding(top = 40.dp).clip(RoundedCornerShape(topStart=32.dp, topEnd=32.dp, bottomStart=15.dp, bottomEnd=15.dp)).background(Brush.linearGradient(listOf(Color(0xFFFF6449), Color(0xFFFF263F), Color(0xFFE90037)))))
                     
                     Column(
                         modifier = Modifier.align(Alignment.TopCenter).zIndex(2f).offset(y = 8.dp),
