@@ -8,6 +8,7 @@ import { socket } from '@/src/lib/socket';
 
 import Reports from '@/components/Reports';
 import OwnerBan from '@/components/ownerban';
+import ManageRooms from '@/components/owner/ManageRooms';
 import { apiUrl } from "@/src/lib/api";
 
 // ==============================================================
@@ -153,6 +154,7 @@ interface UserRecord {
   email: string;
   role: string;
   image?: string;
+  registerTime?: string;
 }
 
 const fallbackUsers: UserRecord[] = [];
@@ -984,6 +986,7 @@ export default function StaffPanel() {
             hurryId: String(u.accountId || u.accountNumber || u.displayAccountNumber || u.displayUserNumber || u["Account ID"] || u["Account Number"] || u.hurryId || u.zyoraId || u.publicUserId || u.id || u.uid || u.appLongId || u._id || '—'),
             email: u.email || u.gmail || u.emailPhone || '—',
             role: u.role || 'NORMAL',
+            registerTime: String(u.registerTime || u.registeredAt || u.registrationTime || u.createdAt || u.created_at || ''),
             image: [u.image, u.dp, u.photo, u.photoURL, u.photoUrl, u.avatar, u.avatarUrl, u.profileImage, u.profileImageUrl, u.profile_image, u.imageUrl, u.picture, u.profile?.image, u.profile?.avatar, u.profile?.photo, u.userData?.image, u.userData?.avatar].find((value: any) => typeof value === 'string' && value.trim() && value.trim() !== 'null' && value.trim() !== 'undefined')?.trim() || ''
           }));
 
@@ -1223,6 +1226,7 @@ export default function StaffPanel() {
                         <th className="py-4 px-2">User ID</th>
                         <th className="py-4 px-2">Email</th>
                         <th className="py-4 px-2">Role</th>
+                        <th className="py-4 px-2">Register Time</th>
                         <th className="py-4 pr-4 text-right">Actions</th>
                       </tr>
                     </thead>
@@ -1270,6 +1274,11 @@ export default function StaffPanel() {
                             </span>
                           </td>
                           <td className="py-3 px-2">
+                            <span className="text-xs font-semibold text-slate-600 whitespace-nowrap">
+                              {u.registerTime && !Number.isNaN(new Date(u.registerTime).getTime()) ? new Date(u.registerTime).toLocaleString() : '—'}
+                            </span>
+                          </td>
+                          <td className="py-3 px-2">
                             <span className={`px-2 py-1 rounded-md text-[10px] font-bold shadow-sm ${
                               u.role === 'HOST' ? 'bg-purple-50 text-purple-600 border border-purple-100' :
                               u.role === 'AGENCY' ? 'bg-orange-50 text-orange-600 border border-orange-100' :
@@ -1301,6 +1310,8 @@ export default function StaffPanel() {
             </div>
           </div>
         )}
+
+        {activeTab === 'manage_rooms' && <ManageRooms />}
 
         {activeTab === 'game_fruit_party' && (
           <div className="p-8 max-w-5xl mx-auto w-full h-full overflow-y-auto">
