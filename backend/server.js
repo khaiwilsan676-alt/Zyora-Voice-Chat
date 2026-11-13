@@ -1628,6 +1628,122 @@ app.get("/api/lucky-bag/wallet/:userId", async (req, res) => {
     res.status(503).json({ error: "Lucky Bag wallet unavailable" });
   }
 });
+
+app.get("/api/seller/user/:accountId", async (req, res) => {
+  try {
+    if (!db) return res.status(503).json({ error: "User service unavailable" });
+    const accountId = String(req.params.accountId || "").trim();
+    if (!/^\\d{4,20}$/.test(accountId)) return res.status(400).json({ error: "Enter a valid user ID" });
+    const user = await db.collection("users").findOne({ $or: [
+      { accountId }, { accountNumber: accountId }, { "Account Number": accountId },
+      { "Account ID": accountId }, { displayAccountNumber: accountId },
+      { displayUserNumber: accountId }
+    ] });
+    if (!user) return res.status(404).json({ error: "User not found" });
+    const uid = String(user.uid || user.id || user.appLongId || user._id || "");
+    const name = user.name || user.displayName || user.userName || user.profile?.name || user.profile?.displayName || user.userData?.name || "User";
+    const avatar = [user.image, user.dp, user.photo, user.photoURL, user.photoUrl, user.avatar, user.avatarUrl, user.profileImage, user.profileImageUrl, user.profile_image, user.imageUrl, user.picture, user.profile?.image, user.profile?.avatar, user.profile?.photo, user.userData?.image, user.userData?.avatar].find(value => typeof value === "string" && value.trim() && value !== "null" && value !== "undefined") || "";
+    res.set("Cache-Control", "no-store");
+    return res.json({ user: { uid, accountId: String(user.accountId || user.accountNumber || user.displayUserNumber || accountId), name, avatar, idImage: user.idImage || user.idCardImage || user.accountIdImage || "" } });
+  } catch (error) {
+    console.error("GET /api/seller/user error:", error.message);
+    return res.status(503).json({ error: "Could not search user" });
+  }
+});
+
+app.post("/api/seller/transfer", async (req, res) => {
+  let debited = false;
+  let sender = null;
+  let recipient = null;
+  const transferId = String(req.body?.transferId || "").trim();
+  try {
+    if (!db) return res.status(503).json({ error: "Wallet service unavailable" });
+    const senderId = String(req.body?.senderId || "").trim();
+    const recipientAccountId = String(req.body?.recipientAccountId || "").trim();
+    const amount = Number(req.body?.amount);
+    if (!senderId || !/^\\d{4,20}$/.test(recipientAccountId) || !Number.isSafeInteger(amount) || amount <= 0 || !transferId || transferId.length > 100) {
+      return res.status(400).json({ error: "Valid user ID and coin amount are required" });
+    }
+    const transfers = db.collection("sellerCoinTransfers");
+    const prior = await transfers.findOne({ _id: transferId });
+    if (prior?.status === "completed") return res.json({ success: true, transfer: prior, duplicate: true });
+    if (prior) return res.status(409).json({ error: "This transfer is already being processed" });
+
+    sender = await ensureWalletUser(senderId);
+    recipient = await db.collection("users").findOne({ $or: [
+      { accountId: recipientAccountId }, { accountNumber: recipientAccountId },
+      { "Account Number": recipientAccountId }, { "Account ID": recipientAccountId },
+      { displayAccountNumber: recipientAccountId }, { displayUserNumber: recipientAccountId }
+    ] });
+    if (!recipient) return res.status(404).json({ error: "User not found" });
+    if (String(recipient._id) === String(sender._id)) return res.status(400).json({ error: "You cannot transfer coins to yourself" });
+
+    const now = Date.now();
+    const senderName = sender.name || sender.displayName || sender.userName || "User";
+    const senderAvatar = sender.image || sender.dp || sender.photoURL || sender.avatar || "";
+    const recipientName = recipient.name || recipient.displayName || recipient.userName || "User";
+    const recipientAvatar = recipient.image || recipient.dp || recipient.photoURL || recipient.avatar || "";
+    const record = {
+      _id: transferId, transferId, status: "pending",
+      senderId: String(sender.uid || sender.id || senderId),
+      senderAccountId: String(sender.accountId || sender.accountNumber || ""),
+      senderName, senderAvatar,
+      recipientId: String(recipient.uid || recipient.id || recipient.appLongId || recipient._id),
+      recipientAccountId, recipientName, recipientAvatar,
+      amount, createdAt: now, updatedAt: now
+    };
+    await transfers.insertOne(record);
+
+    const debit = await db.collection("users").updateOne(
+      { _id: sender._id, coins: { $gte: amount } },
+      { $inc: { coins: -amount }, $set: { walletUpdatedAt: now } }
+    );
+    if (!debit.modifiedCount) {
+      await transfers.updateOne({ _id: transferId }, { $set: { status: "failed", failure: "insufficient_balance", updatedAt: Date.now() } });
+      return res.status(409).json({ error: "Insufficient balance" });
+    }
+    debited = true;
+
+    try {
+      const credit = await db.collection("users").updateOne(
+        { _id: recipient._id },
+        { $inc: { coins: amount }, $set: { walletUpdatedAt: Date.now() } }
+      );
+      if (!credit.modifiedCount) throw new Error("Recipient wallet could not be updated");
+    } catch (creditError) {
+      await db.collection("users").updateOne({ _id: sender._id }, { $inc: { coins: amount }, $set: { walletUpdatedAt: Date.now() } });
+      debited = false;
+      await transfers.updateOne({ _id: transferId }, { $set: { status: "failed", failure: "recipient_credit_failed", updatedAt: Date.now() } });
+      throw creditError;
+    }
+
+    const completedAt = Date.now();
+    await transfers.updateOne({ _id: transferId }, { $set: { status: "completed", completedAt, updatedAt: completedAt } });
+    const updatedSender = await db.collection("users").findOne({ _id: sender._id });
+    return res.json({ success: true, balance: Math.max(0, Number(updatedSender?.coins ?? 0)), transfer: { ...record, status: "completed", completedAt } });
+  } catch (error) {
+    if (debited && sender && recipient) {
+      try { await db.collection("users").updateOne({ _id: sender._id }, { $inc: { coins: Number(req.body?.amount) }, $set: { walletUpdatedAt: Date.now() } }); } catch (_) {}
+    }
+    console.error("POST /api/seller/transfer error:", error.message);
+    return res.status(503).json({ error: error.message || "Coin transfer failed" });
+  }
+});
+
+app.get("/api/seller/transfers", async (req, res) => {
+  try {
+    if (!db) return res.status(503).json({ error: "Transfer history unavailable" });
+    const senderId = String(req.query.senderId || "").trim();
+    if (!senderId) return res.status(400).json({ error: "senderId required" });
+    const rows = await db.collection("sellerCoinTransfers").find({ senderId, status: "completed" }).sort({ createdAt: -1 }).limit(100).toArray();
+    res.set("Cache-Control", "no-store");
+    return res.json({ transfers: rows });
+  } catch (error) {
+    console.error("GET /api/seller/transfers error:", error.message);
+    return res.status(503).json({ error: "Could not load transfer history" });
+  }
+});
+
 app.post("/api/wallet/exchange", async (req, res) => {
   try {
     if (!db) return res.status(503).json({ error: "GitHub storage is not connected" });
