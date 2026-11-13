@@ -192,7 +192,8 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
                                 name = name,
                                 image = displayPhoto,
                                 country = profileCountry,
-                                flag = profileCountry.takeIf { it.isNotBlank() }?.let { countryFlag(it) }.orEmpty()
+                                flag = profileCountry.takeIf { it.isNotBlank() }?.let { countryFlag(it) }.orEmpty(),
+                                followers = fansCount
                             ))
                         }, contentAlignment = Alignment.Center) {
                             if (displayPhoto.isNotBlank()) {
@@ -240,7 +241,6 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
                             if (phone.isNotBlank()) Text(phone, fontSize = 12.sp, color = Color(0xFF4B5563))
                         }
                     }
-                    Text("›", fontSize = 32.sp, color = Color(0xFF374151), modifier = Modifier.padding(top = 10.dp).clickable { onPublicProfile(RoomProfileUser(id = uid, uid = uid, accountId = account.ifBlank { uid }, name = name, image = displayPhoto, country = profileCountry, flag = profileCountry.takeIf { it.isNotBlank() }?.let { countryFlag(it) }.orEmpty())) })
                 }
 
                 Spacer(Modifier.height(18.dp))
