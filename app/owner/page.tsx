@@ -729,7 +729,7 @@ export default function StaffPanel() {
             hurryId: String(u.accountId || u.accountNumber || u.displayAccountNumber || u.displayUserNumber || u["Account ID"] || u["Account Number"] || u.hurryId || u.zyoraId || u.publicUserId || u.id || u.uid || u.appLongId || u._id || '—'),
             email: String(u.email || u.gmail || u.emailPhone || u.emailAddress || '—'),
             role: String(u.role || 'NORMAL'),
-            image: [u.image, u.dp, u.photo, u.photoURL, u.photoUrl, u.avatar, u.avatarUrl, u.profileImage, u.profileImageUrl, u.profile_image, u.imageUrl].find((value: any) => typeof value === 'string' && value.trim() && value.trim() !== 'null' && value.trim() !== 'undefined')?.trim() || ''
+            image: [u.image, u.dp, u.photo, u.photoURL, u.photoUrl, u.avatar, u.avatarUrl, u.profileImage, u.profileImageUrl, u.profile_image, u.imageUrl, u.picture, u.profile?.image, u.profile?.avatar, u.profile?.photo, u.userData?.image, u.userData?.avatar].find((value: any) => typeof value === 'string' && value.trim() && value.trim() !== 'null' && value.trim() !== 'undefined')?.trim() || ''
           }));
         } catch (err) {
           console.warn('Socket.IO owner users load failed; trying HTTP users API:', err);
@@ -755,7 +755,7 @@ export default function StaffPanel() {
             hurryId: String(u.accountId || u.accountNumber || u.displayAccountNumber || u.displayUserNumber || u["Account ID"] || u["Account Number"] || u.hurryId || u.zyoraId || u.publicUserId || u.id || u.uid || u.appLongId || u._id || '—'),
             email: String(u.email || u.gmail || u.emailPhone || u.emailAddress || '—'),
             role: String(u.role || 'NORMAL'),
-            image: [u.image, u.dp, u.photo, u.photoURL, u.photoUrl, u.avatar, u.avatarUrl, u.profileImage, u.profileImageUrl, u.profile_image, u.imageUrl].find((value: any) => typeof value === 'string' && value.trim() && value.trim() !== 'null' && value.trim() !== 'undefined')?.trim() || ''
+            image: [u.image, u.dp, u.photo, u.photoURL, u.photoUrl, u.avatar, u.avatarUrl, u.profileImage, u.profileImageUrl, u.profile_image, u.imageUrl, u.picture, u.profile?.image, u.profile?.avatar, u.profile?.photo, u.userData?.image, u.userData?.avatar].find((value: any) => typeof value === 'string' && value.trim() && value.trim() !== 'null' && value.trim() !== 'undefined')?.trim() || ''
           }));
         }
 
@@ -965,12 +965,12 @@ export default function StaffPanel() {
           const rawUsers = Array.isArray(data) ? data : (data?.users || []);
           const fetchedList = rawUsers.map((u: any, index: number) => ({
             id: String(u._id || u.id || u.uid || index + 1),
-            name: u.name || u.displayName || u.userName || 'User',
+            name: u.name || u.displayName || u.userName || u.profile?.name || u.profile?.displayName || u.userData?.name || 'User',
             username: u.username || u.userName || `@${(u.name || 'user').toLowerCase().replace(/\s+/g, '')}`,
             hurryId: String(u.accountId || u.accountNumber || u.displayAccountNumber || u.displayUserNumber || u["Account ID"] || u["Account Number"] || u.hurryId || u.zyoraId || u.publicUserId || u.id || u.uid || u.appLongId || u._id || '—'),
             email: u.email || u.gmail || u.emailPhone || '—',
             role: u.role || 'NORMAL',
-            image: [u.image, u.dp, u.photo, u.photoURL, u.photoUrl, u.avatar, u.avatarUrl, u.profileImage, u.profileImageUrl, u.profile_image, u.imageUrl].find((value: any) => typeof value === 'string' && value.trim() && value.trim() !== 'null' && value.trim() !== 'undefined')?.trim() || ''
+            image: [u.image, u.dp, u.photo, u.photoURL, u.photoUrl, u.avatar, u.avatarUrl, u.profileImage, u.profileImageUrl, u.profile_image, u.imageUrl, u.picture, u.profile?.image, u.profile?.avatar, u.profile?.photo, u.userData?.image, u.userData?.avatar].find((value: any) => typeof value === 'string' && value.trim() && value.trim() !== 'null' && value.trim() !== 'undefined')?.trim() || ''
           }));
 
           setUsers(prev => {
