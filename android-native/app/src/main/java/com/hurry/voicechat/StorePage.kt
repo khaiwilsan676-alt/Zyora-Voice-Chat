@@ -212,6 +212,8 @@ fun NativeAvatarFrameOverlay(
 @Composable
 fun NativeOwnedFrameShowcase(userId: String) {
     var frames by remember(userId) { mutableStateOf<List<JSONObject>>(emptyList()) }
+    var showcaseClock by remember(userId) { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(userId) { while (true) { showcaseClock = System.currentTimeMillis(); delay(1000L) } }
     val refreshVersion = nativeAvatarFrameRefreshVersions[userId] ?: 0L
     LaunchedEffect(userId, refreshVersion) {
         frames = emptyList()
@@ -282,6 +284,13 @@ fun NativeOwnedFrameShowcase(userId: String) {
                                     )
                                 }
                             }
+                            val remaining = ((owned.optLong("expiresAt") - showcaseClock).coerceAtLeast(0L) / 1000L)
+                            Text(
+                                text = "${remaining / 86400L}d ${(remaining % 86400L) / 3600L}h",
+                                color = Color.LightGray,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium
+                            )
                         }
                     }
                     repeat(3 - rowFrames.size) { Spacer(Modifier.weight(1f)) }
@@ -303,6 +312,8 @@ fun NativeOwnedFrameShowcase(userId: String) {
 @Composable
 fun NativeOwnedVehicleShowcase(userId: String) {
     var vehicles by remember(userId) { mutableStateOf<List<JSONObject>>(emptyList()) }
+    var showcaseClock by remember(userId) { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(userId) { while (true) { showcaseClock = System.currentTimeMillis(); delay(1000L) } }
     LaunchedEffect(userId) {
         vehicles = emptyList()
         if (userId.isNotBlank()) withContext(Dispatchers.IO) {
@@ -344,12 +355,30 @@ fun NativeOwnedVehicleShowcase(userId: String) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     rowVehicles.forEach { (owned, item) ->
                         val image = owned.optString("image").ifBlank { item.image }
-                        AsyncImage(
-                            model = StoreAssetBase + image,
-                            contentDescription = "Owned vehicle",
-                            modifier = Modifier.weight(1f).height(92.dp).clip(RoundedCornerShape(12.dp)),
-                            contentScale = ContentScale.Fit
-                        )
+                        Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                            AsyncImage(
+                                model = StoreAssetBase + image,
+                                contentDescription = "Owned vehicle",
+                                modifier = Modifier.fillMaxWidth().height(92.dp),
+                                contentScale = ContentScale.Fit
+                            )
+                            Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                                repeat(item.stars) {
+                                    AsyncImage(
+                                        model = StoreAssetBase + "file_0000000004e881fa84e61b8616f8eaf8.png",
+                                        contentDescription = "Star",
+                                        modifier = Modifier.size(12.dp)
+                                    )
+                                }
+                            }
+                            val remaining = ((owned.optLong("expiresAt") - showcaseClock).coerceAtLeast(0L) / 1000L)
+                            Text(
+                                text = "${remaining / 86400L}d ${(remaining % 86400L) / 3600L}h",
+                                color = Color.LightGray,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
                     }
                     repeat(3 - rowVehicles.size) { Spacer(Modifier.weight(1f)) }
                 }
