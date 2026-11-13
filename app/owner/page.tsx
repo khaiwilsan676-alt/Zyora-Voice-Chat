@@ -9,6 +9,7 @@ import { socket } from '@/src/lib/socket';
 import Reports from '@/components/Reports';
 import OwnerBan from '@/components/ownerban';
 import ManageRooms from '@/components/owner/ManageRooms';
+import SellerCenterUsers from '@/components/owner/SellerCenterUsers';
 import { apiUrl } from "@/src/lib/api";
 
 // ==============================================================
@@ -1123,7 +1124,7 @@ export default function StaffPanel() {
 
           <SidebarCategory
             icon="👥" title="User Center" activeItem={activeTab} setActiveItem={setActiveTab} setIsSidebarOpen={setIsSidebarOpen}
-            items={[{ id: 'manage_users', label: 'Manage Users', icon: '👤' }, { id: 'host_apps', label: 'Host Applications', icon: '📝' }]}
+            items={[{ id: 'manage_users', label: 'Manage Users', icon: '👤' }, { id: 'seller_center', label: 'Seller Center', icon: '🛒' }, { id: 'host_apps', label: 'Host Applications', icon: '📝' }]}
           />
           <SidebarCategory
             icon="🎙️" title="Live Rooms" activeItem={activeTab} setActiveItem={setActiveTab} setIsSidebarOpen={setIsSidebarOpen}
@@ -1313,6 +1314,7 @@ export default function StaffPanel() {
         )}
 
         {activeTab === 'manage_rooms' && <ManageRooms />}
+      {activeTab === 'seller_center' && <SellerCenterUsers />}
 
         {activeTab === 'game_fruit_party' && (
           <div className="p-8 max-w-5xl mx-auto w-full h-full overflow-y-auto">
