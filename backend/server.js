@@ -1633,7 +1633,7 @@ app.get("/api/seller/user/:accountId", async (req, res) => {
   try {
     if (!db) return res.status(503).json({ error: "User service unavailable" });
     const accountId = String(req.params.accountId || "").trim();
-    if (!/^\\d{4,20}$/.test(accountId)) return res.status(400).json({ error: "Enter a valid user ID" });
+    if (!/^\d{4,20}$/.test(accountId)) return res.status(400).json({ error: "Enter a valid user ID" });
     const user = await db.collection("users").findOne({ $or: [
       { accountId }, { accountNumber: accountId }, { "Account Number": accountId },
       { "Account ID": accountId }, { displayAccountNumber: accountId },
