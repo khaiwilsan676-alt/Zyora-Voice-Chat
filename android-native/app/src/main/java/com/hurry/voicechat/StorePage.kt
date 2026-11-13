@@ -67,6 +67,7 @@ import java.net.URLEncoder
 import java.net.HttpURLConnection
 import java.io.File
 import java.security.MessageDigest
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -640,7 +641,9 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                                         topFade = if (isVehicle) 0.1f else 0f,
                                         bottomFade = gridBottomFade,
                                         removeGreenScreen = removeGreen,
-                                        mute = item.id == "a8"
+                                        mute = item.id == "a8",
+                                        loop = !isVehicle,
+                                        cacheVideo = isVehicle
                                     )
                                 } else {
                                     val mediaModifier = Modifier.fillMaxWidth().height(if (isVehicle || isFrame || isBubble) 120.dp else 80.dp)
@@ -1185,7 +1188,7 @@ fun StoreVideoPreview(
     onComplete: (() -> Unit)? = null,
     cacheVideo: Boolean = false
 ) {
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current.applicationContext
     val playbackUrl by produceState(initialValue = if (cacheVideo) "" else url, url, cacheVideo) {
         if (!cacheVideo) {
             value = url
@@ -1196,24 +1199,31 @@ fun StoreVideoPreview(
                         .digest(url.toByteArray())
                         .joinToString("") { "%02x".format(it) }
                     val cachedFile = File(context.filesDir, "store-video-$digest.mp4")
-                    if (!cachedFile.exists() || cachedFile.length() <= 0L) {
-                        val tempFile = File(context.filesDir, "store-video-$digest.tmp")
-                        val connection = URL(url).openConnection().apply {
-                            connectTimeout = 15000
-                            readTimeout = 30000
-                        }
+                    if (!cachedFile.isFile || cachedFile.length() <= 0L) {
+                        // Use a unique temporary file: Store grid, detail and room previews
+                        // can request the same asset at the same time.
+                        val tempFile = File.createTempFile("store-video-$digest-", ".tmp", context.filesDir)
                         try {
-                            connection.getInputStream().use { input ->
-                                tempFile.outputStream().use { output -> input.copyTo(output) }
+                            val connection = URL(url).openConnection().apply {
+                                connectTimeout = 15000
+                                readTimeout = 30000
+                            }
+                            try {
+                                connection.getInputStream().use { input ->
+                                    tempFile.outputStream().use { output -> input.copyTo(output) }
+                                }
+                            } finally {
+                                (connection as? HttpURLConnection)?.disconnect()
+                            }
+                            check(tempFile.isFile && tempFile.length() > 0L) { "Downloaded vehicle video is empty" }
+                            if (!tempFile.renameTo(cachedFile)) {
+                                tempFile.copyTo(cachedFile, overwrite = true)
                             }
                         } finally {
-                            (connection as? HttpURLConnection)?.disconnect()
-                        }
-                        if (!tempFile.renameTo(cachedFile)) {
-                            tempFile.copyTo(cachedFile, overwrite = true)
                             tempFile.delete()
                         }
                     }
+                    check(cachedFile.isFile && cachedFile.length() > 0L) { "Cached vehicle video is unavailable" }
                     cachedFile.toURI().toString()
                 }.getOrElse { url }
             }
@@ -1281,46 +1291,59 @@ fun StoreVideoPreview(
                     textureView.isOpaque = false
                     
                     val mediaPlayer = MediaPlayer()
+                    val released = AtomicBoolean(false)
+                    var outputSurface: Surface? = null
+                    fun releasePlayer() {
+                        if (released.compareAndSet(false, true)) {
+                            runCatching { mediaPlayer.setSurface(null) }
+                            runCatching { mediaPlayer.release() }
+                            outputSurface?.release()
+                            outputSurface = null
+                        }
+                    }
                     textureView.tag = mediaPlayer
-                    
+                    textureView.setTag(android.R.id.content, ::releasePlayer)
+
                     textureView.surfaceTextureListener = object : TextureView.SurfaceTextureListener {
                         override fun onSurfaceTextureAvailable(surface: SurfaceTexture, width: Int, height: Int) {
-                            mediaPlayer.setSurface(Surface(surface))
                             try {
+                                outputSurface = Surface(surface)
+                                mediaPlayer.setSurface(outputSurface)
                                 mediaPlayer.setDataSource(ctx, Uri.parse(playbackUrl))
                                 mediaPlayer.isLooping = loop
-                                if (!loop && onComplete != null) mediaPlayer.setOnCompletionListener { onComplete() }
-                                
-                                mediaPlayer.setOnVideoSizeChangedListener { _, w, h ->
-                                    if (w > 0 && h > 0) {
-                                        videoRatio = w.toFloat() / h.toFloat()
-                                    }
+                                if (!loop && onComplete != null) {
+                                    mediaPlayer.setOnCompletionListener { if (!released.get()) onComplete() }
                                 }
-                                
+                                mediaPlayer.setOnVideoSizeChangedListener { _, w, h ->
+                                    if (w > 0 && h > 0) videoRatio = w.toFloat() / h.toFloat()
+                                }
                                 mediaPlayer.setOnInfoListener { _, what, _ ->
                                     if (what == MediaPlayer.MEDIA_INFO_VIDEO_RENDERING_START) {
                                         isVideoReady = true
                                         true
                                     } else false
                                 }
-                                // Register listeners before prepareAsync so cached clips cannot
-                                // finish preparation before their callback is attached.
                                 mediaPlayer.setOnPreparedListener {
-                                    if (mute) {
-                                        it.setVolume(0f, 0f)
-                                    }
-                                    if (!pause) it.start()
-                                    else {
+                                    if (released.get()) return@setOnPreparedListener
+                                    if (mute) it.setVolume(0f, 0f)
+                                    if (!pause) it.start() else {
                                         it.seekTo(100)
                                         isVideoReady = true
                                     }
                                 }
+                                mediaPlayer.setOnErrorListener { _, _, _ ->
+                                    isVideoReady = false
+                                    true
+                                }
                                 mediaPlayer.prepareAsync()
-                            } catch (e: Exception) { e.printStackTrace() }
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                                releasePlayer()
+                            }
                         }
                         override fun onSurfaceTextureSizeChanged(surface: SurfaceTexture, width: Int, height: Int) {}
                         override fun onSurfaceTextureDestroyed(surface: SurfaceTexture): Boolean {
-                            mediaPlayer.release()
+                            releasePlayer()
                             return true
                         }
                         override fun onSurfaceTextureUpdated(surface: SurfaceTexture) {}
@@ -1329,8 +1352,7 @@ fun StoreVideoPreview(
                 },
                 modifier = Modifier.fillMaxSize(),
                 onRelease = { view ->
-                    val mp = view.tag as? MediaPlayer
-                    mp?.release()
+                    (view.getTag(android.R.id.content) as? (() -> Unit))?.invoke()
                 }
             )
         }
