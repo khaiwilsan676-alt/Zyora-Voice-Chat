@@ -202,12 +202,13 @@ fun PublicProfileScreen(
         }
     }
 
-    // SCROLL STATE & COLOR LOGIC ADDED HERE (Kuch aur touch nahi kiya)
+    // SCROLL STATE & COLOR LOGIC (Modified for smooth fade & name showing)
     val listState = rememberLazyListState()
     val isScrolled by remember { derivedStateOf { listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 50 } }
-    val topBarColor by animateColorAsState(
-        targetValue = if (isScrolled) Color.Black else Color.Transparent,
-        animationSpec = tween(200)
+    
+    val topBarAlpha by animateFloatAsState(
+        targetValue = if (isScrolled) 1f else 0f,
+        animationSpec = tween(300)
     )
 
     // State Variables
@@ -368,20 +369,10 @@ fun PublicProfileScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .background(Color.Black)
     ) {
-        // --- NEW IMAGE BACKGROUND LOGIC ---
-        val isFemaleBg = userGender.trim().equals("female", ignoreCase = true)
-        val defaultBg = if (isFemaleBg) "/public/file_000000006e4c8246a095cd0444c8efe6.png" else "/public/file_0000000082708246a5d469a2bfd8d637.png"
-        
-        AsyncImage(
-            model = profileAsset(defaultBg),
-            contentDescription = "Background",
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize()
-        )
-
         LazyColumn(
-            state = listState, // LIST STATE ATTACHED HERE
+            state = listState,
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(bottom = if (isOtherUser) 100.dp else 40.dp)
         ) {
@@ -391,6 +382,7 @@ fun PublicProfileScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(350.dp)
+                        .background(Color(0xFF1F2937))
                 ) {
                     if (coverPhotos.isNotEmpty()) {
                         val pagerState = rememberPagerState(pageCount = { coverPhotos.size })
@@ -475,7 +467,7 @@ fun PublicProfileScreen(
                             clip = true
                         }
                         .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
-                        .background(Color.Transparent) // Black background removed here!
+                        .background(Color.Black)
                         .padding(horizontal = 16.dp, vertical = 16.dp)
                         .padding(top = 4.dp)
                 ) {
@@ -550,7 +542,7 @@ fun PublicProfileScreen(
                                 modifier = Modifier.padding(end = 6.dp) 
                             )
                         }
-                        // Lv.1 ke side wali image hata di gayi hai!
+                        // Side image removed properly as requested
                     }
 
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 12.dp)) {
@@ -681,43 +673,54 @@ fun PublicProfileScreen(
             }
         }
 
-        // --- NEW TOP BAR LOGIC ADDED HERE (Scroll hone par Black ho jayega aur Name Center mein ayega) ---
-        Row(
+        // --- NEW TOP BAR LOGIC (Mixing Fade Effect + Username added) ---
+        Box(
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .fillMaxWidth()
-                .background(topBarColor)
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color.Black.copy(alpha = topBarAlpha),
+                            Color.Black.copy(alpha = topBarAlpha * 0.8f),
+                            Color.Transparent
+                        )
+                    )
+                )
                 .windowInsetsPadding(WindowInsets.statusBars)
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+                .padding(bottom = 16.dp) // Bottom padding for smooth mixing fade edge
         ) {
-            IconButton(onClick = onBack) {
-                Icon(Icons.Default.ArrowBack, "Back", tint = Color.White)
-            }
-            
-            AnimatedVisibility(
-                visible = isScrolled,
-                enter = fadeIn(),
-                exit = fadeOut()
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
+                IconButton(onClick = onBack) {
+                    Icon(Icons.Default.ArrowBack, "Back", tint = Color.White)
+                }
+                
+                // USER NAME IN MIDDLE
                 Text(
                     text = userName,
-                    color = Color.White,
+                    color = Color.White.copy(alpha = topBarAlpha),
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
+                    textAlign = TextAlign.Center
                 )
-            }
-            
-            if (isOtherUser) {
-                IconButton(onClick = { showActionSheet = true }) {
-                    LucidePublicProfileIcon(warning = true, modifier = Modifier.size(24.dp))
-                }
-            } else {
-                IconButton(onClick = { showEditSheet = true }) {
-                    LucidePublicProfileIcon(warning = false, modifier = Modifier.size(22.dp))
+
+                if (isOtherUser) {
+                    IconButton(onClick = { showActionSheet = true }) {
+                        LucidePublicProfileIcon(warning = true, modifier = Modifier.size(24.dp))
+                    }
+                } else {
+                    IconButton(onClick = { showEditSheet = true }) {
+                        LucidePublicProfileIcon(warning = false, modifier = Modifier.size(22.dp))
+                    }
                 }
             }
         }
@@ -729,7 +732,7 @@ fun PublicProfileScreen(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
-                    .background(Color.Transparent) // Black card background hata diya hai!
+                    // Card background hta diya, ab over-lap karega
                     .padding(horizontal = 24.dp, vertical = 12.dp)
                     .windowInsetsPadding(WindowInsets.navigationBars),
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
