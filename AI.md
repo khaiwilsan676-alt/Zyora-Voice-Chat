@@ -798,3 +798,8 @@ Current documentation does not certify that all historical features are build-, 
 - Public Profile owned Vehicle and Frame showcases now render the original white/10 translucent EmptySectionCard with their original artwork/text whenever inventory is empty or unavailable.
 - Removed the newly introduced full-width default Store artwork fallbacks. Owned inventory image grid, stars, countdowns, and three-column layout remain unchanged.
 - Verification: source commit only; Native Build 2 and device verification pending.
+
+
+## Own public profile navigation and fans count (2026-11-13)
+- MeScreen.kt: the signed-in user's already-loaded Fans count is passed into the own Public Profile model so the profile can display the same count as the Me page.
+- The standalone top-right chevron shortcut was removed. Opening the signed-in user's Public Profile from Me is now done by tapping the avatar; other menu and stats navigation remain unchanged.
