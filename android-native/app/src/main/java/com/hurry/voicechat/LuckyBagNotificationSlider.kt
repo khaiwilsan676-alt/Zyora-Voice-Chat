@@ -18,6 +18,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -115,7 +120,21 @@ fun LuckyBagNotificationSlider(currentUserId: String, onGoToRoom: (String, Strin
                     AsyncImage(
                         model = LUCKY_BAG_BANNER_IMAGE,
                         contentDescription = null,
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                            .drawWithCache {
+                                val edgeFade = Brush.horizontalGradient(
+                                    0f to Color.Transparent,
+                                    0.09f to Color.White,
+                                    0.91f to Color.White,
+                                    1f to Color.Transparent
+                                )
+                                onDrawWithContent {
+                                    drawContent()
+                                    drawRect(edgeFade, blendMode = BlendMode.DstIn)
+                                }
+                            },
                         contentScale = ContentScale.FillBounds
                     )
                     Row(
@@ -160,8 +179,8 @@ fun LuckyBagNotificationSlider(currentUserId: String, onGoToRoom: (String, Strin
                                 .offset(x = 5.dp)
                                 .padding(end = 2.dp)
                                 .size(width = 54.dp, height = 32.dp)
-                                .background(Color(0xFFD7A46A))
-                                .border(1.5.dp, Color(0xFF80502F))
+                                .background(Color(0xFFD7A46A), RoundedCornerShape(50))
+                                .border(1.5.dp, Color(0xFF80502F), RoundedCornerShape(50))
                                 .clickable {
                                     onGoToRoom(item.roomId, item.roomName)
                                     visible = false
