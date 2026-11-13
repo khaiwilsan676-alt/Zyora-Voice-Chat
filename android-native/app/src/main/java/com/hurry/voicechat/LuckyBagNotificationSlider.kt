@@ -6,20 +6,15 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -108,25 +103,17 @@ fun LuckyBagNotificationSlider(currentUserId: String, onGoToRoom: (String, Strin
                 .fillMaxWidth()
                 .statusBarsPadding()
                 .padding(top = 2.dp)
-                .padding(horizontal = 8.dp)
         ) {
             val item = banner
             if (item != null) {
-                Box(Modifier.fillMaxWidth().height(76.dp).clip(RoundedCornerShape(13.dp))) {
-                    // Keep the complete artwork visible; do not crop or dim it.
+                // Original artwork is the notification surface itself: no card,
+                // rounded container, border, scrim, or separate background.
+                Box(Modifier.fillMaxWidth().height(76.dp)) {
                     AsyncImage(
                         model = LUCKY_BAG_BANNER_IMAGE,
                         contentDescription = null,
                         modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Fit
-                    )
-                    // Soft warm edge blend only; no dark scrim over the artwork.
-                    Box(
-                        Modifier.fillMaxSize().background(
-                            Brush.horizontalGradient(
-                                listOf(Color(0x33FFE8B8), Color.Transparent, Color.Transparent, Color(0x33FFE8B8))
-                            )
-                        )
+                        contentScale = ContentScale.FillBounds
                     )
                     Row(
                         Modifier.fillMaxSize().padding(start = 8.dp, end = 3.dp),
@@ -170,10 +157,8 @@ fun LuckyBagNotificationSlider(currentUserId: String, onGoToRoom: (String, Strin
                                 .offset(x = 5.dp)
                                 .padding(end = 2.dp)
                                 .size(width = 54.dp, height = 32.dp)
-                                .shadow(5.dp, RoundedCornerShape(10.dp))
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(Brush.verticalGradient(listOf(Color(0xFFFFF0C9), Color(0xFFD7A46A), Color(0xFF9A633D))))
-                                .border(1.5.dp, Color(0xFF80502F), RoundedCornerShape(10.dp))
+                                .background(Color(0xFFD7A46A))
+                                .border(1.5.dp, Color(0xFF80502F))
                                 .clickable {
                                     onGoToRoom(item.roomId, item.roomName)
                                     visible = false
