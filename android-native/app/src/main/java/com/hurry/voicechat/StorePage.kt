@@ -79,6 +79,47 @@ private val CardGrey = Color(0xFF242424) // Halka grey for cards
 private const val StoreAssetBase = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/"
 internal val nativeAvatarFrameRefreshVersions = mutableStateMapOf<String, Long>()
 
+private const val NativeStoreCachePrefs = "zyora_store_inventory_cache"
+private fun readNativeStoreInventoryCache(context: android.content.Context, userId: String): JSONArray {
+    if (userId.isBlank()) return JSONArray()
+    val raw = context.getSharedPreferences(NativeStoreCachePrefs, android.content.Context.MODE_PRIVATE)
+        .getString("inventory_$userId", null) ?: return JSONArray()
+    return runCatching { JSONArray(raw) }.getOrDefault(JSONArray())
+}
+private fun writeNativeStoreInventoryCache(context: android.content.Context, userId: String, items: JSONArray) {
+    if (userId.isBlank()) return
+    context.getSharedPreferences(NativeStoreCachePrefs, android.content.Context.MODE_PRIVATE)
+        .edit().putString("inventory_$userId", items.toString()).apply()
+}
+private fun upsertNativeStoreCachedItem(context: android.content.Context, userId: String, item: JSONObject) {
+    val id = item.optString("itemId")
+    if (userId.isBlank() || id.isBlank()) return
+    val cached = readNativeStoreInventoryCache(context, userId)
+    val merged = JSONArray()
+    var replaced = false
+    for (i in 0 until cached.length()) {
+        val existing = cached.optJSONObject(i) ?: continue
+        if (existing.optString("itemId") == id) {
+            merged.put(JSONObject(item.toString()))
+            replaced = true
+        } else merged.put(existing)
+    }
+    if (!replaced) merged.put(JSONObject(item.toString()))
+    writeNativeStoreInventoryCache(context, userId, merged)
+}
+private fun updateNativeStoreCachedEquip(context: android.content.Context, userId: String, itemId: String, equipped: Boolean) {
+    val cached = readNativeStoreInventoryCache(context, userId)
+    val updated = JSONArray()
+    for (i in 0 until cached.length()) {
+        val item = cached.optJSONObject(i) ?: continue
+        if (item.optString("tab") == nativeStoreItems.firstOrNull { it.id == itemId }?.tab) {
+            item.put("equipped", item.optString("itemId") == itemId && equipped)
+        }
+        updated.put(item)
+    }
+    writeNativeStoreInventoryCache(context, userId, updated)
+}
+
 private data class NativeStoreTab(val id: String, val label: String, val icon: String)
 private data class NativeStoreItem(
     val id: String, val name: String, val image: String, val tab: String,
@@ -140,11 +181,18 @@ fun NativeAvatarFrameOverlay(
     modifier: Modifier = Modifier,
     fallbackUserIds: List<String> = emptyList()
 ) {
-    var frame by remember(userId, fallbackUserIds) { mutableStateOf<JSONObject?>(null) }
+    val appContext = LocalContext.current.applicationContext
     val lookupIds = remember(userId, fallbackUserIds) { (listOf(userId) + fallbackUserIds).filter { it.isNotBlank() }.distinct() }
+    var frame by remember(userId, fallbackUserIds) {
+        mutableStateOf(lookupIds.firstNotNullOfOrNull { id ->
+            readNativeStoreInventoryCache(appContext, id).let { cached ->
+                (0 until cached.length()).mapNotNull { cached.optJSONObject(it) }
+                    .firstOrNull { it.optString("tab") == "Avatar Frame" && it.optBoolean("equipped") && it.optLong("expiresAt") > System.currentTimeMillis() }
+            }
+        })
+    }
     val refreshVersion = lookupIds.maxOfOrNull { nativeAvatarFrameRefreshVersions[it] ?: 0L } ?: 0L
     LaunchedEffect(lookupIds, refreshVersion) {
-        frame = null
         if (lookupIds.isNotEmpty()) {
             val equippedFrame = withContext(Dispatchers.IO) {
                 lookupIds.firstNotNullOfOrNull { lookupId ->
@@ -165,6 +213,7 @@ fun NativeAvatarFrameOverlay(
                         val json = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
                         connection.disconnect()
                         val items = json.optJSONArray("items") ?: JSONArray()
+                        writeNativeStoreInventoryCache(appContext, lookupId, items)
                         (0 until items.length()).map { items.getJSONObject(it) }
                             .firstOrNull { it.optString("tab") == "Avatar Frame" && it.optBoolean("equipped") && it.optLong("expiresAt") > System.currentTimeMillis() }
                     }.getOrNull()
@@ -211,12 +260,17 @@ fun NativeAvatarFrameOverlay(
 
 @Composable
 fun NativeOwnedFrameShowcase(userId: String, onDataLoaded: ((Boolean) -> Unit)? = null) {
-    var frames by remember(userId) { mutableStateOf<List<JSONObject>>(emptyList()) }
+    val appContext = LocalContext.current.applicationContext
+    var frames by remember(userId) {
+        mutableStateOf(readNativeStoreInventoryCache(appContext, userId).let { cached ->
+            (0 until cached.length()).mapNotNull { cached.optJSONObject(it) }
+                .filter { it.optString("tab") == "Avatar Frame" && it.optLong("expiresAt") > System.currentTimeMillis() }
+        })
+    }
     var showcaseClock by remember(userId) { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(userId) { while (true) { showcaseClock = System.currentTimeMillis(); delay(1000L) } }
     val refreshVersion = nativeAvatarFrameRefreshVersions[userId] ?: 0L
     LaunchedEffect(userId, refreshVersion) {
-        frames = emptyList()
         if (userId.isNotBlank()) withContext(Dispatchers.IO) {
             runCatching {
                 val encoded = URLEncoder.encode(userId, "UTF-8")
@@ -230,6 +284,7 @@ fun NativeOwnedFrameShowcase(userId: String, onDataLoaded: ((Boolean) -> Unit)? 
                 c.disconnect()
                 if (code !in 200..299) throw IllegalStateException("Inventory unavailable")
                 val items = json.optJSONArray("items") ?: JSONArray()
+                writeNativeStoreInventoryCache(appContext, userId, items)
                 (0 until items.length()).map { items.getJSONObject(it) }
                     .filter { it.optString("tab") == "Avatar Frame" && it.optLong("expiresAt") > System.currentTimeMillis() }
             }.onSuccess { frames = it; onDataLoaded?.invoke(it.isNotEmpty()) }
@@ -303,11 +358,16 @@ fun NativeOwnedFrameShowcase(userId: String, onDataLoaded: ((Boolean) -> Unit)? 
 
 @Composable
 fun NativeOwnedVehicleShowcase(userId: String, onDataLoaded: ((Boolean) -> Unit)? = null) {
-    var vehicles by remember(userId) { mutableStateOf<List<JSONObject>>(emptyList()) }
+    val appContext = LocalContext.current.applicationContext
+    var vehicles by remember(userId) {
+        mutableStateOf(readNativeStoreInventoryCache(appContext, userId).let { cached ->
+            (0 until cached.length()).mapNotNull { cached.optJSONObject(it) }
+                .filter { it.optString("tab") == "Vehicle" && it.optLong("expiresAt") > System.currentTimeMillis() }
+        })
+    }
     var showcaseClock by remember(userId) { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(userId) { while (true) { showcaseClock = System.currentTimeMillis(); delay(1000L) } }
     LaunchedEffect(userId) {
-        vehicles = emptyList()
         if (userId.isNotBlank()) withContext(Dispatchers.IO) {
             runCatching {
                 val encoded = URLEncoder.encode(userId, "UTF-8")
@@ -323,7 +383,8 @@ fun NativeOwnedVehicleShowcase(userId: String, onDataLoaded: ((Boolean) -> Unit)
                 connection.disconnect()
                 if (code !in 200..299) throw IllegalStateException("Inventory unavailable")
                 val items = json.optJSONArray("items") ?: JSONArray()
-                (0 until items.length()).map { items.getJSONObject(it) }
+                writeNativeStoreInventoryCache(appContext, userId, items)
+                (0 until items.length()).map { it.getJSONObject(it) }
                     .filter { it.optString("tab") == "Vehicle" && it.optLong("expiresAt") > System.currentTimeMillis() }
             }.onSuccess { vehicles = it; onDataLoaded?.invoke(it.isNotEmpty()) }
         }
@@ -387,6 +448,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
     val appContext = LocalContext.current
     val authPrefs = remember { appContext.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE) }
     val walletCachePrefs = remember { appContext.getSharedPreferences("zyora_wallet_cache", android.content.Context.MODE_PRIVATE) }
+    val storeInventoryCache = remember { appContext.getSharedPreferences(NativeStoreCachePrefs, android.content.Context.MODE_PRIVATE) }
     val storeUserId = remember(userId) { authPrefs.getString("uid", null)?.takeIf { it.isNotBlank() } ?: userId.ifBlank { authPrefs.getString("accountId", "").orEmpty() } }
     val storeInventoryUserId = remember(userId) { userId.ifBlank { authPrefs.getString("accountId", "").orEmpty() } }
     var tryItem by remember { mutableStateOf<NativeStoreItem?>(null) }
@@ -396,9 +458,29 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
     var giftSelectedUser by remember { mutableStateOf<JSONObject?>(null) }
     var giftBusy by remember { mutableStateOf(false) }
     var balance by remember(storeUserId) { mutableIntStateOf(walletCachePrefs.getLong("balance_$storeUserId", 0L).coerceAtLeast(0L).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()) }
-    val ownedIds = remember { mutableStateListOf<String>() }
-    val equippedIds = remember { mutableStateListOf<String>() }
-    val expiryById = remember { mutableStateMapOf<String, Long>() }
+    val cachedInventory = remember(storeInventoryUserId) { readNativeStoreInventoryCache(appContext, storeInventoryUserId) }
+    val ownedIds = remember(storeUserId) {
+        mutableStateListOf<String>().apply {
+            for (i in 0 until cachedInventory.length()) cachedInventory.optJSONObject(i)?.let { item ->
+                if (item.optLong("expiresAt") > System.currentTimeMillis()) add(item.optString("itemId"))
+            }
+        }
+    }
+    val equippedIds = remember(storeUserId) {
+        mutableStateListOf<String>().apply {
+            for (i in 0 until cachedInventory.length()) cachedInventory.optJSONObject(i)?.let { item ->
+                if (item.optBoolean("equipped") && item.optLong("expiresAt") > System.currentTimeMillis()) add(item.optString("itemId"))
+            }
+        }
+    }
+    val expiryById = remember(storeUserId) {
+        mutableStateMapOf<String, Long>().apply {
+            for (i in 0 until cachedInventory.length()) cachedInventory.optJSONObject(i)?.let { item ->
+                val id = item.optString("itemId"); val expiry = item.optLong("expiresAt")
+                if (id.isNotBlank() && expiry > System.currentTimeMillis()) put(id, expiry)
+            }
+        }
+    }
     var purchaseBusy by remember { mutableStateOf(false) }
     var purchaseItemId by remember { mutableStateOf<String?>(null) }
     var purchaseMessage by remember { mutableStateOf<String?>(null) }
@@ -470,6 +552,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                 if (code !in 200..299) throw IllegalStateException(json.optString("error", "Wallet unavailable"))
                 val owned = mutableListOf<String>(); val equipped = mutableListOf<String>(); val expiries = mutableMapOf<String,Long>()
                 val arr = json.optJSONArray("items") ?: JSONArray()
+                writeNativeStoreInventoryCache(appContext, storeInventoryUserId, arr)
                 for (i in 0 until arr.length()) {
                     val item = arr.getJSONObject(i); val id = item.optString("itemId"); val expiry = item.optLong("expiresAt")
                     if (id.isNotBlank() && expiry > System.currentTimeMillis()) {
@@ -768,6 +851,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                                                                 equippedIds.removeAll { id -> nativeStoreItems.find { it.id == id }?.tab == item.tab }
                                                                 equippedIds.add(item.id)
                                                             } else equippedIds.remove(item.id)
+                                                            updateNativeStoreCachedEquip(appContext, storeInventoryUserId, item.id, nextEquipped)
                                                             if (item.tab == "Avatar Frame") nativeAvatarFrameRefreshVersions[storeInventoryUserId] = (nativeAvatarFrameRefreshVersions[storeInventoryUserId] ?: 0L) + 1L
                                                         }.onFailure { purchaseMessage = if (nextEquipped) "Using" else "Removed" }
                                                         purchaseBusy = false
@@ -805,7 +889,10 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                                                         walletCachePrefs.edit().putLong("balance_$storeUserId", balance.toLong()).apply()
                                                         val bought = json.optJSONObject("item")
                                                         if (!ownedIds.contains(item.id)) ownedIds.add(item.id)
-                                                        if (bought != null) expiryById[item.id] = bought.optLong("expiresAt")
+                                                        if (bought != null) {
+                                                            expiryById[item.id] = bought.optLong("expiresAt")
+                                                            upsertNativeStoreCachedItem(appContext, storeInventoryUserId, bought)
+                                                        }
                                                         purchaseMessage = "Purchase successful"
                                                         if (item.tab == "Avatar Frame") nativeAvatarFrameRefreshVersions[storeUserId] = (nativeAvatarFrameRefreshVersions[storeUserId] ?: 0L) + 1L
                                                     }.onFailure {
