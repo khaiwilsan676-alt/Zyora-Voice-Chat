@@ -193,6 +193,11 @@ fun NativeAvatarFrameOverlay(
     }
     val refreshVersion = lookupIds.maxOfOrNull { nativeAvatarFrameRefreshVersions[it] ?: 0L } ?: 0L
     LaunchedEffect(lookupIds, refreshVersion) {
+        frame = lookupIds.firstNotNullOfOrNull { lookupId ->
+            val cached = readNativeStoreInventoryCache(appContext, lookupId)
+            (0 until cached.length()).mapNotNull { cached.optJSONObject(it) }
+                .firstOrNull { it.optString("tab") == "Avatar Frame" && it.optBoolean("equipped") && it.optLong("expiresAt") > System.currentTimeMillis() }
+        }
         if (lookupIds.isNotEmpty()) {
             val equippedFrame = withContext(Dispatchers.IO) {
                 lookupIds.firstNotNullOfOrNull { lookupId ->
@@ -219,7 +224,7 @@ fun NativeAvatarFrameOverlay(
                     }.getOrNull()
                 }
             }
-            frame = equippedFrame
+            if (equippedFrame != null) frame = equippedFrame
         }
     }
     LaunchedEffect(frame) {
