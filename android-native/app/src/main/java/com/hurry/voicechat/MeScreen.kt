@@ -165,8 +165,7 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
         MeMenu("Level", "IMG_20260915_225404.png"),
         MeMenu("Family", "IMG_20260915_225349.png"),
         MeMenu("Store", "IMG_20260915_225447.png"),
-        MeMenu("Bag", "IMG_20260915_225506.png"),
-        MeMenu("Seller Center", "IMG_20260915_225536.png")
+        MeMenu("Bag", "IMG_20260915_225506.png")
     )
 
     LazyColumn(
