@@ -256,11 +256,9 @@ fun SellerCenter(
                             isChecking = true; selectedUser = null; statusMessage = ""
                             runCatching {
                                 val encoded = URLEncoder.encode(targetId, "UTF-8")
-                                // Same endpoint and parameters used by app/owner/page.tsx.
-                                val search = sellerRequest("/api/users?search=$encoded&accountId=$encoded")
-                                val rawUsers = search.optJSONArray("users")
+                                // Resolve the exact account ID through the server's canonical Seller lookup.
+                                val search = sellerRequest("/api/seller/user/$encoded")
                                 val found = search.optJSONObject("user")
-                                    ?: rawUsers?.optJSONObject(0)
                                     ?: throw IllegalStateException("User not found")
                                 val foundId = sequenceOf("accountId", "accountNumber", "displayAccountNumber", "displayUserNumber", "Account ID", "Account Number", "hurryId", "zyoraId", "publicUserId", "id", "uid", "appLongId", "_id")
                                     .map { found.optString(it, "").trim() }
