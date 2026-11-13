@@ -1068,7 +1068,40 @@ app.get("/api/users", async (req, res) => {
 
 
 // ==============================================================
- // PERSISTENT FOLLOW GRAPH + REAL-TIME FOLLOW COUNTS
+ // Owner-controlled Seller Center visibility. Reuses the profile's existing coinSellerTag field.
+app.post("/api/owner/seller-center", async (req, res) => {
+  try {
+    if (!db) return res.status(503).json({ error: "User service unavailable" });
+    const accountId = String(req.body?.accountId || "").trim();
+    const uid = String(req.body?.uid || "").trim();
+    const active = req.body?.active === true;
+    if (!accountId && !uid) return res.status(400).json({ error: "User ID required" });
+    const identifiers = [];
+    if (uid) identifiers.push({ uid }, { id: uid }, { appLongId: uid });
+    if (accountId) {
+      identifiers.push(
+        { accountId }, { accountNumber: accountId }, { displayAccountNumber: accountId },
+        { displayUserNumber: accountId }, { "Account Number": accountId }, { "Account ID": accountId }
+      );
+      if (/^\d+$/.test(accountId)) {
+        const numeric = Number(accountId);
+        identifiers.push({ accountId: numeric }, { accountNumber: numeric }, { displayUserNumber: numeric });
+      }
+    }
+    const result = await db.collection("users").updateMany(
+      { $or: identifiers },
+      { $set: { coinSellerTag: active, coinSeller: active, sellerTag: active } }
+    );
+    if (!result.matchedCount) return res.status(404).json({ error: "User not found" });
+    res.set("Cache-Control", "no-store");
+    return res.json({ success: true, active, updated: result.modifiedCount, matched: result.matchedCount });
+  } catch (error) {
+    console.error("POST /api/owner/seller-center error:", error);
+    return res.status(500).json({ error: "Could not update Seller Center status" });
+  }
+});
+
+// PERSISTENT FOLLOW GRAPH + REAL-TIME FOLLOW COUNTS
  // GitHub storage stores each follower/target pair; Socket.IO broadcasts changes.
  // ==============================================================
 app.get("/api/follows", async (req, res) => {
