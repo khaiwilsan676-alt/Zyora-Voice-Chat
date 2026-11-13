@@ -34,7 +34,6 @@ const textValue = (...values: unknown[]) => {
 
 export default function ManageRooms() {
   const [rooms, setRooms] = useState<RoomRecord[]>([]);
-  const [users, setUsers] = useState<UserRecord[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -53,7 +52,6 @@ export default function ManageRooms() {
         const roomRows = Array.isArray(roomData?.rooms) ? roomData.rooms : [];
         const userRows: UserRecord[] = Array.isArray(userData?.users) ? userData.users : [];
         if (!active) return;
-        setUsers(userRows);
         setRooms(roomRows.map((room: any, index: number) => {
           const ownerId = textValue(room.ownerId, room.ownerAccountId, room.accountId, room.roomAdmin, room['Room Admin'], room.id, room.roomId);
           const owner = userRows.find((user) => [user.accountId, user.accountNumber, user.id, user.uid].some((id) => id && String(id) === ownerId));
@@ -71,7 +69,6 @@ export default function ManageRooms() {
         console.error('Owner Manage Rooms load failed:', error);
         if (active) {
           setRooms([]);
-          setUsers([]);
         }
       } finally {
         if (active) setLoading(false);
