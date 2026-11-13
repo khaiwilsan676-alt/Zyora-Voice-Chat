@@ -90,7 +90,7 @@ fun SellerCenter(
     var amount by remember { mutableStateOf("") }
     var owner by remember { mutableStateOf(SellerUser(userId, accountId, ownerName.ifBlank { "User" }, ownerAvatar, "")) }
     var selectedUser by remember { mutableStateOf<SellerUser?>(null) }
-    var balance by remember { mutableLongStateOf(0L) }
+    var balance by remember { mutableStateOf(0L) }
     var isChecking by remember { mutableStateOf(false) }
     var isTransferring by remember { mutableStateOf(false) }
     var statusMessage by remember { mutableStateOf("") }
