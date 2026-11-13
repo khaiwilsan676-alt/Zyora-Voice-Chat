@@ -154,7 +154,7 @@ interface UserRecord {
   email: string;
   role: string;
   image?: string;
-  registerTime?: string;
+  registerTime?: string | number;
 }
 
 const fallbackUsers: UserRecord[] = [];
@@ -986,7 +986,7 @@ export default function StaffPanel() {
             hurryId: String(u.accountId || u.accountNumber || u.displayAccountNumber || u.displayUserNumber || u["Account ID"] || u["Account Number"] || u.hurryId || u.zyoraId || u.publicUserId || u.id || u.uid || u.appLongId || u._id || '—'),
             email: u.email || u.gmail || u.emailPhone || '—',
             role: u.role || 'NORMAL',
-            registerTime: String(u.registerTime || u.registeredAt || u.registrationTime || u.createdAt || u.created_at || ''),
+            registerTime: u.registerTime || u.registeredAt || u.registrationTime || u.createdAt || u.created_at || '',
             image: [u.image, u.dp, u.photo, u.photoURL, u.photoUrl, u.avatar, u.avatarUrl, u.profileImage, u.profileImageUrl, u.profile_image, u.imageUrl, u.picture, u.profile?.image, u.profile?.avatar, u.profile?.photo, u.userData?.image, u.userData?.avatar].find((value: any) => typeof value === 'string' && value.trim() && value.trim() !== 'null' && value.trim() !== 'undefined')?.trim() || ''
           }));
 
