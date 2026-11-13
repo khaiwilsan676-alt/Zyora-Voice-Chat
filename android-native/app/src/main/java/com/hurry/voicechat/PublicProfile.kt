@@ -60,7 +60,7 @@ import kotlin.math.abs
 fun LucidePublicProfileIcon(
     warning: Boolean,
     modifier: Modifier = Modifier,
-    tint: Color = Color.White
+    tint: Color = Color.Black
 ) {
     Canvas(modifier = modifier) {
         val sx = size.width / 24f
@@ -192,7 +192,6 @@ fun PublicProfileScreen(
         profileCacheKeys.firstNotNullOfOrNull { db.loadProfile(it) }
     }
 
-    // Vercel serves files inside the public/ directory from the URL root.
     val profileAsset: (String) -> String = { path ->
         if (path.isBlank()) ""
         else if (path.startsWith("http://") || path.startsWith("https://") || path.startsWith("data:") || path.startsWith("content:") || path.startsWith("file:")) path
@@ -202,7 +201,6 @@ fun PublicProfileScreen(
         }
     }
 
-    // SCROLL STATE & COLOR LOGIC (Modified for smooth fade & name showing)
     val listState = rememberLazyListState()
     val isScrolled by remember { derivedStateOf { listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 50 } }
     
@@ -211,7 +209,6 @@ fun PublicProfileScreen(
         animationSpec = tween(300)
     )
 
-    // State Variables
     var coverPhotos by remember(profileCacheKey, cachedProfile, targetUser?.coverPhoto) {
         mutableStateOf(ProfilePersistence.stringList(cachedProfile?.optString("coverPhotos", "")).ifEmpty { cachedProfile?.optString("coverPhoto")?.takeIf { it.isNotBlank() && it != "null" }?.let { listOf(it) } ?: targetUser?.coverPhoto?.takeIf { it.isNotBlank() }?.let { listOf(it) } ?: emptyList() }.map { profileAsset(it) })
     }
@@ -219,7 +216,7 @@ fun PublicProfileScreen(
     var selectedAvatarUri by remember(profileCacheKey, cachedProfile) {
         mutableStateOf<String?>(sequenceOf("image", "avatar", "profileImageUrl").map { cachedProfile?.optString(it, "").orEmpty() }.firstOrNull { it.isNotBlank() && it != "null" })
     }
-    var receivedGifts by remember { mutableStateOf(listOf<String>()) } // Dummy for UI
+    var receivedGifts by remember { mutableStateOf(listOf<String>()) } 
 
     var showEditSheet by remember { mutableStateOf(false) }
     var showNameScreen by remember { mutableStateOf(false) }
@@ -244,16 +241,13 @@ fun PublicProfileScreen(
     var followersCount by remember(targetUser?.uid, targetUser?.id, targetUser?.accountId) { mutableIntStateOf(targetUser?.followers?.takeIf { it > 0 } ?: -1) }
     var followBusy by remember { mutableStateOf(false) }
     
-    // Crop State
     var uriToCrop by remember { mutableStateOf<String?>(null) }
     var avatarSaving by remember { mutableStateOf(false) }
 
-    // User Data State
     var userName by remember(profileCacheKey, cachedProfile) { mutableStateOf(cachedProfile?.optString("name")?.takeIf { it.isNotBlank() && it != "null" } ?: targetUser?.name?.takeIf { it.isNotBlank() } ?: "User") }
     var userBio by remember(profileCacheKey, cachedProfile, targetUser?.bio) { mutableStateOf(cachedProfile?.optString("bio")?.takeIf { it != "null" } ?: targetUser?.bio ?: "") }
     var userAge by remember(profileCacheKey, cachedProfile, targetUser?.age) { mutableIntStateOf(if (cachedProfile?.has("age") == true) cachedProfile.optInt("age", targetUser?.age ?: 0) else targetUser?.age ?: 0) }
     
-    // Keep profile details in index.db; MongoDB-backed media URL is the canonical DP source.
     var userGender by remember(profileCacheKey, cachedProfile, targetUser?.gender) { mutableStateOf(cachedProfile?.optString("gender")?.takeIf { it.isNotBlank() && it != "null" } ?: targetUser?.gender?.takeIf { it.isNotBlank() } ?: "Male") }
     
     var liveProfileTags by remember(profileCacheKey, cachedProfile) { mutableStateOf(cachedProfile) }
@@ -275,7 +269,7 @@ fun PublicProfileScreen(
     val avatarPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         uri?.let { picked -> 
             val saved = ProfilePersistence.imageDataUri(context, picked) ?: picked.toString()
-            uriToCrop = saved // Open Crop overlay instead of direct save
+            uriToCrop = saved 
         }
     }
     val albumPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
@@ -315,9 +309,7 @@ fun PublicProfileScreen(
 
         val merged = org.json.JSONObject(cached?.toString() ?: "{}")
         
-        // Sync all necessary fields from remote to override cache, especially if user deleted them
         remote?.let { latest ->
-            // Normalize server aliases so a fresh install restores the same profile name and DP.
             val remoteName = sequenceOf("name", "displayName", "userName", "nickname").map { latest.optString(it, "").trim() }.firstOrNull { it.isNotBlank() && it != "null" && !it.equals("User", ignoreCase = true) }
             val remoteAvatar = sequenceOf("image", "avatar", "profileImageUrl").map { latest.optString(it, "").trim() }.firstOrNull { it.isNotBlank() && it != "null" }
             if (!remoteName.isNullOrBlank()) {
@@ -376,7 +368,7 @@ fun PublicProfileScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(Color.White)
     ) {
         LazyColumn(
             state = listState,
@@ -389,7 +381,7 @@ fun PublicProfileScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(350.dp)
-                        .background(Color(0xFF1F2937))
+                        .background(Color(0xFFE5E7EB))
                 ) {
                     if (coverPhotos.isNotEmpty()) {
                         val pagerState = rememberPagerState(pageCount = { coverPhotos.size })
@@ -413,11 +405,10 @@ fun PublicProfileScreen(
                         AsyncImage(model = userPhoto, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
                     } else {
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text(avatarLetter, color = Color.White, fontSize = 64.sp, fontWeight = FontWeight.Bold)
+                            Text(avatarLetter, color = Color.Black, fontSize = 64.sp, fontWeight = FontWeight.Bold)
                         }
                     }
 
-                    // Avatar DP Circle M background image k ouper hi overlap
                     AsyncImage(
                         model = userPhoto,
                         contentDescription = "Avatar",
@@ -435,7 +426,6 @@ fun PublicProfileScreen(
                         fallbackUserIds = listOf(targetUser?.uid.orEmpty(), targetUser?.id.orEmpty())
                     )
                     
-                    // --- IN ROOM BUTTON (only while the target is in a live room) ---
                     if (isOtherUser && liveRoomId.isNotBlank()) {
                     Box(
                         modifier = Modifier
@@ -474,7 +464,7 @@ fun PublicProfileScreen(
                             clip = true
                         }
                         .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
-                        .background(Color.Black)
+                        .background(Color.White)
                         .padding(horizontal = 16.dp, vertical = 16.dp)
                         .padding(top = 4.dp)
                 ) {
@@ -491,7 +481,7 @@ fun PublicProfileScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            Text(displayName, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                            Text(displayName, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.Black)
                             
                             Box(
                                 modifier = Modifier
@@ -520,8 +510,8 @@ fun PublicProfileScreen(
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
                         if (isCoreOfficial || isRedOfficial || is500002Official || displayAccNum in setOf("500003", "500004")) {
                             AsyncImage(model = profileAsset("/IMG_20261101_125212.png"), contentDescription = "Purple ID Badge", contentScale = ContentScale.Fit, modifier = Modifier.height(25.dp).widthIn(min = 22.dp, max = 35.dp).padding(end = 4.dp))
-                            Text(displayAccNum, fontSize = 12.sp, color = Color.LightGray)
-                        } else Text("ID: $displayAccNum", fontSize = 12.sp, color = Color.LightGray)
+                            Text(displayAccNum, fontSize = 12.sp, color = Color.Gray)
+                        } else Text("ID: $displayAccNum", fontSize = 12.sp, color = Color.Gray)
 
                         IconButton(
                             onClick = {
@@ -531,10 +521,10 @@ fun PublicProfileScreen(
                             },
                             modifier = Modifier.size(24.dp)
                         ) {
-                            Icon(Icons.Default.ContentCopy, contentDescription = "Copy", tint = Color.LightGray, modifier = Modifier.size(14.dp))
+                            Icon(Icons.Default.ContentCopy, contentDescription = "Copy", tint = Color.Gray, modifier = Modifier.size(14.dp))
                         }
                         Text(" | ", color = Color.Gray)
-                        Text("${if (followers >= 0) followers.toString() else "—"} Fans", fontSize = 12.sp, color = Color.LightGray)
+                        Text("${if (followers >= 0) followers.toString() else "—"} Fans", fontSize = 12.sp, color = Color.Gray)
                     }
 
                     Row(modifier = Modifier.padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -549,23 +539,22 @@ fun PublicProfileScreen(
                                 modifier = Modifier.padding(end = 6.dp) 
                             )
                         }
-                        // Side image removed properly as requested
                     }
 
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 12.dp)) {
-                        Icon(Icons.Outlined.LocationOn, "Location", tint = Color.LightGray, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Outlined.LocationOn, "Location", tint = Color.Gray, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
                         if (location.isNotBlank()) {
                             CountryFlagImage(location, Modifier.size(18.dp, 12.dp))
                             Spacer(modifier = Modifier.width(6.dp))
                         }
-                        Text(location, fontSize = 14.sp, color = Color.LightGray)
+                        Text(location, fontSize = 14.sp, color = Color.Gray)
                     }
 
                     Row(modifier = Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                         LucidePublicProfileIcon(
                             warning = false, 
-                            tint = Color.LightGray, 
+                            tint = Color.Gray, 
                             modifier = Modifier
                                 .size(14.dp)
                                 .then(if (!isOtherUser) Modifier.clickable { showEditSheet = true } else Modifier)
@@ -574,7 +563,7 @@ fun PublicProfileScreen(
                         Text(
                             text = userBio.ifBlank { if (isOtherUser) "No bio added yet" else "Add bio..." },
                             fontSize = 12.sp,
-                            color = Color.LightGray,
+                            color = Color.Gray,
                             fontStyle = FontStyle.Italic
                         )
                     }
@@ -608,7 +597,7 @@ fun PublicProfileScreen(
                                         model = profileAsset(albumImages[idx]),
                                         contentDescription = null,
                                         contentScale = ContentScale.Crop,
-                                        modifier = Modifier.aspectRatio(1f).clip(RoundedCornerShape(12.dp)).background(Color(0xFF2C2C2C)).clickable { fullImageIndex = idx }
+                                        modifier = Modifier.aspectRatio(1f).clip(RoundedCornerShape(12.dp)).background(Color.Black.copy(alpha = 0.1f)).clickable { fullImageIndex = idx }
                                     )
                                 }
                             }
@@ -708,7 +697,6 @@ fun PublicProfileScreen(
             }
         }
 
-        // --- NEW TOP BAR LOGIC (Mixing Fade Effect + Username added) ---
         Box(
             modifier = Modifier
                 .align(Alignment.TopCenter)
@@ -716,14 +704,14 @@ fun PublicProfileScreen(
                 .background(
                     Brush.verticalGradient(
                         colors = listOf(
-                            Color.Black.copy(alpha = topBarAlpha),
-                            Color.Black.copy(alpha = topBarAlpha * 0.8f),
+                            Color.White.copy(alpha = topBarAlpha),
+                            Color.White.copy(alpha = topBarAlpha * 0.8f),
                             Color.Transparent
                         )
                     )
                 )
                 .windowInsetsPadding(WindowInsets.statusBars)
-                .padding(bottom = 16.dp) // Bottom padding for smooth mixing fade edge
+                .padding(bottom = 16.dp)
         ) {
             Row(
                 modifier = Modifier
@@ -733,13 +721,12 @@ fun PublicProfileScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = onBack) {
-                    Icon(Icons.Default.ArrowBack, "Back", tint = Color.White)
+                    Icon(Icons.Default.ArrowBack, "Back", tint = Color.Black)
                 }
                 
-                // USER NAME IN MIDDLE
                 Text(
                     text = userName,
-                    color = Color.White.copy(alpha = topBarAlpha),
+                    color = Color.Black.copy(alpha = topBarAlpha),
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
@@ -759,7 +746,6 @@ fun PublicProfileScreen(
                 }
             }
         }
-        // ----------------------------------------------------------------------
 
         // 4. Bottom Action Bar (For Other Users)
         if (isOtherUser) {
@@ -767,7 +753,6 @@ fun PublicProfileScreen(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
-                    // Card background hta diya, ab over-lap karega
                     .padding(horizontal = 24.dp, vertical = 12.dp)
                     .windowInsetsPadding(WindowInsets.navigationBars),
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
@@ -876,7 +861,7 @@ fun PublicProfileScreen(
             var scale by remember { mutableFloatStateOf(1f) }
             var offset by remember { mutableStateOf(Offset.Zero) }
 
-            Column(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+            Column(modifier = Modifier.fillMaxSize().background(Color.White)) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -887,7 +872,7 @@ fun PublicProfileScreen(
                 ) {
                     Text(
                         text = "Cancel", 
-                        color = Color.White, 
+                        color = Color.Black, 
                         fontSize = 16.sp, 
                         fontWeight = FontWeight.Medium,
                         modifier = Modifier.clickable { uriToCrop = null }.padding(8.dp)
@@ -956,7 +941,7 @@ fun PublicProfileScreen(
                     Box(
                         modifier = Modifier
                             .size(250.dp)
-                            .border(2.dp, Color.White.copy(alpha = 0.8f))
+                            .border(2.dp, Color.Black.copy(alpha = 0.8f))
                             .background(Color.Transparent)
                     )
                 }
@@ -968,7 +953,7 @@ fun PublicProfileScreen(
         ModalBottomSheet(
             onDismissRequest = { showActionSheet = false },
             containerColor = Color.Transparent, 
-            contentColor = Color.White,
+            contentColor = Color.Black,
             scrimColor = Color.Transparent,
             dragHandle = null
         ) {
@@ -983,7 +968,7 @@ fun PublicProfileScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(12.dp))
-                        .background(Color.Black) 
+                        .background(Color.White) 
                 ) {
                     Text(
                         "Report",
@@ -994,12 +979,12 @@ fun PublicProfileScreen(
                                 showUserReport = true
                             }
                             .padding(vertical = 18.dp),
-                        color = Color.White,
+                        color = Color.Black,
                         fontSize = 18.sp,
                         textAlign = TextAlign.Center,
                         fontWeight = FontWeight.Medium
                     )
-                    Divider(color = Color.DarkGray.copy(alpha = 0.5f), thickness = 0.5.dp)
+                    Divider(color = Color.LightGray, thickness = 0.5.dp)
                     Text(
                         if (isUserBlocked) "Unblock" else "Block",
                         modifier = Modifier
@@ -1021,7 +1006,7 @@ fun PublicProfileScreen(
                                 }
                             }
                             .padding(vertical = 18.dp),
-                        color = Color.White,
+                        color = Color.Black,
                         fontSize = 18.sp,
                         textAlign = TextAlign.Center,
                         fontWeight = FontWeight.Medium
@@ -1059,7 +1044,7 @@ fun PublicProfileScreen(
         ModalBottomSheet(
             onDismissRequest = { showEditSheet = false },
             sheetState = sheetState,
-            containerColor = Color.Black, 
+            containerColor = Color.White, 
             scrimColor = Color.Black.copy(alpha = 0.5f),
             shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp),
             dragHandle = null
@@ -1075,9 +1060,9 @@ fun PublicProfileScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(onClick = { showEditSheet = false }, modifier = Modifier.size(24.dp)) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White) 
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.Black) 
                     }
-                    Text("Edit Information", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White) 
+                    Text("Edit Information", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.Black) 
                     Spacer(modifier = Modifier.width(24.dp))
                 }
 
@@ -1093,38 +1078,38 @@ fun PublicProfileScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Avatar", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Color.LightGray)
+                        Text("Avatar", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Color.DarkGray)
                         Box(
-                            modifier = Modifier.size(56.dp).clip(CircleShape).background(Color(0xFF2C2C2C)).clickable { avatarPicker.launch("image/*") },
+                            modifier = Modifier.size(56.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.1f)).clickable { avatarPicker.launch("image/*") },
                             contentAlignment = Alignment.Center
                         ) {
                             if (userPhoto.isNotBlank()) {
                                 AsyncImage(model = userPhoto, contentDescription = "Avatar", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
                             } else {
-                                Text(avatarLetter, fontSize = 20.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                                Text(avatarLetter, fontSize = 20.sp, color = Color.Black, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
 
                     EditRowItem("Nickname", { showNameScreen = true }) {
-                        Text(userName.ifBlank { "Enter name" }, color = Color.White, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Icon(Icons.Default.ChevronRight, null, tint = Color.LightGray, modifier = Modifier.size(16.dp))
+                        Text(userName.ifBlank { "Enter name" }, color = Color.Black, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Icon(Icons.Default.ChevronRight, null, tint = Color.Gray, modifier = Modifier.size(16.dp))
                     }
 
                     EditRowItem("Age", { showAgeScreen = true }) {
-                        Text(userAge.toString(), color = Color.White, fontSize = 14.sp)
-                        Icon(Icons.Default.ChevronRight, null, tint = Color.LightGray, modifier = Modifier.size(16.dp))
+                        Text(userAge.toString(), color = Color.Black, fontSize = 14.sp)
+                        Icon(Icons.Default.ChevronRight, null, tint = Color.Gray, modifier = Modifier.size(16.dp))
                     }
 
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("Background (${coverPhotos.size}/4)", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Color.LightGray)
+                        Text("Background (${coverPhotos.size}/4)", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Color.DarkGray)
                         Row(
                             modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             if (coverPhotos.size < 4) {
                                 Box(
-                                    modifier = Modifier.requiredSize(64.dp).clip(RoundedCornerShape(12.dp)).background(Color(0xFF1E1E1E)),
+                                    modifier = Modifier.requiredSize(64.dp).clip(RoundedCornerShape(12.dp)).background(Color.Black.copy(alpha = 0.1f)),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Box(Modifier.fillMaxSize().clickable { backgroundPicker.launch("image/*") }, contentAlignment = Alignment.Center) {
@@ -1166,19 +1151,19 @@ fun PublicProfileScreen(
                     }
 
                     EditRowItem("Bio", { showBioScreen = true }) {
-                        Text(userBio.ifBlank { "Add bio..." }, color = Color.White, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 180.dp))
-                        Icon(Icons.Default.ChevronRight, null, tint = Color.LightGray, modifier = Modifier.size(16.dp))
+                        Text(userBio.ifBlank { "Add bio..." }, color = Color.Black, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 180.dp))
+                        Icon(Icons.Default.ChevronRight, null, tint = Color.Gray, modifier = Modifier.size(16.dp))
                     }
 
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("Album Photos (${albumImages.size}/4)", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Color.LightGray)
+                        Text("Album Photos (${albumImages.size}/4)", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Color.DarkGray)
                         Row(
                             modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             if (albumImages.size < 4) {
                                 Box(
-                                    modifier = Modifier.requiredSize(64.dp).clip(RoundedCornerShape(12.dp)).background(Color(0xFF1E1E1E)),
+                                    modifier = Modifier.requiredSize(64.dp).clip(RoundedCornerShape(12.dp)).background(Color.Black.copy(alpha = 0.1f)),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Box(Modifier.fillMaxSize().clickable { albumPicker.launch("image/*") }, contentAlignment = Alignment.Center) {
@@ -1231,7 +1216,7 @@ fun PublicProfileScreen(
     if (showNameScreen) {
         ModalBottomSheet(
             onDismissRequest = { showNameScreen = false },
-            containerColor = Color.Black, 
+            containerColor = Color.White, 
             shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp),
             dragHandle = null
         ) {
@@ -1247,9 +1232,9 @@ fun PublicProfileScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(onClick = { showNameScreen = false }, modifier = Modifier.size(24.dp)) { 
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White) 
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.Black) 
                     }
-                    Text("Nickname", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    Text("Nickname", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.Black)
                     Spacer(modifier = Modifier.width(24.dp))
                 }
                 
@@ -1260,10 +1245,10 @@ fun PublicProfileScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp)
                         .clip(RoundedCornerShape(12.dp)),
-                    textStyle = TextStyle(color = Color.White, fontSize = 16.sp),
+                    textStyle = TextStyle(color = Color.Black, fontSize = 16.sp),
                     colors = TextFieldDefaults.colors(
-                        focusedContainerColor = Color(0xFF1F2937),
-                        unfocusedContainerColor = Color(0xFF1F2937),
+                        focusedContainerColor = Color(0xFFF3F4F6),
+                        unfocusedContainerColor = Color(0xFFF3F4F6),
                         focusedIndicatorColor = Color.Transparent,
                         unfocusedIndicatorColor = Color.Transparent,
                         disabledIndicatorColor = Color.Transparent
@@ -1286,7 +1271,7 @@ fun PublicProfileScreen(
     if (showBioScreen) {
         ModalBottomSheet(
             onDismissRequest = { showBioScreen = false },
-            containerColor = Color.Black, 
+            containerColor = Color.White, 
             shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp),
             dragHandle = null
         ) {
@@ -1301,7 +1286,7 @@ fun PublicProfileScreen(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("Bio", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    Text("Bio", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.Black)
                 }
                 
                 TextField(
@@ -1311,10 +1296,10 @@ fun PublicProfileScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp)
                         .height(150.dp),
-                    textStyle = TextStyle(color = Color.White, fontSize = 16.sp),
+                    textStyle = TextStyle(color = Color.Black, fontSize = 16.sp),
                     colors = TextFieldDefaults.colors(
-                        focusedContainerColor = Color(0xFF1F2937),
-                        unfocusedContainerColor = Color(0xFF1F2937),
+                        focusedContainerColor = Color(0xFFF3F4F6),
+                        unfocusedContainerColor = Color(0xFFF3F4F6),
                         focusedIndicatorColor = Color.Transparent,
                         unfocusedIndicatorColor = Color.Transparent,
                         disabledIndicatorColor = Color.Transparent
@@ -1338,7 +1323,7 @@ fun PublicProfileScreen(
     if (showAgeScreen) {
         ModalBottomSheet(
             onDismissRequest = { showAgeScreen = false }, 
-            containerColor = Color.Black, 
+            containerColor = Color.White, 
             shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp),
             dragHandle = null
         ) {
@@ -1357,7 +1342,7 @@ fun PublicProfileScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text("Cancel", color = Color.Gray, modifier = Modifier.clickable { showAgeScreen = false })
-                    Text("Birthday", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color.White)
+                    Text("Birthday", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color.Black)
                     Text(
                         "Confirm",
                         color = Color(0xFF1DC4E9),
@@ -1386,7 +1371,7 @@ fun PublicProfileScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(40.dp)
-                            .background(Color(0xFF1F2937)) 
+                            .background(Color(0xFFF3F4F6)) 
                     )
                     Row(
                         modifier = Modifier.fillMaxWidth(), 
@@ -1425,7 +1410,7 @@ fun PublicProfileScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black)
+                    .background(Color.White)
                     .pointerInput(Unit) {
                         detectTransformGestures { _, pan, zoom, _ ->
                             scale = (scale * zoom).coerceIn(1f, 5f)
@@ -1438,7 +1423,7 @@ fun PublicProfileScreen(
                     }
             ) {
                 IconButton(onClick = { fullImageIndex = null }, modifier = Modifier.align(Alignment.TopStart).padding(16.dp).windowInsetsPadding(WindowInsets.statusBars)) {
-                    Icon(Icons.Default.ArrowBack, null, tint = Color.White)
+                    Icon(Icons.Default.ArrowBack, null, tint = Color.Black)
                 }
 
                 AsyncImage(
@@ -1467,7 +1452,7 @@ fun EmptySectionCard(
             .fillMaxWidth()
             .height(72.dp)
             .clip(RoundedCornerShape(12.dp))
-            .background(Color.White.copy(alpha = 0.1f))
+            .background(Color.Black.copy(alpha = 0.3f))
             .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -1481,7 +1466,7 @@ fun EmptySectionCard(
         Spacer(modifier = Modifier.width(12.dp))
         Text(
             text = text,
-            color = Color.LightGray,
+            color = Color.Black.copy(alpha = 0.8f),
             fontSize = 14.sp,
             fontWeight = FontWeight.Medium
         )
@@ -1599,7 +1584,7 @@ fun <T> WheelPicker(
                         Text(
                             text = item.toString(),
                             fontSize = if (isSelected) 20.sp else 16.sp,
-                            color = if (isSelected) Color.White else Color.Gray, 
+                            color = if (isSelected) Color.Black else Color.Gray, 
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                         )
                     }
@@ -1661,9 +1646,9 @@ private fun RealProfileChatIcon() {
 @Composable
 fun SectionHeader(title: String, subtitle: String = "") {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-        Text(title, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.White) 
+        Text(title, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.Black) 
         if (subtitle.isNotEmpty()) {
-            Text(subtitle, fontSize = 12.sp, color = Color.LightGray)
+            Text(subtitle, fontSize = 12.sp, color = Color.Gray)
         }
     }
 }
@@ -1678,7 +1663,7 @@ fun EditRowItem(title: String, onClick: () -> Unit, content: @Composable () -> U
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(title, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Color.LightGray) 
+        Text(title, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Color.DarkGray) 
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             content()
         }
