@@ -753,3 +753,11 @@ Current documentation does not certify that all historical features are build-, 
 - Fixed equipped Vehicle playback when opening Room with an already-connected/reused room socket. That path refreshes presence/seats without emitting a fresh `room_join`, so the server's `room_vehicle_entry` broadcast is not guaranteed to run.
 - RoomPage now resolves the signed-in user's equipped, unexpired Vehicle directly from `/api/store/inventory/{userId}` after a fresh join and when reusing an already-connected socket, checking UID/account identity variants and using the same public video asset base as Store.
 - The fallback only fills an empty Room preview, so it does not replace a vehicle event already received from another entrant. Playback remains on the Room screen, outside the entry card, with the existing Store-matched layout and one-shot behavior.
+
+
+## 2026-11-13 — Vehicle one-shot playback and persistent local video cache
+- Native `StorePage.kt`: Vehicle preview playback is non-looping, so a completed Store vehicle clip does not restart every 5–10 seconds. The Store preview downloads the MP4 once into the app's persistent `filesDir` cache (SHA-256 URL key) and reuses the same file for later previews.
+- Native `RoomPage.kt`: room-entry vehicle playback uses that same persistent cached MP4 and remains one-shot; the existing `room_vehicle_entry` Socket.IO event and server-authoritative equipped/unexpired vehicle lookup remain unchanged.
+- Native Android does not provide browser IndexedDB; the equivalent device-persistent cache is the app-private files directory. Each device downloads the shared public MP4 once and then reuses its local copy; the video bytes are not transferred between users' devices.
+- Store inventory remains server-authoritative. The existing inventory GET deletes expired rows and returns only active, unexpired purchases; the Bag expiry timer removes expired cards locally so Store changes from Owned back to Buy after expiry/refresh.
+- Verification: source commits `182d0dab`, `f618237a`, and `f7c3615f`; Native Build 2 and real-device first-download/cached-playback timing still need verification.
