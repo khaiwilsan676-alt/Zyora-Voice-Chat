@@ -297,14 +297,6 @@ fun NativeOwnedFrameShowcase(userId: String, onDataLoaded: ((Boolean) -> Unit)? 
                 }
             }
         }
-    } else {
-        // Same default frame artwork used when a profile has no owned frames.
-        AsyncImage(
-            model = StoreAssetBase + "1785091457562.png",
-            contentDescription = "Default avatar frame",
-            modifier = Modifier.fillMaxWidth().height(112.dp),
-            contentScale = ContentScale.Fit
-        )
     }
 }
 
@@ -384,13 +376,6 @@ fun NativeOwnedVehicleShowcase(userId: String, onDataLoaded: ((Boolean) -> Unit)
                 }
             }
         }
-    } else {
-        AsyncImage(
-            model = StoreAssetBase + "1785091443553.png",
-            contentDescription = "Vehicle",
-            modifier = Modifier.fillMaxWidth().height(112.dp).clip(RoundedCornerShape(16.dp)),
-            contentScale = ContentScale.Crop
-        )
     }
 }
 
