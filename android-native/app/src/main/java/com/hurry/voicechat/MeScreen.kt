@@ -184,7 +184,17 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
             ) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
                     Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
-                        Box(Modifier.size(80.dp), contentAlignment = Alignment.Center) {
+                        Box(Modifier.size(80.dp).clickable {
+                            onPublicProfile(RoomProfileUser(
+                                id = uid,
+                                uid = uid,
+                                accountId = account.ifBlank { uid },
+                                name = name,
+                                image = displayPhoto,
+                                country = profileCountry,
+                                flag = profileCountry.takeIf { it.isNotBlank() }?.let { countryFlag(it) }.orEmpty()
+                            ))
+                        }, contentAlignment = Alignment.Center) {
                             if (displayPhoto.isNotBlank()) {
                                 AsyncImage(displayPhoto, null, Modifier.fillMaxSize().clip(CircleShape), contentScale = ContentScale.Crop)
                             } else {
