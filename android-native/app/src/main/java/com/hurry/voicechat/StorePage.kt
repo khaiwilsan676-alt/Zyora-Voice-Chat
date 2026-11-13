@@ -929,7 +929,15 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                                 }
                                 val source = item.video ?: item.image
                                 if (source.endsWith(".mp4", true)) {
-                                    StoreVideoPreview(StoreAssetBase + source, Modifier.fillMaxSize(), pause = false, removeGreenScreen = true, mute = item.id == "a8")
+                                    StoreVideoPreview(
+                                        StoreAssetBase + source,
+                                        Modifier.fillMaxSize(),
+                                        pause = false,
+                                        removeGreenScreen = true,
+                                        mute = item.id == "a8",
+                                        loop = item.tab != "Vehicle",
+                                        cacheVideo = item.tab == "Vehicle"
+                                    )
                                 } else {
                                     AsyncImage(model = StoreAssetBase + source, contentDescription = null, modifier = Modifier.fillMaxSize())
                                 }
