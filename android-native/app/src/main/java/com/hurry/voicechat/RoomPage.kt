@@ -1952,7 +1952,15 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
             // Lucky Bag sits in its own row immediately BEFORE the room banner.
             if (showFloatingLuckyBag) {
                 Row(
-                    modifier = Modifier.padding(bottom = 4.dp),
+                    modifier = Modifier
+                        .padding(bottom = 4.dp)
+                        .clickable {
+                            // The first Lucky Bag image above the room banner opens
+                            // the same in-room confirmation/reveal sheet.
+                            luckyBagClaimError = null
+                            showLuckyBagCenterReveal = true
+                            showFloatingLuckyBag = false
+                        },
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -1973,11 +1981,6 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                                     drawContent()
                                     drawRect(edgeFade, blendMode = BlendMode.DstIn)
                                 }
-                            }
-                            .clickable {
-                                luckyBagClaimError = null
-                                showLuckyBagCenterReveal = true
-                                showFloatingLuckyBag = false
                             },
                         contentScale = ContentScale.Fit
                     )
