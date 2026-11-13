@@ -1125,6 +1125,27 @@ fun RoomPage(
                 if (updated >= 0L) mainHandler.post { roomWalletBalance = updated }
             }
         }
+        val luckyBagTransactionListener = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
+            val transactionUserId = payload.optString("userId")
+            if (transactionUserId.isNotBlank() &&
+                transactionUserId in setOf(canonicalWalletUserId, accountId, currentUser.uid, currentUser.id)) {
+                val transactionId = payload.optString("id").ifBlank {
+                    "${payload.optString("type")}:${payload.optString("bagId")}:$transactionUserId"
+                }
+                val type = payload.optString("type")
+                val amount = payload.optLong("amount", 0L)
+                val bagId = payload.optString("bagId")
+                val createdAt = payload.optLong("createdAt", System.currentTimeMillis())
+                mainHandler.post {
+                    runCatching {
+                        NativeIndexDatabase(appContext).saveLuckyBagTransaction(
+                            transactionId, transactionUserId, type, amount, bagId, createdAt
+                        )
+                    }
+                }
+            }
+        }
         val luckyBagBannerListener = Emitter.Listener { args ->
             val payload = args.firstOrNull() as? JSONObject ?: return@Listener
             if (payload.optString("roomId") == roomId && payload.optString("senderId") != accountId) {
@@ -1402,6 +1423,7 @@ fun RoomPage(
         roomSocket.on("room_join_blocked", roomJoinBlockedListener)
         roomSocket.on("room_follow_updated", roomFollowListener)
         roomSocket.on("lucky_bag_banner",luckyBagBannerListener)
+        roomSocket.on("lucky_bag_transaction",luckyBagTransactionListener)
         roomSocket.on("wallet_balance_updated",walletBalanceListener)
         roomSocket.on(Socket.EVENT_CONNECT,connectListener)
         if (roomSocket.connected()) {
@@ -1446,6 +1468,7 @@ fun RoomPage(
             roomSocket.off("room_join_blocked", roomJoinBlockedListener)
             roomSocket.off("room_follow_updated", roomFollowListener)
             roomSocket.off("lucky_bag_banner",luckyBagBannerListener)
+            roomSocket.off("lucky_bag_transaction",luckyBagTransactionListener)
             roomSocket.off("wallet_balance_updated",walletBalanceListener)
             roomSocket.off(Socket.EVENT_CONNECT,connectListener)
             if (!latestKeepingRoomForMini) {
