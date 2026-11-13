@@ -2718,247 +2718,27 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
             }
         }
 
-        if (showLuckyBagCenterReveal) {
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.6f))
-                    .clickable { showLuckyBagCenterReveal = false; showFloatingLuckyBag = true },
-                contentAlignment = Alignment.Center
-            ) {
-                Box(
-                    modifier = Modifier.fillMaxWidth(0.9f),
-                    contentAlignment = Alignment.BottomCenter
-                ) {
-                    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
-                        AsyncImage(
-                            model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261021_170648.png",
-                            contentDescription = "Lucky Bag Claim Reveal",
-                            modifier = Modifier.fillMaxWidth().heightIn(max = 420.dp).clickable(enabled = false) {},
-                            contentScale = ContentScale.Fit
-                        )
-                        Column(
-                            modifier = Modifier.align(Alignment.TopCenter).padding(top = 34.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            AsyncImage(
-                                model = luckyBagSenderImage.ifBlank { "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/default-avatar.png" },
-                                contentDescription = "Lucky Bag sender avatar",
-                                modifier = Modifier.size(58.dp).clip(CircleShape).border(2.dp, Color(0xFFFFE4A0), CircleShape),
-                                contentScale = ContentScale.Crop
-                            )
-                            Text(
-                                text = "Lucky Bag from ${luckyBagSenderName.ifBlank { "User" }}",
-                                color = Color(0xFF8B3B26), fontSize = 14.sp, fontWeight = FontWeight.Bold,
-                                textAlign = TextAlign.Center, modifier = Modifier.padding(top = 5.dp)
-                            )
-                            luckyBagClaimError?.let {
-                                Text(it, color = Color(0xFFB91C1C), fontSize = 11.sp, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 4.dp).padding(horizontal = 12.dp))
-                            }
-                        }
-                    }
-                    
-                    Box(
-                        modifier = Modifier
-                             .offset(y = 4.dp)
-                            .width(190.dp)
-                            .height(72.dp)
-                            .clip(RoundedCornerShape(50))
-                            .background(Brush.verticalGradient(listOf(Color(0xFFFFF2A2), Color(0xFFFFE28A), Color(0xFFF4C46B), Color(0xFFFFF0A0))))
-                            .border(3.dp, Color(0xFFFFEDB0), RoundedCornerShape(50))
-                            .padding(6.dp)
-                            .clip(RoundedCornerShape(50))
-                            .background(Brush.verticalGradient(listOf(Color(0xFFFFE7A0), Color(0xFFF5C66E), Color(0xFFFFEDB0))))
-                            .border(3.dp, Color(0xFFF5D27D), RoundedCornerShape(50))
-                            .padding(6.dp)
-                            .clip(RoundedCornerShape(50))
-                            .background(Brush.verticalGradient(listOf(Color(0xFFFFF0C9), Color(0xFFFFDDA0), Color(0xFFFFCC85))))
-                            .border(3.dp, Color(0xFFFFF0C4), RoundedCornerShape(50))
-                            .clickable(enabled = !luckyBagClaiming) {
-                                if (luckyBagId.isBlank()) {
-                                    luckyBagClaimError = "Lucky Bag is unavailable"
-                                } else {
-                                    luckyBagClaiming = true
-                                    luckyBagClaimError = null
-                                    CoroutineScope(Dispatchers.IO).launch {
-                                        val result = runCatching {
-                                            val payload = JSONObject().put("bagId", luckyBagId).put("userId", canonicalWalletUserId)
-                                            val connection = (java.net.URL("https://zyora-server.onrender.com/api/lucky-bag/claim").openConnection() as java.net.HttpURLConnection).apply {
-                                                requestMethod = "POST"
-                                                connectTimeout = 12000
-                                                readTimeout = 15000
-                                                doOutput = true
-                                                setRequestProperty("Content-Type", "application/json")
-                                            }
-                                            connection.outputStream.use { it.write(payload.toString().toByteArray(Charsets.UTF_8)) }
-                                            val status = connection.responseCode
-                                            val stream = if (status in 200..299) connection.inputStream else connection.errorStream
-                                            val body = stream.bufferedReader().use { it.readText() }
-                                            connection.disconnect()
-                                            val json = JSONObject(body)
-                                            if (status !in 200..299 || !json.optBoolean("success")) throw IllegalStateException(json.optString("error", "Claim failed"))
-                                            json
-                                        }
-                                        withContext(Dispatchers.Main) {
-                                            luckyBagClaiming = false
-                                            result.onSuccess { json ->
-                                                luckyBagClaimAmount = json.optLong("amount")
-                                                showLuckyBagCenterReveal = false
-                                                showLuckyBagClaimedCard = true
-                                                showFloatingLuckyBag = false
-                                            }.onFailure { err -> luckyBagClaimError = err.message ?: "Claim failed" }
-                                        }
-                                    }
-                                }
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = if (luckyBagClaiming) "Open" else "Open",
-                            color = Color(0xFFDF182B),
-                            fontSize = 23.sp,
-                            fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold
-                        )
-                    }
-                }
-            }
-        }
+        LuckyBagOpenConfirmCards(
+            showLuckyBagCenterReveal = showLuckyBagCenterReveal,
+            showLuckyBagClaimedCard = showLuckyBagClaimedCard,
+            luckyBagSenderName = luckyBagSenderName,
+            luckyBagSenderImage = luckyBagSenderImage,
+            luckyBagId = luckyBagId,
+            luckyBagClaiming = luckyBagClaiming,
+            luckyBagClaimError = luckyBagClaimError,
+            luckyBagClaimAmount = luckyBagClaimAmount,
+            canonicalWalletUserId = canonicalWalletUserId,
+            roomWalletBalance = roomWalletBalance,
+            showFloatingLuckyBag = showFloatingLuckyBag,
+            onShowLuckyBagCenterRevealChange = { showLuckyBagCenterReveal = it },
+            onShowLuckyBagClaimedCardChange = { showLuckyBagClaimedCard = it },
+            onLuckyBagClaimingChange = { luckyBagClaiming = it },
+            onLuckyBagClaimErrorChange = { luckyBagClaimError = it },
+            onLuckyBagClaimAmountChange = { luckyBagClaimAmount = it },
+            onShowFloatingLuckyBagChange = { showFloatingLuckyBag = it },
+            onRoomWalletBalanceChange = { roomWalletBalance = it }
+        )
         
-        if (showLuckyBagClaimedCard) {
-            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=0.6f)).clickable { }, contentAlignment = Alignment.Center) {
-                Box(Modifier.fillMaxWidth(0.85f).aspectRatio(0.59f).clickable(enabled=false){}) {
-                    Box(Modifier.fillMaxSize().padding(top = 40.dp).clip(RoundedCornerShape(topStart=32.dp, topEnd=32.dp, bottomStart=18.dp, bottomEnd=18.dp)).background(Brush.linearGradient(listOf(Color(0xFFFF6449), Color(0xFFFF263F), Color(0xFFE90037)))))
-                    
-                    Column(
-                        modifier = Modifier.align(Alignment.TopCenter).zIndex(2f).offset(y = 8.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        AsyncImage(
-                            model = luckyBagSenderImage.ifBlank { "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/default-avatar.png" },
-                            contentDescription = "Lucky Bag sender avatar",
-                            modifier = Modifier.size(62.dp).clip(CircleShape).border(3.dp, Color(0xFFFFD875), CircleShape),
-                            contentScale = ContentScale.Crop
-                        )
-                        Text(
-                            text = "Lucky Bag from ${luckyBagSenderName.ifBlank { "User" }}",
-                            color = Color(0xFF8B3B26), fontSize = 14.sp, fontWeight = FontWeight.Bold,
-                            textAlign = TextAlign.Center, modifier = Modifier.padding(top = 5.dp)
-                        )
-                    }
-
-                    Box(Modifier.align(Alignment.TopCenter).fillMaxWidth(0.9f).fillMaxHeight(0.72f).clip(RoundedCornerShape(24.dp)).background(Brush.verticalGradient(listOf(Color(0xFFFFF7E5), Color(0xFFFFF0D4))))) {
-                        Column(Modifier.align(Alignment.BottomCenter).padding(bottom = 66.dp).fillMaxWidth()) {
-                            Box(Modifier.fillMaxWidth().height(2.dp).padding(horizontal = 24.dp).background(Color(0xFFF5EBD8)))
-                            Row(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 18.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                                Text("Reward: ${luckyBagClaimAmount} Coins", color = Color(0xFFD29A72), fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text("Details", color = Color(0xFFD29A72), fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                                    Icon(Icons.Default.ChevronRight, null, tint = Color(0xFFD29A72), modifier = Modifier.size(16.dp))
-                                }
-                            }
-                        }
-                    }
-
-                    Canvas(Modifier.align(Alignment.BottomCenter).fillMaxWidth().fillMaxHeight(0.35f)) {
-                        val w = size.width
-                        val h = size.height
-                        
-                        val goldBrush = Brush.verticalGradient(listOf(Color(0xFFFFF8C9), Color(0xFFFFD76D), Color(0xFFFFAD36), Color(0xFFFFF0A9)))
-                        val goldPath = Path().apply {
-                            moveTo(0f, h * 0.15f)
-                            quadraticBezierTo(w / 2f, -h * 0.05f, w, h * 0.15f)
-                            lineTo(w, h * 0.28f)
-                            quadraticBezierTo(w / 2f, h * 0.08f, 0f, h * 0.28f)
-                            close()
-                        }
-                        drawPath(goldPath, goldBrush)
-                        
-                        val redBrush = Brush.verticalGradient(listOf(Color(0xFFFF6449), Color(0xFFE90037)))
-                        val redPath = Path().apply {
-                            moveTo(0f, h * 0.26f)
-                            quadraticBezierTo(w / 2f, h * 0.06f, w, h * 0.26f)
-                            lineTo(w, h)
-                            lineTo(0f, h)
-                            close()
-                        }
-                        drawPath(redPath, redBrush)
-                    }
-
-                    luckyBagClaimError?.let { error ->
-                        Text(
-                            error,
-                            color = Color(0xFF8B1E1E),
-                            fontSize = 11.sp,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 88.dp, start = 16.dp, end = 16.dp)
-                        )
-                    }
-                    Box(
-                        Modifier.align(Alignment.BottomCenter)
-                            .padding(bottom = 24.dp)
-                            .fillMaxWidth(0.85f)
-                            .height(62.dp)
-                            .clip(RoundedCornerShape(50))
-                            .background(Color(0xFFFF304D))
-                            .border(3.dp, Color(0xFFFFDC73), RoundedCornerShape(50))
-                            .padding(5.dp)
-                            .clip(RoundedCornerShape(50))
-                            .background(Brush.verticalGradient(listOf(Color(0xFFFFF2B9), Color(0xFFFFD28A), Color(0xFFFFAC45), Color(0xFFFFE8A0))))
-                            .border(3.dp, Color(0xFFFFF0AD), RoundedCornerShape(50))
-                            .clickable(enabled = !luckyBagClaiming) {
-                                if (luckyBagId.isBlank() || canonicalWalletUserId.isBlank()) {
-                                    luckyBagClaimError = "Lucky Bag confirmation unavailable"
-                                } else {
-                                    luckyBagClaiming = true
-                                    luckyBagClaimError = null
-                                    CoroutineScope(Dispatchers.IO).launch {
-                                        val result = runCatching {
-                                            val payload = JSONObject()
-                                                .put("bagId", luckyBagId)
-                                                .put("userId", canonicalWalletUserId)
-                                            val connection = (java.net.URL("https://zyora-server.onrender.com/api/lucky-bag/confirm").openConnection() as java.net.HttpURLConnection).apply {
-                                                requestMethod = "POST"
-                                                connectTimeout = 12000
-                                                readTimeout = 15000
-                                                doOutput = true
-                                                setRequestProperty("Content-Type", "application/json")
-                                            }
-                                            connection.outputStream.use { it.write(payload.toString().toByteArray(Charsets.UTF_8)) }
-                                            val status = connection.responseCode
-                                            val stream = if (status in 200..299) connection.inputStream else connection.errorStream
-                                            val body = stream.bufferedReader().use { it.readText() }
-                                            connection.disconnect()
-                                            val json = JSONObject(body)
-                                            if (status !in 200..299 || !json.optBoolean("success")) {
-                                                throw IllegalStateException(json.optString("error", "Confirmation failed"))
-                                            }
-                                            json
-                                        }
-                                        withContext(Dispatchers.Main) {
-                                            luckyBagClaiming = false
-                                            result.onSuccess { json ->
-                                                roomWalletBalance = json.optLong("balance", roomWalletBalance).coerceAtLeast(0L)
-                                                showLuckyBagClaimedCard = false
-                                                luckyBagClaimAmount = 0L
-                                            }.onFailure { err ->
-                                                luckyBagClaimError = err.message ?: "Confirmation failed"
-                                            }
-                                        }
-                                    }
-                                }
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            if (luckyBagClaiming) "Confirming..." else "Confirm",
-                            color = Color(0xFF9A4F1C),
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.ExtraBold
-                        )
-                    }
-                }
-            }
-        }
         if (showInviteSheet) RoomInviteSheet(
             roomUsers = activeRoomUsers,
             currentUserId = accountId,
