@@ -2680,7 +2680,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                 Modifier
                     .fillMaxSize()
                     .background(Color.Black.copy(alpha = 0.6f))
-                    .clickable { showLuckyBagCenterReveal = false },
+                    .clickable { showLuckyBagCenterReveal = false; showFloatingLuckyBag = true },
                 contentAlignment = Alignment.Center
             ) {
                 Box(
@@ -2782,7 +2782,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
         }
         
         if (showLuckyBagClaimedCard) {
-            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=0.6f)).clickable { showLuckyBagClaimedCard=false }, contentAlignment = Alignment.Center) {
+            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=0.6f)), contentAlignment = Alignment.Center) {
                 Box(Modifier.fillMaxWidth(0.85f).aspectRatio(0.59f).clickable(enabled=false){}) {
                     Box(Modifier.fillMaxSize().padding(top = 40.dp).clip(RoundedCornerShape(topStart=32.dp, topEnd=32.dp, bottomStart=18.dp, bottomEnd=18.dp)).background(Brush.linearGradient(listOf(Color(0xFFFF6449), Color(0xFFFF263F), Color(0xFFE90037)))))
                     
@@ -2807,7 +2807,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                         Column(Modifier.align(Alignment.BottomCenter).padding(bottom = 66.dp).fillMaxWidth()) {
                             Box(Modifier.fillMaxWidth().height(2.dp).padding(horizontal = 24.dp).background(Color(0xFFF5EBD8)))
                             Row(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 18.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                                Text("Received ${luckyBagClaimAmount} Coins", color = Color(0xFFD29A72), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                Text("Reward: ${luckyBagClaimAmount} Coins", color = Color(0xFFD29A72), fontSize = 14.sp, fontWeight = FontWeight.Bold)
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text("Details", color = Color(0xFFD29A72), fontSize = 14.sp, fontWeight = FontWeight.Bold)
                                     Icon(Icons.Default.ChevronRight, null, tint = Color(0xFFD29A72), modifier = Modifier.size(16.dp))
