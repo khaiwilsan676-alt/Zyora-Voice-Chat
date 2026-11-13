@@ -777,3 +777,11 @@ Current documentation does not certify that all historical features are build-, 
 - Server credit uses an idempotency key scoped to bag + user, so retrying Confirm cannot credit the same reward twice. Wallet balance updates are broadcast after confirmation.
 - The confirmation card cannot be dismissed by tapping the backdrop; failed confirmation keeps the card visible and shows an error for retry.
 - Verification still required: backend deployment, native APK build, and multi-user/retry testing against MongoDB.
+
+## 2026-11-13 — Vehicle preview cache and playback lifecycle root-cause fix
+- Every Store Vehicle preview path now uses the same persistent app-private video cache, including the Store grid, item detail, and room-entry preview. A device downloads each shared MP4 once; subsequent previews read the local file.
+- Cache downloads write to unique temporary files and publish only after a non-empty download completes. This prevents simultaneous grid/detail/room previews from corrupting a shared temporary file.
+- Vehicle previews are one-shot rather than looping; non-vehicle frame previews retain their existing looping behavior.
+- MediaPlayer and its output Surface now share one idempotent cleanup path. Surface destruction and Compose view release can no longer release the same player twice or leave the output Surface unreleased.
+- The room vehicle preview continues to use the same cached file and existing Socket.IO room-entry event; video bytes are not sent through Socket.IO.
+- Verification status: source changes committed. A successful Native Build 2 APK run and on-device playback test are still required before calling this fully verified.
