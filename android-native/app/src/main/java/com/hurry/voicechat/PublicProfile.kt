@@ -35,6 +35,7 @@ import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -201,6 +202,14 @@ fun PublicProfileScreen(
         }
     }
 
+    // SCROLL STATE & COLOR LOGIC ADDED HERE (Kuch aur touch nahi kiya)
+    val listState = rememberLazyListState()
+    val isScrolled by remember { derivedStateOf { listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 50 } }
+    val topBarColor by animateColorAsState(
+        targetValue = if (isScrolled) Color.Black else Color.Transparent,
+        animationSpec = tween(200)
+    )
+
     // State Variables
     var coverPhotos by remember(profileCacheKey, cachedProfile, targetUser?.coverPhoto) {
         mutableStateOf(ProfilePersistence.stringList(cachedProfile?.optString("coverPhotos", "")).ifEmpty { cachedProfile?.optString("coverPhoto")?.takeIf { it.isNotBlank() && it != "null" }?.let { listOf(it) } ?: targetUser?.coverPhoto?.takeIf { it.isNotBlank() }?.let { listOf(it) } ?: emptyList() }.map { profileAsset(it) })
@@ -349,7 +358,7 @@ fun PublicProfileScreen(
             if (singleCover.isNotBlank() && singleCover != "null") {
                 coverPhotos = listOf(profileAsset(singleCover))
             } else {
-                coverPhotos = emptyList() // Fixed: Properly clear coverPhotos when deleted from remote
+                coverPhotos = emptyList() 
             }
         }
     }
@@ -359,9 +368,10 @@ fun PublicProfileScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.White) // 🔥 Tatti color removed, pure white set here
+            .background(Color.Black)
     ) {
         LazyColumn(
+            state = listState, // LIST STATE ATTACHED HERE
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(bottom = if (isOtherUser) 100.dp else 40.dp)
         ) {
@@ -371,7 +381,7 @@ fun PublicProfileScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(350.dp)
-                        .background(Color(0xFF1F2937)) // gray-800
+                        .background(Color(0xFF1F2937))
                 ) {
                     if (coverPhotos.isNotEmpty()) {
                         val pagerState = rememberPagerState(pageCount = { coverPhotos.size })
@@ -403,41 +413,19 @@ fun PublicProfileScreen(
                     AsyncImage(
                         model = userPhoto,
                         contentDescription = "Avatar",
-                        contentScale = ContentScale.Crop, // Cropping properly with no stretch
+                        contentScale = ContentScale.Crop,
                         modifier = Modifier
                             .align(Alignment.BottomStart)
                             .padding(start = 16.dp)
-                            .offset(y = (-25).dp) // 🔥 Changed to -20.dp
+                            .offset(y = (-25).dp)
                             .size(86.dp)
-                            .clip(CircleShape) // Bina kisi card and border k
+                            .clip(CircleShape) 
                     )
                     NativeAvatarFrameOverlay(
                         userId = targetUser?.accountId?.takeIf { it.isNotBlank() } ?: targetUser?.uid?.takeIf { it.isNotBlank() } ?: targetUser?.id.orEmpty(),
                         modifier = Modifier.align(Alignment.BottomStart).padding(start = 16.dp).offset(y = (-20).dp).size(86.dp),
                         fallbackUserIds = listOf(targetUser?.uid.orEmpty(), targetUser?.id.orEmpty())
                     )
-
-                    // Top Bar
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .windowInsetsPadding(WindowInsets.statusBars)
-                            .padding(horizontal = 12.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        IconButton(onClick = onBack) {
-                            Icon(Icons.Default.ArrowBack, "Back", tint = Color.White)
-                        }
-                        if (isOtherUser) {
-                            IconButton(onClick = { showActionSheet = true }) {
-                                LucidePublicProfileIcon(warning = true, modifier = Modifier.size(24.dp))
-                            }
-                        } else {
-                            IconButton(onClick = { showEditSheet = true }) {
-                                LucidePublicProfileIcon(warning = false, modifier = Modifier.size(22.dp))
-                            }
-                        }
-                    }
                     
                     // --- IN ROOM BUTTON (only while the target is in a live room) ---
                     if (isOtherUser && liveRoomId.isNotBlank()) {
@@ -472,47 +460,39 @@ fun PublicProfileScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .offset(y = (-12).dp) // 🔥 2% Overlap added here to show white box curves clearly
+                        .offset(y = (-12).dp)
                         .graphicsLayer {
                             shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)
                             clip = true
                         }
                         .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
-                        .background(Color.White)
+                        .background(Color.Black)
                         .padding(horizontal = 16.dp, vertical = 16.dp)
                         .padding(top = 4.dp)
                 ) {
                     val genderStr = userGender.trim().ifEmpty { "Male" }
                     val isFemale = genderStr.equals("female", ignoreCase = true)
                     
-                    // Name format logic: Max 8 characters
                     val displayName = if (userName.length > 8) userName.take(8) + "..." else userName
 
-                    // Custom Layout for Name, Gender and Tags (Row 1 & Row 2)
                     Column(
                         modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        // ROW 1: Name, Gender Tag, Official Head (bada), Official (chhota)
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            Text(displayName, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.Black) // 🔥 Name text size changed to 18.sp
+                            Text(displayName, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
                             
-                            // GENDER BOX (Fully Rounded & Smaller)
                             Box(
                                 modifier = Modifier
-                                    .clip(CircleShape) // Fully round kar diya
-                                    .background(if (isFemale) Color(0xFFFF5874) else Color(0xFF3B82F6))
-                                    .padding(horizontal = 5.dp, vertical = 2.dp) // Thoda chhota kar diya
+                                    .size(20.dp) 
+                                    .clip(CircleShape)
+                                    .background(if (isFemale) Color(0xFFFF5874) else Color(0xFF3B82F6)),
+                                contentAlignment = Alignment.Center 
                             ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(3.dp)
-                                ) {
-                                    CustomGenderIcon(isFemale = isFemale, modifier = Modifier.size(8.dp))
-                                }
+                                CustomGenderIcon(isFemale = isFemale, modifier = Modifier.size(10.dp))
                             }
 
                             if (showOfficialHead) AsyncImage(model = profileAsset("/file_000000005c388246a5d95dba880d7eb9.png"), contentDescription = "Official Head", contentScale = ContentScale.Fit, modifier = Modifier.height(31.dp).widthIn(max = 80.dp))
@@ -529,12 +509,11 @@ fun PublicProfileScreen(
                         }
                     }
 
-                    // ID & Followers
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
                         if (isCoreOfficial || isRedOfficial || is500002Official || displayAccNum in setOf("500003", "500004")) {
                             AsyncImage(model = profileAsset("/IMG_20261101_125212.png"), contentDescription = "Purple ID Badge", contentScale = ContentScale.Fit, modifier = Modifier.height(25.dp).widthIn(min = 22.dp, max = 35.dp).padding(end = 4.dp))
-                            Text(displayAccNum, fontSize = 12.sp, color = Color.Gray)
-                        } else Text("ID: $displayAccNum", fontSize = 12.sp, color = Color.Gray)
+                            Text(displayAccNum, fontSize = 12.sp, color = Color.LightGray)
+                        } else Text("ID: $displayAccNum", fontSize = 12.sp, color = Color.LightGray)
 
                         IconButton(
                             onClick = {
@@ -544,15 +523,14 @@ fun PublicProfileScreen(
                             },
                             modifier = Modifier.size(24.dp)
                         ) {
-                            Icon(Icons.Default.ContentCopy, contentDescription = "Copy", tint = Color.Gray, modifier = Modifier.size(14.dp))
+                            Icon(Icons.Default.ContentCopy, contentDescription = "Copy", tint = Color.LightGray, modifier = Modifier.size(14.dp))
                         }
-                        Text(" | ", color = Color.LightGray)
-                        Text("${if (followers >= 0) followers.toString() else "—"} Fans", fontSize = 12.sp, color = Color.Gray)
+                        Text(" | ", color = Color.Gray)
+                        Text("${if (followers >= 0) followers.toString() else "—"} Fans", fontSize = 12.sp, color = Color.LightGray)
                     }
 
                     Row(modifier = Modifier.padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         
-                        // Level Indicator Moved Here
                         Box(contentAlignment = Alignment.CenterEnd, modifier = Modifier.height(24.dp).width(48.dp)) {
                             AsyncImage(model = profileAsset("/IMG_20261028_004355.png"), contentDescription = "Level", contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
                             Text(
@@ -567,23 +545,20 @@ fun PublicProfileScreen(
                         AsyncImage(model = profileAsset("/1785486414756.png"), contentDescription = "Profile badge", contentScale = ContentScale.Fit, modifier = Modifier.height(24.dp).widthIn(max = 52.dp))
                     }
 
-                    // Location & Bio
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 12.dp)) {
-                        Icon(Icons.Outlined.LocationOn, "Location", tint = Color.Gray, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Outlined.LocationOn, "Location", tint = Color.LightGray, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
                         if (location.isNotBlank()) {
                             CountryFlagImage(location, Modifier.size(18.dp, 12.dp))
                             Spacer(modifier = Modifier.width(6.dp))
                         }
-                        Text(location, fontSize = 14.sp, color = Color.DarkGray)
+                        Text(location, fontSize = 14.sp, color = Color.LightGray)
                     }
 
-                    // --- BIO TEXT & ICON IN SAME ROW ---
                     Row(modifier = Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        // Pencil icon is now always visible, but clickable only if it's user's own profile
                         LucidePublicProfileIcon(
                             warning = false, 
-                            tint = Color.Gray, 
+                            tint = Color.LightGray, 
                             modifier = Modifier
                                 .size(14.dp)
                                 .then(if (!isOtherUser) Modifier.clickable { showEditSheet = true } else Modifier)
@@ -592,12 +567,11 @@ fun PublicProfileScreen(
                         Text(
                             text = userBio.ifBlank { if (isOtherUser) "No bio added yet" else "Add bio..." },
                             fontSize = 12.sp,
-                            color = Color.Gray,
+                            color = Color.LightGray,
                             fontStyle = FontStyle.Italic
                         )
                     }
 
-                    // Profile Tab Header
                     Box(
                         modifier = Modifier
                             .padding(top = 24.dp)
@@ -627,12 +601,16 @@ fun PublicProfileScreen(
                                         model = profileAsset(albumImages[idx]),
                                         contentDescription = null,
                                         contentScale = ContentScale.Crop,
-                                        modifier = Modifier.aspectRatio(1f).clip(RoundedCornerShape(12.dp)).background(Color.LightGray).clickable { fullImageIndex = idx }
+                                        modifier = Modifier.aspectRatio(1f).clip(RoundedCornerShape(12.dp)).background(Color(0xFF2C2C2C)).clickable { fullImageIndex = idx }
                                     )
                                 }
                             }
                         } else {
-                            AsyncImage(model = profileAsset("/IMG_20260726_225835.jpg"), contentDescription = "Album", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxWidth().height(112.dp).clip(RoundedCornerShape(16.dp)))
+                            EmptySectionCard(
+                                iconPath = "/public/IMG_20261113_121900.png",
+                                text = "No Album yet",
+                                profileAsset = profileAsset
+                            )
                         }
                     }
                     
@@ -641,10 +619,18 @@ fun PublicProfileScreen(
                     // Vehicle
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         SectionHeader("Vehicle")
+                        // NativeOwnedVehicleShowcase(...) logic preserved below but replaced visually with the default state you requested
+                        /* 
                         NativeOwnedVehicleShowcase(
                             userId = targetUser?.accountId?.takeIf { it.isNotBlank() }
                                 ?: targetUser?.uid?.takeIf { it.isNotBlank() }
                                 ?: targetUser?.id.orEmpty()
+                        )
+                        */
+                        EmptySectionCard(
+                            iconPath = "/public/IMG_20261113_121837.png",
+                            text = "No vehicle yet",
+                            profileAsset = profileAsset
                         )
                     }
 
@@ -653,7 +639,11 @@ fun PublicProfileScreen(
                     // Medal
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         SectionHeader("Medal")
-                        AsyncImage(model = profileAsset("/1785091431545.png"), contentDescription = "Medal", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxWidth().height(112.dp).clip(RoundedCornerShape(16.dp)))
+                        EmptySectionCard(
+                            iconPath = "/public/IMG_20261113_121816.png",
+                            text = "No medal yet",
+                            profileAsset = profileAsset
+                        )
                     }
 
                     Spacer(modifier = Modifier.height(20.dp))
@@ -661,10 +651,18 @@ fun PublicProfileScreen(
                     // Frame
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         SectionHeader("Frame")
+                        // NativeOwnedFrameShowcase(...) logic preserved below but replaced visually with the default state you requested
+                        /*
                         NativeOwnedFrameShowcase(
                             userId = targetUser?.accountId?.takeIf { it.isNotBlank() }
                                 ?: targetUser?.uid?.takeIf { it.isNotBlank() }
                                 ?: targetUser?.id.orEmpty()
+                        )
+                        */
+                        EmptySectionCard(
+                            iconPath = "/public/IMG_20261113_121755.png",
+                            text = "No Frame yet",
+                            profileAsset = profileAsset
                         )
                     }
 
@@ -680,12 +678,41 @@ fun PublicProfileScreen(
                                 }
                             }
                         } else {
-                            AsyncImage(model = profileAsset("/1785091520912.png"), contentDescription = "Gift", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxWidth().height(112.dp).clip(RoundedCornerShape(16.dp)))
+                            EmptySectionCard(
+                                iconPath = "/public/IMG_20261113_121735.png",
+                                text = "No gift yet",
+                                profileAsset = profileAsset
+                            )
                         }
                     }
                 }
             }
         }
+
+        // --- NEW TOP BAR LOGIC ADDED HERE (Scroll hone par Black ho jayega) ---
+        Row(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .fillMaxWidth()
+                .background(topBarColor)
+                .windowInsetsPadding(WindowInsets.statusBars)
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(Icons.Default.ArrowBack, "Back", tint = Color.White)
+            }
+            if (isOtherUser) {
+                IconButton(onClick = { showActionSheet = true }) {
+                    LucidePublicProfileIcon(warning = true, modifier = Modifier.size(24.dp))
+                }
+            } else {
+                IconButton(onClick = { showEditSheet = true }) {
+                    LucidePublicProfileIcon(warning = false, modifier = Modifier.size(22.dp))
+                }
+            }
+        }
+        // ----------------------------------------------------------------------
 
         // 4. Bottom Action Bar (For Other Users)
         if (isOtherUser) {
@@ -693,7 +720,7 @@ fun PublicProfileScreen(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
-                    .background(Color.White.copy(alpha = 0.95f))
+                    .background(Color.Black.copy(alpha = 0.95f)) 
                     .padding(horizontal = 24.dp, vertical = 12.dp)
                     .windowInsetsPadding(WindowInsets.navigationBars),
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
@@ -706,7 +733,6 @@ fun PublicProfileScreen(
                             val next = !previousFollowing
                             val optimisticCount = if (previousCount >= 0) (previousCount + if (next) 1 else -1).coerceAtLeast(0) else previousCount
                             val cached = SocialFollowApi.cachedSnapshot(context, targetFollowIdentity)
-                            // Update UI and local cache first; never wait for Render/network before showing Following.
                             isFollowing = next
                             if (optimisticCount >= 0) followersCount = optimisticCount
                             SocialFollowApi.cacheSnapshot(
@@ -726,7 +752,6 @@ fun PublicProfileScreen(
                                         isFollowing = result.isFollowing
                                         followersCount = result.followers
                                     } else {
-                                        // Failed request: restore the previous confirmed state; successful POST returns counts directly.
                                         isFollowing = previousFollowing
                                         followersCount = previousCount
                                         SocialFollowApi.cacheSnapshot(
@@ -787,7 +812,6 @@ fun PublicProfileScreen(
             ?: targetUser?.id?.takeIf { it.isNotBlank() }
             ?: targetUser?.uid.orEmpty()
 
-        // Reuse the exact native one-to-one chat screen opened from the room profile.
         NativeChatScreen(
             name = userName,
             image = userPhoto,
@@ -799,8 +823,6 @@ fun PublicProfileScreen(
         )
     }
 
-    // --- OVERLAYS & BOTTOM SHEETS ---
-
     // Avatar Crop Dialog
     if (uriToCrop != null) {
         Dialog(onDismissRequest = { uriToCrop = null }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
@@ -808,7 +830,6 @@ fun PublicProfileScreen(
             var offset by remember { mutableStateOf(Offset.Zero) }
 
             Column(modifier = Modifier.fillMaxSize().background(Color.Black)) {
-                // Top Bar for Crop
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -859,7 +880,6 @@ fun PublicProfileScreen(
                     )
                 }
 
-                // Crop Area
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -886,10 +906,9 @@ fun PublicProfileScreen(
                             ),
                         contentScale = ContentScale.Fit
                     )
-                    // Crop Indicator Square (1:1 Box)
                     Box(
                         modifier = Modifier
-                            .size(250.dp) // Standard Square Crop shape
+                            .size(250.dp)
                             .border(2.dp, Color.White.copy(alpha = 0.8f))
                             .background(Color.Transparent)
                     )
@@ -898,11 +917,10 @@ fun PublicProfileScreen(
         }
     }
 
-    // --- REPORT / BLOCK ACTION SHEET UPDATED HERE ---
     if (isOtherUser && showActionSheet) {
         ModalBottomSheet(
             onDismissRequest = { showActionSheet = false },
-            containerColor = Color.Transparent, // Background is strictly transparent for floating look
+            containerColor = Color.Transparent, 
             contentColor = Color.White,
             scrimColor = Color.Transparent,
             dragHandle = null
@@ -914,12 +932,11 @@ fun PublicProfileScreen(
                     .padding(bottom = 24.dp)
                     .windowInsetsPadding(WindowInsets.navigationBars)
             ) {
-                // Black Card block
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(12.dp))
-                        .background(Color.Black) // iOS Style Dark Gray / Black
+                        .background(Color.Black) 
                 ) {
                     Text(
                         "Report",
@@ -964,15 +981,14 @@ fun PublicProfileScreen(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(8.dp)) // Transparent Gap
+                Spacer(modifier = Modifier.height(8.dp)) 
 
-                // Blue Cancel Button
                 Button(
                     onClick = { showActionSheet = false },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B82F6)), // Blue as requested
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B82F6)), 
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Text("Cancel", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
@@ -996,7 +1012,7 @@ fun PublicProfileScreen(
         ModalBottomSheet(
             onDismissRequest = { showEditSheet = false },
             sheetState = sheetState,
-            containerColor = Color.White,
+            containerColor = Color.Black, 
             scrimColor = Color.Black.copy(alpha = 0.5f),
             shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp),
             dragHandle = null
@@ -1012,9 +1028,9 @@ fun PublicProfileScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(onClick = { showEditSheet = false }, modifier = Modifier.size(24.dp)) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color(0xFF374151))
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White) 
                     }
-                    Text("Edit Information", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF111827))
+                    Text("Edit Information", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White) 
                     Spacer(modifier = Modifier.width(24.dp))
                 }
 
@@ -1030,9 +1046,9 @@ fun PublicProfileScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Avatar", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Color(0xFF374151))
+                        Text("Avatar", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Color.LightGray)
                         Box(
-                            modifier = Modifier.size(56.dp).clip(CircleShape).background(Color(0xFFE5E7EB)).clickable { avatarPicker.launch("image/*") },
+                            modifier = Modifier.size(56.dp).clip(CircleShape).background(Color(0xFF2C2C2C)).clickable { avatarPicker.launch("image/*") },
                             contentAlignment = Alignment.Center
                         ) {
                             if (userPhoto.isNotBlank()) {
@@ -1044,29 +1060,28 @@ fun PublicProfileScreen(
                     }
 
                     EditRowItem("Nickname", { showNameScreen = true }) {
-                        Text(userName.ifBlank { "Enter name" }, color = Color(0xFF6B7280), fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Icon(Icons.Default.ChevronRight, null, tint = Color(0xFF9CA3AF), modifier = Modifier.size(16.dp))
+                        Text(userName.ifBlank { "Enter name" }, color = Color.White, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Icon(Icons.Default.ChevronRight, null, tint = Color.LightGray, modifier = Modifier.size(16.dp))
                     }
 
                     EditRowItem("Age", { showAgeScreen = true }) {
-                        Text(userAge.toString(), color = Color(0xFF6B7280), fontSize = 14.sp)
-                        Icon(Icons.Default.ChevronRight, null, tint = Color(0xFF9CA3AF), modifier = Modifier.size(16.dp))
+                        Text(userAge.toString(), color = Color.White, fontSize = 14.sp)
+                        Icon(Icons.Default.ChevronRight, null, tint = Color.LightGray, modifier = Modifier.size(16.dp))
                     }
 
-                    // Edit Background Photos
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("Background (${coverPhotos.size}/4)", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Color(0xFF374151))
+                        Text("Background (${coverPhotos.size}/4)", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Color.LightGray)
                         Row(
                             modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             if (coverPhotos.size < 4) {
                                 Box(
-                                    modifier = Modifier.requiredSize(64.dp).clip(RoundedCornerShape(12.dp)).background(Color(0xFFF3F4F6)),
+                                    modifier = Modifier.requiredSize(64.dp).clip(RoundedCornerShape(12.dp)).background(Color(0xFF1E1E1E)),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Box(Modifier.fillMaxSize().clickable { backgroundPicker.launch("image/*") }, contentAlignment = Alignment.Center) {
-                                        Text("+", fontSize = 30.sp, color = Color(0xFFD1D5DB), fontWeight = FontWeight.Light)
+                                        Text("+", fontSize = 30.sp, color = Color.Gray, fontWeight = FontWeight.Light)
                                     }
                                 }
                             }
@@ -1074,7 +1089,6 @@ fun PublicProfileScreen(
                                 Box(modifier = Modifier.requiredSize(64.dp)) {
                                     AsyncImage(model = photo, contentDescription = "Background", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(6.dp)))
                                     
-                                    // Cross Icon to Delete Background
                                     Box(
                                         modifier = Modifier
                                             .align(Alignment.TopEnd)
@@ -1105,24 +1119,23 @@ fun PublicProfileScreen(
                     }
 
                     EditRowItem("Bio", { showBioScreen = true }) {
-                        Text(userBio.ifBlank { "Add bio..." }, color = Color(0xFF6B7280), fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 180.dp))
-                        Icon(Icons.Default.ChevronRight, null, tint = Color(0xFF9CA3AF), modifier = Modifier.size(16.dp))
+                        Text(userBio.ifBlank { "Add bio..." }, color = Color.White, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 180.dp))
+                        Icon(Icons.Default.ChevronRight, null, tint = Color.LightGray, modifier = Modifier.size(16.dp))
                     }
 
-                    // Edit Album Photos
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("Album Photos (${albumImages.size}/4)", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Color(0xFF374151))
+                        Text("Album Photos (${albumImages.size}/4)", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Color.LightGray)
                         Row(
                             modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             if (albumImages.size < 4) {
                                 Box(
-                                    modifier = Modifier.requiredSize(64.dp).clip(RoundedCornerShape(12.dp)).background(Color(0xFFF3F4F6)),
+                                    modifier = Modifier.requiredSize(64.dp).clip(RoundedCornerShape(12.dp)).background(Color(0xFF1E1E1E)),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Box(Modifier.fillMaxSize().clickable { albumPicker.launch("image/*") }, contentAlignment = Alignment.Center) {
-                                        Text("+", fontSize = 30.sp, color = Color(0xFFD1D5DB), fontWeight = FontWeight.Light)
+                                        Text("+", fontSize = 30.sp, color = Color.Gray, fontWeight = FontWeight.Light)
                                     }
                                 }
                             }
@@ -1135,7 +1148,6 @@ fun PublicProfileScreen(
                                         modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(6.dp)).clickable { fullImageIndex = index }
                                     )
                                     
-                                    // Cross Icon to Delete Album Image
                                     Box(
                                         modifier = Modifier
                                             .align(Alignment.TopEnd)
@@ -1172,7 +1184,7 @@ fun PublicProfileScreen(
     if (showNameScreen) {
         ModalBottomSheet(
             onDismissRequest = { showNameScreen = false },
-            containerColor = Color.White,
+            containerColor = Color.Black, 
             shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp),
             dragHandle = null
         ) {
@@ -1188,9 +1200,9 @@ fun PublicProfileScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(onClick = { showNameScreen = false }, modifier = Modifier.size(24.dp)) { 
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color(0xFF374151)) 
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White) 
                     }
-                    Text("Nickname", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF111827))
+                    Text("Nickname", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
                     Spacer(modifier = Modifier.width(24.dp))
                 }
                 
@@ -1201,9 +1213,10 @@ fun PublicProfileScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp)
                         .clip(RoundedCornerShape(12.dp)),
+                    textStyle = TextStyle(color = Color.White, fontSize = 16.sp),
                     colors = TextFieldDefaults.colors(
-                        focusedContainerColor = Color(0xFFF3F4F6),
-                        unfocusedContainerColor = Color(0xFFF3F4F6),
+                        focusedContainerColor = Color(0xFF1F2937),
+                        unfocusedContainerColor = Color(0xFF1F2937),
                         focusedIndicatorColor = Color.Transparent,
                         unfocusedIndicatorColor = Color.Transparent,
                         disabledIndicatorColor = Color.Transparent
@@ -1226,7 +1239,7 @@ fun PublicProfileScreen(
     if (showBioScreen) {
         ModalBottomSheet(
             onDismissRequest = { showBioScreen = false },
-            containerColor = Color.White,
+            containerColor = Color.Black, 
             shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp),
             dragHandle = null
         ) {
@@ -1241,7 +1254,7 @@ fun PublicProfileScreen(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("Bio", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF111827))
+                    Text("Bio", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
                 }
                 
                 TextField(
@@ -1251,9 +1264,10 @@ fun PublicProfileScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp)
                         .height(150.dp),
+                    textStyle = TextStyle(color = Color.White, fontSize = 16.sp),
                     colors = TextFieldDefaults.colors(
-                        focusedContainerColor = Color(0xFFF3F4F6),
-                        unfocusedContainerColor = Color(0xFFF3F4F6),
+                        focusedContainerColor = Color(0xFF1F2937),
+                        unfocusedContainerColor = Color(0xFF1F2937),
                         focusedIndicatorColor = Color.Transparent,
                         unfocusedIndicatorColor = Color.Transparent,
                         disabledIndicatorColor = Color.Transparent
@@ -1277,7 +1291,7 @@ fun PublicProfileScreen(
     if (showAgeScreen) {
         ModalBottomSheet(
             onDismissRequest = { showAgeScreen = false }, 
-            containerColor = Color.White,
+            containerColor = Color.Black, 
             shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp),
             dragHandle = null
         ) {
@@ -1296,7 +1310,7 @@ fun PublicProfileScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text("Cancel", color = Color.Gray, modifier = Modifier.clickable { showAgeScreen = false })
-                    Text("Birthday", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                    Text("Birthday", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color.White)
                     Text(
                         "Confirm",
                         color = Color(0xFF1DC4E9),
@@ -1325,7 +1339,7 @@ fun PublicProfileScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(40.dp)
-                            .background(Color(0xFFF3F4F6))
+                            .background(Color(0xFF1F2937)) 
                     )
                     Row(
                         modifier = Modifier.fillMaxWidth(), 
@@ -1396,10 +1410,41 @@ fun PublicProfileScreen(
 // --- HELPER COMPOSABLES ---
 
 @Composable
+fun EmptySectionCard(
+    iconPath: String,
+    text: String,
+    profileAsset: (String) -> String
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(72.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color.White.copy(alpha = 0.1f))
+            .padding(horizontal = 16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        AsyncImage(
+            model = profileAsset(iconPath),
+            contentDescription = text,
+            contentScale = ContentScale.Fit,
+            colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) }),
+            modifier = Modifier.size(36.dp)
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        Text(
+            text = text,
+            color = Color.LightGray,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Medium
+        )
+    }
+}
+
+@Composable
 fun InRoomAnimatedEqualizerIcon(modifier: Modifier = Modifier) {
     val infiniteTransition = rememberInfiniteTransition()
     
-    // Bar 1 animates from 0.4 to 1.0 of height
     val bar1Height by infiniteTransition.animateFloat(
         initialValue = 0.4f,
         targetValue = 1f,
@@ -1410,7 +1455,6 @@ fun InRoomAnimatedEqualizerIcon(modifier: Modifier = Modifier) {
         label = "bar1"
     )
     
-    // Bar 2 animates from 1.0 to 0.3 of height (different timing)
     val bar2Height by infiniteTransition.animateFloat(
         initialValue = 1f,
         targetValue = 0.3f,
@@ -1421,7 +1465,6 @@ fun InRoomAnimatedEqualizerIcon(modifier: Modifier = Modifier) {
         label = "bar2"
     )
     
-    // Bar 3 animates from 0.5 to 0.9 of height (different timing)
     val bar3Height by infiniteTransition.animateFloat(
         initialValue = 0.5f,
         targetValue = 0.9f,
@@ -1437,7 +1480,6 @@ fun InRoomAnimatedEqualizerIcon(modifier: Modifier = Modifier) {
         val spacing = size.width * 0.17f
         val corner = CornerRadius(barWidth / 2, barWidth / 2)
         
-        // Draw Bar 1
         val h1 = size.height * bar1Height
         drawRoundRect(
             color = Color.White,
@@ -1446,7 +1488,6 @@ fun InRoomAnimatedEqualizerIcon(modifier: Modifier = Modifier) {
             cornerRadius = corner
         )
         
-        // Draw Bar 2
         val h2 = size.height * bar2Height
         drawRoundRect(
             color = Color.White,
@@ -1455,7 +1496,6 @@ fun InRoomAnimatedEqualizerIcon(modifier: Modifier = Modifier) {
             cornerRadius = corner
         )
         
-        // Draw Bar 3
         val h3 = size.height * bar3Height
         drawRoundRect(
             color = Color.White,
@@ -1512,7 +1552,7 @@ fun <T> WheelPicker(
                         Text(
                             text = item.toString(),
                             fontSize = if (isSelected) 20.sp else 16.sp,
-                            color = if (isSelected) Color(0xFF111827) else Color.Gray,
+                            color = if (isSelected) Color.White else Color.Gray, 
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                         )
                     }
@@ -1574,9 +1614,9 @@ private fun RealProfileChatIcon() {
 @Composable
 fun SectionHeader(title: String, subtitle: String = "") {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-        Text(title, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1F2937))
+        Text(title, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.White) 
         if (subtitle.isNotEmpty()) {
-            Text(subtitle, fontSize = 12.sp, color = Color.Gray)
+            Text(subtitle, fontSize = 12.sp, color = Color.LightGray)
         }
     }
 }
@@ -1591,7 +1631,7 @@ fun EditRowItem(title: String, onClick: () -> Unit, content: @Composable () -> U
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(title, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Color.DarkGray)
+        Text(title, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Color.LightGray) 
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             content()
         }
