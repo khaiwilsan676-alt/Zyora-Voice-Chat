@@ -768,3 +768,12 @@ Current documentation does not certify that all historical features are build-, 
 - Switched the banner artwork to `ContentScale.Fit` so the source image is not cropped; added only a subtle warm edge blend. Removed the countdown circle border.
 - Restyled GO as a smaller brown/gold raised button and shifted it slightly right.
 - Verification: source committed on a focused branch. Native APK build and device appearance remain unverified. The room-side Lucky Bag reveal/claim/Confirm flow and authoritative wallet credit timing were not changed in this commit and still require a separate end-to-end fix/test.
+
+
+## 2026-11-13 — Lucky Bag Confirm-gated wallet credit and room placement
+- The received Lucky Bag artwork now occupies its own right-aligned row immediately before the room side-banner column.
+- Tapping Open reserves a per-user reward and opens the reward card; the claim endpoint does not change wallet coins.
+- Coins are credited only by the explicit Confirm action through `POST /api/lucky-bag/confirm`.
+- Server credit uses an idempotency key scoped to bag + user, so retrying Confirm cannot credit the same reward twice. Wallet balance updates are broadcast after confirmation.
+- The confirmation card cannot be dismissed by tapping the backdrop; failed confirmation keeps the card visible and shows an error for retry.
+- Verification still required: backend deployment, native APK build, and multi-user/retry testing against MongoDB.
