@@ -155,6 +155,7 @@ interface UserRecord {
   role: string;
   image?: string;
   registerTime?: string | number;
+  lastLoginAt?: string | number;
 }
 
 const fallbackUsers: UserRecord[] = [];
@@ -986,7 +987,7 @@ export default function StaffPanel() {
             hurryId: String(u.accountId || u.accountNumber || u.displayAccountNumber || u.displayUserNumber || u["Account ID"] || u["Account Number"] || u.hurryId || u.zyoraId || u.publicUserId || u.id || u.uid || u.appLongId || u._id || '—'),
             email: u.email || u.gmail || u.emailPhone || '—',
             role: u.role || 'NORMAL',
-            registerTime: u.registerTime || u.registeredAt || u.registrationTime || u.createdAt || u.created_at || '',
+            lastLoginAt: u.lastLoginAt || u.lastLoginAtISO || u.lastLogin || u.lastLoginTime || '',
             image: [u.image, u.dp, u.photo, u.photoURL, u.photoUrl, u.avatar, u.avatarUrl, u.profileImage, u.profileImageUrl, u.profile_image, u.imageUrl, u.picture, u.profile?.image, u.profile?.avatar, u.profile?.photo, u.userData?.image, u.userData?.avatar].find((value: any) => typeof value === 'string' && value.trim() && value.trim() !== 'null' && value.trim() !== 'undefined')?.trim() || ''
           }));
 
@@ -1226,7 +1227,7 @@ export default function StaffPanel() {
                         <th className="py-4 px-2">User ID</th>
                         <th className="py-4 px-2">Email</th>
                         <th className="py-4 px-2">Role</th>
-                        <th className="py-4 px-2">Register Time</th>
+                        <th className="py-4 px-2">Last Login</th>
                         <th className="py-4 pr-4 text-right">Actions</th>
                       </tr>
                     </thead>
@@ -1285,7 +1286,7 @@ export default function StaffPanel() {
                           </td>
                           <td className="py-3 px-2">
                             <span className="text-xs font-semibold text-slate-600 whitespace-nowrap">
-                              {u.registerTime && !Number.isNaN(new Date(u.registerTime).getTime()) ? new Date(u.registerTime).toLocaleString() : '—'}
+                              {u.lastLoginAt && !Number.isNaN(new Date(typeof u.lastLoginAt === 'number' && u.lastLoginAt < 100000000000 ? u.lastLoginAt * 1000 : u.lastLoginAt).getTime()) ? new Date(typeof u.lastLoginAt === 'number' && u.lastLoginAt < 100000000000 ? u.lastLoginAt * 1000 : u.lastLoginAt).toLocaleString() : 'Never logged in'}
                             </span>
                           </td>
                           <td className="py-3 pr-4 text-right">
