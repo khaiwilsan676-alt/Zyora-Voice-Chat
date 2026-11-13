@@ -31,7 +31,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -1957,6 +1961,19 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                         contentDescription = "Lucky Bag Sent",
                         modifier = Modifier
                             .size(62.dp)
+                            .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                            .drawWithCache {
+                                val edgeFade = Brush.horizontalGradient(
+                                    0f to Color.Transparent,
+                                    0.12f to Color.White,
+                                    0.88f to Color.White,
+                                    1f to Color.Transparent
+                                )
+                                onDrawWithContent {
+                                    drawContent()
+                                    drawRect(edgeFade, blendMode = BlendMode.DstIn)
+                                }
+                            }
                             .clickable {
                                 luckyBagClaimError = null
                                 showLuckyBagCenterReveal = true
