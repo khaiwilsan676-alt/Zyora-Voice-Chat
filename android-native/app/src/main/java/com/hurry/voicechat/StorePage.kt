@@ -1020,7 +1020,8 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                                     topFade = topFadeVal,
                                     bottomFade = bottomFadeVal,
                                     removeGreenScreen = isV1,
-                                    mute = item.id == "a8"
+                                    mute = item.id == "a8",
+                                    loop = item.tab != "Vehicle"
                                 )
                             } else {
                                 AsyncImage(model = StoreAssetBase + source, contentDescription = item.name, modifier = Modifier.fillMaxWidth())
@@ -1185,9 +1186,9 @@ fun StoreVideoPreview(
                     val digest = MessageDigest.getInstance("SHA-256")
                         .digest(url.toByteArray())
                         .joinToString("") { "%02x".format(it) }
-                    val cachedFile = File(context.cacheDir, "avatar-frame-$digest.mp4")
+                    val cachedFile = File(context.filesDir, "store-video-$digest.mp4")
                     if (!cachedFile.exists() || cachedFile.length() <= 0L) {
-                        val tempFile = File(context.cacheDir, "avatar-frame-$digest.tmp")
+                        val tempFile = File(context.filesDir, "store-video-$digest.tmp")
                         val connection = URL(url).openConnection().apply {
                             connectTimeout = 15000
                             readTimeout = 30000
@@ -1293,7 +1294,8 @@ fun StoreVideoPreview(
                                         true
                                     } else false
                                 }
-                                mediaPlayer.prepareAsync()
+                                // Register listeners before prepareAsync so cached clips cannot
+                                // finish preparation before their callback is attached.
                                 mediaPlayer.setOnPreparedListener {
                                     if (mute) {
                                         it.setVolume(0f, 0f)
@@ -1304,6 +1306,7 @@ fun StoreVideoPreview(
                                         isVideoReady = true
                                     }
                                 }
+                                mediaPlayer.prepareAsync()
                             } catch (e: Exception) { e.printStackTrace() }
                         }
                         override fun onSurfaceTextureSizeChanged(surface: SurfaceTexture, width: Int, height: Int) {}
