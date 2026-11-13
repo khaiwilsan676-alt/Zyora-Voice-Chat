@@ -1662,7 +1662,7 @@ app.post("/api/seller/transfer", async (req, res) => {
     const senderId = String(req.body?.senderId || "").trim();
     const recipientAccountId = String(req.body?.recipientAccountId || "").trim();
     const amount = Number(req.body?.amount);
-    if (!senderId || !/^\\d{4,20}$/.test(recipientAccountId) || !Number.isSafeInteger(amount) || amount <= 0 || !transferId || transferId.length > 100) {
+    if (!senderId || !/^\d{4,20}$/.test(recipientAccountId) || !Number.isSafeInteger(amount) || amount <= 0 || !transferId || transferId.length > 100) {
       return res.status(400).json({ error: "Valid user ID and coin amount are required" });
     }
     const transfers = db.collection("sellerCoinTransfers");
