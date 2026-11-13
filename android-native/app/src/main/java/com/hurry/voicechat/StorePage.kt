@@ -870,15 +870,22 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
 
     purchaseMessage?.let { message ->
         LaunchedEffect(message) { delay(2500); if (purchaseMessage == message) purchaseMessage = null }
-        Dialog(onDismissRequest = { purchaseMessage = null }) {
-            Box(
-                Modifier.fillMaxWidth().padding(horizontal = 48.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(Color.Black.copy(alpha = 0.70f))
-                    .padding(horizontal = 22.dp, vertical = 17.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(message, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
+        if (message == "Using" || message == "Removed" || message == "Gift Sended") {
+            Box(Modifier.fillMaxWidth().padding(12.dp), contentAlignment = Alignment.BottomCenter) {
+                Text(message, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.background(Color(0xFF242424), RoundedCornerShape(8.dp)).padding(horizontal = 14.dp, vertical = 9.dp))
+            }
+        } else {
+            Dialog(onDismissRequest = { purchaseMessage = null }) {
+                Box(
+                    Modifier.fillMaxWidth().padding(horizontal = 48.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color.Black.copy(alpha = 0.70f))
+                        .padding(horizontal = 22.dp, vertical = 17.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(message, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
+                }
             }
         }
     }
