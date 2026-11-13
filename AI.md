@@ -785,3 +785,10 @@ Current documentation does not certify that all historical features are build-, 
 - MediaPlayer and its output Surface now share one idempotent cleanup path. Surface destruction and Compose view release can no longer release the same player twice or leave the output Surface unreleased.
 - The room vehicle preview continues to use the same cached file and existing Socket.IO room-entry event; video bytes are not sent through Socket.IO.
 - Verification status: source changes committed. A successful Native Build 2 APK run and on-device playback test are still required before calling this fully verified.
+
+
+## 2026-11-13 — Public Profile owned Vehicle and Frame details
+- Public Profile Vehicle and Frame sections now use the user's owned, unexpired Store inventory directly, showing catalogue images without wrapping cards or card backgrounds.
+- Both sections use three images per row, with remaining items continuing on the next row. Store star artwork appears below each image and the same day/hour expiry countdown style used in the Store Bag appears below the stars.
+- Vehicle showcase now includes the Store star row; both showcases update countdowns every second and remove items at expiry. Store purchase/equip behavior and unrelated profile UI remain unchanged.
+- Verification: GitHub source commits only; Native Build 2 and device visual verification remain pending.
