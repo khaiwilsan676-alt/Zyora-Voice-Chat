@@ -256,22 +256,8 @@ fun SellerCenter(
                             isChecking = true; selectedUser = null; statusMessage = ""
                             runCatching {
                                 val encoded = URLEncoder.encode(targetId, "UTF-8")
-                                // Resolve the exact account ID through the server's canonical Seller lookup.
-                                val search = sellerRequest("/api/seller/user/$encoded")
-                                val found = search.optJSONObject("user")
-                                    ?: throw IllegalStateException("User not found")
-                                val foundId = sequenceOf("accountId", "accountNumber", "displayAccountNumber", "displayUserNumber", "Account ID", "Account Number", "hurryId", "zyoraId", "publicUserId", "id", "uid", "appLongId", "_id")
-                                    .map { found.optString(it, "").trim() }
-                                    .firstOrNull { it.isNotBlank() && it != "null" && it != "undefined" }
-                                    ?: targetId
-                                selectedUser = SellerUser(
-                                    uid = found.optString("uid", found.optString("id", found.optString("_id"))),
-                                    accountId = foundId,
-                                    name = found.optString("name", found.optString("displayName", found.optString("userName", "User"))),
-                                    avatar = sequenceOf("image", "dp", "photo", "photoURL", "photoUrl", "avatar", "avatarUrl", "profileImage", "profileImageUrl", "profile_image", "imageUrl", "picture")
-                                        .map { found.optString(it, "") }.firstOrNull { it.isNotBlank() && it != "null" && it != "undefined" }.orEmpty(),
-                                    idImage = found.optString("idImage", found.optString("idCardImage"))
-                                )
+                                val found = sellerRequest("/api/seller/user/$encoded").getJSONObject("user")
+                                selectedUser = sellerUser(found)
                             }.onFailure { statusMessage = it.message ?: "User not found" }
                             isChecking = false
                         }
