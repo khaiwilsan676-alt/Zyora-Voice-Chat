@@ -6,19 +6,21 @@ import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import org.json.JSONObject
 
-internal class NativeIndexDatabase(context: Context) : SQLiteOpenHelper(context.applicationContext, "index.db", null, 5) {
+internal class NativeIndexDatabase(context: Context) : SQLiteOpenHelper(context.applicationContext, "index.db", null, 6) {
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL("CREATE TABLE IF NOT EXISTS chat_cache (chat_key TEXT PRIMARY KEY NOT NULL, payload TEXT NOT NULL, updated_at INTEGER NOT NULL)")
         db.execSQL("CREATE TABLE IF NOT EXISTS profile_cache (profile_key TEXT PRIMARY KEY NOT NULL, payload TEXT NOT NULL, updated_at INTEGER NOT NULL)")
         db.execSQL("CREATE TABLE IF NOT EXISTS conversation_cache (conversation_key TEXT PRIMARY KEY NOT NULL, peer_id TEXT NOT NULL, payload TEXT NOT NULL, updated_at INTEGER NOT NULL)")
         db.execSQL("CREATE TABLE IF NOT EXISTS voice_cache (message_id TEXT PRIMARY KEY NOT NULL, peer_id TEXT NOT NULL, audio BLOB NOT NULL, duration_seconds INTEGER NOT NULL, updated_at INTEGER NOT NULL)")
         db.execSQL("CREATE TABLE IF NOT EXISTS room_lock_cache (room_id TEXT PRIMARY KEY NOT NULL, is_locked INTEGER NOT NULL, room_password TEXT NOT NULL, updated_at INTEGER NOT NULL)")
+        db.execSQL("CREATE TABLE IF NOT EXISTS lucky_bag_transactions (transaction_id TEXT PRIMARY KEY NOT NULL, user_id TEXT NOT NULL, type TEXT NOT NULL, amount INTEGER NOT NULL, bag_id TEXT NOT NULL, created_at INTEGER NOT NULL)")
     }
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
         if (oldVersion < 2) db.execSQL("CREATE TABLE IF NOT EXISTS profile_cache (profile_key TEXT PRIMARY KEY NOT NULL, payload TEXT NOT NULL, updated_at INTEGER NOT NULL)")
         if (oldVersion < 3) db.execSQL("CREATE TABLE IF NOT EXISTS conversation_cache (conversation_key TEXT PRIMARY KEY NOT NULL, peer_id TEXT NOT NULL, payload TEXT NOT NULL, updated_at INTEGER NOT NULL)")
         if (oldVersion < 4) db.execSQL("CREATE TABLE IF NOT EXISTS voice_cache (message_id TEXT PRIMARY KEY NOT NULL, peer_id TEXT NOT NULL, audio BLOB NOT NULL, duration_seconds INTEGER NOT NULL, updated_at INTEGER NOT NULL)")
         if (oldVersion < 5) db.execSQL("CREATE TABLE IF NOT EXISTS room_lock_cache (room_id TEXT PRIMARY KEY NOT NULL, is_locked INTEGER NOT NULL, room_password TEXT NOT NULL, updated_at INTEGER NOT NULL)")
+        if (oldVersion < 6) db.execSQL("CREATE TABLE IF NOT EXISTS lucky_bag_transactions (transaction_id TEXT PRIMARY KEY NOT NULL, user_id TEXT NOT NULL, type TEXT NOT NULL, amount INTEGER NOT NULL, bag_id TEXT NOT NULL, created_at INTEGER NOT NULL)")
     }
     fun saveChat(key: String, payload: String) {
         val values = ContentValues()
@@ -90,6 +92,42 @@ internal class NativeIndexDatabase(context: Context) : SQLiteOpenHelper(context.
         readableDatabase.query("room_lock_cache", arrayOf("is_locked", "room_password"), "room_id=?", arrayOf(roomId), null, null, null).use { cursor ->
             return if (cursor.moveToFirst()) Pair(cursor.getInt(0) == 1, cursor.getString(1).orEmpty()) else null
         }
+    }
+
+    /** Lucky Bag history is device-local in index.db; it is never uploaded to MongoDB. */
+    fun saveLuckyBagTransaction(transactionId: String, userId: String, type: String, amount: Long, bagId: String, createdAt: Long) {
+        if (transactionId.isBlank() || userId.isBlank() || type.isBlank()) return
+        val values = ContentValues().apply {
+            put("transaction_id", transactionId)
+            put("user_id", userId)
+            put("type", type)
+            put("amount", amount)
+            put("bag_id", bagId)
+            put("created_at", createdAt)
+        }
+        writableDatabase.insertWithOnConflict("lucky_bag_transactions", null, values, SQLiteDatabase.CONFLICT_IGNORE)
+    }
+
+    fun loadLuckyBagTransactions(userId: String, limit: Int = 100): List<JSONObject> {
+        if (userId.isBlank()) return emptyList()
+        val result = mutableListOf<JSONObject>()
+        readableDatabase.query(
+            "lucky_bag_transactions",
+            arrayOf("transaction_id", "user_id", "type", "amount", "bag_id", "created_at"),
+            "user_id=?",
+            arrayOf(userId),
+            null, null, "created_at DESC", limit.coerceIn(1, 500).toString()
+        ).use { cursor ->
+            while (cursor.moveToNext()) {
+                result += JSONObject().put("id", cursor.getString(0))
+                    .put("userId", cursor.getString(1))
+                    .put("type", cursor.getString(2))
+                    .put("amount", cursor.getLong(3))
+                    .put("bagId", cursor.getString(4))
+                    .put("createdAt", cursor.getLong(5))
+            }
+        }
+        return result
     }
 
     fun saveProfile(key: String, payload: JSONObject) {
