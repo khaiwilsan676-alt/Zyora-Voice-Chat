@@ -384,7 +384,7 @@ fun NativeOwnedVehicleShowcase(userId: String, onDataLoaded: ((Boolean) -> Unit)
                 if (code !in 200..299) throw IllegalStateException("Inventory unavailable")
                 val items = json.optJSONArray("items") ?: JSONArray()
                 writeNativeStoreInventoryCache(appContext, userId, items)
-                (0 until items.length()).map { it.getJSONObject(it) }
+                (0 until items.length()).map { items.getJSONObject(it) }
                     .filter { it.optString("tab") == "Vehicle" && it.optLong("expiresAt") > System.currentTimeMillis() }
             }.onSuccess { vehicles = it; onDataLoaded?.invoke(it.isNotEmpty()) }
         }
