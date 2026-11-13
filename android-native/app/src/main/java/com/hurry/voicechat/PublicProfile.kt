@@ -619,10 +619,12 @@ fun PublicProfileScreen(
                     // Vehicle
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         SectionHeader("Vehicle")
-                        EmptySectionCard(
-                            iconPath = "/public/IMG_20261113_121837.png",
-                            text = "No vehicle yet",
-                            profileAsset = profileAsset
+                        NativeOwnedVehicleShowcase(
+                            userId = targetUser?.accountId?.takeIf { it.isNotBlank() }
+                                ?: targetUser?.displayAccountNumber?.takeIf { it.isNotBlank() }
+                                ?: targetUser?.id?.takeIf { it.isNotBlank() }
+                                ?: targetUser?.uid?.takeIf { it.isNotBlank() }
+                                ?: currentUserId
                         )
                     }
 
@@ -643,10 +645,12 @@ fun PublicProfileScreen(
                     // Frame
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         SectionHeader("Frame")
-                        EmptySectionCard(
-                            iconPath = "/public/IMG_20261113_121755.png",
-                            text = "No Frame yet",
-                            profileAsset = profileAsset
+                        NativeOwnedFrameShowcase(
+                            userId = targetUser?.accountId?.takeIf { it.isNotBlank() }
+                                ?: targetUser?.displayAccountNumber?.takeIf { it.isNotBlank() }
+                                ?: targetUser?.id?.takeIf { it.isNotBlank() }
+                                ?: targetUser?.uid?.takeIf { it.isNotBlank() }
+                                ?: currentUserId
                         )
                     }
 
