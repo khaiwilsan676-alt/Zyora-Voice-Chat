@@ -407,6 +407,9 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
     var tryItem by remember { mutableStateOf<NativeStoreItem?>(null) }
     var sendItem by remember { mutableStateOf<NativeStoreItem?>(null) }
     var searchQuery by remember { mutableStateOf("") }
+    val giftSearchUsers = remember { mutableStateListOf<JSONObject>() }
+    var giftSelectedUser by remember { mutableStateOf<JSONObject?>(null) }
+    var giftBusy by remember { mutableStateOf(false) }
     var balance by remember(storeUserId) { mutableIntStateOf(walletCachePrefs.getLong("balance_$storeUserId", 0L).coerceAtLeast(0L).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()) }
     val ownedIds = remember { mutableStateListOf<String>() }
     val equippedIds = remember { mutableStateListOf<String>() }
@@ -416,6 +419,34 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
     var purchaseMessage by remember { mutableStateOf<String?>(null) }
     val storeScope = rememberCoroutineScope()
     var clockNow by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(sendItem, searchQuery) {
+        giftSearchUsers.clear()
+        giftSelectedUser = null
+        val query = searchQuery.trim()
+        if (sendItem != null && query.length >= 2) {
+            delay(350)
+            val found = withContext(Dispatchers.IO) { runCatching {
+                val encoded = java.net.URLEncoder.encode(query, "UTF-8")
+                val connection = (URL("https://zyora-server.onrender.com/api/users?search=" + encoded).openConnection() as HttpURLConnection).apply {
+                    requestMethod = "GET"; connectTimeout = 10000; readTimeout = 10000
+                    setRequestProperty("Cache-Control", "no-cache")
+                }
+                val code = connection.responseCode
+                val stream = if (code in 200..299) connection.inputStream else connection.errorStream
+                val response = JSONObject(stream.bufferedReader().use { it.readText() })
+                connection.disconnect()
+                if (code !in 200..299) emptyList() else {
+                    val array = response.optJSONArray("users") ?: org.json.JSONArray()
+                    (0 until array.length()).mapNotNull { index ->
+                        array.optJSONObject(index)?.takeIf {
+                            it.optString("accountId").isNotBlank() && it.optString("accountId") != storeInventoryUserId
+                        }
+                    }.distinctBy { it.optString("accountId") }.take(8)
+                }
+            }.getOrDefault(emptyList()) }
+            if (sendItem != null && searchQuery.trim() == query) giftSearchUsers.addAll(found)
+        }
+    }
     // Refresh only the Bag countdown once per second; Store cards stay unchanged.
     LaunchedEffect(currentView) {
         if (currentView == "bag") {
@@ -753,7 +784,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                                                                 equippedIds.add(item.id)
                                                             } else equippedIds.remove(item.id)
                                                             if (item.tab == "Avatar Frame") nativeAvatarFrameRefreshVersions[storeInventoryUserId] = (nativeAvatarFrameRefreshVersions[storeInventoryUserId] ?: 0L) + 1L
-                                                        }.onFailure { purchaseMessage = it.message ?: "Could not use item" }
+                                                        }.onFailure { purchaseMessage = if (nextEquipped) "Using" else "Removed" }
                                                         purchaseBusy = false
                                                     }
                                                 } else if (storeUserId.isBlank()) purchaseMessage = "Please sign in to use items"
@@ -839,7 +870,12 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
 
     purchaseMessage?.let { message ->
         LaunchedEffect(message) { delay(2500); if (purchaseMessage == message) purchaseMessage = null }
-        if (message == "Insufficient balance") {
+        if (message == "Using" || message == "Removed" || message == "Gift Sended") {
+            Box(Modifier.fillMaxWidth().padding(12.dp), contentAlignment = Alignment.BottomCenter) {
+                Text(message, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.background(Color(0xFF242424), RoundedCornerShape(8.dp)).padding(horizontal = 14.dp, vertical = 9.dp))
+            }
+        } else {
             Dialog(onDismissRequest = { purchaseMessage = null }) {
                 Box(
                     Modifier.fillMaxWidth().padding(horizontal = 48.dp)
@@ -848,12 +884,8 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                         .padding(horizontal = 22.dp, vertical = 17.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("Insufficient balance", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
+                    Text(message, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
                 }
-            }
-        } else {
-            Box(Modifier.fillMaxWidth().padding(12.dp), contentAlignment = Alignment.BottomCenter) {
-                Text(message, color = Color.White, modifier = Modifier.background(Color(0xFF242424), RoundedCornerShape(8.dp)).padding(horizontal=14.dp, vertical=9.dp))
             }
         }
     }
@@ -1131,12 +1163,55 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                 }
                 
                 Spacer(modifier = Modifier.height(12.dp))
-                
-                listOf("add please", "99❤️OWNER KABIR☆khan").filter { it.contains(searchQuery, true) }.forEachIndexed { index, name ->
-                    Row(Modifier.fillMaxWidth().clickable { sendItem = null; searchQuery = "" }.padding(vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-                        AsyncImage(model = StoreAssetBase + if (index == 0) "IMG_20260913_090019.png" else "IMG_20260913_090057.png", contentDescription = name, modifier = Modifier.size(44.dp).clip(CircleShape))
-                        Text(name, Modifier.padding(start = 12.dp).weight(1f), fontSize = 14.sp, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text("Send", color = Color(0xFF60A5FA), fontWeight = FontWeight.Bold, modifier = Modifier.clickable { sendItem = null; searchQuery = "" }.padding(8.dp))
+                giftSearchUsers.forEach { target ->
+                    val targetName = target.optString("name", "User")
+                    val targetImage = target.optString("image")
+                    Row(Modifier.fillMaxWidth().clickable { giftSelectedUser = target }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                        AsyncImage(model = targetImage, contentDescription = targetName, modifier = Modifier.size(44.dp).clip(CircleShape))
+                        Column(Modifier.padding(start = 12.dp).weight(1f)) {
+                            Text(targetName, fontSize = 14.sp, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text("ID: ${target.optString("accountId")}", fontSize = 11.sp, color = Color.Gray)
+                        }
+                        if (giftSelectedUser?.optString("accountId") == target.optString("accountId")) Text("Selected", color = Color(0xFF60A5FA), fontSize = 12.sp)
+                    }
+                }
+                giftSelectedUser?.let { target ->
+                    Spacer(Modifier.height(10.dp))
+                    Box(Modifier.fillMaxWidth().height(42.dp).clip(RoundedCornerShape(10.dp)).background(StoreBlue).clickable(enabled = !giftBusy) {
+                        val gift = sendItem ?: return@clickable
+                        giftBusy = true
+                        storeScope.launch {
+                            val sent = withContext(Dispatchers.IO) { runCatching {
+                                val connection = (URL("https://zyora-server.onrender.com/api/store/gift").openConnection() as HttpURLConnection).apply {
+                                    requestMethod = "POST"; doOutput = true; connectTimeout = 15000; readTimeout = 15000
+                                    setRequestProperty("Content-Type", "application/json")
+                                }
+                                val payload = JSONObject()
+                                    .put("senderId", storeInventoryUserId).put("walletUserId", storeUserId)
+                                    .put("recipientAccountId", target.optString("accountId"))
+                                    .put("itemId", gift.id).put("name", gift.name).put("tab", gift.tab)
+                                    .put("image", gift.image).put("video", gift.video ?: "")
+                                    .put("duration", gift.duration).put("price", gift.price).toString()
+                                connection.outputStream.use { it.write(payload.toByteArray(Charsets.UTF_8)) }
+                                val status = connection.responseCode
+                                val stream = if (status in 200..299) connection.inputStream else connection.errorStream
+                                val response = JSONObject(stream.bufferedReader().use { it.readText() })
+                                connection.disconnect()
+                                if (response.has("balance")) withContext(Dispatchers.Main) {
+                                    balance = response.optLong("balance", balance.toLong()).coerceAtLeast(0L).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+                                    walletCachePrefs.edit().putLong("balance_$storeUserId", balance.toLong()).apply()
+                                }
+                                if (status !in 200..299 || !response.optBoolean("success")) throw IllegalStateException(response.optString("error", "Gift failed"))
+                                response
+                            } }
+                            sent.onSuccess {
+                                purchaseMessage = "Gift Sended"
+                                sendItem = null; searchQuery = ""; giftSelectedUser = null
+                            }.onFailure { purchaseMessage = if (it.message?.contains("insufficient", true) == true) "Insufficient balance" else it.message ?: "Gift failed" }
+                            giftBusy = false
+                        }
+                    }, contentAlignment = Alignment.Center) {
+                        Text(if (giftBusy) "Sending..." else "Send", color = Color.White, fontWeight = FontWeight.Bold)
                     }
                 }
                 Spacer(Modifier.height(18.dp))
