@@ -368,8 +368,18 @@ fun PublicProfileScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
     ) {
+        // --- NEW IMAGE BACKGROUND LOGIC ---
+        val isFemaleBg = userGender.trim().equals("female", ignoreCase = true)
+        val defaultBg = if (isFemaleBg) "/public/file_000000006e4c8246a095cd0444c8efe6.png" else "/public/file_0000000082708246a5d469a2bfd8d637.png"
+        
+        AsyncImage(
+            model = profileAsset(defaultBg),
+            contentDescription = "Background",
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize()
+        )
+
         LazyColumn(
             state = listState, // LIST STATE ATTACHED HERE
             modifier = Modifier.fillMaxSize(),
@@ -381,7 +391,6 @@ fun PublicProfileScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(350.dp)
-                        .background(Color(0xFF1F2937))
                 ) {
                     if (coverPhotos.isNotEmpty()) {
                         val pagerState = rememberPagerState(pageCount = { coverPhotos.size })
@@ -466,7 +475,7 @@ fun PublicProfileScreen(
                             clip = true
                         }
                         .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
-                        .background(Color.Black)
+                        .background(Color.Transparent) // Black background removed here!
                         .padding(horizontal = 16.dp, vertical = 16.dp)
                         .padding(top = 4.dp)
                 ) {
@@ -541,8 +550,7 @@ fun PublicProfileScreen(
                                 modifier = Modifier.padding(end = 6.dp) 
                             )
                         }
-
-                        AsyncImage(model = profileAsset("/1785486414756.png"), contentDescription = "Profile badge", contentScale = ContentScale.Fit, modifier = Modifier.height(24.dp).widthIn(max = 52.dp))
+                        // Lv.1 ke side wali image hata di gayi hai!
                     }
 
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 12.dp)) {
@@ -619,14 +627,6 @@ fun PublicProfileScreen(
                     // Vehicle
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         SectionHeader("Vehicle")
-                        // NativeOwnedVehicleShowcase(...) logic preserved below but replaced visually with the default state you requested
-                        /* 
-                        NativeOwnedVehicleShowcase(
-                            userId = targetUser?.accountId?.takeIf { it.isNotBlank() }
-                                ?: targetUser?.uid?.takeIf { it.isNotBlank() }
-                                ?: targetUser?.id.orEmpty()
-                        )
-                        */
                         EmptySectionCard(
                             iconPath = "/public/IMG_20261113_121837.png",
                             text = "No vehicle yet",
@@ -651,14 +651,6 @@ fun PublicProfileScreen(
                     // Frame
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         SectionHeader("Frame")
-                        // NativeOwnedFrameShowcase(...) logic preserved below but replaced visually with the default state you requested
-                        /*
-                        NativeOwnedFrameShowcase(
-                            userId = targetUser?.accountId?.takeIf { it.isNotBlank() }
-                                ?: targetUser?.uid?.takeIf { it.isNotBlank() }
-                                ?: targetUser?.id.orEmpty()
-                        )
-                        */
                         EmptySectionCard(
                             iconPath = "/public/IMG_20261113_121755.png",
                             text = "No Frame yet",
@@ -689,7 +681,7 @@ fun PublicProfileScreen(
             }
         }
 
-        // --- NEW TOP BAR LOGIC ADDED HERE (Scroll hone par Black ho jayega) ---
+        // --- NEW TOP BAR LOGIC ADDED HERE (Scroll hone par Black ho jayega aur Name Center mein ayega) ---
         Row(
             modifier = Modifier
                 .align(Alignment.TopCenter)
@@ -697,11 +689,28 @@ fun PublicProfileScreen(
                 .background(topBarColor)
                 .windowInsetsPadding(WindowInsets.statusBars)
                 .padding(horizontal = 12.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = onBack) {
                 Icon(Icons.Default.ArrowBack, "Back", tint = Color.White)
             }
+            
+            AnimatedVisibility(
+                visible = isScrolled,
+                enter = fadeIn(),
+                exit = fadeOut()
+            ) {
+                Text(
+                    text = userName,
+                    color = Color.White,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            
             if (isOtherUser) {
                 IconButton(onClick = { showActionSheet = true }) {
                     LucidePublicProfileIcon(warning = true, modifier = Modifier.size(24.dp))
@@ -720,7 +729,7 @@ fun PublicProfileScreen(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
-                    .background(Color.Black.copy(alpha = 0.95f)) 
+                    .background(Color.Transparent) // Black card background hata diya hai!
                     .padding(horizontal = 24.dp, vertical = 12.dp)
                     .windowInsetsPadding(WindowInsets.navigationBars),
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
