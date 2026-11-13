@@ -809,3 +809,9 @@ Current documentation does not certify that all historical features are build-, 
 - Successful Buy and Equip/Remove operations update the local inventory cache immediately; cache refresh merges still-valid entries so an older in-flight inventory response cannot hide a just-purchased item.
 - `NativeOwnedFrameShowcase`, `NativeOwnedVehicleShowcase`, and `NativeAvatarFrameOverlay` now render cached owned/equipped items first and refresh from the server without clearing visible content while loading. Expired items remain filtered by their server expiry timestamp.
 - No Store/profile/room/seat UI layout, colors, dimensions, or purchase/equip rules changed. Native build and device verification remain pending.
+
+
+## 2026-11-14 — Owner Seller Center user activation
+- Added a separate `SellerCenterUsers.tsx` screen under Owner Panel → User Center → Seller Center. It searches users through the existing `/api/users?q=` MongoDB search path and shows the matched user's avatar, name, and real account ID in a table.
+- Added an owner action endpoint that updates the existing profile `coinSellerTag` (and its legacy aliases) on the matched MongoDB user record. Public profiles already consume this profile flag to display the Coin Seller badge.
+- Removed the Seller Center shortcut from the Me page menu; unrelated Me page items and layouts remain unchanged.
