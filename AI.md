@@ -803,3 +803,9 @@ Current documentation does not certify that all historical features are build-, 
 ## Own public profile navigation and fans count (2026-11-13)
 - MeScreen.kt: the signed-in user's already-loaded Fans count is passed into the own Public Profile model so the profile can display the same count as the Me page.
 - The standalone top-right chevron shortcut was removed. Opening the signed-in user's Public Profile from Me is now done by tapping the avatar; other menu and stats navigation remain unchanged.
+
+## 2026-11-13 — Persistent Store inventory and avatar asset cache
+- `StorePage.kt`: cache unexpired owned inventory per account in app-private SharedPreferences so Store Bag ownership, equipped state, and expiry hydrate immediately before the server refresh.
+- Successful Buy and Equip/Remove operations update the local inventory cache immediately; cache refresh merges still-valid entries so an older in-flight inventory response cannot hide a just-purchased item.
+- `NativeOwnedFrameShowcase`, `NativeOwnedVehicleShowcase`, and `NativeAvatarFrameOverlay` now render cached owned/equipped items first and refresh from the server without clearing visible content while loading. Expired items remain filtered by their server expiry timestamp.
+- No Store/profile/room/seat UI layout, colors, dimensions, or purchase/equip rules changed. Native build and device verification remain pending.
