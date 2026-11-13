@@ -1454,10 +1454,6 @@ const luckyBags = () => {
   if (!db) throw new Error("GitHub storage is not connected");
   return db.collection("luckyBags");
 };
-const luckyBagTransactions = () => {
-  if (!db) throw new Error("GitHub storage is not connected");
-  return db.collection("luckyBagTransactions");
-};
 async function creditLuckyBagWallet(userId, amount) {
   await creditWallet(userId, amount);
 }
@@ -1470,10 +1466,8 @@ async function refundLuckyBag(bagId) {
   );
   if (!result.modifiedCount) return false;
   await creditLuckyBagWallet(bag.senderId, bag.amount);
-  await luckyBagTransactions().insertOne({
-    userId: bag.senderId, type: "lucky_bag_refund", amount: bag.amount,
-    bagId: bag.bagId, createdAt: Date.now()
-  });
+  const transaction = { id: `luckybag_refund:${bag.bagId}`, userId: bag.senderId, type: "lucky_bag_refund", amount: bag.amount, bagId: bag.bagId, createdAt: Date.now() };
+  io.emit("lucky_bag_transaction", transaction);
   io.emit("lucky_bag_refunded", { bagId: bag.bagId, senderId: bag.senderId, amount: bag.amount });
   return true;
 }
@@ -1694,11 +1688,11 @@ app.post("/api/lucky-bag/send", async (req, res) => {
     const bag = { bagId, senderId, senderName, senderImage, roomId, roomName, amount, recipients, claimedCount: 0, claimedTotal: 0, status: "open", createdAt: now, expiresAt: now + 5 * 60 * 1000 };
     try {
       await luckyBags().insertOne(bag);
-      await luckyBagTransactions().insertOne({ userId: senderId, type: "lucky_bag_send", amount: -amount, bagId, createdAt: now });
     } catch (err) {
       await creditLuckyBagWallet(senderId, amount);
       throw err;
     }
+    io.emit("lucky_bag_transaction", { id: `luckybag_send:${bagId}`, userId: senderId, type: "lucky_bag_send", amount: -amount, bagId, createdAt: now });
     io.emit("lucky_bag_banner", { bagId, senderId, senderName, senderImage, roomId, roomName, amount, recipients, expiresAt: bag.expiresAt });
     scheduleLuckyBagRefund(bag);
     res.json({ success: true, bagId, balance: await walletBalance(senderId), expiresAt: bag.expiresAt });
@@ -1775,7 +1769,7 @@ app.post("/api/lucky-bag/confirm", async (req, res) => {
       { $set: { "claims.$.status": "confirmed", "claims.$.confirmedAt": Date.now() } }
     );
     if (creditedNow) {
-      await luckyBagTransactions().insertOne({ userId, type: "lucky_bag_claim", amount, bagId, createdAt: Date.now() });
+      io.emit("lucky_bag_transaction", { id: `luckybag_claim:${bagId}:${userId}`, userId, type: "lucky_bag_claim", amount, bagId, createdAt: Date.now() });
       io.emit("lucky_bag_claimed", { bagId, userId, amount, claimedCount: bag.claimedCount || 1, recipients: bag.recipients });
     }
     const balance = await walletBalance(userId);
