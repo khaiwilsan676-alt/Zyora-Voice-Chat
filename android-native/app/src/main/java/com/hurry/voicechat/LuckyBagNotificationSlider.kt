@@ -120,17 +120,17 @@ fun LuckyBagNotificationSlider(currentUserId: String, onGoToRoom: (String, Strin
         ) {
             val item = banner
             if (item != null) {
-                // Original artwork is the notification surface itself: no card,
-                // rounded container, border, scrim, or separate background.
-                Box(Modifier.fillMaxWidth().height(76.dp)) {
+                // Modified Box: FillWidth ke liye default height hataya aur matchParentSize ka use kiya
+                Box(Modifier.fillMaxWidth().defaultMinSize(minHeight = 76.dp)) {
                     AsyncImage(
                         model = LUCKY_BAG_BANNER_IMAGE,
                         contentDescription = null,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Fit // Yahi change kiya hai bas (FillBounds ko hata ke Fit lagaya)
+                        modifier = Modifier.fillMaxWidth(),
+                        // Edge-to-edge fix: no crop, no stretch
+                        contentScale = ContentScale.FillWidth 
                     )
                     Row(
-                        Modifier.fillMaxSize().padding(start = 8.dp, end = 3.dp),
+                        Modifier.matchParentSize().padding(start = 8.dp, end = 3.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         AsyncImage(
@@ -259,8 +259,8 @@ fun LuckyBagOpenConfirmCards(
                     
                     Box(
                         modifier = Modifier
-                             // Open Button 6dp upar shift kar diya (-2.dp)
-                             .offset(y = (-2).dp)
+                             // Open Button 15dp aur upar shift kar diya (-17.dp total)
+                             .offset(y = (-17).dp)
                             .width(190.dp)
                             .height(72.dp)
                             .clip(RoundedCornerShape(50))
