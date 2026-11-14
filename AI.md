@@ -878,3 +878,10 @@ Current documentation does not certify that all historical features are build-, 
 - On successful credit, sends the recipient a private Zyora System message with the credited amount and “From Zyora official Team”. Online delivery uses Socket.IO; offline delivery uses the existing pending private-message queue when Redis is available.
 - Owner Panel transfer history remains in its existing browser IndexedDB store. Official Notifications now times out visibly if the Socket.IO acknowledgement never arrives rather than remaining stuck in Sending.
 - Verification: source changes committed; backend deployment and live account-to-account testing remain required.
+
+
+## 2026-11-14 — Owner Manage Users canonical list and cache
+- Owner Manage Users membership is sourced only from the MongoDB-backed `/api/users` list; the signed-in Owner Panel session is never inserted as a synthetic user.
+- Search now filters the already-loaded canonical list instead of merging search responses into state, preventing deleted MongoDB accounts from being resurrected by stale search results.
+- Added a short-lived 15-second in-memory snapshot to avoid repeated list requests in the same tab. The existing `owner_users_changed` Socket.IO event invalidates the snapshot and reloads the canonical list.
+- No Manage Users UI changes. Verification: source committed; production API/event behavior and browser testing remain pending.
