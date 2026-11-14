@@ -455,6 +455,9 @@ export default function StaffPanel() {
   const [selectedFeedback, setSelectedFeedback] = useState<any | null>(null);
   const [feedbackSearchQuery, setFeedbackSearchQuery] = useState('');
   const [selectedFeedbackTypeFilter, setSelectedFeedbackTypeFilter] = useState('All');
+  const [appliedFeedbackSearchQuery, setAppliedFeedbackSearchQuery] = useState('');
+  const [appliedFeedbackTypeFilter, setAppliedFeedbackTypeFilter] = useState('All');
+  const [feedbackPage, setFeedbackPage] = useState(1);
 
   const [supportChats, setSupportChats] = useState<any[]>([]);
 
@@ -1045,6 +1048,22 @@ export default function StaffPanel() {
   const filteredThemes = ALL_STORE_THEMES.filter(t =>
     !themeSearchQuery.trim() || t.name.toLowerCase().includes(themeSearchQuery.toLowerCase())
   );
+
+  const filteredFeedbacks = feedbacks.filter((fb) => {
+    const q = appliedFeedbackSearchQuery.trim().toLowerCase();
+    const matchesSearch = !q ||
+      (fb.userName || '').toLowerCase().includes(q) ||
+      (fb.userAccountId || '').toLowerCase().includes(q) ||
+      (fb.userId || '').toLowerCase().includes(q) ||
+      (fb.contactInfo || '').toLowerCase().includes(q) ||
+      (fb.description || '').toLowerCase().includes(q) ||
+      (fb.typeLabel || '').toLowerCase().includes(q);
+    const matchesType = appliedFeedbackTypeFilter === 'All' || fb.type === appliedFeedbackTypeFilter;
+    return matchesSearch && matchesType;
+  });
+  const feedbackPageSize = 20;
+  const feedbackTotalPages = Math.max(1, Math.ceil(filteredFeedbacks.length / feedbackPageSize));
+  const paginatedFeedbacks = filteredFeedbacks.slice((feedbackPage - 1) * feedbackPageSize, feedbackPage * feedbackPageSize);
 
   const filteredSupportChats = supportChats.filter((chat) => {
     const q = appliedSupportSearchQuery.trim().toLowerCase();
@@ -1927,58 +1946,61 @@ export default function StaffPanel() {
 
         {activeTab === 'feedback' && (
           <div className="flex flex-col h-full bg-white overflow-hidden">
-            <div className="px-8 py-6 border-b border-slate-200 shrink-0">
-              <div className="relative w-full max-w-3xl">
-                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
-                <input
-                  type="text"
-                  value={feedbackSearchQuery}
-                  onChange={(e) => setFeedbackSearchQuery(e.target.value)}
-                  placeholder="Search feedback..."
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 rounded-lg text-sm focus:outline-none font-medium text-slate-900 placeholder:text-slate-400 caret-slate-900"
-                />
+            <div className="px-6 py-4 border-b border-slate-200 shrink-0">
+              <h2 className="text-xl font-black text-slate-800">User Feedback</h2>
+            </div>
+
+            <div className="px-6 py-4 border-b border-slate-100 shrink-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="relative flex-1 min-w-[220px] max-w-2xl">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                  <input
+                    type="text"
+                    value={feedbackSearchQuery}
+                    onChange={(e) => setFeedbackSearchQuery(e.target.value)}
+                    placeholder="Search feedback..."
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-400 font-medium text-slate-900 placeholder:text-slate-400 caret-slate-900"
+                  />
+                </div>
+                <select
+                  value={selectedFeedbackTypeFilter}
+                  onChange={(e) => setSelectedFeedbackTypeFilter(e.target.value)}
+                  className="px-3 py-2.5 bg-white border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 outline-none cursor-pointer"
+                >
+                  <option value="All">All</option>
+                  <option value="bug">Bug</option>
+                  <option value="account">Account</option>
+                  <option value="recharge">Recharge</option>
+                  <option value="other">Other</option>
+                </select>
+                <button
+                  onClick={() => { setAppliedFeedbackSearchQuery(feedbackSearchQuery); setAppliedFeedbackTypeFilter(selectedFeedbackTypeFilter); setFeedbackPage(1); }}
+                  className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold transition-colors"
+                >Filter</button>
               </div>
             </div>
 
-            <div className="px-8 py-4 border-b border-slate-100 flex items-center justify-between shrink-0">
-              <h2 className="text-lg font-black text-slate-800">User Feedback</h2>
-              <span className="text-xs font-bold px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full">
-                Total: {feedbacks.length}
-              </span>
-            </div>
-
-            <div className="hidden md:flex items-center gap-4 px-8 py-3 text-[11px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50 border-b border-slate-100 shrink-0">
+            <div className="hidden md:flex items-center gap-4 px-6 py-3 text-[11px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50 border-b border-slate-100 shrink-0">
               <span className="w-10">S.No</span>
               <span className="w-12">Avatar</span>
               <span className="flex-1">Name</span>
               <span className="w-40">ID</span>
               <span className="w-28">Type</span>
-              <span className="w-40 text-right">Date Time</span>
+              <span className="w-40">Date Time</span>
+              <span className="w-24 text-right">Action</span>
             </div>
 
             <div className="flex-1 overflow-y-auto">
-              {feedbacks
-                .filter((fb) => {
-                  const q = feedbackSearchQuery.toLowerCase();
-                  const matchesSearch =
-                    (fb.userName || '').toLowerCase().includes(q) ||
-                    (fb.userAccountId || '').toLowerCase().includes(q) ||
-                    (fb.userId || '').toLowerCase().includes(q) ||
-                    (fb.contactInfo || '').toLowerCase().includes(q) ||
-                    (fb.description || '').toLowerCase().includes(q) ||
-                    (fb.typeLabel || '').toLowerCase().includes(q);
-
-                  const matchesType =
-                    selectedFeedbackTypeFilter === 'All' ||
-                    fb.type === selectedFeedbackTypeFilter;
-
-                  return matchesSearch && matchesType;
-                })
-                .map((fb, idx) => (
+              {paginatedFeedbacks.length === 0 ? (
+                <div className="py-16 text-center text-slate-400 text-sm font-medium">
+                  <MessageSquare className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+                  <p className="font-bold text-slate-700">No user feedback found</p>
+                </div>
+              ) : (
+                paginatedFeedbacks.map((fb, idx) => (
                   <div
                     key={fb.id}
-                    onClick={() => setSelectedFeedback(fb)}
-                    className="flex items-center gap-4 px-8 py-3.5 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors"
+                    className="flex items-center gap-4 px-6 py-3.5 border-b border-slate-100 hover:bg-slate-50 transition-colors"
                   >
                     <div className="w-10 text-xs font-bold text-slate-500">{idx + 1}</div>
                     <div className="w-12 shrink-0">
@@ -2006,21 +2028,29 @@ export default function StaffPanel() {
                         {fb.typeLabel || fb.type || 'Feedback'}
                       </span>
                     </div>
-                    <div className="w-40 shrink-0 text-right">
+                    <div className="w-40 shrink-0">
                       <span className="text-[11px] text-slate-400 font-medium">
                         {fb.timestamp ? new Date(fb.timestamp).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}
                       </span>
                     </div>
                   </div>
+                  <div className="w-24 flex justify-end shrink-0">
+                    <button onClick={() => setSelectedFeedback(fb)} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold">Open</button>
+                  </div>
                 ))}
 
-              {feedbacks.length === 0 && (
-                <div className="py-16 text-center text-slate-400 text-sm font-medium">
-                  <MessageSquare className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-                  <p className="font-bold text-slate-700">No user feedback submitted yet</p>
-                </div>
-              )}
+
             </div>
+
+            {filteredFeedbacks.length > 0 && (
+              <div className="px-6 py-3 border-t border-slate-100 flex items-center justify-between shrink-0">
+                <span className="text-xs text-slate-500 font-medium">Page {feedbackPage} of {feedbackTotalPages} · {filteredFeedbacks.length} feedbacks</span>
+                <div className="flex items-center gap-2">
+                  <button disabled={feedbackPage <= 1} onClick={() => setFeedbackPage(p => Math.max(1, p - 1))} className="p-2 rounded-lg border border-slate-200 text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50"><ArrowLeft className="w-4 h-4" /></button>
+                  <button disabled={feedbackPage >= feedbackTotalPages} onClick={() => setFeedbackPage(p => Math.min(feedbackTotalPages, p + 1))} className="p-2 rounded-lg border border-slate-200 text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50"><ArrowRight className="w-4 h-4" /></button>
+                </div>
+              </div>
+            )}
 
             {selectedFeedback && (
               <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
