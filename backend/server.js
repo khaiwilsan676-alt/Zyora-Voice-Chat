@@ -56,6 +56,9 @@ app.use((req, res, next) => {
   next();
 });
 
+// Volatile handoff buffer only: no MongoDB/Redis/GitHub persistence. Owner IndexedDB is durable.
+const liveFeedbackBuffer = new Map();
+
 const io = new Server(server, {
   cors: {
     origin: "*",
@@ -3192,13 +3195,15 @@ io.on("connection", (socket) => {
 
     // Live-only relay. Feedback is stored locally by clients/Owner IndexedDB;
     // never write feedback content to GitHub storage.
+    liveFeedbackBuffer.set(feedbackId, payload);
+    while (liveFeedbackBuffer.size > 500) liveFeedbackBuffer.delete(liveFeedbackBuffer.keys().next().value);
     io.emit("user_feedback", payload);
     if (typeof acknowledge === "function") acknowledge({ ok: true, id: feedbackId });
   });
 
   socket.on("user_feedback_history_request", () => {
-    // No server-side feedback history and no GitHub storage read.
-    socket.emit("user_feedback_history_response", { feedbacks: [] });
+    // Replay only the volatile handoff window; Owner Panel persists received items in browser IndexedDB.
+    socket.emit("user_feedback_history_response", { feedbacks: Array.from(liveFeedbackBuffer.values()) });
   });
 
   // Official messages are never persisted on the server. Socket.IO only relays them live;
