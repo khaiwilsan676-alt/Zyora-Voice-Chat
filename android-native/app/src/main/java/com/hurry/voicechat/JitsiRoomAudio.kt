@@ -50,6 +50,7 @@ fun JitsiRoomAudio(
     roomId: String,
     userName: String,
     canSpeak: Boolean,
+    canShareMusic: Boolean = canSpeak,
     roomSocket: Socket?,
     musicUri: String? = null,
     musicPlaying: Boolean = false,
@@ -58,6 +59,7 @@ fun JitsiRoomAudio(
     val context = LocalContext.current
     val latestMusicUri by rememberUpdatedState(musicUri)
     val latestCanSpeak by rememberUpdatedState(canSpeak)
+    val latestCanShareMusic by rememberUpdatedState(canShareMusic)
     val latestMusicPlaying by rememberUpdatedState(musicPlaying)
     var hasMicPermission by remember {
         mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED)
@@ -132,7 +134,7 @@ fun JitsiRoomAudio(
         }
 
         fun startMusicRelay(uri: String) {
-            if (!alive.get() || !voiceAllowed.get() || !latestCanSpeak || uri.isBlank() || musicRelayRunning.get()) return
+            if (!alive.get() || !latestCanShareMusic || !roomSocket.connected() || uri.isBlank() || musicRelayRunning.get()) return
             musicRelayRunning.set(true)
             activeMusicUri = uri
             musicRelayThread = thread(name = "ZyoraRoomMusicRelay", isDaemon = true) {
@@ -304,7 +306,6 @@ fun JitsiRoomAudio(
             if (data.optString("roomId") != roomId) return@Listener
             if (data.optBoolean("muted", false)) {
                 voiceAllowed.set(false)
-                stopMusicRelay()
                 stopCapture()
                 if (roomSocket.connected()) roomSocket.emit("room_voice_stop", JSONObject().put("roomId", roomId))
             }
@@ -319,7 +320,6 @@ fun JitsiRoomAudio(
                 retryPending.set(false)
                 startCapture()
             } else {
-                stopMusicRelay()
                 stopCapture()
                 // Retry transient seat-state/permission races while still unmuted.
                 scheduleVoiceRetry(500L)
@@ -423,6 +423,7 @@ fun JitsiRoomAudio(
         roomSocket.on("room_moderation_mute", moderationMuteListener)
         roomSocket.on("room_voice_permission", permissionListener)
         roomSocket.on("room_voice_chunk", chunkListener)
+        roomSocket.on("room_music_chunk", chunkListener)
         val disconnectListener = Emitter.Listener {
             voiceAllowed.set(false)
             stopMusicRelay()
@@ -467,7 +468,7 @@ fun JitsiRoomAudio(
         musicWatcherThread = thread(name = "ZyoraRoomMusicWatch", isDaemon = true) {
             while (alive.get()) {
                 val uri = latestMusicUri?.takeIf { it.isNotBlank() }
-                val shouldRelay = voiceAllowed.get() && latestCanSpeak && latestMusicPlaying && uri != null
+                val shouldRelay = latestCanShareMusic && roomSocket.connected() && latestMusicPlaying && uri != null
                 if (!shouldRelay) {
                     if (musicRelayRunning.get()) stopMusicRelay()
                     if (!latestMusicPlaying || uri == null) finishedMusicUri = null
@@ -501,6 +502,7 @@ fun JitsiRoomAudio(
             roomSocket.off("room_moderation_mute", moderationMuteListener)
             roomSocket.off("room_voice_permission", permissionListener)
             roomSocket.off("room_voice_chunk", chunkListener)
+            roomSocket.off("room_music_chunk", chunkListener)
             roomSocket.off(Socket.EVENT_DISCONNECT, disconnectListener)
             roomSocket.off(Socket.EVENT_CONNECT, connectListener)
             onSpeakingChanged(false)
@@ -632,7 +634,7 @@ private fun relayDecodedMusic(
                         resamplePosition += step
                         if (packetSize == packet.size) {
                             if (socket.connected() && running.get()) {
-                                socket.emit("room_voice_chunk", JSONObject().put("roomId", roomId), packet.copyOf())
+                                socket.emit("room_music_chunk", JSONObject().put("roomId", roomId), packet.copyOf())
                             }
                             nextFrameAt += 20_000_000L
                             val waitNanos = nextFrameAt - System.nanoTime()
