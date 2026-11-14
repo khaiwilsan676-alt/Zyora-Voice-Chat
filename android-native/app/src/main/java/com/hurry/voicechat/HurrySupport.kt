@@ -24,6 +24,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.DisposableEffect
 import io.socket.client.IO
 import io.socket.client.Socket
+import io.socket.emitter.Emitter
 import org.json.JSONArray
 import org.json.JSONObject
 import androidx.compose.ui.Alignment
@@ -71,6 +72,7 @@ fun HurrySupport(onBack: () -> Unit) {
     }
     var draft by remember { mutableStateOf("") }
     var typing by remember { mutableStateOf(false) }
+    var daisyEnabled by remember { mutableStateOf(true) }
     val localChatDb = remember { NativeIndexDatabase(context) }
     val messages = remember(supportUserId) {
         mutableStateListOf<SupportMessage>().apply {
@@ -96,6 +98,26 @@ fun HurrySupport(onBack: () -> Unit) {
     LaunchedEffect(supportUserId, supportSocket) {
         if (supportUserId.isNotBlank() && supportSocket != null && messages.isNotEmpty()) {
             syncDaisyChat(messages.toList(), supportSocket, supportUserId, supportUserName, supportUserPhoto, supportUserAccountId)
+        }
+    }
+    DisposableEffect(supportSocket, supportUserId) {
+        val active = supportSocket
+        val modeListener = Emitter.Listener { args ->
+            val data = args.firstOrNull() as? JSONObject
+            if (data != null) daisyEnabled = data.optBoolean("enabled", true)
+        }
+        val replyListener = Emitter.Listener { args ->
+            val data = args.firstOrNull() as? JSONObject ?: return@Listener
+            if (data.optString("userId") == supportUserId) {
+                messages.add(SupportMessage(data.optString("text"), true, timestamp = data.optLong("timestamp", System.currentTimeMillis())))
+                syncDaisyChat(messages.toList(), active, supportUserId, supportUserName, supportUserPhoto, supportUserAccountId)
+            }
+        }
+        active?.on("daisy_mode", modeListener)
+        active?.on("owner_support_reply", replyListener)
+        onDispose {
+            active?.off("daisy_mode", modeListener)
+            active?.off("owner_support_reply", replyListener)
         }
     }
     val keyboard = LocalSoftwareKeyboardController.current
@@ -174,16 +196,18 @@ fun HurrySupport(onBack: () -> Unit) {
         messages.add(SupportMessage(text, false))
         draft = ""
         keyboard?.hide()
-        typing = true
+        typing = daisyEnabled
         syncDaisyChat(messages.toList(), supportSocket, supportUserId, supportUserName, supportUserPhoto, supportUserAccountId)
     }
 
     LaunchedEffect(messages.size, typing) {
         if (typing) {
             delay(1000)
-            val last = messages.lastOrNull { !it.isBot }?.text.orEmpty()
-            messages.add(answer(last))
-            syncDaisyChat(messages.toList(), supportSocket, supportUserId, supportUserName, supportUserPhoto, supportUserAccountId)
+            if (daisyEnabled) {
+                val last = messages.lastOrNull { !it.isBot }?.text.orEmpty()
+                messages.add(answer(last))
+                syncDaisyChat(messages.toList(), supportSocket, supportUserId, supportUserName, supportUserPhoto, supportUserAccountId)
+            }
             typing = false
         }
     }
