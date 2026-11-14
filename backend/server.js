@@ -1524,17 +1524,15 @@ async function creditLuckyBagWallet(userId, amount) {
   await creditWallet(userId, amount);
 }
 async function refundLuckyBag(bagId) {
-  const bag = await luckyBags().findOne({ bagId: String(bagId), status: "open", claimedCount: 0 });
-  if (!bag) return false;
-  const result = await luckyBags().updateOne(
-    { bagId: String(bagId), status: "open", claimedCount: 0 },
-    { $set: { status: "refunded", refundedAt: Date.now() } }
-  );
-  if (!result.modifiedCount) return false;
+  const bag = getLuckyBag(bagId);
+  if (!bag || bag.status !== "open" || Number(bag.claimedCount || 0) !== 0) return false;
+  bag.status = "refunded";
+  bag.refundedAt = Date.now();
   await creditLuckyBagWallet(bag.senderId, bag.amount);
   const transaction = { id: `luckybag_refund:${bag.bagId}`, userId: bag.senderId, type: "lucky_bag_refund", amount: bag.amount, bagId: bag.bagId, createdAt: Date.now() };
   publishLuckyBagTransaction(transaction);
   io.emit("lucky_bag_refunded", { bagId: bag.bagId, senderId: bag.senderId, amount: bag.amount });
+  liveLuckyBags.delete(String(bagId));
   return true;
 }
 function scheduleLuckyBagRefund(bag) {
