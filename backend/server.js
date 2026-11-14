@@ -3429,34 +3429,48 @@ io.on("connection", (socket) => {
       let liveCount = 0;
       let queuedCount = 0;
       let skippedCount = 0;
-      for (const recipient of recipientsByAccount.values()) {
-        const targetIds = [...new Set([recipient.userId, recipient.accountId].filter(Boolean))];
-        const targetRooms = targetIds.map((id) => \`user:\${id}\`);
-        const connected = await io.in(targetRooms).fetchSockets();
-        const recipientPayload = {
-          ...payload,
-          receiverId: recipient.userId,
-          receiverAccountId: recipient.accountId,
-          receiverName: "User",
-          receiverPhoto: "/default-avatar.png",
-        };
+      const connectedSockets = await io.fetchSockets();
+      const onlineIds = new Set();
+      for (const connectedSocket of connectedSockets) {
+        if (connectedSocket.userId) onlineIds.add(String(connectedSocket.userId));
+        if (connectedSocket.presenceAccountId || connectedSocket.accountId) {
+          onlineIds.add(String(connectedSocket.presenceAccountId || connectedSocket.accountId));
+        }
+      }
 
-        if (connected.length) {
-          io.to(targetRooms).emit("private_message", recipientPayload);
-          io.to(targetRooms).emit("official_broadcast_message", recipientPayload);
-          liveCount += 1;
-        } else if (redis) {
+      const recipients = Array.from(recipientsByAccount.values());
+      for (let offset = 0; offset < recipients.length; offset += 100) {
+        const batch = recipients.slice(offset, offset + 100);
+        const results = await Promise.all(batch.map(async (recipient) => {
+          const targetIds = [...new Set([recipient.userId, recipient.accountId].filter(Boolean))];
+          const targetRooms = targetIds.map((id) => \`user:\${id}\`);
+          const recipientPayload = {
+            ...payload,
+            receiverId: recipient.userId,
+            receiverAccountId: recipient.accountId,
+            receiverName: "User",
+            receiverPhoto: "/default-avatar.png",
+          };
+          if (targetIds.some((id) => onlineIds.has(id))) {
+            io.to(targetRooms).emit("private_message", recipientPayload);
+            io.to(targetRooms).emit("official_broadcast_message", recipientPayload);
+            return "live";
+          }
+          if (!redis) return "skipped";
           try {
             const queueKey = \`private_messages:pending:\${recipient.accountId || recipient.userId}\`;
             await redis.rpush(queueKey, JSON.stringify(recipientPayload));
             await redis.expire(queueKey, 60 * 60 * 24 * 7);
-            queuedCount += 1;
+            return "queued";
           } catch (queueError) {
-            skippedCount += 1;
             console.error("Could not queue official broadcast for active user:", queueError.message);
+            return "skipped";
           }
-        } else {
-          skippedCount += 1;
+        }));
+        for (const result of results) {
+          if (result === "live") liveCount += 1;
+          else if (result === "queued") queuedCount += 1;
+          else skippedCount += 1;
         }
       }
 
