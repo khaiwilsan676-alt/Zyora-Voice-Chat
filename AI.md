@@ -1001,3 +1001,9 @@ Current documentation does not certify that all historical features are build-, 
 - Online recipients receive the existing private inbox and official-chat socket events. Offline recipients are queued in Redis under their canonical account ID for seven days and replayed by the existing registration path.
 - Owner Panel confirmation now describes all registered Zyora users, not only users active in the previous seven days.
 - Commits: production server `670fefe`; Owner Panel `f5635a8`. Render deployment and real online/offline multi-account verification remain pending.
+
+## 2026-11-15 — Visitor count live sync and Master Wallet history storage
+- Native MeScreen no longer fetches visitor history from the server. It reads and writes received visitor rows only in the signed-in device's native `index.db`.
+- MeScreen now registers its Socket.IO user room and listens for `profile_visitor_updated`, persisting each visit locally and refreshing the Visitors count while Me is open.
+- Owner Panel Master Wallet transfer history remains browser IndexedDB-only. The backend no longer writes `masterWalletTransactions` into MongoDB user documents and removes that legacy history field during database initialization; `masterWalletCreditIds` remains only for duplicate-credit protection.
+- No UI/layout changes.
