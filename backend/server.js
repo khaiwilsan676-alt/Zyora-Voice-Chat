@@ -60,7 +60,7 @@ app.use((req, res, next) => {
 const liveFeedbackBuffer = new Map();
 // Short-lived report handoff so Owner Panel reconnects can recover reports missed while offline.
 const liveUserReports = new Map();
-// Owner private-chat monitor reconnect handoff; canonical history remains in MongoDB privateMessages.
+// Bounded in-memory live handoff for Owner Panel reconnects; durable Owner history is browser IndexedDB.
 const livePrivateMessageMonitorBuffer = new Map();
 // Short-lived AI chat handoff for Owner Panel reconnects. Durable chat history stays in each client's IndexedDB/index.db; never write it to MongoDB.
 const liveAiSupportBuffer = new Map();
@@ -1418,23 +1418,6 @@ app.put("/api/users", async (req, res) => {
     });
   }
 });
-
-app.get("/api/privateMessages", async (req, res) => {
-  try {
-    const ownerKey = String(req.headers["x-owner-panel-key"] || "");
-    if (!process.env.OWNER_PANEL_ACCESS_KEY || ownerKey !== process.env.OWNER_PANEL_ACCESS_KEY) {
-      return res.status(403).json({ error: "Owner access required" });
-    }
-    const mongo = mediaDb || await connectMediaMongo();
-    if (!mongo) return res.status(503).json({ error: "Private chat storage unavailable" });
-    const messages = await mongo.collection("privateMessages").find({}).sort({ timestamp: -1 }).limit(5000).toArray();
-    return res.json({ messages: messages.reverse().map(({ _id, ...message }) => message) });
-  } catch (error) {
-    console.error("Owner private message history failed:", error.message);
-    return res.status(500).json({ error: "Failed to load private chat history" });
-  }
-});
-
 
 /* One permanent wallet per user: users.coins is the canonical coin balance.
    Legacy luckyBagWallets is read only for one-time migration; new writes go to users. */
@@ -3118,21 +3101,8 @@ io.on("connection", (socket) => {
       timestamp: Number(message.timestamp || Date.now()),
     };
 
-    // Keep permanent private-message history in MongoDB, not device-only storage.
-    try {
-      const mongo = mediaDb || await connectMediaMongo();
-      if (mongo) {
-        await mongo.collection("privateMessages").updateOne(
-          { id: normalizedMessage.id },
-          { $setOnInsert: normalizedMessage },
-          { upsert: true }
-        );
-      } else {
-        console.error("Private message MongoDB storage is unavailable");
-      }
-    } catch (error) {
-      console.error("Private message MongoDB save failed:", error.message);
-    }
+    // Native clients persist private chat history in their own index.db.
+    // Owner Panel stores its live monitor stream in browser IndexedDB.
 
     const targetIds = [...new Set([receiverId, receiverAccountId].filter(Boolean))];
     const targetRooms = targetIds.map((id) => `user:${id}`);
@@ -3178,28 +3148,9 @@ io.on("connection", (socket) => {
       socket.emit("private_message_history", { chatId: data.chatId || "", messages: [] });
       return;
     }
-    try {
-      const mongo = mediaDb || await connectMediaMongo();
-      if (!mongo) {
-        socket.emit("private_message_history", { chatId: data.chatId || "", messages: [], storageUnavailable: true });
-        return;
-      }
-      const messages = await mongo.collection("privateMessages").find({
-        $or: [
-          { senderId: { $in: currentIds }, receiverId: { $in: peerIds } },
-          { senderAccountId: { $in: currentIds }, receiverAccountId: { $in: peerIds } },
-          { senderId: { $in: peerIds }, receiverId: { $in: currentIds } },
-          { senderAccountId: { $in: peerIds }, receiverAccountId: { $in: currentIds } }
-        ]
-      }).sort({ timestamp: 1 }).limit(500).toArray();
-      socket.emit("private_message_history", {
-        chatId: data.chatId || "",
-        messages: messages.map(({ _id, ...message }) => message)
-      });
-    } catch (error) {
-      console.error("Private message history load failed:", error.message);
-      socket.emit("private_message_history", { chatId: data.chatId || "", messages: [], error: "history_unavailable" });
-    }
+    // Durable chat history is read locally from each native client's index.db.
+    // The backend only relays messages and does not store private chat history.
+    socket.emit("private_message_history", { chatId: data.chatId || "", messages: [] });
   });
 
   socket.on("private_message_clear", (data = {}) => {
