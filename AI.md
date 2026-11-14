@@ -833,3 +833,6 @@ Current documentation does not certify that all historical features are build-, 
 - Socket.IO is used only to deliver new submissions to the Owner Panel in real time. The Owner Panel may keep its own browser IndexedDB cache for entries it receives.
 - These flows are live-only: if the Owner Panel is disconnected when an event is sent, the server does not retain a backlog for later replay.
 - Keep the existing UI unchanged.
+## 2026-11-14 Daisy AI Support Live Delivery Fix
+- Native Daisy support chat now queues the latest `ai_support_message` snapshot until its Socket.IO connection is established, preventing messages sent during initial connection from being silently dropped.
+- Chat history remains in the user's native `index.db` and Owner Panel browser IndexedDB; no MongoDB persistence was added.
