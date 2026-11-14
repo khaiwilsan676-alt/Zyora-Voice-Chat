@@ -828,9 +828,8 @@ Current documentation does not certify that all historical features are build-, 
 - Manage Users no longer inserts a synthetic current-session user when that account is not present in the real users API response. Real API users remain unchanged.
 - No UI changes.
 
-
-## 2026-11-14 — Durable Owner history for Feedback, AI Chat, and Reports
-- The Zyora Server now upserts feedback records into MongoDB `user_feedback`, AI support conversations into `ai_support_chats` (one latest conversation record per user), and reports into `user_reports`.
-- Owner Panel history requests now return persisted MongoDB records, so entries can be restored after the Owner Panel browser reconnects or its local IndexedDB cache is cleared.
-- Reports page now requests `user_report_history_request`, merges the returned records into its existing IndexedDB cache, and continues receiving new reports through the existing live Socket.IO event.
-- Existing Socket.IO events and UI are retained. MongoDB is the durable history store; the already-configured Redis Socket.IO adapter continues to distribute live events across server instances.
+## 2026-11-14 — Feedback, AI Chat, and Reports storage rule
+- Feedback, AI support chat, and user reports are stored in the submitting user's native local `index.db`; do not persist these records in MongoDB or Redis.
+- Socket.IO is used only to deliver new submissions to the Owner Panel in real time. The Owner Panel may keep its own browser IndexedDB cache for entries it receives.
+- These flows are live-only: if the Owner Panel is disconnected when an event is sent, the server does not retain a backlog for later replay.
+- Keep the existing UI unchanged.
