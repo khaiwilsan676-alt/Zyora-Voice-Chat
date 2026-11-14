@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.net.URL
@@ -134,11 +135,29 @@ fun InviteFriends(onBack: (() -> Unit)? = null, onClose: (() -> Unit)? = null) {
     val screenWidth = configuration.screenWidthDp.dp
     val vh = screenHeight / 100f
     val userPrefs = remember { context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE) }
-    val code = userPrefs.getString("uid", null)?.takeIf { it.isNotBlank() } ?: "WELCOME123"
+    val code = userPrefs.getString("accountId", null)?.takeIf { it.isNotBlank() } ?: userPrefs.getString("uid", null)?.takeIf { it.isNotBlank() }.orEmpty()
     val inviteLink = "https://yourapp.com/invite/$code"
     
     var isSheetOpen by remember { mutableStateOf(false) }
     var copied by remember { mutableStateOf(false) }
+    var bindTargetId by remember { mutableStateOf("") }
+    var bindBusy by remember { mutableStateOf(false) }
+    var inviteCount by remember { mutableIntStateOf(0) }
+    var inviteTotalRewards by remember { mutableLongStateOf(0L) }
+    var invitePendingCoins by remember { mutableLongStateOf(0L) }
+    var inviteMessage by remember { mutableStateOf("") }
+    var inviteMessageError by remember { mutableStateOf(false) }
+    val inviteScope = rememberCoroutineScope()
+    LaunchedEffect(code) {
+        if (code.isNotBlank()) {
+            val stats = HurryApi.inviteStats(code)
+            if (stats != null && !stats.has("error")) {
+                inviteCount = stats.optInt("invitationCount", 0)
+                inviteTotalRewards = stats.optLong("totalRewards", 0L)
+                invitePendingCoins = stats.optLong("pendingCoins", 0L)
+            }
+        }
+    }
     
     var inviteRules by remember { mutableStateOf(false) }
     var giftRules by remember { mutableStateOf(false) }
@@ -227,8 +246,44 @@ fun InviteFriends(onBack: (() -> Unit)? = null, onClose: (() -> Unit)? = null) {
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Friend's Invite", color = inviteYellow, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                        Text("0", color = inviteYellow, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                        OutlinedTextField(
+                            value = bindTargetId,
+                            onValueChange = { bindTargetId = it.filter(Char::isDigit).take(20) },
+                            modifier = Modifier.weight(1f).height(48.dp),
+                            singleLine = true,
+                            placeholder = { Text("Enter User ID", fontSize = 12.sp, color = Color.White.copy(alpha = .7f)) },
+                            textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 13.sp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Color(0xFFFF5555), unfocusedBorderColor = Color(0xFFDA3333),
+                                focusedContainerColor = Color(0xFFB91525), unfocusedContainerColor = Color(0xFFB91525),
+                                cursorColor = Color.White
+                            )
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Button(
+                            enabled = !bindBusy && bindTargetId.isNotBlank() && code.isNotBlank(),
+                            onClick = {
+                                bindBusy = true
+                                inviteScope.launch {
+                                    val result = HurryApi.bindInvite(code, bindTargetId.trim())
+                                    bindBusy = false
+                                    if (result?.optBoolean("success") == true) {
+                                        inviteCount = result.optInt("invitationCount", inviteCount + 1)
+                                        invitePendingCoins = result.optLong("pendingCoins", invitePendingCoins + 250000L)
+                                        inviteTotalRewards = result.optLong("totalRewards", inviteTotalRewards + 250000L)
+                                        bindTargetId = ""
+                                        inviteMessage = "User successfully bind"
+                                        inviteMessageError = false
+                                    } else {
+                                        inviteMessage = result?.optString("error")?.takeIf { it.isNotBlank() && it != "null" } ?: "Unable to bind user. Please retry."
+                                        inviteMessageError = true
+                                    }
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD92335)),
+                            contentPadding = PaddingValues(horizontal = 15.dp, vertical = 4.dp),
+                            modifier = Modifier.height(42.dp)
+                        ) { Text(if (bindBusy) "..." else "Bind", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
                     }
                 }
 
@@ -276,7 +331,7 @@ fun InviteFriends(onBack: (() -> Unit)? = null, onClose: (() -> Unit)? = null) {
                         Modifier.align(Alignment.BottomStart).padding(start = 86.dp, bottom = vh * 10f),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text("0", color = inviteYellow, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                        Text(inviteCount.toString(), color = inviteYellow, fontSize = 24.sp, fontWeight = FontWeight.Bold)
                         Text("Number\nInvitation", color = inviteYellow, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, lineHeight = 12.sp, textAlign = TextAlign.Center)
                     }
 
@@ -286,7 +341,7 @@ fun InviteFriends(onBack: (() -> Unit)? = null, onClose: (() -> Unit)? = null) {
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         InviteArt("file_00000000e56882119c217d508b6733dc.png", Modifier.size(40.dp), key = InviteKey.WHITE)
-                        Text("0", color = inviteYellow, fontSize = 24.sp, fontWeight = FontWeight.Bold, lineHeight = 25.sp)
+                        Text(inviteTotalRewards.toString(), color = inviteYellow, fontSize = 24.sp, fontWeight = FontWeight.Bold, lineHeight = 25.sp)
                         Text("Total Coins\nRewards", color = inviteYellow, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, lineHeight = 12.sp, textAlign = TextAlign.Center)
                     }
 
@@ -296,11 +351,22 @@ fun InviteFriends(onBack: (() -> Unit)? = null, onClose: (() -> Unit)? = null) {
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         InviteArt("file_00000000e56882119c217d508b6733dc.png", Modifier.size(50.dp), key = InviteKey.WHITE)
-                        Text("0", color = inviteYellow, fontSize = 30.sp, fontWeight = FontWeight.Bold, lineHeight = 32.sp)
+                        Text(invitePendingCoins.toString(), color = inviteYellow, fontSize = 30.sp, fontWeight = FontWeight.Bold, lineHeight = 32.sp)
                         Box(
                             Modifier.padding(top = 12.dp).clip(CircleShape)
                                 .background(Brush.verticalGradient(listOf(Color(0xFFE62E2E), Color(0xFFB80D0D), Color(0xFF7A0000))))
                                 .border(1.5.dp, inviteYellow, CircleShape)
+                                .clickable(enabled = invitePendingCoins >= 250000L) {
+                                    inviteScope.launch {
+                                        val result = HurryApi.claimInvite(code)
+                                        if (result?.optBoolean("success") == true) {
+                                            invitePendingCoins = result.optLong("pendingCoins", (invitePendingCoins - 250000L).coerceAtLeast(0L))
+                                            Toast.makeText(context, "250,000 coins added to your wallet", Toast.LENGTH_LONG).show()
+                                        } else {
+                                            Toast.makeText(context, result?.optString("error") ?: "Claim failed. Please retry.", Toast.LENGTH_LONG).show()
+                                        }
+                                    }
+                                }
                                 .padding(horizontal = 40.dp, vertical = 6.dp)
                         ) {
                             Text("Claim", color = inviteYellow, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
@@ -344,6 +410,13 @@ fun InviteFriends(onBack: (() -> Unit)? = null, onClose: (() -> Unit)? = null) {
             }
         }
     }
+
+    if (inviteMessage.isNotBlank()) AlertDialog(
+        onDismissRequest = { inviteMessage = "" },
+        title = { Text(if (inviteMessageError) "Invite" else "Success") },
+        text = { Text(inviteMessage) },
+        confirmButton = { TextButton(onClick = { inviteMessage = "" }) { Text("OK") } }
+    )
 
     if (inviteRules) InviteRulesDialog(
         text = "If invite friend download & enter the Invite code in the input Given. Then a Inverter will Receive a 250,000Coins rewards hand to hand in there coins wallet",
