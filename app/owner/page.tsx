@@ -145,6 +145,60 @@ const saveSupportChatToIndexedDB = async (chatData: any) => {
 };
 
 // ==============================================================
+
+// ==============================================================
+// MASTER WALLET HISTORY — IndexedDB only
+// ==============================================================
+const MASTER_WALLET_DB = "ZyoraMasterWalletDB";
+const MASTER_WALLET_STORE = "transferHistory";
+
+const openMasterWalletDB = (): Promise<IDBDatabase> => new Promise((resolve, reject) => {
+  if (typeof window === "undefined" || !window.indexedDB) return reject(new Error("IndexedDB unavailable"));
+  const request = window.indexedDB.open(MASTER_WALLET_DB, 1);
+  request.onupgradeneeded = () => {
+    if (!request.result.objectStoreNames.contains(MASTER_WALLET_STORE)) {
+      request.result.createObjectStore(MASTER_WALLET_STORE, { keyPath: "id" });
+    }
+  };
+  request.onsuccess = () => resolve(request.result);
+  request.onerror = () => reject(request.error || new Error("Could not open wallet history"));
+});
+
+const loadMasterWalletHistory = async (): Promise<any[]> => {
+  try {
+    const db = await openMasterWalletDB();
+    const rows = await new Promise<any[]>((resolve, reject) => {
+      const request = db.transaction(MASTER_WALLET_STORE, "readonly").objectStore(MASTER_WALLET_STORE).getAll();
+      request.onsuccess = () => resolve(Array.isArray(request.result) ? request.result : []);
+      request.onerror = () => reject(request.error);
+    });
+    db.close();
+    return rows.sort((a, b) => Number(b.timestamp || 0) - Number(a.timestamp || 0));
+  } catch (error) {
+    console.error("Master wallet IndexedDB history load failed:", error);
+    return [];
+  }
+};
+
+const saveMasterWalletHistory = async (record: any): Promise<void> => {
+  if (!record?.id || !record?.userId || !Number.isSafeInteger(Number(record.amount)) || Number(record.amount) <= 0) {
+    throw new Error("Invalid master wallet history record");
+  }
+  const db = await openMasterWalletDB();
+  await new Promise<void>((resolve, reject) => {
+    const transaction = db.transaction(MASTER_WALLET_STORE, "readwrite");
+    transaction.objectStore(MASTER_WALLET_STORE).put({
+      id: String(record.id), userId: String(record.userId), accountId: String(record.accountId || ""),
+      name: String(record.name || "User"), avatar: String(record.avatar || ""),
+      amount: Number(record.amount), timestamp: Number(record.timestamp || Date.now()), status: "completed"
+    });
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error);
+    transaction.onabort = () => reject(transaction.error || new Error("History save aborted"));
+  });
+  db.close();
+};
+
 // TYPES & DATA
 // ==============================================================
 interface UserRecord {
@@ -534,6 +588,44 @@ export default function StaffPanel() {
   const [masterWalletAmount, setMasterWalletAmount] = useState('');
 
   const officialFileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    let active = true;
+    if (activeTab === 'wallet') {
+      loadMasterWalletHistory().then(rows => { if (active) setMasterWalletHistory(rows); });
+    }
+    return () => { active = false; };
+  }, [activeTab]);
+
+  useEffect(() => {
+    let active = true;
+    const term = masterWalletSearch.trim();
+    if (!term || masterWalletSelectedUser) {
+      setMasterWalletResults([]);
+      setMasterWalletSearching(false);
+      return;
+    }
+    setMasterWalletSearching(true);
+    const timer = window.setTimeout(async () => {
+      try {
+        const response = await fetch(apiUrl('/api/users?q=' + encodeURIComponent(term)), { cache: 'no-store', headers: { Accept: 'application/json' } });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data?.error || 'User search failed');
+        const rows = Array.isArray(data?.users) ? data.users : data?.user ? [data.user] : [];
+        if (active) setMasterWalletResults(rows.map((user: any) => ({
+          uid: String(user.uid || user.id || user.appLongId || user._id || ''),
+          accountId: String(user.accountId || user.accountNumber || user.displayAccountNumber || user.displayUserNumber || user.id || user.uid || ''),
+          name: String(user.name || user.displayName || user.userName || 'User'),
+          image: String(user.image || user.dp || user.avatar || user.photoURL || user.photoUrl || user.profileImage || user.picture || '')
+        })).filter((user: any) => user.uid && user.accountId));
+      } catch (error) {
+        if (active) { setMasterWalletResults([]); console.error('Master wallet user search failed:', error); }
+      } finally {
+        if (active) setMasterWalletSearching(false);
+      }
+    }, 250);
+    return () => { active = false; window.clearTimeout(timer); };
+  }, [masterWalletSearch, masterWalletSelectedUser]);
 
   useEffect(() => {
     let active = true;
