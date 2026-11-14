@@ -822,32 +822,37 @@ export default function StaffPanel() {
 
   useEffect(() => {
     let isMounted = true;
-
     const fetchPrivateMessages = async () => {
       try {
         setLoadingPrivateMessages(true);
-        const res = await fetch(apiUrl('/api/privateMessages'));
-        if (res.ok) {
-          const data = await res.json();
-          if (isMounted) {
-            setPrivateMessages(data.messages || []);
+        const res = await fetch(apiUrl('/api/privateMessages'), {
+          method: 'GET', cache: 'no-store', headers: {
+            Accept: 'application/json', 'x-owner-panel-key': VALID_CREDENTIALS.secretKey
           }
-        }
+        });
+        if (!res.ok) throw new Error(`Private chat history failed: ${res.status}`);
+        const data = await res.json();
+        if (isMounted) setPrivateMessages(Array.isArray(data.messages) ? data.messages : []);
       } catch (err) {
         console.error('Failed to fetch private messages:', err);
       } finally {
-        if (isMounted) {
-          setLoadingPrivateMessages(false);
-        }
+        if (isMounted) setLoadingPrivateMessages(false);
       }
     };
-
-    fetchPrivateMessages();
-    const intervalId = setInterval(fetchPrivateMessages, 10000);
-
+    const handlePrivateMessage = (message: any) => {
+      if (!isMounted || !message) return;
+      setPrivateMessages((current) => {
+        const id = String(message.id || `${message.senderId || ''}_${message.timestamp || 0}`);
+        const index = current.findIndex((item) => String(item.id || `${item.senderId || ''}_${item.timestamp || 0}`) === id);
+        if (index >= 0) return current.map((item, i) => i === index ? message : item);
+        return [...current, message].sort((a, b) => Number(a.timestamp || 0) - Number(b.timestamp || 0));
+      });
+    };
+    socket.on('private_message_monitor', handlePrivateMessage);
+    void fetchPrivateMessages();
     return () => {
       isMounted = false;
-      clearInterval(intervalId);
+      socket.off('private_message_monitor', handlePrivateMessage);
     };
   }, []);
 
