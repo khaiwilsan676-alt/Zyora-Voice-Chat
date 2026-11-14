@@ -969,3 +969,11 @@ Current documentation does not certify that all historical features are build-, 
 - Lucky Bag send, claim, and refund events are relayed live to the Owner Panel. The panel saves these events in browser IndexedDB database `ZyoraOwnerLuckyBagDB` / `transactions` and displays them in the Master Wallet page.
 - Backend retains only a bounded 2,000-event in-memory reconnect handoff for Lucky Bag transactions. It clears on server restart; no MongoDB or Redis transaction-history persistence was added. Each Android user's own Lucky Bag history remains in that device's native `index.db`.
 - No unrelated UI redesign. Deployment and live runtime verification remain pending.
+
+
+## 2026-11-14 — Owner Panel Private Chat live monitor fix
+- Production `Zyora-Server/server.js` now forwards normal user-to-user private messages and delivered official private messages to authenticated Owner Panel sockets using the `private_message_monitor` event.
+- Owner Panel authenticates its monitor socket with the existing owner secret, joins the private-chat monitor room, and receives a bounded in-memory reconnect snapshot (up to 5,000 messages).
+- Owner Panel continues saving received messages in browser IndexedDB (`ZyoraPrivateMessagesDB` / `privateMessages`); each native user's durable chat history remains in their own `index.db`.
+- Private chat content is not persisted in MongoDB. Monitor handoff is volatile and clears when the backend restarts; messages sent while the Owner Panel is offline may be missing after the handoff window expires.
+- No Private Chat UI changes.
