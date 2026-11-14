@@ -865,3 +865,8 @@ Current documentation does not certify that all historical features are build-, 
 - After a Seller Center coin transfer has successfully debited the seller and credited the recipient, the backend sends the recipient a private `Zyora System` message through the existing `private_message` delivery event.
 - Notification text includes `🎉 Successful Offline Recharge`, the exact transferred coin amount, and the seller's name. Online recipients receive it immediately; offline recipients use the existing Redis pending private-message queue.
 - The native recipient inbox stores the message through its existing local `index.db` private-message path. No MongoDB private-message history write, UI redesign, or change to the wallet transfer/debit/credit rules was added. Duplicate completed transfer requests do not send a second notification.
+
+## 2026-11-14 — Gate Me Seller Center menu by owner activation
+- Native `MeScreen.kt`: the Seller Center menu entry is appended immediately after Bag only when the freshly loaded account profile has the owner-controlled seller activation flag (`coinSellerTag`, with legacy aliases retained).
+- When the Owner Panel turns Seller Center off, the next Me profile refresh hides the entry; when turned on, it appears below Bag. No unrelated Me layout or icon asset is changed.
+- Status: implemented in source; native build and device behavior still require verification.
