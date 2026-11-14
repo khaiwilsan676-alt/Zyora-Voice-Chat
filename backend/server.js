@@ -58,6 +58,10 @@ app.use((req, res, next) => {
 
 // Volatile handoff buffer only: no MongoDB/Redis/GitHub persistence. Owner IndexedDB is durable.
 const liveFeedbackBuffer = new Map();
+// Short-lived report handoff so Owner Panel reconnects can recover reports missed while offline.
+const liveUserReports = new Map();
+// Owner private-chat monitor reconnect handoff; canonical history remains in MongoDB privateMessages.
+const livePrivateMessageMonitorBuffer = new Map();
 // Short-lived AI chat handoff for Owner Panel reconnects. Durable chat history stays in each client's IndexedDB/index.db; never write it to MongoDB.
 const liveAiSupportBuffer = new Map();
 
@@ -3146,7 +3150,20 @@ io.on("connection", (socket) => {
         console.error("Could not queue offline private message:", error.message);
       }
     }
+    livePrivateMessageMonitorBuffer.set(String(normalizedMessage.id || `${normalizedMessage.senderId || ""}_${normalizedMessage.timestamp || Date.now()}`), normalizedMessage);
+    while (livePrivateMessageMonitorBuffer.size > 5000) livePrivateMessageMonitorBuffer.delete(livePrivateMessageMonitorBuffer.keys().next().value);
     io.emit("private_message_monitor", normalizedMessage);
+  });
+
+  socket.on("owner_private_message_history_request", (data = {}) => {
+    const ownerKey = String(data.ownerKey || "");
+    if (!process.env.OWNER_PANEL_ACCESS_KEY || ownerKey !== process.env.OWNER_PANEL_ACCESS_KEY) {
+      socket.emit("owner_private_message_history_response", { messages: [], error: "owner_access_required" });
+      return;
+    }
+    socket.emit("owner_private_message_history_response", {
+      messages: Array.from(livePrivateMessageMonitorBuffer.values()).sort((a, b) => Number(a.timestamp || 0) - Number(b.timestamp || 0))
+    });
   });
 
   socket.on("private_message_history_request", async (data = {}) => {
@@ -3270,15 +3287,18 @@ io.on("connection", (socket) => {
       timestamp: Number(data.timestamp || Date.now()),
     };
 
-    // Live-only relay. Reports are kept in the submitting device's local database
-    // and the Owner panel's browser IndexedDB; never write report content to GitHub storage.
+    // Keep a bounded in-memory handoff so reports submitted while Owner Panel is
+    // reconnecting are replayed. Durable owner-side copies remain in browser IndexedDB.
+    liveUserReports.set(reportId, payload);
+    while (liveUserReports.size > 1000) liveUserReports.delete(liveUserReports.keys().next().value);
     io.emit("user_report", payload);
     if (typeof acknowledge === "function") acknowledge({ ok: true, id: reportId, timestamp: payload.timestamp });
   });
 
   socket.on("user_report_history_request", () => {
-    // No server-side report history and no GitHub storage read.
-    socket.emit("user_report_history_response", { reports: [] });
+    socket.emit("user_report_history_response", {
+      reports: Array.from(liveUserReports.values()).sort((a, b) => Number(b.timestamp || 0) - Number(a.timestamp || 0))
+    });
   });
 
   socket.on("user_feedback", async (data = {}, acknowledge) => {
