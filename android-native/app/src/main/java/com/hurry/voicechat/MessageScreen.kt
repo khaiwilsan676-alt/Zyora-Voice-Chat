@@ -1550,16 +1550,17 @@ fun NativeChatScreen(
                             Spacer(Modifier.width(8.dp))
                         }
 
+                        if (!mine && isOfficial) {
+                            AsyncImage(
+                                model = image,
+                                contentDescription = name,
+                                modifier = Modifier.size(28.dp).clip(CircleShape),
+                                contentScale = ContentScale.Crop
+                            )
+                            Spacer(Modifier.width(8.dp))
+                        }
+
                         Column(horizontalAlignment = if (mine) Alignment.End else Alignment.Start) {
-                            if (!mine && isOfficial) {
-                                AsyncImage(
-                                    model = image,
-                                    contentDescription = name,
-                                    modifier = Modifier.size(28.dp).clip(CircleShape),
-                                    contentScale = ContentScale.Crop
-                                )
-                                Spacer(Modifier.height(5.dp))
-                            }
                             Surface(
                                 modifier = if (!isImageMessage && !isRoomInvitation) Modifier.twoSecondLongPress {
                                     clipboard.setText(AnnotatedString(messageText))
@@ -1661,14 +1662,6 @@ fun NativeChatScreen(
                                         Text(messageText, color = if (mine) Color.White else Color(0xFF1F2937), fontSize = 14.sp)
                                     }
                                 }
-                            }
-                            if (isOfficial) {
-                                Text(
-                                    SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(messageTime)),
-                                    color = Color(0xFF8A929E),
-                                    fontSize = 10.sp,
-                                    modifier = Modifier.padding(start = 3.dp, top = 3.dp)
-                                )
                             }
                         }
 
