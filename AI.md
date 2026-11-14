@@ -848,3 +848,8 @@ Current documentation does not certify that all historical features are build-, 
 - Native Help & Feedback keeps each submission in the user's local `index.db` and sends the same record over the existing Socket.IO `user_feedback` event. Contact information is genuinely optional, matching its UI label; leaving it blank no longer blocks submission.
 - The server relays the feedback live to the Owner Panel, includes the optional evidence URI in the payload, and acknowledges successful relay so the native sender can close its one-shot socket cleanly. No feedback body is written to MongoDB, Redis, or server-side history.
 - Owner Panel receives the event and persists it in its browser IndexedDB cache; its existing feedback table and UI are unchanged.
+
+## 2026-11-14 — Daisy AI chat owner live-sync reliability
+- Daisy conversations continue to be saved locally in the native `index.db` `chat_cache` store under the per-user support-chat key.
+- The backend now keeps only a bounded, in-memory handoff of recent AI chat snapshots so the Owner Panel can recover messages after a Socket.IO reconnect; no AI chat content is written to MongoDB, Redis, or GitHub storage.
+- Owner Panel requests the handoff on initial connection and every subsequent Socket.IO reconnect, merges received chats into its existing browser IndexedDB cache, and updates the existing AI Chat section live.
