@@ -939,3 +939,5 @@ Current documentation does not certify that all historical features are build-, 
 - Production `Zyora-Server/server.js` now keeps a bounded in-memory handoff of the latest AI support snapshot per user (maximum 200 users) and recent reports (maximum 500). The Owner Panel requests both snapshots after connect/reconnect and merges them into its existing browser IndexedDB stores.
 - AI chat and report content remain durable only in the submitting user's local `index.db` and the Owner Panel browser IndexedDB; the backend handoff is volatile and clears on server restart. No MongoDB or Redis chat/report persistence was added.
 - Owner Panel GitHub Pages deployment is triggered by the `app/**` change. Render deployment and a real-device AI chat/report test are still required before marking runtime delivery verified.
+
+- Native Daisy support now republishes the restored local conversation snapshot when the support screen opens and Socket.IO connects, so the bounded server handoff can be repopulated without requiring the user to send a new message. Existing users need to open Daisy once on an updated app for their local history to be handed off.
