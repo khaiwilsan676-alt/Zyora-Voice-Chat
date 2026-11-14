@@ -12,21 +12,21 @@ private const val API_BASE = "https://zyora-server.onrender.com"
 data class RoomSyncResult(val rooms: List<HurryRoom>, val serverTime: Long)
 
 object HurryApi {
-    suspend fun bindInvite(inviterId: String, targetId: String): JSONObject? = inviteRequest("/api/invites/bind", JSONObject().put("inviterId", inviterId).put("targetId", targetId))
-    suspend fun claimInvite(userId: String): JSONObject? = inviteRequest("/api/invites/claim", JSONObject().put("userId", userId))
-    suspend fun inviteStats(userId: String): JSONObject? = withContext(Dispatchers.IO) {
+    suspend fun bindInvite(inviterId: String, targetId: String, idToken: String): JSONObject? = inviteRequest("/api/invites/bind", JSONObject().put("inviterId", inviterId).put("targetId", targetId), idToken)
+    suspend fun claimInvite(userId: String, idToken: String): JSONObject? = inviteRequest("/api/invites/claim", JSONObject().put("userId", userId), idToken)
+    suspend fun inviteStats(userId: String, idToken: String): JSONObject? = withContext(Dispatchers.IO) {
         runCatching {
             val encoded = java.net.URLEncoder.encode(userId, "UTF-8")
             val c = URL("$API_BASE/api/invites/$encoded").openConnection() as HttpURLConnection
-            c.requestMethod = "GET"; c.connectTimeout = 8000; c.readTimeout = 8000
+            c.requestMethod = "GET"; c.connectTimeout = 8000; c.readTimeout = 8000; c.setRequestProperty("Authorization", "Bearer $idToken")
             try { val stream = if (c.responseCode in 200..299) c.inputStream else c.errorStream; JSONObject(stream.bufferedReader().use { it.readText() }) } finally { c.disconnect() }
         }.getOrNull()
     }
-    private suspend fun inviteRequest(path: String, body: JSONObject): JSONObject? = withContext(Dispatchers.IO) {
+    private suspend fun inviteRequest(path: String, body: JSONObject, idToken: String): JSONObject? = withContext(Dispatchers.IO) {
         runCatching {
             val c = URL("$API_BASE$path").openConnection() as HttpURLConnection
             c.requestMethod = "POST"; c.doOutput = true; c.connectTimeout = 8000; c.readTimeout = 8000
-            c.setRequestProperty("Content-Type", "application/json")
+            c.setRequestProperty("Content-Type", "application/json"); c.setRequestProperty("Authorization", "Bearer $idToken")
             c.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
             try { val stream = if (c.responseCode in 200..299) c.inputStream else c.errorStream; JSONObject(stream.bufferedReader().use { it.readText() }) } finally { c.disconnect() }
         }.getOrNull()
