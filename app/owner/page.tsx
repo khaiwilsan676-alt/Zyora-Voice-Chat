@@ -516,13 +516,54 @@ export default function StaffPanel() {
     });
   };
 
-  const [officialSender, setOfficialSender] = useState<'hurry_team_official' | 'hurry_system_official'>('hurry_team_official');
+  const [officialSender, setOfficialSender] = useState<'hurry_team_official' | 'hurry_system_official'>('hurry_system_official');
+  const [officialRecipientQuery, setOfficialRecipientQuery] = useState('');
+  const [officialRecipientResults, setOfficialRecipientResults] = useState<any[]>([]);
+  const [officialRecipient, setOfficialRecipient] = useState<any | null>(null);
+  const [officialRecipientLoading, setOfficialRecipientLoading] = useState(false);
   const [officialText, setOfficialText] = useState('');
   const [officialImage, setOfficialImage] = useState('');
   const [officialSending, setOfficialSending] = useState(false);
   const [officialSuccess, setOfficialSuccess] = useState('');
   const [officialHistory, setOfficialHistory] = useState<any[]>([]);
   const officialFileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    let active = true;
+    const term = officialRecipientQuery.trim();
+    if (!term) {
+      setOfficialRecipientResults([]);
+      setOfficialRecipientLoading(false);
+      return;
+    }
+    setOfficialRecipientLoading(true);
+    const searchUsers = async () => {
+      try {
+        const response = await fetch(apiUrl('/api/users?q=' + encodeURIComponent(term)), {
+          cache: 'no-store',
+          headers: { Accept: 'application/json' }
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data?.error || 'User search failed');
+        const rows = Array.isArray(data?.users) ? data.users : data?.user ? [data.user] : [];
+        if (active) setOfficialRecipientResults(rows.map((user: any) => ({
+          uid: String(user.uid || user.id || user.appLongId || user._id || ''),
+          accountId: String(user.accountId || user.accountNumber || user.displayAccountNumber || user.displayUserNumber || user.id || user.uid || ''),
+          name: String(user.name || user.displayName || user.userName || 'User'),
+          image: String(user.image || user.dp || user.avatar || user.photoURL || user.photoUrl || user.profileImage || user.picture || '')
+        })).filter((user: any) => user.uid && user.accountId));
+      } catch (error) {
+        if (active) {
+          setOfficialRecipientResults([]);
+          console.error('Official recipient search failed:', error);
+        }
+      } finally {
+        if (active) setOfficialRecipientLoading(false);
+      }
+    };
+    void searchUsers();
+    return () => { active = false; };
+  }, [officialRecipientQuery]);
 
 
   useEffect(() => {
@@ -2190,6 +2231,63 @@ export default function StaffPanel() {
 
               <div>
                 <label className="block text-[11px] font-extrabold text-slate-600 uppercase tracking-wider mb-2">
+                  Search User ID
+                </label>
+                <input
+                  type="text"
+                  value={officialRecipientQuery}
+                  onChange={(e) => {
+                    setOfficialRecipientQuery(e.target.value);
+                    setOfficialRecipient(null);
+                  }}
+                  placeholder="Enter a user's real Zyora ID..."
+                  className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500"
+                />
+                {officialRecipientLoading && <p className="mt-2 text-xs text-slate-500">Searching users...</p>}
+                {!officialRecipientLoading && officialRecipientQuery.trim() && officialRecipientResults.length > 0 && (
+                  <div className="mt-2 overflow-hidden rounded-xl border border-slate-200 bg-white">
+                    {officialRecipientResults.slice(0, 6).map((user: any) => (
+                      <button
+                        type="button"
+                        key={user.uid + ':' + user.accountId}
+                        onClick={() => {
+                          setOfficialRecipient(user);
+                          setOfficialRecipientQuery(user.accountId);
+                          setOfficialRecipientResults([]);
+                        }}
+                        className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-slate-50 border-b border-slate-100 last:border-b-0"
+                      >
+                        <div className="w-10 h-10 rounded-full overflow-hidden bg-slate-100 flex items-center justify-center shrink-0">
+                          {user.image ? <img src={user.image} alt={user.name} className="w-full h-full object-cover" /> : <span className="font-bold text-slate-500">{user.name.charAt(0).toUpperCase()}</span>}
+                        </div>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-bold text-slate-800">{user.name}</span>
+                          <span className="block text-xs text-slate-500">ID: {user.accountId}</span>
+                        </span>
+                        <span className="text-xs font-bold text-indigo-600">Select</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {!officialRecipientLoading && officialRecipientQuery.trim() && !officialRecipient && officialRecipientResults.length === 0 && (
+                  <p className="mt-2 text-xs text-slate-500">No matching user selected. Search by ID and select the correct account.</p>
+                )}
+                {officialRecipient && (
+                  <div className="mt-2 flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3">
+                    <div className="w-10 h-10 rounded-full overflow-hidden bg-white flex items-center justify-center shrink-0">
+                      {officialRecipient.image ? <img src={officialRecipient.image} alt={officialRecipient.name} className="w-full h-full object-cover" /> : <span className="font-bold text-slate-500">{officialRecipient.name.charAt(0).toUpperCase()}</span>}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-bold text-slate-800">{officialRecipient.name}</p>
+                      <p className="text-xs text-slate-600">Selected ID: {officialRecipient.accountId}</p>
+                    </div>
+                    <button type="button" onClick={() => { setOfficialRecipient(null); setOfficialRecipientQuery(''); }} className="ml-auto text-xs font-bold text-red-600">Change</button>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-extrabold text-slate-600 uppercase tracking-wider mb-2">
                   Select ID
                 </label>
                 <select
@@ -2263,38 +2361,50 @@ export default function StaffPanel() {
                 <div className="flex justify-end pt-2">
                   <button
                     onClick={() => {
+                      if (!officialRecipient) {
+                        alert('Please search and select one user ID first.');
+                        return;
+                      }
                       if (!officialText.trim() && !officialImage) {
                         alert('Please enter text or select an image.');
                         return;
                       }
 
                       setOfficialSending(true);
-
                       const senderName = officialSender === 'hurry_team_official' ? 'Zyora Team' : 'Zyora System';
                       const senderPhoto = officialSender === 'hurry_team_official' ? '/logo.png' : '/file_00000000a66881f8aa9e15d2fe2b9a0c.png';
-
                       const payload = {
-                        id: `official_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+                        id: `official_private_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
                         senderId: officialSender,
+                        senderAccountId: officialSender,
                         senderName,
                         senderPhoto,
+                        receiverId: officialRecipient.uid,
+                        receiverAccountId: officialRecipient.accountId,
+                        receiverName: officialRecipient.name,
+                        receiverPhoto: officialRecipient.image || '/default-avatar.png',
                         text: officialText.trim(),
                         type: officialImage ? 'image' : 'message',
                         imageUrl: officialImage || undefined,
                         timestamp: Date.now()
                       };
 
-                      socket.emit('send_official_message', payload);
-
-                      setOfficialSuccess('Sent successfully!');
-                      setOfficialText('');
-                      setOfficialImage('');
-                      if (officialFileInputRef.current) officialFileInputRef.current.value = '';
-                      setOfficialSending(false);
-
-                      setTimeout(() => setOfficialSuccess(''), 3000);
+                      socket.emit('send_official_private_message', payload, (result: any) => {
+                        setOfficialSending(false);
+                        if (!result?.ok) {
+                          alert(result?.error || 'Message could not be delivered.');
+                          return;
+                        }
+                        setOfficialSuccess('Private message sent successfully!');
+                        setOfficialText('');
+                        setOfficialImage('');
+                        setOfficialRecipient(null);
+                        setOfficialRecipientQuery('');
+                        if (officialFileInputRef.current) officialFileInputRef.current.value = '';
+                        setTimeout(() => setOfficialSuccess(''), 3000);
+                      });
                     }}
-                    disabled={officialSending || (!officialText.trim() && !officialImage)}
+                    disabled={officialSending || !officialRecipient || (!officialText.trim() && !officialImage)}
                     className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-extrabold rounded-md shadow-md hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 transition-all flex items-center gap-2 cursor-pointer"
                   >
                     <Send className="w-4 h-4" />
