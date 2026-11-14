@@ -365,7 +365,10 @@ fun HelpFeedbackPage(onBack: () -> Unit = {}) {
                                         localIndexDb.saveChat("feedback_$feedbackId", obj.toString())
                                         val mainHandler = Handler(Looper.getMainLooper())
                                         try {
-                                            val options = IO.Options.builder().setTimeout(15000).setReconnection(false).build()
+                                            val options = IO.Options().apply {
+                                                timeout = 15000
+                                                reconnection = false
+                                            }
                                             val feedbackSocket = IO.socket("https://zyora-server.onrender.com", options)
                                             var finished = false
                                             fun finishSubmission(delivered: Boolean) {
