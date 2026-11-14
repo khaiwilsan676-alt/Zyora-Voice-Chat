@@ -2062,9 +2062,9 @@ export default function StaffPanel() {
                         {fb.timestamp ? new Date(fb.timestamp).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}
                       </span>
                     </div>
-                  </div>
-                  <div className="w-24 flex justify-end shrink-0">
-                    <button onClick={() => setSelectedFeedback(fb)} className="px-4 py-2 bg-green-800 hover:bg-green-900 text-white rounded-lg text-xs font-bold">Open</button>
+                    <div className="w-24 flex justify-end shrink-0">
+                      <button onClick={() => setSelectedFeedback(fb)} className="px-4 py-2 bg-green-800 hover:bg-green-900 text-white rounded-lg text-xs font-bold">Open</button>
+                    </div>
                   </div>
                 ))}
 
