@@ -305,5 +305,17 @@ private fun syncDaisyChat(
         .put("messages", messageArray)
         .put("lastMessage", lastMessage)
         .put("timestamp", System.currentTimeMillis())
-    runCatching { socket?.emit("ai_support_message", payload) }
+    runCatching {
+        val activeSocket = socket ?: return@runCatching
+        // The support screen can open before Socket.IO finishes connecting.
+        // Queue this snapshot so the first user message is not silently dropped.
+        if (activeSocket.connected()) {
+            activeSocket.emit("ai_support_message", payload)
+        } else {
+            activeSocket.once(Socket.EVENT_CONNECT) {
+                activeSocket.emit("ai_support_message", payload)
+            }
+            if (!activeSocket.connected()) activeSocket.connect()
+        }
+    }
 }
