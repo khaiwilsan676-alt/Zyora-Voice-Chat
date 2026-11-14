@@ -719,28 +719,49 @@ export default function StaffPanel() {
         });
       };
 
+      const mergeSupportChatSnapshot = (current: any, incoming: any) => {
+        const currentTime = Number(current?.timestamp || 0);
+        const incomingTime = Number(incoming?.timestamp || 0);
+        // Ignore delayed/out-of-order snapshots so an older history response
+        // cannot replace a newer live conversation already shown in this panel.
+        const latest = incomingTime >= currentTime ? incoming : current;
+        return {
+          ...(current || {}),
+          ...(latest || {}),
+          userId: String(incoming?.userId || current?.userId || ""),
+          messages: Array.isArray(latest?.messages)
+            ? latest.messages
+            : (Array.isArray(current?.messages) ? current.messages : []),
+          status: incoming?.status || current?.status || "Open",
+          timestamp: Math.max(currentTime, incomingTime)
+        };
+      };
+
       const handleHistoryResponse = (data: any) => {
         if (!isMounted || !Array.isArray(data?.chats)) return;
         setSupportChats(prev => {
           const map = new Map<string, any>();
-          prev.forEach(item => map.set(item.userId, item));
+          prev.forEach(item => map.set(String(item.userId), item));
           data.chats.forEach((item: any) => {
-            if (item.userId) {
-              map.set(item.userId, { ...map.get(item.userId), ...item });
-              saveSupportChatToIndexedDB(item);
-            }
+            if (!item?.userId) return;
+            const userId = String(item.userId);
+            const merged = mergeSupportChatSnapshot(map.get(userId), item);
+            map.set(userId, merged);
+            void saveSupportChatToIndexedDB(merged);
           });
           return Array.from(map.values()).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
         });
       };
 
       const handleAiSupportMessage = (data: any) => {
-        if (!isMounted || !data?.userId) return;
+        if (!isMounted || !data?.userId || !Array.isArray(data.messages)) return;
         setSupportChats(prev => {
           const map = new Map<string, any>();
-          prev.forEach(item => map.set(item.userId, item));
-          map.set(data.userId, data);
-          saveSupportChatToIndexedDB(data);
+          prev.forEach(item => map.set(String(item.userId), item));
+          const userId = String(data.userId);
+          const merged = mergeSupportChatSnapshot(map.get(userId), data);
+          map.set(userId, merged);
+          void saveSupportChatToIndexedDB(merged);
           return Array.from(map.values()).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
         });
       };
