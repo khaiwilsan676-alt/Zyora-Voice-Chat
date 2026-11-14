@@ -1297,7 +1297,7 @@ export default function StaffPanel() {
                             </div>
                           </td>
                           <td className="py-3 px-2">
-                            <span className="text-sm font-bold text-[#8a92ff] tracking-wide">{u.hurryId}</span>
+                            <span className="text-sm font-bold text-black tracking-wide">{u.hurryId}</span>
                           </td>
                           <td className="py-3 px-2">
                             <span className="text-xs font-semibold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-md inline-block">
@@ -1660,7 +1660,7 @@ export default function StaffPanel() {
                           </div>
                           <div className="min-w-0">
                             <div className="font-bold text-sm text-slate-800 truncate">{conv.senderName}</div>
-                            <div className="text-[10px] text-slate-400 font-semibold truncate">ID: {conv.senderId}</div>
+                            <div className="text-[10px] text-black font-semibold truncate">ID: {conv.senderId}</div>
                           </div>
                         </div>
 
@@ -1676,7 +1676,7 @@ export default function StaffPanel() {
                           </div>
                           <div className="min-w-0">
                             <div className="font-bold text-sm text-slate-800 truncate">{conv.receiverName}</div>
-                            <div className="text-[10px] text-slate-400 font-semibold truncate">ID: {conv.receiverId}</div>
+                            <div className="text-[10px] text-black font-semibold truncate">ID: {conv.receiverId}</div>
                           </div>
                         </div>
 
@@ -1843,7 +1843,7 @@ export default function StaffPanel() {
                               </div>
                             </td>
                             <td className="px-4 py-4 font-semibold">{chat.userName || 'User'}</td>
-                            <td className="px-4 py-4 font-semibold text-blue-600">{chat.userAccountId || chat.userId}</td>
+                            <td className="px-4 py-4 font-semibold text-black">{chat.userAccountId || chat.userId}</td>
                             <td className="whitespace-nowrap px-4 py-4 text-xs text-slate-500">{chat.timestamp ? new Date(chat.timestamp).toLocaleString() : '—'}</td>
                             <td className="px-4 py-4">
                               <button type="button" onClick={() => setSelectedSupportUserId(chat.userId)} className="rounded-lg bg-green-800 px-4 py-2 text-xs font-bold text-white hover:bg-green-900">
@@ -1903,7 +1903,7 @@ export default function StaffPanel() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="font-bold text-sm text-slate-800 truncate">{activeChat.userName || 'User'}</div>
-                      <div className="text-[11px] text-blue-600 font-semibold truncate">
+                      <div className="text-[11px] text-black font-semibold truncate">
                         ID: {activeChat.userAccountId || activeChat.userId}
                       </div>
                     </div>
@@ -2045,7 +2045,7 @@ export default function StaffPanel() {
                       <div className="font-bold text-sm text-slate-800 truncate">{fb.userName || 'User'}</div>
                     </div>
                     <div className="w-40 shrink-0">
-                      <span className="text-xs font-bold text-indigo-600 truncate block">ID: {fb.userAccountId || fb.userId || 'N/A'}</span>
+                      <span className="text-xs font-bold text-black truncate block">ID: {fb.userAccountId || fb.userId || 'N/A'}</span>
                     </div>
                     <div className="w-28 shrink-0">
                       <span className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wide border ${
@@ -2102,7 +2102,7 @@ export default function StaffPanel() {
                     <div>
                       <h3 className="text-base font-bold text-slate-800">{selectedFeedback.userName || 'User'}</h3>
                       <div className="text-xs font-semibold text-slate-500 mt-0.5">
-                        User ID: <strong className="text-indigo-600">{selectedFeedback.userAccountId || selectedFeedback.userId}</strong>
+                        User ID: <strong className="text-black">{selectedFeedback.userAccountId || selectedFeedback.userId}</strong>
                       </div>
                     </div>
                   </div>
