@@ -90,6 +90,14 @@ fun HurrySupport(onBack: () -> Unit) {
         messages.forEach { item -> array.put(JSONObject().put("text", item.text).put("image", item.image ?: JSONObject.NULL).put("isBot", item.isBot).put("timestamp", item.timestamp)) }
         localChatDb.saveChat("daisy_support_$supportUserId", array.toString())
     }
+    // Publish the already-restored local conversation once whenever Daisy opens
+    // and the Socket.IO connection is ready. This repopulates the server's
+    // short-lived Owner Panel handoff even before the user sends a new message.
+    LaunchedEffect(supportUserId, supportSocket) {
+        if (supportUserId.isNotBlank() && supportSocket != null && messages.isNotEmpty()) {
+            syncDaisyChat(messages.toList(), supportSocket, supportUserId, supportUserName, supportUserPhoto, supportUserAccountId)
+        }
+    }
     val keyboard = LocalSoftwareKeyboardController.current
 
     fun answer(raw: String): SupportMessage {
