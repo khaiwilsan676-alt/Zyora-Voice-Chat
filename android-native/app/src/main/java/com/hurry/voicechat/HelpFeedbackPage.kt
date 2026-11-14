@@ -28,6 +28,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.socket.client.Ack
 import io.socket.client.IO
 import io.socket.client.Socket
 import org.json.JSONObject
@@ -364,7 +365,12 @@ fun HelpFeedbackPage(onBack: () -> Unit = {}) {
                                         runCatching {
                                             val feedbackSocket = IO.socket("https://zyora-server.onrender.com")
                                             feedbackSocket.on(Socket.EVENT_CONNECT) {
-                                                feedbackSocket.emit("user_feedback", obj)
+                                                feedbackSocket.emit("user_feedback", obj, Ack {
+                                                    feedbackSocket.disconnect()
+                                                    feedbackSocket.close()
+                                                })
+                                            }
+                                            feedbackSocket.on(Socket.EVENT_CONNECT_ERROR) {
                                                 feedbackSocket.disconnect()
                                                 feedbackSocket.close()
                                             }
