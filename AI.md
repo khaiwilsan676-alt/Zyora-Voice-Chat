@@ -896,7 +896,7 @@ Current documentation does not certify that all historical features are build-, 
 
 ## 2026-11-14 — Master Wallet Seller transfer engine reuse
 - Owner Panel Master Wallet now calls the established `/api/seller/transfer` endpoint with `masterWallet: true`, avoiding a separate un-deployed route that could return an HTML 404 page.
-- The existing Seller transfer engine is reused for user lookup, legacy coin normalization, idempotency, transfer records, canonical MongoDB `users.coins` credit, and the same Socket.IO online / Redis offline private-message delivery.
+- The existing Seller transfer endpoint is reused for user lookup, legacy coin normalization, canonical MongoDB `users.coins` credit, and the same Socket.IO online / Redis offline private-message delivery. Master Wallet credits increment the existing User document directly; an idempotency key is stored on that same document. Master Wallet history is Owner Panel browser IndexedDB only, with no separate MongoDB transaction collection. Seller Center retains its existing `sellerCoinTransfers` history.
 - Master Wallet mode does not debit a seller or owner user balance; it credits the selected recipient and sends the exact Zyora System notice: `You receive / Coins: [amount] / From Zyora official Team`.
 - The Owner Panel now detects HTML/non-JSON server responses and shows a readable deployment error instead of throwing an opaque JSON parse exception.
 
