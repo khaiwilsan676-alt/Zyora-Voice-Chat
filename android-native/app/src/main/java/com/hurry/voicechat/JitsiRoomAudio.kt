@@ -91,8 +91,12 @@ fun JitsiRoomAudio(
         if (roomSocket == null) return@DisposableEffect onDispose { }
         val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
         val oldMode = audioManager.mode
-        // Room audio uses the normal media/speaker route, never call mode.
-        audioManager.mode = AudioManager.MODE_NORMAL
+        val oldSpeakerphone = audioManager.isSpeakerphoneOn
+        // Use Android's communication path so platform acoustic echo cancellation
+        // and voice processing can prevent the local microphone re-capturing playback.
+        audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
+        @Suppress("DEPRECATION")
+        runCatching { audioManager.isSpeakerphoneOn = true }
 
         val alive = AtomicBoolean(true)
         val recording = AtomicBoolean(false)
@@ -355,7 +359,7 @@ fun JitsiRoomAudio(
                         AudioTrack.Builder()
                             .setAudioAttributes(
                                 AudioAttributes.Builder()
-                                    .setUsage(AudioAttributes.USAGE_MEDIA)
+                                    .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
                                     .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
                                     .build()
                             )
@@ -530,7 +534,11 @@ fun JitsiRoomAudio(
                     runCatching { player?.pause(); player?.flush(); player?.stop(); player?.release() }
                     player = null
                 }
-                runCatching { audioManager.mode = oldMode }
+                runCatching {
+                    @Suppress("DEPRECATION")
+                    audioManager.isSpeakerphoneOn = oldSpeakerphone
+                    audioManager.mode = oldMode
+                }
             }
         }
     }
