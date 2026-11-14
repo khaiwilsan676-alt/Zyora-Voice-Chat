@@ -497,8 +497,7 @@ const LoginForm = ({ onLoginSuccess }: { onLoginSuccess: () => void }) => {
           <div>
             <label className="block text-[11px] font-extrabold text-slate-600 uppercase tracking-wider mb-2">
               Secret Key
-            </label>
-            <div className="relative">
+            </label>            <div className="relative">
               <div className="absolute left-3.5 top-3 text-slate-400">
                 <Key className="w-4 h-4" />
               </div>
@@ -997,8 +996,7 @@ export default function StaffPanel() {
         }
       } catch (error) {
         console.error("Owner private chat IndexedDB load failed:", error);
-      } finally {
-        if (isMounted) setLoadingPrivateMessages(false);
+      } finally {        if (isMounted) setLoadingPrivateMessages(false);
       }
     };
     const handlePrivateMessage = (message: any) => {
@@ -1469,7 +1467,7 @@ export default function StaffPanel() {
 
           <SidebarCategory
             icon="👥" title="User Center" activeItem={activeTab} setActiveItem={setActiveTab} setIsSidebarOpen={setIsSidebarOpen}
-            items={[{ id: 'manage_users', label: 'Manage Users', icon: '👤' }, { id: 'seller_center', label: 'Seller Center', icon: '🛒' }, { id: 'host_apps', label: 'Host Applications', icon: '📝' }]}
+            items={[{ id: 'manage_users', label: 'Manage Users', icon: '👤' }, { id: 'host_apps', label: 'Host Applications', icon: '📝' }]}
           />
           <SidebarCategory
             icon="🎙️" title="Live Rooms" activeItem={activeTab} setActiveItem={setActiveTab} setIsSidebarOpen={setIsSidebarOpen}
@@ -1481,7 +1479,7 @@ export default function StaffPanel() {
           />
           <SidebarCategory
             icon="💰" title="Economy" activeItem={activeTab} setActiveItem={setActiveTab} setIsSidebarOpen={setIsSidebarOpen}
-            items={[{ id: 'wallet', label: 'Master Wallet', icon: '💳' }, { id: 'history', label: 'Send History', icon: '📜' }, { id: 'revenue', label: 'Bean Revenue', icon: '📈' }]}
+            items={[{ id: 'wallet', label: 'Master Wallet', icon: '💳' }, { id: 'seller_center', label: 'Seller Center', icon: '🛒' }, { id: 'revenue', label: 'Bean Revenue', icon: '📈' }]}
           />
           <SidebarCategory
             icon="📁" title="Content" activeItem={activeTab} setActiveItem={setActiveTab} setIsSidebarOpen={setIsSidebarOpen}
@@ -1497,8 +1495,7 @@ export default function StaffPanel() {
               { id: 'tickets', label: 'Private Chat', icon: '🎫' },
               { id: 'official_msg', label: 'Official Msg', icon: '📢' }
             ]}
-          />
-          <SidebarCategory
+          />          <SidebarCategory
             icon="⚙️" title="Platform" activeItem={activeTab} setActiveItem={setActiveTab} setIsSidebarOpen={setIsSidebarOpen}
             items={[{ id: 'analytics', label: 'Analytics', icon: '📊' }, { id: 'agency', label: 'Agency Mgmt', icon: '🏢' }]}
           />
@@ -1997,8 +1994,7 @@ export default function StaffPanel() {
                         </div>
 
                         <div className="w-48 text-[11px] text-slate-400 font-medium text-right shrink-0">
-                          {conv.timestamp ? new Date(conv.timestamp).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}
-                        </div>
+                          {conv.timestamp ? new Date(conv.timestamp).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}                        </div>
                       </div>
                     ))
                   )}
@@ -2497,8 +2493,7 @@ export default function StaffPanel() {
 
             <div className="hidden md:flex items-center gap-4 px-6 py-3 text-[11px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50 border-b border-slate-100 shrink-0">
               <span className="w-10">S.No</span>
-              <span className="w-12">Avatar</span>
-              <span className="flex-1">Name</span>
+              <span className="w-12">Avatar</span>              <span className="flex-1">Name</span>
               <span className="w-40">ID</span>
               <span className="w-28">Type</span>
               <span className="w-40">Date Time</span>
