@@ -547,10 +547,6 @@ export default function StaffPanel() {
         socket.connect();
       }
 
-      socket.emit("user_feedback_history_request");
-      socket.emit("ai_support_history_request");
-      socket.emit("official_message_history_request");
-
       const handleFeedbackHistoryResponse = (data: any) => {
         if (!isMounted || !Array.isArray(data?.feedbacks)) return;
         setFeedbacks(prev => {
@@ -645,6 +641,19 @@ export default function StaffPanel() {
 
       socket.on("official_message_history_response", handleOfficialHistoryResponse);
       socket.on("official_broadcast_message", handleOfficialBroadcast);
+
+      // Register all response listeners before requesting snapshots. Socket.IO may
+      // deliver a fast history response immediately; emitting first loses that response.
+      const requestOwnerHistories = () => {
+        socket.emit("user_feedback_history_request");
+        socket.emit("ai_support_history_request");
+        socket.emit("official_message_history_request");
+      };
+      if (socket.connected) {
+        requestOwnerHistories();
+      } else {
+        socket.once("connect", requestOwnerHistories);
+      }
 
       return () => {
         isMounted = false;
