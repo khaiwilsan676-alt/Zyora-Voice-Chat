@@ -519,7 +519,7 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int, onChat: (Strin
                                             .putLong("diamonds_$walletUserId", serverDiamonds)
                                             .putLong("last_sync_$walletUserId", System.currentTimeMillis())
                                             .apply()
-                                        recordTransaction(dao, "Diamond Exchange", -d, "diamond")
+                                        recordTransaction(context, walletUserId, "Diamond Exchange", -d, "diamond")
                                         din = ""; cin = ""
                                         coins = serverBalance
                                         diamonds = serverDiamonds
@@ -615,7 +615,7 @@ private fun DetailsNativePage(type: String, onBack: () -> Unit) {
                             Text(tx.optString("date"), Modifier.padding(top = 4.dp),
                                 fontSize = 13.sp, color = Color(0xFF9CA3AF))
                         }
-                        Text(if (tx.optLong("amount") > 0) "+${tx.amount}" else tx.amount.toString(),
+                        Text(if (tx.optLong("amount") > 0) "+${tx.optLong("amount")}" else tx.optLong("amount").toString(),
                             fontSize = 15.sp, fontWeight = FontWeight.Bold, color = valueColor)
                     }
                     HorizontalDivider(color = Color(0xFFF3F4F6))
