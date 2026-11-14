@@ -3302,7 +3302,7 @@ io.on("connection", (socket) => {
   });
 
 
-  socket.on("user_report", async (data = {}) => {
+  socket.on("user_report", async (data = {}, acknowledge) => {
     const reportId = String(data.id || `report_${Date.now()}`);
 
     const payload = {
@@ -3322,6 +3322,7 @@ io.on("connection", (socket) => {
     // Live-only relay. Reports are kept in the submitting device's local database
     // and the Owner panel's browser IndexedDB; never write report content to GitHub storage.
     io.emit("user_report", payload);
+    if (typeof acknowledge === "function") acknowledge({ ok: true, id: reportId, timestamp: payload.timestamp });
   });
 
   socket.on("user_report_history_request", () => {
