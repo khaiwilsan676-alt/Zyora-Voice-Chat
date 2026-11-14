@@ -892,3 +892,10 @@ Current documentation does not certify that all historical features are build-, 
 - Added a dedicated `user_reports` table to the submitting device's native `index.db` with a version-7 migration; report submissions no longer masquerade as chat-cache records.
 - The native sender keeps its local copy and emits `user_report` over Socket.IO. The backend only relays the event live and acknowledges delivery; it does not persist report content in MongoDB, Redis, or server history.
 - Owner Panel Reports continues to receive `user_report` live and cache the received report/status in its own browser IndexedDB. No Report UI redesign.
+
+
+## 2026-11-14 — Master Wallet Seller transfer engine reuse
+- Owner Panel Master Wallet now calls the established `/api/seller/transfer` endpoint with `masterWallet: true`, avoiding a separate un-deployed route that could return an HTML 404 page.
+- The existing Seller transfer engine is reused for user lookup, legacy coin normalization, idempotency, transfer records, canonical MongoDB `users.coins` credit, and the same Socket.IO online / Redis offline private-message delivery.
+- Master Wallet mode does not debit a seller or owner user balance; it credits the selected recipient and sends the exact Zyora System notice: `You receive / Coins: [amount] / From Zyora official Team`.
+- The Owner Panel now detects HTML/non-JSON server responses and shows a readable deployment error instead of throwing an opaque JSON parse exception.
