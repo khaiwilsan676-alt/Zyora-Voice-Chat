@@ -961,3 +961,10 @@ Current documentation does not certify that all historical features are build-, 
 - Native clients remain responsible for their own private-message history in `index.db`. The backend relays live messages and keeps only a bounded in-memory handoff for Owner Panel reconnects; it does not persist private chat content to MongoDB, Redis, or GitHub storage.
 - Important: browser IndexedDB belongs to the Owner Panel browser/device. A different browser/device does not share that local database. Messages sent while the Owner Panel is offline cannot be recovered after the backend's in-memory handoff is lost; no server-side durable copy is retained.
 - Status: **Committed in repository; deployment and live two-account verification pending.**
+
+
+## 2026-11-14 — Lucky Bag and Master Wallet Owner Panel IndexedDB history
+- Master Wallet transfer history remains saved and loaded only from Owner Panel browser IndexedDB database `ZyoraMasterWalletDB` / `transferHistory`.
+- Lucky Bag send, claim, and refund events are relayed live to the Owner Panel. The panel saves these events in browser IndexedDB database `ZyoraOwnerLuckyBagDB` / `transactions` and displays them in the Master Wallet page.
+- Backend retains only a bounded 2,000-event in-memory reconnect handoff for Lucky Bag transactions. It clears on server restart; no MongoDB or Redis transaction-history persistence was added. Each Android user's own Lucky Bag history remains in that device's native `index.db`.
+- No unrelated UI redesign. Deployment and live runtime verification remain pending.
