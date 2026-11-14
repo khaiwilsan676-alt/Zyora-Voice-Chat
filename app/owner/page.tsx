@@ -2634,6 +2634,41 @@ export default function StaffPanel() {
                     <Send className="w-4 h-4" />
                     <span>{officialSending ? 'Sending...' : 'Send'}</span>
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!officialText.trim() && !officialImage) {
+                        alert('Please enter text or select an image.');
+                        return;
+                      }
+                      if (!window.confirm('Broadcast this message to all currently connected Zyora users?')) return;
+                      setOfficialSending(true);
+                      socket.timeout(20000).emit('send_official_message', {
+                        id: `official_broadcast_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+                        senderId: officialSender,
+                        text: officialText.trim(),
+                        type: officialImage ? 'image' : 'message',
+                        imageUrl: officialImage || undefined,
+                        timestamp: Date.now()
+                      }, (timeoutError: any, result: any) => {
+                        setOfficialSending(false);
+                        if (timeoutError || !result?.ok) {
+                          alert(result?.error || 'Broadcast delivery was not confirmed. Please retry.');
+                          return;
+                        }
+                        setOfficialSuccess(`Broadcast sent to ${result.deliveredCount} connected users.`);
+                        setOfficialText('');
+                        setOfficialImage('');
+                        if (officialFileInputRef.current) officialFileInputRef.current.value = '';
+                        setTimeout(() => setOfficialSuccess(''), 4000);
+                      });
+                    }}
+                    disabled={officialSending || (!officialText.trim() && !officialImage)}
+                    className="px-6 py-2.5 bg-slate-900 text-white text-sm font-extrabold rounded-md shadow-md disabled:opacity-50 transition-all flex items-center gap-2 cursor-pointer"
+                  >
+                    <Send className="w-4 h-4" />
+                    <span>{officialSending ? 'Sending...' : 'Broadcast to all users'}</span>
+                  </button>
                 </div>
 
                 {officialSuccess && (
