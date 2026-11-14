@@ -3347,6 +3347,8 @@ io.on("connection", (socket) => {
       return;
     }
     io.to(targetRooms).emit("private_message", normalizedMessage);
+    // Also deliver to the dedicated Zyora System/Team chat socket, but only for this recipient.
+    io.to(targetRooms).emit("official_broadcast_message", normalizedMessage);
     if (typeof acknowledge === "function") acknowledge({ ok: true, id: normalizedMessage.id });
   });
 
