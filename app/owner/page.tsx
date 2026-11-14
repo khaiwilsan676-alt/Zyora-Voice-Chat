@@ -147,6 +147,51 @@ const saveSupportChatToIndexedDB = async (chatData: any) => {
 // ==============================================================
 
 // ==============================================================
+ // OWNER PRIVATE CHAT — browser IndexedDB only (no MongoDB)
+const OWNER_PRIVATE_CHAT_DB = "ZyoraPrivateMessagesDB";
+const OWNER_PRIVATE_CHAT_STORE = "privateMessages";
+const openOwnerPrivateChatDB = (): Promise<IDBDatabase> => new Promise((resolve, reject) => {
+  if (typeof window === "undefined" || !window.indexedDB) return reject(new Error("IndexedDB unavailable"));
+  const request = indexedDB.open(OWNER_PRIVATE_CHAT_DB, 1);
+  request.onupgradeneeded = () => {
+    if (!request.result.objectStoreNames.contains(OWNER_PRIVATE_CHAT_STORE)) {
+      request.result.createObjectStore(OWNER_PRIVATE_CHAT_STORE, { keyPath: "id" });
+    }
+  };
+  request.onsuccess = () => resolve(request.result);
+  request.onerror = () => reject(request.error || new Error("Could not open private chat IndexedDB"));
+});
+const loadOwnerPrivateMessagesFromIndexedDB = async (): Promise<any[]> => {
+  const db = await openOwnerPrivateChatDB();
+  try {
+    return await new Promise<any[]>((resolve, reject) => {
+      const request = db.transaction(OWNER_PRIVATE_CHAT_STORE, "readonly").objectStore(OWNER_PRIVATE_CHAT_STORE).getAll();
+      request.onsuccess = () => resolve(Array.isArray(request.result) ? request.result : []);
+      request.onerror = () => reject(request.error);
+    });
+  } finally { db.close(); }
+};
+const saveOwnerPrivateMessagesToIndexedDB = async (messages: any[]): Promise<void> => {
+  if (!Array.isArray(messages) || !messages.length) return;
+  const db = await openOwnerPrivateChatDB();
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const transaction = db.transaction(OWNER_PRIVATE_CHAT_STORE, "readwrite");
+      const store = transaction.objectStore(OWNER_PRIVATE_CHAT_STORE);
+      messages.forEach((message) => {
+        if (!message) return;
+        const id = String(message.id || `${message.senderId || ""}_${message.timestamp || 0}`);
+        store.put({ ...message, id });
+      });
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+      transaction.onabort = () => reject(transaction.error || new Error("Private chat IndexedDB save aborted"));
+    });
+  } finally { db.close(); }
+};
+
+// ==============================================================
+// ==============================================================
 // MASTER WALLET HISTORY — IndexedDB only
 // ==============================================================
 const MASTER_WALLET_DB = "ZyoraMasterWalletDB";
@@ -869,37 +914,32 @@ export default function StaffPanel() {
 
   useEffect(() => {
     let isMounted = true;
-    let historyRequest = 0;
     const mergePrivateMessages = (incoming: any[]) => {
-      if (!isMounted || !Array.isArray(incoming)) return;
+      if (!isMounted || !Array.isArray(incoming) || !incoming.length) return;
       setPrivateMessages((current) => {
         const byId = new Map<string, any>();
         [...current, ...incoming].forEach((message) => {
           if (!message) return;
           const id = String(message.id || `${message.senderId || ''}_${message.timestamp || 0}`);
-          byId.set(id, message);
+          byId.set(id, { ...message, id });
         });
         return Array.from(byId.values()).sort((a, b) => Number(a.timestamp || 0) - Number(b.timestamp || 0));
       });
+      void saveOwnerPrivateMessagesToIndexedDB(incoming).catch((error) =>
+        console.error("Owner private chat IndexedDB save failed:", error)
+      );
     };
-    const fetchPrivateMessages = async () => {
-      const requestId = ++historyRequest;
+    const loadPrivateMessages = async () => {
       try {
         setLoadingPrivateMessages(true);
-        const res = await fetch(apiUrl('/api/privateMessages'), {
-          method: 'GET', cache: 'no-store', headers: {
-            Accept: 'application/json', 'x-owner-panel-key': VALID_CREDENTIALS.secretKey
-          }
-        });
-        if (!res.ok) throw new Error(`Private chat history failed: ${res.status}`);
-        const data = await res.json();
-        if (isMounted && requestId === historyRequest) {
-          mergePrivateMessages(Array.isArray(data.messages) ? data.messages : []);
+        const saved = await loadOwnerPrivateMessagesFromIndexedDB();
+        if (isMounted && saved.length) {
+          setPrivateMessages(saved.sort((a, b) => Number(a.timestamp || 0) - Number(b.timestamp || 0)));
         }
-      } catch (err) {
-        console.error('Failed to fetch private messages:', err);
+      } catch (error) {
+        console.error("Owner private chat IndexedDB load failed:", error);
       } finally {
-        if (isMounted && requestId === historyRequest) setLoadingPrivateMessages(false);
+        if (isMounted) setLoadingPrivateMessages(false);
       }
     };
     const handlePrivateMessage = (message: any) => {
@@ -911,18 +951,15 @@ export default function StaffPanel() {
       mergePrivateMessages(data.messages);
     };
     const requestPrivateMessageHistory = () => {
+      // Only the backend's short-lived live handoff is requested; durable history is this browser's IndexedDB.
       socket.emit('owner_private_message_history_request', { ownerKey: VALID_CREDENTIALS.secretKey });
-      void fetchPrivateMessages();
     };
-    const handleSocketConnect = () => {
-      // Recover MongoDB history plus the bounded live handoff after reconnect.
-      requestPrivateMessageHistory();
-    };
+    const handleSocketConnect = () => requestPrivateMessageHistory();
 
     socket.on('private_message_monitor', handlePrivateMessage);
     socket.on('owner_private_message_history_response', handlePrivateMessageHistory);
     socket.on('connect', handleSocketConnect);
-    void fetchPrivateMessages();
+    void loadPrivateMessages();
     if (socket.connected) requestPrivateMessageHistory();
     if (!socket.connected) socket.connect();
 
