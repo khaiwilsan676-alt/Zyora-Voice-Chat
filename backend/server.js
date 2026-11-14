@@ -3380,7 +3380,7 @@ io.on("connection", (socket) => {
       const isTeam = rawSenderId === "hurry_team_official";
       const timestamp = Number(data.timestamp || Date.now());
       const payload = {
-        id: String(data.id || \`official_\${timestamp}_\${Math.random().toString(36).substring(2, 7)}\`),
+        id: String(data.id || `official_${timestamp}_${Math.random().toString(36).substring(2, 7)}`),
         senderId: rawSenderId,
         senderAccountId: rawSenderId,
         senderName: isTeam ? "Zyora Team" : "Zyora System",
