@@ -114,7 +114,7 @@ private suspend fun subtractDiamondsFromDB(dao: WalletDao, amount: Long): Boolea
     true
 }
 
-private suspend fun recordTransaction(dao: WalletDao, title: String, amount: Long, type: String) = withContext(Dispatchers.IO) {
+private suspend fun recordTransaction(context: Context, userId: String, title: String, amount: Long, type: String) = withContext(Dispatchers.IO) {
     val now = java.util.Calendar.getInstance()
     val dateStr = String.format(
         "%04d.%02d.%02d %02d:%02d",
@@ -122,10 +122,8 @@ private suspend fun recordTransaction(dao: WalletDao, title: String, amount: Lon
         now.get(java.util.Calendar.DAY_OF_MONTH),
         now.get(java.util.Calendar.HOUR_OF_DAY), now.get(java.util.Calendar.MINUTE)
     )
-    dao.insertTransaction(TransactionEntity(
-        title = title, amount = amount, date = dateStr,
-        timestamp = System.currentTimeMillis(), type = type
-    ))
+    val timestamp = System.currentTimeMillis()
+    NativeIndexDatabase(context).saveWalletTransaction("${userId}_${timestamp}_${type}", userId, title, amount, dateStr, timestamp, type)
 }
 
 private suspend fun fetchCanonicalWallet(userId: String): JSONObject? = withContext(Dispatchers.IO) {
@@ -481,7 +479,7 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int, onChat: (Strin
                                             .putLong("diamonds_$walletUserId", serverDiamonds)
                                             .putLong("last_sync_$walletUserId", System.currentTimeMillis())
                                             .apply()
-                                        recordTransaction(dao, "Diamond Exchange", -d, "diamond")
+                                        recordTransaction(context, walletUserId, "Diamond Exchange", -d, "diamond")
                                         din = ""; cin = ""
                                         coins = serverBalance
                                         diamonds = serverDiamonds
@@ -558,7 +556,7 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int, onChat: (Strin
                             if (newBalance >= 0L) {
                                 withContext(Dispatchers.IO) {
                                     dao.saveUserData(UserDataEntity(balance = newBalance, diamonds = diamonds))
-                                    recordTransaction(dao, "Recharge", credit, "coin")
+                                    recordTransaction(context, walletUserId, "Recharge", credit, "coin")
                                 }
                                 walletCachePrefs.edit()
                                     .putLong("balance_$walletUserId", newBalance)
@@ -580,13 +578,11 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int, onChat: (Strin
 @Composable
 private fun DetailsNativePage(type: String, onBack: () -> Unit) {
     val context = LocalContext.current
-    val dao = remember { WalletDatabase.get(context).walletDao() }
-    var transactions by remember { mutableStateOf<List<TransactionEntity>>(emptyList()) }
-
-    LaunchedEffect(type) {
-        val cutoff = System.currentTimeMillis() - 24 * 60 * 60 * 1000L
-        withContext(Dispatchers.IO) { dao.deleteOldTransactions(cutoff) }
-        transactions = withContext(Dispatchers.IO) { dao.getRecentTransactions(type) }
+    val authPrefs = remember(context) { context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE) }
+    val walletUserId = remember(authPrefs) { authPrefs.getString("accountId", "").orEmpty().ifBlank { authPrefs.getString("uid", "").orEmpty() } }
+    var transactions by remember { mutableStateOf<List<JSONObject>>(emptyList()) }
+    LaunchedEffect(type, walletUserId) {
+        transactions = withContext(Dispatchers.IO) { NativeIndexDatabase(context).loadWalletTransactions(walletUserId, type, 20) }
     }
 
     val valueColor = if (type == "diamond") Color(0xFF3B82F6) else Color(0xFFF59E0B)
@@ -610,16 +606,16 @@ private fun DetailsNativePage(type: String, onBack: () -> Unit) {
         } else {
             LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp),
                 contentPadding = PaddingValues(top = 8.dp, bottom = 24.dp)) {
-                items(transactions, key = { it.id }) { tx ->
+                items(transactions, key = { it.optString("id") }) { tx ->
                     Row(Modifier.fillMaxWidth().padding(vertical = 16.dp),
                         verticalAlignment = Alignment.Top) {
                         Column(Modifier.weight(1f)) {
-                            Text(tx.title, fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
+                            Text(tx.optString("title"), fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
                                 color = Color(0xFF111827))
-                            Text(tx.date, Modifier.padding(top = 4.dp),
+                            Text(tx.optString("date"), Modifier.padding(top = 4.dp),
                                 fontSize = 13.sp, color = Color(0xFF9CA3AF))
                         }
-                        Text(if (tx.amount > 0) "+${tx.amount}" else tx.amount.toString(),
+                        Text(if (tx.optLong("amount") > 0) "+${tx.amount}" else tx.amount.toString(),
                             fontSize = 15.sp, fontWeight = FontWeight.Bold, color = valueColor)
                     }
                     HorizontalDivider(color = Color(0xFFF3F4F6))
