@@ -64,6 +64,8 @@ const liveUserReports = new Map();
 const livePrivateMessageMonitorBuffer = new Map();
 // Short-lived AI chat handoff for Owner Panel reconnects. Durable chat history stays in each client's IndexedDB/index.db; never write it to MongoDB.
 const liveAiSupportBuffer = new Map();
+// Daisy automation switch is shared by all connected support clients.
+let daisySupportEnabled = true;
 // Bounded volatile reconnect handoff; Owner Panel IndexedDB is the durable history.
 const liveLuckyBagTransactions = new Map();
 
@@ -2066,6 +2068,42 @@ app.get("/", (_req, res) => {
 
 io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
+
+  // Send the current Daisy state to every newly connected support client.
+  socket.emit("daisy_mode", { enabled: daisySupportEnabled });
+
+  // Owner Panel controls Daisy globally; STOP disables automated replies only.
+  socket.on("daisy_mode_set", (data = {}) => {
+    if (typeof data.enabled !== "boolean") return;
+    daisySupportEnabled = data.enabled;
+    io.emit("daisy_mode", { enabled: daisySupportEnabled });
+  });
+
+  // Relay manual Zyora Team replies back to the matching native support chat.
+  socket.on("owner_support_reply", (data = {}, acknowledge) => {
+    const userId = String(data.userId || "").trim();
+    const text = String(data.text || "").trim();
+    if (!userId || !text) {
+      if (typeof acknowledge === "function") acknowledge({ ok: false, error: "Missing userId or text" });
+      return;
+    }
+
+    const timestamp = Date.now();
+    const reply = { userId, text, timestamp };
+    // Native support sockets may not join user:<id>; broadcast the tagged reply
+    // and let each client filter by its own userId.
+    io.emit("owner_support_reply", reply);
+
+    const previous = liveAiSupportBuffer.get(userId);
+    if (previous) {
+      const messages = Array.isArray(previous.messages) ? previous.messages.slice() : [];
+      messages.push({ text, image: null, isBot: true, timestamp });
+      const updatedChat = { ...previous, messages, lastMessage: messages[messages.length - 1], timestamp };
+      liveAiSupportBuffer.set(userId, updatedChat);
+      io.emit("ai_support_message", updatedChat);
+    }
+    if (typeof acknowledge === "function") acknowledge({ ok: true, userId, timestamp });
+  });
 
   socket.on("register", async (payload) => {
     const userId =
