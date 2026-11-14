@@ -1731,10 +1731,15 @@ app.post("/api/seller/transfer", async (req, res) => {
     if ((!masterWallet && !senderId) || !/^\d{4,20}$/.test(recipientAccountId) || !Number.isSafeInteger(amount) || amount <= 0 || !transferId || transferId.length > 100) {
       return res.status(400).json({ error: "Valid user ID and coin amount are required" });
     }
-    const transfers = db.collection(masterWallet ? "masterWalletTransfers" : "sellerCoinTransfers");
-    const prior = await transfers.findOne({ _id: transferId });
-    if (prior?.status === "completed") return res.json({ success: true, transfer: prior, duplicate: true });
-    if (prior) return res.status(409).json({ error: "This transfer is already being processed" });
+    // Master Wallet history is browser IndexedDB only. MongoDB stores no
+    // Master Wallet transaction document; the recipient's existing users document
+    // is the sole balance record and carries an in-document idempotency key.
+    const transfers = masterWallet ? null : db.collection("sellerCoinTransfers");
+    if (!masterWallet) {
+      const prior = await transfers.findOne({ _id: transferId });
+      if (prior?.status === "completed") return res.json({ success: true, transfer: prior, duplicate: true });
+      if (prior) return res.status(409).json({ error: "This transfer is already being processed" });
+    }
 
     if (!masterWallet) sender = await ensureWalletUser(senderId);
     recipient = await db.collection("users").findOne({ $or: [
@@ -1774,7 +1779,7 @@ app.post("/api/seller/transfer", async (req, res) => {
       recipientAccountId, recipientName, recipientAvatar,
       amount, createdAt: now, updatedAt: now
     };
-    await transfers.insertOne(record);
+    if (!masterWallet) await transfers.insertOne(record);
 
     if (!masterWallet) {
       const debit = await db.collection("users").updateOne(
@@ -1789,22 +1794,47 @@ app.post("/api/seller/transfer", async (req, res) => {
     }
 
     try {
-      const credit = await db.collection("users").updateOne(
-        { _id: recipient._id },
-        { $inc: { coins: amount }, $set: { walletUpdatedAt: Date.now() } }
-      );
-      if (!credit.modifiedCount) throw new Error("Recipient wallet could not be updated");
+      const credit = masterWallet
+        ? await db.collection("users").updateOne(
+            { _id: recipient._id, masterWalletCreditIds: { $ne: transferId } },
+            {
+              $inc: { coins: amount },
+              $addToSet: { masterWalletCreditIds: transferId },
+              $set: { walletUpdatedAt: Date.now() }
+            }
+          )
+        : await db.collection("users").updateOne(
+            { _id: recipient._id },
+            { $inc: { coins: amount }, $set: { walletUpdatedAt: Date.now() } }
+          );
+      if (!credit.modifiedCount) {
+        if (masterWallet) {
+          const alreadyCredited = await db.collection("users").findOne(
+            { _id: recipient._id, masterWalletCreditIds: transferId },
+            { projection: { coins: 1 } }
+          );
+          if (alreadyCredited) {
+            return res.json({
+              success: true,
+              duplicate: true,
+              balance: Number(alreadyCredited.coins || 0),
+              transfer: { ...record, status: "completed", completedAt: now }
+            });
+          }
+        }
+        throw new Error("Recipient wallet could not be updated");
+      }
     } catch (creditError) {
       if (debited && sender) {
         await db.collection("users").updateOne({ _id: sender._id }, { $inc: { coins: amount }, $set: { walletUpdatedAt: Date.now() } });
         debited = false;
       }
-      await transfers.updateOne({ _id: transferId }, { $set: { status: "failed", failure: "recipient_credit_failed", updatedAt: Date.now() } });
+      if (!masterWallet) await transfers.updateOne({ _id: transferId }, { $set: { status: "failed", failure: "recipient_credit_failed", updatedAt: Date.now() } });
       throw creditError;
     }
 
     const completedAt = Date.now();
-    await transfers.updateOne({ _id: transferId }, { $set: { status: "completed", completedAt, updatedAt: completedAt } });
+    if (!masterWallet) await transfers.updateOne({ _id: transferId }, { $set: { status: "completed", completedAt, updatedAt: completedAt } });
 
     // Notify the credited account through the same Zyora System private-message
     // path used by Official Notifications. The native recipient stores it in index.db.
