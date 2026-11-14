@@ -1007,3 +1007,10 @@ Current documentation does not certify that all historical features are build-, 
 - MeScreen now registers its Socket.IO user room and listens for `profile_visitor_updated`, persisting each visit locally and refreshing the Visitors count while Me is open.
 - Owner Panel Master Wallet transfer history remains browser IndexedDB-only. The backend no longer writes `masterWalletTransactions` into MongoDB user documents and removes that legacy history field during database initialization; `masterWalletCreditIds` remains only for duplicate-credit protection.
 - No UI/layout changes.
+
+
+## 2026-11-15 — Invite Friends ID binding and 250,000-coin reward
+- Native Invite Friends replaces the decorative friend-invite count row with a User ID input and Bind action. A target account can be bound only once; duplicate binding returns the requested “User has already bind” error.
+- Each successful bind increments the inviter's invitation count and 250,000 reward balance. Claim atomically moves one 250,000 reward into the existing user's `coins` wallet balance, with the pending reward decremented in the same user-document update to prevent repeat claims.
+- Invite bind records and counters are embedded in the existing `users` document; no new MongoDB collection is added. Owner Panel → Events → Bind User ID receives the inviter ID over Socket.IO and persists the list in browser IndexedDB, with a server sync request to recover records after the panel reconnects.
+- Updated native `HurryApi.kt`, `InviteFriends.kt`, Owner Panel `app/owner/page.tsx`, and Zyora Server `server.js`. Build and live multi-account verification are still required.
