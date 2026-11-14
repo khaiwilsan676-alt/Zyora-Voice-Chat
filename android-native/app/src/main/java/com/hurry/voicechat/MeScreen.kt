@@ -138,7 +138,7 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
             }
         }
         val register = Emitter.Listener {
-            socket.emit("register", JSONObject().put("userId", visitorUserId).put("accountId", visitorUserId))
+            socket.emit("register", JSONObject().put("userId", uid.ifBlank { visitorUserId }).put("accountId", visitorUserId))
         }
         socket.on("follow_updated", followListener)
         socket.on("profile_follow_updated", followListener)
