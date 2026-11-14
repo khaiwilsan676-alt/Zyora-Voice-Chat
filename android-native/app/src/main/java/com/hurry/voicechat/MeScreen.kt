@@ -145,7 +145,7 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
         socket.on("profile_visitor_updated", visitorListener)
         socket.on(Socket.EVENT_CONNECT, register)
         socket.connect()
-        if (socket.connected()) socket.emit("register", JSONObject().put("userId", visitorUserId).put("accountId", visitorUserId))
+        if (socket.connected()) socket.emit("register", JSONObject().put("userId", uid.ifBlank { visitorUserId }).put("accountId", visitorUserId))
         onDispose {
             socket.off("follow_updated", followListener)
             socket.off("profile_follow_updated", followListener)
