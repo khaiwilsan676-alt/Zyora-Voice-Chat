@@ -842,3 +842,9 @@ Current documentation does not certify that all historical features are build-, 
 - Moved the activated Seller Center entry into the main Me menu directly below Bag.
 - Restored the original Seller Center menu artwork asset `IMG_20260915_225536.png`; removed the temporary custom-drawn icon and the misplaced bottom-list entry.
 - Seller Center remains visible only when the signed-in user's seller activation profile flag is enabled.
+
+
+## 2026-11-14 — Help & Feedback submission reliability
+- Native Help & Feedback keeps each submission in the user's local `index.db` and sends the same record over the existing Socket.IO `user_feedback` event. Contact information is genuinely optional, matching its UI label; leaving it blank no longer blocks submission.
+- The server relays the feedback live to the Owner Panel, includes the optional evidence URI in the payload, and acknowledges successful relay so the native sender can close its one-shot socket cleanly. No feedback body is written to MongoDB, Redis, or server-side history.
+- Owner Panel receives the event and persists it in its browser IndexedDB cache; its existing feedback table and UI are unchanged.
