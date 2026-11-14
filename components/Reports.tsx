@@ -156,7 +156,7 @@ export default function Reports() {
           <button
             type="button"
             onClick={() => { setPage(1); setFilterOpen(false); }}
-            className="rounded-xl bg-blue-600 px-6 py-3 text-sm font-bold text-white hover:bg-blue-700"
+            className="rounded-xl bg-green-800 px-6 py-3 text-sm font-bold text-white hover:bg-green-900"
           >
             Filter
           </button>
@@ -194,7 +194,7 @@ export default function Reports() {
                       <button
                         type="button"
                         onClick={() => setSelectedReport(report)}
-                        className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700"
+                        className="rounded-lg bg-green-800 px-4 py-2 text-xs font-bold text-white hover:bg-green-900"
                       >
                         Open
                       </button>
