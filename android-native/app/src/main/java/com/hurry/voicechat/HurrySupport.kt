@@ -200,7 +200,7 @@ fun HurrySupport(onBack: () -> Unit) {
         syncDaisyChat(messages.toList(), supportSocket, supportUserId, supportUserName, supportUserPhoto, supportUserAccountId)
     }
 
-    LaunchedEffect(messages.size, typing) {
+    LaunchedEffect(messages.size, typing, daisyEnabled) {
         if (typing) {
             delay(1000)
             if (daisyEnabled) {
