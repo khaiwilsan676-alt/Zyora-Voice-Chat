@@ -1848,7 +1848,7 @@ app.post("/api/owner/master-wallet/transfer", async (req, res) => {
     const recipientAccountId = String(req.body?.recipientAccountId || "").trim();
     const amount = Number(req.body?.amount);
     if (!/^master_[A-Za-z0-9_-]{8,100}$/.test(transferId) ||
-        !/^\\d{4,20}$/.test(recipientAccountId) ||
+        !/^\d{4,20}$/.test(recipientAccountId) ||
         !Number.isSafeInteger(amount) || amount <= 0) {
       return res.status(400).json({ error: "Select a valid Zyora user and enter a positive whole coin amount" });
     }
