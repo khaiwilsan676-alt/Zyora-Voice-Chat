@@ -906,3 +906,9 @@ Current documentation does not certify that all historical features are build-, 
 - Fixed the actual Render backend route in `Zyora-Server/server.js`: Seller Center keeps its seller debit/recipient credit behavior and sends `🎉 Successful Offline Recharge / Coins: [amount] / From Seller: [seller name]`; Master Wallet credits the selected recipient without debiting a seller and sends `You receive / Coins: [amount] / From Zyora official Team`.
 - Both notices use the existing `private_message` event consumed by the native Message page and are saved by the recipient in local `index.db`; online delivery targets registered UID/account-ID rooms, offline delivery queues under all known recipient aliases in Redis for seven days, and duplicate completed transfer retries do not send a second notice.
 - Wallet transfer amounts, debit/credit rules, existing chat UI, and unrelated screens were not changed. Source commits were pushed to the live server repository; Render deployment and real-account online/offline tests are still required.
+
+
+## 2026-11-14 — Zyora Team/System private message delivery and chat presentation
+- Added the missing `send_official_private_message` Socket.IO handler to Zyora-Server. Targeted official messages now deliver through the normal `private_message` inbox event, also notify the dedicated official conversation, and queue for offline users in Redis when available; the send callback reports success/failure.
+- Native Message page now keeps official message timestamps in local chat history, shows the Zyora Team/System avatar above each official message, and displays the message time below it.
+- Official Team/System inbox rows now load and refresh their last-message preview and time, and official avatar URLs use the Zyora public assets. No visual redesign or MongoDB chat-history persistence added.
