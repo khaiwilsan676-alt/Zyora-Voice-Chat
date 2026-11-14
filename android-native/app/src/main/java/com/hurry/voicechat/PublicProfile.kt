@@ -1728,13 +1728,21 @@ fun PublicProfile(
     LaunchedEffect(visitorIdentity, viewedProfileIdentity, isOwnProfile) {
         if (!isOwnProfile && visitorIdentity.isNotBlank() && viewedProfileIdentity.isNotBlank()) {
             withContext(Dispatchers.IO) {
+                val now = System.currentTimeMillis()
+                val db = NativeIndexDatabase(context)
+                val key = "visitor_history:" + visitorIdentity + ":sent"
+                val root = db.loadProfile(key) ?: JSONObject().put("visitors", org.json.JSONArray())
+                val oldRows = root.optJSONArray("visitors") ?: org.json.JSONArray()
+                val row = JSONObject().put("id", viewedProfileIdentity)
+                    .put("name", user.name.orEmpty()).put("avatar", user.image.orEmpty())
+                    .put("gender", user.gender.orEmpty()).put("lastViewedAt", now).put("viewCount", 1)
+                val next = org.json.JSONArray().put(row)
+                for (i in 0 until minOf(oldRows.length(), 199)) next.put(oldRows.optJSONObject(i))
+                db.saveProfile(key, JSONObject().put("visitors", next))
                 runCatching {
                     val payload = JSONObject().put("viewerId", visitorIdentity).put("profileId", viewedProfileIdentity)
                     val connection = (URL("https://zyora-server.onrender.com/api/profile-visitors").openConnection() as HttpURLConnection).apply {
-                        requestMethod = "POST"
-                        connectTimeout = 10000
-                        readTimeout = 10000
-                        doOutput = true
+                        requestMethod = "POST"; connectTimeout = 10000; readTimeout = 10000; doOutput = true
                         setRequestProperty("Content-Type", "application/json; charset=utf-8")
                     }
                     try {
