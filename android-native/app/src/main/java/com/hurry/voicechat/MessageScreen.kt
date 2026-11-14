@@ -840,7 +840,16 @@ fun NativeChatScreen(
         indexDb.saveConversation("conversation_${currentAccountId}_$peerId", peerId, preview)
     }
     
-    val messageTimestamps = remember(name, receiverId, currentUserId) { mutableStateListOf<Long>() }
+    val messageTimestamps = remember(name, receiverId, currentUserId) {
+        mutableStateListOf<Long>().apply {
+            val saved = runCatching { org.json.JSONArray(indexDb.loadChat(localConversationKey) ?: "[]") }.getOrDefault(org.json.JSONArray())
+            for (index in 0 until saved.length()) add(saved.optJSONObject(index)?.optLong("timestamp", System.currentTimeMillis()) ?: System.currentTimeMillis())
+            if (isEmpty() && officialIdForCache != null) {
+                val cached = runCatching { org.json.JSONArray(prefs.getString(cacheKey, "[]") ?: "[]") }.getOrDefault(org.json.JSONArray())
+                for (index in 0 until cached.length()) add(cached.optJSONObject(index)?.optLong("timestamp", System.currentTimeMillis()) ?: System.currentTimeMillis())
+            }
+        }
+    }
     val messages = remember(name, receiverId, currentUserId) {
         mutableStateListOf<Pair<Boolean, String>>().apply {
             val dbCache = indexDb.loadChat(localConversationKey)
@@ -849,10 +858,7 @@ fun NativeChatScreen(
                 (0 until array.length()).mapNotNull { index ->
                     val entry = array.optJSONObject(index) ?: return@mapNotNull null
                     val value = entry.optString("text")
-                    if (value.isNotBlank()) {
-                        messageTimestamps.add(entry.optLong("timestamp", System.currentTimeMillis()))
-                        entry.optBoolean("mine") to value
-                    } else null
+                    if (value.isNotBlank()) entry.optBoolean("mine") to value else null
                 }
             }.getOrDefault(emptyList())
             if (restored.isNotEmpty()) addAll(restored)
@@ -863,10 +869,7 @@ fun NativeChatScreen(
                     for (index in 0 until array.length()) {
                         val entry = array.optJSONObject(index) ?: continue
                         val value = entry.optString("text")
-                        if (value.isNotBlank()) {
-                            add(false to value)
-                            messageTimestamps.add(entry.optLong("timestamp", System.currentTimeMillis()))
-                        }
+                        if (value.isNotBlank()) add(false to value)
                     }
                 }
             }
