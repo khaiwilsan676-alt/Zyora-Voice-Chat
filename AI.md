@@ -941,3 +941,5 @@ Current documentation does not certify that all historical features are build-, 
 - Owner Panel GitHub Pages deployment is triggered by the `app/**` change. Render deployment and a real-device AI chat/report test are still required before marking runtime delivery verified.
 
 - Native Daisy support now republishes the restored local conversation snapshot when the support screen opens and Socket.IO connects, so the bounded server handoff can be repopulated without requiring the user to send a new message. Existing users need to open Daisy once on an updated app for their local history to be handed off.
+
+- Owner Panel AI Chat handlers now merge snapshots by user ID, preserve existing moderation/status fields, reject malformed live snapshots, and ignore older out-of-order updates so a delayed history response cannot overwrite a newer conversation. Server acknowledges accepted AI chat snapshots; the existing local index.db + Owner browser IndexedDB storage model is unchanged.
