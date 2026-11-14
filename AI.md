@@ -988,3 +988,11 @@ Current documentation does not certify that all historical features are build-, 
 - Native MeScreen now reads the Visitors count only from the signed-in user's local native `index.db` profile cache key `visitor_history:<accountId>:received`.
 - Removed the Me page's `/api/profile-visitors` count fetch and server-derived count write. The Visitors page's existing local received-visitor history is the source for the displayed count.
 - No MongoDB collection or Me UI/layout change was added. Count reflects visitor rows already synced into this device's local index.db; remote updates arrive through the existing Visitors page Socket.IO flow.
+
+
+## 2026-11-14 — Official chat WhatsApp-style alignment and production broadcast repair
+- Native MessageScreen: Zyora Team/System incoming message bubbles now sit on the same horizontal row as the official avatar; removed the timestamp rendered underneath official message bubbles. No other chat layout was changed.
+- Production `Zyora-Server/server.js`: replaced the live-only `io.emit` broadcast stub (which did not acknowledge the Owner Panel send and could not reach offline users) with registered-user delivery for accounts active in the last seven days plus all currently connected identities.
+- Broadcast delivery uses the normal `private_message` inbox event and the official conversation event. Online users receive it live; eligible offline users are queued in Redis for seven days. Owner Panel receives explicit delivered/live/queued/skipped counts through its existing acknowledgement callback.
+- Native local IndexDB remains the recipient-side message history; unread counts and existing message notifications continue through the existing private-message inbox path. No MongoDB message-history persistence or unrelated UI changes.
+- Status: source commits completed in the app and production server repositories. Render deployment, native APK build, and multi-account online/offline verification remain required; do not claim runtime success until those checks pass.
