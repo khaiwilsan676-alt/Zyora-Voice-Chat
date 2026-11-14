@@ -471,6 +471,8 @@ export default function StaffPanel() {
   const [appliedSupportSearchQuery, setAppliedSupportSearchQuery] = useState('');
   const [supportStatusFilter, setSupportStatusFilter] = useState('All');
   const [appliedSupportStatusFilter, setAppliedSupportStatusFilter] = useState('All');
+  const [supportFilterOpen, setSupportFilterOpen] = useState(false);
+  const [supportChatPage, setSupportChatPage] = useState(1);
 
   const [selectedPair, setSelectedPair] = useState<any | null>(null);
 
@@ -1076,6 +1078,9 @@ export default function StaffPanel() {
     const matchesStatus = appliedSupportStatusFilter === 'All' || status === appliedSupportStatusFilter;
     return matchesSearch && matchesStatus;
   });
+  const supportChatPageSize = 20;
+  const supportChatTotalPages = Math.max(1, Math.ceil(filteredSupportChats.length / supportChatPageSize));
+  const paginatedSupportChats = filteredSupportChats.slice((supportChatPage - 1) * supportChatPageSize, supportChatPage * supportChatPageSize);
 
   const privateConversations = React.useMemo(() => {
     const pairMap = new Map<string, any>();
@@ -1774,82 +1779,92 @@ export default function StaffPanel() {
                 </div>
 
                 <div className="px-6 py-4 border-b border-slate-100 shrink-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <div className="relative flex-1 min-w-[220px] max-w-2xl">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <div className="relative flex-1 min-w-[220px]">
                       <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
                       <input
                         type="text"
                         value={supportSearchQuery}
                         onChange={(e) => setSupportSearchQuery(e.target.value)}
                         placeholder="Search AI chats by user name, ID, email..."
-                        className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-400 font-medium text-slate-900 placeholder:text-slate-400 caret-slate-900"
+                        className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-blue-500 font-medium text-slate-900 placeholder:text-slate-400 caret-slate-900"
                       />
                     </div>
-                    <select
-                      value={supportStatusFilter}
-                      onChange={(e) => setSupportStatusFilter(e.target.value)}
-                      className="px-3 py-2.5 bg-white border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 outline-none cursor-pointer"
-                    >
-                      <option value="All">All</option>
-                      <option value="Open">Open</option>
-                      <option value="Ignored">Ignored</option>
-                      <option value="Handled">Handled</option>
-                    </select>
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setSupportFilterOpen((open) => !open)}
+                        className="flex w-full items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 sm:min-w-40"
+                      >
+                        {supportStatusFilter} <ChevronDown size={16} />
+                      </button>
+                      {supportFilterOpen && (
+                        <div className="absolute right-0 z-20 mt-2 w-full min-w-40 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
+                          {['All', 'Open', 'Ignored', 'Handled'].map((status) => (
+                            <button
+                              key={status}
+                              type="button"
+                              onClick={() => { setSupportStatusFilter(status); setSupportFilterOpen(false); }}
+                              className={`block w-full px-4 py-2.5 text-left text-sm hover:bg-blue-50 ${supportStatusFilter === status ? 'font-bold text-blue-600' : 'text-slate-700'}`}
+                            >{status}</button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                     <button
-                      onClick={() => { setAppliedSupportSearchQuery(supportSearchQuery); setAppliedSupportStatusFilter(supportStatusFilter); }}
-                      className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold transition-colors"
+                      type="button"
+                      onClick={() => { setAppliedSupportSearchQuery(supportSearchQuery); setAppliedSupportStatusFilter(supportStatusFilter); setSupportChatPage(1); setSupportFilterOpen(false); }}
+                      className="rounded-xl bg-blue-600 px-6 py-3 text-sm font-bold text-white hover:bg-blue-700"
                     >Filter</button>
                   </div>
                 </div>
 
-                <div className="hidden md:flex items-center gap-4 px-6 py-3 text-[11px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50 border-b border-slate-100 shrink-0">
-                  <span className="w-10">S.No</span>
-                  <span className="w-12">Avatar</span>
-                  <span className="flex-1">Name</span>
-                  <span className="w-48">ID</span>
-                  <span className="w-48 text-right">Date Time</span>
-                </div>
-
-                <div className="flex-1 overflow-y-auto">
-                  {filteredSupportChats.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-40 text-slate-400">
-                      <Bot className="w-12 h-12 mb-3 text-slate-200" />
-                      <p className="text-sm">No AI support chat sessions found.</p>
-                    </div>
-                  ) : (
-                    filteredSupportChats.map((chat, idx) => (
-                      <div
-                        key={chat.userId}
-                        className="flex items-center gap-4 px-6 py-3.5 border-b border-slate-100 hover:bg-slate-50 transition-colors"
-                      >
-                        <div className="w-10 text-xs font-bold text-slate-500">{idx + 1}</div>
-                        <div className="w-12 shrink-0">
-                          <div className="w-9 h-9 rounded-full overflow-hidden border border-slate-200 bg-gradient-to-r from-blue-400 to-indigo-500">
-                            {chat.userPhoto ? (
-                              <img src={chat.userPhoto} alt={chat.userName} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-white font-bold text-xs">
-                                {(chat.userName || 'U').charAt(0).toUpperCase()}
+                <section className="mx-6 mb-5 flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                  <div className="border-b border-slate-100 px-5 py-4">
+                    <h3 className="text-lg font-bold text-slate-800">AI Chats</h3>
+                  </div>
+                  <div className="flex-1 overflow-x-auto overflow-y-auto">
+                    <table className="w-full min-w-[850px] text-left">
+                      <thead className="sticky top-0 bg-slate-50 text-[11px] font-extrabold uppercase tracking-wide text-slate-500">
+                        <tr>
+                          {['S.No', 'Avatar', 'Name', 'ID', 'Date Time', 'Action'].map((heading) => (
+                            <th key={heading} className="px-4 py-3">{heading}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {paginatedSupportChats.map((chat, index) => (
+                          <tr key={chat.userId} className="text-sm text-slate-700 hover:bg-slate-50">
+                            <td className="px-4 py-3 font-semibold">{(supportChatPage - 1) * supportChatPageSize + index + 1}</td>
+                            <td className="px-4 py-3">
+                              <div className="h-9 w-9 overflow-hidden rounded-full border border-slate-200 bg-gradient-to-r from-blue-400 to-indigo-500">
+                                {chat.userPhoto ? (
+                                  <img src={chat.userPhoto} alt={chat.userName || 'User'} className="h-full w-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                                ) : (
+                                  <div className="flex h-full w-full items-center justify-center text-xs font-bold text-white">{(chat.userName || 'U').charAt(0).toUpperCase()}</div>
+                                )}
                               </div>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="font-bold text-sm text-slate-800 truncate">{chat.userName || 'User'}</div>
-                        </div>
-                        <div className="w-48 shrink-0">
-                          <div className="text-[11px] text-blue-600 font-bold truncate">ID: {chat.userAccountId || chat.userId}</div>
-                        </div>
-                        <div className="w-40 text-[11px] text-slate-400 font-medium shrink-0">
-                          {chat.timestamp ? new Date(chat.timestamp).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}
-                        </div>
-                        <div className="w-24 flex justify-end shrink-0">
-                          <button onClick={() => setSelectedSupportUserId(chat.userId)} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold">Open</button>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
+                            </td>
+                            <td className="px-4 py-3 font-semibold">{chat.userName || 'User'}</td>
+                            <td className="px-4 py-3 font-semibold text-blue-600">{chat.userAccountId || chat.userId}</td>
+                            <td className="whitespace-nowrap px-4 py-3 text-xs text-slate-500">{chat.timestamp ? new Date(chat.timestamp).toLocaleString() : '—'}</td>
+                            <td className="px-4 py-3">
+                              <button type="button" onClick={() => setSelectedSupportUserId(chat.userId)} className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700">Open</button>
+                            </td>
+                          </tr>
+                        ))}
+                        {paginatedSupportChats.length === 0 && (
+                          <tr><td colSpan={6} className="px-4 py-14 text-center text-sm font-medium text-slate-400">No AI chats found.</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="flex items-center justify-center gap-5 border-t border-slate-100 px-4 py-4">
+                    <button type="button" aria-label="Previous page" disabled={supportChatPage <= 1} onClick={() => setSupportChatPage((current) => Math.max(1, current - 1))} className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-30">‹</button>
+                    <span className="text-sm font-semibold text-slate-600">Previous&nbsp;&nbsp; {supportChatPage} / {supportChatTotalPages} &nbsp;&nbsp;Next</span>
+                    <button type="button" aria-label="Next page" disabled={supportChatPage >= supportChatTotalPages} onClick={() => setSupportChatPage((current) => Math.min(supportChatTotalPages, current + 1))} className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-30">›</button>
+                  </div>
+                </section>
               </>
             ) : (() => {
               const activeChat = supportChats.find(c => c.userId === selectedSupportUserId);
