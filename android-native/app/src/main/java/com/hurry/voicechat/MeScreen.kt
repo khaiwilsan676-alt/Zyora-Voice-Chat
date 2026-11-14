@@ -111,12 +111,12 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
         if (visitorUserId.isBlank()) {
             visitorCount = 0
         } else {
-            val cacheKey = "visitor_count:" + visitorUserId
-            val cachedCount = withContext(Dispatchers.IO) {
-                runCatching { NativeIndexDatabase(context).loadProfile(cacheKey)?.optInt("count", 0) ?: 0 }.getOrDefault(0)
+            val historyKey = "visitor_history:" + visitorUserId + ":received"
+            val db = NativeIndexDatabase(context)
+            visitorCount = withContext(Dispatchers.IO) {
+                runCatching { db.loadProfile(historyKey)?.optJSONArray("visitors")?.length() ?: 0 }.getOrDefault(0)
             }
-            visitorCount = cachedCount
-            val freshCount = withContext(Dispatchers.IO) {
+            val freshRows = withContext(Dispatchers.IO) {
                 val encoded = java.net.URLEncoder.encode(visitorUserId, "UTF-8")
                 val connection = (URL("https://zyora-server.onrender.com/api/profile-visitors?userId=$encoded&type=received").openConnection() as HttpURLConnection).apply {
                     requestMethod = "GET"
@@ -124,12 +124,9 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
                     readTimeout = 12000
                 }
                 try {
-                    val status = connection.responseCode
-                    if (status in 200..299) {
+                    if (connection.responseCode in 200..299) {
                         val body = connection.inputStream.bufferedReader().use { it.readText() }
-                        val count = JSONObject(body).optJSONArray("visitors")?.length() ?: 0
-                        runCatching { NativeIndexDatabase(context).saveProfile(cacheKey, JSONObject().put("count", count)) }
-                        count
+                        JSONObject(body).optJSONArray("visitors")
                     } else null
                 } catch (_: Exception) {
                     null
@@ -137,7 +134,12 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
                     connection.disconnect()
                 }
             }
-            if (freshCount != null) visitorCount = freshCount
+            if (freshRows != null) {
+                withContext(Dispatchers.IO) {
+                    runCatching { db.saveProfile(historyKey, JSONObject().put("visitors", freshRows)) }
+                }
+                visitorCount = freshRows.length()
+            }
         }
     }
     val phone = prefs.getString("phone", "") ?: ""
