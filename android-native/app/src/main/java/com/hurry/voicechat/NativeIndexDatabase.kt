@@ -6,7 +6,7 @@ import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import org.json.JSONObject
 
-internal class NativeIndexDatabase(context: Context) : SQLiteOpenHelper(context.applicationContext, "index.db", null, 7) {
+internal class NativeIndexDatabase(context: Context) : SQLiteOpenHelper(context.applicationContext, "index.db", null, 8) {
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL("CREATE TABLE IF NOT EXISTS chat_cache (chat_key TEXT PRIMARY KEY NOT NULL, payload TEXT NOT NULL, updated_at INTEGER NOT NULL)")
         db.execSQL("CREATE TABLE IF NOT EXISTS profile_cache (profile_key TEXT PRIMARY KEY NOT NULL, payload TEXT NOT NULL, updated_at INTEGER NOT NULL)")
@@ -15,6 +15,7 @@ internal class NativeIndexDatabase(context: Context) : SQLiteOpenHelper(context.
         db.execSQL("CREATE TABLE IF NOT EXISTS room_lock_cache (room_id TEXT PRIMARY KEY NOT NULL, is_locked INTEGER NOT NULL, room_password TEXT NOT NULL, updated_at INTEGER NOT NULL)")
         db.execSQL("CREATE TABLE IF NOT EXISTS lucky_bag_transactions (transaction_id TEXT PRIMARY KEY NOT NULL, user_id TEXT NOT NULL, type TEXT NOT NULL, amount INTEGER NOT NULL, bag_id TEXT NOT NULL, created_at INTEGER NOT NULL)")
         db.execSQL("CREATE TABLE IF NOT EXISTS user_reports (report_id TEXT PRIMARY KEY NOT NULL, payload TEXT NOT NULL, created_at INTEGER NOT NULL)")
+        db.execSQL("CREATE TABLE IF NOT EXISTS wallet_transactions (transaction_id TEXT PRIMARY KEY NOT NULL, user_id TEXT NOT NULL, title TEXT NOT NULL, amount INTEGER NOT NULL, date TEXT NOT NULL, timestamp INTEGER NOT NULL, type TEXT NOT NULL)")
     }
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
         if (oldVersion < 2) db.execSQL("CREATE TABLE IF NOT EXISTS profile_cache (profile_key TEXT PRIMARY KEY NOT NULL, payload TEXT NOT NULL, updated_at INTEGER NOT NULL)")
@@ -23,6 +24,7 @@ internal class NativeIndexDatabase(context: Context) : SQLiteOpenHelper(context.
         if (oldVersion < 5) db.execSQL("CREATE TABLE IF NOT EXISTS room_lock_cache (room_id TEXT PRIMARY KEY NOT NULL, is_locked INTEGER NOT NULL, room_password TEXT NOT NULL, updated_at INTEGER NOT NULL)")
         if (oldVersion < 6) db.execSQL("CREATE TABLE IF NOT EXISTS lucky_bag_transactions (transaction_id TEXT PRIMARY KEY NOT NULL, user_id TEXT NOT NULL, type TEXT NOT NULL, amount INTEGER NOT NULL, bag_id TEXT NOT NULL, created_at INTEGER NOT NULL)")
         if (oldVersion < 7) db.execSQL("CREATE TABLE IF NOT EXISTS user_reports (report_id TEXT PRIMARY KEY NOT NULL, payload TEXT NOT NULL, created_at INTEGER NOT NULL)")
+        if (oldVersion < 8) db.execSQL("CREATE TABLE IF NOT EXISTS wallet_transactions (transaction_id TEXT PRIMARY KEY NOT NULL, user_id TEXT NOT NULL, title TEXT NOT NULL, amount INTEGER NOT NULL, date TEXT NOT NULL, timestamp INTEGER NOT NULL, type TEXT NOT NULL)")
     }
     fun saveChat(key: String, payload: String) {
         val values = ContentValues()
@@ -149,6 +151,29 @@ internal class NativeIndexDatabase(context: Context) : SQLiteOpenHelper(context.
             while (cursor.moveToNext()) {
                 runCatching { JSONObject(cursor.getString(0)) }.getOrNull()?.let(result::add)
             }
+        }
+        return result
+    }
+
+
+    /** Wallet history is stored only in this device's index.db. */
+    fun saveWalletTransaction(transactionId: String, userId: String, title: String, amount: Long, date: String, timestamp: Long, type: String) {
+        if (transactionId.isBlank() || userId.isBlank() || type.isBlank()) return
+        val values = ContentValues().apply {
+            put("transaction_id", transactionId); put("user_id", userId); put("title", title)
+            put("amount", amount); put("date", date); put("timestamp", timestamp); put("type", type)
+        }
+        writableDatabase.insertWithOnConflict("wallet_transactions", null, values, SQLiteDatabase.CONFLICT_REPLACE)
+    }
+    fun loadWalletTransactions(userId: String, type: String, limit: Int = 20): List<JSONObject> {
+        if (userId.isBlank()) return emptyList()
+        val result = mutableListOf<JSONObject>()
+        readableDatabase.query("wallet_transactions", arrayOf("transaction_id", "title", "amount", "date", "timestamp", "type"),
+            "user_id=? AND type=?", arrayOf(userId, type), null, null, "timestamp DESC",
+            limit.coerceIn(1, 500).toString()).use { cursor ->
+            while (cursor.moveToNext()) result += JSONObject().put("id", cursor.getString(0))
+                .put("title", cursor.getString(1)).put("amount", cursor.getLong(2))
+                .put("date", cursor.getString(3)).put("timestamp", cursor.getLong(4)).put("type", cursor.getString(5))
         }
         return result
     }
