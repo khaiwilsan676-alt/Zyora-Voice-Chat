@@ -953,3 +953,11 @@ Current documentation does not certify that all historical features are build-, 
 - User reports are now kept in a bounded in-memory reconnect handoff (up to 1,000) and replayed to the Owner Panel on `user_report_history_request`. The Owner Panel continues saving received reports to its own IndexedDB; submitting devices continue saving reports in native `index.db`.
 - No Owner Panel UI redesign and no report/private-chat content is written to GitHub storage. The in-memory handoff is lost on backend restart; report durability remains the Owner browser IndexedDB and submitting device database.
 - Status: **Implemented in repository**. Render deployment, web build, Owner Panel login/reconnect, report submission from a second account, and private-chat history on the GitHub Pages URL still require runtime verification.
+
+
+## 2026-11-14 — Private Chat storage moved out of MongoDB
+- Owner Panel → Private Chat now loads and saves its history in the Owner browser's IndexedDB database `ZyoraPrivateMessagesDB`, object store `privateMessages`.
+- Removed the Owner Panel's `/api/privateMessages` MongoDB history request and removed backend MongoDB writes/reads for private message history.
+- Native clients remain responsible for their own private-message history in `index.db`. The backend relays live messages and keeps only a bounded in-memory handoff for Owner Panel reconnects; it does not persist private chat content to MongoDB, Redis, or GitHub storage.
+- Important: browser IndexedDB belongs to the Owner Panel browser/device. A different browser/device does not share that local database. Messages sent while the Owner Panel is offline cannot be recovered after the backend's in-memory handoff is lost; no server-side durable copy is retained.
+- Status: **Committed in repository; deployment and live two-account verification pending.**
