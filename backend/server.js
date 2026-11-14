@@ -64,6 +64,8 @@ const liveUserReports = new Map();
 const livePrivateMessageMonitorBuffer = new Map();
 // Short-lived AI chat handoff for Owner Panel reconnects. Durable chat history stays in each client's IndexedDB/index.db; never write it to MongoDB.
 const liveAiSupportBuffer = new Map();
+// Bounded volatile reconnect handoff; Owner Panel IndexedDB is the durable history.
+const liveLuckyBagTransactions = new Map();
 
 const io = new Server(server, {
   cors: {
@@ -76,6 +78,14 @@ const io = new Server(server, {
   upgradeTimeout: 10000,
   maxHttpBufferSize: 1024 * 1024,
 });
+
+function publishLuckyBagTransaction(transaction) {
+  if (!transaction?.id || !transaction?.userId || !transaction?.type) return;
+  const payload = { id: String(transaction.id), userId: String(transaction.userId), type: String(transaction.type), amount: Number(transaction.amount || 0), bagId: String(transaction.bagId || ""), createdAt: Number(transaction.createdAt || Date.now()) };
+  liveLuckyBagTransactions.set(payload.id, payload);
+  while (liveLuckyBagTransactions.size > 2000) liveLuckyBagTransactions.delete(liveLuckyBagTransactions.keys().next().value);
+  io.emit("lucky_bag_transaction", payload);
+}
 
 const databaseClient = new GitHubClient();
 let db = null;
@@ -1522,7 +1532,7 @@ async function refundLuckyBag(bagId) {
   if (!result.modifiedCount) return false;
   await creditLuckyBagWallet(bag.senderId, bag.amount);
   const transaction = { id: `luckybag_refund:${bag.bagId}`, userId: bag.senderId, type: "lucky_bag_refund", amount: bag.amount, bagId: bag.bagId, createdAt: Date.now() };
-  io.emit("lucky_bag_transaction", transaction);
+  publishLuckyBagTransaction(transaction);
   io.emit("lucky_bag_refunded", { bagId: bag.bagId, senderId: bag.senderId, amount: bag.amount });
   return true;
 }
@@ -1928,7 +1938,7 @@ app.post("/api/lucky-bag/send", async (req, res) => {
       await creditLuckyBagWallet(senderId, amount);
       throw err;
     }
-    io.emit("lucky_bag_transaction", { id: `luckybag_send:${bagId}`, userId: senderId, type: "lucky_bag_send", amount: -amount, bagId, createdAt: now });
+    publishLuckyBagTransaction({ id: `luckybag_send:${bagId}`, userId: senderId, type: "lucky_bag_send", amount: -amount, bagId, createdAt: now });
     io.emit("lucky_bag_banner", { bagId, senderId, senderName, senderImage, roomId, roomName, amount, recipients, expiresAt: bag.expiresAt });
     scheduleLuckyBagRefund(bag);
     res.json({ success: true, bagId, balance: await walletBalance(senderId), expiresAt: bag.expiresAt });
@@ -2005,7 +2015,7 @@ app.post("/api/lucky-bag/confirm", async (req, res) => {
       { $set: { "claims.$.status": "confirmed", "claims.$.confirmedAt": Date.now() } }
     );
     if (creditedNow) {
-      io.emit("lucky_bag_transaction", { id: `luckybag_claim:${bagId}:${userId}`, userId, type: "lucky_bag_claim", amount, bagId, createdAt: Date.now() });
+      publishLuckyBagTransaction({ id: `luckybag_claim:${bagId}:${userId}`, userId, type: "lucky_bag_claim", amount, bagId, createdAt: Date.now() });
       io.emit("lucky_bag_claimed", { bagId, userId, amount, claimedCount: bag.claimedCount || 1, recipients: bag.recipients });
     }
     const balance = await walletBalance(userId);
@@ -3244,6 +3254,10 @@ io.on("connection", (socket) => {
     while (liveUserReports.size > 1000) liveUserReports.delete(liveUserReports.keys().next().value);
     io.emit("user_report", payload);
     if (typeof acknowledge === "function") acknowledge({ ok: true, id: reportId, timestamp: payload.timestamp });
+  });
+
+  socket.on("lucky_bag_history_request", () => {
+    socket.emit("lucky_bag_history_response", { transactions: Array.from(liveLuckyBagTransactions.values()).sort((a, b) => Number(b.createdAt || 0) - Number(a.createdAt || 0)) });
   });
 
   socket.on("user_report_history_request", () => {
