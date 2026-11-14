@@ -267,20 +267,29 @@ fun VisitorsPage(onBack:()->Unit) {
         val listener=Emitter.Listener { args ->
             val event = args.firstOrNull() as? JSONObject
             val visitor = event?.optJSONObject("visitor")
-            if (tab == 0 && visitor != null) scope.launch {
+            if (tab == 0 && visitor != null && (event.optString("profileId") == myId || event.optString("profileId") == prefs.getString("uid", "").orEmpty())) scope.launch {
                 withContext(Dispatchers.IO) {
                     val key = "visitor_history:" + myId + ":received"
                     val db = NativeIndexDatabase(context)
                     val root = db.loadProfile(key) ?: JSONObject().put("visitors", JSONArray())
                     val list = root.optJSONArray("visitors") ?: JSONArray()
-                    val row = JSONObject().put("id", visitor.optString("id"))
-                        .put("name", visitor.optString("name", "User"))
-                        .put("avatar", visitor.optString("avatar"))
-                        .put("gender", visitor.optString("gender"))
-                        .put("lastViewedAt", event.optLong("lastViewedAt", System.currentTimeMillis()))
-                        .put("viewCount", 1)
-                    val next = JSONArray().put(row)
-                    for (i in 0 until minOf(list.length(), 199)) next.put(list.optJSONObject(i))
+                    val visitorId = visitor.optString("id")
+                    val now = event.optLong("lastViewedAt", System.currentTimeMillis())
+                    val next = JSONArray()
+                    var matched = false
+                    for (i in 0 until list.length()) {
+                        val old = list.optJSONObject(i) ?: continue
+                        if (old.optString("id") == visitorId) {
+                            next.put(JSONObject(old.toString()).put("name", visitor.optString("name", old.optString("name", "User")))
+                                .put("avatar", visitor.optString("avatar", old.optString("avatar")))
+                                .put("gender", visitor.optString("gender", old.optString("gender")))
+                                .put("lastViewedAt", now).put("viewCount", old.optInt("viewCount", 1).coerceAtLeast(1) + 1))
+                            matched = true
+                        } else if (next.length() < 19) next.put(old)
+                    }
+                    if (!matched) next.put(0, JSONObject().put("id", visitorId).put("name", visitor.optString("name", "User"))
+                        .put("avatar", visitor.optString("avatar")).put("gender", visitor.optString("gender"))
+                        .put("lastViewedAt", now).put("viewCount", 1))
                     db.saveProfile(key, JSONObject().put("visitors", next))
                     rows = processVisitorRows(next)
                 }
