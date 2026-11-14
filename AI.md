@@ -836,3 +836,9 @@ Current documentation does not certify that all historical features are build-, 
 ## 2026-11-14 Daisy AI Support Live Delivery Fix
 - Native Daisy support chat now queues the latest `ai_support_message` snapshot until its Socket.IO connection is established, preventing messages sent during initial connection from being silently dropped.
 - Chat history remains in the user's native `index.db` and Owner Panel browser IndexedDB; no MongoDB persistence was added.
+
+
+## 2026-11-14 — Seller Center Me menu placement
+- Moved the activated Seller Center entry into the main Me menu directly below Bag.
+- Restored the original Seller Center menu artwork asset `IMG_20260915_225536.png`; removed the temporary custom-drawn icon and the misplaced bottom-list entry.
+- Seller Center remains visible only when the signed-in user's seller activation profile flag is enabled.
