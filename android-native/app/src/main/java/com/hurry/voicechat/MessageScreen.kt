@@ -75,7 +75,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-private const val RAW_MSG = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/"
+private const val RAW_MSG = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/"
 
 
 private fun containsProhibitedChatText(value: String): Boolean {
@@ -460,13 +460,22 @@ fun MessageScreen(onChat: (String, String, String) -> Unit, embeddedSheet: Boole
     val currentAuthUid = authPrefs.getString("uid", "").orEmpty().ifBlank { prefs.getString("uid", "").orEmpty() }
     val currentUserId = authPrefs.getString("accountId", "").orEmpty().ifBlank { prefs.getString("accountId", prefs.getString("userId", currentAuthUid)).orEmpty() }.ifBlank { currentAuthUid }
     val indexDb = remember { NativeIndexDatabase(context) }
-    val chats = remember {
+    val savedConversations = remember(currentUserId) {
+        if (currentUserId.isNotBlank()) indexDb.loadConversations("conversation_${currentUserId}_") else emptyList()
+    }
+    val chats = remember(currentUserId, savedConversations.size) {
         mutableStateListOf<MessagePreview>().apply {
-            add(MessagePreview("hurry_team_official", "Zyora Team", RAW_MSG + "logo.png", ""))
-            add(MessagePreview("hurry_system_official", "Zyora System", RAW_MSG + "file_00000000a66881f8aa9e15d2fe2b9a0c.png", ""))
-            if (currentUserId.isNotBlank()) indexDb.loadConversations("conversation_${currentUserId}_").forEach { saved ->
+            val teamSaved = savedConversations.firstOrNull { it.optString("peerId") == "hurry_team_official" }
+            val systemSaved = savedConversations.firstOrNull { it.optString("peerId") == "hurry_system_official" }
+            add(MessagePreview("hurry_team_official", "Zyora Team", RAW_MSG + "logo.png",
+                teamSaved?.optString("lastMessage").orEmpty(), teamSaved?.optString("time").orEmpty(),
+                unreadPrefs.getInt("unread_${currentUserId}_hurry_team_official", 0)))
+            add(MessagePreview("hurry_system_official", "Zyora System", RAW_MSG + "file_00000000a66881f8aa9e15d2fe2b9a0c.png",
+                systemSaved?.optString("lastMessage").orEmpty(), systemSaved?.optString("time").orEmpty(),
+                unreadPrefs.getInt("unread_${currentUserId}_hurry_system_official", 0)))
+            savedConversations.forEach { saved ->
                 val peerId = saved.optString("peerId")
-                val unread = unreadPrefs.getInt("unread_${currentUserId}_${peerId}", 0) // Fetch unread messages
+                val unread = unreadPrefs.getInt("unread_${currentUserId}_${peerId}", 0)
                 if (peerId.isNotBlank() && none { it.uid == peerId }) add(MessagePreview(peerId, saved.optString("peerName", "User"), saved.optString("peerPhoto", ""), saved.optString("lastMessage", ""), saved.optString("time", ""), unread))
             }
         }
@@ -518,7 +527,53 @@ fun MessageScreen(onChat: (String, String, String) -> Unit, embeddedSheet: Boole
         
         val existing = chats.indexOfFirst { it.uid == peerId }
         if (existing >= 0) chats.removeAt(existing)
-        chats.add(2.coerceAtMost(chats.size), MessagePreview(peerId, peerName.ifBlank { "User" }, peerPhoto, lastMessage, time, unread))
+        val insertAt = when (peerId) {
+            "hurry_team_official" -> 0
+            "hurry_system_official" -> 1
+            else -> 2.coerceAtMost(chats.size)
+        }
+        chats.add(insertAt.coerceAtMost(chats.size), MessagePreview(peerId, peerName.ifBlank { "User" }, peerPhoto, lastMessage, time, unread))
+    }
+
+    DisposableEffect(currentUserId) {
+        if (currentUserId.isBlank()) return@DisposableEffect onDispose { }
+        val inboxSocket = IO.socket("https://zyora-server.onrender.com", IO.Options().apply {
+            transports = arrayOf("websocket")
+            reconnection = true
+            reconnectionAttempts = Int.MAX_VALUE
+        })
+        val incomingPreview = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
+            val ids = setOf(currentUserId, currentAuthUid)
+            if (payload.optString("receiverId") !in ids && payload.optString("receiverAccountId") !in ids) return@Listener
+            val peerId = payload.optString("senderAccountId").ifBlank { payload.optString("senderId") }
+            if (peerId.isBlank()) return@Listener
+            val preview = when (payload.optString("type")) {
+                "voice" -> "🎤 Voice message"
+                "image" -> "📷 Image"
+                "room_invitation" -> "Room invitation"
+                else -> payload.optString("text")
+            }
+            android.os.Handler(Looper.getMainLooper()).post {
+                updateConversationPreview(
+                    peerId,
+                    payload.optString("senderName", "User"),
+                    payload.optString("senderPhoto", ""),
+                    preview,
+                    payload.optLong("timestamp", System.currentTimeMillis())
+                )
+            }
+        }
+        inboxSocket.on("private_message", incomingPreview)
+        inboxSocket.on(Socket.EVENT_CONNECT) {
+            inboxSocket.emit("register", JSONObject().put("userId", currentAuthUid).put("accountId", currentUserId))
+        }
+        inboxSocket.connect()
+        onDispose {
+            inboxSocket.off("private_message", incomingPreview)
+            inboxSocket.disconnect()
+            inboxSocket.close()
+        }
     }
 
     Column(Modifier.fillMaxSize().background(Color(0xFFF1F1F1))) {
