@@ -1415,10 +1415,20 @@ app.put("/api/users", async (req, res) => {
   }
 });
 
-app.get("/api/privateMessages", (_req, res) => {
-  // Private chat history is not stored on the server; Owner panel uses its browser-local IndexedDB
-  // plus the Socket.IO private_message_monitor event for live messages.
-  return res.json({ messages: [] });
+app.get("/api/privateMessages", async (req, res) => {
+  try {
+    const ownerKey = String(req.headers["x-owner-panel-key"] || "");
+    if (!process.env.OWNER_PANEL_ACCESS_KEY || ownerKey !== process.env.OWNER_PANEL_ACCESS_KEY) {
+      return res.status(403).json({ error: "Owner access required" });
+    }
+    const mongo = mediaDb || await connectMediaMongo();
+    if (!mongo) return res.status(503).json({ error: "Private chat storage unavailable" });
+    const messages = await mongo.collection("privateMessages").find({}).sort({ timestamp: -1 }).limit(5000).toArray();
+    return res.json({ messages: messages.reverse().map(({ _id, ...message }) => message) });
+  } catch (error) {
+    console.error("Owner private message history failed:", error.message);
+    return res.status(500).json({ error: "Failed to load private chat history" });
+  }
 });
 
 
