@@ -3352,28 +3352,55 @@ io.on("connection", (socket) => {
 
   // Official messages are never persisted on the server. Socket.IO only relays them live;
   // each native client stores received messages in its own local index.db.
-  socket.on("send_official_message", (data = {}) => {
+  socket.on("send_official_message", async (data = {}, acknowledge) => {
     const rawSenderId = String(data.senderId || "");
     if (rawSenderId !== "hurry_team_official" && rawSenderId !== "hurry_system_official") {
-      console.warn("Unauthorized or invalid official sender ID:", rawSenderId);
+      if (typeof acknowledge === "function") acknowledge({ ok: false, error: "Invalid official sender" });
       return;
     }
-
+    const text = String(data.text || "").trim();
+    const type = data.type || (data.imageUrl ? "image" : "message");
+    if (!text && type !== "image") {
+      if (typeof acknowledge === "function") acknowledge({ ok: false, error: "Message is empty" });
+      return;
+    }
     const isTeam = rawSenderId === "hurry_team_official";
+    const timestamp = Number(data.timestamp || Date.now());
     const payload = {
-      id: String(data.id || `official_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`),
+      id: String(data.id || `official_${timestamp}_${Math.random().toString(36).substring(2, 7)}`),
       senderId: rawSenderId,
+      senderAccountId: rawSenderId,
       senderName: isTeam ? "Zyora Team" : "Zyora System",
       senderPhoto: isTeam ? "/logo.png" : "/file_00000000a66881f8aa9e15d2fe2b9a0c.png",
-      text: String(data.text || ""),
-      type: data.type || (data.imageUrl ? "image" : "message"),
-      imageUrl: data.imageUrl || undefined,
-      timestamp: Number(data.timestamp || Date.now()),
+      text, type, imageUrl: data.imageUrl || undefined, timestamp,
       isOfficialBroadcast: true,
     };
 
-    // Live-only relay; deliberately no GitHub storage/Redis write.
+    // Fan out through the same private_message inbox pipeline used by user-to-user
+    // chat so native clients persist it in index.db and increment their normal unread badge.
+    const sockets = await io.fetchSockets();
+    const delivered = new Set();
+    for (const recipient of sockets) {
+      const userId = String(recipient.userId || "");
+      const accountId = String(recipient.presenceAccountId || recipient.accountId || "");
+      if (!userId && !accountId) continue;
+      const key = accountId || userId;
+      if (delivered.has(key)) continue;
+      delivered.add(key);
+      const recipientPayload = {
+        ...payload,
+        receiverId: userId || accountId,
+        receiverAccountId: accountId || userId,
+        receiverName: "User",
+        receiverPhoto: "/default-avatar.png",
+      };
+      recipient.emit("private_message", recipientPayload);
+    }
+    // Keep the dedicated official-chat stream for the Zyora System/Team conversation.
     io.emit("official_broadcast_message", payload);
+    if (typeof acknowledge === "function") {
+      acknowledge({ ok: true, id: payload.id, deliveredCount: delivered.size });
+    }
   });
 
   socket.on("official_message_history_request", () => {
