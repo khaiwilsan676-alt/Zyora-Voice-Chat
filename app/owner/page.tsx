@@ -693,16 +693,27 @@ export default function StaffPanel() {
         socket.connect();
       }
 
+      const mergeFeedbackRecord = (current: any, incoming: any) => ({
+        ...(current || {}),
+        ...(incoming || {}),
+        id: String(incoming?.id || current?.id || ""),
+        // Keep locally applied Owner status when a stale server snapshot has no
+        // status update; preserve all submission fields from the latest record.
+        status: incoming?.status || current?.status || "pending",
+        timestamp: Math.max(Number(current?.timestamp || 0), Number(incoming?.timestamp || 0)),
+      });
+
       const handleFeedbackHistoryResponse = (data: any) => {
         if (!isMounted || !Array.isArray(data?.feedbacks)) return;
         setFeedbacks(prev => {
           const map = new Map<string, any>();
-          prev.forEach(item => map.set(item.id, item));
+          prev.forEach(item => map.set(String(item.id), item));
           data.feedbacks.forEach((item: any) => {
-            if (item.id) {
-              map.set(item.id, { ...map.get(item.id), ...item });
-              void saveFeedbackToIndexedDB(item);
-            }
+            if (!item?.id) return;
+            const id = String(item.id);
+            const merged = mergeFeedbackRecord(map.get(id), item);
+            map.set(id, merged);
+            void saveFeedbackToIndexedDB(merged);
           });
           return Array.from(map.values()).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
         });
@@ -712,9 +723,11 @@ export default function StaffPanel() {
         if (!isMounted || !data?.id) return;
         setFeedbacks(prev => {
           const map = new Map<string, any>();
-          prev.forEach(item => map.set(item.id, item));
-          map.set(data.id, data);
-          void saveFeedbackToIndexedDB(data);
+          prev.forEach(item => map.set(String(item.id), item));
+          const id = String(data.id);
+          const merged = mergeFeedbackRecord(map.get(id), data);
+          map.set(id, merged);
+          void saveFeedbackToIndexedDB(merged);
           return Array.from(map.values()).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
         });
       };
