@@ -870,3 +870,11 @@ Current documentation does not certify that all historical features are build-, 
 - Native `MeScreen.kt`: the Seller Center menu entry is appended immediately after Bag only when the freshly loaded account profile has the owner-controlled seller activation flag (`coinSellerTag`, with legacy aliases retained).
 - When the Owner Panel turns Seller Center off, the next Me profile refresh hides the entry; when turned on, it appears below Bag. No unrelated Me layout or icon asset is changed.
 - Status: implemented in source; native build and device behavior still require verification.
+
+
+## 2026-11-14 — Owner Master Wallet coin credit
+- Enabled the previously disabled Owner Panel Master Wallet Transfer Coins action.
+- Added an idempotent backend credit flow that updates only the recipient's canonical `users.coins` balance and records transfer status in `masterWalletTransfers`; it does not debit a seller wallet or alter Seller Center transfer behavior.
+- On successful credit, sends the recipient a private Zyora System message with the credited amount and “From Zyora official Team”. Online delivery uses Socket.IO; offline delivery uses the existing pending private-message queue when Redis is available.
+- Owner Panel transfer history remains in its existing browser IndexedDB store. Official Notifications now times out visibly if the Socket.IO acknowledgement never arrives rather than remaining stuck in Sending.
+- Verification: source changes committed; backend deployment and live account-to-account testing remain required.
