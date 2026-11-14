@@ -920,3 +920,10 @@ Current documentation does not certify that all historical features are build-, 
 - Active users currently connected receive the broadcast immediately through the existing private-message inbox event; active users currently offline are queued in Redis for delivery on their next registration. UID/account-ID aliases are deduplicated.
 - Owner Panel confirmation now describes the 7-day audience and reports live versus queued counts. Server acknowledgement returns explicit delivery/queue/skipped counts and catches handler failures rather than leaving the UI to time out.
 - Legacy users without a recorded activity timestamp become eligible after their next Socket.IO registration. Render deployment and multi-account delivery verification are still required; source commits alone do not prove runtime delivery.
+
+
+## Official broadcast delivery follow-up (2026-11-14)
+- Zyora Team and Zyora System broadcasts use the same private-message inbox event so native clients persist them in local IndexDB.
+- Broadcast recipients include MongoDB users active within the last seven days and all currently connected socket identities, even when an activity timestamp is missing or stale.
+- Live delivery targets matched socket instances directly rather than relying on Socket.IO room membership; offline eligible users remain queued in Redis for up to seven days.
+- Runtime delivery still requires Render deployment and multi-account verification.
