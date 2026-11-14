@@ -933,3 +933,9 @@ Current documentation does not certify that all historical features are build-, 
 - Added the missing handler to the actual Render backend repository. It validates and bounds the report payload, broadcasts `user_report` to the Owner Panel through Socket.IO, and acknowledges success/failure to the Android sender.
 - Report content remains saved in the submitting device's native `index.db` and the Owner Panel's browser IndexedDB. The production relay does not write report content to MongoDB, Redis, or server history. Existing report UI and entry points are unchanged.
 - Production deployment and an end-to-end submit-to-Owner-Panel test are still required; source commit alone does not prove the Render service has redeployed.
+
+
+## 2026-11-14 — GitHub Pages Owner Panel AI chat and report recovery
+- Production `Zyora-Server/server.js` now keeps a bounded in-memory handoff of the latest AI support snapshot per user (maximum 200 users) and recent reports (maximum 500). The Owner Panel requests both snapshots after connect/reconnect and merges them into its existing browser IndexedDB stores.
+- AI chat and report content remain durable only in the submitting user's local `index.db` and the Owner Panel browser IndexedDB; the backend handoff is volatile and clears on server restart. No MongoDB or Redis chat/report persistence was added.
+- Owner Panel GitHub Pages deployment is triggered by the `app/**` change. Render deployment and a real-device AI chat/report test are still required before marking runtime delivery verified.
