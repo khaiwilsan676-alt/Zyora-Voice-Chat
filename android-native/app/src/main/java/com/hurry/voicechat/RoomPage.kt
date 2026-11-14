@@ -926,6 +926,7 @@ fun RoomPage(
     // Keep the vehicle video as an independent room-screen preview, not inside the entry banner.
     var roomVehiclePreview by remember(roomId) { mutableStateOf("") }
     var roomVehiclePreviewItemId by remember(roomId) { mutableStateOf("") }
+    var roomGiftVideoPreview by remember(roomId) { mutableStateOf("") }
     val seats=remember{mutableStateListOf<NativeRoomSeat>().apply{for(i in 1..15)add(NativeRoomSeat(i))}}
     // The owner gets one automatic attempt on the first authoritative seat snapshot only.
     val ownerAutoSeatAttempted = remember(roomId, accountId) { java.util.concurrent.atomic.AtomicBoolean(false) }
@@ -1011,6 +1012,15 @@ fun RoomPage(
                     }
                 }
             }
+        }
+        val giftVideoListener = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
+            if (payload.optString("roomId") != roomId || payload.optString("senderId") == accountId) return@Listener
+            val video = payload.optString("video").trim()
+            if (video.isBlank()) return@Listener
+            val videoUrl = if (video.startsWith("http://", true) || video.startsWith("https://", true)) video
+                else "https://zyora-voice-chat.vercel.app/" + video.trimStart('/')
+            mainHandler.post { roomGiftVideoPreview = videoUrl }
         }
         val vehicleEntryListener = Emitter.Listener { args ->
             val payload = args.firstOrNull() as? JSONObject ?: return@Listener
@@ -1400,6 +1410,7 @@ fun RoomPage(
         }
         roomSocket.on("room_presence",presenceListener)
         roomSocket.on("room_vehicle_entry", vehicleEntryListener)
+        roomSocket.on("gift_video_play", giftVideoListener)
         roomSocket.on("avatar_frame_updated", avatarFrameUpdatedListener)
         roomSocket.on("room_seat_invite", seatInviteListener)
         roomSocket.on("room_kicked", roomKickedListener)
@@ -1451,6 +1462,7 @@ fun RoomPage(
             }
             roomSocket.off("room_presence",presenceListener)
             roomSocket.off("room_vehicle_entry", vehicleEntryListener)
+            roomSocket.off("gift_video_play", giftVideoListener)
             roomSocket.off("avatar_frame_updated", avatarFrameUpdatedListener)
             roomSocket.off("room_seat_invite", seatInviteListener)
             roomSocket.off("room_kicked", roomKickedListener)
@@ -2424,8 +2436,12 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
             roomUsers = activeRoomUsers,
             walletBalance = roomWalletBalance,
             onDebitWallet = { requested -> if (requested <= roomWalletBalance) roomWalletBalance else null },
-            onSendCoinTransfer = { transfer -> roomSocketRef.value?.emit("coin_transfer", JSONObject(transfer)) }
+            onSendCoinTransfer = { transfer -> roomSocketRef.value?.emit("coin_transfer", JSONObject(transfer)) },
+            onSendGiftVideoPlay = { payload -> roomSocketRef.value?.emit("gift_video_play", JSONObject(payload)) }
         )
+        if (roomGiftVideoPreview.isNotBlank()) {
+            RoomGiftVideoOverlay(src = roomGiftVideoPreview) { roomGiftVideoPreview = "" }
+        }
         if(showGames) GamesSheet(onClose={showGames=false},onWildParty={showGames=false;showWildParty=true},onFruitParty={showGames=false;showFruitParty=true})
         if(showRoomTask) Roomtask(onBack={showRoomTask=false})
         if(showWildParty) Wildparty(onClose={showWildParty=false},onMinimize={showWildParty=false})
