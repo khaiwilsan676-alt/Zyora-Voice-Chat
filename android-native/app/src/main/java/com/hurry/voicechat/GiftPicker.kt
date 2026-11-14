@@ -1008,7 +1008,7 @@ fun LuckyGiftNotificationSlider(
         exit = slideOutHorizontally(targetOffsetX = { -it }) + fadeOut(),
         modifier = Modifier
             .fillMaxWidth()
-            .padding(bottom = 100.dp),
+            .padding(bottom = 60.dp),
     ) {
         if (notice == null) return@AnimatedVisibility
         val isBroadcast = notice.recipientMode == RecipientMode.MIC ||
@@ -1037,7 +1037,7 @@ fun LuckyGiftNotificationSlider(
                         endX = Float.POSITIVE_INFINITY,
                     )
                 )
-                .padding(start = 4.dp, end = 60.dp, top = 4.dp, bottom = 4.dp)
+                .padding(start = 3.dp, end = 48.dp, top = 2.dp, bottom = 2.dp)
                 .widthIn(min = 280.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -1046,7 +1046,7 @@ fun LuckyGiftNotificationSlider(
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
-                    .size(44.dp)
+                    .size(36.dp)
                     .clip(CircleShape),
             )
             Spacer(Modifier.width(8.dp))
@@ -1054,7 +1054,7 @@ fun LuckyGiftNotificationSlider(
                 Text(
                     text = topText,
                     color = Color.White,
-                    fontSize = 13.sp,
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -1062,7 +1062,7 @@ fun LuckyGiftNotificationSlider(
                 Text(
                     text = bottomText,
                     color = Color.White.copy(alpha = 0.9f),
-                    fontSize = 11.sp,
+                    fontSize = 10.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -1072,12 +1072,12 @@ fun LuckyGiftNotificationSlider(
                 model = notice.giftImage,
                 contentDescription = null,
                 contentScale = ContentScale.Fit,
-                modifier = Modifier.size(38.dp),
+                modifier = Modifier.size(30.dp),
             )
             Text(
                 text = "×${notice.multiplier}",
                 color = Color.White,
-                fontSize = 22.sp,
+                fontSize = 19.sp,
                 fontWeight = FontWeight.Black,
                 fontStyle = FontStyle.Italic,
                 modifier = Modifier.padding(start = 4.dp),
@@ -1120,10 +1120,10 @@ fun LuckyComboButton(
     Box(
         Modifier
             .fillMaxSize()
-            .padding(end = 24.dp, bottom = 48.dp),
+            .padding(end = 24.dp, bottom = 60.dp),
         contentAlignment = Alignment.BottomEnd,
     ) {
-        Box(contentAlignment = Alignment.Center, modifier = Modifier.size(104.dp)) {
+        Box(contentAlignment = Alignment.Center, modifier = Modifier.size(76.dp)) {
             // pulse rings
             Box(
                 Modifier
@@ -1144,7 +1144,7 @@ fun LuckyComboButton(
             // main button
             Box(
                 Modifier
-                    .size(96.dp)
+                    .size(68.dp)
                     .clip(CircleShape)
                     .background(
                         Brush.radialGradient(
@@ -1157,13 +1157,13 @@ fun LuckyComboButton(
                 Text(
                     text = "Combo",
                     color = Color.White,
-                    fontSize = 18.sp,
+                    fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 0.5.sp,
                 )
                 // Countdown ring
                 Canvas(Modifier.fillMaxSize().padding(8.dp)) {
-                    val stroke = Stroke(width = 4.5f)
+                    val stroke = Stroke(width = 3.5f)
                     // background ring
                     drawCircle(
                         color = Color.White.copy(alpha = 0.35f),
