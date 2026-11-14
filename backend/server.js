@@ -2773,6 +2773,24 @@ io.on("connection", (socket) => {
     socket.emit("room_voice_permission", { roomId: room, allowed: hasSeat });
   });
 
+  // Music has its own publisher channel, independent of microphone mute.
+  // Only an occupied seat may publish; socket.to excludes the local sender.
+  socket.on("room_music_chunk", (data = {}, binaryAudio) => {
+    const room = String(data.roomId || "");
+    if (!room || !socketIsInRoom(socket, room)) return;
+    const accountId = String(socket.roomAccountId || socket.accountId || "");
+    const hasOccupiedSeat = getRoomSeats(room).some((seat) =>
+      seat?.isOccupied &&
+      String(seat?.user?.accountId || seat?.user?.userId || "") === accountId
+    );
+    if (!hasOccupiedSeat) return;
+    const audio = (Buffer.isBuffer(binaryAudio) || Array.isArray(binaryAudio)) ? binaryAudio : data.audio;
+    const validAudio = Buffer.isBuffer(audio) ? audio.length > 0 && audio.length <= 4096
+      : Array.isArray(audio) && audio.length > 0 && audio.length <= 4096;
+    if (!validAudio) return;
+    socket.to(`room:${room}`).emit("room_music_chunk", { roomId: room, userId: accountId }, audio);
+  });
+
   socket.on("room_voice_chunk", (data = {}, binaryAudio) => {
     const room = String(data.roomId || "");
     if (!room || !socket.roomVoiceActive || socket.roomVoiceRoomId !== room ||
