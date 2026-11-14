@@ -2091,10 +2091,24 @@ io.on("connection", (socket) => {
 
     const timestamp = Date.now();
     const userIds = [...new Set([userId, userAccountId].filter(Boolean))];
-    const reply = { userId: userId || userAccountId, userAccountId, userIds, text, timestamp };
-    // Support screens can identify the same account by Firebase UID or Zyora ID.
-    // Broadcast both aliases; each native client accepts only its own identity.
-    io.emit("owner_support_reply", reply);
+    const reply = {
+      id: `zyora_support_${userId || userAccountId}_${timestamp}`,
+      senderId: "hurry_team_official",
+      senderAccountId: "hurry_team_official",
+      receiverId: userId || userAccountId,
+      receiverAccountId: userAccountId || userId,
+      senderName: "Zyora Team",
+      senderPhoto: "/logo.png",
+      receiverName: String(data.userName || "User"),
+      receiverPhoto: String(data.userPhoto || "/default-avatar.png"),
+      text, type: "message", timestamp
+    };
+    // Deliver owner replies through the exact same private_message event and
+    // registered user:<uid>/user:<accountId> rooms as ordinary user-to-user chat.
+    const targetRooms = userIds.map((id) => `user:${id}`);
+    io.to(targetRooms).emit("private_message", reply);
+    // Keep the older support event for any already-installed clients during rollout.
+    io.emit("owner_support_reply", { ...reply, userId: userId || userAccountId, userAccountId, userIds });
 
     const previous = liveAiSupportBuffer.get(userId) || liveAiSupportBuffer.get(userAccountId);
     if (previous) {
