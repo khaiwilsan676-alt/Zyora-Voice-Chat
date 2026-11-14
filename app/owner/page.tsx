@@ -2970,7 +2970,7 @@ export default function StaffPanel() {
           </div>
         )}
 
-        {activeTab !== 'wallet' && activeTab !== 'manage_users' && activeTab !== 'game_fruit_party' && activeTab !== 'game_wild_party' && activeTab !== 'themes' && activeTab !== 'gift_catalog' && activeTab !== 'ai_chats' && activeTab !== 'feedback' && activeTab !== 'official_msg' && activeTab !== 'reports' && activeTab !== 'bans' && activeTab !== 'tickets' && (
+        {activeTab !== 'wallet' && activeTab !== 'manage_users' && activeTab !== 'game_fruit_party' && activeTab !== 'game_wild_party' && activeTab !== 'themes' && activeTab !== 'gift_catalog' && activeTab !== 'ai_chats' && activeTab !== 'feedback' && activeTab !== 'official_msg' && activeTab !== 'reports' && activeTab !== 'bans' && activeTab !== 'tickets' && activeTab !== 'events' && (
           <div className="p-8 max-w-5xl mx-auto w-full">
             <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
               <h2 className="text-xl font-bold text-slate-800 capitalize">
