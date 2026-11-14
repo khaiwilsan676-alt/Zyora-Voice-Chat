@@ -1,25 +1,30 @@
-import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Plus, X } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ChevronDown, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { socket } from '../src/lib/socket';
 
 const REPORTS_DB_NAME = 'ZyoraReportsDB';
 const REPORTS_STORE = 'userReports';
+const PAGE_SIZE = 20;
+const REPORT_STATUSES = ['Open', 'Ignored', 'Handled'] as const;
 
 const openReportsDB = (): Promise<IDBDatabase> => new Promise((resolve, reject) => {
   const request = indexedDB.open(REPORTS_DB_NAME, 1);
   request.onerror = () => reject(request.error);
   request.onupgradeneeded = () => {
     const db = request.result;
-    if (!db.objectStoreNames.contains(REPORTS_STORE)) db.createObjectStore(REPORTS_STORE, { keyPath: 'id' });
+    if (!db.objectStoreNames.contains(REPORTS_STORE)) {
+      db.createObjectStore(REPORTS_STORE, { keyPath: 'id' });
+    }
   };
   request.onsuccess = () => resolve(request.result);
 });
 
 const loadLocalReports = async (): Promise<any[]> => {
+  if (typeof indexedDB === 'undefined') return [];
   try {
     const db = await openReportsDB();
     const items = await new Promise<any[]>((resolve, reject) => {
-      const request = db.transaction([REPORTS_STORE], 'readonly').objectStore(REPORTS_STORE).getAll();
+      const request = db.transaction(REPORTS_STORE, 'readonly').objectStore(REPORTS_STORE).getAll();
       request.onsuccess = () => resolve(request.result || []);
       request.onerror = () => reject(request.error);
     });
@@ -34,232 +39,245 @@ const saveLocalReport = async (report: any) => {
   if (!report?.id || typeof indexedDB === 'undefined') return;
   try {
     const db = await openReportsDB();
-    db.transaction([REPORTS_STORE], 'readwrite').objectStore(REPORTS_STORE).put(report);
+    await new Promise<void>((resolve, reject) => {
+      const transaction = db.transaction(REPORTS_STORE, 'readwrite');
+      transaction.objectStore(REPORTS_STORE).put(report);
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+      transaction.onabort = () => reject(transaction.error);
+    });
     db.close();
   } catch (error) {
     console.error('Local report save failed:', error);
   }
 };
 
+const getReporterId = (report: any) => String(report.senderId || report.reporterId || report.reporter || 'N/A');
+const getTargetId = (report: any) => String(report.reportedId || report.targetId || report.target || 'N/A');
+const getReason = (report: any) => {
+  const category = String(report.category || report.reason || 'Other');
+  return ({ violence: 'Violence', abusing: 'Abusing', illegal: 'Illegal', others: "Other's", other: 'Other' } as Record<string, string>)[category.toLowerCase()] || category;
+};
+const getStatus = (report: any) => REPORT_STATUSES.includes(report.status) ? report.status : 'Open';
+
 export default function Reports() {
   const [reports, setReports] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All');
+  const [filterOpen, setFilterOpen] = useState(false);
   const [selectedReport, setSelectedReport] = useState<any>(null);
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
-    let isMounted = true;
-
-    if (!socket.connected) {
-      socket.connect();
-    }
-
-    void loadLocalReports().then((localReports) => {
-      if (!isMounted) return;
-      setReports(localReports.sort((a: any, b: any) => (b.timestamp || 0) - (a.timestamp || 0)));
+    let mounted = true;
+    void loadLocalReports().then((items) => {
+      if (mounted) setReports(items.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0)));
     });
 
-    // Request is live-only; the server deliberately returns no GitHub storage history.
-    socket.emit('user_report_history_request');
-
-    const handleHistoryResponse = (data: any) => {
-      if (!isMounted || !Array.isArray(data?.reports) || data.reports.length === 0) return;
-      data.reports.forEach((report: any) => void saveLocalReport(report));
-      setReports((prev) => {
-        const map = new Map<string, any>();
-        prev.forEach((item) => map.set(item.id, item));
-        data.reports.forEach((item: any) => map.set(item.id, item));
-        return Array.from(map.values()).sort((a: any, b: any) => (b.timestamp || 0) - (a.timestamp || 0));
+    if (!socket.connected) socket.connect();
+    const handleNewReport = (incoming: any) => {
+      if (!mounted || !incoming?.id) return;
+      const report = { ...incoming, status: getStatus(incoming) };
+      void saveLocalReport(report);
+      setReports((previous) => {
+        const next = [report, ...previous.filter((item) => item.id !== report.id)];
+        return next.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
       });
     };
-
-    const handleNewReport = (data: any) => {
-      if (!isMounted || !data?.id) return;
-      void saveLocalReport(data);
-      setReports((prev) => {
-        if (prev.some((m) => m.id === data.id)) return prev;
-        return [data, ...prev].sort((a: any, b: any) => (b.timestamp || 0) - (a.timestamp || 0));
-      });
-    };
-
-    socket.on('user_report_history_response', handleHistoryResponse);
     socket.on('user_report', handleNewReport);
-
     return () => {
-      isMounted = false;
-      socket.off('user_report_history_response', handleHistoryResponse);
+      mounted = false;
       socket.off('user_report', handleNewReport);
     };
   }, []);
 
-  const filteredReports = reports.filter((report) => {
-    const q = searchQuery.toLowerCase();
-    return (
-      (report.senderName || '').toLowerCase().includes(q) ||
-      (report.senderId || '').toLowerCase().includes(q) ||
-      (report.reportedName || '').toLowerCase().includes(q) ||
-      (report.reportedId || '').toLowerCase().includes(q)
-    );
-  });
+  const filteredReports = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    return reports.filter((report) => {
+      const matchesSearch = !query || [
+        getReporterId(report), getTargetId(report), getReason(report),
+        report.senderName, report.reportedName, report.description,
+      ].some((value) => String(value || '').toLowerCase().includes(query));
+      const matchesStatus = statusFilter === 'All' || getStatus(report) === statusFilter;
+      return matchesSearch && matchesStatus;
+    });
+  }, [reports, searchQuery, statusFilter]);
+
+  const pageCount = Math.max(1, Math.ceil(filteredReports.length / PAGE_SIZE));
+  const visibleReports = filteredReports.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  useEffect(() => { setPage(1); }, [searchQuery, statusFilter]);
+
+  const updateStatus = (report: any, status: typeof REPORT_STATUSES[number]) => {
+    const updated = { ...report, status };
+    setReports((previous) => previous.map((item) => item.id === report.id ? updated : item));
+    setSelectedReport(updated);
+    void saveLocalReport(updated);
+  };
 
   return (
-    <div className="flex flex-col h-full bg-slate-50 overflow-y-auto p-6 md:p-8">
-      <div className="max-w-5xl mx-auto w-full space-y-6">
-        <h2 className="text-2xl font-bold text-slate-800">Report</h2>
+    <div className="flex h-full flex-col overflow-y-auto bg-slate-50 p-5 md:p-8">
+      <div className="mx-auto w-full max-w-7xl space-y-5">
+        <h2 className="text-2xl font-bold text-slate-800">Report's</h2>
 
-        <div className="w-full">
+        <div className="flex flex-col gap-3 sm:flex-row">
           <input
-            type="text"
-            placeholder="Search by ID or Name..."
+            type="search"
+            placeholder="Search reports..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white shadow-sm"
+            onChange={(event) => setSearchQuery(event.target.value)}
+            className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none focus:border-blue-500"
           />
-        </div>
-
-        <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden flex flex-col h-[600px]">
-          <div className="hidden md:flex items-center gap-4 px-8 py-3 text-[11px] font-extrabold text-slate-500 uppercase tracking-wider bg-slate-50 border-b border-slate-100 shrink-0">
-            <span className="w-10">S.No</span>
-            <span className="w-12">Report Sender Avtar</span>
-            <span className="w-40">Report Sender ID</span>
-            <span className="w-12">Reported Avtar</span>
-            <span className="flex-1">Reported ID</span>
-            <span className="w-40 text-right">Data Time</span>
-          </div>
-
-          <div className="flex-1 overflow-y-auto">
-            {filteredReports.map((report, idx) => (
-              <div
-                key={report.id}
-                onClick={() => setSelectedReport(report)}
-                className="flex items-center gap-4 px-8 py-3.5 border-b border-slate-100 hover:bg-slate-50 transition-colors cursor-pointer"
-              >
-                <div className="w-10 text-xs font-bold text-slate-500">{idx + 1}</div>
-
-                <div className="w-12 shrink-0">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-bold flex items-center justify-center shadow-sm overflow-hidden border border-indigo-100">
-                    {report.senderPhoto ? (
-                      <img src={report.senderPhoto} alt={report.senderName} className="w-full h-full object-cover" />
-                    ) : (
-                      <span className="text-sm">{(report.senderName || 'U').charAt(0).toUpperCase()}</span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="w-40 shrink-0 min-w-0">
-                  <div className="font-bold text-sm text-slate-800 truncate">{report.senderId}</div>
-                  <div className="text-xs text-slate-400 truncate">{report.senderName}</div>
-                </div>
-
-                <div className="w-12 shrink-0">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-r from-red-500 to-pink-600 text-white font-bold flex items-center justify-center shadow-sm overflow-hidden border border-red-100">
-                    {report.reportedPhoto ? (
-                      <img src={report.reportedPhoto} alt={report.reportedName} className="w-full h-full object-cover" />
-                    ) : (
-                      <span className="text-sm">{(report.reportedName || 'U').charAt(0).toUpperCase()}</span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex-1 min-w-0">
-                  <div className="font-bold text-sm text-slate-800 truncate">{report.reportedId}</div>
-                  <div className="text-xs text-slate-400 truncate">{report.reportedName}</div>
-                </div>
-
-                <div className="w-40 shrink-0 text-right">
-                  <span className="text-[11px] text-slate-400 font-medium">
-                    {report.timestamp
-                      ? new Date(report.timestamp).toLocaleString([], {
-                          month: 'short',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })
-                      : ''}
-                  </span>
-                </div>
-              </div>
-            ))}
-
-            {filteredReports.length === 0 && (
-              <div className="py-16 text-center text-slate-400 text-sm font-medium">
-                <p className="font-bold text-slate-700">No reports found.</p>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setFilterOpen((open) => !open)}
+              className="flex w-full items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 sm:min-w-40"
+            >
+              {statusFilter} <ChevronDown size={16} />
+            </button>
+            {filterOpen && (
+              <div className="absolute right-0 z-20 mt-2 w-full min-w-40 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
+                {['All', ...REPORT_STATUSES].map((status) => (
+                  <button
+                    key={status}
+                    type="button"
+                    onClick={() => { setStatusFilter(status); setFilterOpen(false); }}
+                    className={`block w-full px-4 py-2.5 text-left text-sm hover:bg-blue-50 ${statusFilter === status ? 'font-bold text-blue-600' : 'text-slate-700'}`}
+                  >
+                    {status}
+                  </button>
+                ))}
               </div>
             )}
           </div>
+          <button
+            type="button"
+            onClick={() => { setPage(1); setFilterOpen(false); }}
+            className="rounded-xl bg-blue-600 px-6 py-3 text-sm font-bold text-white hover:bg-blue-700"
+          >
+            Filter
+          </button>
         </div>
+
+        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="border-b border-slate-100 px-5 py-4">
+            <h3 className="text-lg font-bold text-slate-800">Reports</h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[950px] text-left">
+              <thead className="bg-slate-50 text-[11px] font-extrabold uppercase tracking-wide text-slate-500">
+                <tr>
+                  {['S.No', 'Reporter', 'Target', 'Reason', 'Status', 'Created At', 'Action'].map((heading) => (
+                    <th key={heading} className="px-4 py-3">{heading}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {visibleReports.map((report, index) => (
+                  <tr key={report.id} className="text-sm text-slate-700 hover:bg-slate-50">
+                    <td className="px-4 py-4 font-semibold">{(page - 1) * PAGE_SIZE + index + 1}</td>
+                    <td className="px-4 py-4 font-semibold">{getReporterId(report)}</td>
+                    <td className="px-4 py-4 font-semibold">{getTargetId(report)}</td>
+                    <td className="px-4 py-4">{getReason(report)}</td>
+                    <td className="px-4 py-4">
+                      <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${getStatus(report) === 'Handled' ? 'bg-emerald-50 text-emerald-700' : getStatus(report) === 'Ignored' ? 'bg-slate-100 text-slate-600' : 'bg-blue-50 text-blue-700'}`}>
+                        {getStatus(report)}
+                      </span>
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-4 text-xs text-slate-500">
+                      {report.timestamp ? new Date(report.timestamp).toLocaleString() : '—'}
+                    </td>
+                    <td className="px-4 py-4">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedReport(report)}
+                        className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700"
+                      >
+                        Open
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {visibleReports.length === 0 && (
+                  <tr><td colSpan={7} className="px-4 py-14 text-center text-sm font-medium text-slate-400">No reports found.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          <div className="flex items-center justify-center gap-5 border-t border-slate-100 px-4 py-4">
+            <button
+              type="button"
+              aria-label="Previous page"
+              disabled={page <= 1}
+              onClick={() => setPage((current) => Math.max(1, current - 1))}
+              className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-30"
+            >
+              <ChevronLeft size={20} />
+            </button>
+            <span className="text-sm font-semibold text-slate-600">Previous&nbsp;&nbsp; {page} / {pageCount} &nbsp;&nbsp;Next</span>
+            <button
+              type="button"
+              aria-label="Next page"
+              disabled={page >= pageCount}
+              onClick={() => setPage((current) => Math.min(pageCount, current + 1))}
+              className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-30"
+            >
+              <ChevronRight size={20} />
+            </button>
+          </div>
+        </section>
       </div>
 
       {selectedReport && (
-        <div className="fixed inset-0 z-50 bg-[#f0f2f5] flex flex-col font-sans">
-          {/* ----- Header Area ----- */}
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setSelectedReport(null)}>
           <div
-            className="relative pt-safe pb-4 flex items-center justify-center"
-            style={{
-              background: 'linear-gradient(to bottom, #3b82f6 0%, #f0f2f5 100%)',
-              paddingTop: 'calc(env(safe-area-inset-top, 0px) + 8px)'
-            }}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="report-detail-title"
+            className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
           >
             <button
+              type="button"
+              aria-label="Close report"
               onClick={() => setSelectedReport(null)}
-              className="absolute left-2 top-auto p-2 hover:bg-white/20 rounded-full transition-colors"
+              className="absolute right-4 top-4 rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
             >
-              <ArrowLeft size={24} className="text-gray-900" />
+              <X size={19} />
             </button>
-            <h1 className="text-xl font-bold text-gray-900 tracking-wide">
-              Report Details
-            </h1>
-          </div>
-
-          {/* ----- Main Scrollable Content ----- */}
-          <div className="flex-1 overflow-y-auto px-4 pb-6">
-            <h2 className="text-base font-bold text-gray-800 mt-4 mb-2">Types</h2>
-            {/* Category Cards (No borders, no shadows) */}
-            <div className="mt-2 grid grid-cols-2 gap-3">
+            <h3 id="report-detail-title" className="mb-5 text-xl font-bold text-slate-800">Report</h3>
+            <div className="space-y-4">
               {[
-                { id: 'violence', label: 'Violence' },
-                { id: 'abusing', label: 'Abusing' },
-                { id: 'illegal', label: 'Illegal' },
-                { id: 'others', label: "Other's" },
-              ].map((cat) => {
-                const isSelected = selectedReport.category === cat.id;
-                return (
-                  <button
-                    key={cat.id}
-                    disabled
-                    className={`py-4 px-2 rounded-md text-sm font-semibold transition-all duration-200 ${
-                      isSelected
-                        ? 'bg-blue-100 text-blue-600'
-                        : 'bg-white text-gray-700 opacity-50'
-                    }`}
-                  >
-                    {cat.label}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Description Section (No borders, no shadows) */}
-            <div className="mt-6">
-              <h2 className="text-base font-bold text-gray-800 mb-2">Description</h2>
-              <textarea
-                value={selectedReport.description || ''}
-                readOnly
-                placeholder="No description provided"
-                className="w-full bg-white rounded-md p-3 text-sm text-gray-800 outline-none min-h-[120px] resize-none"
-              />
-            </div>
-
-            {/* Attach Proof Section (Sirf dashed border rakha hai, shadow hata di) */}
-            <div className="mt-6">
-              <h2 className="text-base font-bold text-gray-800 mb-2">Uploaded Image</h2>
-              <div
-                className="w-full max-h-[500px] bg-white rounded-md flex items-center justify-center relative overflow-hidden"
-              >
-                {selectedReport.proofImage ? (
-                  <img src={selectedReport.proofImage} alt="Proof" className="w-full h-auto max-h-[500px] object-contain" />
-                ) : (
-                  <span className="text-xs text-gray-400 py-10">No Image</span>
-                )}
+                ['Reporter ID', getReporterId(selectedReport)],
+                ['Target', getTargetId(selectedReport)],
+                ['Status', getStatus(selectedReport)],
+              ].map(([label, value]) => (
+                <div key={label}>
+                  <div className="mb-1 text-xs font-bold text-slate-400">{label}</div>
+                  <div className="rounded-lg bg-slate-50 px-3 py-2.5 text-sm font-semibold text-slate-800">{value}</div>
+                </div>
+              ))}
+              <div>
+                <div className="mb-1 text-xs font-bold text-slate-400">Description</div>
+                <div className="min-h-24 whitespace-pre-wrap break-words rounded-lg bg-slate-50 px-3 py-3 text-sm text-slate-800">
+                  {selectedReport.description || 'No description provided'}
+                </div>
+              </div>
+              <div>
+                <div className="mb-2 text-xs font-bold text-slate-400">Update Status</div>
+                <div className="flex flex-wrap gap-2">
+                  {REPORT_STATUSES.map((status) => (
+                    <button
+                      key={status}
+                      type="button"
+                      onClick={() => updateStatus(selectedReport, status)}
+                      className={`rounded-lg px-3 py-2 text-xs font-bold ${getStatus(selectedReport) === status ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-blue-50'}`}
+                    >
+                      {status}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
