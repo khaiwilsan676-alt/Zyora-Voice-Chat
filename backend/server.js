@@ -1808,7 +1808,7 @@ app.post("/api/seller/transfer", async (req, res) => {
         senderPhoto: "/file_00000000a66881f8aa9e15d2fe2b9a0c.png",
         receiverName: recipientName,
         receiverPhoto: recipientAvatar || "/default-avatar.png",
-        text: "🎉 Successful Offline Recharge\\nCoins: " + amount.toLocaleString("en-US") + "\\nFrom Seller: " + senderName,
+        text: "🎉 Successful Offline Recharge\nCoins: " + amount.toLocaleString("en-US") + "\nFrom Seller: " + senderName,
         type: "message",
         timestamp: completedAt,
         isOfficialPrivateMessage: true
