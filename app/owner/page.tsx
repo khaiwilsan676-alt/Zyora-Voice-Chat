@@ -2661,9 +2661,9 @@ export default function StaffPanel() {
                         alert('Please enter text or select an image.');
                         return;
                       }
-                      if (!window.confirm('Broadcast this message to all currently connected Zyora users?')) return;
+                      if (!window.confirm('Broadcast this message to registered users active within the last 7 days? Users inactive for more than 7 days will be skipped.')) return;
                       setOfficialSending(true);
-                      socket.timeout(20000).emit('send_official_message', {
+                      socket.timeout(60000).emit('send_official_message', {
                         id: `official_broadcast_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
                         senderId: officialSender,
                         text: officialText.trim(),
@@ -2676,7 +2676,7 @@ export default function StaffPanel() {
                           alert(result?.error || 'Broadcast delivery was not confirmed. Please retry.');
                           return;
                         }
-                        setOfficialSuccess(`Broadcast sent to ${result.deliveredCount} connected users.`);
+                        setOfficialSuccess(`Broadcast delivered to ${result.deliveredCount} active users (${result.liveCount || 0} live, ${result.queuedCount || 0} queued).`);
                         setOfficialText('');
                         setOfficialImage('');
                         if (officialFileInputRef.current) officialFileInputRef.current.value = '';
