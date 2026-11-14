@@ -3254,7 +3254,18 @@ io.on("connection", (socket) => {
     const targetRooms = [...new Set([receiverId, receiverAccountId])].map((id) => "user:" + id);
     const recipients = await io.in(targetRooms).fetchSockets();
     if (!recipients.length) {
-      if (typeof acknowledge === "function") acknowledge({ ok: false, error: "User is offline. Message was not sent." });
+      if (redis) {
+        try {
+          const queueKey = "private_messages:pending:" + receiverAccountId;
+          await redis.rpush(queueKey, JSON.stringify(normalizedMessage));
+          await redis.expire(queueKey, 60 * 60 * 24 * 7);
+          if (typeof acknowledge === "function") acknowledge({ ok: true, queued: true, id: normalizedMessage.id });
+          return;
+        } catch (error) {
+          console.error("Could not queue offline official private message:", error.message);
+        }
+      }
+      if (typeof acknowledge === "function") acknowledge({ ok: false, error: "User is offline and message queue is unavailable." });
       return;
     }
     io.to(targetRooms).emit("private_message", normalizedMessage);
