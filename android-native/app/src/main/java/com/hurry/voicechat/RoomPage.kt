@@ -402,6 +402,7 @@ fun RoomPage(
     
     var luckyGiftNotice by remember(roomId) { mutableStateOf<LuckyNotice?>(null) }
     var showLuckyComboButton by remember(roomId) { mutableStateOf(false) }
+    var luckyComboTimeLeft by remember(roomId) { mutableIntStateOf(5) }
     var showFloatingLuckyBag by remember { mutableStateOf(false) }
     var showLuckyBagCenterReveal by remember { mutableStateOf(false) }
     var showLuckyBagClaimedCard by remember { mutableStateOf(false) }
@@ -1208,7 +1209,15 @@ fun RoomPage(
                 )
                 if (senderId == accountId) {
                     showLuckyComboButton = true
-                    mainHandler.postDelayed({ showLuckyComboButton = false }, 5000L)
+                    luckyComboTimeLeft = 5
+                    for (second in 1..5) {
+                        mainHandler.postDelayed({
+                            if (showLuckyComboButton) {
+                                luckyComboTimeLeft = (5 - second).coerceAtLeast(0)
+                                if (luckyComboTimeLeft == 0) showLuckyComboButton = false
+                            }
+                        }, second * 1000L)
+                    }
                 }
                 if (giftImage.isNotBlank()) {
                     seats.indices.filter { seats[it].occupied && seats[it].accountId in recipientIds }.forEach { index ->
@@ -2499,7 +2508,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
             Box(Modifier.fillMaxSize().zIndex(251f)) {
                 LuckyComboButton(
                     visible = true,
-                    timeLeft = 5,
+                    timeLeft = luckyComboTimeLeft,
                     onClick = {
                         showLuckyComboButton = false
                         showGift = true
