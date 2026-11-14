@@ -555,7 +555,7 @@ export default function StaffPanel() {
           data.feedbacks.forEach((item: any) => {
             if (item.id) {
               map.set(item.id, { ...map.get(item.id), ...item });
-              saveFeedbackToIndexedDB(item);
+              void saveFeedbackToIndexedDB(item);
             }
           });
           return Array.from(map.values()).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
@@ -568,7 +568,7 @@ export default function StaffPanel() {
           const map = new Map<string, any>();
           prev.forEach(item => map.set(item.id, item));
           map.set(data.id, data);
-          saveFeedbackToIndexedDB(data);
+          void saveFeedbackToIndexedDB(data);
           return Array.from(map.values()).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
         });
       };
