@@ -996,3 +996,12 @@ Current documentation does not certify that all historical features are build-, 
 - Broadcast delivery uses the normal `private_message` inbox event and the official conversation event. Online users receive it live; eligible offline users are queued in Redis for seven days. Owner Panel receives explicit delivered/live/queued/skipped counts through its existing acknowledgement callback.
 - Native local IndexDB remains the recipient-side message history; unread counts and existing message notifications continue through the existing private-message inbox path. No MongoDB message-history persistence or unrelated UI changes.
 - Status: source commits completed in the app and production server repositories. Render deployment, native APK build, and multi-account online/offline verification remain required; do not claim runtime success until those checks pass.
+
+
+## 2026-11-15 — Zyora Team/System broadcast delivery correction
+- The Owner Panel connects to `https://zyora-server.onrender.com`; the production broadcast handler is in the separate `Zyora-Server/server.js` repository.
+- Root cause in the earlier broadcast implementation: recipient discovery relied on stale `lastOnlineAt/lastActiveAt` fields and custom identity properties on `io.fetchSockets()` RemoteSocket objects. That could omit registered users or fail to match connected identities.
+- Production `send_official_message` now enumerates all registered `users` profiles, resolves each Firebase/user ID and permanent Zyora account ID, and checks the corresponding `user:<id>` Socket.IO identity rooms using `io.in(rooms).fetchSockets()`.
+- Online recipients receive the existing private inbox and official-chat socket events. Offline recipients are queued in Redis under their canonical account ID for seven days and replayed by the existing registration path.
+- Owner Panel confirmation now describes all registered Zyora users, not only users active in the previous seven days.
+- Commits: production server `670fefe`; Owner Panel `f5635a8`. Render deployment and real online/offline multi-account verification remain pending.
