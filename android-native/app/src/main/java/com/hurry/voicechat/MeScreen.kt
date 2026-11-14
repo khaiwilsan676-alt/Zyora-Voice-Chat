@@ -129,7 +129,10 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
                         .put("avatar", visitor.optString("avatar")).put("gender", visitor.optString("gender"))
                         .put("lastViewedAt", now).put("viewCount", 1))
                     db.saveProfile(historyKey, JSONObject().put("visitors", next))
-                    (0 until next.length()).sumOf { next.optJSONObject(it)?.optInt("viewCount", 1)?.coerceAtLeast(1) ?: 0 }
+                    listOf("received", "sent").sumOf { type ->
+                        val entries = db.loadProfile("visitor_history:" + visitorUserId + ":" + type)?.optJSONArray("visitors") ?: org.json.JSONArray()
+                        (0 until entries.length()).sumOf { index -> entries.optJSONObject(index)?.optInt("viewCount", 1)?.coerceAtLeast(1) ?: 0 }
+                    }
                 }
                 visitorCount = count
             }
