@@ -96,13 +96,46 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
                 fansCount=it.followers; followingCount=it.followingCount; friendsCount=it.friends; followCountsReady=true
             }
         }
-        val listener = Emitter.Listener { followScope.launch { refresh() } }
-        socket.on("follow_updated", listener)
-        socket.on("profile_follow_updated", listener)
+        val followListener = Emitter.Listener { followScope.launch { refresh() } }
+        val visitorListener = Emitter.Listener { args ->
+            val event = args.firstOrNull() as? JSONObject ?: return@Listener
+            val visitor = event.optJSONObject("visitor") ?: return@Listener
+            if (event.optString("profileId") != visitorUserId || visitor.optString("id").isBlank()) return@Listener
+            followScope.launch {
+                val count = withContext(Dispatchers.IO) {
+                    val historyKey = "visitor_history:" + visitorUserId + ":received"
+                    val db = NativeIndexDatabase(context)
+                    val root = db.loadProfile(historyKey) ?: JSONObject().put("visitors", org.json.JSONArray())
+                    val previous = root.optJSONArray("visitors") ?: org.json.JSONArray()
+                    val row = JSONObject()
+                        .put("id", visitor.optString("id"))
+                        .put("name", visitor.optString("name", "User"))
+                        .put("avatar", visitor.optString("avatar"))
+                        .put("gender", visitor.optString("gender"))
+                        .put("lastViewedAt", event.optLong("lastViewedAt", System.currentTimeMillis()))
+                        .put("viewCount", 1)
+                    val next = org.json.JSONArray().put(row)
+                    for (index in 0 until minOf(previous.length(), 199)) next.put(previous.optJSONObject(index))
+                    db.saveProfile(historyKey, JSONObject().put("visitors", next))
+                    next.length()
+                }
+                visitorCount = count
+            }
+        }
+        val register = Emitter.Listener {
+            socket.emit("register", JSONObject().put("userId", visitorUserId).put("accountId", visitorUserId))
+        }
+        socket.on("follow_updated", followListener)
+        socket.on("profile_follow_updated", followListener)
+        socket.on("profile_visitor_updated", visitorListener)
+        socket.on(Socket.EVENT_CONNECT, register)
         socket.connect()
+        if (socket.connected()) socket.emit("register", JSONObject().put("userId", visitorUserId).put("accountId", visitorUserId))
         onDispose {
-            socket.off("follow_updated", listener)
-            socket.off("profile_follow_updated", listener)
+            socket.off("follow_updated", followListener)
+            socket.off("profile_follow_updated", followListener)
+            socket.off("profile_visitor_updated", visitorListener)
+            socket.off(Socket.EVENT_CONNECT, register)
             socket.disconnect()
             socket.close()
         }
@@ -112,34 +145,12 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
             visitorCount = 0
         } else {
             val historyKey = "visitor_history:" + visitorUserId + ":received"
-            val db = NativeIndexDatabase(context)
-            visitorCount = withContext(Dispatchers.IO) {
-                runCatching { db.loadProfile(historyKey)?.optJSONArray("visitors")?.length() ?: 0 }.getOrDefault(0)
+            val rows = withContext(Dispatchers.IO) {
+                runCatching {
+                    NativeIndexDatabase(context).loadProfile(historyKey)?.optJSONArray("visitors")?.length() ?: 0
+                }.getOrDefault(0)
             }
-            val freshRows = withContext(Dispatchers.IO) {
-                val encoded = java.net.URLEncoder.encode(visitorUserId, "UTF-8")
-                val connection = (URL("https://zyora-server.onrender.com/api/profile-visitors?userId=$encoded&type=received").openConnection() as HttpURLConnection).apply {
-                    requestMethod = "GET"
-                    connectTimeout = 12000
-                    readTimeout = 12000
-                }
-                try {
-                    if (connection.responseCode in 200..299) {
-                        val body = connection.inputStream.bufferedReader().use { it.readText() }
-                        JSONObject(body).optJSONArray("visitors")
-                    } else null
-                } catch (_: Exception) {
-                    null
-                } finally {
-                    connection.disconnect()
-                }
-            }
-            if (freshRows != null) {
-                withContext(Dispatchers.IO) {
-                    runCatching { db.saveProfile(historyKey, JSONObject().put("visitors", freshRows)) }
-                }
-                visitorCount = freshRows.length()
-            }
+            visitorCount = rows
         }
     }
     val phone = prefs.getString("phone", "") ?: ""
