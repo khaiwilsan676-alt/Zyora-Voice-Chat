@@ -194,6 +194,46 @@ const saveOwnerPrivateMessagesToIndexedDB = async (messages: any[]): Promise<voi
 // ==============================================================
 // MASTER WALLET HISTORY — IndexedDB only
 // ==============================================================
+const LUCKY_BAG_DB = "ZyoraOwnerLuckyBagDB";
+const LUCKY_BAG_STORE = "transactions";
+const openLuckyBagDB = (): Promise<IDBDatabase> => new Promise((resolve, reject) => {
+  if (typeof window === "undefined" || !window.indexedDB) return reject(new Error("IndexedDB unavailable"));
+  const request = window.indexedDB.open(LUCKY_BAG_DB, 1);
+  request.onupgradeneeded = () => {
+    if (!request.result.objectStoreNames.contains(LUCKY_BAG_STORE)) request.result.createObjectStore(LUCKY_BAG_STORE, { keyPath: "id" });
+  };
+  request.onsuccess = () => resolve(request.result);
+  request.onerror = () => reject(request.error || new Error("Could not open Lucky Bag history"));
+});
+const loadLuckyBagHistory = async (): Promise<any[]> => {
+  try {
+    const db = await openLuckyBagDB();
+    const rows = await new Promise<any[]>((resolve, reject) => {
+      const request = db.transaction(LUCKY_BAG_STORE, "readonly").objectStore(LUCKY_BAG_STORE).getAll();
+      request.onsuccess = () => resolve(Array.isArray(request.result) ? request.result : []);
+      request.onerror = () => reject(request.error);
+    });
+    db.close();
+    return rows.sort((x, y) => Number(y.createdAt || 0) - Number(x.createdAt || 0));
+  } catch (error) { console.error("Lucky Bag IndexedDB history load failed:", error); return []; }
+};
+const saveLuckyBagHistory = async (record: any): Promise<void> => {
+  if (!record?.id || !record?.userId || !record?.type) return;
+  const db = await openLuckyBagDB();
+  await new Promise<void>((resolve, reject) => {
+    const transaction = db.transaction(LUCKY_BAG_STORE, "readwrite");
+    transaction.objectStore(LUCKY_BAG_STORE).put({
+      id: String(record.id), userId: String(record.userId), type: String(record.type),
+      amount: Number(record.amount || 0), bagId: String(record.bagId || ""),
+      createdAt: Number(record.createdAt || Date.now())
+    });
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error);
+    transaction.onabort = () => reject(transaction.error || new Error("Lucky Bag history save aborted"));
+  });
+  db.close();
+};
+
 const MASTER_WALLET_DB = "ZyoraMasterWalletDB";
 const MASTER_WALLET_STORE = "transferHistory";
 
@@ -631,6 +671,7 @@ export default function StaffPanel() {
   const [officialSuccess, setOfficialSuccess] = useState('');
   const [officialHistory, setOfficialHistory] = useState<any[]>([]);
   const [masterWalletHistory, setMasterWalletHistory] = useState<any[]>([]);
+  const [luckyBagHistory, setLuckyBagHistory] = useState<any[]>([]);
   const [masterWalletSearch, setMasterWalletSearch] = useState('');
   const [masterWalletResults, setMasterWalletResults] = useState<any[]>([]);
   const [masterWalletSelectedUser, setMasterWalletSelectedUser] = useState<any | null>(null);
@@ -644,6 +685,7 @@ export default function StaffPanel() {
     let active = true;
     if (activeTab === 'wallet') {
       loadMasterWalletHistory().then(rows => { if (active) setMasterWalletHistory(rows); });
+      loadLuckyBagHistory().then(rows => { if (active) setLuckyBagHistory(rows); });
     }
     return () => { active = false; };
   }, [activeTab]);
@@ -870,6 +912,20 @@ export default function StaffPanel() {
         });
       };
 
+      const handleLuckyBagTransaction = (data: any) => {
+        if (!isMounted || !data?.id || !data?.userId || !data?.type) return;
+        const record = { ...data, id: String(data.id), createdAt: Number(data.createdAt || Date.now()) };
+        void saveLuckyBagHistory(record).then(async () => {
+          const rows = await loadLuckyBagHistory();
+          if (isMounted) setLuckyBagHistory(rows);
+        }).catch(error => console.error("Owner Lucky Bag IndexedDB save failed:", error));
+      };
+      const handleLuckyBagHistory = (data: any) => {
+        if (!isMounted || !Array.isArray(data?.transactions)) return;
+        data.transactions.forEach((record: any) => handleLuckyBagTransaction(record));
+      };
+      socket.on("lucky_bag_transaction", handleLuckyBagTransaction);
+      socket.on("lucky_bag_history_response", handleLuckyBagHistory);
       socket.on("official_message_history_response", handleOfficialHistoryResponse);
       socket.on("official_broadcast_message", handleOfficialBroadcast);
 
@@ -880,6 +936,7 @@ export default function StaffPanel() {
         socket.emit("ai_support_history_request");
         socket.emit("user_report_history_request");
         socket.emit("official_message_history_request");
+        socket.emit("lucky_bag_history_request");
       };
       // Keep the Owner Panel synchronized after both initial connection and mobile-network reconnects.
       socket.on("connect", requestOwnerHistories);
@@ -894,6 +951,8 @@ export default function StaffPanel() {
         socket.off("ai_support_message", handleAiSupportMessage);
         socket.off("user_report", handleUserReport);
         socket.off("user_report_history_response", handleUserReportHistory);
+        socket.off("lucky_bag_transaction", handleLuckyBagTransaction);
+        socket.off("lucky_bag_history_response", handleLuckyBagHistory);
         socket.off("official_message_history_response", handleOfficialHistoryResponse);
         socket.off("official_broadcast_message", handleOfficialBroadcast);
       };
@@ -2355,6 +2414,31 @@ export default function StaffPanel() {
                       )) : (
                         <tr><td colSpan={6} className="px-5 py-14 text-center text-sm font-medium text-slate-400">No transfer history yet</td></tr>
                       )}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+              <section className="overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-sm">
+                <div className="border-b border-slate-100 px-5 py-5 md:px-6">
+                  <h2 className="text-lg font-black text-slate-900">Lucky Bag Transactions</h2>
+                  <p className="mt-1 text-xs text-slate-500">Saved in this Owner Panel browser IndexedDB</p>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[760px] border-collapse text-left">
+                    <thead><tr className="border-b border-slate-100 bg-slate-50 text-[10px] font-extrabold uppercase tracking-wider text-slate-500">
+                      <th className="px-5 py-3">S.No</th><th className="px-4 py-3">User ID</th><th className="px-4 py-3">Type</th><th className="px-4 py-3 text-right">Coins</th><th className="px-4 py-3">Bag ID</th><th className="px-5 py-3 text-right">Date Time</th>
+                    </tr></thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {luckyBagHistory.length > 0 ? luckyBagHistory.map((item, idx) => (
+                        <tr key={item.id} className="transition-colors hover:bg-slate-50">
+                          <td className="px-5 py-3 text-xs font-bold text-slate-500">{idx + 1}</td>
+                          <td className="px-4 py-3 text-xs font-bold text-slate-700">{item.userId}</td>
+                          <td className="px-4 py-3 text-xs font-bold text-slate-800">{String(item.type).replaceAll('_', ' ')}</td>
+                          <td className="px-4 py-3 text-right text-sm font-black tabular-nums">{Number(item.amount || 0).toLocaleString()}</td>
+                          <td className="px-4 py-3 text-xs text-slate-500">{item.bagId || '—'}</td>
+                          <td className="px-5 py-3 text-right text-xs font-semibold text-slate-500">{item.createdAt ? new Date(item.createdAt).toLocaleString() : '—'}</td>
+                        </tr>
+                      )) : <tr><td colSpan={6} className="px-5 py-14 text-center text-sm font-medium text-slate-400">No Lucky Bag transactions yet</td></tr>}
                     </tbody>
                   </table>
                 </div>
