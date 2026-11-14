@@ -150,7 +150,7 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
                     NativeIndexDatabase(context).loadProfile(historyKey)?.optJSONArray("visitors")?.length() ?: 0
                 }.getOrDefault(0)
             }
-            visitorCount = rows
+            visitorCount = maxOf(visitorCount, rows)
         }
     }
     val phone = prefs.getString("phone", "") ?: ""
