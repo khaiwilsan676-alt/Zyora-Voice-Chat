@@ -28,6 +28,10 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.socket.client.IO
+import io.socket.client.Socket
+import org.json.JSONObject
+import java.util.UUID
 
 private val FeedbackBlue = Color(0xFF2563EB)
 private val FeedbackGray = Color(0xFF6B7280)
@@ -36,7 +40,8 @@ private val FeedbackBorder = Color(0xFFE5E7EB)
 @Composable
 fun HelpFeedbackPage(onBack: () -> Unit = {}) {
     val context = LocalContext.current
-    val prefs = remember { context.getSharedPreferences("hurry_feedback", Context.MODE_PRIVATE) }
+    val authPrefs = remember { context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE) }
+    val localIndexDb = remember { NativeIndexDatabase(context) }
     var selectedType by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var contact by remember { mutableStateOf("") }
@@ -334,17 +339,37 @@ fun HelpFeedbackPage(onBack: () -> Unit = {}) {
                                     contact.isBlank() -> error = "Please enter your contact information"
                                     else -> {
                                         submitting = true
-                                        val obj = org.json.JSONObject()
+                                        val feedbackId = "fb_${UUID.randomUUID()}"
+                                        val timestamp = System.currentTimeMillis()
+                                        val userId = authPrefs.getString("uid", "").orEmpty()
+                                            .ifBlank { authPrefs.getString("accountId", "").orEmpty() }
+                                        val userAccountId = authPrefs.getString("accountId", "").orEmpty().ifBlank { userId }
+                                        val userName = authPrefs.getString("name", "User").orEmpty().ifBlank { "User" }
+                                        val userPhoto = authPrefs.getString("image", "").orEmpty()
+                                        val obj = JSONObject()
+                                            .put("id", feedbackId)
+                                            .put("userId", userId)
+                                            .put("userName", userName)
+                                            .put("userAccountId", userAccountId)
+                                            .put("userPhoto", userPhoto)
                                             .put("type", selectedType)
+                                            .put("typeLabel", selectedType)
                                             .put("description", description.trim())
                                             .put("contactInfo", contact.trim())
                                             .put("evidenceUri", evidenceUri?.toString() ?: "")
-                                            .put("timestamp", System.currentTimeMillis())
+                                            .put("timestamp", timestamp)
+                                            .put("createdAt", java.time.Instant.ofEpochMilli(timestamp).toString())
                                             .put("status", "pending")
-                                        val old = prefs.getString("pending_feedback", "[]") ?: "[]"
-                                        val array = try { org.json.JSONArray(old) } catch (_: Exception) { org.json.JSONArray() }
-                                        array.put(obj)
-                                        prefs.edit().putString("pending_feedback", array.toString()).apply()
+                                        localIndexDb.saveChat("feedback_$feedbackId", obj.toString())
+                                        runCatching {
+                                            val feedbackSocket = IO.socket("https://zyora-server.onrender.com")
+                                            feedbackSocket.on(Socket.EVENT_CONNECT) {
+                                                feedbackSocket.emit("user_feedback", obj)
+                                                feedbackSocket.disconnect()
+                                                feedbackSocket.close()
+                                            }
+                                            feedbackSocket.connect()
+                                        }
                                         submitting = false
                                         success = true
                                         selectedType = ""
