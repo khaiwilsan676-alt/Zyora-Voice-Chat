@@ -2838,7 +2838,7 @@ export default function StaffPanel() {
                         alert('Please enter text or select an image.');
                         return;
                       }
-                      if (!window.confirm('Broadcast this message to registered users active within the last 7 days? Users inactive for more than 7 days will be skipped.')) return;
+                      if (!window.confirm('Broadcast this message to all registered Zyora users?')) return;
                       setOfficialSending(true);
                       socket.timeout(60000).emit('send_official_message', {
                         id: `official_broadcast_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
