@@ -1480,7 +1480,6 @@ fun RoomPage(
         roomSocket.on("room_kick_announcement",kickAnnouncementListener)
         roomSocket.on("room_seats",seatListener)
         roomSocket.on("coin_transfer_received", luckyGiftReceivedListener)
-        roomSocket.on("room_seat_action", luckyGiftAnimationListener)
         roomSocket.on("room_voice_speaker",voiceSpeakerListener)
         val roomPublicMessageBlockedListener = Emitter.Listener { args ->
             val payload = args.firstOrNull() as? JSONObject
@@ -1534,7 +1533,6 @@ fun RoomPage(
             roomSocket.off("room_kick_announcement",kickAnnouncementListener)
             roomSocket.off("room_seats",seatListener)
             roomSocket.off("coin_transfer_received", luckyGiftReceivedListener)
-            roomSocket.off("room_seat_action", luckyGiftAnimationListener)
             roomSocket.off("room_voice_speaker",voiceSpeakerListener)
             mainHandler.post { activeVoiceSpeakerIds.clear() }
             roomSocket.off("room_settings_updated",settingsListener)
