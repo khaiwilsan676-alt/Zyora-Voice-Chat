@@ -927,3 +927,9 @@ Current documentation does not certify that all historical features are build-, 
 - Broadcast recipients include MongoDB users active within the last seven days and all currently connected socket identities, even when an activity timestamp is missing or stale.
 - Live delivery targets matched socket instances directly rather than relying on Socket.IO room membership; offline eligible users remain queued in Redis for up to seven days.
 - Runtime delivery still requires Render deployment and multi-account verification.
+
+## 2026-11-14 — Production user report delivery root-cause fix
+- Root cause: the Android app emitted `user_report` to the Render production host `zyora-server.onrender.com`, but the deployed source repository `Zyora-Server/server.js` had no `user_report` Socket.IO listener. The similarly named relay existed only in the app repository's unused backend copy, so the production server silently ignored submissions.
+- Added the missing handler to the actual Render backend repository. It validates and bounds the report payload, broadcasts `user_report` to the Owner Panel through Socket.IO, and acknowledges success/failure to the Android sender.
+- Report content remains saved in the submitting device's native `index.db` and the Owner Panel's browser IndexedDB. The production relay does not write report content to MongoDB, Redis, or server history. Existing report UI and entry points are unchanged.
+- Production deployment and an end-to-end submit-to-Owner-Panel test are still required; source commit alone does not prove the Render service has redeployed.
