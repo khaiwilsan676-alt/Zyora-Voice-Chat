@@ -977,3 +977,8 @@ Current documentation does not certify that all historical features are build-, 
 - Owner Panel continues saving received messages in browser IndexedDB (`ZyoraPrivateMessagesDB` / `privateMessages`); each native user's durable chat history remains in their own `index.db`.
 - Private chat content is not persisted in MongoDB. Monitor handoff is volatile and clears when the backend restarts; messages sent while the Owner Panel is offline may be missing after the handoff window expires.
 - No Private Chat UI changes.
+
+
+## 2026-11-14 — Owner Panel private chat voice-note display
+- Private Chat conversation previews identify voice notes, and the message view renders received voice audio controls from the live monitor payload.
+- Existing Owner browser IndexedDB storage and native `index.db` ownership remain unchanged; no MongoDB chat-history storage was added.
