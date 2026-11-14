@@ -58,6 +58,8 @@ app.use((req, res, next) => {
 
 // Volatile handoff buffer only: no MongoDB/Redis/GitHub persistence. Owner IndexedDB is durable.
 const liveFeedbackBuffer = new Map();
+// Short-lived AI chat handoff for Owner Panel reconnects. Durable chat history stays in each client's IndexedDB/index.db; never write it to MongoDB.
+const liveAiSupportBuffer = new Map();
 
 const io = new Server(server, {
   cors: {
@@ -3121,29 +3123,39 @@ io.on("connection", (socket) => {
     io.to(`user:${otherUserId}`).emit("private_messages_deleted", payload);
   });
 
-  socket.on("ai_support_message", async (data = {}) => {
-    const userId = String(data.userId || "");
-    if (!userId) return;
+  socket.on("ai_support_message", (data = {}, acknowledge) => {
+    const userId = String(data.userId || "").trim();
+    if (!userId) {
+      if (typeof acknowledge === "function") acknowledge({ ok: false, error: "Missing userId" });
+      return;
+    }
 
     const payload = {
       userId,
-      userName: data.userName || "User",
-      userEmail: data.userEmail || "",
-      userPhoto: data.userPhoto || data.userImage || "",
-      userAccountId: data.userAccountId || "",
+      userName: String(data.userName || "User"),
+      userEmail: String(data.userEmail || ""),
+      userPhoto: String(data.userPhoto || data.userImage || ""),
+      userAccountId: String(data.userAccountId || ""),
       messages: Array.isArray(data.messages) ? data.messages : [],
       lastMessage: data.lastMessage || data.message || null,
       timestamp: Number(data.timestamp || Date.now()),
     };
 
-    // Real-time only: chat history belongs to the clients' local index.db / Owner IndexedDB.
-    // Do not persist Daisy support messages in GitHub storage.
+    // Volatile reconnect handoff only. Durable chat history remains in native index.db
+    // and the Owner Panel's own IndexedDB; never persist AI chat in MongoDB/Redis/GitHub.
+    liveAiSupportBuffer.set(userId, payload);
+    while (liveAiSupportBuffer.size > 200) {
+      liveAiSupportBuffer.delete(liveAiSupportBuffer.keys().next().value);
+    }
     io.emit("ai_support_message", payload);
+    if (typeof acknowledge === "function") acknowledge({ ok: true, userId, timestamp: payload.timestamp });
   });
 
-  socket.on("ai_support_history_request", async () => {
-    // No server-side chat history; the Owner panel restores its own browser IndexedDB cache.
-    socket.emit("ai_support_history_response", { chats: [] });
+  socket.on("ai_support_history_request", () => {
+    // Replay only the in-memory handoff window; the Owner Panel merges it with its local IndexedDB copy.
+    socket.emit("ai_support_history_response", {
+      chats: Array.from(liveAiSupportBuffer.values()).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
+    });
   });
 
 
