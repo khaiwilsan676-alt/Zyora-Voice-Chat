@@ -859,3 +859,9 @@ Current documentation does not certify that all historical features are build-, 
 - Zyora Team / Zyora System messages use a dedicated Socket.IO send_official_private_message event and are delivered only to the selected user's registered Socket.IO identity rooms as the normal private_message event.
 - Official private messages are not broadcast and are not written to MongoDB or Redis; the native private-message inbox receives and stores them in the user's local index.db using its existing private-chat sync path.
 - Existing Official Notifications sender selector, message composer, image attachment, and surrounding Owner Panel layout are retained. Offline recipients are reported as not sent rather than falsely showing success.
+
+
+## 2026-11-14 — Seller Center successful recharge notification
+- After a Seller Center coin transfer has successfully debited the seller and credited the recipient, the backend sends the recipient a private `Zyora System` message through the existing `private_message` delivery event.
+- Notification text includes `🎉 Successful Offline Recharge`, the exact transferred coin amount, and the seller's name. Online recipients receive it immediately; offline recipients use the existing Redis pending private-message queue.
+- The native recipient inbox stores the message through its existing local `index.db` private-message path. No MongoDB private-message history write, UI redesign, or change to the wallet transfer/debit/credit rules was added. Duplicate completed transfer requests do not send a second notification.
