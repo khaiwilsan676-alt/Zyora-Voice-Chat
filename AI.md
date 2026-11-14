@@ -912,3 +912,11 @@ Current documentation does not certify that all historical features are build-, 
 - Added the missing `send_official_private_message` Socket.IO handler to Zyora-Server. Targeted official messages now deliver through the normal `private_message` inbox event, also notify the dedicated official conversation, and queue for offline users in Redis when available; the send callback reports success/failure.
 - Native Message page now keeps official message timestamps in local chat history, shows the Zyora Team/System avatar above each official message, and displays the message time below it.
 - Official Team/System inbox rows now load and refresh their last-message preview and time, and official avatar URLs use the Zyora public assets. No visual redesign or MongoDB chat-history persistence added.
+
+
+## Official broadcast active-user delivery (2026-11-14)
+- Owner Panel broadcast now targets only registered MongoDB users whose `lastOnlineAt` or `lastActiveAt` timestamp is within the previous 7 days; users inactive for more than 7 days are excluded.
+- Socket.IO registration records `lastOnlineAt` and `lastActiveAt` on the matching registered user record.
+- Active users currently connected receive the broadcast immediately through the existing private-message inbox event; active users currently offline are queued in Redis for delivery on their next registration. UID/account-ID aliases are deduplicated.
+- Owner Panel confirmation now describes the 7-day audience and reports live versus queued counts. Server acknowledgement returns explicit delivery/queue/skipped counts and catches handler failures rather than leaving the UI to time out.
+- Legacy users without a recorded activity timestamp become eligible after their next Socket.IO registration. Render deployment and multi-account delivery verification are still required; source commits alone do not prove runtime delivery.
