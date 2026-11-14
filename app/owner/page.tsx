@@ -649,14 +649,13 @@ export default function StaffPanel() {
         socket.emit("ai_support_history_request");
         socket.emit("official_message_history_request");
       };
-      if (socket.connected) {
-        requestOwnerHistories();
-      } else {
-        socket.once("connect", requestOwnerHistories);
-      }
+      // Keep the Owner Panel synchronized after both initial connection and mobile-network reconnects.
+      socket.on("connect", requestOwnerHistories);
+      if (socket.connected) requestOwnerHistories();
 
       return () => {
         isMounted = false;
+        socket.off("connect", requestOwnerHistories);
         socket.off("user_feedback_history_response", handleFeedbackHistoryResponse);
         socket.off("user_feedback", handleUserFeedback);
         socket.off("ai_support_history_response", handleHistoryResponse);
