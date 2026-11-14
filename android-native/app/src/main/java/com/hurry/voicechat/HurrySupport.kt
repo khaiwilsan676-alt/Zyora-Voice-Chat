@@ -61,6 +61,9 @@ fun HurrySupport(onBack: () -> Unit) {
         var socket: Socket? = null
         runCatching {
             socket = IO.socket(DAISY_SUPPORT_SOCKET_URL)
+            socket?.on(Socket.EVENT_CONNECT) {
+                socket?.emit("register", JSONObject().put("userId", supportUserId).put("accountId", supportUserAccountId))
+            }
             supportSocket = socket
         }
         onDispose {
@@ -107,25 +110,20 @@ fun HurrySupport(onBack: () -> Unit) {
         }
         val replyListener = Emitter.Listener { args ->
             val data = args.firstOrNull() as? JSONObject ?: return@Listener
-            val replyIds = mutableSetOf(
-                data.optString("userId"),
-                data.optString("userAccountId")
-            ).apply {
-                val aliases = data.optJSONArray("userIds")
-                if (aliases != null) for (index in 0 until aliases.length()) add(aliases.optString(index))
-            }
-            if (replyIds.any { it.isNotBlank() && (it == supportUserId || it == supportUserAccountId) }) {
+            val receiverIds = setOf(data.optString("receiverId"), data.optString("receiverAccountId"))
+            if (receiverIds.any { it.isNotBlank() && (it == supportUserId || it == supportUserAccountId) } &&
+                data.optString("senderAccountId") == "hurry_team_official") {
                 messages.add(SupportMessage(data.optString("text"), true, timestamp = data.optLong("timestamp", System.currentTimeMillis())))
                 syncDaisyChat(messages.toList(), active, supportUserId, supportUserName, supportUserPhoto, supportUserAccountId)
             }
         }
         active?.on("daisy_mode", modeListener)
-        active?.on("owner_support_reply", replyListener)
+        active?.on("private_message", replyListener)
         // Attach listeners before connecting so the server's initial Daisy STOP state is not missed.
         if (active != null && !active.connected()) active.connect()
         onDispose {
             active?.off("daisy_mode", modeListener)
-            active?.off("owner_support_reply", replyListener)
+            active?.off("private_message", replyListener)
         }
     }
     val keyboard = LocalSoftwareKeyboardController.current
