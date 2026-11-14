@@ -982,3 +982,9 @@ Current documentation does not certify that all historical features are build-, 
 ## 2026-11-14 — Owner Panel private chat voice-note display
 - Private Chat conversation previews identify voice notes, and the message view renders received voice audio controls from the live monitor payload.
 - Existing Owner browser IndexedDB storage and native `index.db` ownership remain unchanged; no MongoDB chat-history storage was added.
+
+
+## 2026-11-14 — Native Me Visitors count local storage
+- Native MeScreen now reads the Visitors count only from the signed-in user's local native `index.db` profile cache key `visitor_history:<accountId>:received`.
+- Removed the Me page's `/api/profile-visitors` count fetch and server-derived count write. The Visitors page's existing local received-visitor history is the source for the displayed count.
+- No MongoDB collection or Me UI/layout change was added. Count reflects visitor rows already synced into this device's local index.db; remote updates arrive through the existing Visitors page Socket.IO flow.
