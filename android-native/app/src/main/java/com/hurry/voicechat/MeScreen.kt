@@ -143,6 +143,9 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
     val phone = prefs.getString("phone", "") ?: ""
     val displayPhoto = photo
     var profileCountry by remember(uid, cachedProfile) { mutableStateOf(sequenceOf(cachedProfile?.optString("countryName", ""), cachedProfile?.optString("country", ""), cachedProfile?.optString("countryCode", "")).map { it?.trim().orEmpty() }.firstOrNull { it.isNotBlank() && it != "null" }.orEmpty()) }
+    var sellerCenterActive by remember(uid, cachedProfile) {
+        mutableStateOf(cachedProfile?.optBoolean("coinSellerTag", false) == true || cachedProfile?.optBoolean("coinSeller", false) == true || cachedProfile?.optBoolean("sellerTag", false) == true)
+    }
 
     LaunchedEffect(uid, account) {
         if (uid.isBlank()) return@LaunchedEffect
@@ -150,6 +153,7 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
             TargetUser(id = uid, uid = uid, accountId = account, displayAccountNumber = account)
         ) ?: return@LaunchedEffect
         NativeIndexDatabase(context).saveProfile(uid, profile)
+        sellerCenterActive = profile.optBoolean("coinSellerTag", false) || profile.optBoolean("coinSeller", false) || profile.optBoolean("sellerTag", false)
         sequenceOf("country", "countryName", "countryCode", "country_code", "nationality", "location").map { profile.optString(it, "").trim() }.firstOrNull { it.isNotBlank() && it != "null" }?.let { profileCountry = it }
         profile.optString("name").takeIf { it.isNotBlank() && it != "null" && it.lowercase() !in listOf("guest", "user", "undefined") && it != name }?.let { name = it }
         sequenceOf("image", "avatar", "profileImageUrl")
@@ -279,7 +283,13 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
         }
 
         item {
-            val bottom = listOf("Language Setting", "Settings", "Customer Service", "Help & Feedback")
+            val bottom = buildList {
+                add("Language Setting")
+                add("Settings")
+                add("Customer Service")
+                if (sellerCenterActive) add("Seller Center")
+                add("Help & Feedback")
+            }
             Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 0.dp, bottom = 2.dp).offset(y = (-55).dp).clip(RoundedCornerShape(6.dp)).background(Color.White)) {
                 bottom.forEach { label ->
                     Row(
@@ -291,6 +301,7 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
                                 "Language Setting" -> MeIconType.LANGUAGE
                                 "Settings" -> MeIconType.SETTINGS
                                 "Customer Service" -> MeIconType.SUPPORT
+                                "Seller Center" -> MeIconType.SELLER
                                 else -> MeIconType.HELP
                             }
                         )
@@ -329,7 +340,7 @@ private fun nativeMeAccountNumber(uid: String): String {
         Text(label, fontSize = 11.sp, color = Color(0xFF4B5563))
     }
 }
-enum class MeIconType { LANGUAGE, SETTINGS, SUPPORT, HELP }
+enum class MeIconType { LANGUAGE, SETTINGS, SUPPORT, SELLER, HELP }
 
 @Composable
 private fun MeMenuIcon(type: MeIconType) {
@@ -358,6 +369,18 @@ private fun MeMenuIcon(type: MeIconType) {
                 drawPath(path = right, color = c, style = stroke)
                 val smile = androidx.compose.ui.graphics.Path().apply { moveTo(size.width*.38f,size.height*.58f); cubicTo(size.width*.38f,size.height*.69f,size.width*.62f,size.height*.69f,size.width*.62f,size.height*.58f) }
                 drawPath(path = smile, color = c, style = stroke)
+            }
+            MeIconType.SELLER -> {
+                val bag = androidx.compose.ui.graphics.Path().apply {
+                    moveTo(size.width*.18f, size.height*.34f)
+                    lineTo(size.width*.82f, size.height*.34f)
+                    lineTo(size.width*.88f, size.height*.90f)
+                    lineTo(size.width*.12f, size.height*.90f)
+                    close()
+                    moveTo(size.width*.34f, size.height*.34f)
+                    cubicTo(size.width*.34f, size.height*.08f, size.width*.66f, size.height*.08f, size.width*.66f, size.height*.34f)
+                }
+                drawPath(path = bag, color = c, style = stroke)
             }
             MeIconType.HELP -> {
                 drawCircle(color = c, radius = size.minDimension*.42f, center = androidx.compose.ui.geometry.Offset(size.width/2f,size.height/2f), style = stroke)
