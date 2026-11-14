@@ -4,6 +4,7 @@ import android.content.Context
 import org.json.JSONObject
 import io.socket.client.IO
 import io.socket.client.Socket
+import io.socket.client.Ack
 import java.util.UUID
 import java.net.HttpURLConnection
 import java.net.URL
@@ -282,13 +283,14 @@ fun UserReport(
                                         .put("category", reportCategory)
                                         .put("description", reportDescription.trim())
                                         .put("timestamp", timestamp)
-                                    localIndexDb.saveChat("report_$reportId", payload.toString())
+                                    localIndexDb.saveUserReport(reportId, payload)
                                     runCatching {
                                         val reportSocket = IO.socket("https://zyora-server.onrender.com")
                                         reportSocket.on(Socket.EVENT_CONNECT) {
-                                            reportSocket.emit("user_report", payload)
-                                            reportSocket.disconnect()
-                                            reportSocket.close()
+                                            reportSocket.emit("user_report", payload, Ack {
+                                                reportSocket.disconnect()
+                                                reportSocket.close()
+                                            })
                                         }
                                         reportSocket.connect()
                                     }
