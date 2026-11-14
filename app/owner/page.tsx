@@ -906,19 +906,30 @@ export default function StaffPanel() {
       if (!isMounted || !message) return;
       mergePrivateMessages([message]);
     };
-    const handleSocketConnect = () => {
-      // Recover messages missed while Owner Panel was disconnected.
+    const handlePrivateMessageHistory = (data: any) => {
+      if (!isMounted || !Array.isArray(data?.messages)) return;
+      mergePrivateMessages(data.messages);
+    };
+    const requestPrivateMessageHistory = () => {
+      socket.emit('owner_private_message_history_request', { ownerKey: VALID_CREDENTIALS.secretKey });
       void fetchPrivateMessages();
+    };
+    const handleSocketConnect = () => {
+      // Recover MongoDB history plus the bounded live handoff after reconnect.
+      requestPrivateMessageHistory();
     };
 
     socket.on('private_message_monitor', handlePrivateMessage);
+    socket.on('owner_private_message_history_response', handlePrivateMessageHistory);
     socket.on('connect', handleSocketConnect);
     void fetchPrivateMessages();
+    if (socket.connected) requestPrivateMessageHistory();
     if (!socket.connected) socket.connect();
 
     return () => {
       isMounted = false;
       socket.off('private_message_monitor', handlePrivateMessage);
+      socket.off('owner_private_message_history_response', handlePrivateMessageHistory);
       socket.off('connect', handleSocketConnect);
     };
   }, []);
