@@ -2066,7 +2066,7 @@ export default function StaffPanel() {
                       <button onClick={() => setSelectedFeedback(fb)} className="px-4 py-2 bg-green-800 hover:bg-green-900 text-white rounded-lg text-xs font-bold">Open</button>
                     </div>
                   </div>
-                ))}
+                )))}
 
 
             </div>
