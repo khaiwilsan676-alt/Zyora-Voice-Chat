@@ -853,3 +853,9 @@ Current documentation does not certify that all historical features are build-, 
 - Daisy conversations continue to be saved locally in the native `index.db` `chat_cache` store under the per-user support-chat key.
 - The backend now keeps only a bounded, in-memory handoff of recent AI chat snapshots so the Owner Panel can recover messages after a Socket.IO reconnect; no AI chat content is written to MongoDB, Redis, or GitHub storage.
 - Owner Panel requests the handoff on initial connection and every subsequent Socket.IO reconnect, merges received chats into its existing browser IndexedDB cache, and updates the existing AI Chat section live.
+
+## 2026-11-14 — Zyora System targeted private messages
+- Owner Panel → Official Notifications now searches the canonical /api/users?q= endpoint by real Zyora account ID and requires selecting one matching account before sending.
+- Zyora Team / Zyora System messages use a dedicated Socket.IO send_official_private_message event and are delivered only to the selected user's registered Socket.IO identity rooms as the normal private_message event.
+- Official private messages are not broadcast and are not written to MongoDB or Redis; the native private-message inbox receives and stores them in the user's local index.db using its existing private-chat sync path.
+- Existing Official Notifications sender selector, message composer, image attachment, and surrounding Owner Panel layout are retained. Offline recipients are reported as not sent rather than falsely showing success.
