@@ -2079,46 +2079,95 @@ io.on("connection", (socket) => {
     io.emit("daisy_mode", { enabled: daisySupportEnabled });
   });
 
-  // Relay manual Zyora Team replies back to the matching native support chat.
-  socket.on("owner_support_reply", (data = {}, acknowledge) => {
-    const userId = String(data.userId || "").trim();
-    const userAccountId = String(data.userAccountId || data.accountId || "").trim();
-    const text = String(data.text || "").trim();
-    if ((!userId && !userAccountId) || !text) {
-      if (typeof acknowledge === "function") acknowledge({ ok: false, error: "Missing user identity or text" });
-      return;
-    }
+  // Manual owner replies are independent of Daisy automation. Resolve every
+  // known UID/account-ID alias, then deliver/queue using normal private chat.
+  socket.on("owner_support_reply", async (data = {}, acknowledge) => {
+    const ack = (result) => { if (typeof acknowledge === "function") acknowledge(result); };
+    try {
+      const userId = String(data.userId || "").trim();
+      const userAccountId = String(data.userAccountId || data.accountId || "").trim();
+      const text = String(data.text || "").trim().slice(0, 4000);
+      if ((!userId && !userAccountId) || !text) {
+        ack({ ok: false, error: "Missing user identity or text" });
+        return;
+      }
 
-    const timestamp = Date.now();
-    const userIds = [...new Set([userId, userAccountId].filter(Boolean))];
-    const reply = {
-      id: `zyora_support_${userId || userAccountId}_${timestamp}`,
-      senderId: "hurry_team_official",
-      senderAccountId: "hurry_team_official",
-      receiverId: userId || userAccountId,
-      receiverAccountId: userAccountId || userId,
-      senderName: "Zyora Team",
-      senderPhoto: "/logo.png",
-      receiverName: String(data.userName || "User"),
-      receiverPhoto: String(data.userPhoto || "/default-avatar.png"),
-      text, type: "message", timestamp
-    };
-    // Deliver owner replies through the exact same private_message event and
-    // registered user:<uid>/user:<accountId> rooms as ordinary user-to-user chat.
-    const targetRooms = userIds.map((id) => `user:${id}`);
-    io.to(targetRooms).emit("private_message", reply);
-    // Keep the older support event for any already-installed clients during rollout.
-    io.emit("owner_support_reply", { ...reply, userId: userId || userAccountId, userAccountId, userIds });
+      const aliases = new Set([userId, userAccountId].filter(Boolean));
+      // Owner Panel snapshots can contain either Firebase UID or Zyora ID.
+      // Expand both from the canonical user profile before looking up sockets.
+      if (db) {
+        const identityList = [...aliases];
+        const profile = await db.collection("users").findOne({
+          $or: [
+            { uid: { $in: identityList } }, { id: { $in: identityList } },
+            { appLongId: { $in: identityList } }, { accountId: { $in: identityList } },
+            { accountNumber: { $in: identityList } }, { displayUserNumber: { $in: identityList } }
+          ]
+        });
+        for (const value of [profile?.uid, profile?.id, profile?.appLongId,
+          profile?.accountId, profile?.accountNumber, profile?.displayUserNumber]) {
+          const alias = String(value || "").trim();
+          if (alias) aliases.add(alias);
+        }
+      }
 
-    const previous = liveAiSupportBuffer.get(userId) || liveAiSupportBuffer.get(userAccountId);
-    if (previous) {
-      const messages = Array.isArray(previous.messages) ? previous.messages.slice() : [];
-      messages.push({ text, image: null, isBot: true, timestamp });
-      const updatedChat = { ...previous, messages, lastMessage: messages[messages.length - 1], timestamp };
-      liveAiSupportBuffer.set(String(previous.userId || userId || userAccountId), updatedChat);
-      io.emit("ai_support_message", updatedChat);
+      const userIds = [...aliases];
+      const primaryUserId = userId || userAccountId;
+      const primaryAccountId = userAccountId || userId;
+      const timestamp = Date.now();
+      const reply = {
+        id: `zyora_support_${primaryUserId}_${timestamp}`,
+        senderId: "hurry_team_official",
+        senderAccountId: "hurry_team_official",
+        receiverId: primaryUserId,
+        receiverAccountId: primaryAccountId,
+        senderName: "Zyora Team",
+        senderPhoto: "/logo.png",
+        receiverName: String(data.userName || "User"),
+        receiverPhoto: String(data.userPhoto || "/default-avatar.png"),
+        text, type: "message", timestamp
+      };
+      const targetRooms = userIds.map((id) => `user:${id}`);
+      const recipients = targetRooms.length ? await io.in(targetRooms).fetchSockets() : [];
+      let delivery = "live";
+      if (recipients.length) {
+        // Room-array union sends one copy even when the user is registered
+        // under both their Firebase UID and Zyora account ID.
+        io.to(targetRooms).emit("private_message", reply);
+      } else if (redis) {
+        delivery = "queued";
+        try {
+          for (const id of userIds) {
+            const queueKey = `private_messages:pending:${id}`;
+            await redis.rpush(queueKey, JSON.stringify(reply));
+            await redis.expire(queueKey, 60 * 60 * 24 * 7);
+          }
+        } catch (queueError) {
+          console.error("Could not queue manual Daisy support reply:", queueError.message);
+          ack({ ok: false, error: "User is offline and message could not be queued." });
+          return;
+        }
+      } else {
+        ack({ ok: false, error: "User is not connected and offline delivery is unavailable." });
+        return;
+      }
+
+      // Preserve legacy listeners during rollout; Daisy STOP never gates this.
+      io.emit("owner_support_reply", { ...reply, userId: primaryUserId, userAccountId: primaryAccountId, userIds });
+      const previous = liveAiSupportBuffer.get(userId) || liveAiSupportBuffer.get(userAccountId) ||
+        userIds.map((id) => liveAiSupportBuffer.get(id)).find(Boolean);
+      if (previous) {
+        const messages = Array.isArray(previous.messages) ? previous.messages.slice() : [];
+        messages.push({ text, image: null, isBot: true, timestamp });
+        const updatedChat = { ...previous, messages, lastMessage: messages[messages.length - 1], timestamp };
+        liveAiSupportBuffer.set(String(previous.userId || primaryUserId), updatedChat);
+        io.emit("ai_support_message", updatedChat);
+      }
+      ack({ ok: true, delivery, userId: primaryUserId, userAccountId: primaryAccountId, userIds, timestamp });
+    } catch (error) {
+      console.error("Manual owner support reply delivery failed:", error);
+      ack({ ok: false, error: "Support reply delivery failed. Please retry." });
     }
-    if (typeof acknowledge === "function") acknowledge({ ok: true, userId: userId || userAccountId, userAccountId, timestamp });
   });
 
   socket.on("register", async (payload) => {
