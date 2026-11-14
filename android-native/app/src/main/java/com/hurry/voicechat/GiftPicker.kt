@@ -938,12 +938,7 @@ private fun VideoEffectOverlay(
     val isFade = style == "fade"
     var show by remember { mutableStateOf(true) }
 
-    LaunchedEffect(Unit) {
-        onStarted()
-        delay(10_000)
-        show = false
-        onFinished()
-    }
+    LaunchedEffect(src) { onStarted() }
 
     if (!show) return
     Box(
@@ -955,13 +950,21 @@ private fun VideoEffectOverlay(
         AndroidView(
             factory = { ctx ->
                 VideoView(ctx).apply {
-                    setVideoURI(Uri.parse(src))
+                    // Gift catalogue stores public asset paths, not Android content/file URIs.
+                    setVideoURI(Uri.parse(giftAssetUrl(src)))
                     setOnPreparedListener { mp ->
-                        mp.isLooping = true
+                        mp.isLooping = false
                         mp.setVolume(0f, 0f)
+                        val controller = android.widget.MediaController(ctx)
+                        controller.setAnchorView(this)
+                        setMediaController(controller)
                         start()
                     }
                     setOnCompletionListener { onFinished() }
+                    setOnErrorListener { _, _, _ ->
+                        onFinished()
+                        true
+                    }
                 }
             },
             modifier = if (isFade) Modifier.fillMaxSize()
@@ -970,6 +973,11 @@ private fun VideoEffectOverlay(
                 .fillMaxHeight(0.72f),
         )
     }
+}
+
+@Composable
+fun RoomGiftVideoOverlay(src: String, onFinished: () -> Unit) {
+    VideoEffectOverlay(src = src, style = "fade", onFinished = onFinished, onStarted = {})
 }
 
 // ============================================================
