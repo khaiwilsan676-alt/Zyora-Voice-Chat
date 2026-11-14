@@ -2,6 +2,9 @@ package com.hurry.voicechat
 
 import android.content.Context
 import org.json.JSONObject
+import io.socket.client.IO
+import io.socket.client.Socket
+import java.util.UUID
 import java.net.HttpURLConnection
 import java.net.URL
 import androidx.compose.foundation.background
@@ -86,6 +89,9 @@ fun UserReport(
             decorFitsSystemWindows = false
         )
     ) {
+        val context = androidx.compose.ui.platform.LocalContext.current
+        val authPrefs = remember { context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE) }
+        val localIndexDb = remember { NativeIndexDatabase(context) }
         var reportCategory by remember { mutableStateOf("") }
         var reportDescription by remember { mutableStateOf("") }
         var reportSubmitted by remember { mutableStateOf(false) }
@@ -259,7 +265,36 @@ fun UserReport(
                             .navigationBarsPadding()
                     ) {
                         Button(
-                            onClick = { if (reportCategory.isNotBlank()) reportSubmitted = true },
+                            onClick = {
+                                if (reportCategory.isNotBlank()) {
+                                    val timestamp = System.currentTimeMillis()
+                                    val senderId = authPrefs.getString("uid", "").orEmpty()
+                                        .ifBlank { authPrefs.getString("accountId", "").orEmpty() }
+                                    val reportId = "report_${UUID.randomUUID()}"
+                                    val payload = JSONObject()
+                                        .put("id", reportId)
+                                        .put("senderId", senderId)
+                                        .put("senderName", authPrefs.getString("name", "User").orEmpty())
+                                        .put("senderPhoto", authPrefs.getString("image", "").orEmpty())
+                                        .put("reportedId", targetId)
+                                        .put("reportedName", targetName)
+                                        .put("reportedPhoto", targetImage)
+                                        .put("category", reportCategory)
+                                        .put("description", reportDescription.trim())
+                                        .put("timestamp", timestamp)
+                                    localIndexDb.saveChat("report_$reportId", payload.toString())
+                                    runCatching {
+                                        val reportSocket = IO.socket("https://zyora-server.onrender.com")
+                                        reportSocket.on(Socket.EVENT_CONNECT) {
+                                            reportSocket.emit("user_report", payload)
+                                            reportSocket.disconnect()
+                                            reportSocket.close()
+                                        }
+                                        reportSocket.connect()
+                                    }
+                                    reportSubmitted = true
+                                }
+                            },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(50.dp),
