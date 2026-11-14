@@ -607,6 +607,28 @@ export default function StaffPanel() {
       socket.on("user_feedback", handleUserFeedback);
       socket.on("ai_support_history_response", handleHistoryResponse);
       socket.on("ai_support_message", handleAiSupportMessage);
+      const handleUserReport = (data: any) => {
+        if (!isMounted || !data?.id || typeof window === "undefined" || !window.indexedDB) return;
+        const report = { ...data, status: data.status || "Open" };
+        const request = window.indexedDB.open("ZyoraReportsDB", 1);
+        request.onupgradeneeded = () => {
+          const db = request.result;
+          if (!db.objectStoreNames.contains("userReports")) {
+            db.createObjectStore("userReports", { keyPath: "id" });
+          }
+        };
+        request.onsuccess = () => {
+          const db = request.result;
+          const transaction = db.transaction("userReports", "readwrite");
+          transaction.objectStore("userReports").put(report);
+          transaction.oncomplete = () => db.close();
+          transaction.onerror = () => db.close();
+          transaction.onabort = () => db.close();
+        };
+        request.onerror = () => console.error("Owner report IndexedDB open failed:", request.error);
+      };
+
+      socket.on("user_report", handleUserReport);
 
       const handleOfficialHistoryResponse = (data: any) => {
         if (!isMounted || !Array.isArray(data?.messages)) return;
@@ -630,6 +652,7 @@ export default function StaffPanel() {
         socket.off("user_feedback", handleUserFeedback);
         socket.off("ai_support_history_response", handleHistoryResponse);
         socket.off("ai_support_message", handleAiSupportMessage);
+        socket.off("user_report", handleUserReport);
         socket.off("official_message_history_response", handleOfficialHistoryResponse);
         socket.off("official_broadcast_message", handleOfficialBroadcast);
       };
