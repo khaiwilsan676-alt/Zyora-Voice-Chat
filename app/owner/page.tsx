@@ -2178,12 +2178,15 @@ export default function StaffPanel() {
                     setMasterWalletTransferring(true);
                     try {
                       const transferId = `master_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
-                      const response = await fetch(apiUrl('/api/owner/master-wallet/transfer'), {
+                      const response = await fetch(apiUrl('/api/seller/transfer'), {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-                        body: JSON.stringify({ transferId, recipientAccountId: masterWalletSelectedUser.accountId, amount })
+                        body: JSON.stringify({ transferId, recipientAccountId: masterWalletSelectedUser.accountId, amount, masterWallet: true })
                       });
-                      const data = await response.json();
+                      const responseText = await response.text();
+                      let data: any;
+                      try { data = JSON.parse(responseText); }
+                      catch { throw new Error(responseText.trim().startsWith('<') ? 'Zyora server returned an HTML error. Please wait for the backend deployment to finish and retry.' : 'Invalid server response. Please retry.'); }
                       if (!response.ok || !data?.success) throw new Error(data?.error || 'Coin transfer failed');
                       await saveMasterWalletHistory({
                         id: transferId,
