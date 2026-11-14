@@ -49,6 +49,7 @@ private const val ROOM_VOICE_FRAME_BYTES = 640 // 20 ms, mono, 16-bit PCM
 fun JitsiRoomAudio(
     roomId: String,
     userName: String,
+    localAccountId: String = "",
     canSpeak: Boolean,
     canShareMusic: Boolean = canSpeak,
     roomSocket: Socket?,
@@ -328,6 +329,8 @@ fun JitsiRoomAudio(
         val chunkListener = Emitter.Listener { args ->
             val data = args.firstOrNull() as? JSONObject ?: return@Listener
             if (data.optString("roomId") != roomId || !alive.get()) return@Listener
+            // Ignore any duplicate-session echo for this same account as well as server-side sender exclusion.
+            if (localAccountId.isNotBlank() && data.optString("userId") == localAccountId) return@Listener
             // JSONObject serializes Kotlin ByteArray payloads as JSON number arrays.
             // Accept both Socket.IO binary buffers and JSON arrays so relayed mic/music
             // packets are decoded consistently on every Android client.
