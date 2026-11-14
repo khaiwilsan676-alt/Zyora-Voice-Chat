@@ -1793,6 +1793,42 @@ app.post("/api/seller/transfer", async (req, res) => {
 
     const completedAt = Date.now();
     await transfers.updateOne({ _id: transferId }, { $set: { status: "completed", completedAt, updatedAt: completedAt } });
+
+    // Notify the credited account through the same Zyora System private-message
+    // path used by Official Notifications. The native recipient stores it in index.db.
+    // Do not write this notification to MongoDB private-message history.
+    try {
+      const systemMessage = {
+        id: "seller_recharge_" + transferId,
+        senderId: "hurry_system_official",
+        senderAccountId: "hurry_system_official",
+        receiverId: String(recipient.uid || recipient.id || recipient.appLongId || recipient._id),
+        receiverAccountId: String(recipient.accountId || recipient.accountNumber || recipientAccountId),
+        senderName: "Zyora System",
+        senderPhoto: "/file_00000000a66881f8aa9e15d2fe2b9a0c.png",
+        receiverName: recipientName,
+        receiverPhoto: recipientAvatar || "/default-avatar.png",
+        text: "🎉 Successful Offline Recharge\\nCoins: " + amount.toLocaleString("en-US") + "\\nFrom Seller: " + senderName,
+        type: "message",
+        timestamp: completedAt,
+        isOfficialPrivateMessage: true
+      };
+      const targetRooms = [...new Set([systemMessage.receiverId, systemMessage.receiverAccountId].filter(Boolean))]
+        .map((id) => "user:" + id);
+      const connectedRecipients = await io.in(targetRooms).fetchSockets();
+      if (connectedRecipients.length) {
+        io.to(targetRooms).emit("private_message", systemMessage);
+      } else if (redis) {
+        const queueKey = "private_messages:pending:" + systemMessage.receiverAccountId;
+        await redis.rpush(queueKey, JSON.stringify(systemMessage));
+        await redis.expire(queueKey, 60 * 60 * 24 * 7);
+      }
+    } catch (notificationError) {
+      // Wallet transfer is already complete; a notification transport issue must
+      // never reverse or report failure for a successful coin transfer.
+      console.error("Seller recharge notification delivery failed:", notificationError.message);
+    }
+
     const updatedSender = await db.collection("users").findOne({ _id: sender._id });
     return res.json({ success: true, balance: Math.max(0, Number(updatedSender?.coins ?? 0)), transfer: { ...record, status: "completed", completedAt } });
   } catch (error) {
