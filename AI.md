@@ -874,7 +874,7 @@ Current documentation does not certify that all historical features are build-, 
 
 ## 2026-11-14 — Owner Master Wallet coin credit
 - Enabled the previously disabled Owner Panel Master Wallet Transfer Coins action.
-- Added an idempotent backend credit flow that updates only the recipient's canonical `users.coins` balance and records transfer status in `masterWalletTransfers`; it does not debit a seller wallet or alter Seller Center transfer behavior.
+- Added an idempotent backend credit flow that increments the recipient's existing `users.coins` field directly. The idempotency key is stored on that same User document; no separate Master Wallet transaction collection/document is created. Seller Center transfer behavior is unchanged.
 - On successful credit, sends the recipient a private Zyora System message with the credited amount and “From Zyora official Team”. Online delivery uses Socket.IO; offline delivery uses the existing pending private-message queue when Redis is available.
 - Owner Panel transfer history remains in its existing browser IndexedDB store. Official Notifications now times out visibly if the Socket.IO acknowledgement never arrives rather than remaining stuck in Sending.
 - Verification: source changes committed; backend deployment and live account-to-account testing remain required.
