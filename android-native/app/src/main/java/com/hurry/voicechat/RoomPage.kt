@@ -246,7 +246,7 @@ object ZyoraKeptRoomSocketSession {
 
 data class RoomPageOwner(val id:String="",val uid:String="",val accountId:String="",val name:String="Room",val image:String="",val country:String="")
 data class RoomPageCurrentUser(val id:String="",val uid:String="",val accountId:String="",val name:String="User",val image:String="")
-data class NativeRoomSeat(val number:Int,val occupied:Boolean=false,val locked:Boolean=false,val muted:Boolean=false,val selfMuted:Boolean=false,val speaking:Boolean=false,val userName:String="",val userImage:String="",val accountId:String="",val gifSrc:String="",val gifTimestamp:Long=0L)
+data class NativeRoomSeat(val number:Int,val occupied:Boolean=false,val locked:Boolean=false,val muted:Boolean=false,val selfMuted:Boolean=false,val speaking:Boolean=false,val userName:String="",val userImage:String="",val accountId:String="",val gifSrc:String="",val gifTimestamp:Long=0L,val gifDurationMs:Long=5000L)
 data class NativeMention(val accountId: String, val name: String)
 data class NativeRoomMessage(val id:String,val text:String,val sender:String,val senderImage:String,val senderAccountId:String="",val timestamp:Long=System.currentTimeMillis(),val type:String="message",val mentions: List<NativeMention> = emptyList(),val imageUrl:String="")
 data class NativeEntryToast(val id:String,val name:String,val image:String,val vehicleVideo:String="",val accountId:String="",val vehicleItemId:String="")
@@ -1168,6 +1168,26 @@ fun RoomPage(
                 }
             }
         }
+        val luckyGiftAnimationListener = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
+            if (payload.optString("roomId") != roomId || payload.optString("action") != "lucky_image") return@Listener
+            val seatNumber = payload.optInt("seatNumber", 0)
+            val src = payload.optString("src").takeIf { it.isNotBlank() } ?: return@Listener
+            val timestamp = payload.optLong("timestamp", System.currentTimeMillis())
+            val duration = payload.optLong("duration", 1100L).coerceIn(500L, 5000L)
+            mainHandler.post {
+                val index = seats.indexOfFirst { it.number == seatNumber && it.occupied }
+                if (index >= 0) {
+                    seats[index] = seats[index].copy(gifSrc = src, gifTimestamp = timestamp, gifDurationMs = duration)
+                    mainHandler.postDelayed({
+                        val currentIndex = seats.indexOfFirst { it.number == seatNumber }
+                        if (currentIndex >= 0 && seats[currentIndex].gifTimestamp == timestamp) {
+                            seats[currentIndex] = seats[currentIndex].copy(gifSrc = "", gifTimestamp = 0L, gifDurationMs = 5000L)
+                        }
+                    }, duration)
+                }
+            }
+        }
         val seatListener = Emitter.Listener { args ->
             val payload = args.firstOrNull() as? JSONObject
             if (payload != null && payload.optString("roomId") == roomId) {
@@ -1177,7 +1197,7 @@ fun RoomPage(
                     val seat = seatsJson.optJSONObject(index) ?: continue
                     val user = seat.optJSONObject("user")
                     val gif = seat.optJSONObject("gif")
-                    parsed.add(NativeRoomSeat(number=seat.optInt("number",index+1),occupied=seat.optBoolean("isOccupied",user != null),locked=seat.optBoolean("isLocked",false),muted=seat.optBoolean("isMuted",false),selfMuted=seat.optBoolean("isSelfMuted",false),speaking=seat.optBoolean("isSpeaking",false),userName=if (user == null) "" else user.optString("name","User"),userImage=if (user == null) "" else if (user.optString("accountId",user.optString("userId","")) in setOf("100002", "100003")) "https://zyora-voice-chat.vercel.app/logo.png" else user.optString("image","").takeIf { it.isNotBlank() && it != "null" } ?: user.optString("dp","").takeIf { it.isNotBlank() && it != "null" } ?: user.optString("avatarUrl","").takeIf { it.isNotBlank() && it != "null" } ?: user.optString("profileImage","").takeIf { it.isNotBlank() && it != "null" } ?: "",accountId=if (user == null) "" else user.optString("accountId",user.optString("userId","")),gifSrc=gif?.optString("src","") ?: "",gifTimestamp=gif?.optLong("timestamp",0L) ?: 0L))
+                    parsed.add(NativeRoomSeat(number=seat.optInt("number",index+1),occupied=seat.optBoolean("isOccupied",user != null),locked=seat.optBoolean("isLocked",false),muted=seat.optBoolean("isMuted",false),selfMuted=seat.optBoolean("isSelfMuted",false),speaking=seat.optBoolean("isSpeaking",false),userName=if (user == null) "" else user.optString("name","User"),userImage=if (user == null) "" else if (user.optString("accountId",user.optString("userId","")) in setOf("100002", "100003")) "https://zyora-voice-chat.vercel.app/logo.png" else user.optString("image","").takeIf { it.isNotBlank() && it != "null" } ?: user.optString("dp","").takeIf { it.isNotBlank() && it != "null" } ?: user.optString("avatarUrl","").takeIf { it.isNotBlank() && it != "null" } ?: user.optString("profileImage","").takeIf { it.isNotBlank() && it != "null" } ?: "",accountId=if (user == null) "" else user.optString("accountId",user.optString("userId","")),gifSrc=gif?.optString("src","") ?: "",gifTimestamp=gif?.optLong("timestamp",0L) ?: 0L,gifDurationMs=gif?.optLong("duration",5000L) ?: 5000L))
                 }
                 mainHandler.post {
                     val byNumber = parsed.associateBy { it.number }
@@ -1421,6 +1441,7 @@ fun RoomPage(
         roomSocket.on("room_chat_cleared",clearedListener)
         roomSocket.on("room_kick_announcement",kickAnnouncementListener)
         roomSocket.on("room_seats",seatListener)
+        roomSocket.on("room_seat_action", luckyGiftAnimationListener)
         roomSocket.on("room_voice_speaker",voiceSpeakerListener)
         val roomPublicMessageBlockedListener = Emitter.Listener { args ->
             val payload = args.firstOrNull() as? JSONObject
@@ -1473,6 +1494,7 @@ fun RoomPage(
             roomSocket.off("room_chat_cleared",clearedListener)
             roomSocket.off("room_kick_announcement",kickAnnouncementListener)
             roomSocket.off("room_seats",seatListener)
+            roomSocket.off("room_seat_action", luckyGiftAnimationListener)
             roomSocket.off("room_voice_speaker",voiceSpeakerListener)
             mainHandler.post { activeVoiceSpeakerIds.clear() }
             roomSocket.off("room_settings_updated",settingsListener)
@@ -2436,7 +2458,32 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
             roomUsers = activeRoomUsers,
             walletBalance = roomWalletBalance,
             onDebitWallet = { requested -> if (requested <= roomWalletBalance) roomWalletBalance else null },
-            onSendCoinTransfer = { transfer -> roomSocketRef.value?.emit("coin_transfer", JSONObject(transfer)) },
+            onSendCoinTransfer = { transfer ->
+                roomSocketRef.value?.emit("coin_transfer", JSONObject(transfer))
+                if (transfer["luckyGift"] == true) {
+                    val recipientIds = (transfer["recipientIds"] as? List<*>)?.mapNotNull { it?.toString() }?.toSet().orEmpty()
+                    val giftImage = transfer["luckyImage"]?.toString().orEmpty()
+                    if (giftImage.isNotBlank() && recipientIds.isNotEmpty()) {
+                        val imageUrl = if (giftImage.startsWith("http", true)) giftImage
+                            else "https://zyora-voice-chat.vercel.app/" + giftImage.trimStart('/')
+                        seats.filter { it.occupied && it.accountId in recipientIds }.forEach { targetSeat ->
+                            val animationTimestamp = System.currentTimeMillis()
+                            roomSocketRef.value?.emit(
+                                "room_seat_action",
+                                JSONObject()
+                                    .put("roomId", roomId)
+                                    .put("userId", accountId)
+                                    .put("action", "lucky_image")
+                                    .put("seatNumber", targetSeat.number)
+                                    .put("src", imageUrl)
+                                    .put("duration", 1100L)
+                                    .put("timestamp", animationTimestamp)
+                                    .put("eventId", "lucky-$roomId-$accountId-${targetSeat.number}-$animationTimestamp")
+                            )
+                        }
+                    }
+                }
+            },
             onSendGiftVideoPlay = { payload -> roomSocketRef.value?.emit("gift_video_play", JSONObject(payload)) }
         )
         if (roomGiftVideoPreview.isNotBlank()) {
@@ -3149,7 +3196,7 @@ private fun RoomSeatInviteDialog(
     LaunchedEffect(seat.gifTimestamp) {
         if (seat.gifTimestamp != 0L && seat.gifSrc.isNotBlank()) {
             showGif = true
-            kotlinx.coroutines.delay(5000)
+            kotlinx.coroutines.delay(seat.gifDurationMs.coerceIn(500L, 5000L))
             showGif = false
         } else {
             showGif = false
