@@ -215,6 +215,11 @@ interface UserRecord {
 
 const fallbackUsers: UserRecord[] = [];
 
+// Short-lived in-memory snapshot avoids duplicate Owner Panel loads in the same tab.
+// Socket updates invalidate it; MongoDB remains the only source of user membership.
+let manageUsersCache: { users: any[]; expiresAt: number } | null = null;
+const MANAGE_USERS_CACHE_TTL_MS = 15_000;
+
 const AVAILABLE_TAGS = [
   { id: 'adminTag', name: 'Admin', emoji: '🛡️' },
   { id: 'officialTag', name: 'Official', emoji: '✅' },
@@ -887,14 +892,19 @@ export default function StaffPanel() {
         try {
           // MongoDB is the canonical user-profile source. Fetch it directly;
           // do not wait for an optional Socket.IO event that may not be deployed.
-          const response = await fetch(apiUrl('/api/users'), {
-            method: 'GET',
-            cache: 'no-store',
-            headers: { Accept: 'application/json' }
-          });
-          if (!response.ok) throw new Error(`Users API failed: ${response.status}`);
-          const apiData = await response.json();
-          rawUsers = Array.isArray(apiData?.users) ? apiData.users : [];
+          if (manageUsersCache && manageUsersCache.expiresAt > Date.now()) {
+            rawUsers = manageUsersCache.users;
+          } else {
+            const response = await fetch(apiUrl('/api/users'), {
+              method: 'GET',
+              cache: 'no-store',
+              headers: { Accept: 'application/json' }
+            });
+            if (!response.ok) throw new Error(`Users API failed: ${response.status}`);
+            const apiData = await response.json();
+            rawUsers = Array.isArray(apiData?.users) ? apiData.users : [];
+            manageUsersCache = { users: rawUsers, expiresAt: Date.now() + MANAGE_USERS_CACHE_TTL_MS };
+          }
           fetchedList = rawUsers.map((u: any, index: number) => ({
             id: String(u._id || u.id || u.uid || index + 1),
             name: String(u.name || u.displayName || u.userName || 'User'),
@@ -1040,6 +1050,7 @@ export default function StaffPanel() {
     loadRealUsers();
 
     const handleOwnerUsersChanged = () => {
+      manageUsersCache = null;
       if (isMounted) void loadRealUsers();
     };
     socket.on('owner_users_changed', handleOwnerUsersChanged);
@@ -1158,47 +1169,8 @@ export default function StaffPanel() {
     const val = e.target.value;
     setSearchQuery(val);
 
-    if (val.trim()) {
-      try {
-        const res = await fetch(apiUrl(`/api/users?search=${encodeURIComponent(val)}&accountId=${encodeURIComponent(val)}`));
-        if (res.ok) {
-          const data = await res.json();
-          const rawUsers = Array.isArray(data) ? data : (data?.users || []);
-          const fetchedList = rawUsers.map((u: any, index: number) => ({
-            id: String(u._id || u.id || u.uid || index + 1),
-            name: u.name || u.displayName || u.userName || u.profile?.name || u.profile?.displayName || u.userData?.name || 'User',
-            username: u.username || u.userName || `@${(u.name || 'user').toLowerCase().replace(/\s+/g, '')}`,
-            hurryId: String(u.accountId || u.accountNumber || u.displayAccountNumber || u.displayUserNumber || u["Account ID"] || u["Account Number"] || u.hurryId || u.zyoraId || u.publicUserId || u.id || u.uid || u.appLongId || u._id || '—'),
-            email: u.email || u.gmail || u.emailPhone || '—',
-            role: u.role || 'NORMAL',
-            lastLoginAt: u.lastLoginAt || u.lastLoginAtISO || u.lastLogin || u.lastLoginTime || '',
-            image: [u.image, u.dp, u.photo, u.photoURL, u.photoUrl, u.avatar, u.avatarUrl, u.profileImage, u.profileImageUrl, u.profile_image, u.imageUrl, u.picture, u.profile?.image, u.profile?.avatar, u.profile?.photo, u.userData?.image, u.userData?.avatar].find((value: any) => typeof value === 'string' && value.trim() && value.trim() !== 'null' && value.trim() !== 'undefined')?.trim() || ''
-          }));
-
-          setUsers(prev => {
-            const newUsers = [...prev];
-            fetchedList.forEach((incoming: UserRecord) => {
-              const existingIndex = newUsers.findIndex(existing => existing.id === incoming.id || (incoming.hurryId && incoming.hurryId !== '—' && existing.hurryId === incoming.hurryId));
-              if (existingIndex < 0) {
-                newUsers.push(incoming);
-              } else {
-                const existing = newUsers[existingIndex];
-                newUsers[existingIndex] = {
-                  ...existing, ...incoming,
-                  name: incoming.name && incoming.name !== 'User' ? incoming.name : existing.name,
-                  username: incoming.username || existing.username,
-                  email: incoming.email && incoming.email !== '—' ? incoming.email : existing.email,
-                  image: incoming.image || existing.image || '',
-                };
-              }
-            });
-            return newUsers;
-          });
-        }
-      } catch (err) {
-        console.warn('API users fetch fallback:', err);
-      }
-    }
+    // Search only the current MongoDB-backed list; do not merge remote matches
+    // into state, which could resurrect accounts deleted from MongoDB.
   };
 
   const filteredUsers = users.filter(u => {
