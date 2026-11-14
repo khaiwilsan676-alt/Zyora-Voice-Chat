@@ -86,9 +86,23 @@ export default function Reports() {
         return next.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
       });
     };
+    const handleReportHistory = (data: any) => {
+      if (!mounted || !Array.isArray(data?.reports)) return;
+      const restored = data.reports.map((item: any) => ({ ...item, status: getStatus(item) }));
+      restored.forEach((item: any) => { void saveLocalReport(item); });
+      setReports((previous) => {
+        const merged = new Map<string, any>();
+        previous.forEach((item) => merged.set(item.id, item));
+        restored.forEach((item: any) => merged.set(item.id, { ...merged.get(item.id), ...item }));
+        return Array.from(merged.values()).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+      });
+    };
+    socket.on('user_report_history_response', handleReportHistory);
+    socket.emit('user_report_history_request');
     socket.on('user_report', handleNewReport);
     return () => {
       mounted = false;
+      socket.off('user_report_history_response', handleReportHistory);
       socket.off('user_report', handleNewReport);
     };
   }, []);
