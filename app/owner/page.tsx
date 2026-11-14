@@ -827,7 +827,21 @@ export default function StaffPanel() {
 
   useEffect(() => {
     let isMounted = true;
+    let historyRequest = 0;
+    const mergePrivateMessages = (incoming: any[]) => {
+      if (!isMounted || !Array.isArray(incoming)) return;
+      setPrivateMessages((current) => {
+        const byId = new Map<string, any>();
+        [...current, ...incoming].forEach((message) => {
+          if (!message) return;
+          const id = String(message.id || `${message.senderId || ''}_${message.timestamp || 0}`);
+          byId.set(id, message);
+        });
+        return Array.from(byId.values()).sort((a, b) => Number(a.timestamp || 0) - Number(b.timestamp || 0));
+      });
+    };
     const fetchPrivateMessages = async () => {
+      const requestId = ++historyRequest;
       try {
         setLoadingPrivateMessages(true);
         const res = await fetch(apiUrl('/api/privateMessages'), {
@@ -837,27 +851,33 @@ export default function StaffPanel() {
         });
         if (!res.ok) throw new Error(`Private chat history failed: ${res.status}`);
         const data = await res.json();
-        if (isMounted) setPrivateMessages(Array.isArray(data.messages) ? data.messages : []);
+        if (isMounted && requestId === historyRequest) {
+          mergePrivateMessages(Array.isArray(data.messages) ? data.messages : []);
+        }
       } catch (err) {
         console.error('Failed to fetch private messages:', err);
       } finally {
-        if (isMounted) setLoadingPrivateMessages(false);
+        if (isMounted && requestId === historyRequest) setLoadingPrivateMessages(false);
       }
     };
     const handlePrivateMessage = (message: any) => {
       if (!isMounted || !message) return;
-      setPrivateMessages((current) => {
-        const id = String(message.id || `${message.senderId || ''}_${message.timestamp || 0}`);
-        const index = current.findIndex((item) => String(item.id || `${item.senderId || ''}_${item.timestamp || 0}`) === id);
-        if (index >= 0) return current.map((item, i) => i === index ? message : item);
-        return [...current, message].sort((a, b) => Number(a.timestamp || 0) - Number(b.timestamp || 0));
-      });
+      mergePrivateMessages([message]);
     };
+    const handleSocketConnect = () => {
+      // Recover messages missed while Owner Panel was disconnected.
+      void fetchPrivateMessages();
+    };
+
     socket.on('private_message_monitor', handlePrivateMessage);
+    socket.on('connect', handleSocketConnect);
     void fetchPrivateMessages();
+    if (!socket.connected) socket.connect();
+
     return () => {
       isMounted = false;
       socket.off('private_message_monitor', handlePrivateMessage);
+      socket.off('connect', handleSocketConnect);
     };
   }, []);
 
