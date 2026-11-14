@@ -1238,6 +1238,16 @@ fun NativeChatScreen(
         officialSocket.on("official_broadcast_message", liveListener)
         officialSocket.on("official_message_history_response", historyListener)
         officialSocket.on(Socket.EVENT_CONNECT) {
+            // Targeted Owner Panel messages are emitted to user:<Firebase UID> and
+            // user:<Zyora account ID> rooms. This dedicated official-chat socket
+            // must register both identities too; otherwise it connects successfully
+            // but can never receive a private official message addressed to this user.
+            officialSocket.emit(
+                "register",
+                JSONObject()
+                    .put("userId", currentUserId)
+                    .put("accountId", currentAccountId)
+            )
             val lastTimestamp = prefs.getLong("${cacheKey}_last_timestamp", 0L)
             officialSocket.emit(
                 "official_message_history_request",
