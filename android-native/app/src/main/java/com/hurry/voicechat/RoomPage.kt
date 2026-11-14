@@ -401,6 +401,7 @@ fun RoomPage(
     }
     
     var luckyGiftNotice by remember(roomId) { mutableStateOf<LuckyNotice?>(null) }
+    var showLuckyComboButton by remember(roomId) { mutableStateOf(false) }
     var showFloatingLuckyBag by remember { mutableStateOf(false) }
     var showLuckyBagCenterReveal by remember { mutableStateOf(false) }
     var showLuckyBagClaimedCard by remember { mutableStateOf(false) }
@@ -1205,6 +1206,10 @@ fun RoomPage(
                     maxWinTimes = payload.optInt("luckyReturnPercent", 0),
                     recipientMode = recipientMode
                 )
+                if (senderId == accountId) {
+                    showLuckyComboButton = true
+                    mainHandler.postDelayed({ showLuckyComboButton = false }, 5000L)
+                }
                 if (giftImage.isNotBlank()) {
                     seats.indices.filter { seats[it].occupied && seats[it].accountId in recipientIds }.forEach { index ->
                         val seat = seats[index]
@@ -2488,6 +2493,18 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
         luckyGiftNotice?.let { notice ->
             Box(Modifier.align(Alignment.TopStart).fillMaxWidth().zIndex(250f)) {
                 LuckyGiftNotificationSlider(notice = notice)
+            }
+        }
+        if (showLuckyComboButton) {
+            Box(Modifier.fillMaxSize().zIndex(251f)) {
+                LuckyComboButton(
+                    visible = true,
+                    timeLeft = 5,
+                    onClick = {
+                        showLuckyComboButton = false
+                        showGift = true
+                    },
+                )
             }
         }
         if(showGift) GiftPicker(
