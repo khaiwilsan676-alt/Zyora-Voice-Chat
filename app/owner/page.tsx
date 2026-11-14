@@ -1417,7 +1417,7 @@ export default function StaffPanel() {
           receiverName: msg.receiverName || 'User',
           receiverPhoto: msg.receiverPhoto || '',
           timestamp: ts,
-          lastMessage: msg.text || (msg.imageUrl ? '📷 Image' : '')
+          lastMessage: msg.text || (msg.imageUrl ? '📷 Image' : (msg.type === 'voice' ? '🎤 Voice message' : ''))
         });
       }
     });
@@ -2062,6 +2062,9 @@ export default function StaffPanel() {
                             <div className="mb-1.5 rounded-lg overflow-hidden border border-white/20">
                               <img src={msg.imageUrl} alt="Attachment" className="max-w-full max-h-60 object-contain" />
                             </div>
+                          )}
+                          {msg.type === 'voice' && msg.audioBase64 && (
+                            <audio controls preload="none" className="max-w-full" src={`data:${msg.audioMimeType || 'audio/mp4'};base64,${msg.audioBase64}`} />
                           )}
                           {msg.text && (
                             <p className="text-xs whitespace-pre-line leading-relaxed break-words">{msg.text}</p>
