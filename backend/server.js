@@ -3404,7 +3404,9 @@ io.on("connection", (socket) => {
         isOfficialBroadcast: true,
       };
 
-      // Only registered accounts that have connected in the last seven days qualify.
+      // Build recipients from the registered-user activity window, then merge every
+      // currently connected identity. This prevents a missing/stale Mongo activity
+      // timestamp from excluding a user who is online right now.
       const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
       const activeUsers = await db.collection("users").find({
         $or: [
@@ -3414,51 +3416,81 @@ io.on("connection", (socket) => {
       }).toArray();
 
       const recipientsByAccount = new Map();
-      for (const user of activeUsers) {
-        const userId = String(user.uid || user.id || user.appLongId || "");
-        const accountId = String(user.accountId || user.accountNumber || user.displayUserNumber || user.displayAccountNumber || userId);
-        const key = accountId || userId;
-        if (!key) continue;
+      const addRecipient = (userId, accountId, name = "User", photo = "/default-avatar.png") => {
+        const uid = String(userId || accountId || "").trim();
+        const aid = String(accountId || userId || "").trim();
+        const key = aid || uid;
+        if (!key) return;
         const previous = recipientsByAccount.get(key) || {};
         recipientsByAccount.set(key, {
-          userId: userId || previous.userId || accountId,
-          accountId: accountId || previous.accountId || userId
+          userId: uid || previous.userId || aid,
+          accountId: aid || previous.accountId || uid,
+          name: name || previous.name || "User",
+          photo: photo || previous.photo || "/default-avatar.png"
         });
+      };
+
+      for (const user of activeUsers) {
+        const userId = String(user.uid || user.userId || user.id || user.appLongId || user._id || "");
+        const accountId = String(user.accountId || user.accountNumber || user.displayUserNumber || user.displayAccountNumber || user.hurryId || userId);
+        addRecipient(userId, accountId, user.name || user.displayName || "User", user.image || user.dp || user.photoURL || user.avatar || "/default-avatar.png");
+      }
+
+      // Use actual connected sockets as the authoritative online delivery targets.
+      // Do not depend on Socket.IO room membership for broadcasts.
+      const connectedSockets = await io.fetchSockets();
+      const socketsByIdentity = new Map();
+      for (const connectedSocket of connectedSockets) {
+        const identities = [...new Set([
+          connectedSocket.userId,
+          connectedSocket.presenceAccountId,
+          connectedSocket.accountId,
+          connectedSocket.roomUserId,
+          connectedSocket.roomAccountId
+        ].map(value => String(value || "").trim()).filter(Boolean))];
+        if (!identities.length) continue;
+        for (const identity of identities) {
+          if (!socketsByIdentity.has(identity)) socketsByIdentity.set(identity, []);
+          socketsByIdentity.get(identity).push(connectedSocket);
+        }
+        // Connected users are included even if their Mongo activity timestamp
+        // has not yet been backfilled or matched to the current account schema.
+        addRecipient(
+          connectedSocket.userId || connectedSocket.roomUserId || connectedSocket.accountId,
+          connectedSocket.presenceAccountId || connectedSocket.accountId || connectedSocket.roomAccountId || connectedSocket.userId,
+          "User",
+          "/default-avatar.png"
+        );
       }
 
       let liveCount = 0;
       let queuedCount = 0;
       let skippedCount = 0;
-      const connectedSockets = await io.fetchSockets();
-      const onlineIds = new Set();
-      for (const connectedSocket of connectedSockets) {
-        if (connectedSocket.userId) onlineIds.add(String(connectedSocket.userId));
-        if (connectedSocket.presenceAccountId || connectedSocket.accountId) {
-          onlineIds.add(String(connectedSocket.presenceAccountId || connectedSocket.accountId));
-        }
-      }
-
       const recipients = Array.from(recipientsByAccount.values());
       for (let offset = 0; offset < recipients.length; offset += 100) {
         const batch = recipients.slice(offset, offset + 100);
         const results = await Promise.all(batch.map(async (recipient) => {
           const targetIds = [...new Set([recipient.userId, recipient.accountId].filter(Boolean))];
-          const targetRooms = targetIds.map((id) => \`user:\${id}\`);
+          const targetSockets = [...new Map(
+            targetIds.flatMap(id => socketsByIdentity.get(id) || []).map(target => [target.id, target])
+          ).values()];
           const recipientPayload = {
             ...payload,
             receiverId: recipient.userId,
             receiverAccountId: recipient.accountId,
-            receiverName: "User",
-            receiverPhoto: "/default-avatar.png",
+            receiverName: recipient.name || "User",
+            receiverPhoto: recipient.photo || "/default-avatar.png",
           };
-          if (targetIds.some((id) => onlineIds.has(id))) {
-            io.to(targetRooms).emit("private_message", recipientPayload);
-            io.to(targetRooms).emit("official_broadcast_message", recipientPayload);
+          if (targetSockets.length) {
+            for (const targetSocket of targetSockets) {
+              targetSocket.emit("private_message", recipientPayload);
+              targetSocket.emit("official_broadcast_message", recipientPayload);
+            }
             return "live";
           }
           if (!redis) return "skipped";
           try {
-            const queueKey = \`private_messages:pending:\${recipient.accountId || recipient.userId}\`;
+            const queueKey = `private_messages:pending:${recipient.accountId || recipient.userId}`;
             await redis.rpush(queueKey, JSON.stringify(recipientPayload));
             await redis.expire(queueKey, 60 * 60 * 24 * 7);
             return "queued";
