@@ -3171,7 +3171,7 @@ io.on("connection", (socket) => {
     socket.emit("user_report_history_response", { reports: [] });
   });
 
-  socket.on("user_feedback", async (data = {}) => {
+  socket.on("user_feedback", async (data = {}, acknowledge) => {
     const feedbackId = String(data.id || `fb_${Date.now()}`);
 
     const payload = {
@@ -3184,6 +3184,7 @@ io.on("connection", (socket) => {
       typeLabel: String(data.typeLabel || "Feedback"),
       description: String(data.description || ""),
       contactInfo: String(data.contactInfo || ""),
+      evidenceUri: String(data.evidenceUri || ""),
       createdAt: data.createdAt || new Date().toISOString(),
       timestamp: Number(data.timestamp || Date.now()),
       status: String(data.status || "pending")
@@ -3192,6 +3193,7 @@ io.on("connection", (socket) => {
     // Live-only relay. Feedback is stored locally by clients/Owner IndexedDB;
     // never write feedback content to GitHub storage.
     io.emit("user_feedback", payload);
+    if (typeof acknowledge === "function") acknowledge({ ok: true, id: feedbackId });
   });
 
   socket.on("user_feedback_history_request", () => {
