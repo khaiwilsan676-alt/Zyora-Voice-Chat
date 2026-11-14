@@ -2128,12 +2128,29 @@ io.on("connection", (socket) => {
         text, type: "message", timestamp
       };
       const targetRooms = userIds.map((id) => `user:${id}`);
-      const recipients = targetRooms.length ? await io.in(targetRooms).fetchSockets() : [];
+      // Resolve both room membership and the identities attached to live sockets.
+      // Some older/reconnected app sessions register presence before their room
+      // subscription is restored; identity matching prevents support replies
+      // from being lost just because a user:<id> room is temporarily absent.
+      const roomRecipients = targetRooms.length ? await io.in(targetRooms).fetchSockets() : [];
+      const allConnectedSockets = await io.fetchSockets();
+      const matchingSockets = allConnectedSockets.filter((connectedSocket) => {
+        const identities = [
+          connectedSocket.userId,
+          connectedSocket.presenceAccountId,
+          connectedSocket.accountId,
+          connectedSocket.roomUserId,
+          connectedSocket.roomAccountId
+        ].map((value) => String(value || "").trim()).filter(Boolean);
+        return identities.some((identity) => aliases.has(identity));
+      });
+      const recipients = [...new Map(
+        [...roomRecipients, ...matchingSockets].map((recipient) => [recipient.id, recipient])
+      ).values()];
       let delivery = "live";
       if (recipients.length) {
-        // Room-array union sends one copy even when the user is registered
-        // under both their Firebase UID and Zyora account ID.
-        io.to(targetRooms).emit("private_message", reply);
+        // Emit directly to the resolved socket set, once per connection.
+        for (const recipient of recipients) recipient.emit("private_message", reply);
       } else if (redis) {
         delivery = "queued";
         try {
