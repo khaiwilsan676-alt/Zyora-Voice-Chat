@@ -945,3 +945,11 @@ Current documentation does not certify that all historical features are build-, 
 - Owner Panel AI Chat handlers now merge snapshots by user ID, preserve existing moderation/status fields, reject malformed live snapshots, and ignore older out-of-order updates so a delayed history response cannot overwrite a newer conversation. Server acknowledges accepted AI chat snapshots; the existing local index.db + Owner browser IndexedDB storage model is unchanged.
 
 - Owner Panel feedback sync now merges live and reconnect snapshots by feedback ID, keeps local status values when an older snapshot arrives, and saves merged records to the existing browser IndexedDB store. User report submissions now receive a Socket.IO acknowledgement after the server accepts and broadcasts the report, matching the native submitter's acknowledgement callback. Reports continue to be stored in the existing Owner IndexedDB store and are replayed from the bounded in-memory server handoff after reconnect.
+
+
+## 2026-11-14 — Owner Private Chat and report reconnect recovery
+- Preserved the existing Owner Panel → Private Chat section and UI. The Owner Panel now requests an authenticated, bounded Socket.IO handoff snapshot after connect/reconnect in addition to its existing private-message history API request, and merges both sources by message ID.
+- `backend/server.js`: added a bounded in-memory handoff for private-message monitor events (up to 5,000) and a history response gated by the existing `OWNER_PANEL_ACCESS_KEY` environment secret. Canonical private-message history remains in MongoDB `privateMessages`.
+- User reports are now kept in a bounded in-memory reconnect handoff (up to 1,000) and replayed to the Owner Panel on `user_report_history_request`. The Owner Panel continues saving received reports to its own IndexedDB; submitting devices continue saving reports in native `index.db`.
+- No Owner Panel UI redesign and no report/private-chat content is written to GitHub storage. The in-memory handoff is lost on backend restart; report durability remains the Owner browser IndexedDB and submitting device database.
+- Status: **Implemented in repository**. Render deployment, web build, Owner Panel login/reconnect, report submission from a second account, and private-chat history on the GitHub Pages URL still require runtime verification.
