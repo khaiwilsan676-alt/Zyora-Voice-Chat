@@ -3218,6 +3218,49 @@ io.on("connection", (socket) => {
     socket.emit("user_feedback_history_response", { feedbacks: Array.from(liveFeedbackBuffer.values()) });
   });
 
+  // Owner Panel sends a private official message to one selected Zyora account.
+  // It uses the normal private_message delivery event; native clients save it in index.db.
+  // No MongoDB or Redis chat-history write is performed for these messages.
+  socket.on("send_official_private_message", async (data = {}, acknowledge) => {
+    const senderId = String(data.senderId || "");
+    const receiverId = String(data.receiverId || "").trim();
+    const receiverAccountId = String(data.receiverAccountId || "").trim();
+    const type = String(data.type || "message");
+    const text = String(data.text || "");
+    if (senderId !== "hurry_team_official" && senderId !== "hurry_system_official") {
+      if (typeof acknowledge === "function") acknowledge({ ok: false, error: "Invalid official sender" });
+      return;
+    }
+    if (!receiverId || !receiverAccountId || (!text && type !== "image")) {
+      if (typeof acknowledge === "function") acknowledge({ ok: false, error: "Recipient and message are required" });
+      return;
+    }
+    const normalizedMessage = {
+      id: String(data.id || "official_private_" + Date.now()),
+      senderId,
+      senderAccountId: senderId,
+      receiverId,
+      receiverAccountId,
+      senderName: senderId === "hurry_team_official" ? "Zyora Team" : "Zyora System",
+      senderPhoto: String(data.senderPhoto || ""),
+      receiverName: String(data.receiverName || "User"),
+      receiverPhoto: String(data.receiverPhoto || "/default-avatar.png"),
+      text,
+      type,
+      imageUrl: data.imageUrl || undefined,
+      timestamp: Number(data.timestamp || Date.now()),
+      isOfficialPrivateMessage: true
+    };
+    const targetRooms = [...new Set([receiverId, receiverAccountId])].map((id) => "user:" + id);
+    const recipients = await io.in(targetRooms).fetchSockets();
+    if (!recipients.length) {
+      if (typeof acknowledge === "function") acknowledge({ ok: false, error: "User is offline. Message was not sent." });
+      return;
+    }
+    io.to(targetRooms).emit("private_message", normalizedMessage);
+    if (typeof acknowledge === "function") acknowledge({ ok: true, id: normalizedMessage.id });
+  });
+
   // Official messages are never persisted on the server. Socket.IO only relays them live;
   // each native client stores received messages in its own local index.db.
   socket.on("send_official_message", (data = {}) => {
