@@ -784,43 +784,48 @@ app.put("/api/rooms", async (req, res) => {
   }
 });
 
-// Persistent room follows: stored by stable user ID so follows survive reinstall.
+// Room follows live inside the existing rooms document; no roomFollows collection.
 app.get("/api/room-follows", async (req, res) => {
   try {
-    if (!db) return res.status(503).json({ error: "GitHub storage is not connected" });
+    if (!db) return res.status(503).json({ error: "DB not connected" });
     const userId = String(req.query.userId || "").trim();
     const roomId = String(req.query.roomId || "").trim();
     if (roomId) {
-      const followers = await db.collection("roomFollows").find({ roomId }).sort({ followedAt: -1 }).limit(500).toArray();
-      return res.json({ followers: followers.map(({ _id, ...item }) => item) });
+      const room = await db.collection("rooms").findOne({ $or: [{ accountId: roomId }, { id: roomId }, { roomId }] });
+      const followers = Array.isArray(room?.roomFollow) ? room.roomFollow : [];
+      return res.json({ followers: followers.sort((a,b) => Number(b.followedAt||0)-Number(a.followedAt||0)) });
     }
     if (!userId) return res.status(400).json({ error: "Missing userId or roomId" });
-    const follows = await db.collection("roomFollows").find({ userId }).sort({ followedAt: -1 }).limit(500).toArray();
-    return res.json({ follows: follows.map(({ _id, ...item }) => item) });
+    const rooms = await db.collection("rooms").find({ "roomFollow.userId": userId }).toArray();
+    const follows = rooms.flatMap(room => (Array.isArray(room.roomFollow) ? room.roomFollow : []).filter(x => String(x.userId) === userId).map(x => ({ ...x, roomId: String(x.roomId || room.accountId || room.id || room.roomId || "") })));
+    return res.json({ follows: follows.sort((a,b) => Number(b.followedAt||0)-Number(a.followedAt||0)) });
   } catch (error) {
     console.error("GET /api/room-follows error:", error);
     return res.status(500).json({ error: "Failed to fetch room follows" });
   }
 });
-
 app.post("/api/room-follows", async (req, res) => {
   try {
-    if (!db) return res.status(503).json({ error: "GitHub storage is not connected" });
+    if (!db) return res.status(503).json({ error: "DB not connected" });
     const userId = String(req.body?.userId || "").trim();
     const roomId = String(req.body?.roomId || "").trim();
     if (!userId || !roomId) return res.status(400).json({ error: "Missing userId or roomId" });
-    const room = await db.collection("rooms").findOne({ $or: [{ accountId: roomId }, { id: roomId }, { roomId }] });
+    const rooms = db.collection("rooms");
+    const filter = { $or: [{ accountId: roomId }, { id: roomId }, { roomId }] };
+    const room = await rooms.findOne(filter);
+    if (!room) return res.status(404).json({ error: "Room not found" });
     const follow = {
       userId, roomId,
-      roomName: String(req.body?.roomName || room?.name || room?.roomName || "Room"),
-      roomImage: String(req.body?.roomImage || room?.dp || room?.image || room?.roomDp || ""),
-      roomCountry: String(req.body?.roomCountry || room?.country || "🇮🇳"),
+      roomName: String(req.body?.roomName || room.name || room.roomName || "Room"),
+      roomImage: String(req.body?.roomImage || room.dp || room.image || room.roomDp || ""),
+      roomCountry: String(req.body?.roomCountry || room.country || "🇮🇳"),
       followerName: String(req.body?.followerName || "User"),
       followerImage: String(req.body?.followerImage || ""),
       followerCountry: String(req.body?.followerCountry || ""),
       followedAt: Date.now()
     };
-    await db.collection("roomFollows").updateOne({ userId, roomId }, { $set: follow }, { upsert: true });
+    await rooms.updateOne({ _id: room._id }, { $pull: { roomFollow: { userId } } });
+    await rooms.updateOne({ _id: room._id }, { $push: { roomFollow: follow } });
     io.to(`room:${roomId}`).emit("room_follow_updated", { roomId, userId, action: "follow" });
     return res.json({ success: true, follow });
   } catch (error) {
@@ -828,14 +833,13 @@ app.post("/api/room-follows", async (req, res) => {
     return res.status(500).json({ error: "Failed to follow room" });
   }
 });
-
 app.delete("/api/room-follows", async (req, res) => {
   try {
-    if (!db) return res.status(503).json({ error: "GitHub storage is not connected" });
+    if (!db) return res.status(503).json({ error: "DB not connected" });
     const userId = String(req.query.userId || "").trim();
     const roomId = String(req.query.roomId || "").trim();
     if (!userId || !roomId) return res.status(400).json({ error: "Missing userId or roomId" });
-    await db.collection("roomFollows").deleteOne({ userId, roomId });
+    await db.collection("rooms").updateOne({ $or: [{ accountId: roomId }, { id: roomId }, { roomId }] }, { $pull: { roomFollow: { userId } } });
     io.to(`room:${roomId}`).emit("room_follow_updated", { roomId, userId, action: "unfollow" });
     return res.json({ success: true });
   } catch (error) {
@@ -1123,49 +1127,32 @@ app.post("/api/owner/seller-center", async (req, res) => {
 // PERSISTENT FOLLOW GRAPH + REAL-TIME FOLLOW COUNTS
  // GitHub storage stores each follower/target pair; Socket.IO broadcasts changes.
  // ==============================================================
+// User followers are embedded in the existing target users document.
 app.get("/api/follows", async (req, res) => {
   try {
     if (!db) return res.status(503).json({ error: "DB not connected" });
-    const targetUid = String(req.query.targetUid || "").trim();
+    const targetUid = String(req.query.targetUid || req.query.userId || "").trim();
     const followerId = String(req.query.followerId || "").trim();
     if (!targetUid) return res.status(400).json({ error: "Missing targetUid" });
-
-    const follows = db.collection("userFollows");
-    const [followers, following] = await Promise.all([
-      follows.countDocuments({ targetUid }),
-      followerId ? follows.findOne({ targetUid, followerId }) : Promise.resolve(null),
-    ]);
-    const followerRows = await follows.find({ targetUid }).sort({ createdAt: 1 }).limit(500).toArray();
-    const ids = followerRows.map((row) => row.followerId).filter(Boolean);
-    let users = [];
-    if (ids.length) {
-      users = await db.collection("users").find({
-        $or: [{ uid: { $in: ids } }, { id: { $in: ids } }, { appLongId: { $in: ids } }],
-      }).project({ uid: 1, id: 1, name: 1, displayName: 1, userName: 1, image: 1, photo: 1, photoURL: 1, accountId: 1 }).toArray();
-    }
+    const target = await db.collection("users").findOne({ $or: [{ uid: targetUid }, { id: targetUid }, { appLongId: targetUid }, { accountId: targetUid }, { accountNumber: targetUid }, { displayUserNumber: targetUid }] });
+    const rows = Array.isArray(target?.Followers) ? target.Followers : [];
+    const ids = rows.map(x => String(x.userId || x.followerId || x.id || "")).filter(Boolean);
+    const uniqueIds = [...new Set(ids)];
+    const following = Boolean(followerId && uniqueIds.includes(followerId));
+    const users = uniqueIds.length ? await db.collection("users").find({
+      $or: [{ uid: { $in: uniqueIds } }, { id: { $in: uniqueIds } }, { appLongId: { $in: uniqueIds } }, { accountId: { $in: uniqueIds } }, { accountNumber: { $in: uniqueIds } }]
+    }).project({ uid: 1, id: 1, appLongId: 1, accountId: 1, name: 1, displayName: 1, userName: 1, image: 1, avatar: 1, photoURL: 1 }).toArray() : [];
     const byId = new Map();
     for (const user of users) {
-      const id = String(user.uid || user.id || user.appLongId || "");
-      byId.set(id, {
-        id,
-        name: user.name || user.displayName || user.userName || "User",
-        image: user.image || user.avatar || user.profileImageUrl || "/default-avatar.png",
-        accountId: String(user.accountId || ""),
-      });
+      const id = String(user.uid || user.id || user.appLongId || user.accountId || user.accountNumber || "");
+      byId.set(id, { id, name: user.name || user.displayName || user.userName || "User", image: user.image || user.avatar || user.photoURL || "/default-avatar.png", accountId: String(user.accountId || user.accountNumber || "") });
     }
-    res.json({
-      success: true,
-      targetUid,
-      followers,
-      following: Boolean(following),
-      followerList: ids.map((id) => byId.get(String(id)) || { id: String(id), name: "User", image: "/default-avatar.png", accountId: "" }),
-    });
+    return res.json({ success: true, targetUid, followers: uniqueIds.length, following, followerList: uniqueIds.map(id => byId.get(id) || { id, name: "User", image: "/default-avatar.png", accountId: "" }) });
   } catch (error) {
     console.error("GET /api/follows error:", error);
-    res.status(500).json({ error: "Failed to load followers" });
+    return res.status(500).json({ error: "Failed to load followers" });
   }
 });
-
 app.post("/api/follows", async (req, res) => {
   try {
     if (!db) return res.status(503).json({ error: "DB not connected" });
@@ -1175,26 +1162,24 @@ app.post("/api/follows", async (req, res) => {
     if (!followerId || !targetUid) return res.status(400).json({ error: "Missing followerId or targetUid" });
     if (followerId === targetUid) return res.status(400).json({ error: "Cannot follow yourself" });
     if (action !== "follow" && action !== "unfollow") return res.status(400).json({ error: "Invalid action" });
-
-    const follows = db.collection("userFollows");
+    const users = db.collection("users");
+    const targetFilter = { $or: [{ uid: targetUid }, { id: targetUid }, { appLongId: targetUid }, { accountId: targetUid }, { accountNumber: targetUid }, { displayUserNumber: targetUid }] };
+    const target = await users.findOne(targetFilter);
+    if (!target) return res.status(404).json({ error: "User not found" });
     if (action === "follow") {
-      await follows.updateOne(
-        { followerId, targetUid },
-        { $setOnInsert: { followerId, targetUid, createdAt: Date.now() }, $set: { updatedAt: Date.now() } },
-        { upsert: true }
-      );
+      await users.updateOne({ _id: target._id }, { $pull: { Followers: { userId: followerId } } });
+      await users.updateOne({ _id: target._id }, { $push: { Followers: { userId: followerId, createdAt: Date.now() } } });
     } else {
-      await follows.deleteOne({ followerId, targetUid });
+      await users.updateOne({ _id: target._id }, { $pull: { Followers: { userId: followerId } } });
     }
-
-    const followers = await follows.countDocuments({ targetUid });
-    const following = action === "follow";
-    const payload = { targetUid, followerId, followers, following, action, timestamp: Date.now() };
+    const updated = await users.findOne({ _id: target._id }, { projection: { Followers: 1 } });
+    const rows = Array.isArray(updated?.Followers) ? updated.Followers : [];
+    const payload = { targetUid, followerId, followers: rows.length, following: action === "follow", action, timestamp: Date.now() };
     io.emit("follow_updated", payload);
-    res.json({ success: true, ...payload });
+    return res.json({ success: true, ...payload });
   } catch (error) {
     console.error("POST /api/follows error:", error);
-    res.status(500).json({ error: "Failed to update follow" });
+    return res.status(500).json({ error: "Failed to update follow" });
   }
 });
 
