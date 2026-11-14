@@ -3838,14 +3838,8 @@ async function connectGitHubDatabase() {
     await databaseClient.connect();
     db = databaseClient.db();
     console.log("GitHub document database ready");
-    const pendingBags = await db.collection("luckyBags").find({ status: "open" }).toArray();
-    for (const bag of pendingBags) {
-      if (Number(bag.expiresAt) <= Date.now() && Number(bag.claimedCount || 0) === 0) {
-        await refundLuckyBag(bag.bagId);
-      } else if (Number(bag.expiresAt) > Date.now()) {
-        scheduleLuckyBagRefund(bag);
-      }
-    }
+    // Lucky Bags are intentionally not restored from persistent storage.
+    // Their active state is server-memory only; Owner history is browser IndexedDB.
   } catch (error) {
     console.error("GitHub database connection/restore failed:", error.message);
   } finally {
