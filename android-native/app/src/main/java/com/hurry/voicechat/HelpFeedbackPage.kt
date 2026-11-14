@@ -31,6 +31,8 @@ import androidx.compose.ui.unit.sp
 import io.socket.client.Ack
 import io.socket.client.IO
 import io.socket.client.Socket
+import android.os.Handler
+import android.os.Looper
 import org.json.JSONObject
 import java.util.UUID
 
@@ -361,27 +363,46 @@ fun HelpFeedbackPage(onBack: () -> Unit = {}) {
                                             .put("createdAt", java.time.Instant.ofEpochMilli(timestamp).toString())
                                             .put("status", "pending")
                                         localIndexDb.saveChat("feedback_$feedbackId", obj.toString())
-                                        runCatching {
-                                            val feedbackSocket = IO.socket("https://zyora-server.onrender.com")
+                                        val mainHandler = Handler(Looper.getMainLooper())
+                                        try {
+                                            val options = IO.Options.builder().setTimeout(15000).setReconnection(false).build()
+                                            val feedbackSocket = IO.socket("https://zyora-server.onrender.com", options)
+                                            var finished = false
+                                            fun finishSubmission(delivered: Boolean) {
+                                                if (finished) return
+                                                finished = true
+                                                feedbackSocket.disconnect()
+                                                feedbackSocket.close()
+                                                mainHandler.post {
+                                                    submitting = false
+                                                    if (delivered) {
+                                                        success = true
+                                                        error = ""
+                                                        selectedType = ""
+                                                        description = ""
+                                                        contact = ""
+                                                        evidenceUri = null
+                                                        evidenceName = ""
+                                                    } else {
+                                                        error = "Could not deliver feedback. It is saved on this device; please try Submit again."
+                                                    }
+                                                }
+                                            }
                                             feedbackSocket.on(Socket.EVENT_CONNECT) {
-                                                feedbackSocket.emit("user_feedback", obj, Ack {
-                                                    feedbackSocket.disconnect()
-                                                    feedbackSocket.close()
+                                                feedbackSocket.emit("user_feedback", obj, Ack { ackArgs ->
+                                                    val ack = ackArgs.firstOrNull() as? JSONObject
+                                                    finishSubmission(ack?.optBoolean("ok", false) == true)
                                                 })
                                             }
                                             feedbackSocket.on(Socket.EVENT_CONNECT_ERROR) {
-                                                feedbackSocket.disconnect()
-                                                feedbackSocket.close()
+                                                finishSubmission(false)
                                             }
                                             feedbackSocket.connect()
+                                            mainHandler.postDelayed({ finishSubmission(false) }, 18000)
+                                        } catch (_: Exception) {
+                                            submitting = false
+                                            error = "Could not connect. Feedback is saved on this device; please try again."
                                         }
-                                        submitting = false
-                                        success = true
-                                        selectedType = ""
-                                        description = ""
-                                        contact = ""
-                                        evidenceUri = null
-                                        evidenceName = ""
                                     }
                                 }
                             },
