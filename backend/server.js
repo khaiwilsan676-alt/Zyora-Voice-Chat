@@ -2096,6 +2096,23 @@ io.on("connection", (socket) => {
       accountId ? String(accountId) : null
     );
 
+    // Record durable activity on each registered connection for the 7-day broadcast audience.
+    if (db) {
+      try {
+        const identityIds = [...new Set([String(userId), accountId ? String(accountId) : ""].filter(Boolean))];
+        await db.collection("users").updateOne(
+          { $or: [
+            { uid: { $in: identityIds } }, { id: { $in: identityIds } },
+            { appLongId: { $in: identityIds } }, { accountId: { $in: identityIds } },
+            { accountNumber: { $in: identityIds } }, { displayUserNumber: { $in: identityIds } }
+          ] },
+          { $set: { lastOnlineAt: Date.now(), lastActiveAt: Date.now() } }
+        );
+      } catch (activityError) {
+        console.error("Could not update registered user activity timestamp:", activityError.message);
+      }
+    }
+
     socket.emit("global_room_presence", {
       rooms: getGlobalRoomPresence(),
     });
@@ -3355,53 +3372,109 @@ io.on("connection", (socket) => {
   // Official messages are never persisted on the server. Socket.IO only relays them live;
   // each native client stores received messages in its own local index.db.
   socket.on("send_official_message", async (data = {}, acknowledge) => {
-    const rawSenderId = String(data.senderId || "");
-    if (rawSenderId !== "hurry_team_official" && rawSenderId !== "hurry_system_official") {
-      if (typeof acknowledge === "function") acknowledge({ ok: false, error: "Invalid official sender" });
-      return;
-    }
-    const text = String(data.text || "").trim();
-    const type = data.type || (data.imageUrl ? "image" : "message");
-    if (!text && type !== "image") {
-      if (typeof acknowledge === "function") acknowledge({ ok: false, error: "Message is empty" });
-      return;
-    }
-    const isTeam = rawSenderId === "hurry_team_official";
-    const timestamp = Number(data.timestamp || Date.now());
-    const payload = {
-      id: String(data.id || `official_${timestamp}_${Math.random().toString(36).substring(2, 7)}`),
-      senderId: rawSenderId,
-      senderAccountId: rawSenderId,
-      senderName: isTeam ? "Zyora Team" : "Zyora System",
-      senderPhoto: isTeam ? "/logo.png" : "/file_00000000a66881f8aa9e15d2fe2b9a0c.png",
-      text, type, imageUrl: data.imageUrl || undefined, timestamp,
-      isOfficialBroadcast: true,
+    const reply = (result) => {
+      if (typeof acknowledge === "function") acknowledge(result);
     };
+    try {
+      const rawSenderId = String(data.senderId || "");
+      if (rawSenderId !== "hurry_team_official" && rawSenderId !== "hurry_system_official") {
+        reply({ ok: false, error: "Invalid official sender" });
+        return;
+      }
+      const text = String(data.text || "").trim();
+      const type = data.type || (data.imageUrl ? "image" : "message");
+      if (!text && type !== "image") {
+        reply({ ok: false, error: "Message is empty" });
+        return;
+      }
+      if (!db) {
+        reply({ ok: false, error: "Registered-user database is unavailable. Please retry." });
+        return;
+      }
 
-    // Fan out through the same private_message inbox pipeline used by user-to-user
-    // chat so native clients persist it in index.db and increment their normal unread badge.
-    const sockets = await io.fetchSockets();
-    const delivered = new Set();
-    for (const recipient of sockets) {
-      const userId = String(recipient.userId || "");
-      const accountId = String(recipient.presenceAccountId || recipient.accountId || "");
-      if (!userId && !accountId) continue;
-      const key = accountId || userId;
-      if (delivered.has(key)) continue;
-      delivered.add(key);
-      const recipientPayload = {
-        ...payload,
-        receiverId: userId || accountId,
-        receiverAccountId: accountId || userId,
-        receiverName: "User",
-        receiverPhoto: "/default-avatar.png",
+      const isTeam = rawSenderId === "hurry_team_official";
+      const timestamp = Number(data.timestamp || Date.now());
+      const payload = {
+        id: String(data.id || \`official_\${timestamp}_\${Math.random().toString(36).substring(2, 7)}\`),
+        senderId: rawSenderId,
+        senderAccountId: rawSenderId,
+        senderName: isTeam ? "Zyora Team" : "Zyora System",
+        senderPhoto: isTeam ? "/logo.png" : "/file_00000000a66881f8aa9e15d2fe2b9a0c.png",
+        text, type, imageUrl: data.imageUrl || undefined, timestamp,
+        isOfficialBroadcast: true,
       };
-      recipient.emit("private_message", recipientPayload);
-    }
-    // Keep the dedicated official-chat stream for the Zyora System/Team conversation.
-    io.emit("official_broadcast_message", payload);
-    if (typeof acknowledge === "function") {
-      acknowledge({ ok: true, id: payload.id, deliveredCount: delivered.size });
+
+      // Only registered accounts that have connected in the last seven days qualify.
+      const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+      const activeUsers = await db.collection("users").find({
+        $or: [
+          { lastOnlineAt: { $gte: cutoff } },
+          { lastActiveAt: { $gte: cutoff } }
+        ]
+      }).toArray();
+
+      const recipientsByAccount = new Map();
+      for (const user of activeUsers) {
+        const userId = String(user.uid || user.id || user.appLongId || "");
+        const accountId = String(user.accountId || user.accountNumber || user.displayUserNumber || user.displayAccountNumber || userId);
+        const key = accountId || userId;
+        if (!key) continue;
+        const previous = recipientsByAccount.get(key) || {};
+        recipientsByAccount.set(key, {
+          userId: userId || previous.userId || accountId,
+          accountId: accountId || previous.accountId || userId
+        });
+      }
+
+      let liveCount = 0;
+      let queuedCount = 0;
+      let skippedCount = 0;
+      for (const recipient of recipientsByAccount.values()) {
+        const targetIds = [...new Set([recipient.userId, recipient.accountId].filter(Boolean))];
+        const targetRooms = targetIds.map((id) => \`user:\${id}\`);
+        const connected = await io.in(targetRooms).fetchSockets();
+        const recipientPayload = {
+          ...payload,
+          receiverId: recipient.userId,
+          receiverAccountId: recipient.accountId,
+          receiverName: "User",
+          receiverPhoto: "/default-avatar.png",
+        };
+
+        if (connected.length) {
+          io.to(targetRooms).emit("private_message", recipientPayload);
+          io.to(targetRooms).emit("official_broadcast_message", recipientPayload);
+          liveCount += 1;
+        } else if (redis) {
+          try {
+            const queueKey = \`private_messages:pending:\${recipient.accountId || recipient.userId}\`;
+            await redis.rpush(queueKey, JSON.stringify(recipientPayload));
+            await redis.expire(queueKey, 60 * 60 * 24 * 7);
+            queuedCount += 1;
+          } catch (queueError) {
+            skippedCount += 1;
+            console.error("Could not queue official broadcast for active user:", queueError.message);
+          }
+        } else {
+          skippedCount += 1;
+        }
+      }
+
+      const eligibleCount = recipientsByAccount.size;
+      const deliveredCount = liveCount + queuedCount;
+      reply({
+        ok: skippedCount === 0,
+        id: payload.id,
+        deliveredCount,
+        liveCount,
+        queuedCount,
+        skippedCount,
+        eligibleCount,
+        error: skippedCount ? \`Could not queue \${skippedCount} active users. Check Redis and retry.\` : undefined
+      });
+    } catch (error) {
+      console.error("Official broadcast delivery failed:", error);
+      reply({ ok: false, error: "Broadcast delivery failed on server. Please retry." });
     }
   });
 
