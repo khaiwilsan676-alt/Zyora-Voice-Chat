@@ -163,15 +163,16 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
             ?.let { photo = it }
     }
 
-    val topItems = listOf(
-        MeMenu("Invite Friends", "IMG_20260915_225333.png"),
-        MeMenu("Medal", "IMG_20260915_225426.png"),
-        MeMenu("Level", "IMG_20260915_225404.png"),
-        MeMenu("Family", "IMG_20260915_225349.png"),
-        MeMenu("Store", "IMG_20260915_225447.png"),
-        MeMenu("Bag", "IMG_20260915_225506.png"),
-        MeMenu("Seller Center", "IMG_20260915_225536.png")
-    )
+    val topItems = buildList {
+        add(MeMenu("Invite Friends", "IMG_20260915_225333.png"))
+        add(MeMenu("Medal", "IMG_20260915_225426.png"))
+        add(MeMenu("Level", "IMG_20260915_225404.png"))
+        add(MeMenu("Family", "IMG_20260915_225349.png"))
+        add(MeMenu("Store", "IMG_20260915_225447.png"))
+        add(MeMenu("Bag", "IMG_20260915_225506.png"))
+        // Seller Center is shown only when the Owner Panel activates this account.
+        if (sellerCenterActive) add(MeMenu("Seller Center", "IMG_20260915_225536.png"))
+    }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize().background(Color(0xFFF1F1F1)),
