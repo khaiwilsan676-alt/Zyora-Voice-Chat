@@ -82,62 +82,18 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
     var followCountsReady by remember(uid) { mutableStateOf(false) }
     val visitorUserId = prefs.getString("accountId", "").orEmpty().ifBlank { uid }
     LaunchedEffect(visitorUserId) {
-        if (visitorUserId.isNotBlank()) {
-            SocialFollowApi.cachedSnapshot(context, visitorUserId)?.let { fansCount=it.followers; followingCount=it.followingCount; friendsCount=it.friends; followCountsReady=true }
-            SocialFollowApi.snapshot(context, visitorUserId, visitorUserId)?.let { fansCount=it.followers; followingCount=it.followingCount; friendsCount=it.friends; followCountsReady=true }
-        }
-    }
-    val followScope = rememberCoroutineScope()
-    DisposableEffect(visitorUserId) {
-        if (visitorUserId.isBlank()) return@DisposableEffect onDispose { }
-        val socket = IO.socket("https://zyora-server.onrender.com", IO.Options().apply { transports=arrayOf("websocket"); reconnection=true })
-        val refresh: suspend () -> Unit = {
-            SocialFollowApi.snapshot(context, visitorUserId, visitorUserId)?.let {
-                fansCount=it.followers; followingCount=it.followingCount; friendsCount=it.friends; followCountsReady=true
-            }
-        }
-        val listener = Emitter.Listener { followScope.launch { refresh() } }
-        socket.on("follow_updated", listener)
-        socket.on("profile_follow_updated", listener)
-        socket.connect()
-        onDispose {
-            socket.off("follow_updated", listener)
-            socket.off("profile_follow_updated", listener)
-            socket.disconnect()
-            socket.close()
-        }
-    }
-    LaunchedEffect(visitorUserId) {
         if (visitorUserId.isBlank()) {
             visitorCount = 0
         } else {
-            val cacheKey = "visitor_count:" + visitorUserId
-            val cachedCount = withContext(Dispatchers.IO) {
-                runCatching { NativeIndexDatabase(context).loadProfile(cacheKey)?.optInt("count", 0) ?: 0 }.getOrDefault(0)
+            // Visitors count is read only from this device's native index.db.
+            // The Visitors page stores received visitor rows in the same local profile cache.
+            visitorCount = withContext(Dispatchers.IO) {
+                runCatching {
+                    val key = "visitor_history:" + visitorUserId + ":received"
+                    val rows = NativeIndexDatabase(context).loadProfile(key)?.optJSONArray("visitors")
+                    rows?.length() ?: 0
+                }.getOrDefault(0)
             }
-            visitorCount = cachedCount
-            val freshCount = withContext(Dispatchers.IO) {
-                val encoded = java.net.URLEncoder.encode(visitorUserId, "UTF-8")
-                val connection = (URL("https://zyora-server.onrender.com/api/profile-visitors?userId=$encoded&type=received").openConnection() as HttpURLConnection).apply {
-                    requestMethod = "GET"
-                    connectTimeout = 12000
-                    readTimeout = 12000
-                }
-                try {
-                    val status = connection.responseCode
-                    if (status in 200..299) {
-                        val body = connection.inputStream.bufferedReader().use { it.readText() }
-                        val count = JSONObject(body).optJSONArray("visitors")?.length() ?: 0
-                        runCatching { NativeIndexDatabase(context).saveProfile(cacheKey, JSONObject().put("count", count)) }
-                        count
-                    } else null
-                } catch (_: Exception) {
-                    null
-                } finally {
-                    connection.disconnect()
-                }
-            }
-            if (freshCount != null) visitorCount = freshCount
         }
     }
     val phone = prefs.getString("phone", "") ?: ""
