@@ -1840,6 +1840,99 @@ app.post("/api/seller/transfer", async (req, res) => {
   }
 });
 
+// Owner Master Wallet: credit a user's canonical wallet once, then notify through Zyora System.
+app.post("/api/owner/master-wallet/transfer", async (req, res) => {
+  try {
+    if (!db) return res.status(503).json({ error: "Wallet service unavailable" });
+    const transferId = String(req.body?.transferId || "").trim();
+    const recipientAccountId = String(req.body?.recipientAccountId || "").trim();
+    const amount = Number(req.body?.amount);
+    if (!/^master_[A-Za-z0-9_-]{8,100}$/.test(transferId) ||
+        !/^\\d{4,20}$/.test(recipientAccountId) ||
+        !Number.isSafeInteger(amount) || amount <= 0) {
+      return res.status(400).json({ error: "Select a valid Zyora user and enter a positive whole coin amount" });
+    }
+
+    const transfers = db.collection("masterWalletTransfers");
+    const prior = await transfers.findOne({ _id: transferId });
+    if (prior?.status === "completed") return res.json({ success: true, transfer: prior, duplicate: true });
+    if (prior) return res.status(409).json({ error: "This transfer is already being processed" });
+
+    const recipient = await db.collection("users").findOne({ $or: [
+      { accountId: recipientAccountId }, { accountNumber: recipientAccountId },
+      { "Account Number": recipientAccountId }, { "Account ID": recipientAccountId },
+      { displayAccountNumber: recipientAccountId }, { displayUserNumber: recipientAccountId },
+      ...(Number.isSafeInteger(Number(recipientAccountId)) ? [
+        { accountId: Number(recipientAccountId) }, { accountNumber: Number(recipientAccountId) },
+        { "Account ID": Number(recipientAccountId) }, { displayAccountNumber: Number(recipientAccountId) },
+        { displayUserNumber: Number(recipientAccountId) }
+      ] : [])
+    ] });
+    if (!recipient) return res.status(404).json({ error: "User not found" });
+
+    const parsedCoins = Number(recipient.coins);
+    const currentCoins = recipient.coins != null && Number.isFinite(parsedCoins)
+      ? Math.max(0, Math.floor(parsedCoins))
+      : Math.max(0, Math.floor(Number(recipient.balance || 0)));
+    const now = Date.now();
+    const recipientId = String(recipient.uid || recipient.id || recipient.appLongId || recipient._id);
+    const recipientName = String(recipient.name || recipient.displayName || recipient.userName || "User");
+    const recipientAvatar = String(recipient.image || recipient.dp || recipient.photoURL || recipient.avatar || "");
+    const record = {
+      _id: transferId, transferId, status: "pending",
+      recipientId, recipientAccountId,
+      recipientName, recipientAvatar, amount, createdAt: now, updatedAt: now
+    };
+    await transfers.insertOne(record);
+
+    const credit = await db.collection("users").updateOne(
+      { _id: recipient._id },
+      { $set: { coins: currentCoins + amount, walletUpdatedAt: now } }
+    );
+    if (!credit.modifiedCount) {
+      await transfers.updateOne({ _id: transferId }, { $set: { status: "failed", failure: "recipient_credit_failed", updatedAt: Date.now() } });
+      return res.status(503).json({ error: "Recipient wallet could not be credited" });
+    }
+
+    const completedAt = Date.now();
+    await transfers.updateOne({ _id: transferId }, { $set: { status: "completed", completedAt, updatedAt: completedAt } });
+
+    const officialMessage = {
+      id: "master_wallet_" + transferId,
+      senderId: "hurry_system_official",
+      senderAccountId: "hurry_system_official",
+      receiverId: recipientId,
+      receiverAccountId: String(recipient.accountId || recipient.accountNumber || recipientAccountId),
+      senderName: "Zyora System",
+      senderPhoto: "/file_00000000a66881f8aa9e15d2fe2b9a0c.png",
+      receiverName: recipientName,
+      receiverPhoto: recipientAvatar || "/default-avatar.png",
+      text: "You receive\\nCoins: " + amount.toLocaleString("en-US") + "\\nFrom Zyora official Team",
+      type: "message",
+      timestamp: completedAt,
+      isOfficialPrivateMessage: true
+    };
+    try {
+      const rooms = [...new Set([officialMessage.receiverId, officialMessage.receiverAccountId].filter(Boolean))].map(id => "user:" + id);
+      const online = await io.in(rooms).fetchSockets();
+      if (online.length) {
+        io.to(rooms).emit("private_message", officialMessage);
+      } else if (redis) {
+        const queueKey = "private_messages:pending:" + officialMessage.receiverAccountId;
+        await redis.rpush(queueKey, JSON.stringify(officialMessage));
+        await redis.expire(queueKey, 60 * 60 * 24 * 7);
+      }
+    } catch (notificationError) {
+      console.error("Master Wallet notification delivery failed:", notificationError.message);
+    }
+
+    return res.json({ success: true, balance: currentCoins + amount, transfer: { ...record, status: "completed", completedAt } });
+  } catch (error) {
+    console.error("POST /api/owner/master-wallet/transfer error:", error.message);
+    return res.status(503).json({ error: error.message || "Master Wallet transfer failed" });
+  }
+});
+
 app.get("/api/seller/transfers", async (req, res) => {
   try {
     if (!db) return res.status(503).json({ error: "Transfer history unavailable" });
