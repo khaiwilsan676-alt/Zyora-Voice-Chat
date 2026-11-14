@@ -6,7 +6,7 @@ import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import org.json.JSONObject
 
-internal class NativeIndexDatabase(context: Context) : SQLiteOpenHelper(context.applicationContext, "index.db", null, 6) {
+internal class NativeIndexDatabase(context: Context) : SQLiteOpenHelper(context.applicationContext, "index.db", null, 7) {
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL("CREATE TABLE IF NOT EXISTS chat_cache (chat_key TEXT PRIMARY KEY NOT NULL, payload TEXT NOT NULL, updated_at INTEGER NOT NULL)")
         db.execSQL("CREATE TABLE IF NOT EXISTS profile_cache (profile_key TEXT PRIMARY KEY NOT NULL, payload TEXT NOT NULL, updated_at INTEGER NOT NULL)")
@@ -14,6 +14,7 @@ internal class NativeIndexDatabase(context: Context) : SQLiteOpenHelper(context.
         db.execSQL("CREATE TABLE IF NOT EXISTS voice_cache (message_id TEXT PRIMARY KEY NOT NULL, peer_id TEXT NOT NULL, audio BLOB NOT NULL, duration_seconds INTEGER NOT NULL, updated_at INTEGER NOT NULL)")
         db.execSQL("CREATE TABLE IF NOT EXISTS room_lock_cache (room_id TEXT PRIMARY KEY NOT NULL, is_locked INTEGER NOT NULL, room_password TEXT NOT NULL, updated_at INTEGER NOT NULL)")
         db.execSQL("CREATE TABLE IF NOT EXISTS lucky_bag_transactions (transaction_id TEXT PRIMARY KEY NOT NULL, user_id TEXT NOT NULL, type TEXT NOT NULL, amount INTEGER NOT NULL, bag_id TEXT NOT NULL, created_at INTEGER NOT NULL)")
+        db.execSQL("CREATE TABLE IF NOT EXISTS user_reports (report_id TEXT PRIMARY KEY NOT NULL, payload TEXT NOT NULL, created_at INTEGER NOT NULL)")
     }
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
         if (oldVersion < 2) db.execSQL("CREATE TABLE IF NOT EXISTS profile_cache (profile_key TEXT PRIMARY KEY NOT NULL, payload TEXT NOT NULL, updated_at INTEGER NOT NULL)")
@@ -21,6 +22,7 @@ internal class NativeIndexDatabase(context: Context) : SQLiteOpenHelper(context.
         if (oldVersion < 4) db.execSQL("CREATE TABLE IF NOT EXISTS voice_cache (message_id TEXT PRIMARY KEY NOT NULL, peer_id TEXT NOT NULL, audio BLOB NOT NULL, duration_seconds INTEGER NOT NULL, updated_at INTEGER NOT NULL)")
         if (oldVersion < 5) db.execSQL("CREATE TABLE IF NOT EXISTS room_lock_cache (room_id TEXT PRIMARY KEY NOT NULL, is_locked INTEGER NOT NULL, room_password TEXT NOT NULL, updated_at INTEGER NOT NULL)")
         if (oldVersion < 6) db.execSQL("CREATE TABLE IF NOT EXISTS lucky_bag_transactions (transaction_id TEXT PRIMARY KEY NOT NULL, user_id TEXT NOT NULL, type TEXT NOT NULL, amount INTEGER NOT NULL, bag_id TEXT NOT NULL, created_at INTEGER NOT NULL)")
+        if (oldVersion < 7) db.execSQL("CREATE TABLE IF NOT EXISTS user_reports (report_id TEXT PRIMARY KEY NOT NULL, payload TEXT NOT NULL, created_at INTEGER NOT NULL)")
     }
     fun saveChat(key: String, payload: String) {
         val values = ContentValues()
@@ -125,6 +127,27 @@ internal class NativeIndexDatabase(context: Context) : SQLiteOpenHelper(context.
                     .put("amount", cursor.getLong(3))
                     .put("bagId", cursor.getString(4))
                     .put("createdAt", cursor.getLong(5))
+            }
+        }
+        return result
+    }
+
+    /** User-submitted reports stay on this device in index.db; never sync this table to MongoDB. */
+    fun saveUserReport(reportId: String, payload: JSONObject) {
+        if (reportId.isBlank()) return
+        val values = ContentValues().apply {
+            put("report_id", reportId)
+            put("payload", payload.toString())
+            put("created_at", payload.optLong("timestamp", System.currentTimeMillis()))
+        }
+        writableDatabase.insertWithOnConflict("user_reports", null, values, SQLiteDatabase.CONFLICT_REPLACE)
+    }
+
+    fun loadUserReports(limit: Int = 100): List<JSONObject> {
+        val result = mutableListOf<JSONObject>()
+        readableDatabase.query("user_reports", arrayOf("payload"), null, null, null, null, "created_at DESC", limit.coerceIn(1, 500).toString()).use { cursor ->
+            while (cursor.moveToNext()) {
+                runCatching { JSONObject(cursor.getString(0)) }.getOrNull()?.let(result::add)
             }
         }
         return result
