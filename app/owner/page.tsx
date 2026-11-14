@@ -284,6 +284,30 @@ const saveMasterWalletHistory = async (record: any): Promise<void> => {
   db.close();
 };
 
+const INVITE_BIND_DB = "ZyoraOwnerInviteDB";
+const openInviteBindDB = (): Promise<IDBDatabase> => new Promise((resolve, reject) => {
+  const request = indexedDB.open(INVITE_BIND_DB, 1);
+  request.onupgradeneeded = () => { if (!request.result.objectStoreNames.contains("bindUserIds")) request.result.createObjectStore("bindUserIds", { keyPath: "id" }); };
+  request.onsuccess = () => resolve(request.result);
+  request.onerror = () => reject(request.error || new Error("Invite IndexedDB unavailable"));
+});
+const saveInviteBindIds = async (rows: any[]) => {
+  const db = await openInviteBindDB();
+  try { await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction("bindUserIds", "readwrite");
+    rows.forEach(row => { if (row?.id && row?.inviterId) tx.objectStore("bindUserIds").put({ id: String(row.id), inviterId: String(row.inviterId), timestamp: Number(row.timestamp || Date.now()) }); });
+    tx.oncomplete = () => resolve(); tx.onerror = () => reject(tx.error); tx.onabort = () => reject(tx.error);
+  }); } finally { db.close(); }
+};
+const loadInviteBindIds = async (): Promise<any[]> => {
+  const db = await openInviteBindDB();
+  try { return await new Promise((resolve, reject) => {
+    const request = db.transaction("bindUserIds", "readonly").objectStore("bindUserIds").getAll();
+    request.onsuccess = () => resolve(Array.isArray(request.result) ? request.result.sort((a: any,b: any) => Number(b.timestamp)-Number(a.timestamp)) : []);
+    request.onerror = () => reject(request.error);
+  }); } finally { db.close(); }
+};
+
 // TYPES & DATA
 // ==============================================================
 interface UserRecord {
@@ -554,6 +578,24 @@ export default function StaffPanel() {
   };
 
   const [activeTab, setActiveTab] = useState('manage_users');
+  const [inviteBindRows, setInviteBindRows] = useState<any[]>([]);
+  useEffect(() => {
+    if (activeTab !== 'events' || !isLoggedIn) return;
+    let active = true;
+    loadInviteBindIds().then(rows => { if (active) setInviteBindRows(rows); }).catch(console.error);
+    const handleBind = async (row: any) => {
+      if (!row?.id || !row?.inviterId) return;
+      await saveInviteBindIds([row]).catch(console.error);
+      if (active) setInviteBindRows(rows => [row, ...rows.filter(item => item.id !== row.id)]);
+    };
+    socket.on('owner_bind_user_id', handleBind);
+    socket.timeout(15000).emit('owner_invites_request', async (error: any, result: any) => {
+      if (error || !Array.isArray(result?.binds)) return;
+      await saveInviteBindIds(result.binds).catch(console.error);
+      if (active) setInviteBindRows(result.binds.sort((a: any,b: any) => Number(b.timestamp)-Number(a.timestamp)));
+    });
+    return () => { active = false; socket.off('owner_bind_user_id', handleBind); };
+  }, [activeTab, isLoggedIn]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   const [users, setUsers] = useState<UserRecord[]>([]);
@@ -2897,6 +2939,24 @@ export default function StaffPanel() {
                 </div>
               </div>
 
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'events' && (
+          <div className="p-6 md:p-8 max-w-5xl mx-auto w-full">
+            <div className="bg-white rounded-2xl border border-slate-200 p-5">
+              <h2 className="text-xl font-extrabold text-slate-800 mb-4">Bind User ID</h2>
+              <div className="grid grid-cols-[1fr_170px] gap-3 px-3 py-2 bg-slate-50 rounded-lg text-[11px] font-extrabold uppercase text-slate-500">
+                <span>Inviter User ID</span><span className="text-right">Date</span>
+              </div>
+              <div className="max-h-[65vh] overflow-y-auto divide-y divide-slate-100">
+                {inviteBindRows.map((row, index) => <div key={row.id || index} className="grid grid-cols-[1fr_170px] gap-3 px-3 py-3 text-sm">
+                  <span className="font-bold text-slate-800">{row.inviterId}</span>
+                  <span className="text-right text-xs text-slate-500">{row.timestamp ? new Date(row.timestamp).toLocaleString() : ''}</span>
+                </div>)}
+                {!inviteBindRows.length && <p className="py-8 text-center text-xs text-slate-400">No bound users yet.</p>}
+              </div>
             </div>
           </div>
         )}
