@@ -81,6 +81,7 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
     var followingCount by remember(uid) { mutableIntStateOf(0) }
     var followCountsReady by remember(uid) { mutableStateOf(false) }
     val visitorUserId = prefs.getString("accountId", "").orEmpty().ifBlank { uid }
+    val visitorIdentityAliases = remember(visitorUserId, uid) { setOf(visitorUserId, uid, prefs.getString("id", "").orEmpty()).filter { it.isNotBlank() }.toSet() }
     LaunchedEffect(visitorUserId) {
         if (visitorUserId.isNotBlank()) {
             SocialFollowApi.cachedSnapshot(context, visitorUserId)?.let { fansCount=it.followers; followingCount=it.followingCount; friendsCount=it.friends; followCountsReady=true }
@@ -100,24 +101,35 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
         val visitorListener = Emitter.Listener { args ->
             val event = args.firstOrNull() as? JSONObject ?: return@Listener
             val visitor = event.optJSONObject("visitor") ?: return@Listener
-            if (event.optString("profileId") != visitorUserId || visitor.optString("id").isBlank()) return@Listener
+            if ((event.optString("profileId") !in visitorIdentityAliases && event.optString("profileId") != visitorUserId) || visitor.optString("id").isBlank()) return@Listener
             followScope.launch {
                 val count = withContext(Dispatchers.IO) {
                     val historyKey = "visitor_history:" + visitorUserId + ":received"
                     val db = NativeIndexDatabase(context)
                     val root = db.loadProfile(historyKey) ?: JSONObject().put("visitors", org.json.JSONArray())
                     val previous = root.optJSONArray("visitors") ?: org.json.JSONArray()
-                    val row = JSONObject()
-                        .put("id", visitor.optString("id"))
-                        .put("name", visitor.optString("name", "User"))
-                        .put("avatar", visitor.optString("avatar"))
-                        .put("gender", visitor.optString("gender"))
-                        .put("lastViewedAt", event.optLong("lastViewedAt", System.currentTimeMillis()))
-                        .put("viewCount", 1)
-                    val next = org.json.JSONArray().put(row)
-                    for (index in 0 until minOf(previous.length(), 199)) next.put(previous.optJSONObject(index))
+                    val visitorId = visitor.optString("id")
+                    val now = event.optLong("lastViewedAt", System.currentTimeMillis())
+                    val next = org.json.JSONArray()
+                    var matched = false
+                    for (index in 0 until previous.length()) {
+                        val old = previous.optJSONObject(index) ?: continue
+                        if (old.optString("id") == visitorId) {
+                            next.put(JSONObject(old.toString())
+                                .put("name", visitor.optString("name", old.optString("name", "User")))
+                                .put("avatar", visitor.optString("avatar", old.optString("avatar")))
+                                .put("gender", visitor.optString("gender", old.optString("gender")))
+                                .put("lastViewedAt", now)
+                                .put("viewCount", old.optInt("viewCount", 1).coerceAtLeast(1) + 1))
+                            matched = true
+                        } else if (next.length() < 19) next.put(old)
+                    }
+                    if (!matched) next.put(0, JSONObject()
+                        .put("id", visitorId).put("name", visitor.optString("name", "User"))
+                        .put("avatar", visitor.optString("avatar")).put("gender", visitor.optString("gender"))
+                        .put("lastViewedAt", now).put("viewCount", 1))
                     db.saveProfile(historyKey, JSONObject().put("visitors", next))
-                    next.length()
+                    (0 until next.length()).sumOf { next.optJSONObject(it)?.optInt("viewCount", 1)?.coerceAtLeast(1) ?: 0 }
                 }
                 visitorCount = count
             }
@@ -147,10 +159,14 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
             val historyKey = "visitor_history:" + visitorUserId + ":received"
             val rows = withContext(Dispatchers.IO) {
                 runCatching {
-                    NativeIndexDatabase(context).loadProfile(historyKey)?.optJSONArray("visitors")?.length() ?: 0
+                    val db = NativeIndexDatabase(context)
+                    listOf("received", "sent").sumOf { type ->
+                        val entries = db.loadProfile("visitor_history:" + visitorUserId + ":" + type)?.optJSONArray("visitors") ?: org.json.JSONArray()
+                        (0 until entries.length()).sumOf { index -> entries.optJSONObject(index)?.optInt("viewCount", 1)?.coerceAtLeast(1) ?: 0 }
+                    }
                 }.getOrDefault(0)
             }
-            visitorCount = maxOf(visitorCount, rows)
+            visitorCount = rows
         }
     }
     val phone = prefs.getString("phone", "") ?: ""
