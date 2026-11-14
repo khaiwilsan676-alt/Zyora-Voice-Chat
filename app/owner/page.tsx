@@ -654,6 +654,8 @@ export default function StaffPanel() {
   const [feedbackPage, setFeedbackPage] = useState(1);
 
   const [supportChats, setSupportChats] = useState<any[]>([]);
+  const [daisyEnabled, setDaisyEnabled] = useState(true);
+  const [ownerSupportDraft, setOwnerSupportDraft] = useState('');
 
   const [privateMessages, setPrivateMessages] = useState<any[]>([]);
   const [filteredPrivateMessages, setFilteredPrivateMessages] = useState<any[]>([]);
@@ -920,6 +922,8 @@ export default function StaffPanel() {
       socket.on("user_feedback", handleUserFeedback);
       socket.on("ai_support_history_response", handleHistoryResponse);
       socket.on("ai_support_message", handleAiSupportMessage);
+      const handleDaisyMode = (data: any) => { if (typeof data?.enabled === "boolean") setDaisyEnabled(data.enabled); };
+      socket.on("daisy_mode", handleDaisyMode);
       const handleUserReport = (data: any) => {
         if (!isMounted || !data?.id || typeof window === "undefined" || !window.indexedDB) return;
         const report = { ...data, status: data.status || "Open" };
@@ -999,6 +1003,7 @@ export default function StaffPanel() {
         socket.off("user_feedback", handleUserFeedback);
         socket.off("ai_support_history_response", handleHistoryResponse);
         socket.off("ai_support_message", handleAiSupportMessage);
+        socket.off("daisy_mode", handleDaisyMode);
         socket.off("user_report", handleUserReport);
         socket.off("user_report_history_response", handleUserReportHistory);
         socket.off("lucky_bag_transaction", handleLuckyBagTransaction);
@@ -2322,6 +2327,16 @@ export default function StaffPanel() {
                       );
                     })}
                     <div ref={supportChatEndRef} />
+                  </div>
+                  <div className="shrink-0 space-y-2 border-t border-slate-200 bg-white p-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-700">Daisy AI: {daisyEnabled ? 'ON' : 'STOPPED'}</span>
+                      <button type="button" onClick={() => socket.emit('daisy_mode_set', { enabled: !daisyEnabled })} className={`rounded-lg px-4 py-2 text-xs font-bold text-white ${daisyEnabled ? 'bg-red-600' : 'bg-emerald-600'}`}>{daisyEnabled ? 'Stop' : 'Start'}</button>
+                    </div>
+                    <div className="flex gap-2">
+                      <input value={ownerSupportDraft} onChange={(e) => setOwnerSupportDraft(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); const text = ownerSupportDraft.trim(); if (!text) return; socket.emit('owner_support_reply', { userId: activeChat.userId, text }); setOwnerSupportDraft(''); } }} placeholder="Reply as Zyora Team..." className="min-w-0 flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-500" />
+                      <button type="button" disabled={!ownerSupportDraft.trim()} onClick={() => { const text = ownerSupportDraft.trim(); if (!text) return; socket.emit('owner_support_reply', { userId: activeChat.userId, text }); setOwnerSupportDraft(''); }} className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white disabled:opacity-40">Send</button>
+                    </div>
                   </div>
                 </div>
               );
