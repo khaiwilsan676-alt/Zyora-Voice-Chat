@@ -465,6 +465,9 @@ export default function StaffPanel() {
 
   const [selectedSupportUserId, setSelectedSupportUserId] = useState<string | null>(null);
   const [supportSearchQuery, setSupportSearchQuery] = useState('');
+  const [appliedSupportSearchQuery, setAppliedSupportSearchQuery] = useState('');
+  const [supportStatusFilter, setSupportStatusFilter] = useState('All');
+  const [appliedSupportStatusFilter, setAppliedSupportStatusFilter] = useState('All');
 
   const [selectedPair, setSelectedPair] = useState<any | null>(null);
 
@@ -1044,13 +1047,15 @@ export default function StaffPanel() {
   );
 
   const filteredSupportChats = supportChats.filter((chat) => {
-    const q = supportSearchQuery.toLowerCase();
-    return (
+    const q = appliedSupportSearchQuery.trim().toLowerCase();
+    const matchesSearch = !q ||
       (chat.userName || '').toLowerCase().includes(q) ||
       (chat.userId || '').toLowerCase().includes(q) ||
       (chat.userAccountId || '').toLowerCase().includes(q) ||
-      (chat.userEmail || '').toLowerCase().includes(q)
-    );
+      (chat.userEmail || '').toLowerCase().includes(q);
+    const status = ['Open', 'Ignored', 'Handled'].includes(chat.status) ? chat.status : 'Open';
+    const matchesStatus = appliedSupportStatusFilter === 'All' || status === appliedSupportStatusFilter;
+    return matchesSearch && matchesStatus;
   });
 
   const privateConversations = React.useMemo(() => {
@@ -1596,7 +1601,8 @@ export default function StaffPanel() {
                   <span className="w-10">S.No</span>
                   <span className="flex-1">Sender</span>
                   <span className="flex-1">Receiver</span>
-                  <span className="w-48 text-right">Date Time</span>
+                  <span className="w-40">Date Time</span>
+                  <span className="w-24 text-right">Action</span>
                 </div>
 
                 <div className="flex-1 overflow-y-auto">
@@ -1749,15 +1755,31 @@ export default function StaffPanel() {
                 </div>
 
                 <div className="px-6 py-4 border-b border-slate-100 shrink-0">
-                  <div className="relative w-full max-w-2xl">
-                    <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
-                    <input
-                      type="text"
-                      value={supportSearchQuery}
-                      onChange={(e) => setSupportSearchQuery(e.target.value)}
-                      placeholder="Search AI chats by user name, ID, email..."
-                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 rounded-lg text-sm focus:outline-none font-medium text-slate-900 placeholder:text-slate-400 caret-slate-900"
-                    />
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="relative flex-1 min-w-[220px] max-w-2xl">
+                      <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                      <input
+                        type="text"
+                        value={supportSearchQuery}
+                        onChange={(e) => setSupportSearchQuery(e.target.value)}
+                        placeholder="Search AI chats by user name, ID, email..."
+                        className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-400 font-medium text-slate-900 placeholder:text-slate-400 caret-slate-900"
+                      />
+                    </div>
+                    <select
+                      value={supportStatusFilter}
+                      onChange={(e) => setSupportStatusFilter(e.target.value)}
+                      className="px-3 py-2.5 bg-white border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 outline-none cursor-pointer"
+                    >
+                      <option value="All">All</option>
+                      <option value="Open">Open</option>
+                      <option value="Ignored">Ignored</option>
+                      <option value="Handled">Handled</option>
+                    </select>
+                    <button
+                      onClick={() => { setAppliedSupportSearchQuery(supportSearchQuery); setAppliedSupportStatusFilter(supportStatusFilter); }}
+                      className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold transition-colors"
+                    >Filter</button>
                   </div>
                 </div>
 
@@ -1779,8 +1801,7 @@ export default function StaffPanel() {
                     filteredSupportChats.map((chat, idx) => (
                       <div
                         key={chat.userId}
-                        onClick={() => setSelectedSupportUserId(chat.userId)}
-                        className="flex items-center gap-4 px-6 py-3.5 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors"
+                        className="flex items-center gap-4 px-6 py-3.5 border-b border-slate-100 hover:bg-slate-50 transition-colors"
                       >
                         <div className="w-10 text-xs font-bold text-slate-500">{idx + 1}</div>
                         <div className="w-12 shrink-0">
@@ -1800,8 +1821,11 @@ export default function StaffPanel() {
                         <div className="w-48 shrink-0">
                           <div className="text-[11px] text-blue-600 font-bold truncate">ID: {chat.userAccountId || chat.userId}</div>
                         </div>
-                        <div className="w-48 text-[11px] text-slate-400 font-medium text-right shrink-0">
+                        <div className="w-40 text-[11px] text-slate-400 font-medium shrink-0">
                           {chat.timestamp ? new Date(chat.timestamp).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}
+                        </div>
+                        <div className="w-24 flex justify-end shrink-0">
+                          <button onClick={() => setSelectedSupportUserId(chat.userId)} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold">Open</button>
                         </div>
                       </div>
                     ))
