@@ -71,22 +71,7 @@ private suspend fun loadProfileVisitors(context:Context,userId:String,type:Strin
         return processVisitorRows(cachedRows) 
     }
     
-    runCatching {
-        val encoded=java.net.URLEncoder.encode(userId,"UTF-8")
-        val connection=(URL("$VISITOR_API/api/profile-visitors?userId=$encoded&type=$type").openConnection() as HttpURLConnection).apply { requestMethod="GET";connectTimeout=12000;readTimeout=12000 }
-        try {
-            val status=connection.responseCode
-            val body=(if(status in 200..299) connection.inputStream else connection.errorStream)?.bufferedReader()?.use{it.readText()}.orEmpty()
-            if(status !in 200..299) return@runCatching cachedVisitors()
-            
-            val root=JSONObject(body)
-            val rows=root.optJSONArray("visitors") ?: JSONArray()
-            val result = processVisitorRows(rows) 
-            
-            runCatching { NativeIndexDatabase(context).saveProfile("visitor_history:"+userId+":"+type,root) }
-            result
-        } finally { connection.disconnect() }
-    }.getOrElse { cachedVisitors() }
+    cachedVisitors()
 }
 
 private fun visitorDate(t:Long)=if(t<=0L) "—" else SimpleDateFormat("dd/MM hh:mm a",Locale.getDefault()).format(Date(t))
@@ -279,8 +264,27 @@ fun VisitorsPage(onBack:()->Unit) {
     DisposableEffect(myId,tab) {
         if(myId.isBlank()) return@DisposableEffect onDispose { }
         val live=IO.socket(VISITOR_API,IO.Options().apply { transports=arrayOf("websocket"); reconnection=true })
-        val listener=Emitter.Listener {
-            scope.launch { rows=loadProfileVisitors(context,myId,if(tab==0) "received" else "sent") }
+        val listener=Emitter.Listener { args ->
+            val event = args.firstOrNull() as? JSONObject
+            val visitor = event?.optJSONObject("visitor")
+            if (tab == 0 && visitor != null) scope.launch {
+                withContext(Dispatchers.IO) {
+                    val key = "visitor_history:" + myId + ":received"
+                    val db = NativeIndexDatabase(context)
+                    val root = db.loadProfile(key) ?: JSONObject().put("visitors", JSONArray())
+                    val list = root.optJSONArray("visitors") ?: JSONArray()
+                    val row = JSONObject().put("id", visitor.optString("id"))
+                        .put("name", visitor.optString("name", "User"))
+                        .put("avatar", visitor.optString("avatar"))
+                        .put("gender", visitor.optString("gender"))
+                        .put("lastViewedAt", event.optLong("lastViewedAt", System.currentTimeMillis()))
+                        .put("viewCount", 1)
+                    val next = JSONArray().put(row)
+                    for (i in 0 until minOf(list.length(), 199)) next.put(list.optJSONObject(i))
+                    db.saveProfile(key, JSONObject().put("visitors", next))
+                    rows = processVisitorRows(next)
+                }
+            }
         }
         live.on("profile_visitor_updated",listener)
         live.on(Socket.EVENT_CONNECT) { live.emit("register",JSONObject().put("userId",myId).put("accountId",myId)) }
