@@ -899,3 +899,10 @@ Current documentation does not certify that all historical features are build-, 
 - The existing Seller transfer engine is reused for user lookup, legacy coin normalization, idempotency, transfer records, canonical MongoDB `users.coins` credit, and the same Socket.IO online / Redis offline private-message delivery.
 - Master Wallet mode does not debit a seller or owner user balance; it credits the selected recipient and sends the exact Zyora System notice: `You receive / Coins: [amount] / From Zyora official Team`.
 - The Owner Panel now detects HTML/non-JSON server responses and shows a readable deployment error instead of throwing an opaque JSON parse exception.
+
+
+## 2026-11-14 — Seller Center + Master Wallet System notification live-server root cause
+- Root cause: the deployed Render service uses the separate `khaiwilsan676-alt/Zyora-Server` repository, while the previously documented transfer notification implementation existed only in the app repository's backend copy. The live server's `/api/seller/transfer` route did not support `masterWallet: true` and did not send either transfer notification.
+- Fixed the actual Render backend route in `Zyora-Server/server.js`: Seller Center keeps its seller debit/recipient credit behavior and sends `🎉 Successful Offline Recharge / Coins: [amount] / From Seller: [seller name]`; Master Wallet credits the selected recipient without debiting a seller and sends `You receive / Coins: [amount] / From Zyora official Team`.
+- Both notices use the existing `private_message` event consumed by the native Message page and are saved by the recipient in local `index.db`; online delivery targets registered UID/account-ID rooms, offline delivery queues under all known recipient aliases in Redis for seven days, and duplicate completed transfer retries do not send a second notice.
+- Wallet transfer amounts, debit/credit rules, existing chat UI, and unrelated screens were not changed. Source commits were pushed to the live server repository; Render deployment and real-account online/offline tests are still required.
