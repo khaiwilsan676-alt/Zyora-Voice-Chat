@@ -885,3 +885,10 @@ Current documentation does not certify that all historical features are build-, 
 - Search now filters the already-loaded canonical list instead of merging search responses into state, preventing deleted MongoDB accounts from being resurrected by stale search results.
 - Added a short-lived 15-second in-memory snapshot to avoid repeated list requests in the same tab. The existing `owner_users_changed` Socket.IO event invalidates the snapshot and reloads the canonical list.
 - No Manage Users UI changes. Verification: source committed; production API/event behavior and browser testing remain pending.
+
+
+## 2026-11-14 — Report submission local DB and live delivery correction
+- All four native Report entry points (Room Info Sheet, Room Profile, Public Profile, and Message Page chat) use the shared `UserReport` flow.
+- Added a dedicated `user_reports` table to the submitting device's native `index.db` with a version-7 migration; report submissions no longer masquerade as chat-cache records.
+- The native sender keeps its local copy and emits `user_report` over Socket.IO. The backend only relays the event live and acknowledges delivery; it does not persist report content in MongoDB, Redis, or server history.
+- Owner Panel Reports continues to receive `user_report` live and cache the received report/status in its own browser IndexedDB. No Report UI redesign.
