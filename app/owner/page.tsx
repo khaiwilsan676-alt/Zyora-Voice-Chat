@@ -1814,7 +1814,7 @@ export default function StaffPanel() {
                     <button
                       type="button"
                       onClick={() => { setAppliedSupportSearchQuery(supportSearchQuery); setAppliedSupportStatusFilter(supportStatusFilter); setSupportChatPage(1); setSupportFilterOpen(false); }}
-                      className="rounded-xl bg-blue-600 px-6 py-3 text-sm font-bold text-white hover:bg-blue-700"
+                      className="rounded-xl bg-green-800 px-6 py-3 text-sm font-bold text-white hover:bg-green-900"
                     >Filter</button>
                   </div>
                 </div>
@@ -1849,7 +1849,7 @@ export default function StaffPanel() {
                             <td className="px-4 py-3 font-semibold text-blue-600">{chat.userAccountId || chat.userId}</td>
                             <td className="whitespace-nowrap px-4 py-3 text-xs text-slate-500">{chat.timestamp ? new Date(chat.timestamp).toLocaleString() : '—'}</td>
                             <td className="px-4 py-3">
-                              <button type="button" onClick={() => setSelectedSupportUserId(chat.userId)} className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700">Open</button>
+                              <button type="button" onClick={() => setSelectedSupportUserId(chat.userId)} className="rounded-lg bg-green-800 px-4 py-2 text-xs font-bold text-white hover:bg-green-900">Open</button>
                             </td>
                           </tr>
                         ))}
@@ -1990,7 +1990,7 @@ export default function StaffPanel() {
                 </select>
                 <button
                   onClick={() => { setAppliedFeedbackSearchQuery(feedbackSearchQuery); setAppliedFeedbackTypeFilter(selectedFeedbackTypeFilter); setFeedbackPage(1); }}
-                  className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold transition-colors"
+                  className="px-5 py-2.5 bg-green-800 hover:bg-green-900 text-white rounded-lg text-sm font-bold transition-colors"
                 >Filter</button>
               </div>
             </div>
@@ -2050,7 +2050,7 @@ export default function StaffPanel() {
                     </div>
                   </div>
                   <div className="w-24 flex justify-end shrink-0">
-                    <button onClick={() => setSelectedFeedback(fb)} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold">Open</button>
+                    <button onClick={() => setSelectedFeedback(fb)} className="px-4 py-2 bg-green-800 hover:bg-green-900 text-white rounded-lg text-xs font-bold">Open</button>
                   </div>
                 ))}
 
