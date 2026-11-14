@@ -586,6 +586,7 @@ export default function StaffPanel() {
   const [masterWalletSelectedUser, setMasterWalletSelectedUser] = useState<any | null>(null);
   const [masterWalletSearching, setMasterWalletSearching] = useState(false);
   const [masterWalletAmount, setMasterWalletAmount] = useState('');
+  const [masterWalletTransferring, setMasterWalletTransferring] = useState(false);
 
   const officialFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -2190,8 +2191,44 @@ export default function StaffPanel() {
                   <label className="mb-2 block text-[11px] font-extrabold uppercase tracking-wider text-slate-500">Coins amount</label>
                   <input type="number" min="1" step="1" inputMode="numeric" value={masterWalletAmount} onChange={e => setMasterWalletAmount(e.target.value)} placeholder="Enter coin amount" className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 text-lg font-black text-slate-900 outline-none focus:border-indigo-400 focus:bg-white focus:ring-4 focus:ring-indigo-500/10" />
                 </div>
-                <button type="button" disabled className="mt-5 flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl bg-slate-300 px-5 py-3.5 text-sm font-black text-white shadow-sm" title="Secure Master Wallet credit endpoint is not implemented yet">
-                  <Send className="h-4 w-4" /> Transfer Coins
+                <button
+                  type="button"
+                  disabled={masterWalletTransferring || !masterWalletSelectedUser || !Number.isSafeInteger(Number(masterWalletAmount)) || Number(masterWalletAmount) <= 0}
+                  onClick={async () => {
+                    if (!masterWalletSelectedUser) { alert('Please select a Zyora user first.'); return; }
+                    const amount = Number(masterWalletAmount);
+                    if (!Number.isSafeInteger(amount) || amount <= 0) { alert('Enter a valid coin amount.'); return; }
+                    setMasterWalletTransferring(true);
+                    try {
+                      const transferId = `master_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+                      const response = await fetch(apiUrl('/api/owner/master-wallet/transfer'), {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+                        body: JSON.stringify({ transferId, recipientAccountId: masterWalletSelectedUser.accountId, amount })
+                      });
+                      const data = await response.json();
+                      if (!response.ok || !data?.success) throw new Error(data?.error || 'Coin transfer failed');
+                      await saveMasterWalletHistory({
+                        id: transferId,
+                        userId: masterWalletSelectedUser.uid,
+                        accountId: masterWalletSelectedUser.accountId,
+                        name: masterWalletSelectedUser.name,
+                        avatar: masterWalletSelectedUser.image,
+                        amount,
+                        timestamp: data.transfer?.completedAt || Date.now()
+                      });
+                      setMasterWalletHistory(await loadMasterWalletHistory());
+                      setMasterWalletAmount('');
+                      alert(`Successfully transferred ${amount.toLocaleString()} coins.`);
+                    } catch (error: any) {
+                      alert(error?.message || 'Coin transfer failed. Please try again.');
+                    } finally {
+                      setMasterWalletTransferring(false);
+                    }
+                  }}
+                  className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-3.5 text-sm font-black text-white shadow-sm transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <Send className="h-4 w-4" /> {masterWalletTransferring ? 'Transferring...' : 'Transfer Coins'}
                 </button>
               </section>
 
@@ -2591,7 +2628,12 @@ export default function StaffPanel() {
                         timestamp: Date.now()
                       };
 
-                      socket.emit('send_official_private_message', payload, (result: any) => {
+                      socket.timeout(15000).emit('send_official_private_message', payload, (timeoutError: any, result: any) => {
+                        if (timeoutError) {
+                          setOfficialSending(false);
+                          alert('Zyora server did not confirm delivery. Please check the connection and retry.');
+                          return;
+                        }
                         setOfficialSending(false);
                         if (!result?.ok) {
                           alert(result?.error || 'Message could not be delivered.');
