@@ -337,7 +337,6 @@ fun HelpFeedbackPage(onBack: () -> Unit = {}) {
                                 when {
                                     selectedType.isBlank() -> error = "Please select a type of issue"
                                     description.isBlank() -> error = "Please describe your problem"
-                                    contact.isBlank() -> error = "Please enter your contact information"
                                     else -> {
                                         submitting = true
                                         val feedbackId = "fb_${UUID.randomUUID()}"
