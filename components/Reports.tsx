@@ -64,6 +64,8 @@ export default function Reports() {
   const [reports, setReports] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
+  const [appliedSearchQuery, setAppliedSearchQuery] = useState('');
+  const [appliedStatusFilter, setAppliedStatusFilter] = useState('All');
   const [filterOpen, setFilterOpen] = useState(false);
   const [selectedReport, setSelectedReport] = useState<any>(null);
   const [page, setPage] = useState(1);
@@ -92,21 +94,21 @@ export default function Reports() {
   }, []);
 
   const filteredReports = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
+    const query = appliedSearchQuery.trim().toLowerCase();
     return reports.filter((report) => {
       const matchesSearch = !query || [
         getReporterId(report), getTargetId(report), getReason(report),
         report.senderName, report.reportedName, report.description,
       ].some((value) => String(value || '').toLowerCase().includes(query));
-      const matchesStatus = statusFilter === 'All' || getStatus(report) === statusFilter;
+      const matchesStatus = appliedStatusFilter === 'All' || getStatus(report) === appliedStatusFilter;
       return matchesSearch && matchesStatus;
     });
-  }, [reports, searchQuery, statusFilter]);
+  }, [reports, appliedSearchQuery, appliedStatusFilter]);
 
   const pageCount = Math.max(1, Math.ceil(filteredReports.length / PAGE_SIZE));
   const visibleReports = filteredReports.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  useEffect(() => { setPage(1); }, [searchQuery, statusFilter]);
+  useEffect(() => { setPage(1); }, [appliedSearchQuery, appliedStatusFilter]);
 
   const updateStatus = (report: any, status: typeof REPORT_STATUSES[number]) => {
     const updated = { ...report, status };
