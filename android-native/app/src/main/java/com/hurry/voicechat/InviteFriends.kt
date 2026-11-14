@@ -136,6 +136,7 @@ fun InviteFriends(onBack: (() -> Unit)? = null, onClose: (() -> Unit)? = null) {
     val vh = screenHeight / 100f
     val userPrefs = remember { context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE) }
     val code = userPrefs.getString("accountId", null)?.takeIf { it.isNotBlank() } ?: userPrefs.getString("uid", null)?.takeIf { it.isNotBlank() }.orEmpty()
+    val inviteIdToken = userPrefs.getString("idToken", "").orEmpty()
     val inviteLink = "https://yourapp.com/invite/$code"
     
     var isSheetOpen by remember { mutableStateOf(false) }
@@ -150,7 +151,7 @@ fun InviteFriends(onBack: (() -> Unit)? = null, onClose: (() -> Unit)? = null) {
     val inviteScope = rememberCoroutineScope()
     LaunchedEffect(code) {
         if (code.isNotBlank()) {
-            val stats = HurryApi.inviteStats(code)
+            val stats = HurryApi.inviteStats(code, inviteIdToken)
             if (stats != null && !stats.has("error")) {
                 inviteCount = stats.optInt("invitationCount", 0)
                 inviteTotalRewards = stats.optLong("totalRewards", 0L)
@@ -265,7 +266,7 @@ fun InviteFriends(onBack: (() -> Unit)? = null, onClose: (() -> Unit)? = null) {
                             onClick = {
                                 bindBusy = true
                                 inviteScope.launch {
-                                    val result = HurryApi.bindInvite(code, bindTargetId.trim())
+                                    val result = HurryApi.bindInvite(code, bindTargetId.trim(), inviteIdToken)
                                     bindBusy = false
                                     if (result?.optBoolean("success") == true) {
                                         inviteCount = result.optInt("invitationCount", inviteCount + 1)
@@ -358,7 +359,7 @@ fun InviteFriends(onBack: (() -> Unit)? = null, onClose: (() -> Unit)? = null) {
                                 .border(1.5.dp, inviteYellow, CircleShape)
                                 .clickable(enabled = invitePendingCoins >= 250000L) {
                                     inviteScope.launch {
-                                        val result = HurryApi.claimInvite(code)
+                                        val result = HurryApi.claimInvite(code, inviteIdToken)
                                         if (result?.optBoolean("success") == true) {
                                             invitePendingCoins = result.optLong("pendingCoins", (invitePendingCoins - 250000L).coerceAtLeast(0L))
                                             Toast.makeText(context, "250,000 coins added to your wallet", Toast.LENGTH_LONG).show()
