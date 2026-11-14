@@ -815,3 +815,8 @@ Current documentation does not certify that all historical features are build-, 
 - Added a separate `SellerCenterUsers.tsx` screen under Owner Panel → User Center → Seller Center. It searches users through the existing `/api/users?q=` MongoDB search path and shows the matched user's avatar, name, and real account ID in a table.
 - Added an owner action endpoint that updates the existing profile `coinSellerTag` (and its legacy aliases) on the matched MongoDB user record. Public profiles already consume this profile flag to display the Coin Seller badge.
 - Removed the Seller Center shortcut from the Me page menu; unrelated Me page items and layouts remain unchanged.
+
+## 2026-11-14 Owner User Reports
+- Rebuilt `components/Reports.tsx` as the Owner Reports table with search, All/Open/Ignored/Handled filtering, and 20-row Previous/Next pagination.
+- Each row shows S.No, Reporter ID, Target user ID, report reason, status, creation time, and a blue Open action. Open displays a centered Report card with Reporter ID, Target, Status, and Description.
+- Reports and status changes are stored in the owner's browser IndexedDB (`ZyoraReportsDB` / `userReports`); new reports arrive through the existing live `user_report` Socket.IO event. No report-history backend or MongoDB persistence was added.
