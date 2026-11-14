@@ -143,6 +143,7 @@ fun InviteFriends(onBack: (() -> Unit)? = null, onClose: (() -> Unit)? = null) {
     var copied by remember { mutableStateOf(false) }
     var bindTargetId by remember { mutableStateOf("") }
     var bindBusy by remember { mutableStateOf(false) }
+    var inviteClaimBusy by remember { mutableStateOf(false) }
     var inviteCount by remember { mutableIntStateOf(0) }
     var inviteTotalRewards by remember { mutableLongStateOf(0L) }
     var invitePendingCoins by remember { mutableLongStateOf(0L) }
@@ -250,7 +251,7 @@ fun InviteFriends(onBack: (() -> Unit)? = null, onClose: (() -> Unit)? = null) {
                         OutlinedTextField(
                             value = bindTargetId,
                             onValueChange = { bindTargetId = it.filter(Char::isDigit).take(20) },
-                            modifier = Modifier.weight(1f).height(48.dp),
+                            modifier = Modifier.weight(1f).height(40.dp),
                             singleLine = true,
                             placeholder = { Text("Enter User ID", fontSize = 12.sp, color = Color.White.copy(alpha = .7f)) },
                             textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 13.sp),
@@ -283,7 +284,7 @@ fun InviteFriends(onBack: (() -> Unit)? = null, onClose: (() -> Unit)? = null) {
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD92335)),
                             contentPadding = PaddingValues(horizontal = 15.dp, vertical = 4.dp),
-                            modifier = Modifier.height(42.dp)
+                            modifier = Modifier.height(36.dp)
                         ) { Text(if (bindBusy) "..." else "Bind", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
                     }
                 }
@@ -357,15 +358,18 @@ fun InviteFriends(onBack: (() -> Unit)? = null, onClose: (() -> Unit)? = null) {
                             Modifier.padding(top = 12.dp).clip(CircleShape)
                                 .background(Brush.verticalGradient(listOf(Color(0xFFE62E2E), Color(0xFFB80D0D), Color(0xFF7A0000))))
                                 .border(1.5.dp, inviteYellow, CircleShape)
-                                .clickable(enabled = invitePendingCoins >= 250000L) {
+                                .clickable(enabled = invitePendingCoins >= 250000L && !inviteClaimBusy) {
+                                    inviteClaimBusy = true
                                     inviteScope.launch {
-                                        val result = HurryApi.claimInvite(code, inviteIdToken)
-                                        if (result?.optBoolean("success") == true) {
-                                            invitePendingCoins = result.optLong("pendingCoins", (invitePendingCoins - 250000L).coerceAtLeast(0L))
-                                            Toast.makeText(context, "250,000 coins added to your wallet", Toast.LENGTH_LONG).show()
-                                        } else {
-                                            Toast.makeText(context, result?.optString("error") ?: "Claim failed. Please retry.", Toast.LENGTH_LONG).show()
-                                        }
+                                        try {
+                                            val result = HurryApi.claimInvite(code, inviteIdToken)
+                                            if (result?.optBoolean("success") == true) {
+                                                invitePendingCoins = result.optLong("pendingCoins", (invitePendingCoins - 250000L).coerceAtLeast(0L))
+                                                Toast.makeText(context, "250,000 coins added to your wallet", Toast.LENGTH_LONG).show()
+                                            } else {
+                                                Toast.makeText(context, result?.optString("error") ?: "Claim failed. Please retry.", Toast.LENGTH_LONG).show()
+                                            }
+                                        } finally { inviteClaimBusy = false }
                                     }
                                 }
                                 .padding(horizontal = 40.dp, vertical = 6.dp)
