@@ -770,7 +770,13 @@ export default function StaffPanel() {
         request.onerror = () => console.error("Owner report IndexedDB open failed:", request.error);
       };
 
+      const handleUserReportHistory = (data: any) => {
+        if (!isMounted || !Array.isArray(data?.reports)) return;
+        data.reports.forEach((report: any) => handleUserReport(report));
+      };
+
       socket.on("user_report", handleUserReport);
+      socket.on("user_report_history_response", handleUserReportHistory);
 
       const handleOfficialHistoryResponse = (data: any) => {
         if (!isMounted || !Array.isArray(data?.messages)) return;
@@ -793,6 +799,7 @@ export default function StaffPanel() {
       const requestOwnerHistories = () => {
         socket.emit("user_feedback_history_request");
         socket.emit("ai_support_history_request");
+        socket.emit("user_report_history_request");
         socket.emit("official_message_history_request");
       };
       // Keep the Owner Panel synchronized after both initial connection and mobile-network reconnects.
@@ -807,6 +814,7 @@ export default function StaffPanel() {
         socket.off("ai_support_history_response", handleHistoryResponse);
         socket.off("ai_support_message", handleAiSupportMessage);
         socket.off("user_report", handleUserReport);
+        socket.off("user_report_history_response", handleUserReportHistory);
         socket.off("official_message_history_response", handleOfficialHistoryResponse);
         socket.off("official_broadcast_message", handleOfficialBroadcast);
       };
