@@ -820,3 +820,10 @@ Current documentation does not certify that all historical features are build-, 
 - Rebuilt `components/Reports.tsx` as the Owner Reports table with search, All/Open/Ignored/Handled filtering, and 20-row Previous/Next pagination.
 - Each row shows S.No, Reporter ID, Target user ID, report reason, status, creation time, and a blue Open action. Open displays a centered Report card with Reporter ID, Target, Status, and Description.
 - Reports and status changes are stored in the owner's browser IndexedDB (`ZyoraReportsDB` / `userReports`); new reports arrive through the existing live `user_report` Socket.IO event. No report-history backend or MongoDB persistence was added.
+
+## 2026-11-14 Feedback, AI Chat, and User Reports
+- Me > Help & Feedback now saves each submitted feedback payload in the app's existing native `index.db` and relays it through the existing `user_feedback` Socket.IO event. The Owner Panel receives the live event and stores its own IndexedDB copy.
+- Daisy AI support chat already persists its message history in native `index.db` and relays updates through `ai_support_message`; Owner Panel caches received chats in its browser IndexedDB.
+- User reports now save locally in native `index.db` and relay through `user_report`; the Owner Reports page stores received reports in its browser IndexedDB.
+- Manage Users no longer inserts a synthetic current-session user when that account is not present in the real users API response. Real API users remain unchanged.
+- No UI changes.
