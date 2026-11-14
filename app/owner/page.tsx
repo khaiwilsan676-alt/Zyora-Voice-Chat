@@ -830,8 +830,6 @@ export default function StaffPanel() {
             email: (!existing.email || existing.email === '—' || existing.email.endsWith('@hurry.app') || existing.email === 'user@gmail.com') ? sessionRecord.email : existing.email,
             image: existing.image || sessionRecord.image
           };
-        } else if (currentAccountId || currentUserId || currentUserEmail) {
-          fetchedList = [sessionRecord, ...fetchedList];
         }
 
         if (isMounted) {
