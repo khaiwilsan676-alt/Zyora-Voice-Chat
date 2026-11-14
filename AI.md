@@ -82,6 +82,7 @@ Backend URL previously supplied: https://zyora-server.onrender.com
 - Daily check-in reward must be credited to the wallet exactly once per day.
 - Reward items should be placed into the correct Bag category (e.g. frames vs themes).
 - Wallet balance must persist after navigating away and returning.
+- Lucky Bag transaction history (send, claim, refund) is stored only in the Owner Panel browser IndexedDB (`ZyoraOwnerLuckyBagDB` / `transactions`). The backend must not persist Lucky Bag documents or history in MongoDB; live open-bag state exists only in server RAM and expires/refunds in memory. User coin balances still update the existing MongoDB `users.coins` field.
 - Room gifts, room DP/theme, and public profile media should persist according to the existing backend contract.
 - Never claim wallet or payment flows are correct without verifying the server transaction and client refresh paths.
 
