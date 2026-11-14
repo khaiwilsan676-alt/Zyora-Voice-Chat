@@ -2082,27 +2082,29 @@ io.on("connection", (socket) => {
   // Relay manual Zyora Team replies back to the matching native support chat.
   socket.on("owner_support_reply", (data = {}, acknowledge) => {
     const userId = String(data.userId || "").trim();
+    const userAccountId = String(data.userAccountId || data.accountId || "").trim();
     const text = String(data.text || "").trim();
-    if (!userId || !text) {
-      if (typeof acknowledge === "function") acknowledge({ ok: false, error: "Missing userId or text" });
+    if ((!userId && !userAccountId) || !text) {
+      if (typeof acknowledge === "function") acknowledge({ ok: false, error: "Missing user identity or text" });
       return;
     }
 
     const timestamp = Date.now();
-    const reply = { userId, text, timestamp };
-    // Native support sockets may not join user:<id>; broadcast the tagged reply
-    // and let each client filter by its own userId.
+    const userIds = [...new Set([userId, userAccountId].filter(Boolean))];
+    const reply = { userId: userId || userAccountId, userAccountId, userIds, text, timestamp };
+    // Support screens can identify the same account by Firebase UID or Zyora ID.
+    // Broadcast both aliases; each native client accepts only its own identity.
     io.emit("owner_support_reply", reply);
 
-    const previous = liveAiSupportBuffer.get(userId);
+    const previous = liveAiSupportBuffer.get(userId) || liveAiSupportBuffer.get(userAccountId);
     if (previous) {
       const messages = Array.isArray(previous.messages) ? previous.messages.slice() : [];
       messages.push({ text, image: null, isBot: true, timestamp });
       const updatedChat = { ...previous, messages, lastMessage: messages[messages.length - 1], timestamp };
-      liveAiSupportBuffer.set(userId, updatedChat);
+      liveAiSupportBuffer.set(String(previous.userId || userId || userAccountId), updatedChat);
       io.emit("ai_support_message", updatedChat);
     }
-    if (typeof acknowledge === "function") acknowledge({ ok: true, userId, timestamp });
+    if (typeof acknowledge === "function") acknowledge({ ok: true, userId: userId || userAccountId, userAccountId, timestamp });
   });
 
   socket.on("register", async (payload) => {
