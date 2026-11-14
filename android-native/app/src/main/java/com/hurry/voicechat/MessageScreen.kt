@@ -27,6 +27,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -784,6 +785,7 @@ fun NativeChatScreen(
         indexDb.saveConversation("conversation_${currentAccountId}_$peerId", peerId, preview)
     }
     
+    val messageTimestamps = remember(name, receiverId, currentUserId) { mutableStateListOf<Long>() }
     val messages = remember(name, receiverId, currentUserId) {
         mutableStateListOf<Pair<Boolean, String>>().apply {
             val dbCache = indexDb.loadChat(localConversationKey)
@@ -792,7 +794,10 @@ fun NativeChatScreen(
                 (0 until array.length()).mapNotNull { index ->
                     val entry = array.optJSONObject(index) ?: return@mapNotNull null
                     val value = entry.optString("text")
-                    if (value.isNotBlank()) (entry.optBoolean("mine") to value) else null
+                    if (value.isNotBlank()) {
+                        messageTimestamps.add(entry.optLong("timestamp", System.currentTimeMillis()))
+                        entry.optBoolean("mine") to value
+                    } else null
                 }
             }.getOrDefault(emptyList())
             if (restored.isNotEmpty()) addAll(restored)
@@ -803,7 +808,10 @@ fun NativeChatScreen(
                     for (index in 0 until array.length()) {
                         val entry = array.optJSONObject(index) ?: continue
                         val value = entry.optString("text")
-                        if (value.isNotBlank()) add(false to value)
+                        if (value.isNotBlank()) {
+                            add(false to value)
+                            messageTimestamps.add(entry.optLong("timestamp", System.currentTimeMillis()))
+                        }
                     }
                 }
             }
@@ -819,7 +827,8 @@ fun NativeChatScreen(
     LaunchedEffect(messages.size, messageIds.size, localConversationKey) {
         val array = org.json.JSONArray()
         messages.forEachIndexed { index, (mine, value) ->
-            array.put(JSONObject().put("id", messageIds.getOrNull(index).orEmpty()).put("mine", mine).put("text", value))
+            array.put(JSONObject().put("id", messageIds.getOrNull(index).orEmpty()).put("mine", mine).put("text", value)
+                .put("timestamp", messageTimestamps.getOrNull(index) ?: System.currentTimeMillis()))
         }
         indexDb.saveChat(localConversationKey, array.toString())
     }
@@ -848,6 +857,7 @@ fun NativeChatScreen(
                 if (!imageUrl.isNullOrBlank()) {
                     val localImage = "IMAGE::" + imageUrl
                     messages.add(true to localImage)
+                    messageTimestamps.add(System.currentTimeMillis())
                     messageIds.add(messageId)
                     saveConversationPreview(receiverId, name, image, "📷 Image", System.currentTimeMillis())
                     val payload = JSONObject().put("id", messageId).put("senderId", currentUserId)
@@ -882,6 +892,7 @@ fun NativeChatScreen(
                     val sentAt = System.currentTimeMillis()
                     val localInvite = "ROOM_INVITE::" + roomData.toString()
                     messages.add(true to localInvite)
+                    messageTimestamps.add(sentAt)
                     messageIds.add(messageId)
                     saveConversationPreview(receiverId, name, image, "Room invitation", sentAt)
                     directSocket?.emit("private_message", JSONObject()
@@ -919,6 +930,7 @@ fun NativeChatScreen(
                 .putLong("${cacheKey}_last_timestamp", maxOf(prefs.getLong("${cacheKey}_last_timestamp", 0L), timestamp))
                 .apply()
             messages.add(false to value)
+            messageTimestamps.add(timestamp)
         }
     }
 
@@ -987,6 +999,7 @@ fun NativeChatScreen(
                     val messageId = payload.optString("id")
                     if (messageId.isNotBlank() && messageIds.contains(messageId)) return@post
                     messages.add(mine to value)
+                    messageTimestamps.add(payload.optLong("timestamp", System.currentTimeMillis()))
                     messageIds.add(messageId)
                     val peerId = if (mine) receiverId else senderAccountId
                     val peerName = if (mine) name else payload.optString("senderName", name)
@@ -1026,6 +1039,10 @@ fun NativeChatScreen(
                 mainHandler.post {
                     messages.clear()
                     messages.addAll(loaded)
+                    messageTimestamps.clear()
+                    messageTimestamps.addAll((0 until arr.length()).mapNotNull { i ->
+                        arr.optJSONObject(i)?.let { it.optLong("timestamp", System.currentTimeMillis()) }
+                    }.take(loaded.size))
                     messageIds.clear()
                     messageIds.addAll(loadedIds)
                 }
@@ -1449,8 +1466,9 @@ fun NativeChatScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 contentPadding = PaddingValues(top = 14.dp, bottom = 12.dp)
             ) {
-                items(messages) { item ->
+                itemsIndexed(messages) { messageIndex, item ->
                     val mine = item.first
+                    val messageTime = messageTimestamps.getOrNull(messageIndex) ?: System.currentTimeMillis()
                     
                     val isVoiceNote = VoiceMessageStore.isVoice(item.second)
                     val isImageMessage = item.second.startsWith("IMAGE::")
@@ -1464,7 +1482,7 @@ fun NativeChatScreen(
                         horizontalArrangement = if (mine) Arrangement.End else Arrangement.Start,
                         verticalAlignment = Alignment.Bottom
                     ) {
-                        if (!mine) {
+                        if (!mine && !isOfficial) {
                             AsyncImage(
                                 model = image,
                                 contentDescription = name,
@@ -1475,6 +1493,15 @@ fun NativeChatScreen(
                         }
 
                         Column(horizontalAlignment = if (mine) Alignment.End else Alignment.Start) {
+                            if (!mine && isOfficial) {
+                                AsyncImage(
+                                    model = image,
+                                    contentDescription = name,
+                                    modifier = Modifier.size(28.dp).clip(CircleShape),
+                                    contentScale = ContentScale.Crop
+                                )
+                                Spacer(Modifier.height(5.dp))
+                            }
                             Surface(
                                 modifier = if (!isImageMessage && !isRoomInvitation) Modifier.twoSecondLongPress {
                                     clipboard.setText(AnnotatedString(messageText))
@@ -1576,6 +1603,14 @@ fun NativeChatScreen(
                                         Text(messageText, color = if (mine) Color.White else Color(0xFF1F2937), fontSize = 14.sp)
                                     }
                                 }
+                            }
+                            if (isOfficial) {
+                                Text(
+                                    SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(messageTime)),
+                                    color = Color(0xFF8A929E),
+                                    fontSize = 10.sp,
+                                    modifier = Modifier.padding(start = 3.dp, top = 3.dp)
+                                )
                             }
                         }
 
@@ -1680,6 +1715,7 @@ fun NativeChatScreen(
                                                     val localVoice = VoiceMessageStore.localMarker(messageId, durationSec)
                                                     val audioBase64 = VoiceMessageStore.persistOutgoing(context, messageId, receiverId, audioFile, durationSec)
                                                     messages.add(true to localVoice)
+                                                    messageTimestamps.add(System.currentTimeMillis())
                                                     messageIds.add(messageId)
                                                     saveConversationPreview(receiverId, name, image, "🎤 Voice message", System.currentTimeMillis())
                                                     val outgoing = JSONObject()
@@ -1820,6 +1856,7 @@ fun NativeChatScreen(
                 }
                 if (value.isNotBlank()) {
                     messages.add(true to value)
+                    messageTimestamps.add(payload.optLong("timestamp", System.currentTimeMillis()))
                     messageIds.add(id)
                     saveConversationPreview(receiverId, name, image, payload.optString("previewText").ifBlank { value }, payload.optLong("timestamp", System.currentTimeMillis()))
                 }
