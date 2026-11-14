@@ -1874,6 +1874,9 @@ app.post("/api/owner/master-wallet/transfer", async (req, res) => {
     const currentCoins = recipient.coins != null && Number.isFinite(parsedCoins)
       ? Math.max(0, Math.floor(parsedCoins))
       : Math.max(0, Math.floor(Number(recipient.balance || 0)));
+    if (typeof recipient.coins !== "number" || !Number.isFinite(recipient.coins)) {
+      await db.collection("users").updateOne({ _id: recipient._id }, { $set: { coins: currentCoins } });
+    }
     const now = Date.now();
     const recipientId = String(recipient.uid || recipient.id || recipient.appLongId || recipient._id);
     const recipientName = String(recipient.name || recipient.displayName || recipient.userName || "User");
@@ -1887,7 +1890,7 @@ app.post("/api/owner/master-wallet/transfer", async (req, res) => {
 
     const credit = await db.collection("users").updateOne(
       { _id: recipient._id },
-      { $set: { coins: currentCoins + amount, walletUpdatedAt: now } }
+      { $inc: { coins: amount }, $set: { walletUpdatedAt: now } }
     );
     if (!credit.modifiedCount) {
       await transfers.updateOne({ _id: transferId }, { $set: { status: "failed", failure: "recipient_credit_failed", updatedAt: Date.now() } });
@@ -1926,7 +1929,8 @@ app.post("/api/owner/master-wallet/transfer", async (req, res) => {
       console.error("Master Wallet notification delivery failed:", notificationError.message);
     }
 
-    return res.json({ success: true, balance: currentCoins + amount, transfer: { ...record, status: "completed", completedAt } });
+    const updatedRecipient = await db.collection("users").findOne({ _id: recipient._id }, { projection: { coins: 1 } });
+    return res.json({ success: true, balance: Number(updatedRecipient?.coins || 0), transfer: { ...record, status: "completed", completedAt } });
   } catch (error) {
     console.error("POST /api/owner/master-wallet/transfer error:", error.message);
     return res.status(503).json({ error: error.message || "Master Wallet transfer failed" });
