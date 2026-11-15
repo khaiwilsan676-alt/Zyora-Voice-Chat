@@ -3627,7 +3627,7 @@ io.on("connection", (socket) => {
         queuedCount,
         skippedCount,
         eligibleCount,
-        error: skippedCount ? \`Could not queue \${skippedCount} active users. Check Redis and retry.\` : undefined
+        error: skippedCount ? `Could not queue ${skippedCount} active users. Check Redis and retry.` : undefined
       });
     } catch (error) {
       console.error("Official broadcast delivery failed:", error);
