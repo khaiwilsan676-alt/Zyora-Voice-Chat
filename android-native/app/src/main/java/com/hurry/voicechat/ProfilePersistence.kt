@@ -174,8 +174,8 @@ internal suspend fun uploadChatImage(
 ): String? = withContext(Dispatchers.IO) {
     if (messageId.isBlank()) return@withContext null
     val mimeType = context.contentResolver.getType(uri)
-        ?.takeIf { it in setOf("image/jpeg", "image/png", "image/webp", "image/gif", "video/mp4", "video/webm", "video/quicktime") }
-        ?: return@withContext null
+        ?.takeIf { it in setOf("image/jpeg", "image/png", "image/webp", "image/gif") }
+        ?: "image/jpeg"
     val bytes = runCatching {
         context.contentResolver.openInputStream(uri)?.use { input ->
             val output = ByteArrayOutputStream()
