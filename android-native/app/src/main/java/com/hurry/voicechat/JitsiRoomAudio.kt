@@ -83,7 +83,8 @@ fun JitsiRoomAudio(
     LaunchedEffect(canSpeak, hasMicPermission, hasBluetoothPermission) {
         if (canSpeak && !hasMicPermission) {
             permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-        } else if (canSpeak && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !hasBluetoothPermission) {
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !hasBluetoothPermission) {
+            // Listeners also need Bluetooth access to select headset playback output.
             bluetoothPermissionLauncher.launch(Manifest.permission.BLUETOOTH_CONNECT)
         }
     }
