@@ -253,13 +253,18 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, ac
                 }
                 Spacer(Modifier.height(35.dp))
 
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(0.dp), verticalAlignment = Alignment.CenterVertically) {
+                // UPDATED: Gap increased and Top 2, 3 shifted down slightly
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.Top
+                ) {
                     AsyncImage(model = familyAsset("IMG_20261115_133007.png"), contentDescription = null, modifier = Modifier.weight(1f).wrapContentHeight().clickable { onRank(0) }, contentScale = ContentScale.FillWidth, colorFilter = if (activeRank == 0) activeFilter else inactiveFilter)
-                    AsyncImage(model = familyAsset("IMG_20261115_132909.png"), contentDescription = null, modifier = Modifier.weight(1f).wrapContentHeight().clickable { onRank(1) }, contentScale = ContentScale.FillWidth, colorFilter = if (activeRank == 1) activeFilter else inactiveFilter)
-                    AsyncImage(model = familyAsset("IMG_20261115_132937.png"), contentDescription = null, modifier = Modifier.weight(1f).wrapContentHeight().clickable { onRank(2) }, contentScale = ContentScale.FillWidth, colorFilter = if (activeRank == 2) activeFilter else inactiveFilter)
+                    AsyncImage(model = familyAsset("IMG_20261115_132909.png"), contentDescription = null, modifier = Modifier.weight(1f).wrapContentHeight().offset(y = 16.dp).clickable { onRank(1) }, contentScale = ContentScale.FillWidth, colorFilter = if (activeRank == 1) activeFilter else inactiveFilter)
+                    AsyncImage(model = familyAsset("IMG_20261115_132937.png"), contentDescription = null, modifier = Modifier.weight(1f).wrapContentHeight().offset(y = 16.dp).clickable { onRank(2) }, contentScale = ContentScale.FillWidth, colorFilter = if (activeRank == 2) activeFilter else inactiveFilter)
                 }
 
-                Row(Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 6.dp).background(Brush.horizontalGradient(listOf(Color.Transparent, familyGold.copy(alpha = .12f), Color.Transparent))).border(1.dp, familyGold.copy(alpha = .18f)), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+                Row(Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 6.dp).background(Brush.horizontalGradient(listOf(Color.Transparent, familyGold.copy(alpha = .12f), Color.Transparent))).border(1.dp, familyGold.copy(alpha = .18f)), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
                     Text("Countdown", color = Color(0xFFFDF6E3), fontSize = 14.sp, modifier = Modifier.padding(end = 6.dp))
                     Text("%02d".format(seconds / 86400), color = Color.White, modifier = Modifier.background(Color(0xFF1A0F02), RoundedCornerShape(4.dp)).padding(4.dp), fontWeight = FontWeight.Bold)
                     Text(" Days ", color = Color(0xFFFDF6E3), fontSize = 12.sp)
@@ -270,14 +275,17 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, ac
                     Text("%02d".format(seconds % 60), color = Color.White, modifier = Modifier.background(Color(0xFF1A0F02), RoundedCornerShape(4.dp)).padding(4.dp), fontWeight = FontWeight.Bold)
                 }
 
-                Box(Modifier.fillMaxWidth().wrapContentHeight().offset(y = (-10).dp)) { AsyncImage(model = familyAsset("IMG_20261115_134723.png"), contentDescription = null, modifier = Modifier.fillMaxWidth(), contentScale = ContentScale.FillWidth) }
-                Box(Modifier.fillMaxWidth().wrapContentHeight().offset(y = (-10).dp)) { AsyncImage(model = familyAsset("IMG_20261115_134543.png"), contentDescription = null, modifier = Modifier.fillMaxWidth(), contentScale = ContentScale.FillWidth) }
-                Box(Modifier.fillMaxWidth().wrapContentHeight().offset(y = (-10).dp)) { AsyncImage(model = familyAsset("IMG_20261115_134632.png"), contentDescription = null, modifier = Modifier.fillMaxWidth(), contentScale = ContentScale.FillWidth) }
+                // UPDATED: Rank 1 to 50 Cards - wrapped in Column with negative spacing to remove gaps
+                Column(Modifier.fillMaxWidth().offset(y = (-10).dp), verticalArrangement = Arrangement.spacedBy((-16).dp)) {
+                    Box(Modifier.fillMaxWidth().wrapContentHeight()) { AsyncImage(model = familyAsset("IMG_20261115_134723.png"), contentDescription = null, modifier = Modifier.fillMaxWidth(), contentScale = ContentScale.FillWidth) }
+                    Box(Modifier.fillMaxWidth().wrapContentHeight()) { AsyncImage(model = familyAsset("IMG_20261115_134543.png"), contentDescription = null, modifier = Modifier.fillMaxWidth(), contentScale = ContentScale.FillWidth) }
+                    Box(Modifier.fillMaxWidth().wrapContentHeight()) { AsyncImage(model = familyAsset("IMG_20261115_134632.png"), contentDescription = null, modifier = Modifier.fillMaxWidth(), contentScale = ContentScale.FillWidth) }
 
-                for (rank in 4..50) {
-                    Box(Modifier.fillMaxWidth().wrapContentHeight().offset(y = (-10).dp), contentAlignment = Alignment.CenterStart) {
-                        AsyncImage(model = familyAsset("IMG_20261115_134839.png"), contentDescription = null, modifier = Modifier.fillMaxWidth(), contentScale = ContentScale.FillWidth)
-                        Text(rank.toString(), color = familyGold, fontSize = 22.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(start = 24.dp))
+                    for (rank in 4..50) {
+                        Box(Modifier.fillMaxWidth().wrapContentHeight(), contentAlignment = Alignment.CenterStart) {
+                            AsyncImage(model = familyAsset("IMG_20261115_134839.png"), contentDescription = null, modifier = Modifier.fillMaxWidth(), contentScale = ContentScale.FillWidth)
+                            Text(rank.toString(), color = familyGold, fontSize = 22.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(start = 24.dp))
+                        }
                     }
                 }
             }
@@ -320,10 +328,15 @@ private fun FamilyTop(onBack: () -> Unit, onRules: () -> Unit, activeRank: Int, 
             }
             Spacer(Modifier.height(35.dp))
 
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(0.dp), verticalAlignment = Alignment.CenterVertically) {
+            // UPDATED: Gap increased and Top 2, 3 shifted down slightly
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.Top
+            ) {
                 AsyncImage(model = familyAsset("IMG_20261115_133007.png"), contentDescription = null, modifier = Modifier.weight(1f).wrapContentHeight().clickable { onRank(0) }, contentScale = ContentScale.FillWidth, colorFilter = if (activeRank == 0) activeFilter else inactiveFilter)
-                AsyncImage(model = familyAsset("IMG_20261115_132909.png"), contentDescription = null, modifier = Modifier.weight(1f).wrapContentHeight().clickable { onRank(1) }, contentScale = ContentScale.FillWidth, colorFilter = if (activeRank == 1) activeFilter else inactiveFilter)
-                AsyncImage(model = familyAsset("IMG_20261115_132937.png"), contentDescription = null, modifier = Modifier.weight(1f).wrapContentHeight().clickable { onRank(2) }, contentScale = ContentScale.FillWidth, colorFilter = if (activeRank == 2) activeFilter else inactiveFilter)
+                AsyncImage(model = familyAsset("IMG_20261115_132909.png"), contentDescription = null, modifier = Modifier.weight(1f).wrapContentHeight().offset(y = 16.dp).clickable { onRank(1) }, contentScale = ContentScale.FillWidth, colorFilter = if (activeRank == 1) activeFilter else inactiveFilter)
+                AsyncImage(model = familyAsset("IMG_20261115_132937.png"), contentDescription = null, modifier = Modifier.weight(1f).wrapContentHeight().offset(y = 16.dp).clickable { onRank(2) }, contentScale = ContentScale.FillWidth, colorFilter = if (activeRank == 2) activeFilter else inactiveFilter)
             }
             Spacer(Modifier.height(20.dp))
 
@@ -427,13 +440,12 @@ private fun FamilyRewardModal(url: String, title: String, isWinnerReward: Boolea
 }
 
 // --------------------------------------------------------
-// CREATE FAMILY (REMOVED APPLY MODE, UPDATED CAMERA ICON & EDIT ICON)
+// CREATE FAMILY 
 // --------------------------------------------------------
 @Composable
 private fun FamilyCreate(onBack:()->Unit, name:String, onName:(String)->Unit, announcement:String, onAnnouncement:(String)->Unit, image:String, onImage:()->Unit, busy:Boolean, error:String?, onCreate:()->Unit) {
     Box(Modifier.fillMaxSize().background(Color(0xFFF9F9F9))) {
         
-        // Tera 10% mixing wala image background top pe
         AsyncImage(
             model = familyAsset("IMG_20261115_230814-bhai-iska-jo-background-image-hai-bss-wo-dee-bss-d.jpg"),
             contentDescription = null,
@@ -442,7 +454,6 @@ private fun FamilyCreate(onBack:()->Unit, name:String, onName:(String)->Unit, an
         )
 
         Column(Modifier.fillMaxSize()) {
-            // Top Bar with back button
             Row(Modifier.fillMaxWidth().statusBarsPadding().padding(top = 16.dp, start = 8.dp, end = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Back", tint = Color.Black, modifier = Modifier.size(28.dp)) }
                 Text("Create my family", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 18.sp, modifier = Modifier.weight(1f).padding(end = 48.dp), textAlign = TextAlign.Center)
@@ -450,17 +461,14 @@ private fun FamilyCreate(onBack:()->Unit, name:String, onName:(String)->Unit, an
 
             Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(bottom = 20.dp)) {
                 
-                // Upload Image (Updated exactly like the image with Camera Icon)
                 Box(Modifier.align(Alignment.CenterHorizontally).padding(top = 24.dp).size(100.dp).clip(RoundedCornerShape(16.dp)).background(Color(0xFFF3F4F6)).clickable(onClick = onImage), contentAlignment = Alignment.Center) {
                     if (image.isNotBlank()) {
                         AsyncImage(model = image, contentDescription = "Family image", modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                     } else {
-                        // Image jaisa light camera icon 
                         Icon(Icons.Default.PhotoCamera, contentDescription = "Upload", tint = Color.LightGray, modifier = Modifier.size(36.dp))
                     }
                 }
 
-                // Family Name Input (Updated with Edit Icon)
                 Text("Family name", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 14.sp, modifier = Modifier.padding(start = 20.dp, top = 32.dp, bottom = 8.dp))
                 OutlinedTextField(
                     value = name, onValueChange = onName,
@@ -477,7 +485,6 @@ private fun FamilyCreate(onBack:()->Unit, name:String, onName:(String)->Unit, an
                     trailingIcon = { Icon(Icons.Default.Edit, contentDescription = "Edit", tint = Color.LightGray, modifier = Modifier.size(20.dp)) }
                 )
 
-                // Family Announcement Input
                 Text("Family Announcement", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 14.sp, modifier = Modifier.padding(start = 20.dp, top = 20.dp, bottom = 8.dp))
                 Box(Modifier.fillMaxWidth().padding(horizontal = 20.dp).height(150.dp).clip(RoundedCornerShape(12.dp)).background(Color(0xFFF3F4F6))) {
                     TextField(
@@ -494,7 +501,6 @@ private fun FamilyCreate(onBack:()->Unit, name:String, onName:(String)->Unit, an
                     Text("${announcement.length}/500", color = Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Medium, modifier = Modifier.align(Alignment.BottomEnd).padding(12.dp))
                 }
 
-                // Required Level (Ekdam waisa hi rakha hai bina touch kiye)
                 Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Text("Required Level", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -502,14 +508,12 @@ private fun FamilyCreate(onBack:()->Unit, name:String, onName:(String)->Unit, an
                         Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(20.dp))
                     }
                 }
-                // APPLY MODE HATA DIYA GAYA HAI YAHAN SE
 
                 if (error != null) {
                     Text(error, color = Color(0xFFDC2626), fontSize = 13.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp))
                 }
             }
 
-            // Bottom 3000000 Button (Safe aur Yellow Gradient wala)
             Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(bottom = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Button(
                     onClick = onCreate, enabled = !busy,
