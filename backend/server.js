@@ -1964,7 +1964,6 @@ app.post("/api/lucky-bag/claim", async (req, res) => {
     if (!bagId || !userId) return res.status(400).json({ error: "bagId and userId required" });
     const bag = getLuckyBag(bagId);
     if (!bag) return res.status(404).json({ error: "Lucky Bag not found" });
-    if (bag.senderId === userId) return res.status(403).json({ error: "Sender cannot claim own Lucky Bag" });
     const prior = (bag.claims || []).find((claim) => claim.userId === userId);
     if (prior) {
       if (prior.status === "confirmed") return res.status(409).json({ error: "Already confirmed this Lucky Bag" });
