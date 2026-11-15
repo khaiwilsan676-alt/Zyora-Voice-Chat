@@ -505,7 +505,7 @@ fun RoomPage(
                         val savedTheme = sequenceOf("theme", "roomTheme", "Room Theme").map { saved.optString(it, "").trim() }.firstOrNull { it.isNotBlank() && it != "null" } ?: roomTheme
                         val savedCustomTheme = sequenceOf("customTheme", "themeImage").map { saved.optString(it, "").trim() }.firstOrNull { it.isNotBlank() && it != "null" }.orEmpty()
                         val savedLocked = saved.optBoolean("isLocked", locked)
-                        val savedPublicMsgOff = saved.optBoolean("publicMsgOff", true)
+                        val savedPublicMsgOff = saved.optBoolean("publicMsgOff", false)
                         val savedRoomPassword = saved.optString("roomPassword", roomPassword).takeUnless { it == "null" }.orEmpty()
                         val savedAdminsJson = saved.optJSONArray("admin") ?: saved.optJSONArray("admins")
                         val savedAdmins = savedAdminsJson?.let { adminsJson ->
