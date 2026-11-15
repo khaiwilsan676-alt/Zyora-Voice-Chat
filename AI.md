@@ -1035,3 +1035,9 @@ Current documentation does not certify that all historical features are build-, 
 - `Zyora-Server/server.js`: the profile-visit relay now includes every known profile identity alias (`accountId`, `accountNumber`, `uid`, `id`, `appLongId`, and the requested profile ID`) and emits the same live event to each corresponding `user:<identity>` room. No visitor history is persisted on the server or in MongoDB.
 - Native `MeScreen.kt` and `Followpage.kt` now accept events matching any supplied profile alias before writing the received visitor row to that profile owner's local native `index.db`. Existing row aggregation, repeat-view count, view timestamp, and UI are retained.
 - Source commits: production server `ab02d83`; native MeScreen `347d62e`; native Followpage `80f0c46`. Render deployment, native APK build, and real two-account live-view verification are still required.
+
+
+## Room vehicle entry playback guard (2026-11-15)
+- `RoomPage.kt`: a room-scoped atomic playback claim allows the equipped vehicle video to start only once per room entry, even if the Socket.IO entry event is duplicated or the retained-socket inventory fallback races with it.
+- The existing Store-matched video presentation, fades, green-screen handling, and one-shot completion behavior are unchanged.
+- Commit: `0b1d1ac241fa1d9f7fea83c7f9b0f4f4e3e5ac62`.
