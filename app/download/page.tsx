@@ -1,66 +1,68 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Download Zyora",
-  description: "Download the latest Zyora Native Android APK.",
+  title: "Zyora",
+  description: "Every time with You",
 };
 
 const APK_URL =
   "https://github.com/khaiwilsan676-alt/Zyora-Voice-Chat/releases/latest/download/app-debug.apk";
 
+const BASE = "/Zyora-Voice-Chat";
+
 export default function DownloadPage() {
   return (
-    <main className="min-h-screen bg-[#080b12] px-5 py-12 text-white">
-      <div className="mx-auto flex min-h-[calc(100vh-6rem)] w-full max-w-md flex-col items-center justify-center text-center">
-        <div className="mb-6 flex h-24 w-24 items-center justify-center overflow-hidden rounded-[2rem] border border-white/10 bg-white/5 shadow-2xl shadow-blue-950/50">
+    <main
+      className="relative min-h-[100svh] w-full overflow-hidden bg-cover bg-center bg-no-repeat text-white"
+      style={{ backgroundImage: `url("${BASE}/IMG_20261115_170818.png")` }}
+    >
+      <div className="absolute inset-0 bg-black/15" />
+
+      <div className="relative mx-auto flex min-h-[100svh] w-full flex-col items-center px-0 pb-28 pt-9 text-center">
+        <img
+          src={`${BASE}/logo.png`}
+          alt="Zyora"
+          className="h-[88px] w-[88px] rounded-[25px] object-cover shadow-2xl"
+        />
+
+        <h1 className="mt-3 text-[32px] font-extrabold tracking-wide drop-shadow-lg">
+          Zyora
+        </h1>
+        <p className="mt-1 text-[15px] font-medium tracking-wide drop-shadow-md">
+          Every time with You
+        </p>
+
+        <div className="mt-8 flex w-full snap-x snap-mandatory gap-4 overflow-x-auto px-5 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <img
-            src="/Zyora-Voice-Chat/logo.png"
-            alt="Zyora app logo"
-            className="h-full w-full object-cover"
+            src={`${BASE}/IMG_20261115_171617.png`}
+            alt=""
+            className="h-auto w-[86vw] max-w-none shrink-0 snap-center rounded-[22px] object-contain"
+          />
+          <img
+            src={`${BASE}/IMG_20261115_171557~2.jpg`}
+            alt=""
+            className="h-auto w-[86vw] max-w-none shrink-0 snap-center rounded-[22px] object-contain"
+          />
+          <img
+            src={`${BASE}/IMG_20261115_171647.png`}
+            alt=""
+            className="h-auto w-[86vw] max-w-none shrink-0 snap-center rounded-[22px] object-contain"
           />
         </div>
-        <p className="mb-3 text-xs font-bold uppercase tracking-[0.32em] text-blue-300">
-          Official Android app
-        </p>
-        <h1 className="text-4xl font-black tracking-tight">Zyora</h1>
-        <p className="mt-3 max-w-xs text-sm leading-6 text-slate-400">
-          Voice chat, rooms and friends — all in the Zyora native Android app.
-        </p>
-
-        <div className="mt-9 w-full rounded-3xl border border-white/10 bg-white/[0.04] p-5 text-left shadow-xl">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-sm font-semibold">Zyora Native APK</p>
-              <p className="mt-1 text-xs text-slate-400">Android installer · Latest release</p>
-            </div>
-            <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-300">
-              Official
-            </span>
-          </div>
-          <a
-            href={APK_URL}
-            className="mt-6 flex min-h-14 w-full items-center justify-center rounded-2xl bg-blue-600 px-5 py-4 text-base font-bold text-white shadow-lg shadow-blue-950/40 transition hover:bg-blue-500 active:scale-[0.99]"
-          >
-            Download APK
-          </a>
-          <p className="mt-3 text-center text-[11px] leading-5 text-slate-500">
-            Downloads the latest Kotlin / Jetpack Compose Android APK from the
-            official Zyora GitHub release.
-          </p>
-        </div>
-
-        <div className="mt-7 max-w-xs text-left text-xs leading-5 text-slate-500">
-          <p className="font-semibold text-slate-300">How to install</p>
-          <ol className="mt-2 list-decimal space-y-1 pl-4">
-            <li>Tap Download APK and wait for the download to finish.</li>
-            <li>Open the downloaded APK file.</li>
-            <li>If Android asks, allow installs from this browser, then tap Install.</li>
-          </ol>
-        </div>
-        <p className="mt-10 text-[10px] font-medium tracking-[0.2em] text-slate-600">
-          ZYORA · NATIVE ANDROID
-        </p>
       </div>
+
+      <a
+        href={APK_URL}
+        className="fixed bottom-5 left-5 right-5 z-10 mx-auto flex min-h-[58px] max-w-[520px] items-center justify-center gap-3 rounded-[18px] bg-white px-6 text-[17px] font-bold text-[#171717] shadow-2xl active:scale-[0.98]"
+      >
+        <svg viewBox="0 0 48 48" aria-hidden="true" className="h-6 w-6">
+          <path fill="#4285F4" d="M43.6 24.5c0-1.4-.1-2.5-.4-3.7H24v7h11a9.5 9.5 0 0 1-4.1 6.2v5.1h6.6c3.9-3.6 6.1-8.7 6.1-14.6Z" />
+          <path fill="#34A853" d="M24 44c5.5 0 10.1-1.8 13.5-4.9l-6.6-5.1c-1.8 1.2-4.1 2-6.9 2-5.3 0-9.8-3.6-11.4-8.4H5.8v5.3A20 20 0 0 0 24 44Z" />
+          <path fill="#FBBC05" d="M12.6 27.6a12 12 0 0 1 0-7.2v-5.3H5.8a20 20 0 0 0 0 17.8l6.8-5.3Z" />
+          <path fill="#EA4335" d="M24 11.9c3 0 5.7 1 7.8 3.1l5.8-5.8C34.1 5.8 29.5 4 24 4A20 20 0 0 0 5.8 15.1l6.8 5.3C14.2 15.5 18.7 11.9 24 11.9Z" />
+        </svg>
+        <span>Download</span>
+      </a>
     </main>
   );
 }
