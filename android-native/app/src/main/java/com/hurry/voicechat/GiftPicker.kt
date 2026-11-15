@@ -7,6 +7,7 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -349,11 +350,35 @@ fun GiftPicker(
                 dialogWindow?.setDimAmount(0f)
                 dialogWindow?.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
             }
+            
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
+                // Drag dismiss variable
+                var offsetY by remember { mutableStateOf(0f) }
+                
                 BoxWithConstraints(
                     Modifier
                         .fillMaxWidth()
                         .fillMaxHeight(0.52f)
+                        // Applying Offset based on Drag
+                        .offset { IntOffset(0, offsetY.roundToInt()) }
+                        // Pointer input to detect drag from top to bottom
+                        .pointerInput(Unit) {
+                            detectVerticalDragGestures(
+                                onDragEnd = {
+                                    if (offsetY > 150f) { // threshold to close
+                                        onClose()
+                                    } else {
+                                        offsetY = 0f // snap back if not dragged enough
+                                    }
+                                },
+                                onVerticalDrag = { change, dragAmount ->
+                                    change.consume()
+                                    if (offsetY + dragAmount > 0) { // only allow dragging down
+                                        offsetY += dragAmount
+                                    }
+                                }
+                            )
+                        }
                         .background(
                             color = Color(0xEB000000),
                             shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)
@@ -936,7 +961,7 @@ private fun VideoEffectOverlay(
     val isFade = style == "fade"
     var show by remember { mutableStateOf(true) }
     
-    // FIX 1: Aspect Ratio store karne ke liye variable (Taaki video kichi-kichi na lage)
+    // Aspect Ratio store karne ke liye variable
     var videoRatio by remember { mutableStateOf<Float?>(null) }
 
     LaunchedEffect(src) { onStarted() }
@@ -1000,25 +1025,26 @@ private fun VideoEffectOverlay(
             },
             modifier = Modifier
                 .fillMaxWidth()
-                // FIX 2: Original Aspect Ratio apply jisse height stretch na ho
+                // Original Aspect Ratio apply jisse height stretch na ho
                 .then(if (videoRatio != null) Modifier.aspectRatio(videoRatio!!) else Modifier.wrapContentHeight())
                 .graphicsLayer { 
                     compositingStrategy = CompositingStrategy.Offscreen 
-                    // FIX 3: Hamesha screen blend mode rakha jisse video ka black background gayab ho jaye
                     blendMode = BlendMode.Screen 
                 }
                 .drawWithContent {
                     drawContent()
-                    // FIX 4: Fade mask ke liye Color.White use kiya transparent gradient ke sath
+                    // PERFECT FADE LOGIC APPLIED HERE
                     if (isFade) {
-                        val bottomFadeStop = if (isKing) 0.8f else 0.9f
+                        val topFadeStop = 0.1f // Top 10% Fade
+                        val bottomFadeStop = if (isKing) 0.8f else 0.9f // King Bottom 20%, Teddy Bottom 10%
                         drawRect(
                             brush = Brush.verticalGradient(
-                                0.0f to Color.White,
+                                0.0f to Color.Transparent,
+                                topFadeStop to Color.White,
                                 bottomFadeStop to Color.White,
                                 1.0f to Color.Transparent
                             ),
-                            blendMode = BlendMode.DstIn // Ye sirf mask ka kaam karega, black add nahi karega
+                            blendMode = BlendMode.DstIn // Ye sirf mask ka kaam karega
                         )
                     }
                 }
@@ -1053,16 +1079,14 @@ fun LuckyGiftNotificationSlider(
     notice: LuckyNotice?,
     floatingWins: List<Pair<String, Long>> = emptyList(),
 ) {
-    // FIX 5: Box ko CenterStart mein daala taki ab Bottom par galti se bhi na jaye
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.CenterStart 
     ) {
         AnimatedVisibility(
             visible = notice != null && !notice.isExiting,
-            // Right se udti hui Left mein aayegi
-            enter = slideInHorizontally(initialOffsetX = { it }) + fadeIn(),
-            // Wapis ud jayegi
+            // InitialOffsetX = -it se ab ye bahar jump nahi karega, perfectly Left se aayega
+            enter = slideInHorizontally(initialOffsetX = { -it }) + fadeIn(),
             exit = slideOutHorizontally(targetOffsetX = { -it }) + fadeOut(),
             modifier = Modifier.fillMaxWidth() 
         ) {
@@ -1076,7 +1100,6 @@ fun LuckyGiftNotificationSlider(
             }
             val bottomText = if (isBroadcast) notice.senderName else "To ${notice.recipientName}"
 
-            // Content Left side float 
             Box(contentAlignment = Alignment.CenterStart) {
                 Row(
                     Modifier
@@ -1124,6 +1147,7 @@ fun LuckyGiftNotificationSlider(
                             fontSize = 9.sp, 
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.offset(y = (-3).dp) // Ye raha upar ki taraf shift
                         )
                     }
                     Spacer(Modifier.width(6.dp))
@@ -1211,7 +1235,7 @@ fun LuckyComboButton(
                     .alpha(pulseAlpha),
             )
 
-            // FIX 6: Sirf ye button click lega (Background/Sheet ko click pass nahi karega ab)
+            // Click intercept bilkul perfect hai, background UI ko trigger nahi hone dega
             Box(
                 Modifier
                     .size(76.dp) 
