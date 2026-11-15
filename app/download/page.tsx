@@ -4,6 +4,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
+  minimumScale: 1,
   userScalable: false,
 };
 
@@ -20,11 +21,23 @@ const BASE = "/Zyora-Voice-Chat";
 export default function DownloadPage() {
   return (
     <main
-      className="relative mx-auto min-h-[100svh] w-full max-w-[480px] overflow-hidden bg-cover bg-center bg-no-repeat text-white"
+      className="relative mx-auto min-h-[100svh] w-full max-w-[480px] overflow-hidden bg-cover bg-center bg-no-repeat text-white touch-manipulation select-none"
       style={{ backgroundImage: `url("${BASE}/IMG_20261115_170818.png")` }}
     >
+      {/* DESKTOP SITE BLOCKER - Ye desktop site on hote hi app ko block kar dega */}
+      <div className="fixed inset-0 z-[9999] hidden md:flex flex-col items-center justify-center bg-[#07152e] text-white px-6 text-center">
+        <span className="mb-4 text-[64px] drop-shadow-lg">🚫</span>
+        <h2 className="mb-2 text-[24px] font-extrabold tracking-wide text-red-500 drop-shadow-md">
+          Desktop Site Not Allowed
+        </h2>
+        <p className="text-[17px] font-medium text-gray-300">
+          Please turn off "Desktop Site" in your browser menu to download the app.
+        </p>
+      </div>
+
       <div className="absolute inset-0 bg-black/15" />
 
+      {/* Baaki sab kuch EXACTLY waisa hi hai jaisa tumne diya tha */}
       <div className="relative mx-auto flex min-h-[100svh] w-full flex-col items-center px-0 pb-28 pt-9 text-center">
         <img
           src={`${BASE}/logo.png`}
@@ -60,7 +73,7 @@ export default function DownloadPage() {
 
       <a
         href={APK_URL}
-        className="fixed bottom-5 left-5 right-5 z-10 mx-auto flex min-h-[58px] max-w-[520px] items-center justify-center gap-3 rounded-[18px] bg-white px-6 text-[17px] font-bold text-[#171717] shadow-2xl active:scale-[0.98]"
+        className="fixed bottom-5 left-5 right-5 z-10 mx-auto flex min-h-[58px] max-w-[520px] items-center justify-center gap-3 rounded-md bg-white px-6 text-[17px] font-bold text-[#171717] shadow-2xl active:scale-[0.98]"
       >
         <svg viewBox="0 0 48 48" aria-hidden="true" className="h-6 w-6">
           <path fill="#4285F4" d="M43.6 24.5c0-1.4-.1-2.5-.4-3.7H24v7h11a9.5 9.5 0 0 1-4.1 6.2v5.1h6.6c3.9-3.6 6.1-8.7 6.1-14.6Z" />
