@@ -1041,3 +1041,7 @@ Current documentation does not certify that all historical features are build-, 
 - `RoomPage.kt`: a room-scoped atomic playback claim allows the equipped vehicle video to start only once per room entry, even if the Socket.IO entry event is duplicated or the retained-socket inventory fallback races with it.
 - The existing Store-matched video presentation, fades, green-screen handling, and one-shot completion behavior are unchanged.
 - Commit: `0b1d1ac241fa1d9f7fea83c7f9b0f4f4e3e5ac62`.
+
+## 15. Kept-room silent re-entry fix (2026-11-15)
+- `RoomPage.kt`: when a kept room's socket reconnects after transport loss, treat it as a silent session restore and do not replay the equipped vehicle preview. When the retained socket is already connected, refresh only room presence and seat snapshots.
+- `Zyora-Server/server.js`: honor the client's `suppressEntry` flag for silent kept-room restores, preventing duplicate `Enter the Room` messages and vehicle-entry broadcasts while allowing new chat messages and live room state to continue normally.
