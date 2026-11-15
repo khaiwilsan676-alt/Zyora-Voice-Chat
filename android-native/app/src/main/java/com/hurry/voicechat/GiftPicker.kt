@@ -583,7 +583,7 @@ fun GiftPicker(
                                                     shape = RoundedCornerShape(6.dp),
                                                     border = BorderStroke(1.dp, Color.White.copy(alpha = 0.15f)),
                                                     shadowElevation = 8.dp,
-                                                    modifier = Modifier.width(50.dp) // Width is 50.dp as requested
+                                                    modifier = Modifier.width(50.dp)
                                                 ) {
                                                     Column(Modifier.padding(0.dp)) {
                                                         multipliers.forEach { m ->
@@ -949,7 +949,7 @@ private fun RecipientButton(
 }
 
 // ============================================================
-// VIDEO OVERLAY (FIXED ASPECT RATIO & FADE)
+// VIDEO OVERLAY (FIXED ORIGINAL COLOR & FADE EDGES)
 // ============================================================
 @Composable
 private fun VideoEffectOverlay(
@@ -979,7 +979,7 @@ private fun VideoEffectOverlay(
         AndroidView(
             factory = { ctx ->
                 android.view.TextureView(ctx).apply {
-                    isOpaque = false // Prevents initial black screen flash
+                    isOpaque = false 
                     surfaceTextureListener = object : android.view.TextureView.SurfaceTextureListener {
                         var mediaPlayer: android.media.MediaPlayer? = null
 
@@ -989,7 +989,6 @@ private fun VideoEffectOverlay(
                                     setDataSource(ctx, Uri.parse(giftAssetUrl(src)))
                                     setSurface(android.view.Surface(surface))
                                     setVolume(0f, 0f)
-                                    // Original width/height nikal ke Ratio set kar diya
                                     setOnVideoSizeChangedListener { _, w, h ->
                                         if (w > 0 && h > 0) {
                                             videoRatio = w.toFloat() / h.toFloat()
@@ -1025,26 +1024,29 @@ private fun VideoEffectOverlay(
             },
             modifier = Modifier
                 .fillMaxWidth()
-                // Original Aspect Ratio apply jisse height stretch na ho
                 .then(if (videoRatio != null) Modifier.aspectRatio(videoRatio!!) else Modifier.wrapContentHeight())
                 .graphicsLayer { 
                     compositingStrategy = CompositingStrategy.Offscreen 
-                    blendMode = BlendMode.Screen 
+                    // FIX: Sirf Autumn ("pure") me Screen Mode chalega black hatane ke liye.
+                    // Teddy/King ("fade") 100% Original aur GAADHE colors me play honge!!
+                    if (style == "pure") {
+                        blendMode = BlendMode.Screen 
+                    }
                 }
                 .drawWithContent {
                     drawContent()
-                    // PERFECT FADE LOGIC APPLIED HERE
+                    // PERFECT FADE LOGIC - Sirf kinare smoothly fade honge, beech me original content rahega
                     if (isFade) {
                         val topFadeStop = 0.1f // Top 10% Fade
                         val bottomFadeStop = if (isKing) 0.8f else 0.9f // King Bottom 20%, Teddy Bottom 10%
                         drawRect(
                             brush = Brush.verticalGradient(
                                 0.0f to Color.Transparent,
-                                topFadeStop to Color.White,
-                                bottomFadeStop to Color.White,
-                                1.0f to Color.Transparent
+                                topFadeStop to Color.White, // Yahan se original chalu 100%
+                                bottomFadeStop to Color.White, // Yahan tak original 100%
+                                1.0f to Color.Transparent // Phir last me fade 
                             ),
-                            blendMode = BlendMode.DstIn // Ye sirf mask ka kaam karega
+                            blendMode = BlendMode.DstIn 
                         )
                     }
                 }
@@ -1085,7 +1087,6 @@ fun LuckyGiftNotificationSlider(
     ) {
         AnimatedVisibility(
             visible = notice != null && !notice.isExiting,
-            // InitialOffsetX = -it se ab ye bahar jump nahi karega, perfectly Left se aayega
             enter = slideInHorizontally(initialOffsetX = { -it }) + fadeIn(),
             exit = slideOutHorizontally(targetOffsetX = { -it }) + fadeOut(),
             modifier = Modifier.fillMaxWidth() 
@@ -1147,7 +1148,7 @@ fun LuckyGiftNotificationSlider(
                             fontSize = 9.sp, 
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.offset(y = (-3).dp) // Ye raha upar ki taraf shift
+                            modifier = Modifier.offset(y = (-3).dp) 
                         )
                     }
                     Spacer(Modifier.width(6.dp))
@@ -1235,7 +1236,6 @@ fun LuckyComboButton(
                     .alpha(pulseAlpha),
             )
 
-            // Click intercept bilkul perfect hai, background UI ko trigger nahi hone dega
             Box(
                 Modifier
                     .size(76.dp) 
