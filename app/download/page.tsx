@@ -1,10 +1,9 @@
-import type { Metadata, Viewport } from "next";
+Import type { Metadata, Viewport } from "next";
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
-  minimumScale: 1,
   userScalable: false,
 };
 
@@ -21,23 +20,11 @@ const BASE = "/Zyora-Voice-Chat";
 export default function DownloadPage() {
   return (
     <main
-      className="relative mx-auto min-h-[100svh] w-full max-w-[480px] overflow-hidden bg-cover bg-center bg-no-repeat text-white touch-manipulation select-none"
+      className="relative mx-auto min-h-[100svh] w-full max-w-[480px] overflow-hidden bg-cover bg-center bg-no-repeat text-white"
       style={{ backgroundImage: `url("${BASE}/IMG_20261115_170818.png")` }}
     >
-      {/* DESKTOP SITE BLOCKER - Ye desktop site on hote hi app ko block kar dega */}
-      <div className="fixed inset-0 z-[9999] hidden md:flex flex-col items-center justify-center bg-[#07152e] text-white px-6 text-center">
-        <span className="mb-4 text-[64px] drop-shadow-lg">🚫</span>
-        <h2 className="mb-2 text-[24px] font-extrabold tracking-wide text-red-500 drop-shadow-md">
-          Desktop Site Not Allowed
-        </h2>
-        <p className="text-[17px] font-medium text-gray-300">
-          Please turn off "Desktop Site" in your browser menu to download the app.
-        </p>
-      </div>
-
       <div className="absolute inset-0 bg-black/15" />
 
-      {/* Baaki sab kuch EXACTLY waisa hi hai jaisa tumne diya tha */}
       <div className="relative mx-auto flex min-h-[100svh] w-full flex-col items-center px-0 pb-28 pt-9 text-center">
         <img
           src={`${BASE}/logo.png`}
