@@ -36,17 +36,17 @@ export default function DownloadPage() {
           <img
             src={`${BASE}/IMG_20261115_171617.png`}
             alt=""
-            className="h-[107.5vw] w-[58vw] max-w-none shrink-0 snap-center rounded-md border-2 border-[#102f70] bg-[#07152e] object-contain"
+            className="h-[100vw] w-[58vw] max-w-none shrink-0 snap-center rounded-md border-2 border-[#102f70] bg-[#07152e] object-contain"
           />
           <img
             src={`${BASE}/IMG_20261115_171557~2.jpg`}
             alt=""
-            className="h-[107.5vw] w-[58vw] max-w-none shrink-0 snap-center rounded-md border-2 border-[#102f70] bg-[#07152e] object-contain"
+            className="h-[100vw] w-[58vw] max-w-none shrink-0 snap-center rounded-md border-2 border-[#102f70] bg-[#07152e] object-contain"
           />
           <img
             src={`${BASE}/IMG_20261115_171647.png`}
             alt=""
-            className="h-[107.5vw] w-[58vw] max-w-none shrink-0 snap-center rounded-md border-2 border-[#102f70] bg-[#07152e] object-contain"
+            className="h-[100vw] w-[58vw] max-w-none shrink-0 snap-center rounded-md border-2 border-[#102f70] bg-[#07152e] object-contain"
           />
         </div>
       </div>
