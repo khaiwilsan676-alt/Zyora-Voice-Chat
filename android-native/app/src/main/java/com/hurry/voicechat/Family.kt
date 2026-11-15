@@ -95,7 +95,7 @@ private data class RewardModalData(
 @Composable
 fun Family(onBack: () -> Unit) {
     val context = LocalContext.current
-    val prefs = remember { context.getSharedPreferences("hurry_user", Context.MODEPRIVATE) }
+    val prefs = remember { context.getSharedPreferences("hurry_user", Context.MODE_PRIVATE) }
     var view by remember { mutableStateOf("main") }
     var showRules by remember { mutableStateOf(false) }
     var showApplyMode by remember { mutableStateOf(false) }
