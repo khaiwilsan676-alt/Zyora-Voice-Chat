@@ -36,17 +36,17 @@ export default function DownloadPage() {
           <img
             src={`${BASE}/IMG_20261115_171617.png`}
             alt=""
-            className="aspect-[4/5] w-[86vw] max-w-none shrink-0 snap-center rounded-[22px] border-2 border-[#102f70] bg-[#07152e] object-contain"
+            className="aspect-[4/5] w-[72vw] max-w-none shrink-0 snap-center rounded-[22px] border-2 border-[#102f70] bg-[#07152e] object-contain"
           />
           <img
             src={`${BASE}/IMG_20261115_171557~2.jpg`}
             alt=""
-            className="aspect-[4/5] w-[86vw] max-w-none shrink-0 snap-center rounded-[22px] border-2 border-[#102f70] bg-[#07152e] object-contain"
+            className="aspect-[4/5] w-[72vw] max-w-none shrink-0 snap-center rounded-[22px] border-2 border-[#102f70] bg-[#07152e] object-contain"
           />
           <img
             src={`${BASE}/IMG_20261115_171647.png`}
             alt=""
-            className="aspect-[4/5] w-[86vw] max-w-none shrink-0 snap-center rounded-[22px] border-2 border-[#102f70] bg-[#07152e] object-contain"
+            className="aspect-[4/5] w-[72vw] max-w-none shrink-0 snap-center rounded-[22px] border-2 border-[#102f70] bg-[#07152e] object-contain"
           />
         </div>
       </div>
