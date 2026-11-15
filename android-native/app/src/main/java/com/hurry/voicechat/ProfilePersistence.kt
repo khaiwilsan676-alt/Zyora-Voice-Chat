@@ -19,7 +19,7 @@ internal object ProfilePersistence {
 
 
     suspend fun uploadImageToMongoDB(dataUri: String, userId: String, folder: String = "user-dp"): String? = withContext(Dispatchers.IO) {
-        if (!dataUri.startsWith("data:image/") || userId.isBlank()) return@withContext null
+        if ((!dataUri.startsWith("data:image/") && !dataUri.startsWith("data:video/")) || userId.isBlank()) return@withContext null
         val payload = JSONObject().put("userId", userId).put("folder", folder).put("imageData", dataUri).toString().toByteArray(Charsets.UTF_8)
         var endpoint = URL("$API/api/upload-image")
         var attempt = 0
@@ -174,8 +174,8 @@ internal suspend fun uploadChatImage(
 ): String? = withContext(Dispatchers.IO) {
     if (messageId.isBlank()) return@withContext null
     val mimeType = context.contentResolver.getType(uri)
-        ?.takeIf { it in setOf("image/jpeg", "image/png", "image/webp", "image/gif") }
-        ?: "image/jpeg"
+        ?.takeIf { it in setOf("image/jpeg", "image/png", "image/webp", "image/gif", "video/mp4", "video/webm", "video/quicktime") }
+        ?: return@withContext null
     val bytes = runCatching {
         context.contentResolver.openInputStream(uri)?.use { input ->
             val output = ByteArrayOutputStream()
@@ -194,4 +194,30 @@ internal suspend fun uploadChatImage(
     if (bytes.isEmpty() || bytes.size > 5 * 1024 * 1024) return@withContext null
     val encoded = android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
     ProfilePersistence.uploadImageToMongoDB("data:$mimeType;base64,$encoded", messageId, folder)
+}
+
+
+internal suspend fun uploadDaisySupportMedia(context: Context, uri: Uri, messageId: String): String? = withContext(Dispatchers.IO) {
+    if (messageId.isBlank()) return@withContext null
+    val mimeType = context.contentResolver.getType(uri)?.lowercase()
+        ?.takeIf { it in setOf("image/jpeg", "image/png", "image/webp", "image/gif", "video/mp4", "video/webm", "video/quicktime") }
+        ?: return@withContext null
+    val bytes = runCatching {
+        context.contentResolver.openInputStream(uri)?.use { input ->
+            val output = ByteArrayOutputStream()
+            val buffer = ByteArray(16 * 1024)
+            var total = 0
+            while (true) {
+                val count = input.read(buffer)
+                if (count < 0) break
+                total += count
+                if (total > 5 * 1024 * 1024) throw IllegalArgumentException("Media exceeds 5 MB")
+                output.write(buffer, 0, count)
+            }
+            output.toByteArray()
+        }
+    }.getOrNull() ?: return@withContext null
+    if (bytes.isEmpty() || bytes.size > 5 * 1024 * 1024) return@withContext null
+    val encoded = Base64.encodeToString(bytes, Base64.NO_WRAP)
+    ProfilePersistence.uploadImageToMongoDB("data:$mimeType;base64,$encoded", messageId, "daisy-support-media")
 }
