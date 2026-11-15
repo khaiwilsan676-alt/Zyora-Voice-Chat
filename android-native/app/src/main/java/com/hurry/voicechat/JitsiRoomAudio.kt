@@ -90,13 +90,10 @@ fun JitsiRoomAudio(
     DisposableEffect(context, roomId, roomSocket, hasMicPermission, hasBluetoothPermission) {
         if (roomSocket == null) return@DisposableEffect onDispose { }
         val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-        val oldMode = audioManager.mode
-        val oldSpeakerphone = audioManager.isSpeakerphoneOn
-        // Use Android's communication path so platform acoustic echo cancellation
-        // and voice processing can prevent the local microphone re-capturing playback.
-        audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
-        @Suppress("DEPRECATION")
-        runCatching { audioManager.isSpeakerphoneOn = true }
+        // Keep room audio on Android's normal media route. MODE_IN_COMMUNICATION
+        // forces call/earpiece routing and can break loudspeaker and Bluetooth media output.
+        // AudioTrack below uses USAGE_MEDIA; the OS then routes to speaker or connected
+        // Bluetooth earbuds/headphones without switching the device into call mode.
 
         val alive = AtomicBoolean(true)
         val recording = AtomicBoolean(false)
@@ -188,7 +185,7 @@ fun JitsiRoomAudio(
             }
             val created = runCatching {
                 AudioRecord(
-                    MediaRecorder.AudioSource.VOICE_COMMUNICATION,
+                    MediaRecorder.AudioSource.MIC,
                     ROOM_VOICE_SAMPLE_RATE,
                     AudioFormat.CHANNEL_IN_MONO,
                     AudioFormat.ENCODING_PCM_16BIT,
@@ -359,7 +356,7 @@ fun JitsiRoomAudio(
                         AudioTrack.Builder()
                             .setAudioAttributes(
                                 AudioAttributes.Builder()
-                                    .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
+                                    .setUsage(AudioAttributes.USAGE_MEDIA)
                                     .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
                                     .build()
                             )
@@ -533,11 +530,6 @@ fun JitsiRoomAudio(
                 synchronized(playerLock) {
                     runCatching { player?.pause(); player?.flush(); player?.stop(); player?.release() }
                     player = null
-                }
-                runCatching {
-                    @Suppress("DEPRECATION")
-                    audioManager.isSpeakerphoneOn = oldSpeakerphone
-                    audioManager.mode = oldMode
                 }
             }
         }
