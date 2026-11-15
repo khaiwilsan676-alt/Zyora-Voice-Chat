@@ -1119,9 +1119,10 @@ fun LuckyGiftNotificationSlider(
                                 endX = Float.POSITIVE_INFINITY,
                             )
                         )
-                        .padding(start = 2.dp, end = 32.dp, top = 1.dp, bottom = 1.dp)
+                        .padding(start = 2.dp, end = 18.dp, top = 1.dp, bottom = 1.dp)
                         .height(38.dp)
-                        .widthIn(min = 250.dp),
+                        .fillMaxWidth(0.92f)
+                        .widthIn(max = 360.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     AsyncImage(
@@ -1133,7 +1134,7 @@ fun LuckyGiftNotificationSlider(
                             .clip(CircleShape),
                     )
                     Spacer(Modifier.width(6.dp))
-                    Column(Modifier.widthIn(max = 110.dp), verticalArrangement = Arrangement.Center) {
+                    Column(Modifier.weight(1f).widthIn(max = 110.dp), verticalArrangement = Arrangement.Center) {
                         Text(
                             text = topText,
                             color = Color.White,
