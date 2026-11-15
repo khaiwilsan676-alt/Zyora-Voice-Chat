@@ -1521,7 +1521,7 @@ fun NativeChatScreen(
                 state = messageListState,
                 modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 12.dp),
                 reverseLayout = false,
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(if (isOfficial) 20.dp else 8.dp), // OFFICIAL ME MESSAGE KA GAP INCREASE KAR DIYA (20.dp)
                 contentPadding = PaddingValues(top = 14.dp, bottom = 12.dp)
             ) {
                 itemsIndexed(messages) { messageIndex, item ->
@@ -1554,10 +1554,13 @@ fun NativeChatScreen(
                             AsyncImage(
                                 model = image,
                                 contentDescription = name,
-                                modifier = Modifier.size(28.dp).clip(CircleShape),
+                                modifier = Modifier
+                                    .size(28.dp)
+                                    .clip(CircleShape)
+                                    .align(Alignment.Top), // Ye ouper aayega ab
                                 contentScale = ContentScale.Crop
                             )
-                            Spacer(Modifier.width(8.dp))
+                            Spacer(Modifier.width(8.dp)) // PEHLE KI TARAH ISKO 8 DP KAR DIYA
                         }
 
                         Column(horizontalAlignment = if (mine) Alignment.End else Alignment.Start) {
