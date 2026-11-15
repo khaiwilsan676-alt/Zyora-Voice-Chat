@@ -2580,6 +2580,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                             val comboTransfer = JSONObject(previousGift.toString())
                                 .put("transferId", nextTransferId)
                                 .put("eventId", nextTransferId)
+                                .put("comboReplay", true)
                                 .put("timestamp", System.currentTimeMillis())
                             roomSocketRef.value?.emit("coin_transfer", comboTransfer)
                         }
