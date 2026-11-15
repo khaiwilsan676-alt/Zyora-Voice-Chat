@@ -4,6 +4,8 @@ import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.media.AudioAttributes
+import android.media.AudioManager
+import android.media.AudioDeviceInfo
 import android.media.audiofx.AcousticEchoCanceler
 import android.media.AudioFormat
 import android.os.Build
@@ -88,10 +90,36 @@ fun JitsiRoomAudio(
 
     DisposableEffect(context, roomId, roomSocket, hasMicPermission, hasBluetoothPermission) {
         if (roomSocket == null) return@DisposableEffect onDispose { }
-        // Keep room audio on Android's normal media route. MODE_IN_COMMUNICATION
-        // forces call/earpiece routing and can break loudspeaker and Bluetooth media output.
-        // AudioTrack below uses USAGE_MEDIA; the OS then routes to speaker or connected
-        // Bluetooth earbuds/headphones without switching the device into call mode.
+        // Use the Android communication path so acoustic echo cancellation is active.
+        // Explicitly prefer a connected Bluetooth headset; otherwise force loudspeaker.
+        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        val previousAudioMode = audioManager.mode
+        val previousSpeakerphone = audioManager.isSpeakerphoneOn
+        audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
+        @Suppress("DEPRECATION")
+        runCatching { audioManager.isSpeakerphoneOn = true }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            runCatching {
+                val bluetooth = audioManager.availableCommunicationDevices.firstOrNull {
+                    it.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO ||
+                        it.type == AudioDeviceInfo.TYPE_BLE_HEADSET
+                }
+                val speaker = audioManager.availableCommunicationDevices.firstOrNull {
+                    it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER
+                }
+                audioManager.setCommunicationDevice(bluetooth ?: speaker)
+            }
+        } else {
+            @Suppress("DEPRECATION")
+            runCatching {
+                if (audioManager.isBluetoothScoAvailableOffCall) {
+                    audioManager.startBluetoothSco()
+                    audioManager.isBluetoothScoOn = true
+                } else {
+                    audioManager.isSpeakerphoneOn = true
+                }
+            }
+        }
 
         val alive = AtomicBoolean(true)
         val recording = AtomicBoolean(false)
@@ -183,7 +211,7 @@ fun JitsiRoomAudio(
             }
             val created = runCatching {
                 AudioRecord(
-                    MediaRecorder.AudioSource.MIC,
+                    MediaRecorder.AudioSource.VOICE_COMMUNICATION,
                     ROOM_VOICE_SAMPLE_RATE,
                     AudioFormat.CHANNEL_IN_MONO,
                     AudioFormat.ENCODING_PCM_16BIT,
@@ -354,7 +382,7 @@ fun JitsiRoomAudio(
                         AudioTrack.Builder()
                             .setAudioAttributes(
                                 AudioAttributes.Builder()
-                                    .setUsage(AudioAttributes.USAGE_MEDIA)
+                                    .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
                                     .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
                                     .build()
                             )
@@ -528,6 +556,16 @@ fun JitsiRoomAudio(
                 synchronized(playerLock) {
                     runCatching { player?.pause(); player?.flush(); player?.stop(); player?.release() }
                     player = null
+                }
+                runCatching {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) audioManager.clearCommunicationDevice()
+                    @Suppress("DEPRECATION")
+                    audioManager.isBluetoothScoOn = false
+                    @Suppress("DEPRECATION")
+                    audioManager.stopBluetoothSco()
+                    @Suppress("DEPRECATION")
+                    audioManager.isSpeakerphoneOn = previousSpeakerphone
+                    audioManager.mode = previousAudioMode
                 }
             }
         }
