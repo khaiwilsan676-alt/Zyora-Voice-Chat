@@ -124,90 +124,109 @@ fun LuckyBagNotificationSlider(currentUserId: String, onGoToRoom: (String, Strin
         ) {
             val item = banner
             if (item != null) {
-                // Fade-in/out edges fix lagaya hai yaha graphicsLayer aur drawWithContent ke sath
+                // Parent Box
                 Box(
                     Modifier
                         .fillMaxWidth()
                         .defaultMinSize(minHeight = 76.dp)
-                        .graphicsLayer { alpha = 0.99f } // BlendMode ke liye alpha chahiye
-                        .drawWithContent {
-                            drawContent()
-                            drawRect(
-                                brush = Brush.horizontalGradient(
-                                    0.0f to Color.Transparent,
-                                    0.05f to Color.Black, // Left se thoda fade hoke normal
-                                    0.95f to Color.Black, // Right se fade start
-                                    1.0f to Color.Transparent
-                                ),
-                                blendMode = BlendMode.DstIn
+                ) {
+                    // FADE LAYER (Sirf background patti aur details fade hogi)
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .graphicsLayer { alpha = 0.99f }
+                            .drawWithContent {
+                                drawContent()
+                                drawRect(
+                                    brush = Brush.horizontalGradient(
+                                        0.0f to Color.Transparent,
+                                        0.20f to Color.Black, // Left se 20% fade fix
+                                        0.80f to Color.Black, // Right se 20% fade fix
+                                        1.0f to Color.Transparent
+                                    ),
+                                    blendMode = BlendMode.DstIn
+                                )
+                            }
+                    ) {
+                        AsyncImage(
+                            model = LUCKY_BAG_BANNER_IMAGE,
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxWidth(),
+                            contentScale = ContentScale.FillWidth 
+                        )
+                        Row(
+                            Modifier.matchParentSize().padding(start = 8.dp, end = 3.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            AsyncImage(
+                                model = item.senderImage.takeIf { it.isNotBlank() } ?: "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/default-avatar.png",
+                                contentDescription = "Sender avatar",
+                                modifier = Modifier.size(43.dp).clip(RoundedCornerShape(8.dp)),
+                                contentScale = ContentScale.Crop
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        item.senderName,
+                                        color = Color.White,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.weight(1f, fill = false)
+                                    )
+                                    Spacer(Modifier.width(5.dp))
+                                    
+                                    Box(
+                                        Modifier
+                                            .size(23.dp)
+                                            .background(Color.Black.copy(alpha = 0.2f), CircleShape),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(seconds.toString(), color = Color(0xFFFFE6A0), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                                
+                                Text(
+                                    "Sent ${item.amount} Coins Lucky Bag · ${item.roomName}",
+                                    color = Color.White,
+                                    fontSize = 12.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Clip,
+                                    modifier = Modifier.basicMarquee(
+                                        iterations = Int.MAX_VALUE,
+                                        spacing = MarqueeSpacing(14.dp)
+                                    )
+                                )
+                            }
+                            
+                            // 25dp spacing fix GO Button se pehle (Sirf scrolling distance banaye rakhne ke liye invisible placeholder)
+                            Spacer(Modifier.width(25.dp))
+                            Box(
+                                Modifier
+                                    .offset(x = 5.dp)
+                                    .padding(end = 2.dp)
+                                    .size(width = 54.dp, height = 32.dp)
                             )
                         }
-                ) {
-                    AsyncImage(
-                        model = LUCKY_BAG_BANNER_IMAGE,
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxWidth(),
-                        // Edge-to-edge fix: no crop, no stretch
-                        contentScale = ContentScale.FillWidth 
-                    )
+                    }
+
+                    // NON-FADE LAYER (GO Button ke liye, taaki chamakta rahe, bina fade hue)
                     Row(
                         Modifier.matchParentSize().padding(start = 8.dp, end = 3.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        AsyncImage(
-                            model = item.senderImage.takeIf { it.isNotBlank() } ?: "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/default-avatar.png",
-                            contentDescription = "Sender avatar",
-                            modifier = Modifier.size(43.dp).clip(RoundedCornerShape(8.dp)),
-                            contentScale = ContentScale.Crop
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    item.senderName,
-                                    color = Color.White,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier.weight(1f, fill = false)
-                                )
-                                Spacer(Modifier.width(5.dp))
-                                
-                                // Countdown Black/20 Circle card mein dal diya
-                                Box(
-                                    Modifier
-                                        .size(23.dp)
-                                        .background(Color.Black.copy(alpha = 0.2f), CircleShape),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(seconds.toString(), color = Color(0xFFFFE6A0), fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                                }
-                            }
-                            
-                            // Text color White kar diya, aur basicMarquee mein 14dp gap (MarqueeSpacing) laga diya
-                            Text(
-                                "Sent ${item.amount} Coins Lucky Bag · ${item.roomName}",
-                                color = Color.White,
-                                fontSize = 12.sp,
-                                maxLines = 1,
-                                overflow = TextOverflow.Clip,
-                                modifier = Modifier.basicMarquee(
-                                    iterations = Int.MAX_VALUE,
-                                    spacing = MarqueeSpacing(14.dp) // Scroll ke beech 14dp ka gap
-                                )
-                            )
-                        }
+                        Spacer(Modifier.weight(1f)) // Baki space kha ke GO button ko right me push karta hai
                         
-                        // 14dp Gap idhar bhi de diya column aur GO Button ke middle me
-                        Spacer(Modifier.width(14.dp))
+                        // Exact 25dp spacing upar wale layout ke saath match karne ke liye
+                        Spacer(Modifier.width(25.dp))
                         
                         Box(
                             Modifier
                                 .offset(x = 5.dp)
                                 .padding(end = 2.dp)
                                 .size(width = 54.dp, height = 32.dp)
-                                // GO button 3D Golden Color bina border ke
                                 .background(Brush.verticalGradient(listOf(Color(0xFFFFF2A2), Color(0xFFFFD28A), Color(0xFFC78426))), RoundedCornerShape(50))
                                 .clickable {
                                     onGoToRoom(item.roomId, item.roomName)
@@ -295,7 +314,6 @@ fun LuckyBagOpenConfirmCards(
                     
                     Box(
                         modifier = Modifier
-                             // Open Button 15dp aur upar shift kar diya (-17.dp total)
                              .offset(y = (-17).dp)
                             .width(190.dp)
                             .height(72.dp)
@@ -362,7 +380,6 @@ fun LuckyBagOpenConfirmCards(
         
         if (showLuckyBagClaimedCard) {
             Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=0.6f)).clickable { }, contentAlignment = Alignment.Center) {
-                // Confirm Card parent box: Ekdum niche se exactly 15dp curve fix kar diya hai clip lagake
                 Box(Modifier.fillMaxWidth(0.85f).aspectRatio(0.59f).clip(RoundedCornerShape(topStart=32.dp, topEnd=32.dp, bottomStart=15.dp, bottomEnd=15.dp)).clickable(enabled=false){}) {
                     
                     Box(Modifier.fillMaxSize().padding(top = 40.dp).clip(RoundedCornerShape(topStart=32.dp, topEnd=32.dp, bottomStart=15.dp, bottomEnd=15.dp)).background(Brush.linearGradient(listOf(Color(0xFFFF6449), Color(0xFFFF263F), Color(0xFFE90037)))))
@@ -497,5 +514,4 @@ fun LuckyBagOpenConfirmCards(
                 }
             }
         }
-
 }
