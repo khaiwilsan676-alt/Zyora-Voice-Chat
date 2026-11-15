@@ -2312,7 +2312,11 @@ export default function StaffPanel() {
 
                             {msg.image && (
                               <div className="mt-2 rounded-xl overflow-hidden border border-slate-200 shadow-sm">
-                                <img src={msg.image} alt="Attachment" className="max-h-60 object-contain bg-slate-100" />
+                                {msg.mediaType === "video" ? (
+                                  <video src={msg.image} controls playsInline preload="metadata" className="max-h-60 max-w-full bg-slate-100" />
+                                ) : (
+                                  <img src={msg.image} alt="Attachment" className="max-h-60 max-w-full object-contain bg-slate-100" />
+                                )}
                               </div>
                             )}
                           </div>
