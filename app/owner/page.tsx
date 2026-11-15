@@ -598,24 +598,6 @@ export default function StaffPanel() {
     });
     return () => { active = false; socket.off('owner_bind_user_id', handleBind); };
   }, [activeTab, isLoggedIn]);
-  const [inviteBindRows, setInviteBindRows] = useState<any[]>([]);
-  useEffect(() => {
-    if (activeTab !== 'events' || !isLoggedIn) return;
-    let active = true;
-    loadInviteBindIds().then(rows => { if (active) setInviteBindRows(rows); }).catch(console.error);
-    const handleBind = async (row: any) => {
-      if (!row?.id || !row?.inviterId) return;
-      await saveInviteBindIds([row]).catch(console.error);
-      if (active) setInviteBindRows(rows => [row, ...rows.filter(item => item.id !== row.id)]);
-    };
-    socket.on('owner_bind_user_id', handleBind);
-    socket.timeout(15000).emit('owner_invites_request', async (error: any, result: any) => {
-      if (error || !Array.isArray(result?.binds)) return;
-      await saveInviteBindIds(result.binds).catch(console.error);
-      if (active) setInviteBindRows(result.binds.sort((a: any,b: any) => Number(b.timestamp)-Number(a.timestamp)));
-    });
-    return () => { active = false; socket.off('owner_bind_user_id', handleBind); };
-  }, [activeTab, isLoggedIn]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   const [users, setUsers] = useState<UserRecord[]>([]);
