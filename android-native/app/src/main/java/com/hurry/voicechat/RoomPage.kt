@@ -1228,7 +1228,7 @@ fun RoomPage(
                     maxWinTimes = payload.optInt("luckyReturnPercent", 0),
                     recipientMode = recipientMode
                 )
-                if (senderId == accountId) {
+                if (senderId == accountId && !payload.optBoolean("comboReplay", false)) {
                     showLuckyComboButton = true
                     luckyComboTimeLeft = 5
                     val activeGeneration = ++luckyComboGeneration
