@@ -13,7 +13,7 @@ const BASE = "/Zyora-Voice-Chat";
 export default function DownloadPage() {
   return (
     <main
-      className="relative min-h-[100svh] w-full overflow-hidden bg-cover bg-center bg-no-repeat text-white"
+      className="relative mx-auto min-h-[100svh] w-full max-w-[480px] overflow-hidden bg-cover bg-center bg-no-repeat text-white"
       style={{ backgroundImage: `url("${BASE}/IMG_20261115_170818.png")` }}
     >
       <div className="absolute inset-0 bg-black/15" />
@@ -36,17 +36,17 @@ export default function DownloadPage() {
           <img
             src={`${BASE}/IMG_20261115_171617.png`}
             alt=""
-            className="h-[100vw] w-auto max-w-none shrink-0 snap-center rounded-md border-2 border-[#102f70] bg-[#07152e] object-contain"
+            className="h-[min(100vw,480px)] w-auto max-w-none shrink-0 snap-center rounded-md border-2 border-[#102f70] bg-[#07152e] object-contain"
           />
           <img
             src={`${BASE}/IMG_20261115_171557~2.jpg`}
             alt=""
-            className="h-[100vw] w-auto max-w-none shrink-0 snap-center rounded-md border-2 border-[#102f70] bg-[#07152e] object-contain"
+            className="h-[min(100vw,480px)] w-auto max-w-none shrink-0 snap-center rounded-md border-2 border-[#102f70] bg-[#07152e] object-contain"
           />
           <img
             src={`${BASE}/IMG_20261115_171647.png`}
             alt=""
-            className="h-[100vw] w-auto max-w-none shrink-0 snap-center rounded-md border-2 border-[#102f70] bg-[#07152e] object-contain"
+            className="h-[min(100vw,480px)] w-auto max-w-none shrink-0 snap-center rounded-md border-2 border-[#102f70] bg-[#07152e] object-contain"
           />
         </div>
       </div>
