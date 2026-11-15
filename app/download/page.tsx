@@ -28,7 +28,7 @@ export default function DownloadPage() {
         <h1 className="-mt-1 text-[32px] font-extrabold tracking-wide drop-shadow-lg">
           Zyora
         </h1>
-        <p className="-mt-1 text-[15px] font-medium tracking-wide drop-shadow-md">
+        <p className="-mt-1 text-[20px] font-medium tracking-wide drop-shadow-md">
           Every time with You
         </p>
 
@@ -36,7 +36,7 @@ export default function DownloadPage() {
           <img
             src={`${BASE}/IMG_20261115_171617.png`}
             alt=""
-            className="h-[100vw] w-[60vw] max-w-none shrink-0 snap-center rounded-md border-2 border-[#102f70] bg-[#07152e] object-contain"
+            className="h-[100vw] w-[62vw] max-w-none shrink-0 snap-center rounded-md border-2 border-[#102f70] bg-[#07152e] object-contain"
           />
           <img
             src={`${BASE}/IMG_20261115_171557~2.jpg`}
@@ -46,7 +46,7 @@ export default function DownloadPage() {
           <img
             src={`${BASE}/IMG_20261115_171647.png`}
             alt=""
-            className="h-[100vw] w-[65vw] max-w-none shrink-0 snap-center rounded-md border-2 border-[#102f70] bg-[#07152e] object-contain"
+            className="h-[100vw] w-[70vw] max-w-none shrink-0 snap-center rounded-md border-2 border-[#102f70] bg-[#07152e] object-contain"
           />
         </div>
       </div>
