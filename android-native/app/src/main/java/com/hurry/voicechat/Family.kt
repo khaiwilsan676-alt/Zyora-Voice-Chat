@@ -127,77 +127,86 @@ fun Family(onBack: () -> Unit) {
         }
     }
 
-    Box(Modifier.fillMaxSize().background(if (view == "create") Color.White else if (view == "top") familyBrown else familyDark)) {
-        when (view) {
-            "create" -> FamilyCreate(onBack = { view = "main" }, name = familyName, onName = { familyName = it }, announcement = announcement, onAnnouncement = { announcement = it }, image = familyImage, onImage = { imagePicker.launch(arrayOf("image/*")) }, mode = applyMode, onMode = { showApplyMode = true }, busy = createBusy, error = createError, onCreate = {
-                if (createBusy) return@FamilyCreate
-                if (familyName.isBlank()) {
-                    createError = "Please enter a Family Name."
-                } else {
-                    createBusy = true
-                    createError = null
-                    scope.launch {
-                        val result = withContext(Dispatchers.IO) {
-                            runCatching {
-                                val current = walletDao.getUserData() ?: UserDataEntity()
-                                if (current.balance < 10_000_000L) {
-                                    "You need 10,000,000 coins to create a family."
-                                } else {
-                                    walletDao.saveUserData(current.copy(balance = current.balance - 10_000_000L))
-                                    val now = System.currentTimeMillis()
-                                    walletDao.insertTransaction(TransactionEntity(
-                                        title = "Create Family", amount = -10_000_000L,
-                                        date = java.text.SimpleDateFormat("yyyy.MM.dd HH:mm", java.util.Locale.getDefault()).format(java.util.Date(now)),
-                                        timestamp = now, type = "coins"
-                                    ))
-                                    null
-                                }
-                            }.getOrElse { "Could not create family. Please try again." }
+    // Ekdam smooth background color transition 
+    val bgColor by androidx.compose.animation.animateColorAsState(
+        targetValue = if (view == "create") Color.White else if (view == "top") familyBrown else familyDark,
+        label = "bgColorTransition"
+    )
+
+    Box(Modifier.fillMaxSize().background(bgColor)) {
+        // Ekdam smooth View/Tab change transition using Crossfade
+        androidx.compose.animation.Crossfade(targetState = view, label = "viewFade") { currentView ->
+            when (currentView) {
+                "create" -> FamilyCreate(onBack = { view = "main" }, name = familyName, onName = { familyName = it }, announcement = announcement, onAnnouncement = { announcement = it }, image = familyImage, onImage = { imagePicker.launch(arrayOf("image/*")) }, mode = applyMode, onMode = { showApplyMode = true }, busy = createBusy, error = createError, onCreate = {
+                    if (createBusy) return@FamilyCreate
+                    if (familyName.isBlank()) {
+                        createError = "Please enter a Family Name."
+                    } else {
+                        createBusy = true
+                        createError = null
+                        scope.launch {
+                            val result = withContext(Dispatchers.IO) {
+                                runCatching {
+                                    val current = walletDao.getUserData() ?: UserDataEntity()
+                                    if (current.balance < 10_000_000L) {
+                                        "You need 10,000,000 coins to create a family."
+                                    } else {
+                                        walletDao.saveUserData(current.copy(balance = current.balance - 10_000_000L))
+                                        val now = System.currentTimeMillis()
+                                        walletDao.insertTransaction(TransactionEntity(
+                                            title = "Create Family", amount = -10_000_000L,
+                                            date = java.text.SimpleDateFormat("yyyy.MM.dd HH:mm", java.util.Locale.getDefault()).format(java.util.Date(now)),
+                                            timestamp = now, type = "coins"
+                                        ))
+                                        null
+                                    }
+                                }.getOrElse { "Could not create family. Please try again." }
+                            }
+                            createBusy = false
+                            if (result == null) {
+                                prefs.edit().putString("familyName", familyName.trim())
+                                    .putString("familyAnnouncement", announcement)
+                                    .putString("familyImage", familyImage)
+                                    .putString("applyMode", applyMode)
+                                    .putString("familyCode", prefs.getString("familyCode", "")?.ifBlank { "FAM" + System.currentTimeMillis().toString().takeLast(6) } ?: "FAM" + System.currentTimeMillis().toString().takeLast(6))
+                                    .putBoolean("familyCreated", true).apply()
+                                view = "top"
+                                Toast.makeText(context, "Family created successfully", Toast.LENGTH_SHORT).show()
+                            } else createError = result
                         }
-                        createBusy = false
-                        if (result == null) {
-                            prefs.edit().putString("familyName", familyName.trim())
-                                .putString("familyAnnouncement", announcement)
-                                .putString("familyImage", familyImage)
-                                .putString("applyMode", applyMode)
-                                .putString("familyCode", prefs.getString("familyCode", "")?.ifBlank { "FAM" + System.currentTimeMillis().toString().takeLast(6) } ?: "FAM" + System.currentTimeMillis().toString().takeLast(6))
-                                .putBoolean("familyCreated", true).apply()
-                            view = "top"
-                            Toast.makeText(context, "Family created successfully", Toast.LENGTH_SHORT).show()
-                        } else createError = result
                     }
-                }
-            })
-            "top" -> FamilyTop(
-                onBack = { 
-                    view = "main" 
-                    activeRank = 0
-                }, 
-                onRules = { showRules = true }, 
-                activeRank = activeRank, 
-                onRank = { 
-                    activeRank = it
-                    // Tab navigation logic inside Rewards view
-                    if (it == 0 || it == 1) {
-                        view = "main"
-                    }
-                }, 
-                onOpenModal = { url, title, isWinner, type -> activeModal = RewardModalData(url, title, isWinner, type) }
-            )
-            else -> FamilyHome(
-                onBack = onBack, 
-                onRules = { showRules = true }, 
-                seconds = seconds, 
-                activeRank = activeRank, 
-                onRank = { 
-                    activeRank = it
-                    // Tab navigation logic inside Home view
-                    if (it == 2) {
-                        view = "top" 
-                    }
-                }, 
-                onCreate = { view = "create" }
-            )
+                })
+                "top" -> FamilyTop(
+                    onBack = { 
+                        view = "main" 
+                        activeRank = 0
+                    }, 
+                    onRules = { showRules = true }, 
+                    activeRank = activeRank, 
+                    onRank = { 
+                        activeRank = it
+                        // Tab navigation logic inside Rewards view
+                        if (it == 0 || it == 1) {
+                            view = "main"
+                        }
+                    }, 
+                    onOpenModal = { url, title, isWinner, type -> activeModal = RewardModalData(url, title, isWinner, type) }
+                )
+                else -> FamilyHome(
+                    onBack = onBack, 
+                    onRules = { showRules = true }, 
+                    seconds = seconds, 
+                    activeRank = activeRank, 
+                    onRank = { 
+                        activeRank = it
+                        // Tab navigation logic inside Home view
+                        if (it == 2) {
+                            view = "top" 
+                        }
+                    }, 
+                    onCreate = { view = "create" }
+                )
+            }
         }
 
         if (activeModal != null) {
@@ -227,7 +236,7 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, ac
     val inactiveFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
 
     // Outer Box maintains the background and holds the Floating Button at the bottom
-    Box(Modifier.fillMaxSize().background(familyDark)) {
+    Box(Modifier.fillMaxSize().background(Color.Transparent)) {
         
         // Inner Box handles the scrolling content
         Box(Modifier.fillMaxSize().verticalScroll(scrollState)) {
@@ -268,8 +277,8 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, ac
                     AsyncImage(model = familyAsset("IMG_20261115_135339.png"), contentDescription = null, modifier = Modifier.align(Alignment.TopCenter).offset(y = (-10).dp).size(190.dp).zIndex(2f), contentScale = ContentScale.Fit)
                 }
 
-                // Gap increased between Podium and Tabs
-                Spacer(Modifier.height(25.dp))
+                // Gap increased between Podium and Tabs exactly to 35dp
+                Spacer(Modifier.height(35.dp))
 
                 // 3 Tabs (This week, Last week, Rewards) - EDGE TO EDGE (Alpha removed, colorless on inactive)
                 Row(
@@ -311,20 +320,20 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, ac
                     Text("%02d".format(seconds % 60), color = Color.White, modifier = Modifier.background(Color(0xFF1A0F02), RoundedCornerShape(4.dp)).padding(4.dp), fontWeight = FontWeight.Bold)
                 }
 
-                // Edge to Edge Top 1, 2, 3 Cards - Gap hata diya, sirf 5dp ouper shift hain
-                Box(Modifier.fillMaxWidth().wrapContentHeight().offset(y = (-5).dp)) {
+                // Edge to Edge Top 1, 2, 3 Cards - offset exactly at -10dp
+                Box(Modifier.fillMaxWidth().wrapContentHeight().offset(y = (-10).dp)) {
                     AsyncImage(model = familyAsset("IMG_20261115_134723.png"), contentDescription = null, modifier = Modifier.fillMaxWidth(), contentScale = ContentScale.FillWidth)
                 }
-                Box(Modifier.fillMaxWidth().wrapContentHeight().offset(y = (-5).dp)) {
+                Box(Modifier.fillMaxWidth().wrapContentHeight().offset(y = (-10).dp)) {
                     AsyncImage(model = familyAsset("IMG_20261115_134543.png"), contentDescription = null, modifier = Modifier.fillMaxWidth(), contentScale = ContentScale.FillWidth)
                 }
-                Box(Modifier.fillMaxWidth().wrapContentHeight().offset(y = (-5).dp)) {
+                Box(Modifier.fillMaxWidth().wrapContentHeight().offset(y = (-10).dp)) {
                     AsyncImage(model = familyAsset("IMG_20261115_134632.png"), contentDescription = null, modifier = Modifier.fillMaxWidth(), contentScale = ContentScale.FillWidth)
                 }
 
-                // RANKS 4 TO 50 WITH TEXT (Edge to Edge) - Gap hata diya, sirf 5dp ouper shift hain
+                // RANKS 4 TO 50 WITH TEXT (Edge to Edge) - offset exactly at -10dp
                 for (rank in 4..50) {
-                    Box(Modifier.fillMaxWidth().wrapContentHeight().offset(y = (-5).dp), contentAlignment = Alignment.CenterStart) {
+                    Box(Modifier.fillMaxWidth().wrapContentHeight().offset(y = (-10).dp), contentAlignment = Alignment.CenterStart) {
                         AsyncImage(model = familyAsset("IMG_20261115_134839.png"), contentDescription = null, modifier = Modifier.fillMaxWidth(), contentScale = ContentScale.FillWidth)
                         Text(rank.toString(), color = familyGold, fontSize = 22.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(start = 24.dp))
                     }
@@ -363,7 +372,7 @@ private fun FamilyTop(onBack: () -> Unit, onRules: () -> Unit, activeRank: Int, 
     val activeFilter = null
     val inactiveFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
 
-    Box(Modifier.fillMaxSize().background(familyBrown).verticalScroll(scrollState)) {
+    Box(Modifier.fillMaxSize().background(Color.Transparent).verticalScroll(scrollState)) {
         Box(Modifier.fillMaxWidth().height(400.dp)) {
             AsyncImage(model = familyAsset("IMG_20261115_203110-isme-jo-background-theme-hai-naa-bss-wohi-dee-sale-isme-jo-ek-tune-middle-m-divi.jpg"), contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
             Box(Modifier.fillMaxSize().background(Brush.verticalGradient(
@@ -386,8 +395,8 @@ private fun FamilyTop(onBack: () -> Unit, onRules: () -> Unit, activeRank: Int, 
                 AsyncImage(model = familyAsset("IMG_20261115_135339.png"), contentDescription = null, modifier = Modifier.align(Alignment.TopCenter).offset(y = (-10).dp).size(190.dp).zIndex(2f), contentScale = ContentScale.Fit)
             }
 
-            // Gap increased between Podium and Tabs
-            Spacer(Modifier.height(25.dp))
+            // Gap increased between Podium and Tabs exactly to 35dp
+            Spacer(Modifier.height(35.dp))
 
             // 3 Tabs in Rewards Page - EDGE TO EDGE (Alpha removed, colorless on inactive)
             Row(
@@ -637,7 +646,7 @@ private fun FamilyRewardVideo(
     val context = LocalContext.current
     val player = remember(url) {
         ExoPlayer.Builder(context).build().apply {
-            setMediaItem(MediaItem.fromUri(Uri.parse(url)))
+            setMediaItem(MediaItem.fromUri(url))
             repeatMode = Player.REPEAT_MODE_ONE
             volume = 0f
             playWhenReady = autoplay
