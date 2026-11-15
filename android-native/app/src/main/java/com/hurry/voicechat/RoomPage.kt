@@ -649,6 +649,7 @@ fun RoomPage(
 
     var miniMusicTrack by remember { mutableStateOf<NativeMusicTrack?>(null) }
     var musicControllerMinimized by remember { mutableStateOf(false) }
+    val musicCardDragOffset = remember { Animatable(0f) }
     var isMusicPlaying by remember { mutableStateOf(false) }
     var musicVolume by remember { mutableFloatStateOf(1f) }
     var repeatOneEnabled by remember { mutableStateOf(false) }
@@ -2195,17 +2196,38 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                     .height(160.dp)
                     .clip(RoundedCornerShape(12.dp))
                     .background(Color.Black)
+                    .graphicsLayer { translationY = musicCardDragOffset.value }
                     .pointerInput(Unit) {
-                        var downwardDrag = 0f
                         detectDragGestures(
                             onDragEnd = {
-                                if (downwardDrag > 80f) musicControllerMinimized = true
-                                downwardDrag = 0f
+                                val shouldMinimize = musicCardDragOffset.value > 90.dp.toPx()
+                                launch {
+                                    if (shouldMinimize) {
+                                        musicCardDragOffset.animateTo(
+                                            targetValue = size.height.toFloat(),
+                                            animationSpec = tween(durationMillis = 240, easing = FastOutSlowInEasing)
+                                        )
+                                        musicControllerMinimized = true
+                                        musicCardDragOffset.snapTo(0f)
+                                    } else {
+                                        musicCardDragOffset.animateTo(
+                                            targetValue = 0f,
+                                            animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium)
+                                        )
+                                    }
+                                }
                             },
-                            onDragCancel = { downwardDrag = 0f },
+                            onDragCancel = {
+                                launch {
+                                    musicCardDragOffset.animateTo(
+                                        targetValue = 0f,
+                                        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium)
+                                    )
+                                }
+                            },
                             onDrag = { change, dragAmount ->
                                 change.consume()
-                                downwardDrag += dragAmount.y
+                                launch { musicCardDragOffset.snapTo((musicCardDragOffset.value + dragAmount.y).coerceIn(0f, size.height.toFloat())) }
                             }
                         )
                     }
