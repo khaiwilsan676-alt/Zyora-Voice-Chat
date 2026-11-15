@@ -2647,7 +2647,7 @@ io.on("connection", (socket) => {
     }
   );
 
-  socket.on("coin_transfer", async ({ roomId, senderId, recipientIds, amount, giftName, giftImage, giftType, transferId, luckyGift, senderName, senderImage, recipientName, recipientImage, multiplier } = {}) => {
+  socket.on("coin_transfer", async ({ roomId, senderId, recipientIds, amount, giftName, giftImage, giftType, transferId, luckyGift, comboReplay, senderName, senderImage, recipientName, recipientImage, multiplier } = {}) => {
     const room = String(roomId || "");
     const sender = String(senderId || "");
     const value = Number(amount);
@@ -2762,6 +2762,7 @@ io.on("connection", (socket) => {
       giftImage: String(giftImage || ""),
       giftType: String(giftType || ""),
       luckyGift: isLucky,
+      comboReplay: comboReplay === true,
       senderName: String(senderName || senderUser?.name || "User"),
       senderImage: String(senderImage || senderUser?.image || "/default-avatar.png"),
       recipientName: String(recipientName || firstRecipient?.name || "User"),
