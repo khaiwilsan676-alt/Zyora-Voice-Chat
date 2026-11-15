@@ -1045,3 +1045,5 @@ Current documentation does not certify that all historical features are build-, 
 ## 15. Kept-room silent re-entry fix (2026-11-15)
 - `RoomPage.kt`: when a kept room's socket reconnects after transport loss, treat it as a silent session restore and do not replay the equipped vehicle preview. When the retained socket is already connected, refresh only room presence and seat snapshots.
 - `Zyora-Server/server.js`: honor the client's `suppressEntry` flag for silent kept-room restores, preventing duplicate `Enter the Room` messages and vehicle-entry broadcasts while allowing new chat messages and live room state to continue normally.
+
+- Room music controller: the top Music pill remains visible whenever a room track is active and tapping it restores the controller; the compact controller is independent of the pill, uses a pure black card background, and can be minimized by dragging the card downward. The pill disappears only when the controller's Power action stops playback. Existing playback controls and card dimensions remain unchanged.
