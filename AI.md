@@ -1015,13 +1015,6 @@ Current documentation does not certify that all historical features are build-, 
 - Invite bind records and counters are embedded in the existing `users` document; no new MongoDB collection is added. Owner Panel → Events → Bind User ID receives the inviter ID over Socket.IO and persists the list in browser IndexedDB, with a server sync request to recover records after the panel reconnects.
 - Updated native `HurryApi.kt`, `InviteFriends.kt`, Owner Panel `app/owner/page.tsx`, and Zyora Server `server.js`. Build and live multi-account verification are still required.
 
-
-## 2026-11-15 Invite bind rewards and Owner Panel history
-- Invite binding validates the target account and enforces one inviter per target inside the existing user document. A successful bind adds 250,000 pending reward coins and updates the inviter's invitation count and total rewards.
-- Claim credits the existing MongoDB `users.coins` balance and decrements pending reward coins in one conditional update.
-- Individual bind-history rows are no longer written to MongoDB. The Owner Panel Events > Bind User ID table displays the bound user's ID and persists rows in browser IndexedDB (`ZyoraOwnerInviteDB` / `bindUserIds`). The backend supplies a bounded in-memory reconnect handoff only; Owner Panel IndexedDB is the durable history store.
-- Status: source changes implemented; native APK build, Render deployment, and two-account bind/claim plus Owner Panel browser persistence tests remain pending.
-
 ## 2026-11-15 — Visitor profile matching, live history, and total view count
 - Fixed native MeScreen visitor-event matching to accept the signed-in account ID and Firebase UID aliases, so live profile visits are not discarded when the server emits the canonical profile account ID or UID.
 - My Visitors now updates an existing visitor row on repeat visits, increments that person's viewCount, and refreshes lastViewedAt instead of creating duplicate rows for every view. FollowPage applies the same local IndexDB aggregation for live events.
