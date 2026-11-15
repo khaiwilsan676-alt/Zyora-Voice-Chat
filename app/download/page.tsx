@@ -22,13 +22,13 @@ export default function DownloadPage() {
         <img
           src={`${BASE}/logo.png`}
           alt="Zyora"
-          className="h-[88px] w-[88px] rounded-[25px] object-cover shadow-2xl"
+          className="h-[88px] w-[88px] rounded-[10px] object-cover shadow-2xl"
         />
 
-        <h1 className="mt-3 text-[32px] font-extrabold tracking-wide drop-shadow-lg">
+        <h1 className="-mt-1 text-[32px] font-extrabold tracking-wide drop-shadow-lg">
           Zyora
         </h1>
-        <p className="mt-1 text-[15px] font-medium tracking-wide drop-shadow-md">
+        <p className="-mt-1 text-[15px] font-medium tracking-wide drop-shadow-md">
           Every time with You
         </p>
 
@@ -36,17 +36,17 @@ export default function DownloadPage() {
           <img
             src={`${BASE}/IMG_20261115_171617.png`}
             alt=""
-            className="h-[107.5vw] w-[55vw] max-w-none shrink-0 snap-center rounded-[22px] border-2 border-[#102f70] bg-[#07152e] object-contain"
+            className="h-[107.5vw] w-[50vw] max-w-none shrink-0 snap-center rounded-md border-2 border-[#102f70] bg-[#07152e] object-contain"
           />
           <img
             src={`${BASE}/IMG_20261115_171557~2.jpg`}
             alt=""
-            className="h-[107.5vw] w-[58vw] max-w-none shrink-0 snap-center rounded-[22px] border-2 border-[#102f70] bg-[#07152e] object-contain"
+            className="h-[107.5vw] w-[45vw] max-w-none shrink-0 snap-center rounded-md border-2 border-[#102f70] bg-[#07152e] object-contain"
           />
           <img
             src={`${BASE}/IMG_20261115_171647.png`}
             alt=""
-            className="h-[107.5vw] w-[58vw] max-w-none shrink-0 snap-center rounded-[22px] border-2 border-[#102f70] bg-[#07152e] object-contain"
+            className="h-[107.5vw] w-[45vw] max-w-none shrink-0 snap-center rounded-md border-2 border-[#102f70] bg-[#07152e] object-contain"
           />
         </div>
       </div>
