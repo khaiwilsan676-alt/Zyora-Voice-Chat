@@ -2830,14 +2830,9 @@ io.on("connection", (socket) => {
     const validAudio = Buffer.isBuffer(audio) ? audio.length > 0 && audio.length <= 4096
       : Array.isArray(audio) && audio.length > 0 && audio.length <= 4096;
     if (!validAudio) return;
-    // Fan out to other accounts. socket.to() excludes only this socket, so a
-    // duplicate session for the same account could otherwise hear its own song.
-    for (const peer of io.sockets.sockets.values()) {
-      if (peer.id === socket.id || !peer.rooms.has("room:" + room)) continue;
-      const peerAccountId = String(peer.roomAccountId || peer.accountId || "");
-      if (peerAccountId === accountId) continue;
-      peer.emit("room_music_chunk", { roomId: room, userId: accountId }, audio);
-    }
+    // Preserve Socket.IO room fanout: it reliably reaches every other joined
+    // client socket while excluding this publishing socket.
+    socket.to("room:" + room).emit("room_music_chunk", { roomId: room, userId: accountId }, audio);
   });
 
   socket.on("room_voice_chunk", (data = {}, binaryAudio) => {
@@ -2860,14 +2855,9 @@ io.on("connection", (socket) => {
     const validAudio = Buffer.isBuffer(audio) ? audio.length > 0 && audio.length <= 4096
       : Array.isArray(audio) && audio.length > 0 && audio.length <= 4096;
     if (!validAudio) return;
-    // Exclude every socket belonging to the publishing account, not only
-    // this socket. Deliver each mic frame to every other joined account.
-    for (const peer of io.sockets.sockets.values()) {
-      if (peer.id === socket.id || !peer.rooms.has("room:" + room)) continue;
-      const peerAccountId = String(peer.roomAccountId || peer.accountId || "");
-      if (peerAccountId === accountId) continue;
-      peer.emit("room_voice_chunk", { roomId: room, userId: accountId }, audio);
-    }
+    // Preserve Socket.IO room fanout so every other joined client receives
+    // the microphone frame; the sender socket is excluded automatically.
+    socket.to("room:" + room).emit("room_voice_chunk", { roomId: room, userId: accountId }, audio);
   });
 
   socket.on("room_voice_activity", (data = {}) => {
