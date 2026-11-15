@@ -1068,3 +1068,9 @@ Current documentation does not certify that all historical features are build-, 
 - Native RoomPage now initializes public messaging as ON (`publicMsgOff=false`) and treats a missing saved setting as ON.
 - A persisted owner setting of OFF (`publicMsgOff=true`) still blocks normal users; turning it back ON allows them to send again. Owner/admin permission behavior, message transport, and UI are unchanged.
 - Source commit: d228c6ad149e805b5e15a39a891c599f2b92b18f. Android build and live multi-user room test remain pending.
+
+
+## 2026-11-16 — Daisy AI image and video attachments
+- Native Daisy AI composer now has the same image attachment icon pattern as Message chat and opens the system picker for images/videos. Attachments are uploaded to the existing MongoDB media endpoint under a dedicated `daisy-support-media` folder, limited to 5 MB and supported JPEG/PNG/WebP/GIF/MP4/WebM/QuickTime types.
+- Daisy chat snapshots carry the media URL and media type through the existing `ai_support_message` Socket.IO event. The Owner Panel AI Chats conversation renders image previews and playable video controls for those messages.
+- Existing text messages, Daisy automation, native `index.db` history, Owner Panel IndexedDB history, and existing chat layout remain unchanged. Build, Render deployment, and real-device/Owner Panel verification are still required.
