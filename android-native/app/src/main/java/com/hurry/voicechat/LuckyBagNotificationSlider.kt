@@ -1,6 +1,10 @@
 package com.hurry.voicechat
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.foundation.MarqueeSpacing
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.text.style.TextAlign
@@ -120,8 +124,25 @@ fun LuckyBagNotificationSlider(currentUserId: String, onGoToRoom: (String, Strin
         ) {
             val item = banner
             if (item != null) {
-                // Modified Box: FillWidth ke liye default height hataya aur matchParentSize ka use kiya
-                Box(Modifier.fillMaxWidth().defaultMinSize(minHeight = 76.dp)) {
+                // Fade-in/out edges fix lagaya hai yaha graphicsLayer aur drawWithContent ke sath
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .defaultMinSize(minHeight = 76.dp)
+                        .graphicsLayer { alpha = 0.99f } // BlendMode ke liye alpha chahiye
+                        .drawWithContent {
+                            drawContent()
+                            drawRect(
+                                brush = Brush.horizontalGradient(
+                                    0.0f to Color.Transparent,
+                                    0.05f to Color.Black, // Left se thoda fade hoke normal
+                                    0.95f to Color.Black, // Right se fade start
+                                    1.0f to Color.Transparent
+                                ),
+                                blendMode = BlendMode.DstIn
+                            )
+                        }
+                ) {
                     AsyncImage(
                         model = LUCKY_BAG_BANNER_IMAGE,
                         contentDescription = null,
@@ -152,20 +173,35 @@ fun LuckyBagNotificationSlider(currentUserId: String, onGoToRoom: (String, Strin
                                     modifier = Modifier.weight(1f, fill = false)
                                 )
                                 Spacer(Modifier.width(5.dp))
-                                Box(Modifier.size(23.dp), contentAlignment = Alignment.Center) {
+                                
+                                // Countdown Black/20 Circle card mein dal diya
+                                Box(
+                                    Modifier
+                                        .size(23.dp)
+                                        .background(Color.Black.copy(alpha = 0.2f), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
                                     Text(seconds.toString(), color = Color(0xFFFFE6A0), fontSize = 10.sp, fontWeight = FontWeight.Bold)
                                 }
                             }
+                            
+                            // Text color White kar diya, aur basicMarquee mein 14dp gap (MarqueeSpacing) laga diya
                             Text(
                                 "Sent ${item.amount} Coins Lucky Bag · ${item.roomName}",
-                                color = Color(0xFFFFE5A1),
+                                color = Color.White,
                                 fontSize = 12.sp,
                                 maxLines = 1,
                                 overflow = TextOverflow.Clip,
-                                modifier = Modifier.basicMarquee(iterations = Int.MAX_VALUE)
+                                modifier = Modifier.basicMarquee(
+                                    iterations = Int.MAX_VALUE,
+                                    spacing = MarqueeSpacing(14.dp) // Scroll ke beech 14dp ka gap
+                                )
                             )
                         }
-                        Spacer(Modifier.width(5.dp))
+                        
+                        // 14dp Gap idhar bhi de diya column aur GO Button ke middle me
+                        Spacer(Modifier.width(14.dp))
+                        
                         Box(
                             Modifier
                                 .offset(x = 5.dp)
