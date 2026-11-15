@@ -141,13 +141,9 @@ fun InviteFriends(onBack: (() -> Unit)? = null, onClose: (() -> Unit)? = null) {
     
     var isSheetOpen by remember { mutableStateOf(false) }
     var copied by remember { mutableStateOf(false) }
-    var bindTargetId by remember { mutableStateOf("") }
-    var bindBusy by remember { mutableStateOf(false) }
     var inviteCount by remember { mutableIntStateOf(0) }
     var inviteTotalRewards by remember { mutableLongStateOf(0L) }
     var invitePendingCoins by remember { mutableLongStateOf(0L) }
-    var inviteMessage by remember { mutableStateOf("") }
-    var inviteMessageError by remember { mutableStateOf(false) }
     val inviteScope = rememberCoroutineScope()
     LaunchedEffect(code) {
         if (code.isNotBlank()) {
@@ -242,50 +238,13 @@ fun InviteFriends(onBack: (() -> Unit)? = null, onClose: (() -> Unit)? = null) {
             ) {
                 Box(Modifier.fillMaxWidth()) {
                     InviteArt("1788074201753~2.jpg", Modifier.fillMaxWidth().wrapContentHeight(), key = InviteKey.GREEN)
-                    Row(
-                        Modifier.fillMaxWidth().align(Alignment.BottomCenter).padding(start = 30.dp, end = 30.dp, bottom = 15.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        OutlinedTextField(
-                            value = bindTargetId,
-                            onValueChange = { bindTargetId = it.filter(Char::isDigit).take(20) },
-                            modifier = Modifier.weight(1f).height(48.dp),
-                            singleLine = true,
-                            placeholder = { Text("Enter User ID", fontSize = 12.sp, color = Color.White.copy(alpha = .7f)) },
-                            textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 13.sp),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = Color(0xFFFF5555), unfocusedBorderColor = Color(0xFFDA3333),
-                                focusedContainerColor = Color(0xFFB91525), unfocusedContainerColor = Color(0xFFB91525),
-                                cursorColor = Color.White
-                            )
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Button(
-                            enabled = !bindBusy && bindTargetId.isNotBlank() && code.isNotBlank(),
-                            onClick = {
-                                bindBusy = true
-                                inviteScope.launch {
-                                    val result = HurryApi.bindInvite(code, bindTargetId.trim(), inviteIdToken)
-                                    bindBusy = false
-                                    if (result?.optBoolean("success") == true) {
-                                        inviteCount = result.optInt("invitationCount", inviteCount + 1)
-                                        invitePendingCoins = result.optLong("pendingCoins", invitePendingCoins + 250000L)
-                                        inviteTotalRewards = result.optLong("totalRewards", inviteTotalRewards + 250000L)
-                                        bindTargetId = ""
-                                        inviteMessage = "User successfully bind"
-                                        inviteMessageError = false
-                                    } else {
-                                        inviteMessage = result?.optString("error")?.takeIf { it.isNotBlank() && it != "null" } ?: "Unable to bind user. Please retry."
-                                        inviteMessageError = true
-                                    }
-                                }
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD92335)),
-                            contentPadding = PaddingValues(horizontal = 15.dp, vertical = 4.dp),
-                            modifier = Modifier.height(42.dp)
-                        ) { Text(if (bindBusy) "..." else "Bind", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
-                    }
+                    Text(
+                        "Friends Invite 0",
+                        modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 15.dp),
+                        color = inviteYellow,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
 
                 Box(Modifier.fillMaxWidth()) {
@@ -411,13 +370,6 @@ fun InviteFriends(onBack: (() -> Unit)? = null, onClose: (() -> Unit)? = null) {
             }
         }
     }
-
-    if (inviteMessage.isNotBlank()) AlertDialog(
-        onDismissRequest = { inviteMessage = "" },
-        title = { Text(if (inviteMessageError) "Invite" else "Success") },
-        text = { Text(inviteMessage) },
-        confirmButton = { TextButton(onClick = { inviteMessage = "" }) { Text("OK") } }
-    )
 
     if (inviteRules) InviteRulesDialog(
         text = "If invite friend download & enter the Invite code in the input Given. Then a Inverter will Receive a 250,000Coins rewards hand to hand in there coins wallet",
