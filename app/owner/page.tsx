@@ -2894,7 +2894,7 @@ export default function StaffPanel() {
                       }
                       if (!window.confirm('Broadcast this message to all registered Zyora users?')) return;
                       setOfficialSending(true);
-                      socket.timeout(60000).emit('send_official_message', {
+                      socket.timeout(600000).emit('send_official_message', {
                         id: `official_broadcast_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
                         senderId: officialSender,
                         text: officialText.trim(),
