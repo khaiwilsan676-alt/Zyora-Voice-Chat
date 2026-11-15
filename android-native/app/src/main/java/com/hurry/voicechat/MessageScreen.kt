@@ -1310,17 +1310,23 @@ fun NativeChatScreen(
             }
         }
 
+        // Live broadcasts use the dedicated event; offline Redis replay uses
+        // the standard private_message event. Listen to both and let the local
+        // message-ID dedupe prevent a double insert when both arrive online.
+        val privateOfficialListener = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
+            if (payload.optString("senderId") == officialId) appendOfficial(payload)
+        }
         officialSocket.on("official_broadcast_message", liveListener)
+        officialSocket.on("private_message", privateOfficialListener)
         officialSocket.on("official_message_history_response", historyListener)
         officialSocket.on(Socket.EVENT_CONNECT) {
-            // Targeted Owner Panel messages are emitted to user:<Firebase UID> and
-            // user:<Zyora account ID> rooms. This dedicated official-chat socket
-            // must register both identities too; otherwise it connects successfully
-            // but can never receive a private official message addressed to this user.
+            // Register the real Firebase UID and the permanent Zyora account ID.
+            // The account ID alone is not a substitute for the UID identity room.
             officialSocket.emit(
                 "register",
                 JSONObject()
-                    .put("userId", currentUserId)
+                    .put("userId", currentAuthUid)
                     .put("accountId", currentAccountId)
             )
             val lastTimestamp = prefs.getLong("${cacheKey}_last_timestamp", 0L)
@@ -1333,6 +1339,7 @@ fun NativeChatScreen(
 
         onDispose {
             officialSocket.off("official_broadcast_message", liveListener)
+            officialSocket.off("private_message", privateOfficialListener)
             officialSocket.off("official_message_history_response", historyListener)
             officialSocket.disconnect()
             officialSocket.close()
