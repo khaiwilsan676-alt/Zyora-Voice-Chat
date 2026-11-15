@@ -1028,3 +1028,10 @@ Current documentation does not certify that all historical features are build-, 
 - `app/owner/page.tsx`: both Enter and Send now wait for the backend acknowledgement. The draft is cleared only after `ok: true`; failed delivery remains in the input and is logged instead of silently appearing sent.
 - Daisy STOP remains an automation-only switch; it does not block owner replies. Native UI, message layout, and local `index.db` chat persistence are unchanged.
 - Status: **Implemented in repository**. Backend deployment, Owner Panel deployment, native APK build, and two-account device delivery still require verification; do not claim runtime delivery is verified until tested.
+
+
+## 2026-11-15 — My Visitors identity-alias delivery correction
+- Root cause follow-up: the production visitor relay previously emitted only to the canonical account ID and Firebase UID/legacy ID. Accounts registered through an account-number or legacy app-long-ID alias could therefore miss the live visit event even though the profile visit POST succeeded.
+- `Zyora-Server/server.js`: the profile-visit relay now includes every known profile identity alias (`accountId`, `accountNumber`, `uid`, `id`, `appLongId`, and the requested profile ID`) and emits the same live event to each corresponding `user:<identity>` room. No visitor history is persisted on the server or in MongoDB.
+- Native `MeScreen.kt` and `Followpage.kt` now accept events matching any supplied profile alias before writing the received visitor row to that profile owner's local native `index.db`. Existing row aggregation, repeat-view count, view timestamp, and UI are retained.
+- Source commits: production server `ab02d83`; native MeScreen `347d62e`; native Followpage `80f0c46`. Render deployment, native APK build, and real two-account live-view verification are still required.
