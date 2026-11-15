@@ -505,7 +505,7 @@ private fun FamilyCreate(onBack:()->Unit, name:String, onName:(String)->Unit, an
                 // APPLY MODE HATA DIYA GAYA HAI YAHAN SE
 
                 if (error != null) {
-                    Text(error, color = Color(0xFFDC2626), fontSize = 13.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(horizontal = 20.dp, top = 8.dp))
+                    Text(error, color = Color(0xFFDC2626), fontSize = 13.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp))
                 }
             }
 
