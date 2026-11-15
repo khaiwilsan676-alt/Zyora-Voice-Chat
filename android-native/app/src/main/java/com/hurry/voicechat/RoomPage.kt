@@ -1467,7 +1467,9 @@ fun RoomPage(
             currentProfileKeys.forEach { profileDb.saveProfile(it, currentProfile) }
             val joinPayload = JSONObject().put("roomId",roomId).put("userId",currentUser.uid.ifBlank{currentUser.id.ifBlank{accountId}}).put("accountId",accountId).put("roomOwnerId",roomOwner.uid.ifBlank{roomOwner.id.ifBlank{roomOwner.accountId.ifBlank{roomId}}}).put("name",latestRoomDisplayName).put("dp",latestRoomDisplayImage).put("roomName",latestRoomName).put("roomImage",latestRoomImage).put("suppressEntry", joinMessageSent)
             roomSocket.emit("room_join",joinPayload)
-            loadEquippedRoomVehicle()
+            // A kept-room reconnect restores the existing room session. Do not replay
+            // the entry vehicle animation when silently restoring that session.
+            if (!joinMessageSent) loadEquippedRoomVehicle()
             if (latestShowChat) roomSocket.emit("room_chat_view", JSONObject().put("roomId", roomId).put("userId", accountId).put("active", true))
             if (!joinMessageSent && accountId != "guest") {
                 joinMessageSent = true
@@ -1518,7 +1520,6 @@ fun RoomPage(
         roomSocket.on("wallet_balance_updated",walletBalanceListener)
         roomSocket.on(Socket.EVENT_CONNECT,connectListener)
         if (roomSocket.connected()) {
-            loadEquippedRoomVehicle()
             // The retained socket is already a room member. Only refresh snapshots;
             // do not emit room_join or generate another "Enter the Room" event.
             roomSocket.emit("room_presence_request", JSONObject().put("roomId", roomId))
