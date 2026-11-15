@@ -26,14 +26,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.PathOperation
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.Layout
@@ -41,6 +45,8 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.text.PlatformTextStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -341,22 +347,26 @@ fun GiftPicker(
                 dialogWindow?.setBackgroundDrawableResource(android.R.color.transparent)
                 dialogWindow?.decorView?.setBackgroundColor(android.graphics.Color.TRANSPARENT)
                 dialogWindow?.setDimAmount(0f)
-                dialogWindow?.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+                dialogWindow?.clearFlags(WindowManager.LayoutParams.FLAGDIM_BEHIND)
             }
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
                 BoxWithConstraints(
                     Modifier
                         .fillMaxWidth()
                         .fillMaxHeight(0.52f)
-                        .background(Color(0xEB000000))
-                        .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)) // strictly 12dp curve
+                        .background(
+                            color = Color(0xEB000000),
+                            shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)
+                        )
+                        .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)) 
                         .border(
                             1.dp,
                             Color.White.copy(alpha = 0.10f),
                             RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp),
                         )
                         .navigationBarsPadding()
-                        .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 12.dp),
+                        // Right side padding (end) reduced to push icons to the right end
+                        .padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 12.dp),
                 ) {
                     Column(Modifier.fillMaxSize()) {
 
@@ -372,7 +382,7 @@ fun GiftPicker(
                             LazyRow(
                                 Modifier
                                     .weight(1f)
-                                    .padding(end = 8.dp),
+                                    .padding(end = 4.dp),
                                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                             ) {
                                 items(seats.filter { it.occupied && it.accountId.isNotBlank() },
@@ -403,9 +413,9 @@ fun GiftPicker(
 
                             // ── MIC / HOUSE buttons ──
                             Row(
-                                horizontalArrangement = Arrangement.spacedBy(4.dp), // Gap decreased
+                                horizontalArrangement = Arrangement.spacedBy(2.dp), 
                                 verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(start = 8.dp) // Mic right side slightly shifted
+                                modifier = Modifier.padding(start = 2.dp) 
                             ) {
                                 RecipientButton(
                                     isActive = recipientMode == RecipientMode.MIC,
@@ -483,8 +493,8 @@ fun GiftPicker(
                         ) {
                             LazyVerticalGrid(
                                 columns = GridCells.Fixed(4),
-                                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                verticalArrangement = Arrangement.spacedBy(4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(2.dp), // Gap Decreased
+                                verticalArrangement = Arrangement.spacedBy(0.dp), // Gap ekdam decrease
                                 modifier = Modifier.fillMaxSize(),
                             ) {
                                 items(currentGifts, key = { it.id }) { gift ->
@@ -550,14 +560,15 @@ fun GiftPicker(
                                                     shape = RoundedCornerShape(6.dp),
                                                     border = BorderStroke(1.dp, Color.White.copy(alpha = 0.15f)),
                                                     shadowElevation = 8.dp,
-                                                    modifier = Modifier.wrapContentWidth()
+                                                    modifier = Modifier.width(30.dp)
                                                 ) {
-                                                    Column(Modifier.padding(2.dp)) {
+                                                    Column(Modifier.padding(0.dp)) {
                                                         multipliers.forEach { m ->
                                                             val active = selectedMultiplier == m
                                                             Box(
                                                                 Modifier
                                                                     .fillMaxWidth()
+                                                                    .background(if (active) Blue600 else Color.Transparent)
                                                                     .clickable {
                                                                         selectedMultiplier = m
                                                                         showMultipliers = false
@@ -565,20 +576,12 @@ fun GiftPicker(
                                                                     .padding(vertical = 4.dp), 
                                                                 contentAlignment = Alignment.Center,
                                                             ) {
-                                                                // Highlight specific to text, not covering full width
-                                                                Box(
-                                                                    Modifier
-                                                                        .clip(RoundedCornerShape(4.dp))
-                                                                        .background(if (active) Blue600 else Color.Transparent)
-                                                                        .padding(horizontal = 10.dp, vertical = 4.dp) 
-                                                                ) {
-                                                                    Text(
-                                                                        text = m,
-                                                                        color = if (active) Color.White else Color(0xFFD1D5DB),
-                                                                        fontSize = 12.sp,
-                                                                        fontWeight = FontWeight.Medium,
-                                                                    )
-                                                                }
+                                                                Text(
+                                                                    text = m,
+                                                                    color = if (active) Color.White else Color(0xFFD1D5DB),
+                                                                    fontSize = 10.sp, 
+                                                                    fontWeight = FontWeight.Medium,
+                                                                )
                                                             }
                                                         }
                                                     }
@@ -586,20 +589,17 @@ fun GiftPicker(
                                             }
                                         ) { measurables, constraints ->
                                             val placeable = measurables.first().measure(constraints)
-                                            // report 0x0 size so parent layout is completely unaffected!
                                             layout(0, 0) {
-                                                // Place exactly above the send button area
                                                 placeable.place(0, -placeable.height - 15)
                                             }
                                         }
                                     }
 
-                                    // Main Button Container (3D Look base)
+                                    // Main Button Container
                                     Row(
                                         Modifier
-                                            .shadow(elevation = 6.dp, shape = RoundedCornerShape(50)) 
                                             .clip(RoundedCornerShape(50))
-                                            .background(Color(0xFF1E293B)) 
+                                            .background(Color.Transparent) 
                                             .border(1.dp, Blue500.copy(alpha = 0.6f), RoundedCornerShape(50)),
                                     ) {
                                         // 1x Multiplier Part
@@ -701,7 +701,7 @@ private fun GiftCard(
                 if (isSelected) Color.Gray.copy(alpha = 0.35f) else Color.Transparent 
             )
             .clickable { onClick() }
-            .padding(horizontal = 2.dp, vertical = 6.dp),
+            .padding(horizontal = 2.dp, vertical = 2.dp), // Padding vertical decrease to close gap
     ) {
         // Lucky badge
         if (activeTab == "Lucky") {
@@ -791,7 +791,7 @@ private fun GiftCard(
             Spacer(Modifier.height(0.dp))
 
             Row(
-                modifier = Modifier.offset(y = (-2).dp),
+                modifier = Modifier.offset(y = (-6).dp), // Thoda upar kar diya Image or value ko name ki taraf
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,
             ) {
@@ -826,7 +826,8 @@ private fun RecipientButton(
     iconType: RecipientIconType,
 ) {
     val iconColor = if (isActive) Blue500 else Color(0xFF9CA3AF)
-    Box(Modifier.width(52.dp).height(50.dp), contentAlignment = Alignment.TopCenter) {
+    // Box width reduced slightly to decrease the extra gap
+    Box(Modifier.width(44.dp).height(50.dp), contentAlignment = Alignment.TopCenter) {
         Box(
             Modifier
                 .size(38.dp)
@@ -861,7 +862,7 @@ private fun RecipientButton(
                     iconPath.lineTo(11.61f * sx, 21.88f * sy)
                     iconPath.lineTo(13.41f * sx, 21.88f * sy)
                     iconPath.lineTo(13.41f * sx, 18.96f * sy)
-                    iconPath.cubicTo(16.96f * sx, 18.54f * sy, 19.81f * sx, 15.54f * sy, 19.81f * sx, 11.88f * sy)
+                    iconPath.cubicTo(16.96f * sx, 18.54f * sy, 19.81f * sx, 15.54f * sy, 19.81f * sy, 11.88f * sy)
                     iconPath.cubicTo(19.81f * sx, 11.39f * sy, 19.4f * sx, 11f * sy, 18.91f * sx, 11f * sy)
                     iconPath.close()
                     drawPath(path = iconPath, color = iconColor)
@@ -911,14 +912,18 @@ private fun RecipientButton(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .offset(x = (-2).dp, y = (-2).dp)
-                .height(13.dp), // Height strictly reduced 
+                .height(13.dp), 
         ) {
             Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(horizontal = 4.dp)) {
                 Text(
                     text = "All",
                     color = Color.White,
-                    fontSize = 7.sp, // Font size chota kar diya uske according
+                    fontSize = 7.sp,
                     fontWeight = FontWeight.Medium,
+                    textAlign = TextAlign.Center,
+                    style = TextStyle(
+                        platformStyle = PlatformTextStyle(includeFontPadding = false)
+                    )
                 )
             }
         }
@@ -926,7 +931,7 @@ private fun RecipientButton(
 }
 
 // ============================================================
-// VIDEO OVERLAY
+// VIDEO OVERLAY (CONTROLLERS REMOVED, DIRECT SHOW)
 // ============================================================
 @Composable
 private fun VideoEffectOverlay(
@@ -936,6 +941,7 @@ private fun VideoEffectOverlay(
     onStarted: () -> Unit,
 ) {
     val isFade = style == "fade"
+    val isPure = style == "pure"
     var show by remember { mutableStateOf(true) }
 
     LaunchedEffect(src) { onStarted() }
@@ -944,20 +950,24 @@ private fun VideoEffectOverlay(
     Box(
         Modifier
             .fillMaxSize()
-            .background(Color.Transparent),
+            .background(Color.Transparent)
+            .then(
+                // Yeh modifier Autumn video ke liye pure black ko screen/mix kar ke transparent karega
+                if (isPure) Modifier.graphicsLayer {
+                    compositingStrategy = CompositingStrategy.Offscreen
+                    blendMode = BlendMode.Screen
+                } else Modifier
+            ),
         contentAlignment = Alignment.Center,
     ) {
         AndroidView(
             factory = { ctx ->
                 VideoView(ctx).apply {
-                    // Gift catalogue stores public asset paths, not Android content/file URIs.
                     setVideoURI(Uri.parse(giftAssetUrl(src)))
                     setOnPreparedListener { mp ->
                         mp.isLooping = false
                         mp.setVolume(0f, 0f)
-                        val controller = android.widget.MediaController(ctx)
-                        controller.setAnchorView(this)
-                        setMediaController(controller)
+                        // Media Controller Hata Diya! Direct video play bina kisi delay/controls ke
                         start()
                     }
                     setOnCompletionListener { onFinished() }
@@ -967,10 +977,27 @@ private fun VideoEffectOverlay(
                     }
                 }
             },
-            modifier = if (isFade) Modifier.fillMaxSize()
-            else Modifier
-                .fillMaxWidth(0.72f)
-                .fillMaxHeight(0.72f),
+            modifier = Modifier
+                .fillMaxWidth() // Full Wide
+                .wrapContentHeight() // Height same as video
+                .then(
+                    // Yeh modifier King aur Teddy ke liye Top & Bottom me exactly 10% Fade daalega
+                    if (isFade) Modifier
+                        .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                        .drawWithContent {
+                            drawContent()
+                            drawRect(
+                                brush = Brush.verticalGradient(
+                                    0.0f to Color.Transparent,
+                                    0.1f to Color.Black,
+                                    0.9f to Color.Black,
+                                    1.0f to Color.Transparent
+                                ),
+                                blendMode = BlendMode.DstIn
+                            )
+                        }
+                    else Modifier
+                )
         )
     }
 }
@@ -1008,7 +1035,7 @@ fun LuckyGiftNotificationSlider(
         exit = slideOutHorizontally(targetOffsetX = { -it }) + fadeOut(),
         modifier = Modifier
             .fillMaxWidth()
-            .padding(bottom = 60.dp),
+            .padding(bottom = 50.dp), // FIXED: 50dp exactly as requested
     ) {
         if (notice == null) return@AnimatedVisibility
         val isBroadcast = notice.recipientMode == RecipientMode.MIC ||
@@ -1037,8 +1064,10 @@ fun LuckyGiftNotificationSlider(
                         endX = Float.POSITIVE_INFINITY,
                     )
                 )
-                .padding(start = 3.dp, end = 48.dp, top = 2.dp, bottom = 2.dp)
-                .widthIn(min = 280.dp),
+                // PATLI PATTI: Padding and height reduced completely
+                .padding(start = 2.dp, end = 32.dp, top = 1.dp, bottom = 1.dp)
+                .height(38.dp)
+                .widthIn(min = 250.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             AsyncImage(
@@ -1046,15 +1075,15 @@ fun LuckyGiftNotificationSlider(
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
-                    .size(36.dp)
+                    .size(32.dp) // Adjusted size for thin look
                     .clip(CircleShape),
             )
-            Spacer(Modifier.width(8.dp))
-            Column(Modifier.widthIn(max = 110.dp)) {
+            Spacer(Modifier.width(6.dp))
+            Column(Modifier.widthIn(max = 110.dp), verticalArrangement = Arrangement.Center) {
                 Text(
                     text = topText,
                     color = Color.White,
-                    fontSize = 11.sp,
+                    fontSize = 10.sp, // Font thoda chota for patli patti
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -1062,22 +1091,22 @@ fun LuckyGiftNotificationSlider(
                 Text(
                     text = bottomText,
                     color = Color.White.copy(alpha = 0.9f),
-                    fontSize = 10.sp,
+                    fontSize = 9.sp, // Font chota
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(6.dp))
             AsyncImage(
                 model = notice.giftImage,
                 contentDescription = null,
                 contentScale = ContentScale.Fit,
-                modifier = Modifier.size(30.dp),
+                modifier = Modifier.size(26.dp), // Gift icon chota kiya
             )
             Text(
                 text = "×${notice.multiplier}",
                 color = Color.White,
-                fontSize = 19.sp,
+                fontSize = 16.sp, // Reduced font for thinner view
                 fontWeight = FontWeight.Black,
                 fontStyle = FontStyle.Italic,
                 modifier = Modifier.padding(start = 4.dp),
@@ -1087,7 +1116,7 @@ fun LuckyGiftNotificationSlider(
 }
 
 // ============================================================
-// LUCKY COMBO BUTTON
+// LUCKY COMBO BUTTON (MODIFIED FOR SIZE AND SMOOTH ARC)
 // ============================================================
 @Composable
 fun LuckyComboButton(
@@ -1117,13 +1146,25 @@ fun LuckyComboButton(
         label = "alpha",
     )
 
+    // NEW LOGIC FOR SMOOTH COUNTDOWN ARC
+    val progressPercent = maxOf(0f, timeLeft.toFloat() / maxTime)
+    val animatedProgress by animateFloatAsState(
+        targetValue = progressPercent,
+        animationSpec = tween(
+            durationMillis = 1000, // 1 second continuous linear animation so it doesn't skip/jump
+            easing = LinearEasing
+        ),
+        label = "smoothProgress"
+    )
+
     Box(
         Modifier
             .fillMaxSize()
-            .padding(end = 24.dp, bottom = 60.dp),
+            .padding(end = 24.dp, bottom = 50.dp), // FIXED: 50dp from bottom ekdam exact
         contentAlignment = Alignment.BottomEnd,
     ) {
-        Box(contentAlignment = Alignment.Center, modifier = Modifier.size(76.dp)) {
+        // Outer box thoda bada kiya: 76.dp se 84.dp
+        Box(contentAlignment = Alignment.Center, modifier = Modifier.size(84.dp)) {
             // pulse rings
             Box(
                 Modifier
@@ -1141,23 +1182,24 @@ fun LuckyComboButton(
                     .alpha(pulseAlpha),
             )
 
-            // main button
+            // main button - directly hits onClick without opening sheet
+            // Button thoda bada kiya: 68.dp se 76.dp
             Box(
                 Modifier
-                    .size(68.dp)
+                    .size(76.dp) 
                     .clip(CircleShape)
                     .background(
                         Brush.radialGradient(
                             listOf(Color(0xFFFF4D79), Color(0xFFFF1A4D))
                         )
                     )
-                    .clickable { onClick() },
+                    .clickable { onClick() }, // Yeh seedha trigger karega
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
                     text = "Combo",
                     color = Color.White,
-                    fontSize = 14.sp,
+                    fontSize = 15.sp, // Font size halka bada kiya accordingly
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 0.5.sp,
                 )
@@ -1170,11 +1212,11 @@ fun LuckyComboButton(
                         radius = size.minDimension / 2 - stroke.width / 2,
                         style = stroke,
                     )
-                    // progress arc
+                    // progress arc (now smooth instead of skipping)
                     drawArc(
                         color = Color.White,
                         startAngle = -90f,
-                        sweepAngle = 360f * (timeLeft.toFloat() / maxTime),
+                        sweepAngle = 360f * animatedProgress, 
                         useCenter = false,
                         style = stroke,
                     )
