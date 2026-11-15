@@ -130,9 +130,11 @@ fun LuckyBagNotificationSlider(currentUserId: String, onGoToRoom: (String, Strin
                         .fillMaxWidth()
                         .defaultMinSize(minHeight = 76.dp)
                 ) {
-                    // FADE LAYER (Sirf background patti aur details fade hogi)
-                    Box(
-                        Modifier
+                    // 1. BACKGROUND FADE LAYER (Fade sirf iss image par lagega)
+                    AsyncImage(
+                        model = LUCKY_BAG_BANNER_IMAGE,
+                        contentDescription = null,
+                        modifier = Modifier
                             .fillMaxWidth()
                             .graphicsLayer { alpha = 0.99f }
                             .drawWithContent {
@@ -140,87 +142,67 @@ fun LuckyBagNotificationSlider(currentUserId: String, onGoToRoom: (String, Strin
                                 drawRect(
                                     brush = Brush.horizontalGradient(
                                         0.0f to Color.Transparent,
-                                        0.20f to Color.Black, // Left se 20% fade fix
-                                        0.80f to Color.Black, // Right se 20% fade fix
+                                        0.20f to Color.Black, // Left se 20%
+                                        0.80f to Color.Black, // Right se 20%
                                         1.0f to Color.Transparent
                                     ),
                                     blendMode = BlendMode.DstIn
                                 )
-                            }
-                    ) {
-                        AsyncImage(
-                            model = LUCKY_BAG_BANNER_IMAGE,
-                            contentDescription = null,
-                            modifier = Modifier.fillMaxWidth(),
-                            contentScale = ContentScale.FillWidth 
-                        )
-                        Row(
-                            Modifier.matchParentSize().padding(start = 8.dp, end = 3.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            AsyncImage(
-                                model = item.senderImage.takeIf { it.isNotBlank() } ?: "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/default-avatar.png",
-                                contentDescription = "Sender avatar",
-                                modifier = Modifier.size(43.dp).clip(RoundedCornerShape(8.dp)),
-                                contentScale = ContentScale.Crop
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        item.senderName,
-                                        color = Color.White,
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                        modifier = Modifier.weight(1f, fill = false)
-                                    )
-                                    Spacer(Modifier.width(5.dp))
-                                    
-                                    Box(
-                                        Modifier
-                                            .size(23.dp)
-                                            .background(Color.Black.copy(alpha = 0.2f), CircleShape),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(seconds.toString(), color = Color(0xFFFFE6A0), fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                                    }
-                                }
-                                
-                                Text(
-                                    "Sent ${item.amount} Coins Lucky Bag · ${item.roomName}",
-                                    color = Color.White,
-                                    fontSize = 12.sp,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Clip,
-                                    modifier = Modifier.basicMarquee(
-                                        iterations = Int.MAX_VALUE,
-                                        spacing = MarqueeSpacing(14.dp)
-                                    )
-                                )
-                            }
-                            
-                            // 25dp spacing fix GO Button se pehle
-                            Spacer(Modifier.width(25.dp))
-                            Box(
-                                Modifier
-                                    .offset(x = 5.dp)
-                                    .padding(end = 2.dp)
-                                    .size(width = 54.dp, height = 32.dp)
-                            )
-                        }
-                    }
+                            },
+                        contentScale = ContentScale.FillWidth 
+                    )
 
-                    // NON-FADE LAYER (GO Button ke liye)
+                    // 2. CONTENT LAYER (Isme koi fade nahi hoga, text aur button ekdum clear honge)
                     Row(
                         Modifier.matchParentSize().padding(start = 8.dp, end = 3.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Spacer(Modifier.weight(1f)) // Baki space kha ke GO button ko right me push karta hai
+                        AsyncImage(
+                            model = item.senderImage.takeIf { it.isNotBlank() } ?: "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/default-avatar.png",
+                            contentDescription = "Sender avatar",
+                            modifier = Modifier.size(43.dp).clip(RoundedCornerShape(8.dp)),
+                            contentScale = ContentScale.Crop
+                        )
+                        Spacer(Modifier.width(8.dp))
                         
-                        // Exact 25dp spacing upar wale layout ke saath match karne ke liye
-                        Spacer(Modifier.width(25.dp))
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    item.senderName,
+                                    color = Color.White,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f, fill = false)
+                                )
+                                Spacer(Modifier.width(5.dp))
+                                
+                                Box(
+                                    Modifier
+                                        .size(23.dp)
+                                        .background(Color.Black.copy(alpha = 0.2f), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(seconds.toString(), color = Color(0xFFFFE6A0), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                            
+                            Text(
+                                "Sent ${item.amount} Coins Lucky Bag · ${item.roomName}",
+                                color = Color.White,
+                                fontSize = 12.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Clip,
+                                modifier = Modifier.basicMarquee(
+                                    iterations = Int.MAX_VALUE,
+                                    spacing = MarqueeSpacing(14.dp)
+                                )
+                            )
+                        }
+                        
+                        // Yaha ek thos 40dp ka gap lagaya hai. Ab scroll text idhar hi ruk jayega, aage ghusega nahi.
+                        Spacer(Modifier.width(40.dp))
                         
                         Box(
                             Modifier
@@ -314,7 +296,6 @@ fun LuckyBagOpenConfirmCards(
                     
                     Box(
                         modifier = Modifier
-                             // Open Button ko thoda aur upar shift kar diya (-30.dp total)
                              .offset(y = (-30).dp)
                             .width(190.dp)
                             .height(72.dp)
@@ -465,11 +446,9 @@ fun LuckyBagOpenConfirmCards(
                                 if (luckyBagId.isBlank() || canonicalWalletUserId.isBlank()) {
                                     onLuckyBagClaimErrorChange("Lucky Bag confirmation unavailable")
                                 } else {
-                                    // Confirm dabate hi card ekdam turant close ho jayega
                                     onShowLuckyBagClaimedCardChange(false)
                                     onLuckyBagClaimErrorChange(null)
                                     
-                                    // Background me balance API call chalti rahegi, user ko wait nahi karna padega
                                     CoroutineScope(Dispatchers.IO).launch {
                                         val result = runCatching {
                                             val payload = JSONObject()
