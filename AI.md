@@ -1028,3 +1028,11 @@ Current documentation does not certify that all historical features are build-, 
 - `app/owner/page.tsx`: both Enter and Send now wait for the backend acknowledgement. The draft is cleared only after `ok: true`; failed delivery remains in the input and is logged instead of silently appearing sent.
 - Daisy STOP remains an automation-only switch; it does not block owner replies. Native UI, message layout, and local `index.db` chat persistence are unchanged.
 - Status: **Implemented in repository**. Backend deployment, Owner Panel deployment, native APK build, and two-account device delivery still require verification; do not claim runtime delivery is verified until tested.
+
+
+## 2026-11-15 Seller Coins transfer latency optimization
+- Zyora Server `/api/seller/transfer` now resolves the sender wallet and recipient profile concurrently instead of waiting for those independent MongoDB lookups one after another.
+- After the committed debit/credit and Seller Center history write, sender and recipient balances are read directly by their already-resolved MongoDB document IDs in parallel. This avoids repeating the full wallet identity-resolution lookup chain through `walletBalance()`.
+- Socket room balance broadcasts, online-recipient discovery, and offline Redis private-message queueing run as background transport work rather than delaying the successful transfer response. The existing message IDs, 7-day offline queue, seller/recipient ID validation, positive safe-integer amount validation, duplicate-transfer protection, atomic balance increments/decrements, and Seller Center history remain unchanged.
+- No Seller Center UI or unrelated screen changes.
+- Status: backend code committed on a fix branch; deployment and real two-account transfer latency/delivery verification are still required.
