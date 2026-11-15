@@ -14,6 +14,11 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.outlined.Image
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import android.net.Uri
+import kotlinx.coroutines.launch
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -46,7 +51,7 @@ private const val DAISY_SUPPORT_SOCKET_URL = "https://zyora-server.onrender.com"
 private const val DAISY_IMAGE = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/1785612362650~2.jpg"
 private val SupportBlue = Color(0xFF3B82F6)
 private val SupportBg = Color(0xFFF0F2F5)
-private data class SupportMessage(val text: String, val isBot: Boolean, val image: String? = null, val timestamp: Long = System.currentTimeMillis())
+private data class SupportMessage(val text: String, val isBot: Boolean, val image: String? = null, val mediaType: String = "image", val timestamp: Long = System.currentTimeMillis())
 
 @Composable
 fun HurrySupport(onBack: () -> Unit) {
@@ -83,7 +88,7 @@ fun HurrySupport(onBack: () -> Unit) {
                 val array = JSONArray(cached ?: "[]")
                 (0 until array.length()).mapNotNull { index ->
                     val item = array.optJSONObject(index) ?: return@mapNotNull null
-                    SupportMessage(item.optString("text"), item.optBoolean("isBot"), item.optString("image").takeIf { it.isNotBlank() && it != "null" }, item.optLong("timestamp"))
+                    SupportMessage(item.optString("text"), item.optBoolean("isBot"), item.optString("image").takeIf { it.isNotBlank() && it != "null" }, item.optString("mediaType", "image"), item.optLong("timestamp"))
                 }
             }.getOrDefault(emptyList())
             if (restored.isNotEmpty()) addAll(restored) else add(SupportMessage("Welcome to Zyora Support\n\nI am Daisy, your Official Customer Support Assistant.\n\nHow can I help you today? Aap Zyora App se juda koi bhi sawal pooch sakte hain!", true))
@@ -91,7 +96,7 @@ fun HurrySupport(onBack: () -> Unit) {
     }
     LaunchedEffect(messages.size, supportUserId) {
         val array = JSONArray()
-        messages.forEach { item -> array.put(JSONObject().put("text", item.text).put("image", item.image ?: JSONObject.NULL).put("isBot", item.isBot).put("timestamp", item.timestamp)) }
+        messages.forEach { item -> array.put(JSONObject().put("text", item.text).put("image", item.image ?: JSONObject.NULL).put("mediaType", item.mediaType).put("isBot", item.isBot).put("timestamp", item.timestamp)) }
         localChatDb.saveChat("daisy_support_$supportUserId", array.toString())
     }
     // Publish the already-restored local conversation once whenever Daisy opens
@@ -127,6 +132,26 @@ fun HurrySupport(onBack: () -> Unit) {
         }
     }
     val keyboard = LocalSoftwareKeyboardController.current
+    val supportScope = rememberCoroutineScope()
+    var uploadingMedia by remember { mutableStateOf(false) }
+    val supportMediaPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+        if (uri != null && !uploadingMedia) {
+            uploadingMedia = true
+            supportScope.launch {
+                val mime = context.contentResolver.getType(uri).orEmpty().lowercase()
+                val mediaType = if (mime.startsWith("video/")) "video" else "image"
+                val messageId = "daisy_${supportUserId}_${System.currentTimeMillis()}"
+                val mediaUrl = runCatching { uploadDaisySupportMedia(context, uri, messageId) }.getOrNull()
+                if (!mediaUrl.isNullOrBlank()) {
+                    messages.add(SupportMessage("", false, mediaUrl, mediaType))
+                    syncDaisyChat(messages.toList(), supportSocket, supportUserId, supportUserName, supportUserPhoto, supportUserAccountId)
+                } else {
+                    android.widget.Toast.makeText(context, "Media upload failed. Choose an image or video under 5 MB.", android.widget.Toast.LENGTH_LONG).show()
+                }
+                uploadingMedia = false
+            }
+        }
+    }
 
     fun answer(raw: String): SupportMessage {
         val msg = raw.lowercase().trim()
@@ -264,7 +289,14 @@ fun HurrySupport(onBack: () -> Unit) {
                         Text(item.text, color = if (item.isBot) Color(0xFF334155) else Color.White, fontSize = 14.sp, lineHeight = 20.sp)
                         if (item.image != null) {
                             Spacer(Modifier.height(8.dp))
-                            AsyncImage(model = item.image, contentDescription = "Seller Policy", modifier = Modifier.fillMaxWidth().heightIn(max = 320.dp).clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.Fit)
+                            if (item.mediaType == "video") {
+                                androidx.compose.ui.viewinterop.AndroidView(
+                                    factory = { viewContext -> android.widget.VideoView(viewContext).apply { setVideoURI(Uri.parse(item.image)); setOnPreparedListener { it.isLooping = false; start() } } },
+                                    modifier = Modifier.fillMaxWidth().heightIn(min = 180.dp, max = 280.dp).clip(RoundedCornerShape(8.dp))
+                                )
+                            } else {
+                                AsyncImage(model = item.image, contentDescription = "Attachment", modifier = Modifier.fillMaxWidth().heightIn(max = 320.dp).clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.Fit)
+                            }
                         }
                     }
                 }
@@ -287,6 +319,9 @@ fun HurrySupport(onBack: () -> Unit) {
                     Modifier.fillMaxWidth().padding(12.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xFFF9FAFB)).padding(start = 12.dp, end = 6.dp, top = 8.dp, bottom = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    IconButton(onClick = { if (!uploadingMedia) supportMediaPicker.launch(arrayOf("image/*", "video/*")) }, enabled = !uploadingMedia, modifier = Modifier.size(34.dp)) {
+                        Icon(Icons.Outlined.Image, contentDescription = "Attach image or video", tint = SupportBlue)
+                    }
                     BasicTextField(
                         value = draft,
                         onValueChange = { draft = it },
@@ -301,7 +336,7 @@ fun HurrySupport(onBack: () -> Unit) {
                         }
                     )
                     Spacer(Modifier.width(8.dp))
-                    Box(Modifier.size(36.dp).clip(CircleShape).background(SupportBlue).clickable { sendMessage() }, contentAlignment = Alignment.Center) {
+                    Box(Modifier.size(36.dp).clip(CircleShape).background(SupportBlue).clickable(enabled = !uploadingMedia) { sendMessage() }, contentAlignment = Alignment.Center) {
                         Icon(Icons.Default.Send, contentDescription = "Send", tint = Color.White, modifier = Modifier.size(17.dp))
                     }
                 }
@@ -325,6 +360,7 @@ private fun syncDaisyChat(
         messageArray.put(JSONObject()
             .put("text", message.text)
             .put("image", message.image ?: JSONObject.NULL)
+            .put("mediaType", message.mediaType)
             .put("isBot", message.isBot)
             .put("timestamp", message.timestamp))
     }
@@ -332,6 +368,7 @@ private fun syncDaisyChat(
     val lastMessage = JSONObject()
         .put("text", last.text)
         .put("image", last.image ?: JSONObject.NULL)
+        .put("mediaType", last.mediaType)
         .put("isBot", last.isBot)
         .put("timestamp", last.timestamp)
     val payload = JSONObject()
