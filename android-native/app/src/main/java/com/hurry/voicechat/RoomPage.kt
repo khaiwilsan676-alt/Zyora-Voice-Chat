@@ -653,6 +653,7 @@ fun RoomPage(
     var miniMusicTrack by remember { mutableStateOf<NativeMusicTrack?>(null) }
     var musicControllerMinimized by remember { mutableStateOf(false) }
     val musicCardDragOffset = remember { Animatable(0f) }
+    val musicDragScope = rememberCoroutineScope()
     var isMusicPlaying by remember { mutableStateOf(false) }
     var musicVolume by remember { mutableFloatStateOf(1f) }
     var repeatOneEnabled by remember { mutableStateOf(false) }
@@ -2211,7 +2212,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                         detectDragGestures(
                             onDragEnd = {
                                 val shouldMinimize = musicCardDragOffset.value > 90.dp.toPx()
-                                launch {
+                                musicDragScope.launch {
                                     if (shouldMinimize) {
                                         musicCardDragOffset.animateTo(
                                             targetValue = size.height.toFloat(),
@@ -2228,7 +2229,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                                 }
                             },
                             onDragCancel = {
-                                launch {
+                                musicDragScope.launch {
                                     musicCardDragOffset.animateTo(
                                         targetValue = 0f,
                                         animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium)
@@ -2237,7 +2238,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                             },
                             onDrag = { change, dragAmount ->
                                 change.consume()
-                                launch { musicCardDragOffset.snapTo((musicCardDragOffset.value + dragAmount.y).coerceIn(0f, size.height.toFloat())) }
+                                musicDragScope.launch { musicCardDragOffset.snapTo((musicCardDragOffset.value + dragAmount.y).coerceIn(0f, size.height.toFloat())) }
                             }
                         )
                     }
