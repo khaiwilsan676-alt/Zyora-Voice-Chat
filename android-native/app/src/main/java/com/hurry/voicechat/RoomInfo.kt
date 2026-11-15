@@ -38,7 +38,7 @@ import kotlinx.coroutines.withContext
 
 data class RoomInfoOwner(val id:String="",val uid:String="",val accountId:String="",val name:String,val image:String)
 data class RoomInfoData(val roomName:String,val roomDp:String,val roomAnnouncement:String,val roomId:String)
-data class RoomInfoFollower(val accountId:String,val name:String,val image:String,val country:String="")
+data class RoomInfoFollower(val accountId:String,val name:String,val image:String,val country:String="",val gender:String="")
 
 @Composable
 fun RoomInfo(
@@ -87,13 +87,14 @@ fun RoomInfo(
     }
     
     var ownerDisplayName by remember(roomOwner.id, roomOwner.uid, roomOwner.accountId) {
-        mutableStateOf(if (roomOwner.accountId == "100002" || roomOwner.id == "100002") "Zyora" else "User")
+        mutableStateOf(if (roomOwner.accountId == "100002" || roomOwner.id == "100002") "Zyora" else roomOwner.name.trim().takeIf { it.isNotBlank() && !it.equals("User", true) } ?: "User")
     }
     val isLogoOwner = roomOwner.accountId == "100002" || roomOwner.id == "100002"
     var ownerDisplayImage by remember(roomOwner.id, roomOwner.uid, roomOwner.accountId, roomOwner.image) {
         mutableStateOf(if (isLogoOwner) "https://zyora-voice-chat.vercel.app/logo.png" else roomOwner.image)
     }
     var ownerCountry by remember(roomOwner.accountId) { mutableStateOf("") }
+    var ownerGender by remember(roomOwner.accountId) { mutableStateOf("") }
     var memberProfiles by remember { mutableStateOf<Map<String, RoomInfoFollower>>(emptyMap()) }
 
     LaunchedEffect(roomFollowers.map { it.accountId }, roomAdmins.map { it.accountId }) {
@@ -105,7 +106,8 @@ fun RoomInfo(
                         member.accountId to member.copy(
                             name = saved.optString("name").ifBlank { member.name },
                             image = saved.optString("image").ifBlank { member.image },
-                            country = saved.optString("country")
+                            country = saved.optString("country"),
+                            gender = saved.optString("gender")
                         )
                     }
                 }.getOrNull()
@@ -125,10 +127,21 @@ fun RoomInfo(
                             image = member.image.ifBlank { cachedMember?.image.orEmpty() },
                             country = cachedMember?.country.orEmpty().ifBlank { member.country }
                         )
+                        val remoteProfile = runCatching {
+                            ProfilePersistence.load(TargetUser(
+                                id = member.accountId, uid = member.accountId, accountId = member.accountId,
+                                name = base.name, image = base.image, gender = base.gender, country = base.country
+                            ))
+                        }.getOrNull()
                         val roomProfileCountry = runCatching {
                             loadRoomProfileCountry(context, member.accountId, base.name, base.image, base.country)
                         }.getOrNull()?.takeIf { it.isNotBlank() } ?: base.country
-                        val resolved = base.copy(country = roomProfileCountry)
+                        val roomProfileGender = sequenceOf(
+                            remoteProfile?.optString("gender", "").orEmpty(),
+                            cachedMember?.gender.orEmpty(),
+                            base.gender
+                        ).map { it.trim() }.firstOrNull { it.isNotBlank() && it != "null" }.orEmpty()
+                        val resolved = base.copy(country = roomProfileCountry, gender = roomProfileGender)
                         runCatching {
                             NativeIndexDatabase(context).saveProfile(
                                 "room_info_member:${member.accountId}",
@@ -136,6 +149,7 @@ fun RoomInfo(
                                     .put("name", resolved.name)
                                     .put("image", resolved.image)
                                     .put("country", resolved.country)
+                                    .put("gender", resolved.gender)
                                     .put("updatedAt", System.currentTimeMillis())
                             )
                         }
@@ -160,6 +174,10 @@ fun RoomInfo(
             val country = runCatching {
                 loadRoomProfileCountry(context, ownerId, roomOwner.name, roomOwner.image)
             }.getOrDefault("")
+            val gender = sequenceOf(
+                profile?.optString("gender", "").orEmpty(),
+                runCatching { NativeIndexDatabase(context).loadProfile(ownerId)?.optString("gender", "").orEmpty() }.getOrDefault("")
+            ).map { it.trim() }.firstOrNull { it.isNotBlank() && it != "null" }.orEmpty()
             val name = profile?.let { p ->
                 sequenceOf("name", "displayName", "userName", "nickname")
                     .map { p.optString(it, "").trim() }
@@ -176,6 +194,7 @@ fun RoomInfo(
                     if (image.isNotBlank()) ownerDisplayImage = image
                 }
                 ownerCountry = country
+                ownerGender = gender
             }
         }
     }
@@ -322,8 +341,8 @@ fun RoomInfo(
                     verticalArrangement = Arrangement.spacedBy(7.dp)
                 ) {
                     item {
-                        MemberRow(ownerDisplayName, if (isLogoOwner) "https://zyora-voice-chat.vercel.app/logo.png" else ownerDisplayImage, roomOwner.accountId, "Owner", ownerCountry) {
-                            onOpenProfile(RoomInfoFollower(roomOwner.accountId, ownerDisplayName, ownerDisplayImage, ownerCountry))
+                        MemberRow(ownerDisplayName, if (isLogoOwner) "https://zyora-voice-chat.vercel.app/logo.png" else ownerDisplayImage, roomOwner.accountId.ifBlank { roomOwner.id.ifBlank { roomOwner.uid } }, "Owner", ownerCountry, ownerGender) {
+                            onOpenProfile(RoomInfoFollower(roomOwner.accountId.ifBlank { roomOwner.id.ifBlank { roomOwner.uid } }, ownerDisplayName, ownerDisplayImage, ownerCountry, ownerGender))
                         }
                     }
                     val adminIds = roomAdmins.map { it.accountId }.toSet()
@@ -332,7 +351,7 @@ fun RoomInfo(
                         .distinctBy { it.accountId }
                     items(allMembers, key = { "member-${it.accountId}" }) { f ->
                         val profile = memberProfiles[f.accountId] ?: f.copy(country = "")
-                        MemberRow(profile.name, profile.image, profile.accountId, if (profile.accountId in adminIds) "Admin" else "", profile.country) { onOpenProfile(profile) }
+                        MemberRow(profile.name, profile.image, profile.accountId, if (profile.accountId in adminIds) "Admin" else "", profile.country, profile.gender) { onOpenProfile(profile) }
                     }
                 }
             }
@@ -460,6 +479,7 @@ private fun MemberRow(
     id: String,
     role: String,
     country: String,
+    gender: String = "",
     onClick: () -> Unit
 ) {
     Row(
@@ -493,8 +513,15 @@ private fun MemberRow(
                 }
             }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                if (country.isNotBlank()) {
-                    Text(countryFlagEmoji(country), fontSize = 13.sp)
+                if (gender.isNotBlank()) {
+                    val isFemale = gender.equals("female", true) || gender.equals("f", true) || gender == "♀"
+                    Box(
+                        Modifier.size(20.dp).clip(CircleShape)
+                            .background(if (isFemale) Color(0xFFEC4899) else Color(0xFF3B82F6)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CustomGenderIcon(isFemale = isFemale, modifier = Modifier.size(8.dp))
+                    }
                 }
                 Box(Modifier.height(16.dp).width(36.dp)) {
                     AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261028_004355.png",
