@@ -116,6 +116,14 @@ private fun queryDeviceMusic(context: android.content.Context): List<DeviceMusic
     return list
 }
 
+private enum class TopToolType {
+    CLEAR_CHAT, PUBLIC_MSG, ENTRY_EFFECT, GIFT_EFFECT, MUSIC, SPEAKER, STORE, MY_ITEM
+}
+
+private enum class PlayToolType {
+    LUCKY_BAG, PK_BATTLE
+}
+
 @Composable
 fun Fourgride(
     onClose: () -> Unit,
@@ -149,7 +157,6 @@ fun Fourgride(
     var musicTracks by remember { mutableStateOf(emptyList<NativeMusicTrack>()) }
 
     LaunchedEffect(roomId) {
-        // New rooms start with effects ON. Existing owner choices are preserved.
         if (!prefs.contains(entryEffectKey)) prefs.edit().putBoolean(entryEffectKey, true).apply()
         if (!prefs.contains(giftEffectKey)) prefs.edit().putBoolean(giftEffectKey, true).apply()
         musicTracks = musicPrefs.getStringSet("uris", emptySet()).orEmpty().mapNotNull { raw ->
@@ -170,7 +177,7 @@ fun Fourgride(
     var deviceMusicTracks by remember { mutableStateOf<List<DeviceMusicItem>>(emptyList()) }
     var addedDeviceIds by remember { mutableStateOf<Set<String>>(emptySet()) }
     var deviceMusicLoading by remember { mutableStateOf(false) }
-    var musicDurations by remember { mutableStateOf<Map<String, Long>>(emptyMap()) }
+    var musicDurations by remember { mutableStateOf>(emptyMap()) }
 
     val audioPermission = if (Build.VERSION.SDK_INT >= 33)
         Manifest.permission.READ_MEDIA_AUDIO else Manifest.permission.READ_EXTERNAL_STORAGE
@@ -224,81 +231,111 @@ fun Fourgride(
     }
 
     val base = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/"
-    val tools = listOf(
-        ToolItem("Clear-Chat", "IMG_20261028_182124.png") { onClearChat() },
-        ToolItem("Public msg", "IMG_20261028_182153.png") { onTogglePublicMsg() },
-        ToolItem("Entry Effect", "IMG_20261028_182218.png") {
-            entryEffect = !entryEffect
-            prefs.edit().putBoolean(entryEffectKey, entryEffect).apply()
-        },
-        ToolItem("Gift Effect", "IMG_20261028_182239.png") {
-            giftEffect = !giftEffect
-            prefs.edit().putBoolean(giftEffectKey, giftEffect).apply()
-        },
-        ToolItem("Music", "IMG_20261028_182305.png") { MusicPlaybackState.wasPlayedOnMusicPage = false; MusicPlaybackState.musicPageBackPressed = false; showMusic = true },
-        ToolItem("Speaker", "IMG_20261028_182329.png") { onToggleSpeaker() },
-        ToolItem("Store", "IMG_20261028_234208.png") { onOpenStore?.invoke("store") },
-        ToolItem("My-Iteam", "IMG_20261028_182358.png") { onOpenStore?.invoke("bag") }
-    )
-    val playTools = listOf(
-        ToolItem("Lucky bag", "IMG_20261028_182446.png") { hideToolsAfterLucky = true; showLuckyBag = true },
-        ToolItem("Pk Battle", "IMG_20261028_182422.png") { }
-    )
 
-    if (!hideToolsAfterLucky) {
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
-        Box(Modifier.fillMaxSize().clickable { onClose() })
-        Column(
-            Modifier.fillMaxWidth()
-                .clip(RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp))
-                .background(Color.Black.copy(alpha = 0.96f))
-                .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 24.dp)
-                .heightIn(max = LocalConfiguration.current.screenHeightDp.dp * 0.70f)
-        ) {
-            Row(Modifier.fillMaxWidth().padding(bottom = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("Tools", modifier = Modifier.weight(1f), fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
-            }
+    // Logic for Top Tools arrangement strictly in 4-column layout
+    val topTools = mutableListOf<TopToolType>()
+    
+    // Owner specific tools
+    if (isRoomOwner) {
+        topTools.add(TopToolType.CLEAR_CHAT)
+        topTools.add(TopToolType.PUBLIC_MSG)
+    }
+    
+    // Everyone sees these
+    topTools.add(TopToolType.ENTRY_EFFECT)
+    topTools.add(TopToolType.GIFT_EFFECT)
+    
+    if (isRoomOwner) {
+        topTools.add(TopToolType.MUSIC)
+    }
+    
+    topTools.add(TopToolType.SPEAKER)
+    topTools.add(TopToolType.STORE)
+    topTools.add(TopToolType.MY_ITEM)
 
-            Row(Modifier.fillMaxWidth().padding(bottom = 16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                if (isRoomOwner) {
-                    ToolCell(Modifier.weight(1f), "Clear-Chat", base + "IMG_20261028_182124.png", onClick = onClearChat)
-                    ToolCell(Modifier.weight(1f), "Public msg", base + "IMG_20261028_182153.png", toggle = !publicMsgOff, onClick = onTogglePublicMsg)
-                }
-                if (isRoomOwner) {
-                    ToolCell(Modifier.weight(1f), "Entry Effect", base + "IMG_20261028_182218.png", toggle = entryEffect, onClick = {
-                        entryEffect = !entryEffect
-                        prefs.edit().putBoolean(entryEffectKey, entryEffect).apply()
-                    })
-                    ToolCell(Modifier.weight(1f), "Gift Effect", base + "IMG_20261028_182239.png", toggle = giftEffect, onClick = {
-                        giftEffect = !giftEffect
-                        prefs.edit().putBoolean(giftEffectKey, giftEffect).apply()
-                    })
-                }
-            }
-
-            Row(Modifier.fillMaxWidth().padding(bottom = 16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                if (isRoomOwner) {
-                    ToolCell(Modifier.weight(1f), "Music", base + "IMG_20261028_182305.png", onClick = { MusicPlaybackState.wasPlayedOnMusicPage = false; MusicPlaybackState.musicPageBackPressed = false; showMusic = true })
-                }
-                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                    AsyncImage(model = base + "IMG_20261028_182329.png", contentDescription = "Speaker", modifier = Modifier.size(48.dp), contentScale = ContentScale.Fit)
-                    Row(Modifier.padding(top = 4.dp).clickable { onToggleSpeaker() }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("Speaker", fontSize = 10.sp, color = Color.White.copy(alpha = 0.9f), maxLines = 1, softWrap = false)
-                        ToolToggle(speaker)
-                    }
-                }
-                ToolCell(Modifier.weight(1f), "Store", base + "IMG_20261028_234208.png", onClick = { onOpenStore?.invoke("store") })
-                ToolCell(Modifier.weight(1f), "My-Iteam", base + "IMG_20261028_182358.png", onClick = { onOpenStore?.invoke("bag") })
-            }
-
-            Text("Play Tools", modifier = Modifier.padding(top = 8.dp, bottom = 8.dp), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                ToolCell(Modifier.weight(1f), "Lucky bag", base + "IMG_20261028_182446.png", onClick = { hideToolsAfterLucky = true; showLuckyBag = true })
-                if (isRoomOwner) ToolCell(Modifier.weight(1f), "Pk Battle", base + "IMG_20261028_182422.png", onClick = {})
-            }
-        }
+    // Logic for Play Tools arrangement strictly in 4-column layout
+    val playTools = mutableListOf<PlayToolType>()
+    playTools.add(PlayToolType.LUCKY_BAG)
+    if (isRoomOwner) {
+        playTools.add(PlayToolType.PK_BATTLE)
     }
 
+    if (!hideToolsAfterLucky) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
+            Box(Modifier.fillMaxSize().clickable { onClose() })
+            Column(
+                Modifier.fillMaxWidth()
+                    .clip(RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp))
+                    .background(Color.Black.copy(alpha = 0.96f))
+                    .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 24.dp)
+                    .heightIn(max = LocalConfiguration.current.screenHeightDp.dp * 0.70f)
+            ) {
+                Row(Modifier.fillMaxWidth().padding(bottom = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text("Tools", modifier = Modifier.weight(1f), fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                }
+
+                // Render Top Tools strictly 4 in a row
+                topTools.chunked(4).forEach { rowItems ->
+                    Row(Modifier.fillMaxWidth().padding(bottom = 16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        rowItems.forEach { type ->
+                            val cellModifier = Modifier.weight(1f)
+                            when (type) {
+                                TopToolType.CLEAR_CHAT -> ToolCell(cellModifier, "Clear-Chat", base + "IMG_20261028_182124.png", onClick = onClearChat)
+                                // ✅ Yahan publicMsgOff logic bilkul waisa hi hai, toggle = !publicMsgOff (By default ON rhega)
+                                TopToolType.PUBLIC_MSG -> ToolCell(cellModifier, "Public msg", base + "IMG_20261028_182153.png", toggle = !publicMsgOff, onClick = onTogglePublicMsg)
+                                TopToolType.ENTRY_EFFECT -> ToolCell(cellModifier, "Entry Effect", base + "IMG_20261028_182218.png", toggle = entryEffect, onClick = {
+                                    entryEffect = !entryEffect
+                                    prefs.edit().putBoolean(entryEffectKey, entryEffect).apply()
+                                })
+                                TopToolType.GIFT_EFFECT -> ToolCell(cellModifier, "Gift Effect", base + "IMG_20261028_182239.png", toggle = giftEffect, onClick = {
+                                    giftEffect = !giftEffect
+                                    prefs.edit().putBoolean(giftEffectKey, giftEffect).apply()
+                                })
+                                TopToolType.MUSIC -> ToolCell(cellModifier, "Music", base + "IMG_20261028_182305.png", onClick = { 
+                                    MusicPlaybackState.wasPlayedOnMusicPage = false
+                                    MusicPlaybackState.musicPageBackPressed = false
+                                    showMusic = true 
+                                })
+                                TopToolType.SPEAKER -> {
+                                    Column(cellModifier, horizontalAlignment = Alignment.CenterHorizontally) {
+                                        AsyncImage(model = base + "IMG_20261028_182329.png", contentDescription = "Speaker", modifier = Modifier.size(48.dp), contentScale = ContentScale.Fit)
+                                        Row(Modifier.padding(top = 4.dp).clickable { onToggleSpeaker() }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                            Text("Speaker", fontSize = 10.sp, color = Color.White.copy(alpha = 0.9f), maxLines = 1, softWrap = false)
+                                            ToolToggle(speaker)
+                                        }
+                                    }
+                                }
+                                TopToolType.STORE -> ToolCell(cellModifier, "Store", base + "IMG_20261028_234208.png", onClick = { onOpenStore?.invoke("store") })
+                                TopToolType.MY_ITEM -> ToolCell(cellModifier, "My-Iteam", base + "IMG_20261028_182358.png", onClick = { onOpenStore?.invoke("bag") })
+                            }
+                        }
+                        // Add empty spacers to maintain the 4-column layout if items are less than 4
+                        repeat(4 - rowItems.size) {
+                            Spacer(Modifier.weight(1f))
+                        }
+                    }
+                }
+
+                Text("Play Tools", modifier = Modifier.padding(top = 8.dp, bottom = 8.dp), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
+                
+                // Render Play Tools strictly 4 in a row (Lucky bag 1st column, PK 2nd column)
+                playTools.chunked(4).forEach { rowItems ->
+                    Row(Modifier.fillMaxWidth().padding(bottom = 16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        rowItems.forEach { type ->
+                            val cellModifier = Modifier.weight(1f)
+                            when (type) {
+                                PlayToolType.LUCKY_BAG -> ToolCell(cellModifier, "Lucky bag", base + "IMG_20261028_182446.png", onClick = { hideToolsAfterLucky = true; showLuckyBag = true })
+                                PlayToolType.PK_BATTLE -> ToolCell(cellModifier, "Pk Battle", base + "IMG_20261028_182422.png", onClick = {})
+                            }
+                        }
+                        // Fill the 3rd and 4th column spaces properly so 1st and 2nd won't stretch awkwardly
+                        repeat(4 - rowItems.size) {
+                            Spacer(Modifier.weight(1f))
+                        }
+                    }
+                }
+            }
+        }
     }
 
     if (showMusic) {
@@ -513,8 +550,6 @@ fun Fourgride(
     }
 }
 
-private data class ToolItem(val title: String, val image: String, val action: () -> Unit)
-
 @Composable
 private fun ToolToggle(enabled: Boolean) {
     Box(
@@ -526,6 +561,7 @@ private fun ToolToggle(enabled: Boolean) {
         Box(Modifier.size(12.dp).clip(RoundedCornerShape(50)).background(Color.White))
     }
 }
+
 @Composable
 private fun ToolCell(
     modifier: Modifier,
@@ -556,7 +592,6 @@ fun MiniMusicControllerCard(
     val track = MusicPlaybackState.currentTrack
     val isMusicPageOpen = MusicPlaybackState.isMusicPageOpen
 
-    // ✅ State for toggling volume view and volume level
     var showVolumeView by remember { mutableStateOf(false) }
     var volumeLevel by remember { mutableFloatStateOf(0.5f) } 
 
@@ -625,7 +660,7 @@ fun MiniMusicControllerCard(
                                     .fillMaxHeight()
                                     .fillMaxWidth(fraction = volumeLevel.coerceAtLeast(0.001f))
                                     .clip(RoundedCornerShape(50))
-                                    .background(Color.White) // ✅ Pura Pink hatakar direct White kar diya
+                                    .background(Color.White)
                             )
                         }
                         
