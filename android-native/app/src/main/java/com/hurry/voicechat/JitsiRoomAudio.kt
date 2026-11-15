@@ -5,10 +5,8 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.media.AudioAttributes
 import android.media.AudioManager
-import android.media.AudioDeviceInfo
 import android.media.audiofx.AcousticEchoCanceler
 import android.media.AudioFormat
-import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.media.AudioRecord
@@ -69,27 +67,13 @@ fun JitsiRoomAudio(
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         hasMicPermission = granted || ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
     }
-    var hasBluetoothPermission by remember {
-        mutableStateOf(
-            Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
-                ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
-        )
-    }
-    val bluetoothPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        hasBluetoothPermission = granted || Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
-            ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
-    }
-
-    LaunchedEffect(canSpeak, hasMicPermission, hasBluetoothPermission) {
+    LaunchedEffect(canSpeak, hasMicPermission) {
         if (canSpeak && !hasMicPermission) {
             permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !hasBluetoothPermission) {
-            // Listeners also need Bluetooth access to select headset playback output.
-            bluetoothPermissionLauncher.launch(Manifest.permission.BLUETOOTH_CONNECT)
         }
     }
 
-    DisposableEffect(context, roomId, roomSocket, hasMicPermission, hasBluetoothPermission) {
+    DisposableEffect(context, roomId, roomSocket, hasMicPermission) {
         if (roomSocket == null) return@DisposableEffect onDispose { }
         // Room playback is media audio, not a phone call. Do not force SCO or
         // the built-in speaker: those communication routes bypass classic A2DP
