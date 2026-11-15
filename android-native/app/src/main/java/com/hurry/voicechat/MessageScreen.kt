@@ -1326,7 +1326,7 @@ fun NativeChatScreen(
             officialSocket.emit(
                 "register",
                 JSONObject()
-                    .put("userId", currentAuthUid)
+                    .put("userId", currentAuthUid.ifBlank { currentUserId })
                     .put("accountId", currentAccountId)
             )
             val lastTimestamp = prefs.getLong("${cacheKey}_last_timestamp", 0L)
