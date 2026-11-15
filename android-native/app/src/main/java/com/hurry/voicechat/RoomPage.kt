@@ -327,6 +327,7 @@ fun RoomPage(
         if (roomAdminIds.any { it in currentUserSeatIds }) roomAdminIds + currentUserSeatIds else roomAdminIds
     }
     var locked by remember(roomId) { mutableStateOf(false) }
+    var publicMsgOff by remember(roomId) { mutableStateOf(false) }
     var roomPassword by remember(roomId) { mutableStateOf("") }
     var roomAdminUsers by remember(roomId) { mutableStateOf<List<RoomInfoFollower>>(emptyList()) }
     var roomMicMode by remember(roomId) { mutableIntStateOf(appContext.getSharedPreferences("room_settings", android.content.Context.MODE_PRIVATE).getInt("micMode_$roomId", 10)) }
