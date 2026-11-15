@@ -1054,3 +1054,11 @@ Current documentation does not certify that all historical features are build-, 
 - Fix: initialize the transient client gate to `false` (public chat open); an explicit room settings update with `publicMsgOff=true` still closes it, and owner/admin bypass behavior remains unchanged.
 - Scope: native room chat permission initialization only; no UI/layout changes and no message transport changes.
 - Verification: source committed; Android build and live multi-user room send test still need to run.
+
+## 2026-11-15 — Public chat default clarified and persisted setting loaded
+
+- Requirement clarified: public room messages must be OFF by default.
+- Corrected the earlier transient-default change: `publicMsgOff` initializes to `true` (OFF).
+- Root cause addressed properly: the native room's existing `/api/rooms?roomId=...` initial settings fetch now reads persisted `publicMsgOff` (defaulting to `true` only when the field is absent) and applies it to the UI state. Thus rooms already configured ON remain ON for normal users after entry, while rooms with no saved setting default OFF.
+- Existing owner/admin bypass, settings toggle, message transport, and UI remain unchanged.
+- Verification: source committed; Android build and live room test remain pending.
