@@ -1047,3 +1047,10 @@ Current documentation does not certify that all historical features are build-, 
 - `Zyora-Server/server.js`: honor the client's `suppressEntry` flag for silent kept-room restores, preventing duplicate `Enter the Room` messages and vehicle-entry broadcasts while allowing new chat messages and live room state to continue normally.
 
 - Room music controller: the top Music pill remains visible whenever a room track is active and tapping it restores the controller; the compact controller is independent of the pill, uses a pure black card background, and can be minimized by dragging the card downward. The pill disappears only when the controller's Power action stops playback. Existing playback controls and card dimensions remain unchanged.
+
+## 2026-11-15 — Native room public-message permission fix
+
+- Root cause: `RoomPage.kt` initialized `publicMsgOff` to `true`, so a newly entered room temporarily treated public chat as closed for every non-owner/non-admin until a `room_settings_updated` event arrived. This could leave normal users unable to send even when public messages were enabled.
+- Fix: initialize the transient client gate to `false` (public chat open); an explicit room settings update with `publicMsgOff=true` still closes it, and owner/admin bypass behavior remains unchanged.
+- Scope: native room chat permission initialization only; no UI/layout changes and no message transport changes.
+- Verification: source committed; Android build and live multi-user room send test still need to run.
