@@ -267,7 +267,15 @@ fun VisitorsPage(onBack:()->Unit) {
         val listener=Emitter.Listener { args ->
             val event = args.firstOrNull() as? JSONObject
             val visitor = event?.optJSONObject("visitor")
-            if (tab == 0 && visitor != null && (event.optString("profileId") == myId || event.optString("profileId") == prefs.getString("uid", "").orEmpty())) scope.launch {
+            val profileAliases = event?.optJSONArray("profileAliases")
+            val ownIdentityAliases = setOf(myId, prefs.getString("uid", "").orEmpty(), prefs.getString("id", "").orEmpty()).filter { it.isNotBlank() }.toSet()
+            val matchesCurrentProfile = event != null && (
+                ownIdentityAliases.contains(event.optString("profileId")) ||
+                (0 until (profileAliases?.length() ?: 0)).any { index ->
+                    ownIdentityAliases.contains(profileAliases?.optString(index).orEmpty())
+                }
+            )
+            if (tab == 0 && visitor != null && matchesCurrentProfile) scope.launch {
                 withContext(Dispatchers.IO) {
                     val key = "visitor_history:" + myId + ":received"
                     val db = NativeIndexDatabase(context)
