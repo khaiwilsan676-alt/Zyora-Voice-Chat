@@ -425,7 +425,7 @@ fun RoomPage(
                     if (connection.responseCode in 200..299) {
                         val root = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
                         val bag = root.optJSONObject("bag")
-                        if (bag != null && bag.optString("senderId") != canonicalWalletUserId) {
+                        if (bag != null) {
                             withContext(Dispatchers.Main) {
                                 luckyBagId = bag.optString("bagId")
                                 luckyBagSenderName = bag.optString("senderName", "User")
@@ -1170,7 +1170,7 @@ fun RoomPage(
         }
         val luckyBagBannerListener = Emitter.Listener { args ->
             val payload = args.firstOrNull() as? JSONObject ?: return@Listener
-            if (payload.optString("roomId") == roomId && payload.optString("senderId") != accountId) {
+            if (payload.optString("roomId") == roomId && payload.optString("senderId") !in setOf(canonicalWalletUserId, accountId, currentUser.uid, currentUser.id).filter { it.isNotBlank() }) {
                 mainHandler.post {
                     luckyBagId = payload.optString("bagId")
                     luckyBagSenderName = payload.optString("senderName", "User")
@@ -2397,7 +2397,9 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                 luckyBagSenderImage = image
                 luckyBagId = bagId
                 luckyBagClaimAmount = amount
-                showFloatingLuckyBag = false
+                luckyBagClaimError = null
+                // Show the same room Lucky Packet image to its sender too.
+                showFloatingLuckyBag = true
             }
         )
         
