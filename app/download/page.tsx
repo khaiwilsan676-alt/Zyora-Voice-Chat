@@ -12,8 +12,12 @@ export default function DownloadPage() {
   return (
     <main className="min-h-screen bg-[#080b12] px-5 py-12 text-white">
       <div className="mx-auto flex min-h-[calc(100vh-6rem)] w-full max-w-md flex-col items-center justify-center text-center">
-        <div className="mb-6 flex h-24 w-24 items-center justify-center rounded-[2rem] border border-white/10 bg-gradient-to-br from-[#263b70] to-[#101a35] text-4xl font-black shadow-2xl shadow-blue-950/50">
-          Z
+        <div className="mb-6 flex h-24 w-24 items-center justify-center overflow-hidden rounded-[2rem] border border-white/10 bg-white/5 shadow-2xl shadow-blue-950/50">
+          <img
+            src="/Zyora-Voice-Chat/logo.png"
+            alt="Zyora app logo"
+            className="h-full w-full object-cover"
+          />
         </div>
         <p className="mb-3 text-xs font-bold uppercase tracking-[0.32em] text-blue-300">
           Official Android app
