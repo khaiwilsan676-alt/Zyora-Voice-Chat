@@ -1631,7 +1631,7 @@ fun RoomPage(
                 Text("0", color = Color(0xFFEEF3A3), fontSize = 12.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, letterSpacing = 0.1.sp)
                 Icon(Icons.Default.ChevronRight, null, tint = Color(0xFFEEF3A3), modifier = Modifier.padding(start = 4.dp).size(10.dp))
             }
-            if (musicControllerMinimized && miniMusicTrack != null) {
+            if (miniMusicTrack != null) {
                 Row(modifier = Modifier.height(26.dp).clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha = 0.30f)).clickable { musicControllerMinimized = false }.padding(start = 2.dp, end = 10.dp),verticalAlignment = Alignment.CenterVertically,horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     AsyncImage(model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_00000000ee70820b9fd0dfe71739874e.png",contentDescription = "Music",modifier = Modifier.size(22.dp),contentScale = ContentScale.Fit)
                     Text(text = miniMusicTrack?.name.orEmpty(),color = Color.White,fontSize = 11.sp,fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,maxLines = 1,overflow = TextOverflow.Clip,modifier = Modifier.widthIn(max = 68.dp).basicMarquee(iterations = Int.MAX_VALUE))
@@ -2181,7 +2181,7 @@ Column(Modifier.align(Alignment.BottomStart).padding(bottom=LocalConfiguration.c
         }
 
         RoomPageBlock {
-if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.isMusicPageOpen && MusicPlaybackState.wasPlayedOnMusicPage && MusicPlaybackState.musicPageBackPressed) {
+if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.isMusicPageOpen) {
             val track = miniMusicTrack!!
             Box(
                 Modifier.align(Alignment.BottomCenter)
@@ -2191,7 +2191,21 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                     .fillMaxWidth()
                     .height(160.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(Color(0xFF171D1B))
+                    .background(Color.Black)
+                    .pointerInput(Unit) {
+                        var downwardDrag = 0f
+                        detectDragGestures(
+                            onDragEnd = {
+                                if (downwardDrag > 80f) musicControllerMinimized = true
+                                downwardDrag = 0f
+                            },
+                            onDragCancel = { downwardDrag = 0f },
+                            onDrag = { change, dragAmount ->
+                                change.consume()
+                                downwardDrag += dragAmount.y
+                            }
+                        )
+                    }
                     .padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
                 Column(Modifier.fillMaxSize()) {
