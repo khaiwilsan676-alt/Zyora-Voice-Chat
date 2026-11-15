@@ -2205,9 +2205,10 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                     .padding(bottom = 60.dp)
                     .fillMaxWidth()
                     .height(160.dp)
+                    // Transform the entire card layer, including its black surface and rounded clip.
+                    .graphicsLayer { translationY = musicCardDragOffset.value }
                     .clip(RoundedCornerShape(12.dp))
                     .background(Color.Black)
-                    .graphicsLayer { translationY = musicCardDragOffset.value }
                     .pointerInput(Unit) {
                         detectDragGestures(
                             onDragEnd = {
