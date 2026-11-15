@@ -505,6 +505,7 @@ fun RoomPage(
                         val savedTheme = sequenceOf("theme", "roomTheme", "Room Theme").map { saved.optString(it, "").trim() }.firstOrNull { it.isNotBlank() && it != "null" } ?: roomTheme
                         val savedCustomTheme = sequenceOf("customTheme", "themeImage").map { saved.optString(it, "").trim() }.firstOrNull { it.isNotBlank() && it != "null" }.orEmpty()
                         val savedLocked = saved.optBoolean("isLocked", locked)
+                        val savedPublicMsgOff = saved.optBoolean("publicMsgOff", true)
                         val savedRoomPassword = saved.optString("roomPassword", roomPassword).takeUnless { it == "null" }.orEmpty()
                         val savedAdminsJson = saved.optJSONArray("admin") ?: saved.optJSONArray("admins")
                         val savedAdmins = savedAdminsJson?.let { adminsJson ->
@@ -523,6 +524,7 @@ fun RoomPage(
                             if (!isLogoRoom && image.isNotBlank()) roomImage = image
                             announcement = message
                             showRoomSettingsAnnouncementInChat = message.isNotBlank() && saved.optBoolean("announcementChatVisible", true)
+                            publicMsgOff = savedPublicMsgOff
                             roomMicMode = savedMicMode
                             roomTheme = savedTheme
                             if (savedAdmins != null) roomAdminIds = savedAdmins
@@ -580,7 +582,7 @@ fun RoomPage(
     }
     var speaker by remember{mutableStateOf(true)}
     var localVoiceSpeaking by remember { mutableStateOf(false) }
-    // Public room chat is open unless the room explicitly reports that it is disabled.\n    // Starting as true incorrectly blocked every non-owner on a fresh room entry before settings arrived.\n    var publicMsgOff by remember(roomId){mutableStateOf(false)}
+    // Public messages are OFF by default; the persisted room setting below overrides this on entry.\n    var publicMsgOff by remember(roomId){mutableStateOf(true)}
     var showPublicMessageClosedToast by remember { mutableStateOf(false) }
     var roomToastText by remember { mutableStateOf("") }
     LaunchedEffect(roomToastText) {
