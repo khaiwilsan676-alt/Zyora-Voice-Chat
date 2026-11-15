@@ -560,7 +560,7 @@ fun GiftPicker(
                                                     shape = RoundedCornerShape(6.dp),
                                                     border = BorderStroke(1.dp, Color.White.copy(alpha = 0.15f)),
                                                     shadowElevation = 8.dp,
-                                                    modifier = Modifier.width(30.dp)
+                                                    modifier = Modifier.width(50.dp) // YAHAN TERE BOLNE PAR WIDTH 30.DP SE 50.DP KAR DI HAI
                                                 ) {
                                                     Column(Modifier.padding(0.dp)) {
                                                         multipliers.forEach { m ->
@@ -931,7 +931,7 @@ private fun RecipientButton(
 }
 
 // ============================================================
-// VIDEO OVERLAY (CONTROLLERS REMOVED, DIRECT SHOW)
+// VIDEO OVERLAY (FIXED FOR TRANSPARENCY & CUSTOM FADES)
 // ============================================================
 @Composable
 private fun VideoEffectOverlay(
@@ -947,50 +947,76 @@ private fun VideoEffectOverlay(
     LaunchedEffect(src) { onStarted() }
 
     if (!show) return
+
+    val isKing = src.contains("17e19680~2")
+
     Box(
         Modifier
             .fillMaxSize()
-            .background(Color.Transparent)
-            .then(
-                // Yeh modifier Autumn video ke liye pure black ko screen/mix kar ke transparent karega
-                if (isPure) Modifier.graphicsLayer {
-                    compositingStrategy = CompositingStrategy.Offscreen
-                    blendMode = BlendMode.Screen
-                } else Modifier
-            ),
+            .background(Color.Transparent),
         contentAlignment = Alignment.Center,
     ) {
         AndroidView(
             factory = { ctx ->
-                VideoView(ctx).apply {
-                    setVideoURI(Uri.parse(giftAssetUrl(src)))
-                    setOnPreparedListener { mp ->
-                        mp.isLooping = false
-                        mp.setVolume(0f, 0f)
-                        // Media Controller Hata Diya! Direct video play bina kisi delay/controls ke
-                        start()
-                    }
-                    setOnCompletionListener { onFinished() }
-                    setOnErrorListener { _, _, _ ->
-                        onFinished()
-                        true
+                android.view.TextureView(ctx).apply {
+                    isOpaque = false // Prevents initial black screen flash
+                    surfaceTextureListener = object : android.view.TextureView.SurfaceTextureListener {
+                        var mediaPlayer: android.media.MediaPlayer? = null
+
+                        override fun onSurfaceTextureAvailable(surface: android.graphics.SurfaceTexture, width: Int, height: Int) {
+                            try {
+                                mediaPlayer = android.media.MediaPlayer().apply {
+                                    setDataSource(ctx, Uri.parse(giftAssetUrl(src)))
+                                    setSurface(android.view.Surface(surface))
+                                    setVolume(0f, 0f)
+                                    setOnPreparedListener { mp ->
+                                        mp.isLooping = false
+                                        mp.start() // Play immediately without any delay/controls
+                                    }
+                                    setOnCompletionListener { onFinished() }
+                                    setOnErrorListener { _, _, _ ->
+                                        onFinished()
+                                        true
+                                    }
+                                    prepareAsync()
+                                }
+                            } catch (e: Exception) {
+                                onFinished()
+                            }
+                        }
+
+                        override fun onSurfaceTextureSizeChanged(surface: android.graphics.SurfaceTexture, width: Int, height: Int) {}
+                        
+                        override fun onSurfaceTextureDestroyed(surface: android.graphics.SurfaceTexture): Boolean {
+                            mediaPlayer?.release()
+                            mediaPlayer = null
+                            return true
+                        }
+                        
+                        override fun onSurfaceTextureUpdated(surface: android.graphics.SurfaceTexture) {}
                     }
                 }
             },
             modifier = Modifier
-                .fillMaxWidth() // Full Wide
-                .wrapContentHeight() // Height same as video
+                .fillMaxWidth()
+                .wrapContentHeight()
                 .then(
-                    // Yeh modifier King aur Teddy ke liye Top & Bottom me exactly 10% Fade daalega
+                    if (isPure) Modifier.graphicsLayer {
+                        compositingStrategy = CompositingStrategy.Offscreen
+                        blendMode = BlendMode.Screen
+                    } else Modifier
+                )
+                .then(
                     if (isFade) Modifier
                         .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
                         .drawWithContent {
                             drawContent()
+                            val bottomFadeStop = if (isKing) 0.8f else 0.9f
                             drawRect(
                                 brush = Brush.verticalGradient(
                                     0.0f to Color.Transparent,
                                     0.1f to Color.Black,
-                                    0.9f to Color.Black,
+                                    bottomFadeStop to Color.Black,
                                     1.0f to Color.Transparent
                                 ),
                                 blendMode = BlendMode.DstIn
@@ -1029,88 +1055,100 @@ fun LuckyGiftNotificationSlider(
     notice: LuckyNotice?,
     floatingWins: List<Pair<String, Long>> = emptyList(),
 ) {
-    AnimatedVisibility(
-        visible = notice != null && !notice.isExiting,
-        enter = slideInHorizontally(initialOffsetX = { -it }) + fadeIn(),
-        exit = slideOutHorizontally(targetOffsetX = { -it }) + fadeOut(),
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 50.dp), // FIXED: 50dp exactly as requested
+    // YAHAN PAR MAINE TERE BATAYE HUE CHANGES KIYE HAIN: 
+    // 1. Ek outer Box banaya aur use `BottomStart` align kar diya taki Top par faste hi nahi!
+    // 2. Exact Right edge se Left aane wala udta hua animation lagaya hai (initialOffsetX = { it })
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.BottomStart // Screen ke left corner par fix karne ke liye
     ) {
-        if (notice == null) return@AnimatedVisibility
-        val isBroadcast = notice.recipientMode == RecipientMode.MIC ||
-                notice.recipientMode == RecipientMode.ROOM
-        val topText = when (notice.recipientMode) {
-            RecipientMode.MIC -> "Sent to All Mic"
-            RecipientMode.ROOM -> "Sent to All in room"
-            else -> notice.senderName
-        }
-        val bottomText = if (isBroadcast) notice.senderName else "To ${notice.recipientName}"
-
-        Row(
-            Modifier
-                .clip(RoundedCornerShape(topEnd = 50.dp, bottomEnd = 50.dp))
-                .background(
-                    Brush.horizontalGradient(
-                        colors = listOf(
-                            Color(0xFFFFC107),
-                            Color(0xFFFFC107),
-                            Color(0xD9FFC107),
-                            Color(0x73FFC107),
-                            Color(0x26FFC107),
-                            Color(0x00FFC107),
-                        ),
-                        startX = 0f,
-                        endX = Float.POSITIVE_INFINITY,
-                    )
-                )
-                // PATLI PATTI: Padding and height reduced completely
-                .padding(start = 2.dp, end = 32.dp, top = 1.dp, bottom = 1.dp)
-                .height(38.dp)
-                .widthIn(min = 250.dp),
-            verticalAlignment = Alignment.CenterVertically,
+        AnimatedVisibility(
+            visible = notice != null && !notice.isExiting,
+            // Ekdam right screen edge se ghusega andar ki taraf (Right to Left aayegi)
+            enter = slideInHorizontally(initialOffsetX = { it }) + fadeIn(),
+            // Wapis Left ki taraf exit karegi
+            exit = slideOutHorizontally(targetOffsetX = { -it }) + fadeOut(),
+            modifier = Modifier
+                .fillMaxWidth() // Screen width full hold karega animation ke liye
+                .padding(bottom = 50.dp) // Bottom se exactly 50dp space ke sath fix kar diya hai
         ) {
-            AsyncImage(
-                model = notice.senderImage,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .size(32.dp) // Adjusted size for thin look
-                    .clip(CircleShape),
-            )
-            Spacer(Modifier.width(6.dp))
-            Column(Modifier.widthIn(max = 110.dp), verticalArrangement = Arrangement.Center) {
-                Text(
-                    text = topText,
-                    color = Color.White,
-                    fontSize = 10.sp, // Font thoda chota for patli patti
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    text = bottomText,
-                    color = Color.White.copy(alpha = 0.9f),
-                    fontSize = 9.sp, // Font chota
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+            if (notice == null) return@AnimatedVisibility
+            val isBroadcast = notice.recipientMode == RecipientMode.MIC ||
+                    notice.recipientMode == RecipientMode.ROOM
+            val topText = when (notice.recipientMode) {
+                RecipientMode.MIC -> "Sent to All Mic"
+                RecipientMode.ROOM -> "Sent to All in room"
+                else -> notice.senderName
             }
-            Spacer(Modifier.width(6.dp))
-            AsyncImage(
-                model = notice.giftImage,
-                contentDescription = null,
-                contentScale = ContentScale.Fit,
-                modifier = Modifier.size(26.dp), // Gift icon chota kiya
-            )
-            Text(
-                text = "×${notice.multiplier}",
-                color = Color.White,
-                fontSize = 16.sp, // Reduced font for thinner view
-                fontWeight = FontWeight.Black,
-                fontStyle = FontStyle.Italic,
-                modifier = Modifier.padding(start = 4.dp),
-            )
+            val bottomText = if (isBroadcast) notice.senderName else "To ${notice.recipientName}"
+
+            // Content Left side mei float karega
+            Box(contentAlignment = Alignment.CenterStart) {
+                Row(
+                    Modifier
+                        .clip(RoundedCornerShape(topEnd = 50.dp, bottomEnd = 50.dp))
+                        .background(
+                            Brush.horizontalGradient(
+                                colors = listOf(
+                                    Color(0xFFFFC107),
+                                    Color(0xFFFFC107),
+                                    Color(0xD9FFC107),
+                                    Color(0x73FFC107),
+                                    Color(0x26FFC107),
+                                    Color(0x00FFC107),
+                                ),
+                                startX = 0f,
+                                endX = Float.POSITIVE_INFINITY,
+                            )
+                        )
+                        .padding(start = 2.dp, end = 32.dp, top = 1.dp, bottom = 1.dp)
+                        .height(38.dp)
+                        .widthIn(min = 250.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    AsyncImage(
+                        model = notice.senderImage,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .size(32.dp) 
+                            .clip(CircleShape),
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Column(Modifier.widthIn(max = 110.dp), verticalArrangement = Arrangement.Center) {
+                        Text(
+                            text = topText,
+                            color = Color.White,
+                            fontSize = 10.sp, 
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Text(
+                            text = bottomText,
+                            color = Color.White.copy(alpha = 0.9f),
+                            fontSize = 9.sp, 
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                    Spacer(Modifier.width(6.dp))
+                    AsyncImage(
+                        model = notice.giftImage,
+                        contentDescription = null,
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.size(26.dp), 
+                    )
+                    Text(
+                        text = "×${notice.multiplier}",
+                        color = Color.White,
+                        fontSize = 16.sp, 
+                        fontWeight = FontWeight.Black,
+                        fontStyle = FontStyle.Italic,
+                        modifier = Modifier.padding(start = 4.dp),
+                    )
+                }
+            }
         }
     }
 }
@@ -1146,7 +1184,6 @@ fun LuckyComboButton(
         label = "alpha",
     )
 
-    // NEW LOGIC FOR SMOOTH COUNTDOWN ARC
     val progressPercent = maxOf(0f, timeLeft.toFloat() / maxTime)
     val animatedProgress by animateFloatAsState(
         targetValue = progressPercent,
@@ -1163,9 +1200,7 @@ fun LuckyComboButton(
             .padding(end = 24.dp, bottom = 50.dp), // FIXED: 50dp from bottom ekdam exact
         contentAlignment = Alignment.BottomEnd,
     ) {
-        // Outer box thoda bada kiya: 76.dp se 84.dp
         Box(contentAlignment = Alignment.Center, modifier = Modifier.size(84.dp)) {
-            // pulse rings
             Box(
                 Modifier
                     .fillMaxSize()
@@ -1182,8 +1217,6 @@ fun LuckyComboButton(
                     .alpha(pulseAlpha),
             )
 
-            // main button - directly hits onClick without opening sheet
-            // Button thoda bada kiya: 68.dp se 76.dp
             Box(
                 Modifier
                     .size(76.dp) 
@@ -1193,26 +1226,23 @@ fun LuckyComboButton(
                             listOf(Color(0xFFFF4D79), Color(0xFFFF1A4D))
                         )
                     )
-                    .clickable { onClick() }, // Yeh seedha trigger karega
+                    .clickable { onClick() }, 
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
                     text = "Combo",
                     color = Color.White,
-                    fontSize = 15.sp, // Font size halka bada kiya accordingly
+                    fontSize = 15.sp, 
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 0.5.sp,
                 )
-                // Countdown ring
                 Canvas(Modifier.fillMaxSize().padding(8.dp)) {
                     val stroke = Stroke(width = 3.5f)
-                    // background ring
                     drawCircle(
                         color = Color.White.copy(alpha = 0.35f),
                         radius = size.minDimension / 2 - stroke.width / 2,
                         style = stroke,
                     )
-                    // progress arc (now smooth instead of skipping)
                     drawArc(
                         color = Color.White,
                         startAngle = -90f,
