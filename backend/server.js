@@ -2831,7 +2831,14 @@ io.on("connection", (socket) => {
     const validAudio = Buffer.isBuffer(audio) ? audio.length > 0 && audio.length <= 4096
       : Array.isArray(audio) && audio.length > 0 && audio.length <= 4096;
     if (!validAudio) return;
-    socket.to(`room:${room}`).emit("room_music_chunk", { roomId: room, userId: accountId }, audio);
+    // Fan out to other accounts. socket.to() excludes only this socket, so a
+    // duplicate session for the same account could otherwise hear its own song.
+    for (const peer of io.sockets.sockets.values()) {
+      if (peer.id === socket.id || !peer.rooms.has("room:" + room)) continue;
+      const peerAccountId = String(peer.roomAccountId || peer.accountId || "");
+      if (peerAccountId === accountId) continue;
+      peer.emit("room_music_chunk", { roomId: room, userId: accountId }, audio);
+    }
   });
 
   socket.on("room_voice_chunk", (data = {}, binaryAudio) => {
@@ -2854,8 +2861,14 @@ io.on("connection", (socket) => {
     const validAudio = Buffer.isBuffer(audio) ? audio.length > 0 && audio.length <= 4096
       : Array.isArray(audio) && audio.length > 0 && audio.length <= 4096;
     if (!validAudio) return;
-    // socket.to excludes the sender, preventing local self-monitoring.
-    socket.to(`room:${room}`).emit("room_voice_chunk", { roomId: room, userId: accountId }, audio);
+    // Exclude every socket belonging to the publishing account, not only
+    // this socket. Deliver each mic frame to every other joined account.
+    for (const peer of io.sockets.sockets.values()) {
+      if (peer.id === socket.id || !peer.rooms.has("room:" + room)) continue;
+      const peerAccountId = String(peer.roomAccountId || peer.accountId || "");
+      if (peerAccountId === accountId) continue;
+      peer.emit("room_voice_chunk", { roomId: room, userId: accountId }, audio);
+    }
   });
 
   socket.on("room_voice_activity", (data = {}) => {
