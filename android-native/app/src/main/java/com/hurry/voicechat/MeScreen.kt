@@ -101,7 +101,14 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
         val visitorListener = Emitter.Listener { args ->
             val event = args.firstOrNull() as? JSONObject ?: return@Listener
             val visitor = event.optJSONObject("visitor") ?: return@Listener
-            if ((event.optString("profileId") !in visitorIdentityAliases && event.optString("profileId") != visitorUserId) || visitor.optString("id").isBlank()) return@Listener
+            val profileAliases = event.optJSONArray("profileAliases")
+            val matchesCurrentProfile = visitorIdentityAliases.contains(event.optString("profileId")) ||
+                event.optString("profileId") == visitorUserId ||
+                (0 until (profileAliases?.length() ?: 0)).any { index ->
+                    visitorIdentityAliases.contains(profileAliases?.optString(index).orEmpty()) ||
+                        profileAliases?.optString(index).orEmpty() == visitorUserId
+                }
+            if (!matchesCurrentProfile || visitor.optString("id").isBlank()) return@Listener
             followScope.launch {
                 val count = withContext(Dispatchers.IO) {
                     val historyKey = "visitor_history:" + visitorUserId + ":received"
