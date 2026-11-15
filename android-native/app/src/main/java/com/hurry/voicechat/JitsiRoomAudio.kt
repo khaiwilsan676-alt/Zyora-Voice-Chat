@@ -108,7 +108,7 @@ fun JitsiRoomAudio(
                 val speaker = audioManager.availableCommunicationDevices.firstOrNull {
                     it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER
                 }
-                audioManager.setCommunicationDevice(bluetooth ?: speaker)
+                (bluetooth ?: speaker)?.let { audioManager.setCommunicationDevice(it) }
             }
         } else {
             @Suppress("DEPRECATION")
