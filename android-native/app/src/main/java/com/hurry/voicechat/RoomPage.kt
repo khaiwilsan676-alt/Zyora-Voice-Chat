@@ -404,6 +404,9 @@ fun RoomPage(
     var luckyGiftNotice by remember(roomId) { mutableStateOf<LuckyNotice?>(null) }
     var showLuckyComboButton by remember(roomId) { mutableStateOf(false) }
     var luckyComboTimeLeft by remember(roomId) { mutableIntStateOf(5) }
+    var luckyComboGeneration by remember(roomId) { mutableIntStateOf(0) }
+    var lastLuckyComboPayload by remember(roomId) { mutableStateOf<JSONObject?>(null) }
+    val seenLuckyGiftTransferIds = remember(roomId) { java.util.Collections.synchronizedSet(mutableSetOf<String>()) }
     var showFloatingLuckyBag by remember { mutableStateOf(false) }
     var showLuckyBagCenterReveal by remember { mutableStateOf(false) }
     var showLuckyBagClaimedCard by remember { mutableStateOf(false) }
@@ -1205,6 +1208,12 @@ fun RoomPage(
             }
             val timestamp = payload.optLong("timestamp", System.currentTimeMillis())
             val noticeId = payload.optString("transferId").ifBlank { "lucky-$timestamp" }
+            if (!seenLuckyGiftTransferIds.add(noticeId)) return@Listener
+            if (seenLuckyGiftTransferIds.size > 200) {
+                synchronized(seenLuckyGiftTransferIds) {
+                    while (seenLuckyGiftTransferIds.size > 150) seenLuckyGiftTransferIds.remove(seenLuckyGiftTransferIds.first())
+                }
+            }
             mainHandler.post {
                 luckyGiftNotice = LuckyNotice(
                     id = noticeId,
@@ -1221,9 +1230,10 @@ fun RoomPage(
                 if (senderId == accountId) {
                     showLuckyComboButton = true
                     luckyComboTimeLeft = 5
+                    val activeGeneration = ++luckyComboGeneration
                     for (second in 1..5) {
                         mainHandler.postDelayed({
-                            if (showLuckyComboButton) {
+                            if (showLuckyComboButton && luckyComboGeneration == activeGeneration) {
                                 luckyComboTimeLeft = (5 - second).coerceAtLeast(0)
                                 if (luckyComboTimeLeft == 0) showLuckyComboButton = false
                             }
@@ -2559,8 +2569,18 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                     visible = true,
                     timeLeft = luckyComboTimeLeft,
                     onClick = {
+                        val previousGift = lastLuckyComboPayload
                         showLuckyComboButton = false
-                        showGift = true
+                        luckyComboGeneration++
+                        luckyComboTimeLeft = 0
+                        if (previousGift != null) {
+                            val nextTransferId = "combo-$accountId-${System.currentTimeMillis()}-${System.nanoTime()}"
+                            val comboTransfer = JSONObject(previousGift.toString())
+                                .put("transferId", nextTransferId)
+                                .put("eventId", nextTransferId)
+                                .put("timestamp", System.currentTimeMillis())
+                            roomSocketRef.value?.emit("coin_transfer", comboTransfer)
+                        }
                     },
                 )
             }
@@ -2577,7 +2597,11 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
             walletBalance = roomWalletBalance,
             onDebitWallet = { requested -> if (requested <= roomWalletBalance) roomWalletBalance else null },
             onSendCoinTransfer = { transfer ->
-                roomSocketRef.value?.emit("coin_transfer", JSONObject(transfer))
+                val outgoingTransfer = JSONObject(transfer)
+                if (outgoingTransfer.optBoolean("luckyGift", false)) {
+                    lastLuckyComboPayload = JSONObject(outgoingTransfer.toString())
+                }
+                roomSocketRef.value?.emit("coin_transfer", outgoingTransfer)
             },
             onSendGiftVideoPlay = { payload -> roomSocketRef.value?.emit("gift_video_play", JSONObject(payload)) }
         )
