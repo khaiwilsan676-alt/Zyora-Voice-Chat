@@ -6,7 +6,6 @@ import android.content.pm.PackageManager
 import android.media.AudioAttributes
 import android.media.audiofx.AcousticEchoCanceler
 import android.media.AudioFormat
-import android.media.AudioManager
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -89,7 +88,6 @@ fun JitsiRoomAudio(
 
     DisposableEffect(context, roomId, roomSocket, hasMicPermission, hasBluetoothPermission) {
         if (roomSocket == null) return@DisposableEffect onDispose { }
-        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
         // Keep room audio on Android's normal media route. MODE_IN_COMMUNICATION
         // forces call/earpiece routing and can break loudspeaker and Bluetooth media output.
         // AudioTrack below uses USAGE_MEDIA; the OS then routes to speaker or connected
