@@ -580,7 +580,7 @@ fun RoomPage(
     }
     var speaker by remember{mutableStateOf(true)}
     var localVoiceSpeaking by remember { mutableStateOf(false) }
-    var publicMsgOff by remember(roomId){mutableStateOf(true)}
+    // Public room chat is open unless the room explicitly reports that it is disabled.\n    // Starting as true incorrectly blocked every non-owner on a fresh room entry before settings arrived.\n    var publicMsgOff by remember(roomId){mutableStateOf(false)}
     var showPublicMessageClosedToast by remember { mutableStateOf(false) }
     var roomToastText by remember { mutableStateOf("") }
     LaunchedEffect(roomToastText) {
