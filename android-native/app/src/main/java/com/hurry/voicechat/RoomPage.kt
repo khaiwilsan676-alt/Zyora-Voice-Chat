@@ -929,6 +929,11 @@ fun RoomPage(
     // Keep the vehicle video as an independent room-screen preview, not inside the entry banner.
     var roomVehiclePreview by remember(roomId) { mutableStateOf("") }
     var roomVehiclePreviewItemId by remember(roomId) { mutableStateOf("") }
+    // One vehicle animation per actual room entry. Socket reconnects, duplicate
+    // server events and the retained-socket inventory fallback must not restart it.
+    val roomVehiclePlaybackClaimed = remember(roomId, accountId) {
+        java.util.concurrent.atomic.AtomicBoolean(false)
+    }
     var roomGiftVideoPreview by remember(roomId) { mutableStateOf("") }
     val seats=remember{mutableStateListOf<NativeRoomSeat>().apply{for(i in 1..15)add(NativeRoomSeat(i))}}
     // The owner gets one automatic attempt on the first authoritative seat snapshot only.
@@ -1035,8 +1040,10 @@ fun RoomPage(
             val videoUrl = if (video.startsWith("http", true)) video else "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/" + video
             val itemId = vehicle.optString("itemId").trim()
             mainHandler.post {
-                roomVehiclePreview = videoUrl
-                roomVehiclePreviewItemId = itemId
+                if (roomVehiclePlaybackClaimed.compareAndSet(false, true)) {
+                    roomVehiclePreview = videoUrl
+                    roomVehiclePreviewItemId = itemId
+                }
             }
         }
         val avatarFrameUpdatedListener = Emitter.Listener { args ->
@@ -1444,7 +1451,7 @@ fun RoomPage(
                         else "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/" + video
                     val itemId = equipped.optString("itemId").trim()
                     mainHandler.post {
-                        if (roomVehiclePreview.isBlank()) {
+                        if (roomVehiclePlaybackClaimed.compareAndSet(false, true)) {
                             roomVehiclePreview = videoUrl
                             roomVehiclePreviewItemId = itemId
                         }
