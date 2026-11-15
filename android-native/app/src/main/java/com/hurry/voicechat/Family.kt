@@ -261,26 +261,27 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, ac
                     FamilyQuestion(Modifier.size(20.dp).clickable(onClick = onRules))
                 }
 
-                // Top 3 Podium (Rank 1, 2, 3) - Frames choti kar di hain aur align set hai
+                // Top 3 Podium (Rank 1, 2, 3) - Top 1 frame image aur choti kardi hai
                 Box(Modifier.fillMaxWidth().height(240.dp).padding(top = 10.dp)) {
                     AsyncImage(model = familyAsset("IMG_20261115_135356.png"), contentDescription = null, modifier = Modifier.align(Alignment.CenterStart).offset(x = (-10).dp, y = 40.dp).size(130.dp), contentScale = ContentScale.Fit)
                     AsyncImage(model = familyAsset("IMG_20261115_135419.png"), contentDescription = null, modifier = Modifier.align(Alignment.CenterEnd).offset(x = 10.dp, y = 40.dp).size(130.dp), contentScale = ContentScale.Fit)
-                    AsyncImage(model = familyAsset("IMG_20261115_135339.png"), contentDescription = null, modifier = Modifier.align(Alignment.TopCenter).offset(y = (-20).dp).size(220.dp).zIndex(2f), contentScale = ContentScale.Fit)
+                    AsyncImage(model = familyAsset("IMG_20261115_135339.png"), contentDescription = null, modifier = Modifier.align(Alignment.TopCenter).offset(y = (-10).dp).size(190.dp).zIndex(2f), contentScale = ContentScale.Fit)
                 }
 
-                Spacer(Modifier.height(10.dp))
+                // Gap increased between Podium and Tabs
+                Spacer(Modifier.height(25.dp))
 
                 // 3 Tabs (This week, Last week, Rewards) - EDGE TO EDGE (Alpha removed, colorless on inactive)
                 Row(
-                    Modifier.fillMaxWidth(), // Removed horizontal padding
-                    horizontalArrangement = Arrangement.spacedBy(0.dp), // Zero gap
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(0.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     AsyncImage(
                         model = familyAsset("IMG_20261115_133007.png"),
                         contentDescription = null,
                         modifier = Modifier.weight(1f).wrapContentHeight().clickable { onRank(0) },
-                        contentScale = ContentScale.FillWidth, // FillWidth keeps aspect ratio, edge to edge
+                        contentScale = ContentScale.FillWidth,
                         colorFilter = if (activeRank == 0) activeFilter else inactiveFilter
                     )
                     AsyncImage(
@@ -299,7 +300,6 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, ac
                     )
                 }
 
-                // Gap after tabs reduced 
                 Row(Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 6.dp).background(Brush.horizontalGradient(listOf(Color.Transparent, familyGold.copy(alpha = .12f), Color.Transparent))).border(1.dp, familyGold.copy(alpha = .18f)), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
                     Text("Countdown", color = Color(0xFFFDF6E3), fontSize = 14.sp, modifier = Modifier.padding(end = 6.dp))
                     Text("%02d".format(seconds / 86400), color = Color.White, modifier = Modifier.background(Color(0xFF1A0F02), RoundedCornerShape(4.dp)).padding(4.dp), fontWeight = FontWeight.Bold)
@@ -311,20 +311,20 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, ac
                     Text("%02d".format(seconds % 60), color = Color.White, modifier = Modifier.background(Color(0xFF1A0F02), RoundedCornerShape(4.dp)).padding(4.dp), fontWeight = FontWeight.Bold)
                 }
 
-                // Edge to Edge Top 1, 2, 3 Cards - Gap added aur 5dp ouper shift kar diya
-                Box(Modifier.fillMaxWidth().wrapContentHeight().offset(y = (-5).dp).padding(bottom = 5.dp)) {
+                // Edge to Edge Top 1, 2, 3 Cards - Gap hata diya, sirf 5dp ouper shift hain
+                Box(Modifier.fillMaxWidth().wrapContentHeight().offset(y = (-5).dp)) {
                     AsyncImage(model = familyAsset("IMG_20261115_134723.png"), contentDescription = null, modifier = Modifier.fillMaxWidth(), contentScale = ContentScale.FillWidth)
                 }
-                Box(Modifier.fillMaxWidth().wrapContentHeight().offset(y = (-5).dp).padding(bottom = 5.dp)) {
+                Box(Modifier.fillMaxWidth().wrapContentHeight().offset(y = (-5).dp)) {
                     AsyncImage(model = familyAsset("IMG_20261115_134543.png"), contentDescription = null, modifier = Modifier.fillMaxWidth(), contentScale = ContentScale.FillWidth)
                 }
-                Box(Modifier.fillMaxWidth().wrapContentHeight().offset(y = (-5).dp).padding(bottom = 5.dp)) {
+                Box(Modifier.fillMaxWidth().wrapContentHeight().offset(y = (-5).dp)) {
                     AsyncImage(model = familyAsset("IMG_20261115_134632.png"), contentDescription = null, modifier = Modifier.fillMaxWidth(), contentScale = ContentScale.FillWidth)
                 }
 
-                // RANKS 4 TO 50 WITH TEXT (Edge to Edge) - Gap added aur 5dp ouper shift kar diya
+                // RANKS 4 TO 50 WITH TEXT (Edge to Edge) - Gap hata diya, sirf 5dp ouper shift hain
                 for (rank in 4..50) {
-                    Box(Modifier.fillMaxWidth().wrapContentHeight().offset(y = (-5).dp).padding(bottom = 5.dp), contentAlignment = Alignment.CenterStart) {
+                    Box(Modifier.fillMaxWidth().wrapContentHeight().offset(y = (-5).dp), contentAlignment = Alignment.CenterStart) {
                         AsyncImage(model = familyAsset("IMG_20261115_134839.png"), contentDescription = null, modifier = Modifier.fillMaxWidth(), contentScale = ContentScale.FillWidth)
                         Text(rank.toString(), color = familyGold, fontSize = 22.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(start = 24.dp))
                     }
@@ -332,8 +332,8 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, ac
             }
         }
 
-        // FLOATING CREATE FAMILY BUTTON AT BOTTOM - 15dp niche shift kiya gaya (padding(bottom = 1.dp))
-        Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(bottom = 1.dp)) {
+        // FLOATING CREATE FAMILY BUTTON AT BOTTOM - Or niche kardi hai offset(y = 25.dp) laga ke
+        Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().offset(y = 25.dp)) {
             AsyncImage(
                 model = familyAsset("file_000000009d1081f59878648feb821b5e.png"),
                 contentDescription = null,
@@ -379,14 +379,15 @@ private fun FamilyTop(onBack: () -> Unit, onRules: () -> Unit, activeRank: Int, 
                 FamilyQuestion(Modifier.size(20.dp).clickable(onClick = onRules))
             }
 
-            // Top 3 Podium (Rank 1, 2, 3) - Frames choti kar di hain aur align set hai
+            // Top 3 Podium (Rank 1, 2, 3) - Top 1 frame image aur choti kardi hai
             Box(Modifier.fillMaxWidth().height(240.dp).padding(top = 10.dp)) {
                 AsyncImage(model = familyAsset("IMG_20261115_135356.png"), contentDescription = null, modifier = Modifier.align(Alignment.CenterStart).offset(x = (-10).dp, y = 40.dp).size(130.dp), contentScale = ContentScale.Fit)
                 AsyncImage(model = familyAsset("IMG_20261115_135419.png"), contentDescription = null, modifier = Modifier.align(Alignment.CenterEnd).offset(x = 10.dp, y = 40.dp).size(130.dp), contentScale = ContentScale.Fit)
-                AsyncImage(model = familyAsset("IMG_20261115_135339.png"), contentDescription = null, modifier = Modifier.align(Alignment.TopCenter).offset(y = (-20).dp).size(220.dp).zIndex(2f), contentScale = ContentScale.Fit)
+                AsyncImage(model = familyAsset("IMG_20261115_135339.png"), contentDescription = null, modifier = Modifier.align(Alignment.TopCenter).offset(y = (-10).dp).size(190.dp).zIndex(2f), contentScale = ContentScale.Fit)
             }
 
-            Spacer(Modifier.height(10.dp))
+            // Gap increased between Podium and Tabs
+            Spacer(Modifier.height(25.dp))
 
             // 3 Tabs in Rewards Page - EDGE TO EDGE (Alpha removed, colorless on inactive)
             Row(
@@ -421,7 +422,7 @@ private fun FamilyTop(onBack: () -> Unit, onRules: () -> Unit, activeRank: Int, 
             Spacer(Modifier.height(20.dp))
 
             RewardCard(
-                title = "TOP 1",
+                title = "TOP 1 Reward",
                 item1 = RewardItemData("Medal *7 days", "1000196572-background (1).mp4", "black"),
                 item2 = RewardItemData("Top1 Tag *7 days", "", "tag"),
                 item3 = RewardItemData(
@@ -445,7 +446,7 @@ private fun FamilyTop(onBack: () -> Unit, onRules: () -> Unit, activeRank: Int, 
             Spacer(Modifier.height(24.dp))
 
             RewardCard(
-                title = "TOP 2",
+                title = "TOP 2 Reward",
                 item1 = RewardItemData("Medal *7 days", "1000196573-background (1).mp4", "black"),
                 item2 = RewardItemData("Top2 Tag *7 days", "", "tag"),
                 item3 = RewardItemData(
@@ -469,17 +470,17 @@ private fun FamilyTop(onBack: () -> Unit, onRules: () -> Unit, activeRank: Int, 
             Spacer(Modifier.height(24.dp))
 
             RewardCard(
-                title = "TOP 3",
+                title = "TOP 3 Reward",
                 item1 = RewardItemData("Medal *7 days", "1000196574-background (1).mp4", "black"),
                 item2 = RewardItemData("Top3 Tag *7 days", "", "tag"),
                 item3 = RewardItemData(
-                    "Vehicle 7 days",
+                    "Vehicle *7 days",
                     "IMG_20260919_222412.jpg",
                     "mixed",
                     videoUrl = "VID_20260919_222502.mp4"
                 ),
                 frame = RewardItemData(
-                    "Frames 7 days",
+                    "Frames *7 days",
                     "gemini_generated_video_123c050b~2.mp4",
                     "green",
                     isWinnerReward = true
@@ -492,16 +493,16 @@ private fun FamilyTop(onBack: () -> Unit, onRules: () -> Unit, activeRank: Int, 
             Spacer(Modifier.height(16.dp))
 
             RewardCard(
-                title = "TOP 4 TO 10",
+                title = "TOP 4 TO 10\nReward",
                 item1 = RewardItemData("Medal *3 days", "", "tag"),
                 item2 = RewardItemData(
-                    "Frames 3 days",
+                    "Frames *3 days",
                     "gemini_generated_video_0d259062.mp4",
                     "green",
                     isWinnerReward = true
                 ),
                 item3 = RewardItemData(
-                    "Vehicle 3 days",
+                    "Vehicle *3 days",
                     "IMG_20260919_222041.jpg",
                     "mixed",
                     videoUrl = "VID_20260919_222549.mp4"
@@ -820,4 +821,3 @@ private fun FamilyQuestion(modifier:Modifier=Modifier) {
         drawContext.canvas.nativeCanvas.drawText("?",size.width/2f,size.height*.73f,android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply{color=android.graphics.Color.WHITE;textSize=size.minDimension*.72f;textAlign=android.graphics.Paint.Align.CENTER;typeface=android.graphics.Typeface.DEFAULT_BOLD})
     }
 }
-
