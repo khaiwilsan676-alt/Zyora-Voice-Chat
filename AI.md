@@ -1062,3 +1062,9 @@ Current documentation does not certify that all historical features are build-, 
 - Root cause addressed properly: the native room's existing `/api/rooms?roomId=...` initial settings fetch now reads persisted `publicMsgOff` (defaulting to `true` only when the field is absent) and applies it to the UI state. Thus rooms already configured ON remain ON for normal users after entry, while rooms with no saved setting default OFF.
 - Existing owner/admin bypass, settings toggle, message transport, and UI remain unchanged.
 - Verification: source committed; Android build and live room test remain pending.
+
+
+## 2026-11-15 — Room public messages ON by default
+- Native RoomPage now initializes public messaging as ON (`publicMsgOff=false`) and treats a missing saved setting as ON.
+- A persisted owner setting of OFF (`publicMsgOff=true`) still blocks normal users; turning it back ON allows them to send again. Owner/admin permission behavior, message transport, and UI are unchanged.
+- Source commit: d228c6ad149e805b5e15a39a891c599f2b92b18f. Android build and live multi-user room test remain pending.
