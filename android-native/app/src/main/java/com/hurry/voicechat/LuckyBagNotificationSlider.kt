@@ -201,7 +201,7 @@ fun LuckyBagNotificationSlider(currentUserId: String, onGoToRoom: (String, Strin
                                 )
                             }
                             
-                            // 25dp spacing fix GO Button se pehle (Sirf scrolling distance banaye rakhne ke liye invisible placeholder)
+                            // 25dp spacing fix GO Button se pehle
                             Spacer(Modifier.width(25.dp))
                             Box(
                                 Modifier
@@ -212,7 +212,7 @@ fun LuckyBagNotificationSlider(currentUserId: String, onGoToRoom: (String, Strin
                         }
                     }
 
-                    // NON-FADE LAYER (GO Button ke liye, taaki chamakta rahe, bina fade hue)
+                    // NON-FADE LAYER (GO Button ke liye)
                     Row(
                         Modifier.matchParentSize().padding(start = 8.dp, end = 3.dp),
                         verticalAlignment = Alignment.CenterVertically
@@ -314,7 +314,8 @@ fun LuckyBagOpenConfirmCards(
                     
                     Box(
                         modifier = Modifier
-                             .offset(y = (-17).dp)
+                             // Open Button ko thoda aur upar shift kar diya (-30.dp total)
+                             .offset(y = (-30).dp)
                             .width(190.dp)
                             .height(72.dp)
                             .clip(RoundedCornerShape(50))
@@ -460,12 +461,15 @@ fun LuckyBagOpenConfirmCards(
                             .clip(RoundedCornerShape(50))
                             .background(Brush.verticalGradient(listOf(Color(0xFFFFF2B9), Color(0xFFFFD28A), Color(0xFFFFAC45), Color(0xFFFFE8A0))))
                             .border(3.dp, Color(0xFFFFF0AD), RoundedCornerShape(50))
-                            .clickable(enabled = !luckyBagClaiming) {
+                            .clickable {
                                 if (luckyBagId.isBlank() || canonicalWalletUserId.isBlank()) {
                                     onLuckyBagClaimErrorChange("Lucky Bag confirmation unavailable")
                                 } else {
-                                    onLuckyBagClaimingChange(true)
+                                    // Confirm dabate hi card ekdam turant close ho jayega
+                                    onShowLuckyBagClaimedCardChange(false)
                                     onLuckyBagClaimErrorChange(null)
+                                    
+                                    // Background me balance API call chalti rahegi, user ko wait nahi karna padega
                                     CoroutineScope(Dispatchers.IO).launch {
                                         val result = runCatching {
                                             val payload = JSONObject()
@@ -490,13 +494,9 @@ fun LuckyBagOpenConfirmCards(
                                             json
                                         }
                                         withContext(Dispatchers.Main) {
-                                            onLuckyBagClaimingChange(false)
                                             result.onSuccess { json ->
                                                 onRoomWalletBalanceChange(json.optLong("balance", roomWalletBalance).coerceAtLeast(0L))
-                                                onShowLuckyBagClaimedCardChange(false)
                                                 onLuckyBagClaimAmountChange(0L)
-                                            }.onFailure { err ->
-                                                onLuckyBagClaimErrorChange(err.message ?: "Confirmation failed")
                                             }
                                         }
                                     }
@@ -505,7 +505,7 @@ fun LuckyBagOpenConfirmCards(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            if (luckyBagClaiming) "Confirming..." else "Confirm",
+                            "Confirm",
                             color = Color(0xFF9A4F1C),
                             fontSize = 22.sp,
                             fontWeight = FontWeight.ExtraBold
