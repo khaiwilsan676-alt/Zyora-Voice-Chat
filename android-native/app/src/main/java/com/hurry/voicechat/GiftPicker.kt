@@ -365,7 +365,6 @@ fun GiftPicker(
                             RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp),
                         )
                         .navigationBarsPadding()
-                        // Right side padding (end) reduced to push icons to the right end
                         .padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 12.dp),
                 ) {
                     Column(Modifier.fillMaxSize()) {
@@ -493,8 +492,8 @@ fun GiftPicker(
                         ) {
                             LazyVerticalGrid(
                                 columns = GridCells.Fixed(4),
-                                horizontalArrangement = Arrangement.spacedBy(2.dp), // Gap Decreased
-                                verticalArrangement = Arrangement.spacedBy(0.dp), // Gap ekdam decrease
+                                horizontalArrangement = Arrangement.spacedBy(2.dp),
+                                verticalArrangement = Arrangement.spacedBy(0.dp),
                                 modifier = Modifier.fillMaxSize(),
                             ) {
                                 items(currentGifts, key = { it.id }) { gift ->
@@ -551,7 +550,6 @@ fun GiftPicker(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                             ) {
                                 Box {
-                                    // Dropdown fixed with Layout to take exactly 0x0 measurement and perfectly float
                                     if (showMultipliers) {
                                         Layout(
                                             content = {
@@ -560,7 +558,7 @@ fun GiftPicker(
                                                     shape = RoundedCornerShape(6.dp),
                                                     border = BorderStroke(1.dp, Color.White.copy(alpha = 0.15f)),
                                                     shadowElevation = 8.dp,
-                                                    modifier = Modifier.width(50.dp) // YAHAN TERE BOLNE PAR WIDTH 30.DP SE 50.DP KAR DI HAI
+                                                    modifier = Modifier.width(50.dp) // Width is 50.dp as requested
                                                 ) {
                                                     Column(Modifier.padding(0.dp)) {
                                                         multipliers.forEach { m ->
@@ -626,7 +624,7 @@ fun GiftPicker(
                                             )
                                         }
 
-                                        // Send Part (3D Gradient and Highlight)
+                                        // Send Part
                                         Box(
                                             Modifier
                                                 .alpha(1f)
@@ -662,7 +660,6 @@ fun GiftPicker(
                 }
             }
 
-            // Insufficient overlay
             if (showInsufficient) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Surface(
@@ -701,9 +698,8 @@ private fun GiftCard(
                 if (isSelected) Color.Gray.copy(alpha = 0.35f) else Color.Transparent 
             )
             .clickable { onClick() }
-            .padding(horizontal = 2.dp, vertical = 2.dp), // Padding vertical decrease to close gap
+            .padding(horizontal = 2.dp, vertical = 2.dp),
     ) {
-        // Lucky badge
         if (activeTab == "Lucky") {
             AsyncImage(
                 model = giftAssetUrl("/IMG_20260928_172454.png"),
@@ -713,7 +709,6 @@ private fun GiftCard(
                     .size(16.dp),
             )
         }
-        // Hot badge (only Arab King)
         if (activeTab == "Hot" && gift.id == 3) {
             AsyncImage(
                 model = giftAssetUrl("/IMG_20260928_172516.png"),
@@ -791,7 +786,7 @@ private fun GiftCard(
             Spacer(Modifier.height(0.dp))
 
             Row(
-                modifier = Modifier.offset(y = (-6).dp), // Thoda upar kar diya Image or value ko name ki taraf
+                modifier = Modifier.offset(y = (-6).dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,
             ) {
@@ -815,7 +810,7 @@ private fun GiftCard(
 }
 
 // ============================================================
-// RECIPIENT BUTTON (MIC / HOUSE)
+// RECIPIENT BUTTON
 // ============================================================
 private enum class RecipientIconType { MIC, HOUSE }
 
@@ -826,7 +821,6 @@ private fun RecipientButton(
     iconType: RecipientIconType,
 ) {
     val iconColor = if (isActive) Blue500 else Color(0xFF9CA3AF)
-    // Box width reduced slightly to decrease the extra gap
     Box(Modifier.width(44.dp).height(50.dp), contentAlignment = Alignment.TopCenter) {
         Box(
             Modifier
@@ -891,7 +885,6 @@ private fun RecipientButton(
                     iconPath.lineTo(302f * sx, 425f * sy)
                     iconPath.close()
 
-                    // DOOR PATH
                     val doorPath = androidx.compose.ui.graphics.Path()
                     doorPath.moveTo(226f * sx, 425f * sy)
                     doorPath.lineTo(226f * sx, 340f * sy)
@@ -931,7 +924,7 @@ private fun RecipientButton(
 }
 
 // ============================================================
-// VIDEO OVERLAY (FIXED FOR TRANSPARENCY & CUSTOM FADES)
+// VIDEO OVERLAY (FIXED ASPECT RATIO & FADE)
 // ============================================================
 @Composable
 private fun VideoEffectOverlay(
@@ -941,8 +934,10 @@ private fun VideoEffectOverlay(
     onStarted: () -> Unit,
 ) {
     val isFade = style == "fade"
-    val isPure = style == "pure"
     var show by remember { mutableStateOf(true) }
+    
+    // FIX 1: Aspect Ratio store karne ke liye variable (Taaki video kichi-kichi na lage)
+    var videoRatio by remember { mutableStateOf<Float?>(null) }
 
     LaunchedEffect(src) { onStarted() }
 
@@ -969,9 +964,15 @@ private fun VideoEffectOverlay(
                                     setDataSource(ctx, Uri.parse(giftAssetUrl(src)))
                                     setSurface(android.view.Surface(surface))
                                     setVolume(0f, 0f)
+                                    // Original width/height nikal ke Ratio set kar diya
+                                    setOnVideoSizeChangedListener { _, w, h ->
+                                        if (w > 0 && h > 0) {
+                                            videoRatio = w.toFloat() / h.toFloat()
+                                        }
+                                    }
                                     setOnPreparedListener { mp ->
                                         mp.isLooping = false
-                                        mp.start() // Play immediately without any delay/controls
+                                        mp.start() 
                                     }
                                     setOnCompletionListener { onFinished() }
                                     setOnErrorListener { _, _, _ ->
@@ -999,31 +1000,28 @@ private fun VideoEffectOverlay(
             },
             modifier = Modifier
                 .fillMaxWidth()
-                .wrapContentHeight()
-                .then(
-                    if (isPure) Modifier.graphicsLayer {
-                        compositingStrategy = CompositingStrategy.Offscreen
-                        blendMode = BlendMode.Screen
-                    } else Modifier
-                )
-                .then(
-                    if (isFade) Modifier
-                        .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
-                        .drawWithContent {
-                            drawContent()
-                            val bottomFadeStop = if (isKing) 0.8f else 0.9f
-                            drawRect(
-                                brush = Brush.verticalGradient(
-                                    0.0f to Color.Transparent,
-                                    0.1f to Color.Black,
-                                    bottomFadeStop to Color.Black,
-                                    1.0f to Color.Transparent
-                                ),
-                                blendMode = BlendMode.DstIn
-                            )
-                        }
-                    else Modifier
-                )
+                // FIX 2: Original Aspect Ratio apply jisse height stretch na ho
+                .then(if (videoRatio != null) Modifier.aspectRatio(videoRatio!!) else Modifier.wrapContentHeight())
+                .graphicsLayer { 
+                    compositingStrategy = CompositingStrategy.Offscreen 
+                    // FIX 3: Hamesha screen blend mode rakha jisse video ka black background gayab ho jaye
+                    blendMode = BlendMode.Screen 
+                }
+                .drawWithContent {
+                    drawContent()
+                    // FIX 4: Fade mask ke liye Color.White use kiya transparent gradient ke sath
+                    if (isFade) {
+                        val bottomFadeStop = if (isKing) 0.8f else 0.9f
+                        drawRect(
+                            brush = Brush.verticalGradient(
+                                0.0f to Color.White,
+                                bottomFadeStop to Color.White,
+                                1.0f to Color.Transparent
+                            ),
+                            blendMode = BlendMode.DstIn // Ye sirf mask ka kaam karega, black add nahi karega
+                        )
+                    }
+                }
         )
     }
 }
@@ -1055,22 +1053,18 @@ fun LuckyGiftNotificationSlider(
     notice: LuckyNotice?,
     floatingWins: List<Pair<String, Long>> = emptyList(),
 ) {
-    // YAHAN PAR MAINE TERE BATAYE HUE CHANGES KIYE HAIN: 
-    // 1. Ek outer Box banaya aur use `BottomStart` align kar diya taki Top par faste hi nahi!
-    // 2. Exact Right edge se Left aane wala udta hua animation lagaya hai (initialOffsetX = { it })
+    // FIX 5: Box ko CenterStart mein daala taki ab Bottom par galti se bhi na jaye
     Box(
         modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.BottomStart // Screen ke left corner par fix karne ke liye
+        contentAlignment = Alignment.CenterStart 
     ) {
         AnimatedVisibility(
             visible = notice != null && !notice.isExiting,
-            // Ekdam right screen edge se ghusega andar ki taraf (Right to Left aayegi)
+            // Right se udti hui Left mein aayegi
             enter = slideInHorizontally(initialOffsetX = { it }) + fadeIn(),
-            // Wapis Left ki taraf exit karegi
+            // Wapis ud jayegi
             exit = slideOutHorizontally(targetOffsetX = { -it }) + fadeOut(),
-            modifier = Modifier
-                .fillMaxWidth() // Screen width full hold karega animation ke liye
-                .padding(bottom = 50.dp) // Bottom se exactly 50dp space ke sath fix kar diya hai
+            modifier = Modifier.fillMaxWidth() 
         ) {
             if (notice == null) return@AnimatedVisibility
             val isBroadcast = notice.recipientMode == RecipientMode.MIC ||
@@ -1082,7 +1076,7 @@ fun LuckyGiftNotificationSlider(
             }
             val bottomText = if (isBroadcast) notice.senderName else "To ${notice.recipientName}"
 
-            // Content Left side mei float karega
+            // Content Left side float 
             Box(contentAlignment = Alignment.CenterStart) {
                 Row(
                     Modifier
@@ -1154,7 +1148,7 @@ fun LuckyGiftNotificationSlider(
 }
 
 // ============================================================
-// LUCKY COMBO BUTTON (MODIFIED FOR SIZE AND SMOOTH ARC)
+// LUCKY COMBO BUTTON 
 // ============================================================
 @Composable
 fun LuckyComboButton(
@@ -1188,7 +1182,7 @@ fun LuckyComboButton(
     val animatedProgress by animateFloatAsState(
         targetValue = progressPercent,
         animationSpec = tween(
-            durationMillis = 1000, // 1 second continuous linear animation so it doesn't skip/jump
+            durationMillis = 1000, 
             easing = LinearEasing
         ),
         label = "smoothProgress"
@@ -1197,7 +1191,7 @@ fun LuckyComboButton(
     Box(
         Modifier
             .fillMaxSize()
-            .padding(end = 24.dp, bottom = 50.dp), // FIXED: 50dp from bottom ekdam exact
+            .padding(end = 24.dp, bottom = 50.dp), 
         contentAlignment = Alignment.BottomEnd,
     ) {
         Box(contentAlignment = Alignment.Center, modifier = Modifier.size(84.dp)) {
@@ -1217,6 +1211,7 @@ fun LuckyComboButton(
                     .alpha(pulseAlpha),
             )
 
+            // FIX 6: Sirf ye button click lega (Background/Sheet ko click pass nahi karega ab)
             Box(
                 Modifier
                     .size(76.dp) 
