@@ -308,29 +308,7 @@ const loadInviteBindIds = async (): Promise<any[]> => {
   }); } finally { db.close(); }
 };
 
-const INVITE_BIND_DB = "ZyoraOwnerInviteDB";
-const openInviteBindDB = (): Promise<IDBDatabase> => new Promise((resolve, reject) => {
-  const request = indexedDB.open(INVITE_BIND_DB, 1);
-  request.onupgradeneeded = () => { if (!request.result.objectStoreNames.contains("bindUserIds")) request.result.createObjectStore("bindUserIds", { keyPath: "id" }); };
-  request.onsuccess = () => resolve(request.result);
-  request.onerror = () => reject(request.error || new Error("Invite IndexedDB unavailable"));
-});
-const saveInviteBindIds = async (rows: any[]) => {
-  const db = await openInviteBindDB();
-  try { await new Promise<void>((resolve, reject) => {
-    const tx = db.transaction("bindUserIds", "readwrite");
-    rows.forEach(row => { if (row?.id && row?.inviterId) tx.objectStore("bindUserIds").put({ id: String(row.id), inviterId: String(row.inviterId), timestamp: Number(row.timestamp || Date.now()) }); });
-    tx.oncomplete = () => resolve(); tx.onerror = () => reject(tx.error); tx.onabort = () => reject(tx.error);
-  }); } finally { db.close(); }
-};
-const loadInviteBindIds = async (): Promise<any[]> => {
-  const db = await openInviteBindDB();
-  try { return await new Promise((resolve, reject) => {
-    const request = db.transaction("bindUserIds", "readonly").objectStore("bindUserIds").getAll();
-    request.onsuccess = () => resolve(Array.isArray(request.result) ? request.result.sort((a: any,b: any) => Number(b.timestamp)-Number(a.timestamp)) : []);
-    request.onerror = () => reject(request.error);
-  }); } finally { db.close(); }
-};
+
 
 // TYPES & DATA
 // ==============================================================
