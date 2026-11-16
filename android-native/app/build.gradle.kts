@@ -78,7 +78,12 @@ val copyGenderAssets = tasks.register<Copy>("copyGenderAssets") {
             "file_00000000d9b08211b0304c61b802348b.png",
             "file_000000003d24821182882f8ca412d2b6.png",
             "1787413631876~2.jpg", "file_00000000ced481fa9117afc4fa91791e.png",
-            "file_00000000eb0081f4885ade7d7db3bef8.png", "fruit-party-logo.jpg", "file_000000009d808211b8ffb7c2183b4ef5.png", "file_00000000c9e08211ab3e8c4d511b7965.png", "file_000000009d808211b8ffb7c2183b4ef5.png", "file_00000000c9e08211ab3e8c4d511b7965.png", "file_000000005f948210bbb51c62a68f797a.png"
+            "file_00000000eb0081f4885ade7d7db3bef8.png", "fruit-party-logo.jpg", "file_000000009d808211b8ffb7c2183b4ef5.png", "file_00000000c9e08211ab3e8c4d511b7965.png", "file_000000009d808211b8ffb7c2183b4ef5.png", "file_00000000c9e08211ab3e8c4d511b7965.png", "file_000000005f948210bbb51c62a68f797a.png",
+            "IMG_20260915_225333.png", "IMG_20260915_225426.png", "IMG_20260915_225404.png",
+            "IMG_20260915_225349.png", "IMG_20260915_225447.png", "IMG_20260915_225506.png",
+            "IMG_20260915_225536.png", "IMG_20261101_125212.png",
+            "file_00000000f26c81f88083bc494a0f229b.png", "file_00000000fe848207abf557a118ff8a5b.png",
+            "file_00000000a25081fbb57574619596eed8.png", "IMG_20261022_212625.png", "IMG_20261028_004355.png"
         )
         rename { fileName ->
             when {
