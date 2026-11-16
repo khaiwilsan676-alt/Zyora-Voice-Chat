@@ -411,14 +411,16 @@ fun RoomPage(
     // leaving several Handler callbacks racing to hide the button.
     LaunchedEffect(roomId, luckyComboGeneration) {
         if (!showLuckyComboButton) return@LaunchedEffect
+        val activeGeneration = luckyComboGeneration
         for (second in 1..5) {
             kotlinx.coroutines.delay(1000L)
-            if (luckyComboGeneration == luckyComboGeneration) {
-                luckyComboTimeLeft = 5 - second
-            }
+            if (luckyComboGeneration != activeGeneration) return@LaunchedEffect
+            luckyComboTimeLeft = 5 - second
         }
-        showLuckyComboButton = false
-        luckyComboTimeLeft = 0
+        if (luckyComboGeneration == activeGeneration) {
+            showLuckyComboButton = false
+            luckyComboTimeLeft = 0
+        }
     }
     val seenLuckyGiftTransferIds = remember(roomId) { java.util.Collections.synchronizedSet(mutableSetOf<String>()) }
     var showFloatingLuckyBag by remember { mutableStateOf(false) }
