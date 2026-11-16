@@ -1129,3 +1129,12 @@ Current documentation does not certify that all historical features are build-, 
 - Removed the previous launch logo and `Zyora` title from the launch UI; the old splash artwork is no longer packaged as the launch drawable.
 - Updated the Android window launch background to use the same requested image so it appears immediately when the app icon is tapped.
 - No other app UI or navigation behavior was changed.
+
+## 2026-11-16 — Family Profile, invitations, and gift-based rankings
+- Added native `familyprofile.kt` and routed the Family card in `PublicProfile.kt` into the dedicated Family Profile screen. The page uses the requested family cover image with a dimmed 10% bottom fade into the grey page, square 12dp family DP, Family ID/member count, white Announcement card, and member ranking list.
+- Owner-only pencil opens the full-screen edit form (family DP/name/announcement only; no Required Level or create-cost button). Owner-only Add Members opens a 70%-height Invite Member sheet with server-backed ID/name search and invite action. Non-owners see Apply.
+- Family invitations are delivered as `family_invite` private-chat messages, including family DP/name/ID, the exact invitation text, and an Accept action. Accept persists membership in MongoDB and syncs the joining user's local public-profile family fields. Private chat history remains in the existing local IndexedDB flow; Redis is used only for offline delivery.
+- Zyora Server now stores families in MongoDB `families`, enforces a 50-member maximum, exposes family load/update/search/invite/accept and global leaderboard endpoints, and updates each member's `coinsSent` plus family `totalCoinsSent` only after a successful `coin_transfer`.
+- `Family.kt` now renders the actual top 1–3 family DP/frame/target and only renders ranks 4–50 when corresponding families exist. Member ranking sorts by each member's sent-gift total; member coin amounts are masked as requested.
+- Existing profile-based families are migrated into the new collection when their Family Profile is first opened. Source commits: native Family Profile/navigation/chat/ranking updates through `82c61f1`; server family API/ranking updates through `23bc796`.
+- GitHub Actions native APK build is queued/running for the latest native commit. APK success, Render deployment, and two-account invitation/acceptance plus gift-ranking verification are still pending; do not mark this feature device-verified until those checks pass.
