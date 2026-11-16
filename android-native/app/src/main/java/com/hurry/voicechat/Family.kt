@@ -70,7 +70,7 @@ private val familyCardBg = Color(0xFF3B0C06)
 private val familyRules = listOf(
     "1. The top 10 families in the weekly family rankings will receive various rewards. Rewards are distributed every Sunday at 5:30 AM (GMT+5:30).",
     "2. There is no need to wait for official approval.",
-    "3. A family can have a maximum of 100 members.",
+    "3. A family can have a maximum of 50 members.",
     "4. Individuals can apply to join a family. Once the family leader approves the request, the applicant can join the family immediately.",
     "5. Each user can join only one family. Regular family members can leave the family at any time without the leader's approval.",
     "6. The family leader has the authority to remove other members from the family at any time without the removed member's consent. The family leader can also disband the family freely without official approval.",
@@ -98,6 +98,8 @@ private data class RewardModalData(
 fun Family(onBack: () -> Unit) {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("hurry_user", Context.MODE_PRIVATE) }
+    val authPrefs = remember { context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE) }
+    val familyCreatorId = authPrefs.getString("accountId", "").orEmpty().ifBlank { authPrefs.getString("uid", "").orEmpty() }.ifBlank { authPrefs.getString("id", "").orEmpty() }
     var view by remember { mutableStateOf("main") }
     var showRules by remember { mutableStateOf(false) }
     var familyName by remember { mutableStateOf(prefs.getString("familyName", "") ?: "") }
@@ -146,13 +148,13 @@ fun Family(onBack: () -> Unit) {
                             val result = withContext(Dispatchers.IO) {
                                 runCatching {
                                     val current = walletDao.getUserData() ?: UserDataEntity()
-                                    if (current.balance < 10_000_000L) {
-                                        "You need 10,000,000 coins to create a family."
+                                    if (current.balance < 30_000_000L) {
+                                        "You need 30,000,000 coins to create a family."
                                     } else {
-                                        walletDao.saveUserData(current.copy(balance = current.balance - 10_000_000L))
+                                        walletDao.saveUserData(current.copy(balance = current.balance - 30_000_000L))
                                         val now = System.currentTimeMillis()
                                         walletDao.insertTransaction(TransactionEntity(
-                                            title = "Create Family", amount = -10_000_000L,
+                                            title = "Create Family", amount = -30_000_000L,
                                             date = java.text.SimpleDateFormat("yyyy.MM.dd HH:mm", java.util.Locale.getDefault()).format(java.util.Date(now)),
                                             timestamp = now, type = "coins"
                                         ))
@@ -164,7 +166,8 @@ fun Family(onBack: () -> Unit) {
                             if (result == null) {
                                 prefs.edit().putString("familyName", familyName.trim())
                                     .putString("familyAnnouncement", announcement)
-                                    .putString("familyImage", familyImage)
+                                     .putString("familyImage", familyImage)
+                                    .putString("familyCreatorId", familyCreatorId)
                                     .putString("familyCode", prefs.getString("familyCode", "")?.ifBlank { "FAM" + System.currentTimeMillis().toString().takeLast(6) } ?: "FAM" + System.currentTimeMillis().toString().takeLast(6))
                                     .putBoolean("familyCreated", true).apply()
                                 view = "top"
@@ -199,7 +202,11 @@ fun Family(onBack: () -> Unit) {
                             view = "top" 
                         }
                     }, 
-                    onCreate = { view = "create" }
+                    onCreate = { view = "create" },
+                    familyCreated = prefs.getBoolean("familyCreated", false),
+                    familyName = familyName,
+                    familyImage = familyImage,
+                    familyCreatorId = familyCreatorId
                 )
             }
         }
@@ -222,7 +229,7 @@ fun Family(onBack: () -> Unit) {
 // MAIN HOME SCREEN
 // --------------------------------------------------------
 @Composable
-private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, activeRank: Int, onRank: (Int) -> Unit, onCreate: () -> Unit) {
+private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, activeRank: Int, onRank: (Int) -> Unit, onCreate: () -> Unit, familyCreated: Boolean, familyName: String, familyImage: String, familyCreatorId: String) {
     val scrollState = rememberScrollState()
     val activeFilter = null
     val inactiveFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
@@ -313,8 +320,35 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, ac
 
         Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().offset(y = 25.dp)) {
             AsyncImage(model = familyAsset("file_000000009d1081f59878648feb821b5e.png"), contentDescription = null, modifier = Modifier.fillMaxWidth().scale(1.15f), contentScale = ContentScale.FillWidth)
-            Box(Modifier.matchParentSize(), contentAlignment = Alignment.Center) {
-                AsyncImage(model = familyAsset("file_0000000056508230808da89fb794a97f.png"), contentDescription = "Create Family", modifier = Modifier.fillMaxWidth(0.5f).clickable(onClick = onCreate), contentScale = ContentScale.Fit)
+            if (familyCreated) {
+                Row(
+                    Modifier.align(Alignment.Center).fillMaxWidth().padding(horizontal = 28.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    AsyncImage(
+                        model = familyImage.takeIf { it.isNotBlank() } ?: familyAsset("IMG_20261116_162146.png"),
+                        contentDescription = "Family DP",
+                        modifier = Modifier.size(54.dp).clip(RoundedCornerShape(15.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+                    Spacer(Modifier.width(10.dp))
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        Text(familyName, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                        Text("Add Members", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                    }
+                    AsyncImage(
+                        model = familyAsset("IMG_20261116_162146.png"),
+                        contentDescription = "Add Members",
+                        modifier = Modifier.size(20.dp),
+                        contentScale = ContentScale.Fit
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text("0/50", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+            } else {
+                Box(Modifier.matchParentSize(), contentAlignment = Alignment.Center) {
+                    AsyncImage(model = familyAsset("file_0000000056508230808da89fb794a97f.png"), contentDescription = "Create Family", modifier = Modifier.fillMaxWidth(0.5f).clickable(onClick = onCreate), contentScale = ContentScale.Fit)
+                }
             }
         }
     }
@@ -545,7 +579,7 @@ private fun FamilyCreate(onBack:()->Unit, name:String, onName:(String)->Unit, an
                 Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Text("Required Level", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("30", color = Color.Gray, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        Text("5", color = Color.Gray, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                         Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(20.dp))
                     }
                 }
@@ -566,7 +600,7 @@ private fun FamilyCreate(onBack:()->Unit, name:String, onName:(String)->Unit, an
                 ) {
                     Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(Color(0xFFFFD700), Color(0xFFD2691E))), RoundedCornerShape(50)), contentAlignment = Alignment.Center) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(if (busy) "Creating family..." else "Create with 3000000 ", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                            Text(if (busy) "Creating family..." else "Create with 30000000 Coins ", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                             if (!busy) {
                                 Box(Modifier.size(18.dp).background(Color(0xFFFFC107), CircleShape).border(1.dp, Color.White, CircleShape), contentAlignment = Alignment.Center) {
                                     Text("H", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold)
@@ -575,7 +609,7 @@ private fun FamilyCreate(onBack:()->Unit, name:String, onName:(String)->Unit, an
                         }
                     }
                 }
-                Text("SVIP3 and above users can create families for free.", color = Color.Gray, fontSize = 12.sp, modifier = Modifier.padding(top = 16.dp, bottom = 12.dp))
+                
             }
         }
     }
