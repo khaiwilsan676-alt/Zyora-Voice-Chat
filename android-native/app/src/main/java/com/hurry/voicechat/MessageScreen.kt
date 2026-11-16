@@ -1659,7 +1659,7 @@ fun NativeChatScreen(
                                                 .background(if (accepted) Color(0xFFE5E7EB) else Color.Black)
                                                 .clickable(enabled = !accepted && invitedFamilyId.isNotBlank()) {
                                                     chatScope.launch {
-                                                        runCatching { FamilyProfileApi.accept(invitedFamilyId) }
+                                                        runCatching { FamilyProfileApi.accept(invitedFamilyId, context) }
                                                             .onSuccess { acceptedFamilyInvites = acceptedFamilyInvites + invitedFamilyId; familyInviteError = "" }
                                                             .onFailure { familyInviteError = it.message ?: "Could not join Family." }
                                                     }
