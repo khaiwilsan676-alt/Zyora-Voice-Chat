@@ -560,7 +560,7 @@ private fun FamilyRewardModal(url: String, title: String, isWinnerReward: Boolea
 // CREATE FAMILY 
 // --------------------------------------------------------
 @Composable
-private fun FamilyCreate(onBack:()->Unit, name:String, onName:(String)->Unit, announcement:String, onAnnouncement:(String)->Unit, image:String, onImage:()->Unit, busy:Boolean, error:String?, onCreate:()->Unit) {
+internal fun FamilyCreate(onBack:()->Unit, name:String, onName:(String)->Unit, announcement:String, onAnnouncement:(String)->Unit, image:String, onImage:()->Unit, busy:Boolean, error:String?, onCreate:()->Unit, editMode:Boolean=false) {
     Box(Modifier.fillMaxSize().background(Color(0xFFF9F9F9))) {
         
         // Image at top with original height and 10% bottom mixing gradient
@@ -585,7 +585,7 @@ private fun FamilyCreate(onBack:()->Unit, name:String, onName:(String)->Unit, an
             // Top Bar with back button
             Row(Modifier.fillMaxWidth().statusBarsPadding().padding(top = 16.dp, start = 8.dp, end = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Back", tint = Color.Black, modifier = Modifier.size(28.dp)) }
-                Text("Create my family", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 18.sp, modifier = Modifier.weight(1f).padding(end = 48.dp), textAlign = TextAlign.Center)
+                Text(if (editMode) "Edit my family" else "Create my family", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 18.sp, modifier = Modifier.weight(1f).padding(end = 48.dp), textAlign = TextAlign.Center)
             }
 
             Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(bottom = 20.dp)) {
@@ -633,12 +633,13 @@ private fun FamilyCreate(onBack:()->Unit, name:String, onName:(String)->Unit, an
                     Text("${announcement.length}/500", color = Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Medium, modifier = Modifier.align(Alignment.BottomEnd).padding(12.dp))
                 }
 
-                // Required Level
-                Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text("Required Level", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("5", color = Color.Gray, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                        Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(20.dp))
+                if (!editMode) {
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Text("Required Level", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("5", color = Color.Gray, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(20.dp))
+                        }
                     }
                 }
 
@@ -658,7 +659,7 @@ private fun FamilyCreate(onBack:()->Unit, name:String, onName:(String)->Unit, an
                 ) {
                     Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(Color(0xFFFFD700), Color(0xFFD2691E))), RoundedCornerShape(50)), contentAlignment = Alignment.Center) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(if (busy) "Creating family..." else "Create with 30000000 Coins ", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                            Text(if (busy) (if (editMode) "Saving..." else "Creating family...") else (if (editMode) "Save Changes" else "Create with 30000000 Coins "), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                             if (!busy) {
                                 AsyncImage(
                                     model = familyAsset("file_00000000e56882119c217d508b6733dc.png"),
