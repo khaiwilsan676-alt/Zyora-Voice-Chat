@@ -100,7 +100,7 @@ fun FamilyProfile(familyId:String,onBack:()->Unit,onOpenChat:(String,String,Stri
     val scope=rememberCoroutineScope(); val auth=FirebaseAuth.getInstance().currentUser
     var family by remember(familyId){mutableStateOf<FamilyRecord?>(null)}
     var loading by remember{mutableStateOf(true)}; var error by remember{mutableStateOf("")}
-    var inviteSheet by remember{mutableStateOf(false)}; var editDialog by remember{mutableStateOf(false)}
+    var inviteSheet by remember{mutableStateOf(false)}; var editDialog by remember{mutableStateOf(false)}; var savingEdit by remember{mutableStateOf(false)}
     var query by remember{mutableStateOf("")}; var results by remember{mutableStateOf<List<FamilyMemberRow>>(emptyList())}
     var searching by remember{mutableStateOf(false)}; var busy by remember{mutableStateOf("")}
     val isOwner=family?.ownerUid==auth?.uid
@@ -182,7 +182,8 @@ fun FamilyProfile(familyId:String,onBack:()->Unit,onOpenChat:(String,String,Stri
             }}
         }
     }
-    if(editDialog&&family!=null)FamilyEditDialog(family!!,{editDialog=false}){n,i,a->scope.launch{
+    if(editDialog&&family!=null)FamilyEditDialog(family!!,busy=savingEdit,error=error,onDismiss={editDialog=false}){n,i,a->scope.launch{
+        savingEdit=true
         runCatching {
             val hostedImage = if (i.startsWith("content://")) {
                 val data = ProfilePersistence.imageDataUri(context, Uri.parse(i)) ?: error("Could not read Family DP.")
@@ -190,12 +191,12 @@ fun FamilyProfile(familyId:String,onBack:()->Unit,onOpenChat:(String,String,Stri
             } else i
             FamilyProfileApi.update(familyId,n,hostedImage,a)
             hostedImage
-        }.onSuccess{hostedImage->context.getSharedPreferences("hurry_user",Context.MODE_PRIVATE).edit().putString("familyName",n).putString("familyImage",hostedImage).putString("familyAnnouncement",a).apply();editDialog=false;reload()}.onFailure{error=it.message?:"Could not update Family."}
+        }.onSuccess{hostedImage->context.getSharedPreferences("hurry_user",Context.MODE_PRIVATE).edit().putString("familyName",n).putString("familyImage",hostedImage).putString("familyAnnouncement",a).apply();savingEdit=false;editDialog=false;reload()}.onFailure{error=it.message?:"Could not update Family.";savingEdit=false}
     }}
 }
 
 @Composable
-private fun FamilyEditDialog(family:FamilyRecord,onDismiss:()->Unit,onSave:(String,String,String)->Unit){
+private fun FamilyEditDialog(family:FamilyRecord,busy:Boolean,error:String,onDismiss:()->Unit,onSave:(String,String,String)->Unit){
     val context=LocalContext.current
     var name by remember(family.id){mutableStateOf(family.name)}
     var image by remember(family.id){mutableStateOf(family.image)}
@@ -206,27 +207,15 @@ private fun FamilyEditDialog(family:FamilyRecord,onDismiss:()->Unit,onSave:(Stri
             image=uri.toString()
         }
     }
-    Dialog(onDismissRequest=onDismiss,properties=DialogProperties(usePlatformDefaultWidth=false)){
-        Column(Modifier.fillMaxSize().background(Color(0xFFF9F9F9))){
-            Row(Modifier.fillMaxWidth().statusBarsPadding().padding(start=4.dp,end=16.dp,top=8.dp),verticalAlignment=Alignment.CenterVertically){
-                IconButton(onClick=onDismiss){Icon(Icons.AutoMirrored.Filled.ArrowBack,"Back",tint=Color.Black,modifier=Modifier.size(27.dp))}
-                Text("Edit my family",color=Color.Black,fontSize=18.sp,fontWeight=FontWeight.Bold,modifier=Modifier.weight(1f),textAlign=androidx.compose.ui.text.style.TextAlign.Center)
-                Spacer(Modifier.width(44.dp))
-            }
-            Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(bottom=20.dp)){
-                Box(Modifier.align(Alignment.CenterHorizontally).padding(top=24.dp).size(100.dp).clip(RoundedCornerShape(16.dp)).background(Color(0xFFF3F4F6)).clickable{picker.launch(arrayOf("image/*"))},contentAlignment=Alignment.Center){
-                    if(image.isNotBlank())AsyncImage(model=image,contentDescription="Family DP",modifier=Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
-                    else Text("＋",color=Color.Gray,fontSize=30.sp)
-                }
-                Text("Family name",color=Color.Black,fontWeight=FontWeight.Bold,fontSize=14.sp,modifier=Modifier.padding(start=20.dp,top=28.dp,bottom=8.dp))
-                OutlinedTextField(value=name,onValueChange={name=it},modifier=Modifier.fillMaxWidth().padding(horizontal=20.dp),singleLine=true,shape=RoundedCornerShape(12.dp),placeholder={Text("Family Name")})
-                Text("Family Announcement",color=Color.Black,fontWeight=FontWeight.Bold,fontSize=14.sp,modifier=Modifier.padding(start=20.dp,top=20.dp,bottom=8.dp))
-                OutlinedTextField(value=announcement,onValueChange={if(it.length<=500)announcement=it},modifier=Modifier.fillMaxWidth().padding(horizontal=20.dp).height(150.dp),shape=RoundedCornerShape(12.dp),placeholder={Text("Family Announcement")})
-                Text(announcement.length.toString()+"/500",color=Color.Gray,fontSize=12.sp,modifier=Modifier.align(Alignment.End).padding(end=22.dp,top=4.dp))
-            }
-            Button(onClick={onSave(name,image,announcement)},enabled=name.isNotBlank(),modifier=Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal=20.dp,vertical=14.dp).height(52.dp),shape=RoundedCornerShape(12.dp),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF2878E8))){
-                Text("Save Changes",color=Color.White,fontWeight=FontWeight.Bold)
-            }
-        }
+    Dialog(onDismissRequest={if(!busy)onDismiss()},properties=DialogProperties(usePlatformDefaultWidth=false)){
+        FamilyCreate(
+            onBack={if(!busy)onDismiss()},
+            name=name,onName={name=it.take(40)},
+            announcement=announcement,onAnnouncement={announcement=it.take(500)},
+            image=image,onImage={picker.launch(arrayOf("image/*"))},
+            busy=busy,error=error.takeIf{it.isNotBlank()},
+            onCreate={if(!busy&&name.isNotBlank())onSave(name,image,announcement)},
+            editMode=true
+        )
     }
 }
