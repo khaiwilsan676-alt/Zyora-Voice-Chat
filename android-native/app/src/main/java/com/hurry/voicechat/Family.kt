@@ -57,7 +57,7 @@ import kotlinx.coroutines.withContext
 import java.util.Calendar
 
 // GITHUB LINK AUTO-ADDER
-private const val FAMILY_ASSET_BASE = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/"
+private const val FAMILY_ASSET_BASE = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/"
 private fun familyAsset(file: String): String {
     return if (file.startsWith("http")) file else FAMILY_ASSET_BASE + file.removePrefix("/")
 }
