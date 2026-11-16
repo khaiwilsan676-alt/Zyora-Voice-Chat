@@ -64,14 +64,28 @@ private fun processVisitorRows(rows: JSONArray): List<VisitorData> {
 
 private suspend fun loadProfileVisitors(context:Context,userId:String,type:String):List<VisitorData> = withContext(Dispatchers.IO) {
     if(userId.isBlank()) return@withContext emptyList()
-    
     fun cachedVisitors(): List<VisitorData> {
         val cached = runCatching { NativeIndexDatabase(context).loadProfile("visitor_history:" + userId + ":" + type) }.getOrNull()
-        val cachedRows = cached?.optJSONArray("visitors") ?: return emptyList()
-        return processVisitorRows(cachedRows) 
+        return processVisitorRows(cached?.optJSONArray("visitors") ?: JSONArray())
     }
-    
-    cachedVisitors()
+    val cached = cachedVisitors()
+    runCatching {
+        val url = URL(VISITOR_API + "/api/profile-visitors?userId=" +
+            java.net.URLEncoder.encode(userId, "UTF-8") + "&type=" + type)
+        val connection = (url.openConnection() as HttpURLConnection).apply {
+            connectTimeout = 8000; readTimeout = 9000; requestMethod = "GET"
+            setRequestProperty("Cache-Control", "no-cache")
+        }
+        try {
+            val code = connection.responseCode
+            if (code !in 200..299) error("Visitor history HTTP $code")
+            val root = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
+            val rows = root.optJSONArray("visitors") ?: JSONArray()
+            NativeIndexDatabase(context).saveProfile("visitor_history:" + userId + ":" + type,
+                JSONObject().put("visitors", rows).put("updatedAt", System.currentTimeMillis()))
+            processVisitorRows(rows)
+        } finally { connection.disconnect() }
+    }.getOrElse { cached }
 }
 
 private fun visitorDate(t:Long)=if(t<=0L) "—" else SimpleDateFormat("dd/MM hh:mm a",Locale.getDefault()).format(Date(t))
