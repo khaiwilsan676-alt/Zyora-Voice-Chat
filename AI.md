@@ -1096,3 +1096,5 @@ Current documentation does not certify that all historical features are build-, 
 - `GET /api/profile-visitors?userId=...&type=received|sent` now returns the corresponding embedded user-document history. `Followpage.kt` loads server history first and retains native `index.db` as the offline fallback; the existing live Socket.IO visitor update remains active.
 - `MeScreen.kt`: Fans, Friends, and Following counts initialize from the saved social-count snapshot before the background refresh, avoiding the temporary dash/blank state during navigation.
 - Source commits: server `e0bced5`; native FollowPage `7f3ad29`, RoomInfo `2f2d481`, MeScreen `04ecb2e`. Render deployment, native APK build, and two-account visitor persistence verification remain required.
+
+- Follow-up: `MeScreen.kt` now refreshes both received and sent visitor histories from the users-document API before calculating the Visitors stat, and mirrors successful responses into local `index.db`; offline fallback remains intact. Commit: `64fe424`.
