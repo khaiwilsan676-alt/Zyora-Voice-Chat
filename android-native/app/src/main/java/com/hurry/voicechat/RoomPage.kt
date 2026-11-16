@@ -1247,6 +1247,7 @@ fun RoomPage(
             val recipientIdsJson = payload.optJSONArray("recipientIds") ?: JSONArray()
             val recipientIds = (0 until recipientIdsJson.length()).map { recipientIdsJson.optString(it) }.toSet()
             val multiplier = payload.optInt("multiplier", 1).coerceAtLeast(1)
+            val isComboReplay = payload.optBoolean("comboReplay", false)
             val recipientName = payload.optString("recipientName", "User")
             val recipientMode = when (payload.optString("recipientMode").lowercase()) {
                 "mic" -> RecipientMode.MIC
@@ -1269,7 +1270,9 @@ fun RoomPage(
                     recipientName = recipientName,
                     senderImage = senderImageRaw.ifBlank { "https://zyora-server.onrender.com/default-avatar.png" },
                     giftImage = giftImage,
-                    multiplier = multiplier,
+                    multiplier = if (isComboReplay && luckyGiftNotice?.senderId == senderId) {
+                        (luckyGiftNotice?.multiplier ?: multiplier) + 1
+                    } else multiplier,
                     totalWinAmount = payload.optLong("luckyReturnAmount", 0L),
                     maxWinTimes = payload.optInt("luckyReturnPercent", 0),
                     recipientMode = recipientMode
@@ -1294,6 +1297,8 @@ fun RoomPage(
                         }, 1800L)
                     }
                 }
+                // Each new send or combo replay renews the same visible notice.
+                // The notice only exits after five seconds with no further combo.
                 mainHandler.postDelayed({
                     if (luckyGiftNotice?.id == noticeId) {
                         luckyGiftNotice = luckyGiftNotice?.copy(isExiting = true)
@@ -2611,7 +2616,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                 .put("updatedAt", System.currentTimeMillis()))
         })
         luckyGiftNotice?.let { notice ->
-            Box(Modifier.align(Alignment.TopStart).fillMaxWidth().zIndex(250f)) {
+            Box(Modifier.align(Alignment.TopStart).fillMaxWidth().offset(y = 12.dp).zIndex(250f)) {
                 LuckyGiftNotificationSlider(notice = notice)
             }
         }
