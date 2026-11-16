@@ -1088,3 +1088,11 @@ Current documentation does not certify that all historical features are build-, 
 - Bundled the Me page menu icons, official-ID artwork, Coins/Diamonds tiles, SVIP banner, Invite badge, and Level badge into Android drawable resources instead of fetching them from GitHub Raw at render time.
 - These decorative assets now render directly from the APK on first open and remain available offline; the live profile avatar and profile data retain their existing cache/network behavior.
 - No layout, sizing, colors, navigation, or profile behavior changed. Native build and real-device timing verification remain pending.
+
+
+## 2026-11-16 — Room gender persistence, MongoDB visitor history, and stable social counts
+- `RoomInfo.kt`: room member gender resolution now falls back to the last valid cached gender when incoming profile/member data is blank; blank refreshes no longer overwrite saved gender, preventing the gender tag from repeatedly disappearing.
+- `Zyora-Server/server.js`: profile visits are now persisted inside each existing `users` document in `visitors` (received / My Visitors) and `visitedProfiles` (sent / Who I have visited). Repeat visits update the same person's `viewCount` and `lastViewedAt`; each list is capped at 20 distinct users. No new collection is created.
+- `GET /api/profile-visitors?userId=...&type=received|sent` now returns the corresponding embedded user-document history. `Followpage.kt` loads server history first and retains native `index.db` as the offline fallback; the existing live Socket.IO visitor update remains active.
+- `MeScreen.kt`: Fans, Friends, and Following counts initialize from the saved social-count snapshot before the background refresh, avoiding the temporary dash/blank state during navigation.
+- Source commits: server `e0bced5`; native FollowPage `7f3ad29`, RoomInfo `2f2d481`, MeScreen `04ecb2e`. Render deployment, native APK build, and two-account visitor persistence verification remain required.
