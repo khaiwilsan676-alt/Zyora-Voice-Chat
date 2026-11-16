@@ -1105,3 +1105,7 @@ Current documentation does not certify that all historical features are build-, 
 - The sender's Combo button now stays mounted after tapping and its five-second window restarts while the previous Lucky Gift is replayed. The echoed combo replay also renews the same timer; it no longer gets excluded from the sender's combo-window handling.
 - Preserved the existing notification artwork, placement, sizing, styling, and its 5-second transient display; no unrelated room UI/layout changes.
 - Native build and multi-device live-room verification remain to be run.
+
+## 2026-11-16 — Lucky Gift notification width
+- `GiftPicker.kt`: increased the Lucky Gift notification row maximum width from 300dp to 340dp and sender/recipient text column maximum width from 110dp to 150dp so the notification can display wider content.
+- Kept its start padding, alignment, vertical position, height, animation, colors, and all other layout properties unchanged.
