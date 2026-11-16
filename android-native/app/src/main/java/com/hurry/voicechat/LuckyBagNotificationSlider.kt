@@ -201,8 +201,8 @@ fun LuckyBagNotificationSlider(currentUserId: String, onGoToRoom: (String, Strin
                             )
                         }
                         
-                        // Yaha ek thos 40dp ka gap lagaya hai. Ab scroll text idhar hi ruk jayega, aage ghusega nahi.
-                        Spacer(Modifier.width(40.dp))
+                        // Yaha ek thos 49.dp ka gap lagaya hai (Changed from 40dp to 49.dp). Ab scroll text idhar hi ruk jayega, aage ghusega nahi.
+                        Spacer(Modifier.width(49.dp))
                         
                         Box(
                             Modifier
