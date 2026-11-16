@@ -1123,3 +1123,9 @@ Current documentation does not certify that all historical features are build-, 
 
 ## 2026-11-16 — Lucky Gift picker banner
 - `GiftPicker.kt`: show `public/IMG_20261116_162726.png` only while the Lucky tab is selected, positioned outside and directly above the gift sheet with a 3dp overlap; no card container or extra spacing.
+
+## 2026-11-16 — Image-only native launch screen
+- Replaced the native app's Compose launch screen with only `public/file_00000000b46081fd889ad8fece9e9e00.png`, displayed full-screen.
+- Removed the previous launch logo and `Zyora` title from the launch UI; the old splash artwork is no longer packaged as the launch drawable.
+- Updated the Android window launch background to use the same requested image so it appears immediately when the app icon is tapped.
+- No other app UI or navigation behavior was changed.
