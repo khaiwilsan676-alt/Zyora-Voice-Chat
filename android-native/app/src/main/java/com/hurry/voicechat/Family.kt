@@ -158,6 +158,23 @@ fun Family(onBack: () -> Unit) {
                                             date = java.text.SimpleDateFormat("yyyy.MM.dd HH:mm", java.util.Locale.getDefault()).format(java.util.Date(now)),
                                             timestamp = now, type = "coins"
                                         ))
+                                        val familyCode = prefs.getString("familyCode", "")?.ifBlank { "FAM" + now.toString().takeLast(6) } ?: "FAM" + now.toString().takeLast(6)
+                                        val selectedImage = familyImage.takeIf { it.startsWith("http") || it.startsWith("data:image/") }
+                                            ?: familyImage.takeIf { it.startsWith("content://") }?.let { ProfilePersistence.imageDataUri(context, Uri.parse(it)) }.orEmpty()
+                                        val familyPhoto = if (selectedImage.startsWith("data:image/")) {
+                                            ProfilePersistence.uploadImageToMongoDB(selectedImage, "$familyCreatorId-family", "family-dp")
+                                                ?: throw IllegalStateException("Family image upload failed.")
+                                        } else selectedImage
+                                        val saved = ProfilePersistence.save(
+                                            TargetUser(id = familyCreatorId, uid = familyCreatorId, accountId = familyCreatorId),
+                                            mapOf("familyCreated" to "true", "familyName" to familyName.trim(),
+                                                "familyImage" to familyPhoto, "familyCreatorId" to familyCreatorId,
+                                                "familyCode" to familyCode, "familyAnnouncement" to announcement)
+                                        )
+                                        if (!saved) {
+                                            walletDao.saveUserData(current)
+                                            throw IllegalStateException("Family could not be published. Please try again.")
+                                        }
                                         null
                                     }
                                 }.getOrElse { "Could not create family. Please try again." }
