@@ -602,9 +602,12 @@ private fun FamilyCreate(onBack:()->Unit, name:String, onName:(String)->Unit, an
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(if (busy) "Creating family..." else "Create with 30000000 Coins ", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                             if (!busy) {
-                                Box(Modifier.size(18.dp).background(Color(0xFFFFC107), CircleShape).border(1.dp, Color.White, CircleShape), contentAlignment = Alignment.Center) {
-                                    Text("H", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-                                }
+                                AsyncImage(
+                                    model = familyAsset("file_00000000e56882119c217d508b6733dc.png"),
+                                    contentDescription = "Coins",
+                                    modifier = Modifier.size(18.dp),
+                                    contentScale = ContentScale.Fit
+                                )
                             }
                         }
                     }
