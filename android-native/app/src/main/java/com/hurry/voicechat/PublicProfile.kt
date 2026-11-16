@@ -590,6 +590,18 @@ fun PublicProfileScreen(
                     .padding(horizontal = 20.dp, vertical = 8.dp)
                 ) {
                     
+                    // Family
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        SectionHeader("Family")
+                        EmptySectionCard(
+                            iconPath = "/public/IMG_20261116_162146.png",
+                            text = "You do not have Family yet",
+                            profileAsset = profileAsset
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
                     // Albums
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         SectionHeader("Albums", "${albumImages.size}/4")
@@ -1453,7 +1465,7 @@ fun EmptySectionCard(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(72.dp)
+            .height(77.dp)
             .clip(RoundedCornerShape(12.dp))
             .background(Color(0xFFF3F4F6))
             .padding(horizontal = 16.dp),
