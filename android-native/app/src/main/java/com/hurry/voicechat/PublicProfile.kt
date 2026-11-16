@@ -154,10 +154,18 @@ fun PublicProfileScreen(
     val authPrefs = remember(context) { context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE) }
     val currentUserId = authPrefs.getString("accountId", "").orEmpty().ifBlank { authPrefs.getString("uid", "").orEmpty() }
     val familyPrefs = remember(context) { context.getSharedPreferences("hurry_user", Context.MODE_PRIVATE) }
-    val hasOwnFamily = remember(familyPrefs, isOtherUser) { !isOtherUser && familyPrefs.getBoolean("familyCreated", false) }
-    val ownFamilyName = familyPrefs.getString("familyName", "").orEmpty()
-    val ownFamilyImage = familyPrefs.getString("familyImage", "").orEmpty()
-    val ownFamilyCreatorId = familyPrefs.getString("familyCreatorId", "").orEmpty().ifBlank { currentUserId }
+    var hasOwnFamily by remember(familyPrefs, isOtherUser, targetUser?.uid, targetUser?.id, targetUser?.accountId) {
+        mutableStateOf(!isOtherUser && familyPrefs.getBoolean("familyCreated", false))
+    }
+    var ownFamilyName by remember(targetUser?.uid, targetUser?.id, targetUser?.accountId) {
+        mutableStateOf(if (!isOtherUser) familyPrefs.getString("familyName", "").orEmpty() else "")
+    }
+    var ownFamilyImage by remember(targetUser?.uid, targetUser?.id, targetUser?.accountId) {
+        mutableStateOf(if (!isOtherUser) familyPrefs.getString("familyImage", "").orEmpty() else "")
+    }
+    var ownFamilyCreatorId by remember(targetUser?.uid, targetUser?.id, targetUser?.accountId) {
+        mutableStateOf(if (!isOtherUser) familyPrefs.getString("familyCreatorId", "").orEmpty().ifBlank { currentUserId } else "")
+    }
     val coroutineScope = rememberCoroutineScope()
     val targetPresenceId = targetUser?.accountId?.takeIf { it.isNotBlank() } ?: targetUser?.id.orEmpty()
     val targetPresenceIds = remember(targetUser) { setOf(targetUser?.accountId.orEmpty(), targetUser?.id.orEmpty(), targetUser?.uid.orEmpty()).filter { it.isNotBlank() }.toSet() }
@@ -329,7 +337,7 @@ fun PublicProfileScreen(
                 merged.put("image", remoteAvatar)
                 merged.put("photo", remoteAvatar)
             }
-            val keysToSync = listOf("coverPhotos", "coverPhoto", "albumImages", "bio", "age", "gender", "country", "countryName", "countryCode", "country_code", "nationality", "location", "officialHeadTag", "officialTag", "adminTag", "serviceTag", "csTag", "hostTag", "isHost", "coinSellerTag", "coinSeller", "sellerTag")
+            val keysToSync = listOf("coverPhotos", "coverPhoto", "albumImages", "bio", "age", "gender", "country", "countryName", "countryCode", "country_code", "nationality", "location", "officialHeadTag", "officialTag", "adminTag", "serviceTag", "csTag", "hostTag", "isHost", "coinSellerTag", "coinSeller", "sellerTag", "familyCreated", "familyName", "familyImage", "familyCreatorId", "familyCode", "familyAnnouncement")
             keysToSync.forEach { key ->
                 if (latest.has(key)) {
                     val value = latest.optString(key, "")
@@ -344,6 +352,19 @@ fun PublicProfileScreen(
 
         if (profileCacheKey.isNotBlank()) listOf(targetUser?.uid, targetUser?.id, targetUser?.accountId, targetUser?.displayAccountNumber, profileCacheKey).filter { !it.isNullOrBlank() }.distinct().forEach { cache.saveProfile(it!!, merged) }
         liveProfileTags = merged
+        val remoteHasFamily = merged.optBoolean("familyCreated", false) &&
+            merged.optString("familyName").isNotBlank() && merged.optString("familyName") != "null"
+        if (isOtherUser) {
+            hasOwnFamily = remoteHasFamily
+            ownFamilyName = merged.optString("familyName", "")
+            ownFamilyImage = merged.optString("familyImage", "")
+            ownFamilyCreatorId = merged.optString("familyCreatorId", targetUser?.accountId ?: targetUser?.id.orEmpty())
+        } else if (familyPrefs.getBoolean("familyCreated", false)) {
+            hasOwnFamily = true
+            ownFamilyName = familyPrefs.getString("familyName", "").orEmpty()
+            ownFamilyImage = familyPrefs.getString("familyImage", "").orEmpty()
+            ownFamilyCreatorId = familyPrefs.getString("familyCreatorId", "").orEmpty().ifBlank { currentUserId }
+        }
 
         merged.optString("name").takeIf { it.isNotBlank() && it != "null" }?.let { userName = it }
         
