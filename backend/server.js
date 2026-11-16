@@ -3031,7 +3031,10 @@ io.on("connection", (socket) => {
         user: {
           name: data.user?.name || "User",
           image: data.user?.image || "/default-avatar.png",
-          accountId: actorId,
+          // Keep the canonical app account ID separate from the Firebase/user ID.
+          // Voice and music publishers authenticate with socket.roomAccountId.
+          accountId: String(socket.roomAccountId || socket.accountId || actorId),
+          userId: String(socket.roomUserId || socket.userId || actorId),
         },
         isMuted: false, isSpeaking: false, gif: undefined,
         socketId: String(socket.id),
