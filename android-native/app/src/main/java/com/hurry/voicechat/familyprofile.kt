@@ -183,12 +183,13 @@ fun FamilyProfile(familyId:String,onBack:()->Unit,onOpenChat:(String,String,Stri
     }
     if(editDialog&&family!=null)FamilyEditDialog(family!!,{editDialog=false}){n,i,a->scope.launch{
         runCatching {
-            val uploaded = if (i.startsWith("content://")) {
+            val hostedImage = if (i.startsWith("content://")) {
                 val data = ProfilePersistence.imageDataUri(context, Uri.parse(i)) ?: error("Could not read Family DP.")
                 ProfilePersistence.uploadImageToMongoDB(data, "$familyId-family", "family-dp") ?: error("Family DP upload failed.")
             } else i
-            FamilyProfileApi.update(familyId,n,uploaded,a)
-        }.onSuccess{context.getSharedPreferences("hurry_user",Context.MODE_PRIVATE).edit().putString("familyName",n).putString("familyImage",uploaded).putString("familyAnnouncement",a).apply();editDialog=false;reload()}.onFailure{error=it.message?:"Could not update Family."}
+            FamilyProfileApi.update(familyId,n,hostedImage,a)
+            hostedImage
+        }.onSuccess{hostedImage->context.getSharedPreferences("hurry_user",Context.MODE_PRIVATE).edit().putString("familyName",n).putString("familyImage",hostedImage).putString("familyAnnouncement",a).apply();editDialog=false;reload()}.onFailure{error=it.message?:"Could not update Family."}
     }}
 }
 
