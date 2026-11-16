@@ -291,10 +291,21 @@ fun Fourgride(
                                     giftEffect = !giftEffect
                                     prefs.edit().putBoolean(giftEffectKey, giftEffect).apply()
                                 })
-                                TopToolType.MUSIC -> ToolCell(cellModifier, "Music", base + "IMG_20261028_182305.png", onClick = { 
-                                    MusicPlaybackState.wasPlayedOnMusicPage = false
-                                    MusicPlaybackState.musicPageBackPressed = false
-                                    showMusic = true 
+                                TopToolType.MUSIC -> ToolCell(cellModifier, "Music", base + "IMG_20261028_182305.png", onClick = {
+                                    // Reopen the last selected song directly in the room mini-controller.
+                                    // Only show the full picker when there is no previous song to restore.
+                                    val previousTrack = MusicPlaybackState.currentTrack
+                                        ?: musicTracks.firstOrNull { it.url == MusicPlaybackState.currentPlayingUri }
+                                    if (previousTrack != null) {
+                                        MusicPlaybackState.wasPlayedOnMusicPage = false
+                                        MusicPlaybackState.musicPageBackPressed = false
+                                        onMusicMinimize?.invoke(previousTrack)
+                                        onClose()
+                                    } else {
+                                        MusicPlaybackState.wasPlayedOnMusicPage = false
+                                        MusicPlaybackState.musicPageBackPressed = false
+                                        showMusic = true
+                                    }
                                 })
                                 TopToolType.SPEAKER -> {
                                     Column(cellModifier, horizontalAlignment = Alignment.CenterHorizontally) {
