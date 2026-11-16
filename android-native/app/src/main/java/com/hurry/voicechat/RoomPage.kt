@@ -586,7 +586,7 @@ fun RoomPage(
     }
     var speaker by remember{mutableStateOf(true)}
     var localVoiceSpeaking by remember { mutableStateOf(false) }
-    // Public messages are OFF by default; the persisted room setting below overrides this on entry.\n    var publicMsgOff by remember(roomId){mutableStateOf(true)}
+    // Public room messages stay ON unless the owner explicitly disables them.
     var showPublicMessageClosedToast by remember { mutableStateOf(false) }
     var roomToastText by remember { mutableStateOf("") }
     LaunchedEffect(roomToastText) {
