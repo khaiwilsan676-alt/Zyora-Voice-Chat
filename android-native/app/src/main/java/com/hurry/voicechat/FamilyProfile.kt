@@ -1,6 +1,7 @@
 package com.hurry.voicechat
 
 import android.net.Uri
+import android.content.Context
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.*
@@ -70,7 +71,20 @@ internal object FamilyProfileApi {
     suspend fun memberCount(id:String):Int=parse(request("/api/families/${URLEncoder.encode(id,"UTF-8")}")).members.size
     suspend fun leaderboard():List<FamilyRecord> { val root=request("/api/families/leaderboard"); val rows=root.optJSONArray("families")?:JSONArray(); return (0 until rows.length()).mapNotNull { i -> rows.optJSONObject(i)?.let { parse(JSONObject().put("family",it)) } } }
     suspend fun update(id:String,n:String,i:String,a:String)=request("/api/families/${URLEncoder.encode(id,"UTF-8")}","PUT",JSONObject().put("name",n).put("image",i).put("announcement",a))
-    suspend fun accept(id:String)=request("/api/families/${URLEncoder.encode(id,"UTF-8")}/accept","POST",JSONObject())
+    suspend fun accept(id:String,context:Context):JSONObject {
+        val result=request("/api/families/${URLEncoder.encode(id,"UTF-8")}/accept","POST",JSONObject())
+        val family=result.optJSONObject("family")
+        if(family!=null){
+            context.getSharedPreferences("hurry_user",Context.MODE_PRIVATE).edit()
+                .putBoolean("familyCreated",true).putString("familyCode",id)
+                .putString("familyName",family.optString("name"))
+                .putString("familyImage",family.optString("image"))
+                .putString("familyAnnouncement",family.optString("announcement"))
+                .putString("familyCreatorId",family.optString("ownerAccountId"))
+                .apply()
+        }
+        return result
+    }
     suspend fun invite(id:String,target:String)=request("/api/families/${URLEncoder.encode(id,"UTF-8")}/invite","POST",JSONObject().put("targetId",target))
     suspend fun search(id:String,q:String):List<FamilyMemberRow>{
         val r=request("/api/families/${URLEncoder.encode(id,"UTF-8")}/search-users?q=${URLEncoder.encode(q,"UTF-8")}")
@@ -148,7 +162,7 @@ fun FamilyProfile(familyId:String,onBack:()->Unit,onOpenChat:(String,String,Stri
             }
             if(error.isNotBlank()&&!loading)item{Text(error,color=Color(0xFFB3261E),fontSize=12.sp,modifier=Modifier.padding(12.dp))}
         }
-        if(family!=null)Button(onClick={if(isOwner)inviteSheet=true else scope.launch{runCatching{FamilyProfileApi.accept(familyId)}.onSuccess{reload()}.onFailure{error=it.message?:"Could not apply."}}},modifier=Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal=16.dp,vertical=10.dp).height(50.dp),shape=RoundedCornerShape(12.dp),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF2878E8))){
+        if(family!=null)Button(onClick={if(isOwner)inviteSheet=true else scope.launch{runCatching{FamilyProfileApi.accept(familyId,context)}.onSuccess{reload()}.onFailure{error=it.message?:"Could not apply."}}},modifier=Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal=16.dp,vertical=10.dp).height(50.dp),shape=RoundedCornerShape(12.dp),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF2878E8))){
             Text(if(isOwner)"Add Members" else "Apply",color=Color.White,fontWeight=FontWeight.Bold)
         }
     }
@@ -174,7 +188,7 @@ fun FamilyProfile(familyId:String,onBack:()->Unit,onOpenChat:(String,String,Stri
                 ProfilePersistence.uploadImageToMongoDB(data, "$familyId-family", "family-dp") ?: error("Family DP upload failed.")
             } else i
             FamilyProfileApi.update(familyId,n,uploaded,a)
-        }.onSuccess{editDialog=false;reload()}.onFailure{error=it.message?:"Could not update Family."}
+        }.onSuccess{context.getSharedPreferences("hurry_user",Context.MODE_PRIVATE).edit().putString("familyName",n).putString("familyImage",uploaded).putString("familyAnnouncement",a).apply();editDialog=false;reload()}.onFailure{error=it.message?:"Could not update Family."}
     }}
 }
 
