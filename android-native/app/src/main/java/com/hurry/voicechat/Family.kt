@@ -283,16 +283,27 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, ac
                     Text("%02d".format(seconds % 60), color = Color.White, modifier = Modifier.background(Color(0xFF1A0F02), RoundedCornerShape(4.dp)).padding(4.dp), fontWeight = FontWeight.Bold)
                 }
 
-                // Increased space after countdown
-                Spacer(Modifier.height(15.dp))
+                // Countdown aur 1st card ke bich mein exactly 10.dp ka gap
+                Spacer(Modifier.height(10.dp))
 
-                // 1 to 50 cards with -32.dp offset and decreased horizontal padding (4.dp)
-                Box(Modifier.fillMaxWidth().padding(horizontal = 4.dp).wrapContentHeight().offset(y = (-32).dp)) { AsyncImage(model = familyAsset("IMG_20261115_134723.png"), contentDescription = null, modifier = Modifier.fillMaxWidth(), contentScale = ContentScale.FillWidth) }
-                Box(Modifier.fillMaxWidth().padding(horizontal = 4.dp).wrapContentHeight().offset(y = (-32).dp)) { AsyncImage(model = familyAsset("IMG_20261115_134543.png"), contentDescription = null, modifier = Modifier.fillMaxWidth(), contentScale = ContentScale.FillWidth) }
-                Box(Modifier.fillMaxWidth().padding(horizontal = 4.dp).wrapContentHeight().offset(y = (-32).dp)) { AsyncImage(model = familyAsset("IMG_20261115_134632.png"), contentDescription = null, modifier = Modifier.fillMaxWidth(), contentScale = ContentScale.FillWidth) }
+                // 1st Card: Ise upar nahi kiya, bilkul waisa hi hai jaisa manga
+                Box(Modifier.fillMaxWidth().padding(horizontal = 4.dp).wrapContentHeight()) { 
+                    AsyncImage(model = familyAsset("IMG_20261115_134723.png"), contentDescription = null, modifier = Modifier.fillMaxWidth(), contentScale = ContentScale.FillWidth) 
+                }
+                
+                // 2nd Card: Ise -21.dp upar kiya hai
+                Box(Modifier.fillMaxWidth().padding(horizontal = 4.dp).wrapContentHeight().offset(y = (-21).dp)) { 
+                    AsyncImage(model = familyAsset("IMG_20261115_134543.png"), contentDescription = null, modifier = Modifier.fillMaxWidth(), contentScale = ContentScale.FillWidth) 
+                }
+                
+                // 3rd Card: Ise bhi -21.dp upar kiya hai
+                Box(Modifier.fillMaxWidth().padding(horizontal = 4.dp).wrapContentHeight().offset(y = (-21).dp)) { 
+                    AsyncImage(model = familyAsset("IMG_20261115_134632.png"), contentDescription = null, modifier = Modifier.fillMaxWidth(), contentScale = ContentScale.FillWidth) 
+                }
 
+                // 4 se leke 50 Cards: In sabko -21.dp upar kiya hai
                 for (rank in 4..50) {
-                    Box(Modifier.fillMaxWidth().padding(horizontal = 4.dp).wrapContentHeight().offset(y = (-32).dp), contentAlignment = Alignment.CenterStart) {
+                    Box(Modifier.fillMaxWidth().padding(horizontal = 4.dp).wrapContentHeight().offset(y = (-21).dp), contentAlignment = Alignment.CenterStart) {
                         AsyncImage(model = familyAsset("IMG_20261115_134839.png"), contentDescription = null, modifier = Modifier.fillMaxWidth(), contentScale = ContentScale.FillWidth)
                         Text(rank.toString(), color = familyGold, fontSize = 22.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(start = 24.dp))
                     }
