@@ -1120,3 +1120,6 @@ Current documentation does not certify that all historical features are build-, 
 - `GiftPicker.kt`: set only the blue Send button to an exact width of 70dp; removed its previous horizontal padding so the fixed width is respected.
 - The multiplier/arrow section, button height, colors, shape, click behavior, and surrounding layout remain unchanged.
 - Native build and device visual verification remain pending.
+
+## 2026-11-16 — Lucky Gift picker banner
+- `GiftPicker.kt`: show `public/IMG_20261116_162726.png` only while the Lucky tab is selected, positioned outside and directly above the gift sheet with a 3dp overlap; no card container or extra spacing.
