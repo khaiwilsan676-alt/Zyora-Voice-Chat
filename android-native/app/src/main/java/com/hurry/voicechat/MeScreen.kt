@@ -39,6 +39,8 @@ import io.socket.client.IO
 import io.socket.client.Socket
 import io.socket.emitter.Emitter
 
+private const val RAW_ME = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/"
+
 private data class MeMenu(val label: String, val asset: String)
 
 @Composable
@@ -332,10 +334,9 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
         }
 
         item {
-            Image(
-                painter = painterResource(R.drawable.wp_file_00000000a25081fbb57574619596eed8),
-                contentDescription = null,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp).offset(y = (-40).dp).padding(bottom = 24.dp).heightIn(min = 76.dp).clip(RoundedCornerShape(8.dp)).clickable { onOpen("SVIP") },
+            AsyncImage(
+                model = RAW_ME + "file_00000000a25081fbb57574619596eed8.png", null,
+                Modifier.fillMaxWidth().padding(horizontal = 12.dp).offset(y = (-40).dp).padding(bottom = 24.dp).heightIn(min = 76.dp).clip(RoundedCornerShape(8.dp)).clickable { onOpen("SVIP") },
                 contentScale = ContentScale.Crop
             )
         }
