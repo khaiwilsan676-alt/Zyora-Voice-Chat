@@ -2330,28 +2330,23 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                                 Modifier.size(30.dp).clickable { musicReplayOne() },
                                 contentAlignment = Alignment.Center
                             ) {
-                                // Repeat-one stays white whether enabled or disabled.
+                                // Show the repeat-one glyph inside the repeat icon only when enabled.
                                 Icon(
-                                    Icons.Default.RepeatOne,
+                                    if (repeatOneEnabled) Icons.Default.RepeatOne else Icons.Default.Repeat,
                                     contentDescription = "Repeat current song",
                                     tint = Color.White,
                                     modifier = Modifier.size(25.dp)
                                 )
                                 if (repeatOneEnabled) {
-                                    Box(
-                                        Modifier.align(Alignment.TopEnd)
-                                            .size(11.dp)
-                                            .clip(CircleShape)
-                                            .background(Color.Black)
-                                            .border(1.dp, Color.White, CircleShape),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(
-                                            "1",
+                                    Canvas(Modifier.size(25.dp)) {
+                                        drawArc(
                                             color = Color.White,
-                                            fontSize = 7.sp,
-                                            lineHeight = 7.sp,
-                                            fontWeight = FontWeight.Bold
+                                            startAngle = 300f,
+                                            sweepAngle = 220f,
+                                            useCenter = false,
+                                            style = Stroke(width = 1.5.dp.toPx(), cap = StrokeCap.Round),
+                                            topLeft = Offset(size.width * 0.10f, size.height * 0.10f),
+                                            size = androidx.compose.ui.geometry.Size(size.width * 0.80f, size.height * 0.80f)
                                         )
                                     }
                                 }
