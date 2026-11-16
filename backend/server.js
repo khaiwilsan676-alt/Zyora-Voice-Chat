@@ -2838,7 +2838,7 @@ io.on("connection", (socket) => {
     const accountId = String(socket.roomAccountId || socket.accountId || "");
     const hasOccupiedSeat = getRoomSeats(room).some((seat) =>
       seat?.isOccupied &&
-      String(seat?.user?.accountId || seat?.user?.userId || "") === accountId
+      roomSeatBelongsToSocket(seat, socket)
     );
     if (!hasOccupiedSeat) return;
     const audio = (Buffer.isBuffer(binaryAudio) || Array.isArray(binaryAudio)) ? binaryAudio : data.audio;
@@ -2857,7 +2857,7 @@ io.on("connection", (socket) => {
     const accountId = String(socket.roomAccountId || socket.accountId || "");
     const hasSeat = getRoomSeats(room).some((seat) =>
       seat?.isOccupied && !seat?.isMuted &&
-      String(seat?.user?.accountId || seat?.user?.userId || "") === accountId
+      roomSeatBelongsToSocket(seat, socket)
     );
     if (!hasSeat) {
       socket.roomVoiceActive = false;
