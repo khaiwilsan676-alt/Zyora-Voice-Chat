@@ -318,12 +318,17 @@ fun PublicProfileScreen(
     }
 
     LaunchedEffect(targetUser?.uid, targetUser?.id, targetUser?.accountId, profileCacheKey) {
+        val cache = NativeIndexDatabase(context)
+        val cached = profileCacheKeys.firstNotNullOfOrNull { cache.loadProfile(it) }
+        val remote = ProfilePersistence.load(targetUser)
         // Republish families created by older app builds under the real Firebase UID.
-        if (!isOtherUser && familyPrefs.getBoolean("familyCreated", false)) {
+        if (!isOtherUser && familyPrefs.getBoolean("familyCreated", false) && remote?.optBoolean("familyCreated", false) != true) {
             val localFamilyImage = familyPrefs.getString("familyImage", "").orEmpty()
             val familyPhoto = if (localFamilyImage.startsWith("content://")) {
-                val imageData = ProfilePersistence.imageDataUri(context, android.net.Uri.parse(localFamilyImage))
-                imageData?.let { ProfilePersistence.uploadImageToMongoDB(it, "$currentUserId-family", "family-dp") }.orEmpty()
+                withContext(Dispatchers.IO) {
+                    val imageData = ProfilePersistence.imageDataUri(context, android.net.Uri.parse(localFamilyImage))
+                    imageData?.let { ProfilePersistence.uploadImageToMongoDB(it, "$currentUserId-family", "family-dp") }.orEmpty()
+                }
             } else localFamilyImage
             val familyUid = authPrefs.getString("uid", "").orEmpty().ifBlank { currentUserId }
             val familyId = authPrefs.getString("id", "").orEmpty().ifBlank { familyUid }
@@ -344,9 +349,6 @@ fun PublicProfileScreen(
                 }
             }
         }
-        val cache = NativeIndexDatabase(context)
-        val cached = profileCacheKeys.firstNotNullOfOrNull { cache.loadProfile(it) }
-        val remote = ProfilePersistence.load(targetUser)
         if (remote == null && cached == null) return@LaunchedEffect
 
         val merged = org.json.JSONObject(cached?.toString() ?: "{}")
