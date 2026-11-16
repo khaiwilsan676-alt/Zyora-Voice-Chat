@@ -603,7 +603,7 @@ fun PublicProfileScreen(
                                 Modifier.fillMaxWidth().height(112.dp).clip(RoundedCornerShape(12.dp))
                             ) {
                                 AsyncImage(
-                                    model = profileAsset("/public/IMG_20261116_163413.png"),
+                                    model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261116_163413.png",
                                     contentDescription = "Family background",
                                     modifier = Modifier.fillMaxSize(),
                                     contentScale = ContentScale.Crop
@@ -618,7 +618,7 @@ fun PublicProfileScreen(
                                         )
                                     }
                                     AsyncImage(
-                                        model = profileAsset("/public/IMG_20261116_164433.png"),
+                                        model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261116_164433.png",
                                         contentDescription = "Family avatar frame",
                                         modifier = Modifier.size(62.dp),
                                         contentScale = ContentScale.Fit
@@ -635,7 +635,7 @@ fun PublicProfileScreen(
                             }
                         } else {
                             EmptySectionCard(
-                                iconPath = "/public/IMG_20261116_162146.png",
+                                iconPath = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261116_162146.png",
                                 text = "You do not have Family yet",
                                 profileAsset = profileAsset
                             )
