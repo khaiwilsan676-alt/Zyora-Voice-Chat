@@ -68,7 +68,8 @@ fun DailyCheckInModal(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = if (showSuccess) 0.7f else 0.2f))
+                // Dim ko 10% (0.1f) kar diya jab showSuccess true ho
+                .background(Color.Black.copy(alpha = if (showSuccess) 0.1f else 0.2f))
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
@@ -217,14 +218,14 @@ fun DailyCheckInModal(
                     }
                 }
             } else {
-                // --- SUCCESS POPUP OVERLAY (Yahan main card nahi hai, sirf ye dikhega) ---
+                // --- SUCCESS POPUP OVERLAY (Sirf ye dikhega) ---
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
-                            onClick = {} // Clicks intercept karne ke liye taaki background pe touch na ho
+                            onClick = {} // Clicks intercept karne ke liye
                         ),
                     contentAlignment = Alignment.Center
                 ) {
@@ -247,15 +248,29 @@ fun DailyCheckInModal(
                                         )
                                     )
                                 )
-                                .padding(vertical = 40.dp),
+                                .padding(vertical = 35.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                // Overlapping Black/20 card with corner curve 12dp
+                                
+                                // Get Rewards text now at the TOP of the Blue Card
+                                Text(
+                                    text = "Get Rewards",
+                                    style = TextStyle(
+                                        brush = Brush.verticalGradient(
+                                            colors = listOf(Color(0xFFFFF59D), Color(0xFFFFB300))
+                                        ),
+                                        fontSize = 24.sp,
+                                        fontWeight = FontWeight.ExtraBold
+                                    ),
+                                    modifier = Modifier.padding(bottom = 20.dp)
+                                )
+
+                                // Overlapping Black/10 card with corner curve 12dp (Thora chota kiya)
                                 Box(
                                     modifier = Modifier
-                                        .background(Color(0x33000000), RoundedCornerShape(12.dp))
-                                        .padding(24.dp),
+                                        .background(Color(0x1A000000), RoundedCornerShape(12.dp)) // 10% opacity black
+                                        .padding(16.dp), // Padding reduced to make it smaller
                                     contentAlignment = Alignment.Center
                                 ) {
                                     val rewardImg = when(currentDay) {
@@ -266,7 +281,7 @@ fun DailyCheckInModal(
                                     AsyncImage(
                                         model = rewardImg.fullUrl,
                                         contentDescription = null,
-                                        modifier = Modifier.size(75.dp),
+                                        modifier = Modifier.size(60.dp), // Image size reduced
                                         contentScale = ContentScale.Fit
                                     )
                                 }
@@ -293,31 +308,16 @@ fun DailyCheckInModal(
                         
                         Spacer(modifier = Modifier.height(35.dp))
                         
-                        // Get Rewards text right above the button
-                        Text(
-                            text = "Get Rewards",
-                            style = TextStyle(
-                                brush = Brush.verticalGradient(
-                                    colors = listOf(Color(0xFFFFF59D), Color(0xFFFFB300))
-                                ),
-                                fontSize = 24.sp,
-                                fontWeight = FontWeight.ExtraBold
-                            ),
-                            modifier = Modifier.padding(bottom = 12.dp)
-                        )
-                        
-                        // OK 3D Yellow Button
+                        // OK Button (Flat, No 3D, Full Round / CircleShape)
                         Box(
                             modifier = Modifier
                                 .width(180.dp)
-                                .height(56.dp)
-                                .background(Color(0xFFE65100), RoundedCornerShape(16.dp)) // 3D Bottom Depth Shadow
-                                .padding(bottom = 6.dp)
-                                .background(Color(0xFFFFC107), RoundedCornerShape(16.dp)) // Top Face
-                                .clip(RoundedCornerShape(16.dp))
+                                .height(50.dp)
+                                .background(Color(0xFFFFC107), CircleShape) // Flat and fully round
+                                .clip(CircleShape)
                                 .clickable {
                                     showSuccess = false
-                                    onClose() // Ye sab kuch close kar dega (Dialog band)
+                                    onClose() // Sab kuch close kar dega
                                 },
                             contentAlignment = Alignment.Center
                         ) {
@@ -570,7 +570,7 @@ private fun BoxScope.CenterCompletedCheckmark() {
             .align(Alignment.Center)
             .size(24.dp)
             .clip(CircleShape)
-            .background(Color(0xFF3B82F6)), // Sirf blue tick box aayega, green border nahi
+            .background(Color(0xFF3B82F6)),
         contentAlignment = Alignment.Center
     ) {
         Icon(
@@ -584,7 +584,7 @@ private fun BoxScope.CenterCompletedCheckmark() {
 
 fun getBorderColor(day: Int, currentDay: Int, isClaimed: Boolean): Color {
     return when {
-        isClaimed -> Color.Transparent // Border green nahi hoga
+        isClaimed -> Color.Transparent
         day == currentDay -> Color(0xFFFFD633)
         else -> Color.Transparent
     }
