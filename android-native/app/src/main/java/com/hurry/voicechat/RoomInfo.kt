@@ -138,18 +138,19 @@ fun RoomInfo(
                         }.getOrNull()?.takeIf { it.isNotBlank() } ?: base.country
                         val roomProfileGender = sequenceOf(
                             remoteProfile?.optString("gender", "").orEmpty(),
-                            cachedMember?.gender.orEmpty(),
-                            base.gender
-                        ).map { it.trim() }.firstOrNull { it.isNotBlank() && it != "null" }.orEmpty()
+                            base.gender,
+                            cachedMember?.gender.orEmpty()
+                        ).map { it.trim() }.firstOrNull { it.isNotBlank() && it != "null" && !it.equals("undefined", true) }.orEmpty()
                         val resolved = base.copy(country = roomProfileCountry, gender = roomProfileGender)
                         runCatching {
-                            NativeIndexDatabase(context).saveProfile(
+                            val db = NativeIndexDatabase(context)
+                            val saved = db.loadProfile("room_info_member:${member.accountId}") ?: org.json.JSONObject()
+                            db.saveProfile(
                                 "room_info_member:${member.accountId}",
-                                org.json.JSONObject()
-                                    .put("name", resolved.name)
-                                    .put("image", resolved.image)
-                                    .put("country", resolved.country)
-                                    .put("gender", resolved.gender)
+                                saved.put("name", resolved.name.ifBlank { saved.optString("name") })
+                                    .put("image", resolved.image.ifBlank { saved.optString("image") })
+                                    .put("country", resolved.country.ifBlank { saved.optString("country") })
+                                    .put("gender", resolved.gender.ifBlank { saved.optString("gender") })
                                     .put("updatedAt", System.currentTimeMillis())
                             )
                         }
