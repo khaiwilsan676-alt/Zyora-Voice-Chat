@@ -103,10 +103,6 @@ enum class RecipientMode { MIC, ROOM, SINGLE }
 // GIFTS
 // ============================================================
 private val hotGifts = listOf(
-    GiftPickerGift(1, "Teddy", 70000, "/IMG_20260922_142150.jpg",
-        video = "/VID_20260921_011932.mp4", videoStyle = "fade"),
-    GiftPickerGift(2, "Autumn's Embrace", 54900, "/IMG_20260922_182259.png",
-        video = "/gemini_generated_video_89e836bd~2.mp4", videoStyle = "pure", noMask = true),
     GiftPickerGift(3, "Arab King", 500000, "/image_d9df9625~2.jpg",
         video = "/gemini_generated_video_17e19680~2.mp4", videoStyle = "fade", sideFade = true),
 )
@@ -1121,7 +1117,7 @@ fun LuckyGiftNotificationSlider(
                         .padding(start = 4.dp, end = 18.dp, top = 2.dp, bottom = 2.dp)
                         .height(38.dp)
                         .wrapContentWidth()
-                        .widthIn(max = 340.dp),
+                        .widthIn(max = 400.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     AsyncImage(
