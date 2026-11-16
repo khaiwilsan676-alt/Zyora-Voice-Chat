@@ -406,6 +406,22 @@ fun RoomPage(
     var luckyComboTimeLeft by remember(roomId) { mutableIntStateOf(5) }
     var luckyComboGeneration by remember(roomId) { mutableIntStateOf(0) }
     var lastLuckyComboPayload by remember(roomId) { mutableStateOf<JSONObject?>(null) }
+    // A single room-scoped Compose timer owns the combo window. Re-keying it on
+    // every new gift or combo tap cancels the previous countdown instead of
+    // leaving several Handler callbacks racing to hide the button.
+    LaunchedEffect(roomId, luckyComboGeneration) {
+        if (!showLuckyComboButton) return@LaunchedEffect
+        val activeGeneration = luckyComboGeneration
+        for (second in 1..5) {
+            kotlinx.coroutines.delay(1000L)
+            if (luckyComboGeneration != activeGeneration) return@LaunchedEffect
+            luckyComboTimeLeft = 5 - second
+        }
+        if (luckyComboGeneration == activeGeneration) {
+            showLuckyComboButton = false
+            luckyComboTimeLeft = 0
+        }
+    }
     val seenLuckyGiftTransferIds = remember(roomId) { java.util.Collections.synchronizedSet(mutableSetOf<String>()) }
     var showFloatingLuckyBag by remember { mutableStateOf(false) }
     var showLuckyBagCenterReveal by remember { mutableStateOf(false) }
@@ -1228,18 +1244,12 @@ fun RoomPage(
                     maxWinTimes = payload.optInt("luckyReturnPercent", 0),
                     recipientMode = recipientMode
                 )
-                if (senderId == accountId && !payload.optBoolean("comboReplay", false)) {
+                if (senderId == accountId) {
+                    // Both the original send and its combo replay renew the same
+                    // five-second window. Never hide the button on a combo tap.
                     showLuckyComboButton = true
                     luckyComboTimeLeft = 5
-                    val activeGeneration = ++luckyComboGeneration
-                    for (second in 1..5) {
-                        mainHandler.postDelayed({
-                            if (showLuckyComboButton && luckyComboGeneration == activeGeneration) {
-                                luckyComboTimeLeft = (5 - second).coerceAtLeast(0)
-                                if (luckyComboTimeLeft == 0) showLuckyComboButton = false
-                            }
-                        }, second * 1000L)
-                    }
+                    luckyComboGeneration++
                 }
                 if (giftImage.isNotBlank()) {
                     seats.indices.filter { seats[it].occupied && seats[it].accountId in recipientIds }.forEach { index ->
@@ -1259,7 +1269,7 @@ fun RoomPage(
                         luckyGiftNotice = luckyGiftNotice?.copy(isExiting = true)
                         mainHandler.postDelayed({ if (luckyGiftNotice?.id == noticeId) luckyGiftNotice = null }, 450)
                     }
-                }, 3800L)
+                }, 5000L)
             }
         }
         val seatListener = Emitter.Listener { args ->
@@ -2579,9 +2589,11 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                     progress = (luckyComboTimeLeft / 5f).coerceIn(0f, 1f),
                     onClick = {
                         val previousGift = lastLuckyComboPayload
-                        showLuckyComboButton = false
+                        // Keep the combo control mounted and restart its
+                        // five-second window while the replay is sent.
+                        showLuckyComboButton = true
+                        luckyComboTimeLeft = 5
                         luckyComboGeneration++
-                        luckyComboTimeLeft = 0
                         if (previousGift != null) {
                             val nextTransferId = "combo-$accountId-${System.currentTimeMillis()}-${System.nanoTime()}"
                             val comboTransfer = JSONObject(previousGift.toString())
