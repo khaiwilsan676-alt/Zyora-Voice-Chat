@@ -120,6 +120,8 @@ fun Family(onBack: () -> Unit) {
     }
     var activeRank by remember { mutableIntStateOf(0) }
     var seconds by remember { mutableIntStateOf(0) }
+    var topFamilies by remember { mutableStateOf<List<FamilyRecord>>(emptyList()) }
+    LaunchedEffect(Unit) { while (true) { runCatching { FamilyProfileApi.leaderboard() }.onSuccess { topFamilies = it }; delay(30000) } }
 
     LaunchedEffect(Unit) {
         while (true) {
@@ -226,7 +228,8 @@ fun Family(onBack: () -> Unit) {
                     familyCreated = prefs.getBoolean("familyCreated", false),
                     familyName = familyName,
                     familyImage = familyImage,
-                    familyCreatorId = familyCreatorId
+                    familyCreatorId = familyCreatorId,
+                    topFamilies = topFamilies
                 )
             }
         }
@@ -249,7 +252,7 @@ fun Family(onBack: () -> Unit) {
 // MAIN HOME SCREEN
 // --------------------------------------------------------
 @Composable
-private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, activeRank: Int, onRank: (Int) -> Unit, onCreate: () -> Unit, familyCreated: Boolean, familyName: String, familyImage: String, familyCreatorId: String) {
+private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, activeRank: Int, onRank: (Int) -> Unit, onCreate: () -> Unit, familyCreated: Boolean, familyName: String, familyImage: String, familyCreatorId: String, topFamilies: List<FamilyRecord>) {
     val scrollState = rememberScrollState()
     val activeFilter = null
     val inactiveFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
@@ -276,12 +279,12 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, ac
                 // 1 frame Middle m 1 row, 2nd row m 2,3 frame
                 Column(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     // Row 1: Rank 1 Frame (thora upar)
-                    AsyncImage(model = familyAsset("IMG_20261115_135339.png"), contentDescription = null, modifier = Modifier.size(175.dp).zIndex(2f).offset(y = (-20).dp), contentScale = ContentScale.Fit)
+                    FamilyPodiumCard(family = topFamilies.getOrNull(0), rank = 1, frame = "IMG_20261115_135339.png", size = 175.dp, modifier = Modifier.zIndex(2f).offset(y = (-20).dp))
                     
                     // Row 2: Rank 2 and 3 Frames (Left or right mein spread)
                     Row(Modifier.fillMaxWidth().offset(y = (-35).dp).padding(horizontal = 25.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                        AsyncImage(model = familyAsset("IMG_20261115_135356.png"), contentDescription = null, modifier = Modifier.size(130.dp), contentScale = ContentScale.Fit)
-                        AsyncImage(model = familyAsset("IMG_20261115_135419.png"), contentDescription = null, modifier = Modifier.size(130.dp), contentScale = ContentScale.Fit)
+                        FamilyPodiumCard(family = topFamilies.getOrNull(1), rank = 2, frame = "IMG_20261115_135356.png", size = 130.dp)
+                        FamilyPodiumCard(family = topFamilies.getOrNull(2), rank = 3, frame = "IMG_20261115_135419.png", size = 130.dp)
                     }
                 }
                 
@@ -329,10 +332,16 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, ac
                 }
 
                 // 4 se leke 50 Cards: In sabko -21.dp upar kiya hai
-                for (rank in 4..50) {
+                topFamilies.drop(3).take(47).forEachIndexed { index, family ->
                     Box(Modifier.fillMaxWidth().padding(horizontal = 4.dp).wrapContentHeight().offset(y = (-25).dp), contentAlignment = Alignment.CenterStart) {
                         AsyncImage(model = familyAsset("IMG_20261115_134839.png"), contentDescription = null, modifier = Modifier.fillMaxWidth(), contentScale = ContentScale.FillWidth)
-                        Text(rank.toString(), color = familyGold, fontSize = 22.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(start = 24.dp))
+                        Text((index + 4).toString(), color = familyGold, fontSize = 22.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(start = 24.dp))
+                        Row(Modifier.align(Alignment.CenterStart).padding(start = 58.dp, end = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                            AsyncImage(model = family.image, contentDescription = family.name, modifier = Modifier.size(38.dp).clip(RoundedCornerShape(10.dp)), contentScale = ContentScale.Crop)
+                            Text(family.name, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f).padding(start = 8.dp), maxLines = 1)
+                            AsyncImage(model = familyAsset("file_00000000e56882119c217d508b6733dc.png"), contentDescription = "Coins", modifier = Modifier.size(15.dp))
+                            Text(family.totalCoinsSent.toString(), color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             }
@@ -369,6 +378,22 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, ac
                 Box(Modifier.matchParentSize(), contentAlignment = Alignment.Center) {
                     AsyncImage(model = familyAsset("file_0000000056508230808da89fb794a97f.png"), contentDescription = "Create Family", modifier = Modifier.fillMaxWidth(0.5f).clickable(onClick = onCreate), contentScale = ContentScale.Fit)
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FamilyPodiumCard(family: FamilyRecord?, rank: Int, frame: String, size: androidx.compose.ui.unit.Dp, modifier: Modifier = Modifier) {
+    if (family == null) return
+    Box(modifier.size(size), contentAlignment = Alignment.Center) {
+        AsyncImage(model = familyAsset(frame), contentDescription = "Top family frame", modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
+        Column(Modifier.align(Alignment.BottomCenter).padding(bottom = size * 0.13f), horizontalAlignment = Alignment.CenterHorizontally) {
+            AsyncImage(model = family.image, contentDescription = family.name, modifier = Modifier.size(size * 0.31f).clip(RoundedCornerShape(10.dp)).border(1.dp, Color.White, RoundedCornerShape(10.dp)), contentScale = ContentScale.Crop)
+            Text(family.name, color = Color.White, fontSize = if (rank == 1) 11.sp else 9.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                AsyncImage(model = familyAsset("file_00000000e56882119c217d508b6733dc.png"), contentDescription = "Coins", modifier = Modifier.size(11.dp))
+                Text(family.totalCoinsSent.toString(), color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold)
             }
         }
     }
