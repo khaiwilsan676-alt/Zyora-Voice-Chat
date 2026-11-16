@@ -149,6 +149,8 @@ fun Family(onBack: () -> Unit) {
                         createBusy = true
                         createError = null
                         scope.launch {
+                            var createdFamilyImage = ""
+                            var createdFamilyCode = ""
                             val result = withContext(Dispatchers.IO) {
                                 runCatching {
                                     val current = walletDao.getUserData() ?: UserDataEntity()
@@ -162,13 +164,15 @@ fun Family(onBack: () -> Unit) {
                                             date = java.text.SimpleDateFormat("yyyy.MM.dd HH:mm", java.util.Locale.getDefault()).format(java.util.Date(now)),
                                             timestamp = now, type = "coins"
                                         ))
-                                        val familyCode = prefs.getString("familyCode", "")?.ifBlank { "FAM" + now.toString().takeLast(6) } ?: "FAM" + now.toString().takeLast(6)
+                                        val familyCode = prefs.getString("familyCode", "").orEmpty().ifBlank { "FAM" + now.toString().takeLast(6) }
+                                        createdFamilyCode = familyCode
                                         val selectedImage = familyImage.takeIf { it.startsWith("http") || it.startsWith("data:image/") }
                                             ?: familyImage.takeIf { it.startsWith("content://") }?.let { ProfilePersistence.imageDataUri(context, Uri.parse(it)) }.orEmpty()
                                         val familyPhoto = if (selectedImage.startsWith("data:image/")) {
                                             ProfilePersistence.uploadImageToMongoDB(selectedImage, "$familyCreatorId-family", "family-dp")
                                                 ?: throw IllegalStateException("Family image upload failed.")
                                         } else selectedImage
+                                        createdFamilyImage = familyPhoto
                                         val saved = ProfilePersistence.save(
                                             TargetUser(id = familyAuthId, uid = familyAuthUid, accountId = familyCreatorId, displayAccountNumber = familyCreatorId),
                                             mapOf("familyCreated" to "true", "familyName" to familyName.trim(),
@@ -197,9 +201,9 @@ fun Family(onBack: () -> Unit) {
                             if (result == null) {
                                 prefs.edit().putString("familyName", familyName.trim())
                                     .putString("familyAnnouncement", announcement)
-                                     .putString("familyImage", familyPhoto)
+                                     .putString("familyImage", createdFamilyImage)
                                     .putString("familyCreatorId", familyCreatorId)
-                                    .putString("familyCode", prefs.getString("familyCode", "")?.ifBlank { "FAM" + System.currentTimeMillis().toString().takeLast(6) } ?: "FAM" + System.currentTimeMillis().toString().takeLast(6))
+                                    .putString("familyCode", createdFamilyCode)
                                     .putBoolean("familyCreated", true).apply()
                                 view = "main"
                                 Toast.makeText(context, "Family created successfully", Toast.LENGTH_SHORT).show()
