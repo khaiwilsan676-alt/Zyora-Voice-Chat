@@ -2330,26 +2330,13 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                                 Modifier.size(30.dp).clickable { musicReplayOne() },
                                 contentAlignment = Alignment.Center
                             ) {
-                                // Show the repeat-one glyph inside the repeat icon only when enabled.
+                                // Keep the original Repeat One icon and its existing tap behavior.
                                 Icon(
-                                    if (repeatOneEnabled) Icons.Default.RepeatOne else Icons.Default.Repeat,
+                                    Icons.Default.RepeatOne,
                                     contentDescription = "Repeat current song",
                                     tint = Color.White,
                                     modifier = Modifier.size(25.dp)
                                 )
-                                if (repeatOneEnabled) {
-                                    Canvas(Modifier.size(25.dp)) {
-                                        drawArc(
-                                            color = Color.White,
-                                            startAngle = 300f,
-                                            sweepAngle = 220f,
-                                            useCenter = false,
-                                            style = Stroke(width = 1.5.dp.toPx(), cap = StrokeCap.Round),
-                                            topLeft = Offset(size.width * 0.10f, size.height * 0.10f),
-                                            size = androidx.compose.ui.geometry.Size(size.width * 0.80f, size.height * 0.80f)
-                                        )
-                                    }
-                                }
                             }
                             Icon(Icons.Default.QueueMusic, "Open Music page", tint = Color.White,
                                 modifier = Modifier.size(25.dp).clickable {
