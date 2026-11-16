@@ -167,20 +167,50 @@ fun FamilyProfile(familyId:String,onBack:()->Unit,onOpenChat:(String,String,Stri
             }}
         }
     }
-    if(editDialog&&family!=null)FamilyEditDialog(family!!,{editDialog=false}){n,i,a->scope.launch{runCatching{FamilyProfileApi.update(familyId,n,i,a)}.onSuccess{editDialog=false;reload()}.onFailure{error=it.message?:"Could not update Family."}}}
+    if(editDialog&&family!=null)FamilyEditDialog(family!!,{editDialog=false}){n,i,a->scope.launch{
+        runCatching {
+            val uploaded = if (i.startsWith("content://")) {
+                val data = ProfilePersistence.imageDataUri(context, Uri.parse(i)) ?: error("Could not read Family DP.")
+                ProfilePersistence.uploadImageToMongoDB(data, "$familyId-family", "family-dp") ?: error("Family DP upload failed.")
+            } else i
+            FamilyProfileApi.update(familyId,n,uploaded,a)
+        }.onSuccess{editDialog=false;reload()}.onFailure{error=it.message?:"Could not update Family."}
+    }}
 }
 
 @Composable
 private fun FamilyEditDialog(family:FamilyRecord,onDismiss:()->Unit,onSave:(String,String,String)->Unit){
-    val context=LocalContext.current;var name by remember(family.id){mutableStateOf(family.name)};var image by remember(family.id){mutableStateOf(family.image)};var announcement by remember(family.id){mutableStateOf(family.announcement)}
-    val picker=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()){uri:Uri?->if(uri!=null){runCatching{context.contentResolver.takePersistableUriPermission(uri,android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)};image=uri.toString()}}
+    val context=LocalContext.current
+    var name by remember(family.id){mutableStateOf(family.name)}
+    var image by remember(family.id){mutableStateOf(family.image)}
+    var announcement by remember(family.id){mutableStateOf(family.announcement)}
+    val picker=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()){uri:Uri?->
+        if(uri!=null){
+            runCatching{context.contentResolver.takePersistableUriPermission(uri,android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)}
+            image=uri.toString()
+        }
+    }
     Dialog(onDismissRequest=onDismiss,properties=DialogProperties(usePlatformDefaultWidth=false)){
-        Column(Modifier.fillMaxWidth().padding(18.dp).clip(RoundedCornerShape(14.dp)).background(Color.White).padding(18.dp)){
-            Text("Edit Family",color=Color.Black,fontSize=18.sp,fontWeight=FontWeight.Bold);Spacer(Modifier.height(12.dp))
-            Row(verticalAlignment=Alignment.CenterVertically){AsyncImage(model=image.ifBlank{FAMILY_ASSETS+"IMG_20261116_162146.png"},contentDescription="Family DP",modifier=Modifier.size(64.dp).clip(RoundedCornerShape(12.dp)).clickable{picker.launch(arrayOf("image/*"))},contentScale=ContentScale.Crop);Text("Change Family DP",color=Color(0xFF2878E8),modifier=Modifier.padding(start=12.dp).clickable{picker.launch(arrayOf("image/*"))})}
-            Spacer(Modifier.height(10.dp));OutlinedTextField(value=name,onValueChange={name=it},modifier=Modifier.fillMaxWidth(),label={Text("Family name")},singleLine=true)
-            Spacer(Modifier.height(8.dp));OutlinedTextField(value=announcement,onValueChange={if(it.length<=500)announcement=it},modifier=Modifier.fillMaxWidth().height(120.dp),label={Text("Announcement")})
-            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.End){TextButton(onClick=onDismiss){Text("Cancel")};Button(onClick={onSave(name,image,announcement)},enabled=name.isNotBlank()){Text("Save")}}
+        Column(Modifier.fillMaxSize().background(Color(0xFFF9F9F9))){
+            Row(Modifier.fillMaxWidth().statusBarsPadding().padding(start=4.dp,end=16.dp,top=8.dp),verticalAlignment=Alignment.CenterVertically){
+                IconButton(onClick=onDismiss){Icon(Icons.AutoMirrored.Filled.ArrowBack,"Back",tint=Color.Black,modifier=Modifier.size(27.dp))}
+                Text("Edit my family",color=Color.Black,fontSize=18.sp,fontWeight=FontWeight.Bold,modifier=Modifier.weight(1f),textAlign=androidx.compose.ui.text.style.TextAlign.Center)
+                Spacer(Modifier.width(44.dp))
+            }
+            Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(bottom=20.dp)){
+                Box(Modifier.align(Alignment.CenterHorizontally).padding(top=24.dp).size(100.dp).clip(RoundedCornerShape(16.dp)).background(Color(0xFFF3F4F6)).clickable{picker.launch(arrayOf("image/*"))},contentAlignment=Alignment.Center){
+                    if(image.isNotBlank())AsyncImage(model=image,contentDescription="Family DP",modifier=Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
+                    else Text("＋",color=Color.Gray,fontSize=30.sp)
+                }
+                Text("Family name",color=Color.Black,fontWeight=FontWeight.Bold,fontSize=14.sp,modifier=Modifier.padding(start=20.dp,top=28.dp,bottom=8.dp))
+                OutlinedTextField(value=name,onValueChange={name=it},modifier=Modifier.fillMaxWidth().padding(horizontal=20.dp),singleLine=true,shape=RoundedCornerShape(12.dp),placeholder={Text("Family Name")})
+                Text("Family Announcement",color=Color.Black,fontWeight=FontWeight.Bold,fontSize=14.sp,modifier=Modifier.padding(start=20.dp,top=20.dp,bottom=8.dp))
+                OutlinedTextField(value=announcement,onValueChange={if(it.length<=500)announcement=it},modifier=Modifier.fillMaxWidth().padding(horizontal=20.dp).height(150.dp),shape=RoundedCornerShape(12.dp),placeholder={Text("Family Announcement")})
+                Text(announcement.length.toString()+"/500",color=Color.Gray,fontSize=12.sp,modifier=Modifier.align(Alignment.End).padding(end=22.dp,top=4.dp))
+            }
+            Button(onClick={onSave(name,image,announcement)},enabled=name.isNotBlank(),modifier=Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal=20.dp,vertical=14.dp).height(52.dp),shape=RoundedCornerShape(12.dp),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF2878E8))){
+                Text("Save Changes",color=Color.White,fontWeight=FontWeight.Bold)
+            }
         }
     }
 }
