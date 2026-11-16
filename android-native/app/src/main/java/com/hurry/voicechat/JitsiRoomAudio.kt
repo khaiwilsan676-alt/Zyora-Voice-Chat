@@ -131,8 +131,11 @@ fun JitsiRoomAudio(
                 try {
                     relayDecodedMusic(context, uri, roomSocket, roomId, musicRelayRunning)
                 } finally {
+                    // Mark a track finished only after natural completion. A socket
+                    // reconnect, pause, or route interruption cancels the relay and
+                    // must allow the same selected track to resume when transport returns.
+                    if (musicRelayRunning.get()) finishedMusicUri = uri
                     musicRelayRunning.set(false)
-                    finishedMusicUri = uri
                     activeMusicUri = null
                 }
             }
