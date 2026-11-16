@@ -2569,7 +2569,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
             Box(Modifier.fillMaxSize().zIndex(251f)) {
                 LuckyComboButton(
                     visible = true,
-                    timeLeft = luckyComboTimeLeft,
+                    progress = (luckyComboTimeLeft / 5f).coerceIn(0f, 1f),
                     onClick = {
                         val previousGift = lastLuckyComboPayload
                         showLuckyComboButton = false
