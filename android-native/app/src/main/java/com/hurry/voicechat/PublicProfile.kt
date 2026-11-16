@@ -647,27 +647,34 @@ fun PublicProfileScreen(
                 Column(modifier = Modifier
                     .fillMaxWidth()
                     .offset(y = (-12).dp) 
-                    .padding(horizontal = 20.dp, vertical = 8.dp)
+                    .padding(vertical = 8.dp) // Removed horizontal 20.dp here for edge-to-edge family banner
                 ) {
                     
                     // Family
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        SectionHeader("Family")
+                        Box(modifier = Modifier.padding(horizontal = 20.dp)) {
+                            SectionHeader("Family")
+                        }
                         if (hasOwnFamily) {
                             Box(
                                 Modifier
                                     .fillMaxWidth()
-                                    .height(112.dp)
-                                    .clip(RoundedCornerShape(12.dp))
+                                    .height(112.dp) // Edge to edge background height limit (you can remove if wrap needed)
                                     .clickable { if (ownFamilyCode.isNotBlank()) onOpenFamily(ownFamilyCode) }
                             ) {
                                 AsyncImage(
                                     model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261116_163413.png",
                                     contentDescription = "Family background",
                                     modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Fit
+                                    contentScale = ContentScale.Fit // No stretch no crop per instruction
                                 )
-                                Box(Modifier.align(Alignment.TopStart).padding(start = 12.dp, top = 12.dp).size(62.dp), contentAlignment = Alignment.Center) {
+                                Box(
+                                    Modifier
+                                        .align(Alignment.CenterStart) // Center left part main
+                                        .padding(start = 16.dp) 
+                                        .size(62.dp), 
+                                    contentAlignment = Alignment.Center
+                                ) {
                                     if (ownFamilyImage.isNotBlank()) {
                                         AsyncImage(
                                             model = ownFamilyImage,
@@ -684,8 +691,10 @@ fun PublicProfileScreen(
                                     )
                                 }
                                 Column(
-                                    Modifier.align(Alignment.CenterStart).padding(start = 84.dp, end = 12.dp),
-                                    verticalArrangement = Arrangement.spacedBy(3.dp)
+                                    Modifier
+                                        .align(Alignment.CenterStart)
+                                        .padding(start = 90.dp, end = 12.dp), // Gap adjust kiya ID ke taraf
+                                    verticalArrangement = Arrangement.spacedBy(0.dp) // Text slightly tighter and nearer to center ID
                                 ) {
                                     Text(ownFamilyName, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1)
                                     Text("Family ID: ${ownFamilyCode.ifBlank { ownFamilyCreatorId }}", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium, maxLines = 1)
@@ -693,21 +702,23 @@ fun PublicProfileScreen(
                                 }
                             }
                         } else {
-                            EmptySectionCard(
-                                iconPath = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261116_162146.png",
-                                text = if (isOtherUser) {
-                                    if (userGender.equals("Female", ignoreCase = true)) "She does not have Family yet"
-                                    else "He does not have Family yet"
-                                } else "You do not have Family yet",
-                                profileAsset = profileAsset
-                            )
+                            Box(modifier = Modifier.padding(horizontal = 20.dp).fillMaxWidth()) {
+                                EmptySectionCard(
+                                    iconPath = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261116_162146.png",
+                                    text = if (isOtherUser) {
+                                        if (userGender.equals("Female", ignoreCase = true)) "She does not have Family yet"
+                                        else "He does not have Family yet"
+                                    } else "You do not have Family yet",
+                                    profileAsset = profileAsset
+                                )
+                            }
                         }
                     }
 
                     Spacer(modifier = Modifier.height(20.dp))
 
                     // Albums
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Column(modifier = Modifier.padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         SectionHeader("Albums", "${albumImages.size}/4")
                         if (albumImages.isNotEmpty()) {
                             LazyVerticalGrid(columns = GridCells.Fixed(4), modifier = Modifier.height(80.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -731,23 +742,21 @@ fun PublicProfileScreen(
                     
                     Spacer(modifier = Modifier.height(20.dp)) 
 
-                    // Vehicle
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // Vehicle (Fixed Clipping issue on the left side)
+                    Column(modifier = Modifier.padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         SectionHeader("Vehicle")
                         
                         var hasVehicle by remember { mutableStateOf(true) }
                         
-                        BoxWithConstraints(Modifier.fillMaxWidth()) {
-                            Box(modifier = Modifier.requiredWidth(maxWidth + 32.dp).offset(x = (-16).dp)) {
-                                NativeOwnedVehicleShowcase(
-                                    userId = targetUser?.accountId?.takeIf { it.isNotBlank() }
-                                        ?: targetUser?.displayAccountNumber?.takeIf { it.isNotBlank() }
-                                        ?: targetUser?.id?.takeIf { it.isNotBlank() }
-                                        ?: targetUser?.uid?.takeIf { it.isNotBlank() }
-                                        ?: currentUserId,
-                                    onDataLoaded = { hasData -> hasVehicle = hasData }
-                                )
-                            }
+                        Box(Modifier.fillMaxWidth()) {
+                            NativeOwnedVehicleShowcase(
+                                userId = targetUser?.accountId?.takeIf { it.isNotBlank() }
+                                    ?: targetUser?.displayAccountNumber?.takeIf { it.isNotBlank() }
+                                    ?: targetUser?.id?.takeIf { it.isNotBlank() }
+                                    ?: targetUser?.uid?.takeIf { it.isNotBlank() }
+                                    ?: currentUserId,
+                                onDataLoaded = { hasData -> hasVehicle = hasData }
+                            )
                         }
 
                         if (!hasVehicle) {
@@ -762,7 +771,7 @@ fun PublicProfileScreen(
                     Spacer(modifier = Modifier.height(20.dp))
 
                     // Medal
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Column(modifier = Modifier.padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         SectionHeader("Medal")
                         EmptySectionCard(
                             iconPath = "/public/IMG_20261113_121816.png",
@@ -773,23 +782,21 @@ fun PublicProfileScreen(
 
                     Spacer(modifier = Modifier.height(20.dp))
 
-                    // Frame
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // Frame (Fixed Clipping issue on the left side)
+                    Column(modifier = Modifier.padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         SectionHeader("Frame")
                         
                         var hasFrame by remember { mutableStateOf(true) }
 
-                        BoxWithConstraints(Modifier.fillMaxWidth()) {
-                            Box(modifier = Modifier.requiredWidth(maxWidth + 32.dp).offset(x = (-16).dp)) {
-                                NativeOwnedFrameShowcase(
-                                    userId = targetUser?.accountId?.takeIf { it.isNotBlank() }
-                                        ?: targetUser?.displayAccountNumber?.takeIf { it.isNotBlank() }
-                                        ?: targetUser?.id?.takeIf { it.isNotBlank() }
-                                        ?: targetUser?.uid?.takeIf { it.isNotBlank() }
-                                        ?: currentUserId,
-                                    onDataLoaded = { hasData -> hasFrame = hasData }
-                                )
-                            }
+                        Box(Modifier.fillMaxWidth()) {
+                            NativeOwnedFrameShowcase(
+                                userId = targetUser?.accountId?.takeIf { it.isNotBlank() }
+                                    ?: targetUser?.displayAccountNumber?.takeIf { it.isNotBlank() }
+                                    ?: targetUser?.id?.takeIf { it.isNotBlank() }
+                                    ?: targetUser?.uid?.takeIf { it.isNotBlank() }
+                                    ?: currentUserId,
+                                onDataLoaded = { hasData -> hasFrame = hasData }
+                            )
                         }
                         
                         if (!hasFrame) {
@@ -804,7 +811,7 @@ fun PublicProfileScreen(
                     Spacer(modifier = Modifier.height(20.dp))
 
                     // Gift
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Column(modifier = Modifier.padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         SectionHeader("Gift")
                         if (receivedGifts.isNotEmpty()) {
                             LazyVerticalGrid(columns = GridCells.Fixed(4), modifier = Modifier.height(88.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -961,7 +968,7 @@ fun PublicProfileScreen(
 
     if (isOtherUser && showChat) {
         val authPrefs = context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE)
-        val chatPrefs = context.getSharedPreferences("hurry_user", Context.MODE_PRIVATE)
+        val chatPrefs = context.getSharedPreferences("hurry_user", Context.MODEPRIVATE)
         val currentAccountId = authPrefs.getString("accountId", "").orEmpty()
             .ifBlank { chatPrefs.getString("accountId", "").orEmpty() }
         val currentUserId = authPrefs.getString("uid", "").orEmpty()
