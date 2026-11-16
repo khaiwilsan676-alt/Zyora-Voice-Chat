@@ -620,38 +620,41 @@ fun PublicProfileScreen(
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         SectionHeader("Family")
                         if (hasOwnFamily) {
-                            Box(
-                                Modifier.fillMaxWidth().height(112.dp).clip(RoundedCornerShape(12.dp))
-                            ) {
-                                AsyncImage(
-                                    model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261116_163413.png",
-                                    contentDescription = "Family background",
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Crop
-                                )
-                                Box(Modifier.align(Alignment.TopStart).padding(start = 12.dp, top = 12.dp).size(62.dp), contentAlignment = Alignment.Center) {
-                                    if (ownFamilyImage.isNotBlank()) {
-                                        AsyncImage(
-                                            model = ownFamilyImage,
-                                            contentDescription = "Family DP",
-                                            modifier = Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)),
-                                            contentScale = ContentScale.Crop
-                                        )
-                                    }
+                            BoxWithConstraints(Modifier.fillMaxWidth()) {
+                                Box(
+                                    Modifier.requiredWidth(maxWidth + 30.dp).offset(x = (-15).dp)
+                                        .height(112.dp).clip(RoundedCornerShape(12.dp))
+                                ) {
                                     AsyncImage(
-                                        model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261116_164433.png",
-                                        contentDescription = "Family avatar frame",
-                                        modifier = Modifier.size(62.dp),
+                                        model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261116_163413.png",
+                                        contentDescription = "Family background",
+                                        modifier = Modifier.fillMaxSize(),
                                         contentScale = ContentScale.Fit
                                     )
-                                }
-                                Column(
-                                    Modifier.align(Alignment.CenterStart).padding(start = 84.dp, end = 12.dp),
-                                    verticalArrangement = Arrangement.spacedBy(3.dp)
-                                ) {
-                                    Text(ownFamilyName, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-                                    Text("Family ID: $ownFamilyCreatorId", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium, maxLines = 1)
-                                    Text("Members 0/50", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                                    Box(Modifier.align(Alignment.TopStart).padding(start = 12.dp, top = 12.dp).size(62.dp), contentAlignment = Alignment.Center) {
+                                        if (ownFamilyImage.isNotBlank()) {
+                                            AsyncImage(
+                                                model = ownFamilyImage,
+                                                contentDescription = "Family DP",
+                                                modifier = Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)),
+                                                contentScale = ContentScale.Crop
+                                            )
+                                        }
+                                        AsyncImage(
+                                            model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261116_164433.png",
+                                            contentDescription = "Family avatar frame",
+                                            modifier = Modifier.size(62.dp),
+                                            contentScale = ContentScale.Fit
+                                        )
+                                    }
+                                    Column(
+                                        Modifier.align(Alignment.CenterStart).padding(start = 84.dp, end = 12.dp),
+                                        verticalArrangement = Arrangement.spacedBy(3.dp)
+                                    ) {
+                                        Text(ownFamilyName, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                                        Text("Family ID: $ownFamilyCreatorId", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+                                        Text("Members 0/50", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                                    }
                                 }
                             }
                         } else {
