@@ -968,7 +968,7 @@ fun PublicProfileScreen(
 
     if (isOtherUser && showChat) {
         val authPrefs = context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE)
-        val chatPrefs = context.getSharedPreferences("hurry_user", Context.MODEPRIVATE)
+        val chatPrefs = context.getSharedPreferences("hurry_user", Context.MODE_PRIVATE)
         val currentAccountId = authPrefs.getString("accountId", "").orEmpty()
             .ifBlank { chatPrefs.getString("accountId", "").orEmpty() }
         val currentUserId = authPrefs.getString("uid", "").orEmpty()
