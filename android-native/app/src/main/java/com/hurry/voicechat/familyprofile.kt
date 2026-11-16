@@ -96,6 +96,7 @@ internal object FamilyProfileApi {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FamilyProfile(familyId:String,onBack:()->Unit,onOpenChat:(String,String,String)->Unit={_,_,_->}) {
+    val context = LocalContext.current
     val scope=rememberCoroutineScope(); val auth=FirebaseAuth.getInstance().currentUser
     val context=LocalContext.current
     var family by remember(familyId){mutableStateOf<FamilyRecord?>(null)}
