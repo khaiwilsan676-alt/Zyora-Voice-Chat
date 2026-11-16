@@ -135,7 +135,8 @@ private fun giftAssetUrl(path: String): String {
 }
 
 private val tabs = listOf("Hot", "Lucky", "Luxury", "Event")
-private val multipliers = listOf("1×", "10×", "299×", "599×", "999×")
+
+private val multipliers = listOf("1", "10", "299", "599", "999")
 
 // Blue palette
 private val Blue500 = Color(0xFF3B82F6)
@@ -175,7 +176,7 @@ fun GiftPicker(
     walletContent: @Composable () -> Unit = {},
 ) {
     var activeTab by remember { mutableStateOf("Hot") }
-    var selectedMultiplier by remember { mutableStateOf("1×") }
+    var selectedMultiplier by remember { mutableStateOf("1") }
     var showMultipliers by remember { mutableStateOf(false) }
     var selectedGift by remember { mutableStateOf<Int?>(null) }
     var sending by remember { mutableStateOf(false) }
@@ -197,7 +198,7 @@ fun GiftPicker(
         else -> emptyList()
     }
 
-    val parseMultiplier: (String) -> Int = { m -> m.replace("×", "").toIntOrNull() ?: 1 }
+    val parseMultiplier: (String) -> Int = { m -> m.toIntOrNull() ?: 1 }
     val selectedGiftObj = currentGifts.find { it.id == selectedGift }
     val totalCost = selectedGiftObj?.let { it.coins * parseMultiplier(selectedMultiplier) } ?: 0
 
@@ -381,7 +382,7 @@ fun GiftPicker(
                         }
                         .background(
                             color = Color(0xEB000000),
-                            shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)
+                            shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp) 
                         )
                         .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)) 
                         .border(
@@ -580,7 +581,7 @@ fun GiftPicker(
                                             content = {
                                                 Surface(
                                                     color = Color(0xFF0C1418),
-                                                    shape = RoundedCornerShape(6.dp),
+                                                    shape = RoundedCornerShape(12.dp), 
                                                     border = BorderStroke(1.dp, Color.White.copy(alpha = 0.15f)),
                                                     shadowElevation = 8.dp,
                                                     modifier = Modifier.width(50.dp)
@@ -591,7 +592,7 @@ fun GiftPicker(
                                                             Box(
                                                                 Modifier
                                                                     .fillMaxWidth()
-                                                                    .background(if (active) Blue600 else Color.Transparent)
+                                                                    .background(Color.Transparent) 
                                                                     .clickable {
                                                                         selectedMultiplier = m
                                                                         showMultipliers = false
@@ -629,7 +630,7 @@ fun GiftPicker(
                                         Row(
                                             Modifier
                                                 .clickable { showMultipliers = !showMultipliers }
-                                                .padding(horizontal = 14.dp, vertical = 8.dp),
+                                                .padding(horizontal = 14.dp, vertical = 6.dp),
                                             verticalAlignment = Alignment.CenterVertically,
                                             horizontalArrangement = Arrangement.spacedBy(4.dp),
                                         ) {
@@ -667,7 +668,7 @@ fun GiftPicker(
                                                 .clickable(enabled = selectedGift != null && !sending) {
                                                     handleSend()
                                                 }
-                                                .padding(horizontal = 26.dp, vertical = 8.dp), 
+                                                .padding(horizontal = 26.dp, vertical = 6.dp),
                                             contentAlignment = Alignment.Center,
                                         ) {
                                             Text(
@@ -718,7 +719,7 @@ private fun GiftCard(
 ) {
     Box(
         Modifier
-            .clip(RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(12.dp))
             .background(
                 if (isSelected) Color.Gray.copy(alpha = 0.35f) else Color.Transparent 
             )
@@ -949,7 +950,7 @@ private fun RecipientButton(
 }
 
 // ============================================================
-// VIDEO OVERLAY (FIXED ORIGINAL COLOR & FADE EDGES)
+// VIDEO OVERLAY 
 // ============================================================
 @Composable
 private fun VideoEffectOverlay(
@@ -961,7 +962,6 @@ private fun VideoEffectOverlay(
     val isFade = style == "fade"
     var show by remember { mutableStateOf(true) }
     
-    // Aspect Ratio store karne ke liye variable
     var videoRatio by remember { mutableStateOf<Float?>(null) }
 
     LaunchedEffect(src) { onStarted() }
@@ -1027,24 +1027,21 @@ private fun VideoEffectOverlay(
                 .then(if (videoRatio != null) Modifier.aspectRatio(videoRatio!!) else Modifier.wrapContentHeight())
                 .graphicsLayer { 
                     compositingStrategy = CompositingStrategy.Offscreen 
-                    // FIX: Sirf Autumn ("pure") me Screen Mode chalega black hatane ke liye.
-                    // Teddy/King ("fade") 100% Original aur GAADHE colors me play honge!!
                     if (style == "pure") {
-                        blendMode = BlendMode.Screen 
+                        blendMode = BlendMode.Plus 
                     }
                 }
                 .drawWithContent {
                     drawContent()
-                    // PERFECT FADE LOGIC - Sirf kinare smoothly fade honge, beech me original content rahega
                     if (isFade) {
-                        val topFadeStop = 0.1f // Top 10% Fade
-                        val bottomFadeStop = if (isKing) 0.8f else 0.9f // King Bottom 20%, Teddy Bottom 10%
+                        val topFadeStop = 0.1f 
+                        val bottomFadeStop = if (isKing) 0.85f else 0.9f 
                         drawRect(
                             brush = Brush.verticalGradient(
-                                0.0f to Color.Transparent,
-                                topFadeStop to Color.White, // Yahan se original chalu 100%
-                                bottomFadeStop to Color.White, // Yahan tak original 100%
-                                1.0f to Color.Transparent // Phir last me fade 
+                                0.0f to Color.White.copy(alpha = 0f), 
+                                topFadeStop to Color.White, 
+                                bottomFadeStop to Color.White, 
+                                1.0f to Color.White.copy(alpha = 0f) 
                             ),
                             blendMode = BlendMode.DstIn 
                         )
@@ -1060,7 +1057,7 @@ fun RoomGiftVideoOverlay(src: String, onFinished: () -> Unit) {
 }
 
 // ============================================================
-// LUCKY GIFT NOTIFICATION SLIDER
+// LUCKY GIFT NOTIFICATION SLIDER (FIXED: Left space, Full Round, x1 next to name)
 // ============================================================
 data class LuckyNotice(
     val id: String,
@@ -1082,14 +1079,16 @@ fun LuckyGiftNotificationSlider(
     floatingWins: List<Pair<String, Long>> = emptyList(),
 ) {
     Box(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(start = 12.dp), // HIGHLIGHT: Thodi space edge se
         contentAlignment = Alignment.CenterStart 
     ) {
         AnimatedVisibility(
             visible = notice != null && !notice.isExiting,
             enter = slideInHorizontally(initialOffsetX = { -it }) + fadeIn(),
             exit = slideOutHorizontally(targetOffsetX = { -it }) + fadeOut(),
-            modifier = Modifier.fillMaxWidth() 
+            modifier = Modifier.wrapContentWidth() 
         ) {
             if (notice == null) return@AnimatedVisibility
             val isBroadcast = notice.recipientMode == RecipientMode.MIC ||
@@ -1104,7 +1103,7 @@ fun LuckyGiftNotificationSlider(
             Box(contentAlignment = Alignment.CenterStart) {
                 Row(
                     Modifier
-                        .clip(RoundedCornerShape(topEnd = 50.dp, bottomEnd = 50.dp))
+                        .clip(RoundedCornerShape(50.dp)) // HIGHLIGHT: Full round shape
                         .background(
                             Brush.horizontalGradient(
                                 colors = listOf(
@@ -1119,10 +1118,10 @@ fun LuckyGiftNotificationSlider(
                                 endX = Float.POSITIVE_INFINITY,
                             )
                         )
-                        .padding(start = 2.dp, end = 18.dp, top = 1.dp, bottom = 1.dp)
+                        .padding(start = 4.dp, end = 18.dp, top = 2.dp, bottom = 2.dp)
                         .height(38.dp)
-                        .fillMaxWidth(0.92f)
-                        .widthIn(max = 360.dp),
+                        .wrapContentWidth()
+                        .widthIn(max = 300.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     AsyncImage(
@@ -1134,7 +1133,9 @@ fun LuckyGiftNotificationSlider(
                             .clip(CircleShape),
                     )
                     Spacer(Modifier.width(6.dp))
-                    Column(Modifier.weight(1f).widthIn(max = 110.dp), verticalArrangement = Arrangement.Center) {
+                    
+                    // HIGHLIGHT: fill = false so name doesn't take extra space
+                    Column(Modifier.weight(1f, fill = false).widthIn(max = 110.dp), verticalArrangement = Arrangement.Center) {
                         Text(
                             text = topText,
                             color = Color.White,
@@ -1153,6 +1154,8 @@ fun LuckyGiftNotificationSlider(
                         )
                     }
                     Spacer(Modifier.width(6.dp))
+                    
+                    // HIGHLIGHT: Gift image + multiplier exactly next to name
                     AsyncImage(
                         model = notice.giftImage,
                         contentDescription = null,
@@ -1174,13 +1177,12 @@ fun LuckyGiftNotificationSlider(
 }
 
 // ============================================================
-// LUCKY COMBO BUTTON 
+// LUCKY COMBO BUTTON (FIXED: Smooth progress support)
 // ============================================================
 @Composable
 fun LuckyComboButton(
     visible: Boolean,
-    timeLeft: Int,
-    maxTime: Int = 5,
+    progress: Float, // Smooth timer progress (0f to 1f)
     onClick: () -> Unit,
 ) {
     if (!visible) return
@@ -1202,16 +1204,6 @@ fun LuckyComboButton(
             RepeatMode.Restart,
         ),
         label = "alpha",
-    )
-
-    val progressPercent = maxOf(0f, timeLeft.toFloat() / maxTime)
-    val animatedProgress by animateFloatAsState(
-        targetValue = progressPercent,
-        animationSpec = tween(
-            durationMillis = 1000, 
-            easing = LinearEasing
-        ),
-        label = "smoothProgress"
     )
 
     Box(
@@ -1266,12 +1258,62 @@ fun LuckyComboButton(
                     drawArc(
                         color = Color.White,
                         startAngle = -90f,
-                        sweepAngle = 360f * animatedProgress, 
+                        sweepAngle = 360f * progress, // Smooth sweep countdown
                         useCenter = false,
                         style = stroke,
                     )
                 }
             }
         }
+    }
+}
+
+// ============================================================
+// NEW: MANAGER COMPOSABLE (Handles exactly 5s timer & combo x count)
+// ============================================================
+@Composable
+fun LuckyComboOverlayManager(
+    initialNotice: LuckyNotice?, // Jab gift bheje to pass kar
+    onDismiss: () -> Unit // 5 sec me timeout call hoga, isme apna initialNotice null kar dena parent me
+) {
+    if (initialNotice == null) return
+    
+    // Combo multiplier tracker
+    var comboCount by remember(initialNotice.id) { mutableStateOf(initialNotice.multiplier) }
+    var clickTrigger by remember { mutableStateOf(0) }
+    
+    // Smooth progress tracker
+    var timerProgress by remember { mutableStateOf(1f) }
+    
+    // 5-Second timer logic
+    LaunchedEffect(clickTrigger, initialNotice.id) {
+        timerProgress = 1f
+        animate(
+            initialValue = 1f,
+            targetValue = 0f,
+            animationSpec = tween(5000, easing = LinearEasing) // Exact 5 seconds
+        ) { value, _ ->
+            timerProgress = value
+        }
+        // Agar 5 sec tak koi click nahi hua to ye line chalegi
+        onDismiss() 
+    }
+    
+    // Notification with updated x number
+    val currentNotice = initialNotice.copy(multiplier = comboCount)
+    
+    Box(Modifier.fillMaxSize()) {
+        // Notification patti (with updated x count)
+        LuckyGiftNotificationSlider(notice = currentNotice)
+        
+        // Combo Button (progress resets smoothly every click)
+        LuckyComboButton(
+            visible = true,
+            progress = timerProgress,
+            onClick = {
+                comboCount += 1 // multiplier +1
+                clickTrigger += 1 // Timer phirse 5 second se shuru (button hide nhi hoga)
+            }
+        )
     }
 }
