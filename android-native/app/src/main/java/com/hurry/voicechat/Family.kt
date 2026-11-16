@@ -177,6 +177,7 @@ fun Family(onBack: () -> Unit) {
                                             walletDao.saveUserData(current)
                                             throw IllegalStateException("Family could not be published. Please try again.")
                                         }
+                                        FamilyProfileApi.create(familyCode, familyName.trim(), familyPhoto, announcement)
                                         null
                                     }
                                 }.getOrElse { "Could not create family. Please try again." }
@@ -185,7 +186,7 @@ fun Family(onBack: () -> Unit) {
                             if (result == null) {
                                 prefs.edit().putString("familyName", familyName.trim())
                                     .putString("familyAnnouncement", announcement)
-                                     .putString("familyImage", familyImage)
+                                     .putString("familyImage", familyPhoto)
                                     .putString("familyCreatorId", familyCreatorId)
                                     .putString("familyCode", prefs.getString("familyCode", "")?.ifBlank { "FAM" + System.currentTimeMillis().toString().takeLast(6) } ?: "FAM" + System.currentTimeMillis().toString().takeLast(6))
                                     .putBoolean("familyCreated", true).apply()
