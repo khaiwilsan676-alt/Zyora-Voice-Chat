@@ -121,6 +121,7 @@ private val luckyGifts = listOf(
     GiftPickerGift(116, "Star", 9800, "/file_0000000066f482118f772ed6fab4ad1f.png", noMask = true),
     GiftPickerGift(110, "Sword", 9999, "/IMG_20260927_221615.png", noMask = true),
     GiftPickerGift(114, "Dancing Girl", 12000, "/IMG_20260927_221722.png", noMask = true),
+)
 
 
 private fun giftAssetUrl(path: String): String {
