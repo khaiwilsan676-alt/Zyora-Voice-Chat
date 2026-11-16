@@ -1138,3 +1138,10 @@ Current documentation does not certify that all historical features are build-, 
 - `Family.kt` now renders the actual top 1–3 family DP/frame/target and only renders ranks 4–50 when corresponding families exist. Member ranking sorts by each member's sent-gift total; member coin amounts are masked as requested.
 - Existing profile-based families are migrated into the new collection when their Family Profile is first opened. Source commits: native Family Profile/navigation/chat/ranking updates through `82c61f1`; server family API/ranking updates through `23bc796`.
 - GitHub Actions native APK build is queued/running for the latest native commit. APK success, Render deployment, and two-account invitation/acceptance plus gift-ranking verification are still pending; do not mark this feature device-verified until those checks pass.
+
+## 2026-11-16 — Family completion follow-up
+- Fixed the Family Profile page's missing Compose context used by Apply and family-DP upload.
+- Owner pencil now opens the same `FamilyCreate` screen used for initial creation. Edit mode changes the heading/button to Edit my family / Save Changes and hides Required Level and the 30,000,000-coin creation control.
+- The edit form saves the family name, hosted DP, and announcement through the owner-authenticated MongoDB update endpoint; successful changes update local profile preferences and reload the page.
+- The backend family creation path already synchronizes `familyCode` and `familyAnnouncement` onto the owner's public-profile document; joined members receive the same fields on acceptance.
+- Latest APK workflow run: #323, associated with commit `ad258d3`; build result is pending at the time of this note.
