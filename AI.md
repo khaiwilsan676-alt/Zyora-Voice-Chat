@@ -1115,3 +1115,8 @@ Current documentation does not certify that all historical features are build-, 
 - Restoring the track does not auto-start audio and does not restore/rejoin the previous room or seat. The user must enter a room normally; the saved song is available in the controller.
 - Pressing the controller's Power/Stop button explicitly clears the saved track. Existing playback, playlist, and controller UI behavior remain unchanged.
 - Native build and force-stop/relaunch device verification remain pending.
+
+## 2026-11-16 — Gift Picker Send button width
+- `GiftPicker.kt`: set only the blue Send button to an exact width of 70dp; removed its previous horizontal padding so the fixed width is respected.
+- The multiplier/arrow section, button height, colors, shape, click behavior, and surrounding layout remain unchanged.
+- Native build and device visual verification remain pending.
