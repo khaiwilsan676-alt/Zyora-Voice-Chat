@@ -55,7 +55,7 @@ val copyGenderAssets = tasks.register<Copy>("copyGenderAssets") {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     from(rootProject.layout.projectDirectory.dir("../public")) {
         include(
-            "file_000000003264821196e942e51038350d.png", "logo.png", "IMG_20261031_121547.png", "IMG_20261031_121627.png",
+            "file_00000000b46081fd889ad8fece9e9e00.png", "logo.png", "IMG_20261031_121547.png", "IMG_20261031_121627.png",
             "IMG_20260804_211013.jpg", "IMG_20260804_211031.jpg",
             "IMG_20260822_143032.png", "1787389350745~2.jpg", "IMG_20260822_143348.png",
             "IMG_20260822_143408.png", "IMG_20260822_143422~2.jpg",
@@ -87,7 +87,7 @@ val copyGenderAssets = tasks.register<Copy>("copyGenderAssets") {
         )
         rename { fileName ->
             when {
-                fileName == "file_000000003264821196e942e51038350d.png" -> "zyora_splash.png"
+                fileName == "file_00000000b46081fd889ad8fece9e9e00.png" -> "zyora_splash_only.png"
                 fileName == "logo.png" -> "zyora_logo.png"
                 fileName in setOf("IMG_20260908_192143.png", "IMG_20260908_192120.png", "IMG_20260908_192203.png", "IMG_20260908_192013.png", "IMG_20260908_192050.png", "IMG_20260908_191941.png", "IMG_20260908_191906.png", "IMG_20260908_191930.png", "IMG_20260910_114515.png", "IMG_20260910_114613.png", "IMG_20260910_114625.png", "file_00000000d0ec820ba666eab8bea30204.png", "file_000000000f0c820b95490c9d927692d9.png", "file_0000000023cc8230baec62632d74e698.png", "file_00000000d9b08211b0304c61b802348b.png", "file_000000003d24821182882f8ca412d2b6.png", "1787413631876~2.jpg", "file_00000000ced481fa9117afc4fa91791e.png", "file_00000000eb0081f4885ade7d7db3bef8.png", "fruit-party-logo.jpg", "file_000000009d808211b8ffb7c2183b4ef5.png", "file_00000000c9e08211ab3e8c4d511b7965.png", "file_000000005f948210bbb51c62a68f797a.png") -> "fp_" + fileName.lowercase().replace("~", "_").replace("-", "_").replace(" ", "_")
                 fileName.startsWith("IMG_20261031") || fileName.startsWith("IMG_20260804") -> fileName.lowercase()
