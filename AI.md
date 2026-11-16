@@ -1098,3 +1098,4 @@ Current documentation does not certify that all historical features are build-, 
 - Source commits: server `e0bced5`; native FollowPage `7f3ad29`, RoomInfo `2f2d481`, MeScreen `04ecb2e`. Render deployment, native APK build, and two-account visitor persistence verification remain required.
 
 - Follow-up: `MeScreen.kt` now refreshes both received and sent visitor histories from the users-document API before calculating the Visitors stat, and mirrors successful responses into local `index.db`; offline fallback remains intact. Commit: `64fe424`.
+- Visitor API identity lookup also matches numeric MongoDB accountId/accountNumber/id values when clients send the same account as a string. Zyora Server follow-up commit: `6100330`.
