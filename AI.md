@@ -1109,3 +1109,9 @@ Current documentation does not certify that all historical features are build-, 
 ## 2026-11-16 — Lucky Gift notification width
 - `GiftPicker.kt`: increased the Lucky Gift notification row maximum width from 300dp to 340dp and sender/recipient text column maximum width from 110dp to 150dp so the notification can display wider content.
 - Kept its start padding, alignment, vertical position, height, animation, colors, and all other layout properties unchanged.
+
+## 2026-11-16 — Restore previous room music after app restart
+- Persist the signed-in user's last selected room track (ID, title, URI, duration) locally when selected/updated and restore it into the room mini-controller after reopening the app.
+- Restoring the track does not auto-start audio and does not restore/rejoin the previous room or seat. The user must enter a room normally; the saved song is available in the controller.
+- Pressing the controller's Power/Stop button explicitly clears the saved track. Existing playback, playlist, and controller UI behavior remain unchanged.
+- Native build and force-stop/relaunch device verification remain pending.
