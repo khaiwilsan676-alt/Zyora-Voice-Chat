@@ -347,7 +347,10 @@ fun GiftPicker(
                 dialogWindow?.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
             }
             
-            BoxWithConstraints(Modifier.fillMaxSize()) {
+            BoxWithConstraints(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.BottomCenter,
+            ) {
                 val giftSheetHeight = maxHeight * 0.52f
                 // Drag dismiss variable
                 var offsetY by remember { mutableStateOf(0f) }
