@@ -100,6 +100,8 @@ fun Family(onBack: () -> Unit) {
     val prefs = remember { context.getSharedPreferences("hurry_user", Context.MODE_PRIVATE) }
     val authPrefs = remember { context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE) }
     val familyCreatorId = authPrefs.getString("accountId", "").orEmpty().ifBlank { authPrefs.getString("uid", "").orEmpty() }.ifBlank { authPrefs.getString("id", "").orEmpty() }
+    val familyAuthUid = authPrefs.getString("uid", "").orEmpty().ifBlank { familyCreatorId }
+    val familyAuthId = authPrefs.getString("id", "").orEmpty().ifBlank { familyAuthUid }
     var view by remember { mutableStateOf("main") }
     var showRules by remember { mutableStateOf(false) }
     var familyName by remember { mutableStateOf(prefs.getString("familyName", "") ?: "") }
@@ -166,7 +168,7 @@ fun Family(onBack: () -> Unit) {
                                                 ?: throw IllegalStateException("Family image upload failed.")
                                         } else selectedImage
                                         val saved = ProfilePersistence.save(
-                                            TargetUser(id = familyCreatorId, uid = familyCreatorId, accountId = familyCreatorId),
+                                            TargetUser(id = familyAuthId, uid = familyAuthUid, accountId = familyCreatorId, displayAccountNumber = familyCreatorId),
                                             mapOf("familyCreated" to "true", "familyName" to familyName.trim(),
                                                 "familyImage" to familyPhoto, "familyCreatorId" to familyCreatorId,
                                                 "familyCode" to familyCode, "familyAnnouncement" to announcement)
