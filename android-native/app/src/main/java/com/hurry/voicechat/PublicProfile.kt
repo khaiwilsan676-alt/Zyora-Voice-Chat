@@ -635,8 +635,11 @@ fun PublicProfileScreen(
                             }
                         } else {
                             EmptySectionCard(
-                                iconPath = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261116_162146.png",
-                                text = "You do not have Family yet",
+                                iconPath = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261116_162146.png",
+                                text = if (isOtherUser) {
+                                    if (userGender.equals("Female", ignoreCase = true)) "She does not have Family yet"
+                                    else "He does not have Family yet"
+                                } else "You do not have Family yet",
                                 profileAsset = profileAsset
                             )
                         }
