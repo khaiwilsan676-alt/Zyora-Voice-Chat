@@ -192,6 +192,21 @@ fun JitsiRoomAudio(
                 return
             }
             recorder = created
+            // Prefer a connected Bluetooth headset microphone when Android exposes
+            // one as an input device. Do not force SCO/communication mode: room
+            // playback remains USAGE_MEDIA so A2DP/LE media output stays available.
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                val bluetoothInput = runCatching {
+                    audioManager.getDevices(AudioManager.GET_DEVICES_INPUTS).firstOrNull { device ->
+                        device.type == android.media.AudioDeviceInfo.TYPE_BLUETOOTH_SCO ||
+                            (android.os.Build.VERSION.SDK_INT >= 31 &&
+                                device.type == android.media.AudioDeviceInfo.TYPE_BLE_HEADSET)
+                    }
+                }.getOrNull()
+                if (bluetoothInput != null) {
+                    runCatching { created.setPreferredDevice(bluetoothInput) }
+                }
+            }
             if (AcousticEchoCanceler.isAvailable()) {
                 echoCanceler = runCatching {
                     AcousticEchoCanceler.create(created.audioSessionId)?.also { it.enabled = true }
