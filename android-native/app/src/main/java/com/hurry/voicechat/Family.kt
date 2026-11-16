@@ -170,7 +170,7 @@ fun Family(onBack: () -> Unit) {
                                     .putString("familyCreatorId", familyCreatorId)
                                     .putString("familyCode", prefs.getString("familyCode", "")?.ifBlank { "FAM" + System.currentTimeMillis().toString().takeLast(6) } ?: "FAM" + System.currentTimeMillis().toString().takeLast(6))
                                     .putBoolean("familyCreated", true).apply()
-                                view = "top"
+                                view = "main"
                                 Toast.makeText(context, "Family created successfully", Toast.LENGTH_SHORT).show()
                             } else createError = result
                         }
