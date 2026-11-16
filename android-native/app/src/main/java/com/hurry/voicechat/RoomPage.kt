@@ -2370,10 +2370,10 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                                 Modifier.size(30.dp).clickable { musicReplayOne() },
                                 contentAlignment = Alignment.Center
                             ) {
-                                // Keep the original Repeat One icon and its existing tap behavior.
+                                // Show the plain repeat icon until enabled; show Repeat One only after tapping.
                                 Icon(
-                                    Icons.Default.RepeatOne,
-                                    contentDescription = "Repeat current song",
+                                    if (repeatOneEnabled) Icons.Default.RepeatOne else Icons.Default.Repeat,
+                                    contentDescription = if (repeatOneEnabled) "Repeat current song" else "Repeat",
                                     tint = Color.White,
                                     modifier = Modifier.size(25.dp)
                                 )
