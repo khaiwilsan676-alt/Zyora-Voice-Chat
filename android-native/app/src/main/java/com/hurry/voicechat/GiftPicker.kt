@@ -688,14 +688,14 @@ fun GiftPicker(
                 // Lucky banner is intentionally outside the sheet, with a 3dp overlap.
                 if (activeTab == "Lucky") {
                     AsyncImage(
-                        model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261116_162726.png",
+                        model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261116_193201.png",
                         contentDescription = null,
                         contentScale = ContentScale.Fit,
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
                             .offset(y = -giftSheetHeight + 3.dp)
                             .fillMaxWidth()
-                            .height(90.dp),
+                            .height(100.dp),
                     )
                 }
             }
