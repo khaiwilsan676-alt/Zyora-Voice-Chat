@@ -75,12 +75,13 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
     val savedAccount = prefs.getString("accountNumber", null)?.takeIf { it.isNotBlank() }
         ?: prefs.getString("accountId", "") ?: ""
     val account = savedAccount.ifBlank { nativeMeAccountNumber(uid) }
-    var visitorCount by remember(uid) { mutableIntStateOf(0) }
-    var fansCount by remember(uid) { mutableIntStateOf(0) }
-    var friendsCount by remember(uid) { mutableIntStateOf(0) }
-    var followingCount by remember(uid) { mutableIntStateOf(0) }
-    var followCountsReady by remember(uid) { mutableStateOf(false) }
     val visitorUserId = prefs.getString("accountId", "").orEmpty().ifBlank { uid }
+    val initialFollowSnapshot = remember(visitorUserId) { SocialFollowApi.cachedSnapshot(context, visitorUserId) }
+    var visitorCount by remember(uid) { mutableIntStateOf(0) }
+    var fansCount by remember(uid) { mutableIntStateOf(initialFollowSnapshot?.followers ?: 0) }
+    var friendsCount by remember(uid) { mutableIntStateOf(initialFollowSnapshot?.friends ?: 0) }
+    var followingCount by remember(uid) { mutableIntStateOf(initialFollowSnapshot?.followingCount ?: 0) }
+    var followCountsReady by remember(uid) { mutableStateOf(initialFollowSnapshot != null) }
     val visitorIdentityAliases = remember(visitorUserId, uid) { setOf(visitorUserId, uid, prefs.getString("id", "").orEmpty()).filter { it.isNotBlank() }.toSet() }
     LaunchedEffect(visitorUserId) {
         if (visitorUserId.isNotBlank()) {
