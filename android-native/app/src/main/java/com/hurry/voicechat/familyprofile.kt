@@ -186,8 +186,8 @@ fun FamilyProfile(familyId:String,onBack:()->Unit,onOpenChat:(String,String,Stri
         savingEdit=true
         runCatching {
             val hostedImage = if (i.startsWith("content://")) {
-                val data = ProfilePersistence.imageDataUri(context, Uri.parse(i)) ?: error("Could not read Family DP.")
-                ProfilePersistence.uploadImageToMongoDB(data, "$familyId-family", "family-dp") ?: error("Family DP upload failed.")
+                val data = ProfilePersistence.imageDataUri(context, Uri.parse(i)) ?: throw IllegalStateException("Could not read Family DP.")
+                ProfilePersistence.uploadImageToMongoDB(data, "$familyId-family", "family-dp") ?: throw IllegalStateException("Family DP upload failed.")
             } else i
             FamilyProfileApi.update(familyId,n,hostedImage,a)
             hostedImage
