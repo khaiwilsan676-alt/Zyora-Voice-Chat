@@ -1083,3 +1083,8 @@ Current documentation does not certify that all historical features are build-, 
 - Native RoomPage retains `publicMsgOff=false` as its default; only the persisted explicit OFF setting closes the composer gate. Removed a stale commented-out OFF-default line; no UI/layout or message transport changes.
 - Commits: server `57952561fe7c968d13560f11aafc52289521b1c8`; native `50b0aa81aa6d3ca944b8eeecb5ccb18fcd349468`.
 - Verification: source updates committed; Render deployment and live multi-user room messaging test remain required.
+
+## 2026-11-16 — Me page instant local artwork
+- Bundled the Me page menu icons, official-ID artwork, Coins/Diamonds tiles, SVIP banner, Invite badge, and Level badge into Android drawable resources instead of fetching them from GitHub Raw at render time.
+- These decorative assets now render directly from the APK on first open and remain available offline; the live profile avatar and profile data retain their existing cache/network behavior.
+- No layout, sizing, colors, navigation, or profile behavior changed. Native build and real-device timing verification remain pending.
