@@ -1269,7 +1269,7 @@ fun RoomPage(
                         luckyGiftNotice = luckyGiftNotice?.copy(isExiting = true)
                         mainHandler.postDelayed({ if (luckyGiftNotice?.id == noticeId) luckyGiftNotice = null }, 450)
                     }
-                }, 3800L)
+                }, 5000L)
             }
         }
         val seatListener = Emitter.Listener { args ->
