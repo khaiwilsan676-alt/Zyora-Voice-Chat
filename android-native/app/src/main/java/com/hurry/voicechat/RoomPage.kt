@@ -271,6 +271,34 @@ fun RoomPage(
     val accountId=currentUser.accountId.ifBlank{currentUser.uid.ifBlank{currentUser.id.ifBlank{"guest"}}}
     val clipboard = LocalClipboardManager.current
     val appContext = LocalContext.current
+    // Keep only the last selected room song across process/app restarts.
+    // The room session itself is deliberately not restored.
+    val lastMusicPrefs = remember { appContext.getSharedPreferences("zyora_last_room_music", android.content.Context.MODE_PRIVATE) }
+    val lastMusicKey = "last_track_$accountId"
+    val savedRoomTrack = remember(accountId) {
+        runCatching {
+            val saved = lastMusicPrefs.getString(lastMusicKey, null) ?: return@runCatching null
+            val json = JSONObject(saved)
+            NativeMusicTrack(
+                id = json.optString("id"),
+                name = json.optString("name"),
+                url = json.optString("url"),
+                duration = json.optLong("duration", 0L)
+            ).takeIf { it.url.isNotBlank() && it.name.isNotBlank() }
+        }.getOrNull()
+    }
+    fun persistLastRoomTrack(track: NativeMusicTrack?) {
+        if (track == null) {
+            lastMusicPrefs.edit().remove(lastMusicKey).apply()
+        } else {
+            lastMusicPrefs.edit().putString(lastMusicKey, JSONObject()
+                .put("id", track.id)
+                .put("name", track.name)
+                .put("url", track.url)
+                .put("duration", track.duration)
+                .toString()).apply()
+        }
+    }
     var roomWalletBalance by remember(accountId) { mutableLongStateOf(0L) }
     // Use exactly the same wallet identity priority as CoinsNativePage.
     // The wallet page keys MongoDB balances by Firebase UID first, then accountId.
@@ -666,7 +694,7 @@ fun RoomPage(
     var showSeatSheet by remember{mutableStateOf(false)}
     var selectedChatProfile by remember { mutableStateOf<NativeRoomMessage?>(null) }
 
-    var miniMusicTrack by remember { mutableStateOf<NativeMusicTrack?>(null) }
+    var miniMusicTrack by remember(accountId) { mutableStateOf(savedRoomTrack) }
     var musicControllerMinimized by remember { mutableStateOf(false) }
     val musicCardDragOffset = remember { Animatable(0f) }
     val musicDragScope = rememberCoroutineScope()
@@ -733,6 +761,7 @@ fun RoomPage(
                     currentTrackIndex = (currentTrackIndex + 1) % musicPlaylist.size
                     val nextTrack = musicPlaylist[currentTrackIndex]
                     miniMusicTrack = nextTrack
+                    persistLastRoomTrack(nextTrack)
                     musicCurrentTime = 0f
                     MusicPlaybackState.currentPlayingUri = nextTrack.url
                     MusicPlaybackState.currentTrack = nextTrack
@@ -845,6 +874,7 @@ fun RoomPage(
             appContext.startService(Intent(appContext, RoomMusicService::class.java).setAction(RoomMusicService.ACTION_STOP))
         }
         miniMusicTrack = null
+        persistLastRoomTrack(null)
         isMusicPlaying = false
         MusicPlaybackState.currentPlayingUri = null
         MusicPlaybackState.currentTrack = null
@@ -2402,6 +2432,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
             },
             onMusicPlay={ track ->
                 miniMusicTrack = track
+                persistLastRoomTrack(track)
                 MusicPlaybackState.wasPlayedOnMusicPage = true
                 MusicPlaybackState.musicPageBackPressed = false
                 if (musicPlaylist.none { it.url == track.url }) musicPlaylist = listOf(track)
@@ -2416,6 +2447,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
             },
             onMusicPlaybackChanged={ track, playing ->
                 miniMusicTrack = track
+                persistLastRoomTrack(track)
                 isMusicPlaying = playing
                 MusicPlaybackState.currentPlayingUri = track.url
                 MusicPlaybackState.currentTrack = track
@@ -2425,6 +2457,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                 openMusicPageFromController = false
                 if (track != null) {
                     miniMusicTrack = track
+                    persistLastRoomTrack(track)
                     MusicPlaybackState.musicPageBackPressed = MusicPlaybackState.wasPlayedOnMusicPage && MusicPlaybackState.isPlaying
                     MusicPlaybackState.isMusicPageOpen = false
                     musicControllerMinimized = false
