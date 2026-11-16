@@ -166,6 +166,8 @@ fun PublicProfileScreen(
     var ownFamilyCreatorId by remember(targetUser?.uid, targetUser?.id, targetUser?.accountId) {
         mutableStateOf(if (!isOtherUser) familyPrefs.getString("familyCreatorId", "").orEmpty().ifBlank { currentUserId } else "")
     }
+    var ownFamilyCode by remember(targetUser?.uid, targetUser?.id, targetUser?.accountId) { mutableStateOf(if (!isOtherUser) familyPrefs.getString("familyCode", "").orEmpty() else "") }
+    var ownFamilyMemberCount by remember { mutableIntStateOf(0) }
     val coroutineScope = rememberCoroutineScope()
     val targetPresenceId = targetUser?.accountId?.takeIf { it.isNotBlank() } ?: targetUser?.id.orEmpty()
     val targetPresenceIds = remember(targetUser) { setOf(targetUser?.accountId.orEmpty(), targetUser?.id.orEmpty(), targetUser?.uid.orEmpty()).filter { it.isNotBlank() }.toSet() }
@@ -387,13 +389,16 @@ fun PublicProfileScreen(
             ownFamilyName = merged.optString("familyName", "")
             ownFamilyImage = merged.optString("familyImage", "")
             ownFamilyCreatorId = merged.optString("familyCreatorId", targetUser?.accountId ?: targetUser?.id.orEmpty())
+            ownFamilyCode = merged.optString("familyCode", merged.optString("familyId", ""))
         } else if (familyPrefs.getBoolean("familyCreated", false)) {
             hasOwnFamily = true
             ownFamilyName = familyPrefs.getString("familyName", "").orEmpty()
             ownFamilyImage = familyPrefs.getString("familyImage", "").orEmpty()
             ownFamilyCreatorId = familyPrefs.getString("familyCreatorId", "").orEmpty().ifBlank { currentUserId }
+            ownFamilyCode = familyPrefs.getString("familyCode", "").orEmpty()
         }
 
+        if (ownFamilyCode.isNotBlank()) runCatching { ownFamilyMemberCount = FamilyProfileApi.memberCount(ownFamilyCode) }
         merged.optString("name").takeIf { it.isNotBlank() && it != "null" }?.let { userName = it }
         
         val savedAvatar = sequenceOf("image", "avatar", "profileImageUrl").map { merged.optString(it, "") }.firstOrNull { it.isNotBlank() && it != "null" }
@@ -651,7 +656,7 @@ fun PublicProfileScreen(
                             BoxWithConstraints(Modifier.fillMaxWidth()) {
                                 Box(
                                     Modifier.requiredWidth(maxWidth + 36.dp).offset(x = (-18).dp)
-                                        .height(112.dp).clip(RoundedCornerShape(12.dp))
+                                        .height(112.dp).clip(RoundedCornerShape(12.dp)).clickable { if (ownFamilyCode.isNotBlank()) onOpenFamily(ownFamilyCode) }
                                 ) {
                                     AsyncImage(
                                         model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261116_163413.png",
@@ -680,8 +685,8 @@ fun PublicProfileScreen(
                                         verticalArrangement = Arrangement.spacedBy(3.dp)
                                     ) {
                                         Text(ownFamilyName, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-                                        Text("Family ID: $ownFamilyCreatorId", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium, maxLines = 1)
-                                        Text("Members 0/50", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                                        Text("Family ID: ${ownFamilyCode.ifBlank { ownFamilyCreatorId }}", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+                                        Text("Members $ownFamilyMemberCount/50", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium)
                                     }
                                 }
                             }
@@ -1788,7 +1793,8 @@ fun PublicProfile(
     onBack: () -> Unit,
     onMessage: () -> Unit = {},
     currentUserId: String = "",
-    onJoinRoom: (String) -> Unit = {}
+    onJoinRoom: (String) -> Unit = {},
+    onOpenFamily: (String) -> Unit = {}
 ) {
     val context = LocalContext.current
     val authPrefs = remember(context) { context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE) }
@@ -1866,6 +1872,7 @@ fun PublicProfile(
         onBack = onBack,
         isOtherUser = !isOwnProfile,
         targetUser = target,
-        onJoinRoom = onJoinRoom
+        onJoinRoom = onJoinRoom,
+        onOpenFamily = onOpenFamily
     )
 }
