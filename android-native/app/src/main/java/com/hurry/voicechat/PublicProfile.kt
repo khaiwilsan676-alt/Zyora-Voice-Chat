@@ -318,6 +318,32 @@ fun PublicProfileScreen(
     }
 
     LaunchedEffect(targetUser?.uid, targetUser?.id, targetUser?.accountId, profileCacheKey) {
+        // Republish families created by older app builds under the real Firebase UID.
+        if (!isOtherUser && familyPrefs.getBoolean("familyCreated", false)) {
+            val localFamilyImage = familyPrefs.getString("familyImage", "").orEmpty()
+            val familyPhoto = if (localFamilyImage.startsWith("content://")) {
+                val imageData = ProfilePersistence.imageDataUri(context, android.net.Uri.parse(localFamilyImage))
+                imageData?.let { ProfilePersistence.uploadImageToMongoDB(it, "$currentUserId-family", "family-dp") }.orEmpty()
+            } else localFamilyImage
+            val familyUid = authPrefs.getString("uid", "").orEmpty().ifBlank { currentUserId }
+            val familyId = authPrefs.getString("id", "").orEmpty().ifBlank { familyUid }
+            if (familyUid.isNotBlank()) {
+                val familyPublished = ProfilePersistence.save(
+                    TargetUser(id = familyId, uid = familyUid, accountId = currentUserId, displayAccountNumber = currentUserId),
+                    mapOf(
+                        "familyCreated" to "true",
+                        "familyName" to familyPrefs.getString("familyName", "").orEmpty(),
+                        "familyImage" to familyPhoto,
+                        "familyCreatorId" to currentUserId,
+                        "familyCode" to familyPrefs.getString("familyCode", "").orEmpty(),
+                        "familyAnnouncement" to familyPrefs.getString("familyAnnouncement", "").orEmpty()
+                    )
+                )
+                if (familyPublished && familyPhoto.isNotBlank() && familyPhoto != localFamilyImage) {
+                    familyPrefs.edit().putString("familyImage", familyPhoto).apply()
+                }
+            }
+        }
         val cache = NativeIndexDatabase(context)
         val cached = profileCacheKeys.firstNotNullOfOrNull { cache.loadProfile(it) }
         val remote = ProfilePersistence.load(targetUser)
