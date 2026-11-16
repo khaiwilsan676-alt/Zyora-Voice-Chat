@@ -41,7 +41,7 @@ import java.util.concurrent.TimeUnit
 
 private const val FAMILY_API = "https://zyora-server.onrender.com"
 private const val FAMILY_ASSETS = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/"
-internal data class FamilyMemberRow(val uid:String,val accountId:String,val name:String,val image:String,val gender:String,val coins:Long)
+internal data class FamilyMemberRow(val uid:String,val accountId:String,val name:String,val image:String,val gender:String,val coins:Long,val tag:String="")
 internal data class FamilyRecord(val id:String,val name:String,val image:String,val announcement:String,val ownerUid:String,val members:List<FamilyMemberRow>,val totalCoinsSent:Long=0L)
 
 internal object FamilyProfileApi {
@@ -63,7 +63,7 @@ internal object FamilyProfileApi {
     }
     private fun parse(root:JSONObject):FamilyRecord {
         val f=root.optJSONObject("family")?:root; val a=f.optJSONArray("members")?:JSONArray()
-        val rows=(0 until a.length()).mapNotNull{i->a.optJSONObject(i)?.let{m->FamilyMemberRow(m.optString("uid",m.optString("id")),m.optString("accountId"),m.optString("name","User"),m.optString("image"),m.optString("gender"),m.optLong("coinsSent").coerceAtLeast(0))}}.sortedByDescending{it.coins}
+        val rows=(0 until a.length()).mapNotNull{i->a.optJSONObject(i)?.let{m->FamilyMemberRow(m.optString("uid",m.optString("id")),m.optString("accountId"),m.optString("name","User"),m.optString("image"),m.optString("gender"),m.optLong("coinsSent").coerceAtLeast(0),m.optString("tag"))}}.sortedByDescending{it.coins}
         return FamilyRecord(f.optString("familyId"),f.optString("name"),f.optString("image"),f.optString("announcement"),f.optString("ownerUid"),rows,f.optLong("totalCoinsSent",0L))
     }
     suspend fun create(id:String,name:String,image:String,announcement:String)=request("/api/families","POST",JSONObject().put("familyId",id).put("name",name).put("image",image).put("announcement",announcement))
@@ -90,7 +90,7 @@ internal object FamilyProfileApi {
     suspend fun applications(id:String):List<FamilyMemberRow>{
         val r=request("/api/families/${URLEncoder.encode(id,"UTF-8")}/applications")
         val a=r.optJSONArray("applications")?:JSONArray()
-        return (0 until a.length()).mapNotNull{x->a.optJSONObject(x)?.let{m->FamilyMemberRow(m.optString("uid"),m.optString("accountId"),m.optString("name","User"),m.optString("image"),m.optString("gender"),0)}}
+        return (0 until a.length()).mapNotNull{x->a.optJSONObject(x)?.let{m->FamilyMemberRow(m.optString("uid"),m.optString("accountId"),m.optString("name","User"),m.optString("image"),m.optString("gender"),0,m.optString("tag"))}}
     }
     suspend fun approve(id:String,uid:String)=request("/api/families/${URLEncoder.encode(id,"UTF-8")}/applications/${URLEncoder.encode(uid,"UTF-8")}/approve","POST",JSONObject())
     suspend fun search(id:String,q:String):List<FamilyMemberRow>{
@@ -113,6 +113,7 @@ fun FamilyProfile(familyId:String,onBack:()->Unit,onOpenChat:(String,String,Stri
     val isOwner=family?.ownerUid==auth?.uid
     fun reload(){scope.launch{loading=true;runCatching{FamilyProfileApi.load(familyId)}.onSuccess{family=it;error=""}.onFailure{error=it.message?:"Could not load Family."};if(isOwner)runCatching{FamilyProfileApi.applications(familyId)}.onSuccess{applications=it};loading=false}}
     LaunchedEffect(familyId){reload()}
+    LaunchedEffect(inviteSheet,isOwner){if(inviteSheet&&isOwner)runCatching{FamilyProfileApi.applications(familyId)}.onSuccess{applications=it}}
     Box(Modifier.fillMaxSize().background(Color(0xFFF1F2F4))){
         LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(bottom=82.dp)){
             item{
@@ -129,9 +130,12 @@ fun FamilyProfile(familyId:String,onBack:()->Unit,onOpenChat:(String,String,Stri
                         Column(Modifier.weight(1f).padding(start=12.dp),verticalArrangement=Arrangement.spacedBy(4.dp)){
                             Text(family?.name?:"Family",color=Color.White,fontSize=18.sp,fontWeight=FontWeight.Bold,maxLines=1)
                             Text("Family ID: ${family?.id?:familyId}",color=Color.White,fontSize=12.sp)
-                            Row(verticalAlignment=Alignment.CenterVertically){
-                                AsyncImage(model=FAMILY_ASSETS+"IMG_20261116_162146.png",contentDescription="Members",modifier=Modifier.size(16.dp))
-                                Text(" ${family?.members?.size?:0}/50",color=Color.White,fontSize=12.sp,fontWeight=FontWeight.Bold)
+                            Box(Modifier.width(116.dp).height(30.dp)){
+                                AsyncImage(model=FAMILY_ASSETS+"file_000000009d1081f59878648feb821b5e.png",contentDescription="Family member capacity",modifier=Modifier.fillMaxSize(),contentScale=ContentScale.FillBounds)
+                                Row(Modifier.align(Alignment.Center).padding(horizontal=7.dp),verticalAlignment=Alignment.CenterVertically){
+                                    AsyncImage(model=FAMILY_ASSETS+"IMG_20261116_162146.png",contentDescription="Members",modifier=Modifier.size(15.dp))
+                                    Text(" ${family?.members?.size?:0}/50",color=Color.White,fontSize=11.sp,fontWeight=FontWeight.Bold)
+                                }
                             }
                         }
                     }
@@ -156,14 +160,14 @@ fun FamilyProfile(familyId:String,onBack:()->Unit,onOpenChat:(String,String,Stri
                             AsyncImage(model=m.image.ifBlank{FAMILY_ASSETS+"IMG_20261116_162146.png"},contentDescription=m.name,modifier=Modifier.size(42.dp).align(Alignment.Center).clip(RoundedCornerShape(12.dp)),contentScale=ContentScale.Crop)
                             AsyncImage(model=FAMILY_ASSETS+when(index){0->"IMG_20261115_135339.png";1->"IMG_20261115_135356.png";else->"IMG_20261115_135419.png"},contentDescription="Rank frame",modifier=Modifier.fillMaxSize(),contentScale=ContentScale.Fit)
                         }
-                        Column(Modifier.weight(1f).padding(start=8.dp)){Text(m.name,color=Color.White,fontSize=14.sp,fontWeight=FontWeight.Bold,maxLines=1);Text("${m.accountId} · ${m.gender}",color=Color.White,fontSize=11.sp)}
+                        Column(Modifier.weight(1f).padding(start=8.dp)){Text(m.name,color=Color.White,fontSize=14.sp,fontWeight=FontWeight.Bold,maxLines=1);Text(listOf(m.accountId,m.gender,m.tag).filter{it.isNotBlank()}.joinToString(" · "),color=Color.White,fontSize=11.sp)}
                         Column(horizontalAlignment=Alignment.End){AsyncImage(model=FAMILY_ASSETS+"file_00000000e56882119c217d508b6733dc.png",contentDescription="Coins",modifier=Modifier.size(17.dp));Text("******",color=Color.White,fontSize=12.sp,fontWeight=FontWeight.Bold)}
                     }
                 }else{
                     Row(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=2.dp).clip(RoundedCornerShape(10.dp)).background(Color.White).padding(9.dp),verticalAlignment=Alignment.CenterVertically){
                         Text("${index+1}",color=Color.Gray,fontSize=13.sp,modifier=Modifier.width(28.dp))
                         AsyncImage(model=m.image.ifBlank{FAMILY_ASSETS+"IMG_20261116_162146.png"},contentDescription=m.name,modifier=Modifier.size(40.dp).clip(RoundedCornerShape(10.dp)),contentScale=ContentScale.Crop)
-                        Column(Modifier.weight(1f).padding(start=9.dp)){Text(m.name,color=Color(0xFF222222),fontSize=13.sp,fontWeight=FontWeight.SemiBold);Text("${m.accountId} · ${m.gender}",color=Color.Gray,fontSize=10.sp)}
+                        Column(Modifier.weight(1f).padding(start=9.dp)){Text(m.name,color=Color(0xFF222222),fontSize=13.sp,fontWeight=FontWeight.SemiBold);Text(listOf(m.accountId,m.gender,m.tag).filter{it.isNotBlank()}.joinToString(" · "),color=Color.Gray,fontSize=10.sp)}
                         Column(horizontalAlignment=Alignment.End){AsyncImage(model=FAMILY_ASSETS+"file_00000000e56882119c217d508b6733dc.png",contentDescription="Coins",modifier=Modifier.size(15.dp));Text("******",color=Color.DarkGray,fontSize=11.sp,fontWeight=FontWeight.Bold)}
                     }
                 }
@@ -184,7 +188,7 @@ fun FamilyProfile(familyId:String,onBack:()->Unit,onOpenChat:(String,String,Stri
                     applications.forEach { applicant ->
                         Row(Modifier.fillMaxWidth().padding(vertical=6.dp),verticalAlignment=Alignment.CenterVertically){
                             AsyncImage(model=applicant.image,contentDescription=null,modifier=Modifier.size(38.dp).clip(RoundedCornerShape(9.dp)),contentScale=ContentScale.Crop)
-                            Column(Modifier.weight(1f).padding(start=9.dp)){Text(applicant.name,color=Color.Black,fontWeight=FontWeight.SemiBold,fontSize=13.sp);Text(applicant.accountId,color=Color.Gray,fontSize=10.sp)}
+                            Column(Modifier.weight(1f).padding(start=9.dp)){Text(applicant.name,color=Color.Black,fontWeight=FontWeight.SemiBold,fontSize=13.sp);Text(listOf(applicant.accountId,applicant.gender,applicant.tag).filter{it.isNotBlank()}.joinToString(" · "),color=Color.Gray,fontSize=10.sp)}
                             TextButton(enabled=busy!=applicant.uid,onClick={scope.launch{busy=applicant.uid;runCatching{FamilyProfileApi.approve(familyId,applicant.uid)}.onSuccess{applications=applications.filterNot{it.uid==applicant.uid};reload()}.onFailure{error=it.message?:"Approval failed."};busy=""}}){Text(if(busy==applicant.uid)"..." else "Approve")}
                         }
                     }
