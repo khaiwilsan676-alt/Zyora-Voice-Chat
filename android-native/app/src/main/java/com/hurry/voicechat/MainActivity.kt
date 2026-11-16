@@ -528,9 +528,11 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
     var openedSearch by remember { mutableStateOf(false) }
     var openedRoomSupport by remember { mutableStateOf(false) }
     var openedPublicProfile by remember { mutableStateOf<RoomProfileUser?>(null) }
+    var openedFamilyId by remember { mutableStateOf<String?>(null) }
 
     BackHandler(enabled = true) {
         when {
+            openedFamilyId != null -> openedFamilyId = null
             openedPublicProfile != null -> openedPublicProfile = null
             openedRoomSupport -> openedRoomSupport = false
             openedSearch -> openedSearch = false
@@ -548,8 +550,10 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
 
     HurryTheme {
         Box(Modifier.fillMaxSize().navigationBarsPadding()) {
-            if (openedPublicProfile != null) {
-                PublicProfile(user=openedPublicProfile!!,onBack={openedPublicProfile=null},onMessage={ val profile = openedPublicProfile!!; val receiverId = profile.accountId?.takeIf { it.isNotBlank() } ?: profile.id?.takeIf { it.isNotBlank() } ?: profile.uid.orEmpty(); if (receiverId.isNotBlank() && receiverId != userId) { openedChat = Triple(receiverId, profile.name, profile.image); openedPublicProfile = null } },currentUserId=userId,onJoinRoom={ targetRoomId -> openedPublicProfile=null; tryOpenRoomById(targetRoomId) })
+            if (openedFamilyId != null) {
+                FamilyProfile(familyId = openedFamilyId!!, onBack = { openedFamilyId = null }, onOpenChat = { uid, name, image -> openedFamilyId = null; openedChat = Triple(uid, name, image) })
+            } else if (openedPublicProfile != null) {
+                PublicProfile(user=openedPublicProfile!!,onBack={openedPublicProfile=null},onMessage={ val profile = openedPublicProfile!!; val receiverId = profile.accountId?.takeIf { it.isNotBlank() } ?: profile.id?.takeIf { it.isNotBlank() } ?: profile.uid.orEmpty(); if (receiverId.isNotBlank() && receiverId != userId) { openedChat = Triple(receiverId, profile.name, profile.image); openedPublicProfile = null } },currentUserId=userId,onJoinRoom={ targetRoomId -> openedPublicProfile=null; tryOpenRoomById(targetRoomId) },onOpenFamily={ id -> openedFamilyId=id; openedPublicProfile=null })
             } else if (openedRoomSupport) {
                 RoomSupport(onBack = { openedRoomSupport = false })
             } else if (openedSearch) {
