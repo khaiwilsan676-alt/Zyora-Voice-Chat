@@ -199,42 +199,13 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun HurryLaunchScreen() {
-    val screenHeight = LocalConfiguration.current.screenHeightDp.dp
-    Box(
-        Modifier
-            .fillMaxSize()
-            .background(Color.Black)
-    ) {
+    Box(Modifier.fillMaxSize()) {
         Image(
             painter = painterResource(id = R.drawable.zyora_splash),
             contentDescription = null,
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop
         )
-
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = screenHeight * 0.35f),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            AsyncImage(
-                model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/logo.png",
-                contentDescription = "Zyora logo",
-                modifier = Modifier
-                    .width(68.dp)
-                    .height(68.dp)
-                    .clip(RoundedCornerShape(20.dp)),
-                contentScale = androidx.compose.ui.layout.ContentScale.Crop
-            )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                "Zyora",
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White
-            )
-        }
     }
 }
 
