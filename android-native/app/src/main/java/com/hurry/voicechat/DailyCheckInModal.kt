@@ -20,6 +20,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -45,8 +46,19 @@ fun DailyCheckInModal(
 ) {
     if (!isOpen) return
 
+    // State to show Success Popup after Sign In
+    var showSuccess by remember { mutableStateOf(false) }
+
+    // Logic to check if day is claimed
+    val isDayClaimed = { day: Int -> 
+        day < currentDay || (day == currentDay && claimedToday) 
+    }
+
     Dialog(
-        onDismissRequest = onClose,
+        onDismissRequest = {
+            showSuccess = false
+            onClose()
+        },
         properties = DialogProperties(
             usePlatformDefaultWidth = false,
             dismissOnBackPress = true,
@@ -56,163 +68,283 @@ fun DailyCheckInModal(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.2f)) 
+                .background(Color.Black.copy(alpha = if (showSuccess) 0.7f else 0.2f))
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
-                    onClick = onClose 
+                    onClick = { if (!showSuccess) onClose() }
                 ),
-            contentAlignment = BiasAlignment(0f, 0.15f) 
+            contentAlignment = if (showSuccess) Alignment.Center else BiasAlignment(0f, 0.15f)
         ) {
             
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                
+            if (!showSuccess) {
+                // --- MAIN SIGN-IN CARD ---
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    
+                    Box(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .padding(top = 50.dp)
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(Color.White)
+                                .border(6.dp, Color(0xFFFFE57C), RoundedCornerShape(12.dp))
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null,
+                                    onClick = {}
+                                )
+                                .padding(start = 20.dp, end = 20.dp, top = 48.dp, bottom = 16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(Color(0xFFFFF3C9))
+                                    .padding(vertical = 8.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "Sign in for 7 days for rich rewards",
+                                    color = Color(0xFF80622E),
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                DayCard(day = 1, reward = "+5,000", image = "file_00000000b2d481fd8cd233482dbeb9ef.png", currentDay = currentDay, isClaimed = isDayClaimed(1), modifier = Modifier.weight(1f))
+                                DayCard(day = 2, reward = "+5,000", image = "file_00000000b2d481fd8cd233482dbeb9ef.png", currentDay = currentDay, isClaimed = isDayClaimed(2), modifier = Modifier.weight(1f))
+                                DayCard(day = 3, reward = "×2 Days", image = "file_00000000882882088d745d793bd43e06.png", currentDay = currentDay, isClaimed = isDayClaimed(3), modifier = Modifier.weight(1f))
+                                DayCard(day = 4, reward = "+10,000", image = "file_00000000b2d481fd8cd233482dbeb9ef.png", currentDay = currentDay, isClaimed = isDayClaimed(4), modifier = Modifier.weight(1f))
+                            }
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                SpecialDayCard(day = 5, currentDay = currentDay, isClaimed = isDayClaimed(5), modifier = Modifier.weight(1f)) {
+                                    renderDay5Special()
+                                }
+                                SpecialDayCard(day = 6, currentDay = currentDay, isClaimed = isDayClaimed(6), modifier = Modifier.weight(1f)) {
+                                    renderDay6Special()
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Day7Card(currentDay = currentDay, isClaimed = isDayClaimed(7))
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            val isButtonDisabled = claimedToday || currentDay > 7
+                            val buttonColor = if (isButtonDisabled) {
+                                Color(0xFF9CA3AF)
+                            } else {
+                                Color(0xFFFFD633)
+                            }
+
+                            Button(
+                                onClick = {
+                                    onSignIn()
+                                    showSuccess = true // Isko true karte hi main card hide ho jayega
+                                },
+                                enabled = !isButtonDisabled,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = buttonColor,
+                                    disabledContainerColor = buttonColor
+                                ),
+                                contentPadding = PaddingValues(),
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth(0.85f)
+                                    .height(46.dp)
+                            ) {
+                                Text(
+                                    text = if (claimedToday) "Signed In today" else if (currentDay > 7) "All Rewards Claimed!" else "Sign in",
+                                    color = if (isButtonDisabled) Color.White else Color.Black,
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.ExtraBold
+                                )
+                            }
+                        }
+
+                        AsyncImage(
+                            model = "file_000000004b6c8211855003bf899492fd.png".fullUrl,
+                            contentDescription = "Top Banner",
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .scale(1.05f)
+                                .align(Alignment.TopCenter)
+                                .offset(x = 2.dp, y = (-45).dp)
+                                .zIndex(2f)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.2f))
+                            .clickable { onClose() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close",
+                            tint = Color.White,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+            } else {
+                // --- SUCCESS POPUP OVERLAY (Yahan main card nahi hai, sirf ye dikhega) ---
                 Box(
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = {} // Clicks intercept karne ke liye taaki background pe touch na ho
+                        ),
+                    contentAlignment = Alignment.Center
                 ) {
                     Column(
-                        modifier = Modifier
-                            .padding(top = 50.dp) 
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(Color.White)
-                            .border(6.dp, Color(0xFFFFE57C), RoundedCornerShape(12.dp)) 
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null,
-                                onClick = {} 
-                            )
-                            .padding(start = 20.dp, end = 20.dp, top = 48.dp, bottom = 16.dp),
+                        modifier = Modifier.fillMaxWidth(),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        
+                        // Edge-to-Edge Blue Glossy Card
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp)) 
-                                .background(Color(0xFFFFF3C9))
-                                .padding(vertical = 8.dp), 
+                                .background(
+                                    brush = Brush.horizontalGradient(
+                                        colors = listOf(
+                                            Color.Transparent,
+                                            Color(0x990277BD), // Glossy Blue fade left
+                                            Color(0xE60277BD), // Solid Center Blue
+                                            Color(0x990277BD), // Glossy Blue fade right
+                                            Color.Transparent
+                                        )
+                                    )
+                                )
+                                .padding(vertical = 40.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                // Overlapping Black/20 card with corner curve 12dp
+                                Box(
+                                    modifier = Modifier
+                                        .background(Color(0x33000000), RoundedCornerShape(12.dp))
+                                        .padding(24.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    val rewardImg = when(currentDay) {
+                                        3 -> "file_00000000882882088d745d793bd43e06.png"
+                                        7 -> "file_0000000044388211996656afc9ce9c03.png"
+                                        else -> "file_00000000b2d481fd8cd233482dbeb9ef.png"
+                                    }
+                                    AsyncImage(
+                                        model = rewardImg.fullUrl,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(75.dp),
+                                        contentScale = ContentScale.Fit
+                                    )
+                                }
+                                
+                                Spacer(modifier = Modifier.height(14.dp))
+                                
+                                // Text exactly below the black card
+                                val rewardTxt = when(currentDay) {
+                                    1, 2 -> "+5,000"
+                                    3 -> "×2 Days"
+                                    4 -> "+10,000"
+                                    5, 6 -> "Special Reward"
+                                    7 -> "Big Reward"
+                                    else -> "+5,000"
+                                }
+                                Text(
+                                    text = rewardTxt,
+                                    color = Color.White,
+                                    fontSize = 20.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                        
+                        Spacer(modifier = Modifier.height(35.dp))
+                        
+                        // Get Rewards text right above the button
+                        Text(
+                            text = "Get Rewards",
+                            style = TextStyle(
+                                brush = Brush.verticalGradient(
+                                    colors = listOf(Color(0xFFFFF59D), Color(0xFFFFB300))
+                                ),
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.ExtraBold
+                            ),
+                            modifier = Modifier.padding(bottom = 12.dp)
+                        )
+                        
+                        // OK 3D Yellow Button
+                        Box(
+                            modifier = Modifier
+                                .width(180.dp)
+                                .height(56.dp)
+                                .background(Color(0xFFE65100), RoundedCornerShape(16.dp)) // 3D Bottom Depth Shadow
+                                .padding(bottom = 6.dp)
+                                .background(Color(0xFFFFC107), RoundedCornerShape(16.dp)) // Top Face
+                                .clip(RoundedCornerShape(16.dp))
+                                .clickable {
+                                    showSuccess = false
+                                    onClose() // Ye sab kuch close kar dega (Dialog band)
+                                },
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "Sign in for 7 days for rich rewards",
-                                color = Color(0xFF80622E),
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(12.dp)) 
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            DayCard(day = 1, reward = "+5,000", image = "file_00000000b2d481fd8cd233482dbeb9ef.png", currentDay = currentDay, modifier = Modifier.weight(1f))
-                            DayCard(day = 2, reward = "+5,000", image = "file_00000000b2d481fd8cd233482dbeb9ef.png", currentDay = currentDay, modifier = Modifier.weight(1f))
-                            DayCard(day = 3, reward = "×2 Days", image = "file_00000000882882088d745d793bd43e06.png", currentDay = currentDay, modifier = Modifier.weight(1f))
-                            DayCard(day = 4, reward = "+10,000", image = "file_00000000b2d481fd8cd233482dbeb9ef.png", currentDay = currentDay, modifier = Modifier.weight(1f))
-                        }
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            SpecialDayCard(day = 5, currentDay = currentDay, modifier = Modifier.weight(1f)) {
-                                renderDay5Special()
-                            }
-                            SpecialDayCard(day = 6, currentDay = currentDay, modifier = Modifier.weight(1f)) {
-                                renderDay6Special()
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        Day7Card(currentDay = currentDay)
-
-                        Spacer(modifier = Modifier.height(16.dp)) 
-
-                        val isButtonDisabled = claimedToday || currentDay > 7
-                        val buttonColor = if (isButtonDisabled) {
-                            Color(0xFF9CA3AF) 
-                        } else {
-                            Color(0xFFFFD633) 
-                        }
-
-                        Button(
-                            onClick = onSignIn,
-                            enabled = !isButtonDisabled,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = buttonColor, 
-                                disabledContainerColor = buttonColor
-                            ),
-                            contentPadding = PaddingValues(),
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier
-                                .fillMaxWidth(0.85f)
-                                .height(46.dp)
-                        ) {
-                            Text(
-                                text = if (claimedToday) "Signed In today" else if (currentDay > 7) "All Rewards Claimed!" else "Sign in",
-                                color = if (isButtonDisabled) Color.White else Color.Black, 
-                                fontSize = 18.sp,
+                                text = "OK",
+                                color = Color(0xFF3E2723),
+                                fontSize = 22.sp,
                                 fontWeight = FontWeight.ExtraBold
                             )
                         }
                     }
-
-                    AsyncImage(
-                        model = "file_000000004b6c8211855003bf899492fd.png".fullUrl,
-                        contentDescription = "Top Banner",
-                        contentScale = ContentScale.Fit, 
-                        modifier = Modifier
-                            .fillMaxWidth() 
-                            .scale(1.05f) 
-                            .align(Alignment.TopCenter)
-                            .offset(x = 2.dp, y = (-45).dp) 
-                            .zIndex(2f)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.2f))
-                        .clickable { onClose() },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = "Close",
-                        tint = Color.White,
-                        modifier = Modifier.size(24.dp)
-                    )
                 }
             }
         }
     }
 }
 
-// ----------------- Helper UI Components (SVG styled) -----------------
+// ----------------- Helper UI Components -----------------
 
 @Composable
-private fun DayCard(day: Int, reward: String, image: String, currentDay: Int, modifier: Modifier = Modifier) {
-    val borderColor = getBorderColor(day, currentDay)
+private fun DayCard(day: Int, reward: String, image: String, currentDay: Int, isClaimed: Boolean, modifier: Modifier = Modifier) {
+    val borderColor = getBorderColor(day, currentDay, isClaimed)
     
     Box(
         modifier = modifier
             .aspectRatio(0.85f)
-            .clip(RoundedCornerShape(6.dp)) 
+            .clip(RoundedCornerShape(6.dp))
             .background(Color(0xFFF3F3F3))
             .border(2.dp, borderColor, RoundedCornerShape(6.dp)),
         contentAlignment = Alignment.Center
@@ -222,7 +354,7 @@ private fun DayCard(day: Int, reward: String, image: String, currentDay: Int, mo
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
-            modifier = Modifier.padding(top = 18.dp) 
+            modifier = Modifier.padding(top = 18.dp)
         ) {
             AsyncImage(
                 model = image.fullUrl,
@@ -241,7 +373,7 @@ private fun DayCard(day: Int, reward: String, image: String, currentDay: Int, mo
             )
         }
         
-        if (day < currentDay) {
+        if (isClaimed) {
             Box(
                 modifier = Modifier
                     .matchParentSize()
@@ -253,13 +385,13 @@ private fun DayCard(day: Int, reward: String, image: String, currentDay: Int, mo
 }
 
 @Composable
-private fun SpecialDayCard(day: Int, currentDay: Int, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
-    val borderColor = getBorderColor(day, currentDay)
+private fun SpecialDayCard(day: Int, currentDay: Int, isClaimed: Boolean, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+    val borderColor = getBorderColor(day, currentDay, isClaimed)
 
     Box(
         modifier = modifier
-            .height(80.dp) 
-            .clip(RoundedCornerShape(6.dp)) 
+            .height(80.dp)
+            .clip(RoundedCornerShape(6.dp))
             .background(Color(0xFFF3F3F3))
             .border(2.dp, borderColor, RoundedCornerShape(6.dp)),
         contentAlignment = Alignment.Center
@@ -267,13 +399,12 @@ private fun SpecialDayCard(day: Int, currentDay: Int, modifier: Modifier = Modif
         DayBadge(day = day)
         
         Box(
-            // Top padding aur kam kar di (6.dp) taaki image upar shift ho aur text bilkul cut na ho
             modifier = Modifier.padding(top = 6.dp)
         ) {
             content()
         }
         
-        if (day < currentDay) {
+        if (isClaimed) {
             Box(
                 modifier = Modifier
                     .matchParentSize()
@@ -285,14 +416,14 @@ private fun SpecialDayCard(day: Int, currentDay: Int, modifier: Modifier = Modif
 }
 
 @Composable
-private fun Day7Card(currentDay: Int) {
-    val borderColor = getBorderColor(7, currentDay)
+private fun Day7Card(currentDay: Int, isClaimed: Boolean) {
+    val borderColor = getBorderColor(7, currentDay, isClaimed)
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(85.dp) 
-            .clip(RoundedCornerShape(8.dp)) 
+            .height(85.dp)
+            .clip(RoundedCornerShape(8.dp))
             .background(Color(0xFFFFF9EB))
             .border(2.dp, borderColor, RoundedCornerShape(8.dp)),
         contentAlignment = Alignment.Center
@@ -300,11 +431,11 @@ private fun Day7Card(currentDay: Int) {
         Box(
             modifier = Modifier
                 .align(Alignment.TopStart)
-                .height(18.dp) 
+                .height(18.dp)
                 .clip(RoundedCornerShape(topStart = 8.dp, bottomEnd = 8.dp))
                 .background(Brush.horizontalGradient(listOf(Color(0xFFFF5038), Color(0xFFFFB62B))))
-                .padding(horizontal = 8.dp), 
-            contentAlignment = Alignment.Center 
+                .padding(horizontal = 8.dp),
+            contentAlignment = Alignment.Center
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
@@ -332,7 +463,7 @@ private fun Day7Card(currentDay: Int) {
             renderDay7Special()
         }
 
-        if (7 < currentDay) {
+        if (isClaimed) {
             Box(
                 modifier = Modifier
                     .matchParentSize()
@@ -349,8 +480,8 @@ private fun Day7Card(currentDay: Int) {
 @Composable
 private fun renderDay5Special() {
     Row(
-        horizontalArrangement = Arrangement.spacedBy(16.dp), 
-        verticalAlignment = Alignment.CenterVertically 
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
         RewardItemIcon("file_00000000b2d481fd8cd233482dbeb9ef.png", "+10,000", 36.dp)
         RewardItemIcon("IMG_20260903_141944.png", "×1 Day", 44.dp)
@@ -360,8 +491,8 @@ private fun renderDay5Special() {
 @Composable
 private fun renderDay6Special() {
     Row(
-        horizontalArrangement = Arrangement.spacedBy(16.dp), 
-        verticalAlignment = Alignment.CenterVertically 
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
         RewardItemIcon("file_00000000b2d481fd8cd233482dbeb9ef.png", "+10,000", 36.dp)
         RewardItemIcon("IMG-20260903-WA0076.jpg", "×2 Days", 36.dp)
@@ -372,10 +503,9 @@ private fun renderDay6Special() {
 private fun renderDay7Special() {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(30.dp, Alignment.CenterHorizontally), 
-        verticalAlignment = Alignment.CenterVertically 
+        horizontalArrangement = Arrangement.spacedBy(30.dp, Alignment.CenterHorizontally),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        // Updated to +15,000 as per TSX
         RewardItemIcon("file_00000000b2d481fd8cd233482dbeb9ef.png", "+15,000", 44.dp)
         RewardItemIcon("file_0000000044388211996656afc9ce9c03.png", "×3 days", 50.dp)
         RewardItemIcon("IMG-20260903-WA0077.jpg", "×3 days", 50.dp)
@@ -389,8 +519,8 @@ private fun RewardItemIcon(image: String, text: String, size: androidx.compose.u
         verticalArrangement = Arrangement.Center
     ) {
         Box(
-            modifier = Modifier.height(50.dp), 
-            contentAlignment = Alignment.BottomCenter 
+            modifier = Modifier.height(50.dp),
+            contentAlignment = Alignment.BottomCenter
         ) {
             AsyncImage(
                 model = image.fullUrl,
@@ -402,12 +532,12 @@ private fun RewardItemIcon(image: String, text: String, size: androidx.compose.u
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = text,
-            fontSize = 10.sp, 
+            fontSize = 10.sp,
             fontWeight = FontWeight.Bold,
-            color = Color(0xFF544B00), 
+            color = Color(0xFF544B00),
             textAlign = TextAlign.Center,
             maxLines = 1,
-            modifier = Modifier.offset(y = (-8).dp) 
+            modifier = Modifier.offset(y = (-8).dp)
         )
     }
 }
@@ -418,8 +548,8 @@ private fun RewardItemIcon(image: String, text: String, size: androidx.compose.u
 private fun BoxScope.DayBadge(day: Int) {
     Box(
         modifier = Modifier
-            .align(Alignment.TopStart) 
-            .size(width = 24.dp, height = 18.dp) 
+            .align(Alignment.TopStart)
+            .size(width = 24.dp, height = 18.dp)
             .clip(RoundedCornerShape(topStart = 6.dp, bottomEnd = 8.dp))
             .background(Color(0xFFFFE000)),
         contentAlignment = Alignment.Center
@@ -437,25 +567,25 @@ private fun BoxScope.DayBadge(day: Int) {
 private fun BoxScope.CenterCompletedCheckmark() {
     Box(
         modifier = Modifier
-            .align(Alignment.Center) 
+            .align(Alignment.Center)
             .size(24.dp)
             .clip(CircleShape)
-            .background(Color(0xFF3B82F6)), 
+            .background(Color(0xFF3B82F6)), // Sirf blue tick box aayega, green border nahi
         contentAlignment = Alignment.Center
     ) {
         Icon(
             imageVector = Icons.Default.Check,
             contentDescription = "Claimed",
-            tint = Color.White, 
+            tint = Color.White,
             modifier = Modifier.size(16.dp)
         )
     }
 }
 
-fun getBorderColor(day: Int, currentDay: Int): Color {
+fun getBorderColor(day: Int, currentDay: Int, isClaimed: Boolean): Color {
     return when {
-        day < currentDay -> Color(0xFF4ADE80) 
-        day == currentDay -> Color(0xFFFFD633) 
+        isClaimed -> Color.Transparent // Border green nahi hoga
+        day == currentDay -> Color(0xFFFFD633)
         else -> Color.Transparent
     }
 }
