@@ -650,6 +650,7 @@ fun GiftPicker(
                                         Box(
                                             Modifier
                                                 .alpha(1f)
+                                                .width(70.dp)
                                                 .clip(RoundedCornerShape(topEnd = 50.dp, bottomEnd = 50.dp))
                                                 .background(
                                                     Brush.verticalGradient(
@@ -664,7 +665,7 @@ fun GiftPicker(
                                                 .clickable(enabled = selectedGift != null && !sending) {
                                                     handleSend()
                                                 }
-                                                .padding(horizontal = 26.dp, vertical = 6.dp),
+                                                .padding(vertical = 6.dp),
                                             contentAlignment = Alignment.Center,
                                         ) {
                                             Text(
