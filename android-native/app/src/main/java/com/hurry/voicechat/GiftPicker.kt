@@ -108,22 +108,20 @@ private val hotGifts = listOf(
 )
 
 private val luckyGifts = listOf(
-    GiftPickerGift(101, "Tiara", 3000, "/IMG_20260927_213855.png", noMask = true),
-    GiftPickerGift(102, "Lucky Clover", 1499, "/IMG_20260927_213917.png", noMask = true),
     GiftPickerGift(103, "Hi", 999, "/IMG_20260927_213946.png", noMask = true),
-    GiftPickerGift(104, "Rose", 3999, "/IMG_20260927_214121.png", noMask = true),
+    GiftPickerGift(102, "Lucky Clover", 1499, "/IMG_20260927_213917.png", noMask = true),
     GiftPickerGift(105, "Kiss", 1600, "/IMG_20260927_214139.png", noMask = true),
-    GiftPickerGift(107, "Dragon", 7000, "/IMG_20260927_221521.png", noMask = true),
-    GiftPickerGift(108, "Nine Hands", 10999, "/IMG_20260927_221544.png", noMask = true),
-    GiftPickerGift(109, "Coffin", 8999, "/IMG_20260927_221559.png", noMask = true),
-    GiftPickerGift(110, "Sword", 9999, "/IMG_20260927_221615.png", noMask = true),
+    GiftPickerGift(104, "Rose", 3999, "/IMG_20260927_214121.png", noMask = true),
     GiftPickerGift(111, "Love lock", 5000, "/IMG_20260927_221637.png", noMask = true),
-    GiftPickerGift(112, "Lantern", 6999, "/IMG_20260927_221654.png", noMask = true),
     GiftPickerGift(113, "Ring", 5999, "/IMG_20260927_221707.png", noMask = true),
-    GiftPickerGift(114, "Dancing Girl", 12000, "/IMG_20260927_221722.png", noMask = true),
+    GiftPickerGift(112, "Lantern", 6500, "/IMG_20260927_221654.png", noMask = true),
+    GiftPickerGift(107, "Dragon", 7000, "/IMG_20260927_221521.png", noMask = true),
     GiftPickerGift(115, "Whale", 7899, "/IMG_20260927_221742.png", noMask = true),
+    GiftPickerGift(109, "Coffin", 8999, "/IMG_20260927_221559.png", noMask = true),
     GiftPickerGift(116, "Star", 9800, "/file_0000000066f482118f772ed6fab4ad1f.png", noMask = true),
-)
+    GiftPickerGift(110, "Sword", 9999, "/IMG_20260927_221615.png", noMask = true),
+    GiftPickerGift(114, "Dancing Girl", 12000, "/IMG_20260927_221722.png", noMask = true),
+
 
 private fun giftAssetUrl(path: String): String {
     if (path.startsWith("https://") || path.startsWith("http://") || path.startsWith("file:") || path.startsWith("content:")) return path
