@@ -2326,10 +2326,35 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                             IconButton(onClick = { musicNext() }, modifier = Modifier.size(34.dp)) {
                                 Icon(Icons.Default.SkipNext, "Next", tint = Color.White, modifier = Modifier.size(27.dp))
                             }
-                            Box(Modifier.size(30.dp).clickable { musicReplayOne() }, contentAlignment = Alignment.Center) {
-                                Icon(Icons.Default.RepeatOne, "Repeat current song",
-                                    tint = if (repeatOneEnabled) Color(0xFF3B82F6) else Color.White,
-                                    modifier = Modifier.size(25.dp))
+                            Box(
+                                Modifier.size(30.dp).clickable { musicReplayOne() },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                // Repeat-one stays white whether enabled or disabled.
+                                Icon(
+                                    Icons.Default.RepeatOne,
+                                    contentDescription = "Repeat current song",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(25.dp)
+                                )
+                                if (repeatOneEnabled) {
+                                    Box(
+                                        Modifier.align(Alignment.TopEnd)
+                                            .size(11.dp)
+                                            .clip(CircleShape)
+                                            .background(Color.Black)
+                                            .border(1.dp, Color.White, CircleShape),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            "1",
+                                            color = Color.White,
+                                            fontSize = 7.sp,
+                                            lineHeight = 7.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
                             }
                             Icon(Icons.Default.QueueMusic, "Open Music page", tint = Color.White,
                                 modifier = Modifier.size(25.dp).clickable {
