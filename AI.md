@@ -1074,3 +1074,12 @@ Current documentation does not certify that all historical features are build-, 
 - Native Daisy AI composer now has the same image attachment icon pattern as Message chat and opens the system picker for images/videos. Attachments are uploaded to the existing MongoDB media endpoint under a dedicated `daisy-support-media` folder, limited to 5 MB and supported JPEG/PNG/WebP/GIF/MP4/WebM/QuickTime types.
 - Daisy chat snapshots carry the media URL and media type through the existing `ai_support_message` Socket.IO event. The Owner Panel AI Chats conversation renders image previews and playable video controls for those messages.
 - Existing text messages, Daisy automation, native `index.db` history, Owner Panel IndexedDB history, and existing chat layout remain unchanged. Build, Render deployment, and real-device/Owner Panel verification are still required.
+
+
+## 2026-11-16 — Room public messaging root-cause fix (ON by default)
+- Requirement: room public messages remain ON by default and stay ON unless the room owner explicitly switches them OFF.
+- Root cause: Zyora Server treated a missing MongoDB `publicMsgOff` field as OFF by using `!== false` in the room-join cache and `room_message` permission check. Legacy rooms without this field were therefore blocked for ordinary members even though the native client defaulted to ON.
+- Fix: server now considers public messaging OFF only when the persisted value is explicitly `true`. Missing/legacy values resolve to ON on room join, settings broadcasts, and every message send; an explicit owner OFF remains enforced. Owner/admin bypass is unchanged.
+- Native RoomPage retains `publicMsgOff=false` as its default; only the persisted explicit OFF setting closes the composer gate. Removed a stale commented-out OFF-default line; no UI/layout or message transport changes.
+- Commits: server `57952561fe7c968d13560f11aafc52289521b1c8`; native `50b0aa81aa6d3ca944b8eeecb5ccb18fcd349468`.
+- Verification: source updates committed; Render deployment and live multi-user room messaging test remain required.
