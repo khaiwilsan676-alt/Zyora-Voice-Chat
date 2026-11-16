@@ -147,6 +147,7 @@ val SPECIAL_ACCOUNTS = mapOf("HUSxSvQnabgU029dWYt1TUV04hd2" to "100002")
 fun PublicProfileScreen(
     onBack: () -> Unit,
     onJoinRoom: (String) -> Unit = {},
+    onOpenFamily: (String) -> Unit = {},
     isOtherUser: Boolean = false,
     targetUser: TargetUser? = null
 ) {
