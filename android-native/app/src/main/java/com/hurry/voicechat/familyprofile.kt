@@ -86,6 +86,13 @@ internal object FamilyProfileApi {
         return result
     }
     suspend fun invite(id:String,target:String)=request("/api/families/${URLEncoder.encode(id,"UTF-8")}/invite","POST",JSONObject().put("targetId",target))
+    suspend fun apply(id:String)=request("/api/families/${URLEncoder.encode(id,"UTF-8")}/apply","POST",JSONObject())
+    suspend fun applications(id:String):List<FamilyMemberRow>{
+        val r=request("/api/families/${URLEncoder.encode(id,"UTF-8")}/applications")
+        val a=r.optJSONArray("applications")?:JSONArray()
+        return (0 until a.length()).mapNotNull{x->a.optJSONObject(x)?.let{m->FamilyMemberRow(m.optString("uid"),m.optString("accountId"),m.optString("name","User"),m.optString("image"),m.optString("gender"),0)}}
+    }
+    suspend fun approve(id:String,uid:String)=request("/api/families/${URLEncoder.encode(id,"UTF-8")}/applications/${URLEncoder.encode(uid,"UTF-8")}/approve","POST",JSONObject())
     suspend fun search(id:String,q:String):List<FamilyMemberRow>{
         val r=request("/api/families/${URLEncoder.encode(id,"UTF-8")}/search-users?q=${URLEncoder.encode(q,"UTF-8")}")
         val a=r.optJSONArray("users")?:JSONArray()
@@ -101,10 +108,10 @@ fun FamilyProfile(familyId:String,onBack:()->Unit,onOpenChat:(String,String,Stri
     var family by remember(familyId){mutableStateOf<FamilyRecord?>(null)}
     var loading by remember{mutableStateOf(true)}; var error by remember{mutableStateOf("")}
     var inviteSheet by remember{mutableStateOf(false)}; var editDialog by remember{mutableStateOf(false)}; var savingEdit by remember{mutableStateOf(false)}
-    var query by remember{mutableStateOf("")}; var results by remember{mutableStateOf<List<FamilyMemberRow>>(emptyList())}
+    var query by remember{mutableStateOf("")}; var results by remember{mutableStateOf<List<FamilyMemberRow>>(emptyList())}; var applications by remember{mutableStateOf<List<FamilyMemberRow>>(emptyList())}; var applicationSent by remember(familyId){mutableStateOf(false)}
     var searching by remember{mutableStateOf(false)}; var busy by remember{mutableStateOf("")}
     val isOwner=family?.ownerUid==auth?.uid
-    fun reload(){scope.launch{loading=true;runCatching{FamilyProfileApi.load(familyId)}.onSuccess{family=it;error=""}.onFailure{error=it.message?:"Could not load Family."};loading=false}}
+    fun reload(){scope.launch{loading=true;runCatching{FamilyProfileApi.load(familyId)}.onSuccess{family=it;error=""}.onFailure{error=it.message?:"Could not load Family."};if(isOwner)runCatching{FamilyProfileApi.applications(familyId)}.onSuccess{applications=it};loading=false}}
     LaunchedEffect(familyId){reload()}
     Box(Modifier.fillMaxSize().background(Color(0xFFF1F2F4))){
         LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(bottom=82.dp)){
@@ -163,14 +170,26 @@ fun FamilyProfile(familyId:String,onBack:()->Unit,onOpenChat:(String,String,Stri
             }
             if(error.isNotBlank()&&!loading)item{Text(error,color=Color(0xFFB3261E),fontSize=12.sp,modifier=Modifier.padding(12.dp))}
         }
-        if(family!=null)Button(onClick={if(isOwner)inviteSheet=true else scope.launch{runCatching{FamilyProfileApi.accept(familyId,context)}.onSuccess{reload()}.onFailure{error=it.message?:"Could not apply."}}},modifier=Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal=16.dp,vertical=10.dp).height(50.dp),shape=RoundedCornerShape(12.dp),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF2878E8))){
-            Text(if(isOwner)"Add Members" else "Apply",color=Color.White,fontWeight=FontWeight.Bold)
+        if(family!=null)Button(onClick={if(isOwner)inviteSheet=true else scope.launch{runCatching{FamilyProfileApi.apply(familyId)}.onSuccess{applicationSent=true;error="Application sent. Waiting for family owner approval."}.onFailure{error=it.message?:"Could not apply."}}},enabled=isOwner||!applicationSent,modifier=Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal=16.dp,vertical=10.dp).height(50.dp),shape=RoundedCornerShape(12.dp),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF2878E8))){
+            Text(if(isOwner)"Add Members" else if(applicationSent)"Applied" else "Apply",color=Color.White,fontWeight=FontWeight.Bold)
         }
     }
     if(inviteSheet)ModalBottomSheet(onDismissRequest={inviteSheet=false},modifier=Modifier.fillMaxHeight(.70f),shape=RoundedCornerShape(topStart=12.dp,topEnd=12.dp),containerColor=Color.White){
         Column(Modifier.fillMaxSize().padding(horizontal=16.dp)){
             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){IconButton(onClick={inviteSheet=false}){Icon(Icons.AutoMirrored.Filled.ArrowBack,"Back",tint=Color.Black)};Text("Invite Member",color=Color.Black,fontSize=17.sp,fontWeight=FontWeight.Bold,modifier=Modifier.weight(1f));Spacer(Modifier.width(44.dp))}
             OutlinedTextField(value=query,onValueChange={query=it},modifier=Modifier.fillMaxWidth(),singleLine=true,shape=RoundedCornerShape(12.dp),placeholder={Text("Search by ID or name")},leadingIcon={Icon(Icons.Default.Search,null)},colors=OutlinedTextFieldDefaults.colors(unfocusedContainerColor=Color(0xFFF1F2F4),focusedContainerColor=Color(0xFFF1F2F4),unfocusedBorderColor=Color.Transparent,focusedBorderColor=Color.Transparent))
+            if(isOwner && applications.isNotEmpty()){
+                Text("Family Applications",color=Color(0xFF222222),fontWeight=FontWeight.Bold,fontSize=14.sp,modifier=Modifier.padding(top=12.dp,bottom=4.dp))
+                Column(Modifier.heightIn(max=160.dp).verticalScroll(rememberScrollState())){
+                    applications.forEach { applicant ->
+                        Row(Modifier.fillMaxWidth().padding(vertical=6.dp),verticalAlignment=Alignment.CenterVertically){
+                            AsyncImage(model=applicant.image,contentDescription=null,modifier=Modifier.size(38.dp).clip(RoundedCornerShape(9.dp)),contentScale=ContentScale.Crop)
+                            Column(Modifier.weight(1f).padding(start=9.dp)){Text(applicant.name,color=Color.Black,fontWeight=FontWeight.SemiBold,fontSize=13.sp);Text(applicant.accountId,color=Color.Gray,fontSize=10.sp)}
+                            TextButton(enabled=busy!=applicant.uid,onClick={scope.launch{busy=applicant.uid;runCatching{FamilyProfileApi.approve(familyId,applicant.uid)}.onSuccess{applications=applications.filterNot{it.uid==applicant.uid};reload()}.onFailure{error=it.message?:"Approval failed."};busy=""}}){Text(if(busy==applicant.uid)"..." else "Approve")}
+                        }
+                    }
+                }
+            }
             LaunchedEffect(query){if(query.isBlank())results=emptyList()else{delay(300);searching=true;runCatching{FamilyProfileApi.search(familyId,query)}.onSuccess{results=it};searching=false}}
             if(searching)LinearProgressIndicator(Modifier.fillMaxWidth())
             LazyColumn(Modifier.fillMaxSize()){itemsIndexed(results){_,m->
