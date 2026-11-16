@@ -318,8 +318,19 @@ fun JitsiRoomAudio(
         val chunkListener = Emitter.Listener { args ->
             val data = args.firstOrNull() as? JSONObject ?: return@Listener
             if (data.optString("roomId") != roomId || !alive.get()) return@Listener
-            // Ignore any duplicate-session echo for this same account as well as server-side sender exclusion.
-            if (localAccountId.isNotBlank() && data.optString("userId") == localAccountId) return@Listener
+            // Never play our own published audio back locally. Servers/older clients may
+            // identify the publisher with different identity keys, so check every supported
+            // account/user/sender field before queuing either voice or music packets.
+            if (localAccountId.isNotBlank()) {
+                val packetOwners = listOf(
+                    data.optString("userId"),
+                    data.optString("accountId"),
+                    data.optString("senderId"),
+                    data.optString("senderAccountId"),
+                    data.optString("publisherId")
+                )
+                if (packetOwners.any { it.isNotBlank() && it == localAccountId }) return@Listener
+            }
             // JSONObject serializes Kotlin ByteArray payloads as JSON number arrays.
             // Accept both Socket.IO binary buffers and JSON arrays so relayed mic/music
             // packets are decoded consistently on every Android client.
