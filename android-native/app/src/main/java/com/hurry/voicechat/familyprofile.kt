@@ -141,7 +141,7 @@ fun FamilyProfile(familyId:String,onBack:()->Unit,onOpenChat:(String,String,Stri
             else if(family?.members.isNullOrEmpty())item{Text(error.ifBlank{"No family members yet."},color=Color.Gray,modifier=Modifier.padding(16.dp))}
             else itemsIndexed(family!!.members){index,m->
                 if(index<3){
-                    val bg=when(index){0->Color(0xFFE1A92D);1->Color(0xFF397FC3);else->Color(0xFF80523A)}
+                    val bg=when(index){0->Brush.horizontalGradient(listOf(Color(0xFFC83A32),Color(0xFFFFD65A)));1->Brush.horizontalGradient(listOf(Color(0xFF245EAA),Color(0xFF4B9BEB)));else->Brush.horizontalGradient(listOf(Color(0xFF68402F),Color(0xFF9B6849)))}
                     Row(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=3.dp).clip(RoundedCornerShape(12.dp)).background(bg).padding(10.dp),verticalAlignment=Alignment.CenterVertically){
                         Text("TOP ${index+1}",color=Color.White,fontWeight=FontWeight.Black,fontSize=12.sp,modifier=Modifier.width(52.dp))
                         Box(Modifier.size(52.dp)){
@@ -169,7 +169,7 @@ fun FamilyProfile(familyId:String,onBack:()->Unit,onOpenChat:(String,String,Stri
     if(inviteSheet)ModalBottomSheet(onDismissRequest={inviteSheet=false},modifier=Modifier.fillMaxHeight(.70f),shape=RoundedCornerShape(topStart=12.dp,topEnd=12.dp),containerColor=Color.White){
         Column(Modifier.fillMaxSize().padding(horizontal=16.dp)){
             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){IconButton(onClick={inviteSheet=false}){Icon(Icons.AutoMirrored.Filled.ArrowBack,"Back",tint=Color.Black)};Text("Invite Member",color=Color.Black,fontSize=17.sp,fontWeight=FontWeight.Bold,modifier=Modifier.weight(1f));Spacer(Modifier.width(44.dp))}
-            OutlinedTextField(value=query,onValueChange={query=it},modifier=Modifier.fillMaxWidth(),singleLine=true,shape=RoundedCornerShape(12.dp),placeholder={Text("Search by ID or name")},leadingIcon={Icon(Icons.Default.Search,null)})
+            OutlinedTextField(value=query,onValueChange={query=it},modifier=Modifier.fillMaxWidth(),singleLine=true,shape=RoundedCornerShape(12.dp),placeholder={Text("Search by ID or name")},leadingIcon={Icon(Icons.Default.Search,null)},colors=OutlinedTextFieldDefaults.colors(unfocusedContainerColor=Color(0xFFF1F2F4),focusedContainerColor=Color(0xFFF1F2F4),unfocusedBorderColor=Color.Transparent,focusedBorderColor=Color.Transparent))
             LaunchedEffect(query){if(query.isBlank())results=emptyList()else{delay(300);searching=true;runCatching{FamilyProfileApi.search(familyId,query)}.onSuccess{results=it};searching=false}}
             if(searching)LinearProgressIndicator(Modifier.fillMaxWidth())
             LazyColumn(Modifier.fillMaxSize()){itemsIndexed(results){_,m->
