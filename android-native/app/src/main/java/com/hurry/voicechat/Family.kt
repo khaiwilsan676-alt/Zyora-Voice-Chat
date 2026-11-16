@@ -246,15 +246,22 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, ac
                     FamilyQuestion(Modifier.size(20.dp).clickable(onClick = onRules))
                 }
 
-                // Sirf 1 frame (Rank 1 Frame)
+                // 1 frame Middle m 1 row, 2nd row m 2,3 frame
                 Column(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    AsyncImage(model = familyAsset("IMG_20261115_135339.png"), contentDescription = null, modifier = Modifier.size(175.dp).zIndex(2f).offset(y = (-15).dp), contentScale = ContentScale.Fit)
+                    // Row 1: Rank 1 Frame (thora upar)
+                    AsyncImage(model = familyAsset("IMG_20261115_135339.png"), contentDescription = null, modifier = Modifier.size(175.dp).zIndex(2f).offset(y = (-20).dp), contentScale = ContentScale.Fit)
+                    
+                    // Row 2: Rank 2 and 3 Frames (Left or right mein spread)
+                    Row(Modifier.fillMaxWidth().offset(y = (-35).dp).padding(horizontal = 25.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                        AsyncImage(model = familyAsset("IMG_20261115_135356.png"), contentDescription = null, modifier = Modifier.size(130.dp), contentScale = ContentScale.Fit)
+                        AsyncImage(model = familyAsset("IMG_20261115_135419.png"), contentDescription = null, modifier = Modifier.size(130.dp), contentScale = ContentScale.Fit)
+                    }
                 }
                 
-                // 12.dp space between Frame and Tabs
-                Spacer(Modifier.height(12.dp))
+                // 15.dp space after 2nd/3rd image frame
+                Spacer(Modifier.height(13.dp))
 
-                // 3 tab image edge to edge with 0.dp gap
+                // 3 tab image edge to edge (0.dp gap)
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(0.dp), verticalAlignment = Alignment.CenterVertically) {
                     AsyncImage(model = familyAsset("IMG_20261115_133007.png"), contentDescription = null, modifier = Modifier.weight(1f).wrapContentHeight().clickable { onRank(0) }, contentScale = ContentScale.FillWidth, colorFilter = if (activeRank == 0) activeFilter else inactiveFilter)
                     AsyncImage(model = familyAsset("IMG_20261115_132909.png"), contentDescription = null, modifier = Modifier.weight(1f).wrapContentHeight().clickable { onRank(1) }, contentScale = ContentScale.FillWidth, colorFilter = if (activeRank == 1) activeFilter else inactiveFilter)
@@ -262,7 +269,7 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, ac
                 }
 
                 // Space 8dp
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(10.dp))
 
                 // Countdown
                 Row(Modifier.fillMaxWidth().padding(vertical = 6.dp).background(Brush.horizontalGradient(listOf(Color.Transparent, familyGold.copy(alpha = .12f), Color.Transparent))).border(1.dp, familyGold.copy(alpha = .18f)), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
@@ -277,15 +284,15 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, ac
                 }
 
                 // Increased space after countdown
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(15.dp))
 
-                // 1 to 50 cards with -28.dp offset and decreased horizontal padding (8.dp)
-                Box(Modifier.fillMaxWidth().padding(horizontal = 8.dp).wrapContentHeight().offset(y = (-28).dp)) { AsyncImage(model = familyAsset("IMG_20261115_134723.png"), contentDescription = null, modifier = Modifier.fillMaxWidth(), contentScale = ContentScale.FillWidth) }
-                Box(Modifier.fillMaxWidth().padding(horizontal = 8.dp).wrapContentHeight().offset(y = (-28).dp)) { AsyncImage(model = familyAsset("IMG_20261115_134543.png"), contentDescription = null, modifier = Modifier.fillMaxWidth(), contentScale = ContentScale.FillWidth) }
-                Box(Modifier.fillMaxWidth().padding(horizontal = 8.dp).wrapContentHeight().offset(y = (-28).dp)) { AsyncImage(model = familyAsset("IMG_20261115_134632.png"), contentDescription = null, modifier = Modifier.fillMaxWidth(), contentScale = ContentScale.FillWidth) }
+                // 1 to 50 cards with -32.dp offset and decreased horizontal padding (4.dp)
+                Box(Modifier.fillMaxWidth().padding(horizontal = 4.dp).wrapContentHeight().offset(y = (-32).dp)) { AsyncImage(model = familyAsset("IMG_20261115_134723.png"), contentDescription = null, modifier = Modifier.fillMaxWidth(), contentScale = ContentScale.FillWidth) }
+                Box(Modifier.fillMaxWidth().padding(horizontal = 4.dp).wrapContentHeight().offset(y = (-32).dp)) { AsyncImage(model = familyAsset("IMG_20261115_134543.png"), contentDescription = null, modifier = Modifier.fillMaxWidth(), contentScale = ContentScale.FillWidth) }
+                Box(Modifier.fillMaxWidth().padding(horizontal = 4.dp).wrapContentHeight().offset(y = (-32).dp)) { AsyncImage(model = familyAsset("IMG_20261115_134632.png"), contentDescription = null, modifier = Modifier.fillMaxWidth(), contentScale = ContentScale.FillWidth) }
 
                 for (rank in 4..50) {
-                    Box(Modifier.fillMaxWidth().padding(horizontal = 8.dp).wrapContentHeight().offset(y = (-28).dp), contentAlignment = Alignment.CenterStart) {
+                    Box(Modifier.fillMaxWidth().padding(horizontal = 4.dp).wrapContentHeight().offset(y = (-32).dp), contentAlignment = Alignment.CenterStart) {
                         AsyncImage(model = familyAsset("IMG_20261115_134839.png"), contentDescription = null, modifier = Modifier.fillMaxWidth(), contentScale = ContentScale.FillWidth)
                         Text(rank.toString(), color = familyGold, fontSize = 22.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(start = 24.dp))
                     }
@@ -323,15 +330,22 @@ private fun FamilyTop(onBack: () -> Unit, onRules: () -> Unit, activeRank: Int, 
                 FamilyQuestion(Modifier.size(20.dp).clickable(onClick = onRules))
             }
 
-            // Sirf 1 frame (Rank 1 Frame)
+            // 1 frame Middle m 1 row, 2nd row m 2,3 frame
             Column(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                // Row 1: Rank 1 Frame (thora upar)
                 AsyncImage(model = familyAsset("IMG_20261115_135339.png"), contentDescription = null, modifier = Modifier.size(175.dp).zIndex(2f).offset(y = (-15).dp), contentScale = ContentScale.Fit)
+                
+                // Row 2: Rank 2 and 3 Frames (Left or right mein spread)
+                Row(Modifier.fillMaxWidth().offset(y = (-35).dp).padding(horizontal = 25.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                    AsyncImage(model = familyAsset("IMG_20261115_135356.png"), contentDescription = null, modifier = Modifier.size(130.dp), contentScale = ContentScale.Fit)
+                    AsyncImage(model = familyAsset("IMG_20261115_135419.png"), contentDescription = null, modifier = Modifier.size(130.dp), contentScale = ContentScale.Fit)
+                }
             }
 
-            // 12.dp space between Frame and Tabs
-            Spacer(Modifier.height(12.dp))
+            // 15.dp space after 2nd/3rd image frame
+            Spacer(Modifier.height(15.dp))
 
-            // 3 tab image edge to edge with 0.dp gap
+            // 3 tab image edge to edge (0.dp gap)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(0.dp), verticalAlignment = Alignment.CenterVertically) {
                 AsyncImage(model = familyAsset("IMG_20261115_133007.png"), contentDescription = null, modifier = Modifier.weight(1f).wrapContentHeight().clickable { onRank(0) }, contentScale = ContentScale.FillWidth, colorFilter = if (activeRank == 0) activeFilter else inactiveFilter)
                 AsyncImage(model = familyAsset("IMG_20261115_132909.png"), contentDescription = null, modifier = Modifier.weight(1f).wrapContentHeight().clickable { onRank(1) }, contentScale = ContentScale.FillWidth, colorFilter = if (activeRank == 1) activeFilter else inactiveFilter)
