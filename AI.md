@@ -1103,5 +1103,5 @@ Current documentation does not certify that all historical features are build-, 
 ## 2026-11-16 — Stable Lucky Gift notification and combo timer
 - `RoomPage.kt`: replaced five independent delayed Handler callbacks with one room-scoped Compose countdown keyed by a generation token, so a newer Lucky Gift or combo tap cancels the previous timer cleanly.
 - The sender's Combo button now stays mounted after tapping and its five-second window restarts while the previous Lucky Gift is replayed. The echoed combo replay also renews the same timer; it no longer gets excluded from the sender's combo-window handling.
-- Preserved the existing notification artwork, placement, sizing, styling, and its 3.8-second transient display; no unrelated room UI/layout changes.
+- Preserved the existing notification artwork, placement, sizing, styling, and its 5-second transient display; no unrelated room UI/layout changes.
 - Native build and multi-device live-room verification remain to be run.
