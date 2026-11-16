@@ -88,7 +88,7 @@ private val familyRules = listOf(
     "6. The family leader has the authority to remove other members from the family at any time without the removed member's consent. The family leader can also disband the family freely without official approval.",
     "7. Upon the disbanding of the family, all members will immediately leave the original family.",
     "8. Family rankings reflect the family's strength. Zaho determines family rankings based on the total spending of all family members.",
-    "9. Any benefits or relationships formed within the family are the result of voluntary actions taken by the members themselves and have no connection to Zyora."
+    "9. Any benefits or relationships formed within the family are the result of voluntary actions taken by the members themselves and have no connection to Zaho."
 )
 
 private data class RewardItemData(
@@ -372,7 +372,7 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, ac
 
                 // 4 se leke 50 Cards
                 topFamilies.drop(3).take(47).forEachIndexed { index, family ->
-                    Box(Modifier.fillMaxWidth().padding(horizontal = 4.dp).wrapContentHeight().offset(y = (-28).dp), contentAlignment = Alignment.CenterStart) {
+                    Box(Modifier.fillMaxWidth().padding(horizontal = 4.dp).wrapContentHeight().offset(y = (-25).dp), contentAlignment = Alignment.CenterStart) {
                         AsyncImage(model = familyAsset("IMG_20261115_134839.png"), contentDescription = null, modifier = Modifier.fillMaxWidth(), contentScale = ContentScale.FillWidth)
                         Text((index + 4).toString(), color = familyGold, fontSize = 22.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(start = 24.dp))
                         Row(Modifier.align(Alignment.CenterStart).padding(start = 65.dp, end = 14.dp), verticalAlignment = Alignment.CenterVertically) {
