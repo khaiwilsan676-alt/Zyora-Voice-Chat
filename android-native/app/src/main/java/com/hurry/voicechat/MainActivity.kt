@@ -205,11 +205,11 @@ private fun HurryLaunchScreen() {
             .fillMaxSize()
             .background(Color.Black)
     ) {
-        AsyncImage(
-            model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_000000003b34820ba9a4e048344ec207.png",
+        Image(
+            painter = painterResource(id = R.drawable.zyora_splash),
             contentDescription = null,
             modifier = Modifier.fillMaxSize(),
-            contentScale = androidx.compose.ui.layout.ContentScale.Crop
+            contentScale = ContentScale.Crop
         )
 
         Column(
