@@ -196,6 +196,20 @@ function getRoomSeats(roomId) {
   );
 }
 
+function roomSeatBelongsToSocket(seat, socket) {
+  const seatIds = [
+    seat?.user?.accountId,
+    seat?.user?.userId,
+  ].map(value => String(value || "").trim()).filter(Boolean);
+  const socketIds = [
+    socket?.roomAccountId,
+    socket?.accountId,
+    socket?.roomUserId,
+    socket?.userId,
+  ].map(value => String(value || "").trim()).filter(Boolean);
+  return seatIds.some(id => socketIds.includes(id));
+}
+
 function emitRoomSeats(roomId) {
   const room = String(roomId);
   io.to(`room:${room}`).emit("room_seats", {
@@ -2809,7 +2823,7 @@ io.on("connection", (socket) => {
     const accountId = String(socket.roomAccountId || socket.accountId || "");
     const hasSeat = getRoomSeats(room).some((seat) =>
       seat?.isOccupied && !seat?.isMuted &&
-      String(seat?.user?.accountId || seat?.user?.userId || "") === accountId
+      roomSeatBelongsToSocket(seat, socket)
     );
     socket.roomVoiceActive = hasSeat;
     socket.roomVoiceRoomId = hasSeat ? room : null;
@@ -3031,9 +3045,7 @@ io.on("connection", (socket) => {
         user: {
           name: data.user?.name || "User",
           image: data.user?.image || "/default-avatar.png",
-          // Keep the canonical app account ID separate from the Firebase/user ID.
-          // Voice and music publishers authenticate with socket.roomAccountId.
-          accountId: String(socket.roomAccountId || socket.accountId || actorId),
+          accountId: actorId,
           userId: String(socket.roomUserId || socket.userId || actorId),
         },
         isMuted: false, isSpeaking: false, gif: undefined,
