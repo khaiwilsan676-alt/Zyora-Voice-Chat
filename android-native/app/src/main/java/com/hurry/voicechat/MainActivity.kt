@@ -199,38 +199,12 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun HurryLaunchScreen() {
-    val screenHeight = LocalConfiguration.current.screenHeightDp.dp
-    Box(Modifier.fillMaxSize()) {
-        Image(
-            painter = painterResource(id = R.drawable.zyora_splash),
-            contentDescription = null,
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop
-        )
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = screenHeight * 0.35f),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Image(
-                painter = painterResource(id = R.drawable.zyora_logo),
-                contentDescription = "Zyora logo",
-                modifier = Modifier
-                    .width(68.dp)
-                    .height(68.dp)
-                    .clip(RoundedCornerShape(14.dp)),
-                contentScale = ContentScale.Crop
-            )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                "Zyora",
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White
-            )
-        }
-    }
+    Image(
+        painter = painterResource(id = R.drawable.zyora_splash_only),
+        contentDescription = null,
+        modifier = Modifier.fillMaxSize(),
+        contentScale = ContentScale.Crop
+    )
 }
 
 @Composable
