@@ -654,41 +654,42 @@ fun PublicProfileScreen(
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         SectionHeader("Family")
                         if (hasOwnFamily) {
-                            BoxWithConstraints(Modifier.fillMaxWidth()) {
-                                Box(
-                                    Modifier.requiredWidth(maxWidth + 36.dp).offset(x = (-18).dp)
-                                        .height(112.dp).clip(RoundedCornerShape(12.dp)).clickable { if (ownFamilyCode.isNotBlank()) onOpenFamily(ownFamilyCode) }
-                                ) {
-                                    AsyncImage(
-                                        model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261116_163413.png",
-                                        contentDescription = "Family background",
-                                        modifier = Modifier.fillMaxSize(),
-                                        contentScale = ContentScale.Fit
-                                    )
-                                    Box(Modifier.align(Alignment.TopStart).padding(start = 12.dp, top = 12.dp).size(62.dp), contentAlignment = Alignment.Center) {
-                                        if (ownFamilyImage.isNotBlank()) {
-                                            AsyncImage(
-                                                model = ownFamilyImage,
-                                                contentDescription = "Family DP",
-                                                modifier = Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)),
-                                                contentScale = ContentScale.Crop
-                                            )
-                                        }
+                            Box(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .height(112.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .clickable { if (ownFamilyCode.isNotBlank()) onOpenFamily(ownFamilyCode) }
+                            ) {
+                                AsyncImage(
+                                    model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261116_163413.png",
+                                    contentDescription = "Family background",
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Fit
+                                )
+                                Box(Modifier.align(Alignment.TopStart).padding(start = 12.dp, top = 12.dp).size(62.dp), contentAlignment = Alignment.Center) {
+                                    if (ownFamilyImage.isNotBlank()) {
                                         AsyncImage(
-                                            model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261116_164433.png",
-                                            contentDescription = "Family avatar frame",
-                                            modifier = Modifier.size(62.dp),
-                                            contentScale = ContentScale.Fit
+                                            model = ownFamilyImage,
+                                            contentDescription = "Family DP",
+                                            modifier = Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)),
+                                            contentScale = ContentScale.Crop
                                         )
                                     }
-                                    Column(
-                                        Modifier.align(Alignment.CenterStart).padding(start = 84.dp, end = 12.dp),
-                                        verticalArrangement = Arrangement.spacedBy(3.dp)
-                                    ) {
-                                        Text(ownFamilyName, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-                                        Text("Family ID: ${ownFamilyCode.ifBlank { ownFamilyCreatorId }}", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium, maxLines = 1)
-                                        Text("Members $ownFamilyMemberCount/50", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium)
-                                    }
+                                    AsyncImage(
+                                        model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261116_164433.png",
+                                        contentDescription = "Family avatar frame",
+                                        modifier = Modifier.size(62.dp),
+                                        contentScale = ContentScale.Fit
+                                    )
+                                }
+                                Column(
+                                    Modifier.align(Alignment.CenterStart).padding(start = 84.dp, end = 12.dp),
+                                    verticalArrangement = Arrangement.spacedBy(3.dp)
+                                ) {
+                                    Text(ownFamilyName, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                                    Text("Family ID: ${ownFamilyCode.ifBlank { ownFamilyCreatorId }}", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+                                    Text("Members $ownFamilyMemberCount/50", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium)
                                 }
                             }
                         } else {
@@ -736,14 +737,18 @@ fun PublicProfileScreen(
                         
                         var hasVehicle by remember { mutableStateOf(true) }
                         
-                        NativeOwnedVehicleShowcase(
-                            userId = targetUser?.accountId?.takeIf { it.isNotBlank() }
-                                ?: targetUser?.displayAccountNumber?.takeIf { it.isNotBlank() }
-                                ?: targetUser?.id?.takeIf { it.isNotBlank() }
-                                ?: targetUser?.uid?.takeIf { it.isNotBlank() }
-                                ?: currentUserId,
-                            onDataLoaded = { hasData -> hasVehicle = hasData }
-                        )
+                        BoxWithConstraints(Modifier.fillMaxWidth()) {
+                            Box(modifier = Modifier.requiredWidth(maxWidth + 32.dp).offset(x = (-16).dp)) {
+                                NativeOwnedVehicleShowcase(
+                                    userId = targetUser?.accountId?.takeIf { it.isNotBlank() }
+                                        ?: targetUser?.displayAccountNumber?.takeIf { it.isNotBlank() }
+                                        ?: targetUser?.id?.takeIf { it.isNotBlank() }
+                                        ?: targetUser?.uid?.takeIf { it.isNotBlank() }
+                                        ?: currentUserId,
+                                    onDataLoaded = { hasData -> hasVehicle = hasData }
+                                )
+                            }
+                        }
 
                         if (!hasVehicle) {
                             EmptySectionCard(
@@ -774,14 +779,18 @@ fun PublicProfileScreen(
                         
                         var hasFrame by remember { mutableStateOf(true) }
 
-                        NativeOwnedFrameShowcase(
-                            userId = targetUser?.accountId?.takeIf { it.isNotBlank() }
-                                ?: targetUser?.displayAccountNumber?.takeIf { it.isNotBlank() }
-                                ?: targetUser?.id?.takeIf { it.isNotBlank() }
-                                ?: targetUser?.uid?.takeIf { it.isNotBlank() }
-                                ?: currentUserId,
-                            onDataLoaded = { hasData -> hasFrame = hasData }
-                        )
+                        BoxWithConstraints(Modifier.fillMaxWidth()) {
+                            Box(modifier = Modifier.requiredWidth(maxWidth + 32.dp).offset(x = (-16).dp)) {
+                                NativeOwnedFrameShowcase(
+                                    userId = targetUser?.accountId?.takeIf { it.isNotBlank() }
+                                        ?: targetUser?.displayAccountNumber?.takeIf { it.isNotBlank() }
+                                        ?: targetUser?.id?.takeIf { it.isNotBlank() }
+                                        ?: targetUser?.uid?.takeIf { it.isNotBlank() }
+                                        ?: currentUserId,
+                                    onDataLoaded = { hasData -> hasFrame = hasData }
+                                )
+                            }
+                        }
                         
                         if (!hasFrame) {
                             EmptySectionCard(
@@ -952,7 +961,7 @@ fun PublicProfileScreen(
 
     if (isOtherUser && showChat) {
         val authPrefs = context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE)
-        val chatPrefs = context.getSharedPreferences("hurry_user", Context.MODE_PRIVATE)
+        val chatPrefs = context.getSharedPreferences("hurry_user", Context.MODEPRIVATE)
         val currentAccountId = authPrefs.getString("accountId", "").orEmpty()
             .ifBlank { chatPrefs.getString("accountId", "").orEmpty() }
         val currentUserId = authPrefs.getString("uid", "").orEmpty()
