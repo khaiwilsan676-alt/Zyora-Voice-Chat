@@ -6,6 +6,7 @@ import android.content.ClipboardManager
 import android.widget.Toast
 import android.content.ContextWrapper
 import android.app.Activity
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -23,6 +24,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -36,8 +38,6 @@ import java.net.URL
 import io.socket.client.IO
 import io.socket.client.Socket
 import io.socket.emitter.Emitter
-
-private const val RAW_ME = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/"
 
 private data class MeMenu(val label: String, val asset: String)
 
@@ -261,8 +261,8 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
                                 horizontalArrangement = Arrangement.spacedBy(5.dp)
                             ) {
                                 if (account in setOf("100002", "100003", "500001", "500002", "500003", "500004")) {
-                                    AsyncImage(
-                                        model = RAW_ME + "IMG_20261101_125212.png",
+                                    Image(
+                                        painter = painterResource(R.drawable.wp_img_20261101_125212),
                                         contentDescription = "Official ID",
                                         modifier = Modifier.height(22.dp).widthIn(max = 52.dp),
                                         contentScale = ContentScale.Fit
@@ -312,9 +312,10 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
         }
 
         item {
-            AsyncImage(
-                RAW_ME + "file_00000000a25081fbb57574619596eed8.png", null,
-                Modifier.fillMaxWidth().padding(horizontal = 12.dp).offset(y = (-40).dp).padding(bottom = 24.dp).heightIn(min = 76.dp).clip(RoundedCornerShape(8.dp)).clickable { onOpen("SVIP") },
+            Image(
+                painter = painterResource(R.drawable.wp_file_00000000a25081fbb57574619596eed8),
+                contentDescription = null,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp).offset(y = (-40).dp).padding(bottom = 24.dp).heightIn(min = 76.dp).clip(RoundedCornerShape(8.dp)).clickable { onOpen("SVIP") },
                 contentScale = ContentScale.Crop
             )
         }
@@ -416,14 +417,34 @@ private fun MeMenuIcon(type: MeIconType) {
 @Composable private fun DividerV() { Box(Modifier.height(34.dp).width(1.dp).background(Color(0xFFD1D5DB))) }
 
 @Composable private fun FeatureImage(asset: String, modifier: Modifier) {
-    AsyncImage(RAW_ME + asset, null, modifier.clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.Crop)
+    val imageRes = when (asset) {
+        "file_00000000f26c81f88083bc494a0f229b.png" -> R.drawable.wp_file_00000000f26c81f88083bc494a0f229b
+        "file_00000000fe848207abf557a118ff8a5b.png" -> R.drawable.wp_file_00000000fe848207abf557a118ff8a5b
+        else -> R.drawable.wp_file_00000000f26c81f88083bc494a0f229b
+    }
+    Image(painter = painterResource(imageRes), contentDescription = null, modifier = modifier.clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.Crop)
 }
 
 @Composable private fun MenuCard(items: List<MeMenu>, onOpen: (String) -> Unit, modifier: Modifier = Modifier) {
     Column(modifier.padding(horizontal = 16.dp, vertical = 0.dp).clip(RoundedCornerShape(6.dp)).background(Color.White)) {
         items.forEach { item ->
             Row(Modifier.fillMaxWidth().clickable { onOpen(item.label) }.padding(horizontal = 16.dp, vertical = 13.dp), verticalAlignment = Alignment.CenterVertically) {
-                AsyncImage(RAW_ME + item.asset, null, Modifier.size(if (item.label == "Seller Center") 40.dp else 32.dp), contentScale = ContentScale.Crop)
+                Image(
+                    painter = painterResource(
+                        when (item.asset) {
+                            "IMG_20260915_225333.png" -> R.drawable.wp_img_20260915_225333
+                            "IMG_20260915_225426.png" -> R.drawable.wp_img_20260915_225426
+                            "IMG_20260915_225404.png" -> R.drawable.wp_img_20260915_225404
+                            "IMG_20260915_225349.png" -> R.drawable.wp_img_20260915_225349
+                            "IMG_20260915_225447.png" -> R.drawable.wp_img_20260915_225447
+                            "IMG_20260915_225506.png" -> R.drawable.wp_img_20260915_225506
+                            else -> R.drawable.wp_img_20260915_225536
+                        }
+                    ),
+                    contentDescription = null,
+                    modifier = Modifier.size(if (item.label == "Seller Center") 40.dp else 32.dp),
+                    contentScale = ContentScale.Crop
+                )
                 Spacer(Modifier.width(16.dp))
                 
                 Text(item.label, Modifier.weight(1f), fontSize = 15.sp, fontWeight = FontWeight.Normal, color = Color(0xFF171717))
@@ -431,8 +452,8 @@ private fun MeMenuIcon(type: MeIconType) {
                 if (item.label == "Family") {
                     Text("Join Now", fontSize = 12.sp, color = Color(0xFF6B7280), modifier = Modifier.padding(end = 8.dp))
                 } else if (item.label == "Invite Friends") {
-                    AsyncImage(
-                        model = RAW_ME + "IMG_20261022_212625.png",
+                    Image(
+                        painter = painterResource(R.drawable.wp_img_20261022_212625),
                         contentDescription = null,
                         modifier = Modifier.height(20.dp).padding(end = 8.dp),
                         contentScale = ContentScale.Fit
@@ -442,12 +463,11 @@ private fun MeMenuIcon(type: MeIconType) {
                         modifier = Modifier.padding(end = 8.dp),
                         contentAlignment = Alignment.CenterEnd // Yaha se text right side shift ho jayega image ke andar
                     ) {
-                        AsyncImage(
-                            model = RAW_ME + "IMG_20261028_004355.png", // Nayi Image yaha lagayi hai
+                        Image(
+                            painter = painterResource(R.drawable.wp_img_20261028_004355),
                             contentDescription = null,
-                            modifier = Modifier.height(25.dp), 
+                            modifier = Modifier.height(25.dp),
                             contentScale = ContentScale.Fit
-                            // ColorFilter maine hata diya taaki nayi image ke real colors theek se show ho
                         )
                         Text(
                             text = "Lv.0",
