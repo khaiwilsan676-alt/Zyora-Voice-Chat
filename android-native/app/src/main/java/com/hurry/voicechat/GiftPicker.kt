@@ -688,7 +688,7 @@ fun GiftPicker(
                 // Lucky banner is intentionally outside the sheet, with a 3dp overlap.
                 if (activeTab == "Lucky") {
                     AsyncImage(
-                        model = giftAssetUrl("/IMG_20261116_162726.png"),
+                        model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261116_162726.png",
                         contentDescription = null,
                         contentScale = ContentScale.Fit,
                         modifier = Modifier
