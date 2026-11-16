@@ -169,13 +169,32 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
         } else {
             val historyKey = "visitor_history:" + visitorUserId + ":received"
             val rows = withContext(Dispatchers.IO) {
-                runCatching {
-                    val db = NativeIndexDatabase(context)
-                    listOf("received", "sent").sumOf { type ->
-                        val entries = db.loadProfile("visitor_history:" + visitorUserId + ":" + type)?.optJSONArray("visitors") ?: org.json.JSONArray()
-                        (0 until entries.length()).sumOf { index -> entries.optJSONObject(index)?.optInt("viewCount", 1)?.coerceAtLeast(1) ?: 0 }
+                val localDb = NativeIndexDatabase(context)
+                var total = 0
+                listOf("received", "sent").forEach { type ->
+                    val remoteRows = runCatching {
+                        val url = URL("https://zyora-server.onrender.com/api/profile-visitors?userId=" +
+                            java.net.URLEncoder.encode(visitorUserId, "UTF-8") + "&type=" + type)
+                        val connection = (url.openConnection() as HttpURLConnection).apply {
+                            connectTimeout = 7000; readTimeout = 8000; requestMethod = "GET"
+                            setRequestProperty("Cache-Control", "no-cache")
+                        }
+                        try {
+                            if (connection.responseCode !in 200..299) error("Visitor history unavailable")
+                            val root = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
+                            root.optJSONArray("visitors")
+                        } finally { connection.disconnect() }
+                    }.getOrNull()
+                    val entries = remoteRows ?: localDb.loadProfile("visitor_history:" + visitorUserId + ":" + type)?.optJSONArray("visitors") ?: org.json.JSONArray()
+                    if (remoteRows != null) {
+                        localDb.saveProfile("visitor_history:" + visitorUserId + ":" + type,
+                            JSONObject().put("visitors", remoteRows).put("updatedAt", System.currentTimeMillis()))
                     }
-                }.getOrDefault(0)
+                    total += (0 until entries.length()).sumOf { index ->
+                        entries.optJSONObject(index)?.optInt("viewCount", 1)?.coerceAtLeast(1) ?: 0
+                    }
+                }
+                total
             }
             visitorCount = rows
         }
