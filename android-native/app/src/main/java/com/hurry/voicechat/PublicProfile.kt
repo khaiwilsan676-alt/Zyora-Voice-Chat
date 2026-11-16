@@ -650,7 +650,7 @@ fun PublicProfileScreen(
                         if (hasOwnFamily) {
                             BoxWithConstraints(Modifier.fillMaxWidth()) {
                                 Box(
-                                    Modifier.requiredWidth(maxWidth + 35.dp).offset(x = (-15).dp)
+                                    Modifier.requiredWidth(maxWidth + 36.dp).offset(x = (-18).dp)
                                         .height(112.dp).clip(RoundedCornerShape(12.dp))
                                 ) {
                                     AsyncImage(
