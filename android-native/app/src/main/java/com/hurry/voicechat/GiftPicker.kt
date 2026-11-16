@@ -695,7 +695,7 @@ fun GiftPicker(
                             .align(Alignment.BottomCenter)
                             .offset(y = -giftSheetHeight + 3.dp)
                             .fillMaxWidth()
-                            .height(100.dp),
+                            .height(90.dp),
                     )
                 }
             }
