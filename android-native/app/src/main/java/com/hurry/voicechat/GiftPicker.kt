@@ -347,7 +347,8 @@ fun GiftPicker(
                 dialogWindow?.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
             }
             
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
+            BoxWithConstraints(Modifier.fillMaxSize()) {
+                val giftSheetHeight = maxHeight * 0.52f
                 // Drag dismiss variable
                 var offsetY by remember { mutableStateOf(0f) }
                 
@@ -679,6 +680,20 @@ fun GiftPicker(
                             }
                         }
                     }
+                }
+
+                // Lucky banner is intentionally outside the sheet, with a 3dp overlap.
+                if (activeTab == "Lucky") {
+                    AsyncImage(
+                        model = giftAssetUrl("/IMG_20261116_162726.png"),
+                        contentDescription = null,
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .offset(y = -giftSheetHeight + 3.dp)
+                            .fillMaxWidth()
+                            .height(100.dp),
+                    )
                 }
             }
 
