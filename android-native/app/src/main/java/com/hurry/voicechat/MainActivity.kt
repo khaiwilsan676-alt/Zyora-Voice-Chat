@@ -111,7 +111,7 @@ class MainActivity : ComponentActivity() {
                 )
             }
             LaunchedEffect(Unit) {
-                kotlinx.coroutines.delay(400)
+                kotlinx.coroutines.yield()
                 showLaunch = false
                 checkForHurryUpdate()
             }
@@ -219,7 +219,7 @@ private fun HurryLaunchScreen() {
                 modifier = Modifier
                     .width(68.dp)
                     .height(68.dp)
-                    .clip(RoundedCornerShape(8.dp)),
+                    .clip(RoundedCornerShape(14.dp)),
                 contentScale = ContentScale.Crop
             )
             Spacer(Modifier.height(8.dp))
