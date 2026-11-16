@@ -153,6 +153,11 @@ fun PublicProfileScreen(
     val context = LocalContext.current
     val authPrefs = remember(context) { context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE) }
     val currentUserId = authPrefs.getString("accountId", "").orEmpty().ifBlank { authPrefs.getString("uid", "").orEmpty() }
+    val familyPrefs = remember(context) { context.getSharedPreferences("hurry_user", Context.MODE_PRIVATE) }
+    val hasOwnFamily = remember(familyPrefs, isOtherUser) { !isOtherUser && familyPrefs.getBoolean("familyCreated", false) }
+    val ownFamilyName = familyPrefs.getString("familyName", "").orEmpty()
+    val ownFamilyImage = familyPrefs.getString("familyImage", "").orEmpty()
+    val ownFamilyCreatorId = familyPrefs.getString("familyCreatorId", "").orEmpty().ifBlank { currentUserId }
     val coroutineScope = rememberCoroutineScope()
     val targetPresenceId = targetUser?.accountId?.takeIf { it.isNotBlank() } ?: targetUser?.id.orEmpty()
     val targetPresenceIds = remember(targetUser) { setOf(targetUser?.accountId.orEmpty(), targetUser?.id.orEmpty(), targetUser?.uid.orEmpty()).filter { it.isNotBlank() }.toSet() }
@@ -593,11 +598,48 @@ fun PublicProfileScreen(
                     // Family
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         SectionHeader("Family")
-                        EmptySectionCard(
-                            iconPath = "/public/IMG_20261116_162146.png",
-                            text = "You do not have Family yet",
-                            profileAsset = profileAsset
-                        )
+                        if (hasOwnFamily) {
+                            Box(
+                                Modifier.fillMaxWidth().height(112.dp).clip(RoundedCornerShape(12.dp))
+                            ) {
+                                AsyncImage(
+                                    model = profileAsset("/public/IMG_20261116_163413.png"),
+                                    contentDescription = "Family background",
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+                                Box(Modifier.align(Alignment.TopStart).padding(start = 12.dp, top = 12.dp).size(62.dp), contentAlignment = Alignment.Center) {
+                                    if (ownFamilyImage.isNotBlank()) {
+                                        AsyncImage(
+                                            model = ownFamilyImage,
+                                            contentDescription = "Family DP",
+                                            modifier = Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)),
+                                            contentScale = ContentScale.Crop
+                                        )
+                                    }
+                                    AsyncImage(
+                                        model = profileAsset("/public/IMG_20261116_164433.png"),
+                                        contentDescription = "Family avatar frame",
+                                        modifier = Modifier.size(62.dp),
+                                        contentScale = ContentScale.Fit
+                                    )
+                                }
+                                Column(
+                                    Modifier.align(Alignment.CenterStart).padding(start = 84.dp, end = 12.dp),
+                                    verticalArrangement = Arrangement.spacedBy(3.dp)
+                                ) {
+                                    Text(ownFamilyName, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                                    Text("Family ID: $ownFamilyCreatorId", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+                                    Text("Members 0/50", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                                }
+                            }
+                        } else {
+                            EmptySectionCard(
+                                iconPath = "/public/IMG_20261116_162146.png",
+                                text = "You do not have Family yet",
+                                profileAsset = profileAsset
+                            )
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(20.dp))
