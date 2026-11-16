@@ -149,14 +149,14 @@ fun FamilyProfile(familyId:String,onBack:()->Unit,onOpenChat:(String,String,Stri
                             AsyncImage(model=FAMILY_ASSETS+when(index){0->"IMG_20261115_135339.png";1->"IMG_20261115_135356.png";else->"IMG_20261115_135419.png"},contentDescription="Rank frame",modifier=Modifier.fillMaxSize(),contentScale=ContentScale.Fit)
                         }
                         Column(Modifier.weight(1f).padding(start=8.dp)){Text(m.name,color=Color.White,fontSize=14.sp,fontWeight=FontWeight.Bold,maxLines=1);Text("${m.accountId} · ${m.gender}",color=Color.White,fontSize=11.sp)}
-                        Column(horizontalAlignment=Alignment.End){AsyncImage(model=FAMILY_ASSETS+"file_00000000e56882119c217d508b6733dc.png",contentDescription="Coins",modifier=Modifier.size(17.dp));Text(m.coins.toString(),color=Color.White,fontSize=12.sp,fontWeight=FontWeight.Bold)}
+                        Column(horizontalAlignment=Alignment.End){AsyncImage(model=FAMILY_ASSETS+"file_00000000e56882119c217d508b6733dc.png",contentDescription="Coins",modifier=Modifier.size(17.dp));Text("******",color=Color.White,fontSize=12.sp,fontWeight=FontWeight.Bold)}
                     }
                 }else{
                     Row(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=2.dp).clip(RoundedCornerShape(10.dp)).background(Color.White).padding(9.dp),verticalAlignment=Alignment.CenterVertically){
                         Text("${index+1}",color=Color.Gray,fontSize=13.sp,modifier=Modifier.width(28.dp))
                         AsyncImage(model=m.image.ifBlank{FAMILY_ASSETS+"IMG_20261116_162146.png"},contentDescription=m.name,modifier=Modifier.size(40.dp).clip(RoundedCornerShape(10.dp)),contentScale=ContentScale.Crop)
                         Column(Modifier.weight(1f).padding(start=9.dp)){Text(m.name,color=Color(0xFF222222),fontSize=13.sp,fontWeight=FontWeight.SemiBold);Text("${m.accountId} · ${m.gender}",color=Color.Gray,fontSize=10.sp)}
-                        Column(horizontalAlignment=Alignment.End){AsyncImage(model=FAMILY_ASSETS+"file_00000000e56882119c217d508b6733dc.png",contentDescription="Coins",modifier=Modifier.size(15.dp));Text(m.coins.toString(),color=Color.DarkGray,fontSize=11.sp,fontWeight=FontWeight.Bold)}
+                        Column(horizontalAlignment=Alignment.End){AsyncImage(model=FAMILY_ASSETS+"file_00000000e56882119c217d508b6733dc.png",contentDescription="Coins",modifier=Modifier.size(15.dp));Text("******",color=Color.DarkGray,fontSize=11.sp,fontWeight=FontWeight.Bold)}
                     }
                 }
             }
