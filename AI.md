@@ -1178,3 +1178,9 @@ Current documentation does not certify that all historical features are build-, 
 - Family owner invitation sends the invited user the existing Family invitation card and sends the owner a Zyora System message: “Invite Send to (User name) from (Family name)”.
 - Family applications send the applicant a Zyora System message: “Apply Sended to (Family name)”. The owner receives an applicant card with avatar, name, account ID, the requested join text, and an Approve action that uses the existing family-application approval API.
 - Family Profile member rows no longer display boolean “True”/“False” values beside account IDs when those values appear in the optional tag field.
+
+
+## 2026-11-17 — Public Profile Family image loading fix
+- `PublicProfile.kt`: load `IMG_20261117_130644.png` for both the Lv.1-row Family tag and the Family banner/tag from the repository's raw GitHub public asset URL, matching the working asset-loading pattern used by the Family screens instead of relying on the Vercel deployment.
+- Family tag and Family banner visibility now also recognize the resolved family code and legacy local `familyId`/`familyCreated` values, so an existing member is not hidden solely because the transient `hasOwnFamily` state has not hydrated yet. Other users' profiles do not inherit the viewer's local membership flags.
+- The requested Family banner image remains fitted without changing the existing card size or layout. APK build and device image-rendering verification remain pending.
