@@ -762,6 +762,8 @@ fun NativeChatScreen(
     var previewImageUrl by remember { mutableStateOf<String?>(null) }
     var roomInvitationSent by remember(receiverId, initialRoomInvitation) { mutableStateOf(false) }
     var acceptedFamilyInvites by remember(receiverId) { mutableStateOf(setOf<String>()) }
+    var approvedFamilyApplications by remember(receiverId) { mutableStateOf(setOf<String>()) }
+    var busyFamilyApplications by remember(receiverId) { mutableStateOf(setOf<String>()) }
     var familyInviteError by remember { mutableStateOf("") }
     
     LaunchedEffect(currentAccountId, receiverId) {
@@ -1641,30 +1643,63 @@ fun NativeChatScreen(
                                     )
                                 } else if (isFamilyInvitation && familyInvitationData != null) {
                                     val invitedFamilyId = familyInvitationData.optString("familyId")
+                                    val isFamilyApplication = familyInvitationData.optString("action") == "Apply"
+                                    val applicantUid = familyInvitationData.optString("applicantUid")
+                                    val applicationKey = "${invitedFamilyId}_${applicantUid}"
                                     val accepted = invitedFamilyId in acceptedFamilyInvites
+                                    val approved = applicationKey in approvedFamilyApplications
+                                    val approving = applicationKey in busyFamilyApplications
                                     Column(Modifier.width(238.dp).clip(RoundedCornerShape(12.dp)).background(Color.White).padding(11.dp)) {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            AsyncImage(model = familyInvitationData.optString("familyImage"), contentDescription = "Family DP",
-                                                modifier = Modifier.size(48.dp).clip(RoundedCornerShape(10.dp)), contentScale = ContentScale.Crop)
-                                            Column(Modifier.weight(1f).padding(start = 9.dp)) {
-                                                Text(familyInvitationData.optString("familyName").ifBlank { "Family" }, color = Color(0xFF111111), fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-                                                Text("ID: " + invitedFamilyId, color = Color(0xFF666666), fontSize = 10.sp, maxLines = 1)
+                                        if (isFamilyApplication) {
+                                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+                                                AsyncImage(model = familyInvitationData.optString("applicantImage"), contentDescription = "Applicant avatar",
+                                                    modifier = Modifier.size(42.dp).clip(CircleShape), contentScale = ContentScale.Crop)
+                                                Column(Modifier.weight(1f).padding(start = 9.dp)) {
+                                                    Text(familyInvitationData.optString("applicantName").ifBlank { "User" }, color = Color(0xFF111111), fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                                                    Text("ID: " + familyInvitationData.optString("applicantId"), color = Color(0xFF666666), fontSize = 10.sp, maxLines = 1)
+                                                }
+                                                TextButton(
+                                                    enabled = !approved && !approving && applicantUid.isNotBlank() && invitedFamilyId.isNotBlank(),
+                                                    onClick = {
+                                                        busyFamilyApplications = busyFamilyApplications + applicationKey
+                                                        chatScope.launch {
+                                                            runCatching { FamilyProfileApi.approve(invitedFamilyId, applicantUid) }
+                                                                .onSuccess { approvedFamilyApplications = approvedFamilyApplications + applicationKey; familyInviteError = "" }
+                                                                .onFailure { familyInviteError = it.message ?: "Could not approve Family application." }
+                                                            busyFamilyApplications = busyFamilyApplications - applicationKey
+                                                        }
+                                                    },
+                                                    contentPadding = PaddingValues(horizontal = 2.dp, vertical = 0.dp)
+                                                ) {
+                                                    Text(if (approved) "Approved" else if (approving) "..." else "Approve", color = Color.Black, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                                }
                                             }
-                                        }
-                                        Spacer(Modifier.height(8.dp))
-                                        Text("You are invited to join our Family", color = Color(0xFF333333), fontSize = 12.sp)
-                                        Spacer(Modifier.height(8.dp))
-                                        if (!mine) {
-                                            Box(Modifier.align(Alignment.End).clip(RoundedCornerShape(6.dp))
-                                                .background(if (accepted) Color(0xFFE5E7EB) else Color.Black)
-                                                .clickable(enabled = !accepted && invitedFamilyId.isNotBlank()) {
-                                                    chatScope.launch {
-                                                        runCatching { FamilyProfileApi.accept(invitedFamilyId, context) }
-                                                            .onSuccess { acceptedFamilyInvites = acceptedFamilyInvites + invitedFamilyId; familyInviteError = "" }
-                                                            .onFailure { familyInviteError = it.message ?: "Could not join Family." }
-                                                    }
-                                                }.padding(horizontal = 13.dp, vertical = 6.dp)) {
-                                                Text(if (accepted) "Accepted" else "Accept", color = if (accepted) Color.DarkGray else Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                            Spacer(Modifier.height(8.dp))
+                                            Text("Hey ! I want to join Your Family", color = Color(0xFF333333), fontSize = 12.sp)
+                                        } else {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                AsyncImage(model = familyInvitationData.optString("familyImage"), contentDescription = "Family DP",
+                                                    modifier = Modifier.size(48.dp).clip(RoundedCornerShape(10.dp)), contentScale = ContentScale.Crop)
+                                                Column(Modifier.weight(1f).padding(start = 9.dp)) {
+                                                    Text(familyInvitationData.optString("familyName").ifBlank { "Family" }, color = Color(0xFF111111), fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                                                    Text("ID: " + invitedFamilyId, color = Color(0xFF666666), fontSize = 10.sp, maxLines = 1)
+                                                }
+                                            }
+                                            Spacer(Modifier.height(8.dp))
+                                            Text("You are invited to join our Family", color = Color(0xFF333333), fontSize = 12.sp)
+                                            Spacer(Modifier.height(8.dp))
+                                            if (!mine) {
+                                                Box(Modifier.align(Alignment.End).clip(RoundedCornerShape(6.dp))
+                                                    .background(if (accepted) Color(0xFFE5E7EB) else Color.Black)
+                                                    .clickable(enabled = !accepted && invitedFamilyId.isNotBlank()) {
+                                                        chatScope.launch {
+                                                            runCatching { FamilyProfileApi.accept(invitedFamilyId, context) }
+                                                                .onSuccess { acceptedFamilyInvites = acceptedFamilyInvites + invitedFamilyId; familyInviteError = "" }
+                                                                .onFailure { familyInviteError = it.message ?: "Could not join Family." }
+                                                        }
+                                                    }.padding(horizontal = 13.dp, vertical = 6.dp)) {
+                                                    Text(if (accepted) "Accepted" else "Accept", color = if (accepted) Color.DarkGray else Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                                }
                                             }
                                         }
                                     }
