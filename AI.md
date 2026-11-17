@@ -1166,3 +1166,10 @@ Current documentation does not certify that all historical features are build-, 
 - Added a compact Family tag beside the profile display name for users who belong to a family, beside the family name on the Public Profile Family card, and alongside the existing Lv.1 badge row.
 - The tag visibility is driven by the existing resolved family membership state, so joined members and family creators both receive it. No backend or membership permissions were changed.
 - Status: **Implemented in repository**. Native APK build and visual positioning on device remain unverified.
+
+## 2026-11-17 — Family tag image and Public Profile family card visibility
+- Replaced the plain blue text Family badges with the requested Family tag image asset `public/IMG_20261117_130644.png` in the Lv.1 row and beside the family name in the Public Profile Family card.
+- Kept the user-name row free of a Family badge; the Lv.1 row is the profile-level tag placement.
+- Fixed the local-profile early-return path so a joined/created family saved in local family preferences can still hydrate and display the Family card when both remote and cached profile records are unavailable.
+- Family banner continues to use `public/IMG_20261117_130644.png`, with the family name and details overlaid at the center.
+- Build and device rendering still require verification.
