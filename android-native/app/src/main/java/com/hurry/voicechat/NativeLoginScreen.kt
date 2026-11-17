@@ -969,6 +969,7 @@ private fun syncHurryUser(user: JSONObject, context: android.content.Context) {
         "g0d2pU1SIcMdSAA9UjayDsIPjYv1" to "500002",
         "nB0zGbJu5yf7ZeHMt5pnMIhzjGB3" to "500003",
         "i8uHx21ZMOSL8tR2Gim14bDJ36E3" to "500004",
+        "t8wb0Hhj6aeArzxBhLdRkrzFOMz2" to "500005",
         "HUSxSvQnabgU029dWYt1TUV04hd2" to "100002",
         "ADqW31RGBMaosOzy0HiqexKSD7h1" to "100003",
         "100002" to "100002",
@@ -979,7 +980,7 @@ private fun syncHurryUser(user: JSONObject, context: android.content.Context) {
         "dCt4l5GbjnMpOeBywiDSH6XfCoj1" to "Zyora.IN",
         "a0yVqX9dEiS2ZZH6eQmpjs3QrUf1" to "500001"
     )
-    val officialIds = setOf("500001", "500002", "500003", "500004", "500005")
+    val officialIds = setOf("500001", "500002", "500003", "500004", "500005", "500005", "500005", "500005")
     val adminIds = setOf("700001", "700002", "700003")
     val accountHash = kotlin.math.abs(uid.hashCode().toLong())
     val generatedAccountId = when {
