@@ -158,7 +158,7 @@ fun PublicProfileScreen(
     val currentUserId = authPrefs.getString("accountId", "").orEmpty().ifBlank { authPrefs.getString("uid", "").orEmpty() }
     val familyPrefs = remember(context) { context.getSharedPreferences("hurry_user", Context.MODE_PRIVATE) }
     var hasOwnFamily by remember(familyPrefs, isOtherUser, targetUser?.uid, targetUser?.id, targetUser?.accountId) {
-        mutableStateOf(!isOtherUser && (familyPrefs.getBoolean("familyCreated", false) || familyPrefs.getString("familyCode", "").orEmpty().ifBlank { familyPrefs.getString("familyId", "").orEmpty() }.isNotBlank()))
+        mutableStateOf(false)
     }
     var ownFamilyName by remember(targetUser?.uid, targetUser?.id, targetUser?.accountId) {
         mutableStateOf(if (!isOtherUser) familyPrefs.getString("familyName", "").orEmpty() else "")
@@ -170,7 +170,7 @@ fun PublicProfileScreen(
         mutableStateOf(if (!isOtherUser) familyPrefs.getString("familyCreatorId", "").orEmpty().ifBlank { currentUserId } else "")
     }
     var ownFamilyCode by remember(targetUser?.uid, targetUser?.id, targetUser?.accountId) { mutableStateOf(if (!isOtherUser) familyPrefs.getString("familyCode", "").orEmpty().ifBlank { familyPrefs.getString("familyId", "").orEmpty() } else "") }
-    val hasFamilyMembership = hasOwnFamily || ownFamilyCode.isNotBlank() || (!isOtherUser && (familyPrefs.getBoolean("familyCreated", false) || familyPrefs.getString("familyCode", "").orEmpty().isNotBlank() || familyPrefs.getString("familyId", "").orEmpty().isNotBlank()))
+    val hasFamilyMembership = hasOwnFamily
     var ownFamilyMemberCount by remember { mutableIntStateOf(0) }
     val coroutineScope = rememberCoroutineScope()
     val targetPresenceId = targetUser?.accountId?.takeIf { it.isNotBlank() } ?: targetUser?.id.orEmpty()
@@ -358,17 +358,18 @@ fun PublicProfileScreen(
         if (remote == null && cached == null) {
             val localFamilyCode = familyPrefs.getString("familyCode", "").orEmpty().ifBlank { familyPrefs.getString("familyId", "").orEmpty() }
             if (!isOtherUser && (localFamilyCode.isNotBlank() || familyPrefs.getBoolean("familyCreated", false))) {
-                hasOwnFamily = true
                 ownFamilyCode = localFamilyCode
                 ownFamilyName = familyPrefs.getString("familyName", "").orEmpty()
                 ownFamilyImage = familyPrefs.getString("familyImage", "").orEmpty()
                 ownFamilyCreatorId = familyPrefs.getString("familyCreatorId", "").orEmpty().ifBlank { currentUserId }
+                hasOwnFamily = false
                 if (localFamilyCode.isNotBlank()) runCatching {
                     val family = FamilyProfileApi.load(localFamilyCode)
                     ownFamilyName = family.name
                     ownFamilyImage = family.image
                     ownFamilyCreatorId = family.ownerAccountId.ifBlank { ownFamilyCreatorId }
                     ownFamilyMemberCount = family.members.size
+                    hasOwnFamily = family.members.isNotEmpty()
                 }
             }
             return@LaunchedEffect
@@ -407,10 +408,8 @@ fun PublicProfileScreen(
             ?: merged.optString("familyId").takeIf { it.isNotBlank() && it != "null" }.orEmpty()
         val localFamilyCode = familyPrefs.getString("familyCode", "").orEmpty().ifBlank { familyPrefs.getString("familyId", "").orEmpty() }
         ownFamilyCode = remoteFamilyCode.ifBlank { localFamilyCode }
-        val remoteHasFamily = (merged.optBoolean("familyCreated", false) || ownFamilyCode.isNotBlank()) &&
-            (merged.optString("familyName").isNotBlank() || ownFamilyCode.isNotBlank())
         if (isOtherUser) {
-            hasOwnFamily = remoteHasFamily
+            hasOwnFamily = false
             ownFamilyName = merged.optString("familyName", "")
             ownFamilyImage = merged.optString("familyImage", "")
             ownFamilyCreatorId = merged.optString("familyCreatorId", targetUser?.accountId ?: targetUser?.id.orEmpty())
@@ -425,7 +424,7 @@ fun PublicProfileScreen(
         }
         if (ownFamilyCode.isNotBlank()) runCatching {
             val joinedFamily = FamilyProfileApi.load(ownFamilyCode)
-            hasOwnFamily = true
+            hasOwnFamily = joinedFamily.members.isNotEmpty()
             ownFamilyName = joinedFamily.name
             ownFamilyImage = joinedFamily.image
             ownFamilyCreatorId = joinedFamily.ownerAccountId.ifBlank { ownFamilyCreatorId }
