@@ -1159,3 +1159,10 @@ Current documentation does not certify that all historical features are build-, 
 - The Family home bottom card now resolves the signed-in user's current family from their profile and the Family API, instead of relying only on the local creator-only familyCreated flag. Joined members see the same Family bottom card and tapping its DP opens that family's profile.
 - Existing card artwork, spacing, and layout are preserved.
 - Native APK build and device verification are pending.
+
+
+## 2026-11-17 — Public Profile Family tag and centered family banner name
+- `PublicProfile.kt`: the family banner now uses `public/IMG_20261117_130644.png`; the current family name is overlaid at the exact center of the image, with the Family ID and member count beneath it. Existing family DP/frame placement and card dimensions are retained.
+- Added a compact Family tag beside the profile display name for users who belong to a family, beside the family name on the Public Profile Family card, and alongside the existing Lv.1 badge row.
+- The tag visibility is driven by the existing resolved family membership state, so joined members and family creators both receive it. No backend or membership permissions were changed.
+- Status: **Implemented in repository**. Native APK build and visual positioning on device remain unverified.
