@@ -893,7 +893,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                                 contentScale = ContentScale.Fit
                             )
                         }
-                        if (ownerId in setOf("100002", "100003", "500001", "500002", "500003", "500004", "500005", "500005", "500005")) {
+                        if (ownerId in setOf("100002", "100003", "500001", "500002", "500003", "500004", "500005", "500005", "500005", "500005", "500005", "500005")) {
                             Row(
                                 Modifier.fillMaxWidth().padding(top = 8.dp),
                                 horizontalArrangement = Arrangement.Center,
