@@ -1191,3 +1191,10 @@ Current documentation does not certify that all historical features are build-, 
 - Tapping the Family DP in the Family tab opens that family's existing Family Profile screen; Back returns to the Family tab.
 - Family leaderboard cards and the user's Family card now display the actual member list count out of 50 instead of a hardcoded 0/50.
 - No unrelated Family UI layout, artwork, colors, or spacing was changed.
+
+## 2026-11-17 — Room contribution cup sheet
+- Added `Roomcup.kt` with a 70vh black bottom sheet, Contribution / Online User tabs, Daily / Weekly selector, GMT+05:30 24-hour clock, and a vertical Top 1–20 contribution list (no podium layout).
+- Rank 1–3 use the supplied rank images; ranks 4–20 use white number text. Empty state reuses the Mine empty-state image and `No data` label. Bottom strip shows the current user's avatar, name, Lv.1 badge, coins, and rank.
+- Room cup icon opens the sheet; Online User tab hands off to the existing ActiveUsers sheet. The top active-user pill continues to open that same ActiveUsers sheet.
+- Zyora-Server records successful room gift amounts in `room_gift_contributions` and exposes `/api/rooms/:roomId/contributions` for rolling 24-hour / 7-day totals.
+- Status: source changes committed; Android build and live Render deployment still require verification.
