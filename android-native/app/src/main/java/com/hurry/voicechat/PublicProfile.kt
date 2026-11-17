@@ -106,6 +106,8 @@ fun LucidePublicProfileIcon(
     }
 }
 
+private const val PUBLIC_PROFILE_FAMILY_IMAGE_URL = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261117_130644.png"
+
 // --- DATA CLASSES ---
 
 data class TargetUser(
@@ -156,7 +158,7 @@ fun PublicProfileScreen(
     val currentUserId = authPrefs.getString("accountId", "").orEmpty().ifBlank { authPrefs.getString("uid", "").orEmpty() }
     val familyPrefs = remember(context) { context.getSharedPreferences("hurry_user", Context.MODE_PRIVATE) }
     var hasOwnFamily by remember(familyPrefs, isOtherUser, targetUser?.uid, targetUser?.id, targetUser?.accountId) {
-        mutableStateOf(!isOtherUser && (familyPrefs.getBoolean("familyCreated", false) || familyPrefs.getString("familyCode", "").orEmpty().isNotBlank()))
+        mutableStateOf(!isOtherUser && (familyPrefs.getBoolean("familyCreated", false) || familyPrefs.getString("familyCode", "").orEmpty().ifBlank { familyPrefs.getString("familyId", "").orEmpty() }.isNotBlank()))
     }
     var ownFamilyName by remember(targetUser?.uid, targetUser?.id, targetUser?.accountId) {
         mutableStateOf(if (!isOtherUser) familyPrefs.getString("familyName", "").orEmpty() else "")
@@ -167,7 +169,8 @@ fun PublicProfileScreen(
     var ownFamilyCreatorId by remember(targetUser?.uid, targetUser?.id, targetUser?.accountId) {
         mutableStateOf(if (!isOtherUser) familyPrefs.getString("familyCreatorId", "").orEmpty().ifBlank { currentUserId } else "")
     }
-    var ownFamilyCode by remember(targetUser?.uid, targetUser?.id, targetUser?.accountId) { mutableStateOf(if (!isOtherUser) familyPrefs.getString("familyCode", "").orEmpty() else "") }
+    var ownFamilyCode by remember(targetUser?.uid, targetUser?.id, targetUser?.accountId) { mutableStateOf(if (!isOtherUser) familyPrefs.getString("familyCode", "").orEmpty().ifBlank { familyPrefs.getString("familyId", "").orEmpty() } else "") }
+    val hasFamilyMembership = hasOwnFamily || ownFamilyCode.isNotBlank() || (!isOtherUser && (familyPrefs.getBoolean("familyCreated", false) || familyPrefs.getString("familyCode", "").orEmpty().isNotBlank() || familyPrefs.getString("familyId", "").orEmpty().isNotBlank()))
     var ownFamilyMemberCount by remember { mutableIntStateOf(0) }
     val coroutineScope = rememberCoroutineScope()
     val targetPresenceId = targetUser?.accountId?.takeIf { it.isNotBlank() } ?: targetUser?.id.orEmpty()
@@ -343,7 +346,7 @@ fun PublicProfileScreen(
                         "familyName" to familyPrefs.getString("familyName", "").orEmpty(),
                         "familyImage" to familyPhoto,
                         "familyCreatorId" to currentUserId,
-                        "familyCode" to familyPrefs.getString("familyCode", "").orEmpty(),
+                        "familyCode" to familyPrefs.getString("familyCode", "").orEmpty().ifBlank { familyPrefs.getString("familyId", "").orEmpty() },
                         "familyAnnouncement" to familyPrefs.getString("familyAnnouncement", "").orEmpty()
                     )
                 )
@@ -353,7 +356,7 @@ fun PublicProfileScreen(
             }
         }
         if (remote == null && cached == null) {
-            val localFamilyCode = familyPrefs.getString("familyCode", "").orEmpty()
+            val localFamilyCode = familyPrefs.getString("familyCode", "").orEmpty().ifBlank { familyPrefs.getString("familyId", "").orEmpty() }
             if (!isOtherUser && (localFamilyCode.isNotBlank() || familyPrefs.getBoolean("familyCreated", false))) {
                 hasOwnFamily = true
                 ownFamilyCode = localFamilyCode
@@ -402,7 +405,7 @@ fun PublicProfileScreen(
         liveProfileTags = merged
         val remoteFamilyCode = merged.optString("familyCode").takeIf { it.isNotBlank() && it != "null" }
             ?: merged.optString("familyId").takeIf { it.isNotBlank() && it != "null" }.orEmpty()
-        val localFamilyCode = familyPrefs.getString("familyCode", "").orEmpty()
+        val localFamilyCode = familyPrefs.getString("familyCode", "").orEmpty().ifBlank { familyPrefs.getString("familyId", "").orEmpty() }
         ownFamilyCode = remoteFamilyCode.ifBlank { localFamilyCode }
         val remoteHasFamily = (merged.optBoolean("familyCreated", false) || ownFamilyCode.isNotBlank()) &&
             (merged.optString("familyName").isNotBlank() || ownFamilyCode.isNotBlank())
@@ -629,9 +632,9 @@ fun PublicProfileScreen(
                                 modifier = Modifier.padding(end = 6.dp)
                             )
                         }
-                        if (hasOwnFamily) {
+                        if (hasFamilyMembership) {
                             AsyncImage(
-                                model = profileAsset("/IMG_20261117_130644.png"),
+                                model = PUBLIC_PROFILE_FAMILY_IMAGE_URL,
                                 contentDescription = "Family tag",
                                 contentScale = ContentScale.Fit,
                                 modifier = Modifier.height(18.dp).widthIn(max = 42.dp)
@@ -690,7 +693,7 @@ fun PublicProfileScreen(
                         Box(modifier = Modifier.padding(horizontal = 20.dp)) {
                             SectionHeader("Family")
                         }
-                        if (hasOwnFamily) {
+                        if (hasFamilyMembership) {
                             Box(
                                 Modifier
                                     .fillMaxWidth()
@@ -699,7 +702,7 @@ fun PublicProfileScreen(
                                     .clickable { if (ownFamilyCode.isNotBlank()) onOpenFamily(ownFamilyCode) }
                             ) {
                                 AsyncImage(
-                                    model = profileAsset("/IMG_20261117_130644.png"),
+                                    model = PUBLIC_PROFILE_FAMILY_IMAGE_URL,
                                     contentDescription = "Family background",
                                     modifier = Modifier.fillMaxSize(),
                                     contentScale = ContentScale.Fit
@@ -734,7 +737,7 @@ fun PublicProfileScreen(
                                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                                         Text(ownFamilyName, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                         AsyncImage(
-                                            model = profileAsset("/IMG_20261117_130644.png"),
+                                            model = PUBLIC_PROFILE_FAMILY_IMAGE_URL,
                                             contentDescription = "Family tag",
                                             contentScale = ContentScale.Fit,
                                             modifier = Modifier.height(18.dp).widthIn(max = 42.dp)
