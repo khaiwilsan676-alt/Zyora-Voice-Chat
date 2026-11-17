@@ -1726,7 +1726,7 @@ fun NativeChatScreen(
                                                 Text(roomInvitationData.optString("roomName").ifBlank { "Room" },
                                                     color = Color(0xFF111827), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
                                                 Spacer(Modifier.height(3.dp))
-                                                if (sharedRoomId in setOf("100002","100003","500002","500003","500004","500005")) {
+                                                if (sharedRoomId in setOf("100002","100003","500002","500003","500004","500005","500005")) {
                                                     AsyncImage(model = "https://zyora-voice-chat.vercel.app/IMG_20261101_125212.png",
                                                         contentDescription = "Account ID", modifier = Modifier.height(16.dp).widthIn(min = 22.dp, max = 30.dp), contentScale = ContentScale.Fit)
                                                 } else {
