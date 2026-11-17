@@ -136,8 +136,6 @@ fun Family(onBack: () -> Unit, onOpenFamily: (String) -> Unit = {}) {
     var myFamilyRecord by remember { mutableStateOf<FamilyRecord?>(null) }
     LaunchedEffect(Unit) { while (true) { runCatching { FamilyProfileApi.leaderboard() }.onSuccess { topFamilies = it }; delay(30000) } }
 
-    // Resolve the signed-in user's family from the server profile first, then local prefs.
-    // This covers both the family creator and users who joined an existing family.
     LaunchedEffect(familyAuthUid, familyAuthId, familyCreatorId) {
         val profileTarget = TargetUser(
             id = familyAuthId,
@@ -348,7 +346,6 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, ac
                 Row(Modifier.fillMaxWidth().statusBarsPadding().padding(start = 8.dp, end = 16.dp, top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Back", tint = Color.White, modifier = Modifier.size(28.dp)) }
                     Spacer(Modifier.weight(1f))
-                    // DEFAULT TOP RIGHT QUESTION MARK BACK!
                     FamilyQuestion(Modifier.size(20.dp).clickable(onClick = onRules))
                 }
 
@@ -401,7 +398,6 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, ac
                         
                         Row(Modifier.align(Alignment.CenterStart).padding(start = 60.dp, end = 26.dp), verticalAlignment = Alignment.CenterVertically) {
                             
-                            // LIST AVATARS TOP 1, 2, 3 (CIRCLE AVATAR WITH FRAME EXACTLY LIKE PODIUM!)
                             val listFrame = when(index) {
                                 0 -> "IMG_20261115_135339.png"
                                 1 -> "IMG_20261115_135356.png"
@@ -417,7 +413,6 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, ac
                                     Text("${family.members.size.coerceAtMost(50)}/50", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Medium)
                                 }
                             }
-                            // RIGHT CORNER COINS
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 AsyncImage(model = familyAsset("file_00000000e56882119c217d508b6733dc.png"), contentDescription = "Coins", modifier = Modifier.size(16.dp))
                                 Spacer(Modifier.height(2.dp))
@@ -435,7 +430,6 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, ac
                         
                         Row(Modifier.align(Alignment.CenterStart).padding(start = 65.dp, end = 26.dp), verticalAlignment = Alignment.CenterVertically) {
                             
-                            // SQUARE AVATARS FOR 4 TO 50 (SIZE BADI KAR DI HAI: 48.dp)
                             AsyncImage(model = family.image, contentDescription = family.name, modifier = Modifier.size(48.dp).clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.Crop)
                             
                             Column(Modifier.weight(1f).padding(start = 10.dp)) {
@@ -446,7 +440,6 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, ac
                                     Text("${family.members.size.coerceAtMost(50)}/50", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Medium)
                                 }
                             }
-                            // RIGHT CORNER COINS
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 AsyncImage(model = familyAsset("file_00000000e56882119c217d508b6733dc.png"), contentDescription = "Coins", modifier = Modifier.size(16.dp))
                                 Spacer(Modifier.height(2.dp))
@@ -482,7 +475,6 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, ac
                         }
                     }
                     
-                    // RANK POSITION SHOW (Right Corner in Bottom Bar)
                     val myRankIndex = topFamilies.indexOfFirst { it.name == familyName }
                     if (myRankIndex != -1) {
                         Text("Top ${myRankIndex + 1}", color = familyGold, fontSize = 14.sp, fontWeight = FontWeight.Black)
@@ -499,12 +491,10 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, ac
     }
 }
 
-// AVATAR IN CIRCLE BEHIND THE FRAME (Perfectly used for Top Podium & List 1,2,3 Cards too)
 @Composable
 private fun FamilyPodiumCard(family: FamilyRecord?, frame: String, size: androidx.compose.ui.unit.Dp, modifier: Modifier = Modifier, avatarSize: androidx.compose.ui.unit.Dp = size * 0.85f) {
     Box(modifier.size(size), contentAlignment = Alignment.Center) {
-        // AVATAR RENDERED FIRST SO IT IS BEHIND THE FRAME (SIZE INCREASED & CENTERED!)
-        Box(Modifier.align(Alignment.Center)) { // Yahan ekdam exact Center align kar diya
+        Box(Modifier.align(Alignment.Center)) { 
             if (family != null) {
                 AsyncImage(
                     model = family.image, 
@@ -522,7 +512,6 @@ private fun FamilyPodiumCard(family: FamilyRecord?, frame: String, size: android
             }
         }
         
-        // FRAME RENDERED ON TOP
         AsyncImage(model = familyAsset(frame), contentDescription = "Top family frame", modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
     }
 }
@@ -546,7 +535,6 @@ private fun FamilyTop(onBack: () -> Unit, onRules: () -> Unit, activeRank: Int, 
             Row(Modifier.fillMaxWidth().statusBarsPadding().padding(top = 8.dp, start = 8.dp, end = 16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Back", tint = Color.White, modifier = Modifier.size(28.dp)) }
                 Spacer(Modifier.weight(1f))
-                // QUESTION MARK ICON WAPAS PEHLE JAISA ADD KAR DIYA
                 FamilyQuestion(Modifier.size(20.dp).clickable(onClick = onRules))
             }
 
@@ -568,38 +556,81 @@ private fun FamilyTop(onBack: () -> Unit, onRules: () -> Unit, activeRank: Int, 
             
             Spacer(Modifier.height(20.dp))
 
-            RewardCard(title = "TOP 1 Reward", item1 = RewardItemData("Medal *7 days", "1000196572-background (1).mp4", "black"), item2 = RewardItemData("Top1 Tag *7 days", "", "tag"), item3 = RewardItemData("Vehicle *7 days", "IMG_20260918_141104.jpg", "vehicle", videoUrl = "gemini_generated_video_e407ad86~2.mp4"), frame = RewardItemData("Frames *7 days", "gemini_generated_video_0d259062.mp4", "green", isWinnerReward = true), familyFrame = RewardItemData("Family Frame *7 d", "", "tag"), roomTheme = RewardItemData("Room Theme *7 d", "IMG-20260914-WA0043.jpg", "tall"), onClick = onOpenModal, label = "TOP1 Family")
+            RewardCard(
+                title = "TOP 1 Reward",
+                row1 = listOf(
+                    RewardItemData("Frames 7 days", "gemini_generated_video_0d259062.mp4", "green", isWinnerReward = true),
+                    RewardItemData("Medal 7 days", "IMG_20261117_210225.png", "black"),
+                    RewardItemData("Vehicle 7 days", "IMG_20260918_141104.jpg", "vehicle", videoUrl = "gemini_generated_video_e407ad86~2.mp4")
+                ),
+                row2 = listOf(
+                    RewardItemData("Top1 Tag 7 days", "IMG_20261117_193617.png", "tag"),
+                    RewardItemData("", "", "empty"), // Empty Card
+                    RewardItemData("Room Theme 7 d", "IMG-20260914-WA0043.jpg", "tall")
+                ),
+                onClick = onOpenModal,
+                label = "TOP1 Family"
+            )
             Spacer(Modifier.height(24.dp))
-            RewardCard(title = "TOP 2 Reward", item1 = RewardItemData("Medal *7 days", "1000196573-background (1).mp4", "black"), item2 = RewardItemData("Top2 Tag *7 days", "", "tag"), item3 = RewardItemData("Vehicle *7 days", "IMG_20260919_010054.jpg", "vehicle", videoUrl = "VID_20260919_010017.mp4"), frame = RewardItemData("Frames *7 days", "gemini_generated_video_0d259062.mp4", "green", isWinnerReward = true), familyFrame = RewardItemData("Family Frame *7 d", "", "tag"), roomTheme = RewardItemData("Room Theme *7 d", "IMG-20260914-WA0045.jpg", "tall"), onClick = onOpenModal, label = "TOP2 Family")
+            RewardCard(
+                title = "TOP 2 Reward",
+                row1 = listOf(
+                    RewardItemData("Frames 7 days", "gemini_generated_video_0d259062.mp4", "green", isWinnerReward = true),
+                    RewardItemData("Medal 7 days", "IMG_20261117_210250.png", "black"),
+                    RewardItemData("Top2 Tag 7 days", "IMG_20261117_193700.png", "tag")
+                ),
+                row2 = listOf(
+                    RewardItemData("Room Theme 7 d", "IMG-20260914-WA0045.jpg", "tall")
+                ),
+                onClick = onOpenModal,
+                label = "TOP2 Family"
+            )
             Spacer(Modifier.height(24.dp))
-            RewardCard(title = "TOP 3 Reward", item1 = RewardItemData("Medal *7 days", "1000196574-background (1).mp4", "black"), item2 = RewardItemData("Top3 Tag *7 days", "", "tag"), item3 = RewardItemData("Vehicle *7 days", "IMG_20260919_222412.jpg", "mixed", videoUrl = "VID_20260919_222502.mp4"), frame = RewardItemData("Frames *7 days", "gemini_generated_video_123c050b~2.mp4", "green", isWinnerReward = true), familyFrame = RewardItemData("Family Frame *7 d", "", "tag"), roomTheme = RewardItemData("Room Theme *7 d", "IMG-20260914-WA0046.jpg", "tall"), onClick = onOpenModal, label = "TOP3 Family")
+            RewardCard(
+                title = "TOP 3 Reward",
+                row1 = listOf(
+                    RewardItemData("Frames 7 days", "gemini_generated_video_123c050b~2.mp4", "green", isWinnerReward = true),
+                    RewardItemData("Medal 7 days", "IMG_20261117_210313.png", "black"),
+                    RewardItemData("Top3 Tag 7 days", "IMG_20261117_193640.png", "tag")
+                ),
+                row2 = listOf(
+                    RewardItemData("Room Theme 7 d", "IMG-20260914-WA0046.jpg", "tall")
+                ),
+                onClick = onOpenModal,
+                label = "TOP3 Family"
+            )
             Spacer(Modifier.height(16.dp))
-            RewardCard(title = "TOP 4 TO 10\nReward", item1 = RewardItemData("Medal *3 days", "", "tag"), item2 = RewardItemData("Frames *3 days", "gemini_generated_video_0d259062.mp4", "green", isWinnerReward = true), item3 = RewardItemData("Vehicle *3 days", "IMG_20260919_222041.jpg", "mixed", videoUrl = "VID_20260919_222549.mp4"), frame = null, familyFrame = null, roomTheme = null, onClick = onOpenModal, label = "TOP4-10 Family")
+            RewardCard(
+                title = "TOP 4 TO 10\nReward",
+                row1 = listOf(
+                    RewardItemData("Frames 3 days", "gemini_generated_video_0d259062.mp4", "green", isWinnerReward = true),
+                    RewardItemData("Medal 3 days", "IMG_20261117_210200.png", "tag")
+                ),
+                onClick = onOpenModal,
+                label = "TOP4-10 Family"
+            )
             Spacer(Modifier.height(60.dp))
         }
     }
 }
 
 @Composable
-private fun RewardCard(title: String, item1: RewardItemData, item2: RewardItemData, item3: RewardItemData, frame: RewardItemData?, familyFrame: RewardItemData?, roomTheme: RewardItemData?, onClick: (String, String, Boolean, String) -> Unit, label: String) {
+private fun RewardCard(title: String, row1: List<RewardItemData>, row2: List<RewardItemData> = emptyList(), onClick: (String, String, Boolean, String) -> Unit, label: String) {
     Box(Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
         Box(Modifier.fillMaxWidth().padding(top = 20.dp).background(familyCardBg, RoundedCornerShape(12.dp)).border(2.dp, familyGold, RoundedCornerShape(12.dp)).padding(top = 40.dp, bottom = 24.dp)) {
             Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                    RewardItemBox(item1, onClick, label)
-                    RewardItemBox(item2, onClick, label)
-                    RewardItemBox(item3, onClick, label)
-                }
-                if (frame != null && familyFrame != null) {
-                    Spacer(Modifier.height(8.dp))
-                    Row(Modifier.fillMaxWidth().offset(y = (-8).dp), horizontalArrangement = Arrangement.Center) {
-                        Box(Modifier.weight(1f), contentAlignment = Alignment.Center) { RewardItemBox(frame, onClick, label) }
-                        Box(Modifier.weight(1f), contentAlignment = Alignment.Center) { RewardItemBox(familyFrame, onClick, label) }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+                    row1.forEach { item ->
+                        RewardItemBox(item, onClick, label)
                     }
                 }
-                if (roomTheme != null) {
+                if (row2.isNotEmpty()) {
                     Spacer(Modifier.height(16.dp))
-                    RewardItemBox(roomTheme, onClick, label)
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+                        row2.forEach { item ->
+                            RewardItemBox(item, onClick, label)
+                        }
+                    }
                 }
             }
         }
@@ -614,7 +645,9 @@ private fun RewardCard(title: String, item1: RewardItemData, item2: RewardItemDa
 private fun RewardItemBox(item: RewardItemData, onClick: (String, String, Boolean, String) -> Unit, label: String) {
     val clickUrl = item.videoUrl.ifBlank { item.thumbnail }
     val isTall = item.type == "tall"
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(if (isTall) 140.dp else 90.dp).clickable { if (clickUrl.isNotBlank()) onClick(clickUrl, label, item.isWinnerReward, item.type) }) {
+    val boxWidth = if (isTall) 140.dp else 90.dp
+    
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(boxWidth).clickable { if (clickUrl.isNotBlank()) onClick(clickUrl, label, item.isWinnerReward, item.type) }) {
         Box(Modifier.fillMaxWidth().aspectRatio(if (isTall) 0.45f else 1f).clip(RoundedCornerShape(12.dp)).background(Brush.verticalGradient(listOf(Color(0xFF8C3A19), Color(0xFF5C1A06))), RoundedCornerShape(12.dp)).border(2.dp, familyGold, RoundedCornerShape(12.dp)).padding(4.dp), contentAlignment = Alignment.Center) {
             Box(Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp))) {
                 if (item.thumbnail.isNotBlank()) {
@@ -627,8 +660,10 @@ private fun RewardItemBox(item: RewardItemData, onClick: (String, String, Boolea
                 }
             }
         }
-        Spacer(Modifier.height(6.dp))
-        Text(item.title, color = Color(0xFFFDE68A), fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 4.dp))
+        if (item.title.isNotBlank()) {
+            Spacer(Modifier.height(2.dp))
+            Text(item.title, color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, modifier = Modifier.offset(y = (-3).dp))
+        }
     }
 }
 
@@ -801,7 +836,6 @@ private fun FamilyRules(onClose:()->Unit) {
     }
 }
 
-// ORIGINAL QUESTION MARK ICON WAPAS KAR DIYA
 @Composable
 private fun FamilyQuestion(modifier:Modifier=Modifier) {
     Canvas(modifier) {
