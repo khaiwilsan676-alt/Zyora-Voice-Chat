@@ -207,12 +207,12 @@ private suspend fun fetchWalletAgentSellers(): List<WalletAgentSeller> = withCon
             JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
         } finally { connection.disconnect() }
         val users = response.optJSONArray("users") ?: return@runCatching emptyList()
-        val allowedSellerIds = setOf("100002", "100003")
         val rows = (0 until users.length()).mapNotNull { index ->
             val user = users.optJSONObject(index) ?: return@mapNotNull null
             val uid = user.optString("uid").ifBlank { user.optString("id") }
             val account = user.optString("accountId").ifBlank { user.optString("accountNumber") }
-            if (uid.isBlank() || account !in allowedSellerIds) return@mapNotNull null
+            // /api/users?sellers=true returns only users with Seller Center active.
+            if (uid.isBlank() || account.isBlank()) return@mapNotNull null
             WalletAgentSeller(
                 uid = uid,
                 accountId = account,
@@ -488,7 +488,7 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int, onChat: (Strin
                             }
                         }
                     )
-                    2 -> AgentContent(onChat = onChat)
+                    2 -> AgentContent(onChat = onChat, currentUserId = walletUserId)
                 }
 
                 Spacer(Modifier.height(if (tab == 1) 100.dp else 24.dp))
@@ -727,14 +727,14 @@ private fun DiamondsContent(
 // UI UPDATED AGENT CONTENT (COMPACT LIKE IMAGE) 
 // ═══════════════════════════════════════════════════════
 @Composable
-private fun AgentContent(onChat: (String, String, String) -> Unit) {
+private fun AgentContent(onChat: (String, String, String) -> Unit, currentUserId: String) {
     val context = LocalContext.current
     var sellers by remember { mutableStateOf<List<WalletAgentSeller>>(emptyList()) }
     var onlineById by remember { mutableStateOf<Map<String, Boolean>>(emptyMap()) }
     var loaded by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        sellers = fetchWalletAgentSellers().filter { it.accountId == "100002" || it.accountId == "100003" }
+        sellers = fetchWalletAgentSellers()
         loaded = true
     }
 
@@ -824,7 +824,8 @@ private fun AgentContent(onChat: (String, String, String) -> Unit) {
                                     .clip(RoundedCornerShape(50))
                                     .background(if (isOnline) Color(0xFF0044FF) else Color(0xFFD1D5DB))
                                     .border(1.dp, Color.White, RoundedCornerShape(50))
-                                    .padding(horizontal = 4.dp, vertical = 0.dp), // Patli si padding
+                                    .height(10.dp)
+                                    .padding(horizontal = 4.dp, vertical = 0.dp),
                                 fontSize = 8.sp, // Choti font
                                 color = Color.White,
                                 fontWeight = FontWeight.Bold
@@ -853,7 +854,7 @@ private fun AgentContent(onChat: (String, String, String) -> Unit) {
                                 contentScale = ContentScale.Fit
                             )
                             Text(
-                                seller.dealLast30Days.ifBlank { "—" },
+                                String.format(java.util.Locale.US, "%,d", seller.coins),
                                 fontSize = 12.sp, color = Color(0xFF6B7280), maxLines = 1
                             )
                         }
@@ -866,7 +867,18 @@ private fun AgentContent(onChat: (String, String, String) -> Unit) {
                         modifier = Modifier
                             .size(36.dp) 
                             .clip(RoundedCornerShape(50))
-                            .clickable { onChat(seller.uid, seller.name, seller.image) },
+                            .clickable {
+                                val ownIds = setOf(
+                                    currentUserId.trim(),
+                                    context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE)
+                                        .getString("uid", "").orEmpty().trim(),
+                                    context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE)
+                                        .getString("accountId", "").orEmpty().trim()
+                                ).filter { it.isNotBlank() }.toSet()
+                                if (seller.uid !in ownIds && seller.accountId !in ownIds) {
+                                    onChat(seller.uid, seller.name, seller.image)
+                                }
+                            },
                         contentScale = ContentScale.Crop
                     )
                 }
