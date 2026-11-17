@@ -179,7 +179,7 @@ fun OtherSocialPages(type: String, onBack: () -> Unit) {
                                 }
                                 Row(verticalAlignment=Alignment.CenterVertically) {
                                     val account=person.accountId.ifBlank{person.id}
-                                    if(account in setOf("100002","100003","500001","500002","500003","500004","500005","500005")) {
+                                    if(account in setOf("100002","100003","500001","500002","500003","500004","500005","500005","500005","500005")) {
                                         AsyncImage(model="https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261101_125212.png",contentDescription="ID",modifier=Modifier.height(18.dp).widthIn(max=28.dp),contentScale=ContentScale.Fit)
                                         Text(account,color=Color(0xFF6B7280),fontSize=11.sp)
                                     } else Text("ID: $account",color=Color(0xFF6B7280),fontSize=11.sp)
