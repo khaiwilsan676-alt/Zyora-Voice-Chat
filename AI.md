@@ -1145,3 +1145,10 @@ Current documentation does not certify that all historical features are build-, 
 - The edit form saves the family name, hosted DP, and announcement through the owner-authenticated MongoDB update endpoint; successful changes update local profile preferences and reload the page.
 - The backend family creation path already synchronizes `familyCode` and `familyAnnouncement` onto the owner's public-profile document; joined members receive the same fields on acceptance.
 - Latest APK workflow run: #323, associated with commit `ad258d3`; build result is pending at the time of this note.
+
+
+## 2026-11-17 — Family Admin tools, member visibility and Zyora System requests
+- Family Admins now see the Add Members action and can search/invite users; owner and admins can review and approve family applications.
+- The Apply action is hidden when the viewer is already listed as a member of that family. Apply and Invite actions use matching compact blue button styling.
+- Family invite and apply notifications are delivered in the dedicated Zyora System conversation, not a user-to-user personal chat. Both involved accounts receive targeted system updates; approved applicants also receive a Zyora System confirmation. Offline delivery uses the existing Redis pending-message queue.
+- Only the family owner and Admins receive member coin contribution values. Other viewers receive member records without the coinsSent field; the profile continues to show masked values.
