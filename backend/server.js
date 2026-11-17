@@ -891,6 +891,7 @@ app.get("/api/users", async (req, res) => {
       "500002": "g0d2pU1SIcMdSAA9UjayDsIPjYv1",
       "500003": "nB0zGbJu5yf7ZeHMt5pnMIhzjGB3",
       "500004": "i8uHx21ZMOSL8tR2Gim14bDJ36E3",
+      "500005": "t8wb0Hhj6aeArzxBhLdRkrzFOMz2",
     };
     const OFFICIAL_ACCOUNT_ID_BY_UID = Object.fromEntries(
       Object.entries(OFFICIAL_UID_BY_ACCOUNT_ID).map(([account, officialUid]) => [officialUid, account])
