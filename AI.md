@@ -1184,3 +1184,10 @@ Current documentation does not certify that all historical features are build-, 
 - `PublicProfile.kt`: load `IMG_20261117_130644.png` for both the Lv.1-row Family tag and the Family banner/tag from the repository's raw GitHub public asset URL, matching the working asset-loading pattern used by the Family screens instead of relying on the Vercel deployment.
 - Family tag and Family banner visibility now also recognize the resolved family code and legacy local `familyId`/`familyCreated` values, so an existing member is not hidden solely because the transient `hasOwnFamily` state has not hydrated yet. Other users' profiles do not inherit the viewer's local membership flags.
 - The requested Family banner image remains fitted without changing the existing card size or layout. APK build and device image-rendering verification remain pending.
+
+
+## 2026-11-17 — Joined Family navigation and member counts
+- The Family tab now resolves the signed-in user's family from the server profile, with local family preferences as fallback, so both creators and joined members receive the same Family card.
+- Tapping the Family DP in the Family tab opens that family's existing Family Profile screen; Back returns to the Family tab.
+- Family leaderboard cards and the user's Family card now display the actual member list count out of 50 instead of a hardcoded 0/50.
+- No unrelated Family UI layout, artwork, colors, or spacing was changed.
