@@ -66,8 +66,6 @@ fun RoomCupSheet(roomId:String,userId:String,userName:String,userImage:String,on
                 CupTab("Contribution",true){}
                 CupTab("Online User",false,onOnline)
             }
-            Spacer(Modifier.height(9.dp))
-            Box(Modifier.width(30.dp).height(3.dp).clip(CircleShape).background(Color.White))
             Spacer(Modifier.height(16.dp))
             Row(Modifier.fillMaxWidth().padding(horizontal=13.dp),verticalAlignment=Alignment.CenterVertically) {
                 Row(Modifier.weight(1f).clip(CircleShape).background(Color(0xFF242424)).padding(3.dp)) {
@@ -122,5 +120,10 @@ fun RoomCupSheet(roomId:String,userId:String,userName:String,userImage:String,on
         }
     }
 }
-@Composable private fun CupTab(label:String,selected:Boolean,onClick:()->Unit){Text(label,Modifier.clickable{onClick()},color=if(selected)Color.White else Color.Gray,fontSize=14.sp,fontWeight=if(selected)FontWeight.SemiBold else FontWeight.Normal)}
+@Composable private fun CupTab(label:String,selected:Boolean,onClick:()->Unit){
+    Column(Modifier.clickable{onClick()},horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(7.dp)) {
+        Text(label,color=if(selected)Color.White else Color.Gray,fontSize=14.sp,fontWeight=if(selected)FontWeight.SemiBold else FontWeight.Normal)
+        Box(Modifier.width(30.dp).height(3.dp).clip(CircleShape).background(if(selected)Color.White else Color.Transparent))
+    }
+}
 @Composable private fun CupPeriod(label:String,selected:Boolean,modifier:Modifier,onClick:()->Unit){Box(modifier.height(29.dp).clip(CircleShape).background(if(selected)Color.White else Color.Transparent).clickable{onClick()},contentAlignment=Alignment.Center){Text(label,color=if(selected)Color.Black else Color.Gray,fontSize=11.sp,fontWeight=if(selected)FontWeight.SemiBold)}}
