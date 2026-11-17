@@ -556,14 +556,6 @@ fun PublicProfileScreen(
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             Text(displayName, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.Black)
-                            if (hasOwnFamily) {
-                                Box(
-                                    modifier = Modifier.clip(RoundedCornerShape(5.dp)).background(Color(0xFF2878D8)).padding(horizontal = 7.dp, vertical = 3.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text("Family", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-                                }
-                            }
 
                             Box(
                                 modifier = Modifier
