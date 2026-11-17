@@ -279,6 +279,17 @@ fun Family(onBack: () -> Unit) {
 // --------------------------------------------------------
 @Composable
 private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, activeRank: Int, onRank: (Int) -> Unit, onCreate: () -> Unit, familyCreated: Boolean, familyName: String, familyImage: String, familyCreatorId: String, topFamilies: List<FamilyRecord>) {
+    val context = LocalContext.current
+    val ownFamilyCode = remember { context.getSharedPreferences("hurry_user", Context.MODE_PRIVATE).getString("familyCode", "").orEmpty() }
+    var ownFamilyMemberCount by remember(ownFamilyCode) { mutableIntStateOf(0) }
+    LaunchedEffect(familyCreated, ownFamilyCode) {
+        if (familyCreated && ownFamilyCode.isNotBlank()) {
+            while (true) {
+                runCatching { FamilyProfileApi.memberCount(ownFamilyCode) }.onSuccess { ownFamilyMemberCount = it }
+                delay(30000)
+            }
+        }
+    }
     val scrollState = rememberScrollState()
     val activeFilter = null
     val inactiveFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
@@ -365,7 +376,7 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, ac
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     AsyncImage(model = familyAsset("IMG_20261116_162146.png"), contentDescription = "Members", modifier = Modifier.size(10.dp))
                                     Spacer(Modifier.width(2.dp))
-                                    Text("0/50", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Medium)
+                                    Text("${family.members.size}/50", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Medium)
                                 }
                             }
                             // RIGHT CORNER COINS
@@ -394,7 +405,7 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, ac
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     AsyncImage(model = familyAsset("IMG_20261116_162146.png"), contentDescription = "Members", modifier = Modifier.size(10.dp))
                                     Spacer(Modifier.width(2.dp))
-                                    Text("0/50", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Medium)
+                                    Text("${family.members.size}/50", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Medium)
                                 }
                             }
                             // RIGHT CORNER COINS
@@ -428,7 +439,7 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, ac
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             AsyncImage(model = familyAsset("IMG_20261116_162146.png"), contentDescription = "Members", modifier = Modifier.size(12.dp))
                             Spacer(Modifier.width(4.dp))
-                            Text("0/50", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                            Text("$ownFamilyMemberCount/50", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium)
                         }
                     }
                     
