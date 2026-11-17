@@ -406,8 +406,9 @@ fun PublicProfileScreen(
         liveProfileTags = merged
         val remoteFamilyCode = merged.optString("familyCode").takeIf { it.isNotBlank() && it != "null" }
             ?: merged.optString("familyId").takeIf { it.isNotBlank() && it != "null" }.orEmpty()
-        val localFamilyCode = familyPrefs.getString("familyCode", "").orEmpty().ifBlank { familyPrefs.getString("familyId", "").orEmpty() }
-        ownFamilyCode = remoteFamilyCode.ifBlank { localFamilyCode }
+        val localFamilyCode = if (isOtherUser) "" else familyPrefs.getString("familyCode", "").orEmpty().ifBlank { familyPrefs.getString("familyId", "").orEmpty() }
+        // Never borrow the signed-in user's family ID while viewing someone else's profile.
+        ownFamilyCode = if (isOtherUser) remoteFamilyCode else remoteFamilyCode.ifBlank { localFamilyCode }
         if (isOtherUser) {
             hasOwnFamily = false
             ownFamilyName = merged.optString("familyName", "")
@@ -428,11 +429,36 @@ fun PublicProfileScreen(
         hasOwnFamily = false
         if (ownFamilyCode.isNotBlank()) runCatching {
             val joinedFamily = FamilyProfileApi.load(ownFamilyCode)
+            val targetIds = if (isOtherUser) {
+                setOf(targetUser?.uid.orEmpty(), targetUser?.accountId.orEmpty(), targetUser?.id.orEmpty(), targetUser?.displayAccountNumber.orEmpty())
+                    .filter { it.isNotBlank() && it != "null" }.toSet()
+            } else {
+                setOf(authPrefs.getString("uid", "").orEmpty(), currentUserId, authPrefs.getString("id", "").orEmpty())
+                    .filter { it.isNotBlank() && it != "null" }.toSet()
+            }
+            val isFamilyMember = joinedFamily.members.any { member ->
+                member.uid in targetIds || member.accountId in targetIds
+            } || (joinedFamily.ownerUid in targetIds || joinedFamily.ownerAccountId in targetIds)
             ownFamilyMemberCount = joinedFamily.members.size
-            hasOwnFamily = joinedFamily.members.isNotEmpty()
-            ownFamilyName = joinedFamily.name
-            ownFamilyImage = joinedFamily.image
-            ownFamilyCreatorId = joinedFamily.ownerAccountId.ifBlank { ownFamilyCreatorId }
+            hasOwnFamily = isFamilyMember
+            if (isFamilyMember) {
+                ownFamilyName = joinedFamily.name
+                ownFamilyImage = joinedFamily.image
+                ownFamilyCreatorId = joinedFamily.ownerAccountId.ifBlank { ownFamilyCreatorId }
+            } else {
+                ownFamilyCode = ""
+                ownFamilyName = ""
+                ownFamilyImage = ""
+                ownFamilyMemberCount = 0
+            }
+        }.onFailure {
+            hasOwnFamily = false
+            if (isOtherUser) {
+                ownFamilyCode = ""
+                ownFamilyName = ""
+                ownFamilyImage = ""
+                ownFamilyMemberCount = 0
+            }
         }
         merged.optString("name").takeIf { it.isNotBlank() && it != "null" }?.let { userName = it }
         
