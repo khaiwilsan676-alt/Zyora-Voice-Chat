@@ -126,17 +126,16 @@ fun FamilyProfile(familyId:String,onBack:()->Unit,onOpenChat:(String,String,Stri
                         if(isOwner)IconButton(onClick={editDialog=true}){Icon(Icons.Default.Edit,"Edit Family",tint=Color.White)}
                     }
                     Row(Modifier.align(Alignment.BottomStart).padding(start=16.dp,bottom=27.dp),verticalAlignment=Alignment.CenterVertically){
-                        AsyncImage(model=family?.image?.takeIf{it.isNotBlank()}?:FAMILY_ASSETS+"IMG_20261116_162146.png",contentDescription="Family DP",modifier=Modifier.size(76.dp).clip(RoundedCornerShape(12.dp)),contentScale=ContentScale.Crop)
+                        AsyncImage(model=family?.image?.takeIf{it.isNotBlank()}?:FAMILY_ASSETS+"IMG_20261116_162146.png",contentDescription="Family DP",modifier=Modifier.size(88.dp).clip(RoundedCornerShape(12.dp)),contentScale=ContentScale.Crop)
                         Column(Modifier.weight(1f).padding(start=12.dp),verticalArrangement=Arrangement.spacedBy(4.dp)){
-                            Text(family?.name?:"Family",color=Color.White,fontSize=18.sp,fontWeight=FontWeight.Bold,maxLines=1)
-                            Text("Family ID: ${family?.id?:familyId}",color=Color.White,fontSize=12.sp)
-                            Box(Modifier.width(116.dp).height(30.dp)){
-                                AsyncImage(model=FAMILY_ASSETS+"file_000000009d1081f59878648feb821b5e.png",contentDescription="Family member capacity",modifier=Modifier.fillMaxSize(),contentScale=ContentScale.FillBounds)
-                                Row(Modifier.align(Alignment.Center).padding(horizontal=7.dp),verticalAlignment=Alignment.CenterVertically){
-                                    AsyncImage(model=FAMILY_ASSETS+"IMG_20261116_162146.png",contentDescription="Members",modifier=Modifier.size(15.dp))
-                                    Text(" ${family?.members?.size?:0}/50",color=Color.White,fontSize=11.sp,fontWeight=FontWeight.Bold)
+                            Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                                Text(family?.name?:"Family",color=Color.White,fontSize=18.sp,fontWeight=FontWeight.Bold,maxLines=1)
+                                Box(Modifier.width(116.dp).height(30.dp)){
+                                    AsyncImage(model=FAMILY_ASSETS+"file_000000009d1081f59878648feb821b5e.png",contentDescription="Family member capacity",modifier=Modifier.fillMaxSize(),contentScale=ContentScale.FillBounds)
+                                    Text("${family?.members?.size?:0}/50",color=Color.White,fontSize=11.sp,fontWeight=FontWeight.Bold,modifier=Modifier.align(Alignment.Center))
                                 }
                             }
+                            Text("Family ID: ${family?.id?:familyId}",color=Color.White,fontSize=12.sp)
                         }
                     }
                 }
