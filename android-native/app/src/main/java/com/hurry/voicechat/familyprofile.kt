@@ -131,8 +131,10 @@ fun FamilyProfile(familyId:String,onBack:()->Unit,onOpenChat:(String,String,Stri
                             Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
                                 Text(family?.name?:"Family",color=Color.White,fontSize=18.sp,fontWeight=FontWeight.Bold,maxLines=1)
                                 Box(Modifier.width(116.dp).height(30.dp)){
-                                    AsyncImage(model=FAMILY_ASSETS+"file_000000009d1081f59878648feb821b5e.png",contentDescription="Family member capacity",modifier=Modifier.fillMaxSize(),contentScale=ContentScale.FillBounds)
-                                    Text("${family?.members?.size?:0}/50",color=Color.White,fontSize=11.sp,fontWeight=FontWeight.Bold,modifier=Modifier.align(Alignment.Center))
+                                    Row(Modifier.align(Alignment.Center),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){
+                                        AsyncImage(model=FAMILY_ASSETS+"IMG_20261116_162146.png",contentDescription="Members",modifier=Modifier.size(15.dp))
+                                        Text("${family?.members?.size?:0}/50",color=Color.White,fontSize=11.sp,fontWeight=FontWeight.Bold)
+                                    }
                                 }
                             }
                             Text("Family ID: ${family?.id?:familyId}",color=Color.White,fontSize=12.sp)
