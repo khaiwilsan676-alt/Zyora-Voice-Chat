@@ -137,7 +137,7 @@ fun InviteFriends(onBack: (() -> Unit)? = null, onClose: (() -> Unit)? = null) {
     val userPrefs = remember { context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE) }
     val code = userPrefs.getString("accountId", null)?.takeIf { it.isNotBlank() } ?: userPrefs.getString("uid", null)?.takeIf { it.isNotBlank() }.orEmpty()
     val inviteIdToken = userPrefs.getString("idToken", "").orEmpty()
-    val inviteLink = "https://github.com/khaiwilsan676-alt/Zyora-Voice-Chat/releases/latest"
+    val inviteLink = "https://zyora-voice-chat.vercel.app/download"
     
     var isSheetOpen by remember { mutableStateOf(false) }
     var copied by remember { mutableStateOf(false) }
