@@ -765,7 +765,7 @@ internal fun FamilyCreate(onBack:()->Unit, name:String, onName:(String)->Unit, a
                     Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(Color(0xFFFFD700), Color(0xFFD2691E))), RoundedCornerShape(50)), contentAlignment = Alignment.Center) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(if (busy) (if (editMode) "Saving..." else "Creating family...") else (if (editMode) "Save Changes" else "Create with 30000000 Coins "), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                            if (!busy) {
+                            if (!busy && !editMode) {
                                 AsyncImage(
                                     model = familyAsset("file_00000000e56882119c217d508b6733dc.png"),
                                     contentDescription = "Coins",
