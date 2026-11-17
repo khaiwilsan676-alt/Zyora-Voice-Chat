@@ -1152,3 +1152,10 @@ Current documentation does not certify that all historical features are build-, 
 - The Apply action is hidden when the viewer is already listed as a member of that family. Apply and Invite actions use matching compact blue button styling.
 - Family invite and apply notifications are delivered in the dedicated Zyora System conversation, not a user-to-user personal chat. Both involved accounts receive targeted system updates; approved applicants also receive a Zyora System confirmation. Offline delivery uses the existing Redis pending-message queue.
 - Only the family owner and Admins receive member coin contribution values. Other viewers receive member records without the coinsSent field; the profile continues to show masked values.
+
+
+## 2026-11-17 — Joined members' Family cards
+- Public Profile resolves a user's Family from their stored familyCode or familyId, then loads the authoritative family record. Joined members now display the same existing Family card as the creator: family DP, family name, creator's account ID as Family ID, and live member count.
+- The Family home bottom card now resolves the signed-in user's current family from their profile and the Family API, instead of relying only on the local creator-only familyCreated flag. Joined members see the same Family bottom card and tapping its DP opens that family's profile.
+- Existing card artwork, spacing, and layout are preserved.
+- Native APK build and device verification are pending.
