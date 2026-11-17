@@ -29,6 +29,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
@@ -79,6 +82,7 @@ private val familyDark = Color(0xFF1A0D06)
 private val familyBrown = Color(0xFF2A1610)
 private val familyCardBg = Color(0xFF3B0C06)
 
+// ZAHO TO ZYORA CHANGED HERE
 private val familyRules = listOf(
     "1. The top 10 families in the weekly family rankings will receive various rewards. Rewards are distributed every Sunday at 5:30 AM (GMT+5:30).",
     "2. There is no need to wait for official approval.",
@@ -87,8 +91,8 @@ private val familyRules = listOf(
     "5. Each user can join only one family. Regular family members can leave the family at any time without the leader's approval.",
     "6. The family leader has the authority to remove other members from the family at any time without the removed member's consent. The family leader can also disband the family freely without official approval.",
     "7. Upon the disbanding of the family, all members will immediately leave the original family.",
-    "8. Family rankings reflect the family's strength. Zaho determines family rankings based on the total spending of all family members.",
-    "9. Any benefits or relationships formed within the family are the result of voluntary actions taken by the members themselves and have no connection to Zaho."
+    "8. Family rankings reflect the family's strength. Zyora determines family rankings based on the total spending of all family members.",
+    "9. Any benefits or relationships formed within the family are the result of voluntary actions taken by the members themselves and have no connection to Zyora."
 )
 
 private data class RewardItemData(
@@ -556,27 +560,32 @@ private fun FamilyTop(onBack: () -> Unit, onRules: () -> Unit, activeRank: Int, 
             
             Spacer(Modifier.height(20.dp))
 
+            // TOP 1
             RewardCard(
                 title = "TOP 1 Reward",
                 row1 = listOf(
-                    RewardItemData("Frames 7 days", "gemini_generated_video_0d259062.mp4", "green", isWinnerReward = true),
-                    RewardItemData("Medal 7 days", "IMG_20261117_210225.png", "black"),
+                    RewardItemData("Medal 7 days", "IMG_20261117_210225.png", "medal"),
+                    RewardItemData("Top1 Tag 7 days", "IMG_20261117_193617.png", "tag"),
                     RewardItemData("Vehicle 7 days", "IMG_20260918_141104.jpg", "vehicle", videoUrl = "gemini_generated_video_e407ad86~2.mp4")
                 ),
                 row2 = listOf(
-                    RewardItemData("Top1 Tag 7 days", "IMG_20261117_193617.png", "tag"),
-                    RewardItemData("", "", "empty"), // Empty Card
+                    RewardItemData("Frames 7 days", "IMG_20261117_222458.png", "green", videoUrl = "1000235551-background.mp4", isWinnerReward = true),
+                    RewardItemData("5 Lakh coins", "file_00000000b2d481fd8cd233482dbeb9ef.png", "coins")
+                ),
+                row3 = listOf(
                     RewardItemData("Room Theme 7 d", "IMG-20260914-WA0043.jpg", "tall")
                 ),
                 onClick = onOpenModal,
                 label = "TOP1 Family"
             )
             Spacer(Modifier.height(24.dp))
+            
+            // TOP 2
             RewardCard(
                 title = "TOP 2 Reward",
                 row1 = listOf(
-                    RewardItemData("Frames 7 days", "gemini_generated_video_0d259062.mp4", "green", isWinnerReward = true),
-                    RewardItemData("Medal 7 days", "IMG_20261117_210250.png", "black"),
+                    RewardItemData("Frames 7 days", "IMG_20261117_222526.png", "green", videoUrl = "1000235550-background.mp4", isWinnerReward = true),
+                    RewardItemData("Medal 7 days", "IMG_20261117_210250.png", "medal"),
                     RewardItemData("Top2 Tag 7 days", "IMG_20261117_193700.png", "tag")
                 ),
                 row2 = listOf(
@@ -586,11 +595,13 @@ private fun FamilyTop(onBack: () -> Unit, onRules: () -> Unit, activeRank: Int, 
                 label = "TOP2 Family"
             )
             Spacer(Modifier.height(24.dp))
+            
+            // TOP 3
             RewardCard(
                 title = "TOP 3 Reward",
                 row1 = listOf(
-                    RewardItemData("Frames 7 days", "gemini_generated_video_123c050b~2.mp4", "green", isWinnerReward = true),
-                    RewardItemData("Medal 7 days", "IMG_20261117_210313.png", "black"),
+                    RewardItemData("Frames 7 days", "IMG_20261117_222701.png", "green", videoUrl = "1000235549-background.mp4", isWinnerReward = true),
+                    RewardItemData("Medal 7 days", "IMG_20261117_210313.png", "medal"),
                     RewardItemData("Top3 Tag 7 days", "IMG_20261117_193640.png", "tag")
                 ),
                 row2 = listOf(
@@ -600,11 +611,13 @@ private fun FamilyTop(onBack: () -> Unit, onRules: () -> Unit, activeRank: Int, 
                 label = "TOP3 Family"
             )
             Spacer(Modifier.height(16.dp))
+            
+            // TOP 4 to 10
             RewardCard(
                 title = "TOP 4 TO 10\nReward",
                 row1 = listOf(
-                    RewardItemData("Frames 3 days", "gemini_generated_video_0d259062.mp4", "green", isWinnerReward = true),
-                    RewardItemData("Medal 3 days", "IMG_20261117_210200.png", "tag")
+                    RewardItemData("Frames 3 days", "IMG_20261117_222718.png", "green", videoUrl = "1000235548-background.mp4", isWinnerReward = true),
+                    RewardItemData("Medal 3 days", "IMG_20261117_210200.png", "medal")
                 ),
                 onClick = onOpenModal,
                 label = "TOP4-10 Family"
@@ -615,19 +628,30 @@ private fun FamilyTop(onBack: () -> Unit, onRules: () -> Unit, activeRank: Int, 
 }
 
 @Composable
-private fun RewardCard(title: String, row1: List<RewardItemData>, row2: List<RewardItemData> = emptyList(), onClick: (String, String, Boolean, String) -> Unit, label: String) {
+private fun RewardCard(title: String, row1: List<RewardItemData>, row2: List<RewardItemData> = emptyList(), row3: List<RewardItemData> = emptyList(), onClick: (String, String, Boolean, String) -> Unit, label: String) {
     Box(Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
         Box(Modifier.fillMaxWidth().padding(top = 20.dp).background(familyCardBg, RoundedCornerShape(12.dp)).border(2.dp, familyGold, RoundedCornerShape(12.dp)).padding(top = 40.dp, bottom = 24.dp)) {
             Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                // ROW 1
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
                     row1.forEach { item ->
                         RewardItemBox(item, onClick, label)
                     }
                 }
+                // ROW 2
                 if (row2.isNotEmpty()) {
+                    Spacer(Modifier.height(8.dp))
+                    Row(Modifier.fillMaxWidth().offset(y = if (row1.size == 3 && row2.size == 2) (-8).dp else 0.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+                        row2.forEach { item ->
+                            RewardItemBox(item, onClick, label)
+                        }
+                    }
+                }
+                // ROW 3
+                if (row3.isNotEmpty()) {
                     Spacer(Modifier.height(16.dp))
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-                        row2.forEach { item ->
+                        row3.forEach { item ->
                             RewardItemBox(item, onClick, label)
                         }
                     }
@@ -645,16 +669,78 @@ private fun RewardCard(title: String, row1: List<RewardItemData>, row2: List<Rew
 private fun RewardItemBox(item: RewardItemData, onClick: (String, String, Boolean, String) -> Unit, label: String) {
     val clickUrl = item.videoUrl.ifBlank { item.thumbnail }
     val isTall = item.type == "tall"
+    val isTag = item.type == "tag"
+    val isMedal = item.type == "medal"
+    val isCoins = item.type == "coins"
+    val isVehicle = item.type == "vehicle"
+    val isFrame = item.type == "green"
     val boxWidth = if (isTall) 140.dp else 90.dp
     
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(boxWidth).clickable { if (clickUrl.isNotBlank()) onClick(clickUrl, label, item.isWinnerReward, item.type) }) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally, 
+        modifier = Modifier.width(boxWidth).clickable(enabled = isVehicle || isFrame) { 
+            if (clickUrl.isNotBlank()) onClick(clickUrl, label, item.isWinnerReward, item.type) 
+        }
+    ) {
         Box(Modifier.fillMaxWidth().aspectRatio(if (isTall) 0.45f else 1f).clip(RoundedCornerShape(12.dp)).background(Brush.verticalGradient(listOf(Color(0xFF8C3A19), Color(0xFF5C1A06))), RoundedCornerShape(12.dp)).border(2.dp, familyGold, RoundedCornerShape(12.dp)).padding(4.dp), contentAlignment = Alignment.Center) {
             Box(Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp))) {
                 if (item.thumbnail.isNotBlank()) {
                     if (item.thumbnail.substringBefore("?").substringAfterLast(".").lowercase() in setOf("mp4", "webm", "m4v")) {
-                        FamilyRewardVideo(url = familyAsset(item.thumbnail), modifier = Modifier.fillMaxSize(), rounded = false, autoplay = true)
+                        FamilyRewardVideo(
+                            url = familyAsset(item.thumbnail), 
+                            modifier = Modifier.fillMaxSize().then(
+                                if (isVehicle) {
+                                    Modifier.graphicsLayer { alpha = 0.99f }.drawWithContent {
+                                        drawContent()
+                                        // TOP 10% AND BOTTOM 15% VIDEO FADE
+                                        drawRect(
+                                            brush = Brush.verticalGradient(
+                                                0f to Color.Transparent,
+                                                0.10f to Color.Black,
+                                                0.85f to Color.Black,
+                                                1f to Color.Transparent
+                                            ),
+                                            blendMode = BlendMode.DstIn
+                                        )
+                                    }
+                                } else Modifier
+                            ), 
+                            rounded = false, 
+                            autoplay = true,
+                            hasSound = isVehicle // VEHICLE ME SOUND ON RAKHNE KE LIYE
+                        )
                     } else {
-                        AsyncImage(model = familyAsset(item.thumbnail), contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = if (isTall) ContentScale.Fit else ContentScale.Crop)
+                        AsyncImage(
+                            model = familyAsset(item.thumbnail), 
+                            contentDescription = null, 
+                            modifier = Modifier.fillMaxSize().padding(if (isMedal) 10.dp else 0.dp).then(
+                                if (isVehicle) {
+                                    Modifier.graphicsLayer { alpha = 0.99f }.drawWithContent {
+                                        drawContent()
+                                        // 4 SIDES 15% FADE FOR IMAGE
+                                        drawRect(
+                                            brush = Brush.verticalGradient(
+                                                0f to Color.Transparent,
+                                                0.15f to Color.Black,
+                                                0.85f to Color.Black,
+                                                1f to Color.Transparent
+                                            ),
+                                            blendMode = BlendMode.DstIn
+                                        )
+                                        drawRect(
+                                            brush = Brush.horizontalGradient(
+                                                0f to Color.Transparent,
+                                                0.15f to Color.Black,
+                                                0.85f to Color.Black,
+                                                1f to Color.Transparent
+                                            ),
+                                            blendMode = BlendMode.DstIn
+                                        )
+                                    }
+                                } else Modifier
+                            ), 
+                            contentScale = if (isTall || isTag || isCoins) ContentScale.Fit else ContentScale.Crop
+                        )
                     }
                     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0f to Color.Black.copy(alpha = 0.7f), 0.20f to Color.Transparent, 0.80f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.7f))))
                 }
@@ -668,9 +754,18 @@ private fun RewardItemBox(item: RewardItemData, onClick: (String, String, Boolea
 }
 
 @Composable
-private fun FamilyRewardVideo(url: String, modifier: Modifier = Modifier, rounded: Boolean = true, autoplay: Boolean = false) {
+private fun FamilyRewardVideo(url: String, modifier: Modifier = Modifier, rounded: Boolean = true, autoplay: Boolean = false, hasSound: Boolean = false) {
     val context = LocalContext.current
-    val player = remember(url) { ExoPlayer.Builder(context).build().apply { setMediaItem(MediaItem.fromUri(url)); repeatMode = Player.REPEAT_MODE_ONE; volume = 0f; playWhenReady = autoplay; prepare(); if (autoplay) play() } }
+    val player = remember(url) { 
+        ExoPlayer.Builder(context).build().apply { 
+            setMediaItem(MediaItem.fromUri(url))
+            repeatMode = Player.REPEAT_MODE_ONE
+            volume = if (hasSound) 1f else 0f // SOUND LOGIC
+            playWhenReady = autoplay
+            prepare()
+            if (autoplay) play() 
+        } 
+    }
     var videoVisible by remember(url) { mutableStateOf(false) }
     DisposableEffect(player) {
         val listener = object : Player.Listener {
@@ -691,10 +786,25 @@ private fun FamilyRewardModal(url: String, title: String, isWinnerReward: Boolea
     Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Box(Modifier.fillMaxSize().background(if (isWinnerReward) Color.Black.copy(alpha = 0.8f) else Color.Black.copy(alpha = 0.35f)).clickable(onClick = onClose), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                val isFrameVideo = type == "green"
                 val isVideo = url.substringBefore("?").substringAfterLast(".").lowercase() in setOf("mp4", "webm", "m4v")
                 val contentModifier = if (isWinnerReward) Modifier.size(320.dp).zIndex(1f) else Modifier.fillMaxWidth().fillMaxHeight(0.75f).zIndex(1f)
                 Box(contentModifier) {
-                    if (isVideo) { FamilyRewardVideo(url = familyAsset(url), modifier = Modifier.fillMaxSize(), rounded = false, autoplay = true) } else { AsyncImage(model = familyAsset(url), contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit) }
+                    if (isVideo) { 
+                        FamilyRewardVideo(
+                            url = familyAsset(url), 
+                            modifier = Modifier.fillMaxSize().then(
+                                if (isFrameVideo) Modifier.graphicsLayer { 
+                                    alpha = 0.99f
+                                    blendMode = BlendMode.Screen 
+                                } else Modifier
+                            ), 
+                            rounded = false, 
+                            autoplay = true
+                        ) 
+                    } else { 
+                        AsyncImage(model = familyAsset(url), contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit) 
+                    }
                     if (!isWinnerReward) { Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0f to Color.Black.copy(alpha = 0.65f), 0.15f to Color.Transparent, 0.70f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.65f)))) }
                 }
             }
@@ -816,20 +926,46 @@ internal fun FamilyCreate(onBack:()->Unit, name:String, onName:(String)->Unit, a
     }
 }
 
-// DARK THEME FAMILY RULES
+// FULL SCREEN FAMILY RULES (BORDERS REMOVED)
 @Composable
-private fun FamilyRules(onClose:()->Unit) {
-    Dialog(onDismissRequest=onClose,properties=DialogProperties(usePlatformDefaultWidth=false)) {
-        Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=.6f)).clickable(onClick = onClose),contentAlignment=Alignment.BottomCenter) {
-            Column(Modifier.fillMaxWidth().fillMaxHeight(.8f).clip(RoundedCornerShape(topStart=24.dp,topEnd=24.dp)).background(Brush.verticalGradient(listOf(Color(0xFF3B0C06), Color(0xFF1A0D06)))).border(2.dp, familyGold.copy(alpha = 0.5f), RoundedCornerShape(topStart=24.dp,topEnd=24.dp)).padding(horizontal=24.dp,vertical=20.dp).clickable(enabled = false, onClick = {})) {
-                Box(Modifier.width(48.dp).height(6.dp).background(familyGold.copy(alpha = 0.4f), RoundedCornerShape(50)).align(Alignment.CenterHorizontally))
-                Spacer(Modifier.height(16.dp))
-                Text("Family rules",color=familyGold,fontSize=18.sp,fontWeight=FontWeight.Bold,modifier=Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
-                Spacer(Modifier.height(16.dp))
-                Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(bottom=12.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-                    familyRules.forEach { Text(it,color=Color(0xFFFDE68A).copy(alpha = 0.9f),fontSize=14.sp,lineHeight=20.sp) }
-                    Spacer(Modifier.height(10.dp)); HorizontalDivider(color = familyGold.copy(alpha = 0.2f)); Spacer(Modifier.height(10.dp))
-                    Text("Regards, Zyora Team",color=familyGold.copy(alpha = 0.7f),fontSize=12.sp,fontWeight=FontWeight.SemiBold, fontStyle = FontStyle.Italic, modifier=Modifier.align(Alignment.End))
+private fun FamilyRules(onClose: () -> Unit) {
+    Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Box(
+            Modifier.fillMaxSize()
+                .background(Brush.verticalGradient(listOf(Color(0xFF3B0C06), Color(0xFF1A0D06))))
+                .clickable(enabled = false, onClick = {})
+        ) {
+            Column(Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 20.dp)) {
+                
+                // BACK BUTTON & HEADING
+                Row(Modifier.fillMaxWidth().statusBarsPadding().padding(bottom = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = onClose, modifier = Modifier.size(48.dp)) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White, modifier = Modifier.size(28.dp))
+                    }
+                    Text(
+                        "Family rules",
+                        color = familyGold,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.weight(1f).offset(x = (-24).dp),
+                        textAlign = TextAlign.Center
+                    )
+                }
+
+                // RULES TEXT
+                Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    familyRules.forEach { 
+                        Text(it, color = Color(0xFFFDE68A).copy(alpha = 0.9f), fontSize = 14.sp, lineHeight = 20.sp) 
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        "Regards, Zyora Team",
+                        color = familyGold.copy(alpha = 0.7f),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold, 
+                        fontStyle = FontStyle.Italic, 
+                        modifier = Modifier.align(Alignment.End)
+                    )
                 }
             }
         }
