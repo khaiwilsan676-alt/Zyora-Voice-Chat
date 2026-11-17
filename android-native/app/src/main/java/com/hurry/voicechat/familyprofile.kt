@@ -179,9 +179,12 @@ fun FamilyProfile(familyId:String,onBack:()->Unit,onOpenChat:(String,String,Stri
             Text(if(isOwner)"Add Members" else if(applicationSent)"Applied" else "Apply",color=Color.White,fontWeight=FontWeight.Bold)
         }
     }
-    if(inviteSheet)ModalBottomSheet(onDismissRequest={inviteSheet=false},modifier=Modifier.fillMaxHeight(.70f),shape=RoundedCornerShape(topStart=12.dp,topEnd=12.dp),containerColor=Color.White){
+    if(inviteSheet)ModalBottomSheet(onDismissRequest={inviteSheet=false},modifier=Modifier.fillMaxHeight(.70f),shape=RoundedCornerShape(topStart=12.dp,topEnd=12.dp),containerColor=Color.White,dragHandle=null){
         Column(Modifier.fillMaxSize().padding(horizontal=16.dp)){
-            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){IconButton(onClick={inviteSheet=false}){Icon(Icons.AutoMirrored.Filled.ArrowBack,"Back",tint=Color.Black)};Text("Invite Member",color=Color.Black,fontSize=17.sp,fontWeight=FontWeight.Bold,modifier=Modifier.weight(1f));Spacer(Modifier.width(44.dp))}
+            Box(Modifier.fillMaxWidth().height(48.dp)){
+                IconButton(onClick={inviteSheet=false},modifier=Modifier.align(Alignment.CenterStart)){Icon(Icons.AutoMirrored.Filled.ArrowBack,"Back",tint=Color.Black)}
+                Text("Invite Members",color=Color.Black,fontSize=17.sp,fontWeight=FontWeight.Bold,modifier=Modifier.align(Alignment.Center))
+            }
             OutlinedTextField(value=query,onValueChange={query=it},modifier=Modifier.fillMaxWidth(),singleLine=true,shape=RoundedCornerShape(12.dp),placeholder={Text("Search by ID or name")},leadingIcon={Icon(Icons.Default.Search,null)},colors=OutlinedTextFieldDefaults.colors(unfocusedContainerColor=Color(0xFFF1F2F4),focusedContainerColor=Color(0xFFF1F2F4),unfocusedBorderColor=Color.Transparent,focusedBorderColor=Color.Transparent))
             if(isOwner && applications.isNotEmpty()){
                 Text("Family Applications",color=Color(0xFF222222),fontWeight=FontWeight.Bold,fontSize=14.sp,modifier=Modifier.padding(top=12.dp,bottom=4.dp))
