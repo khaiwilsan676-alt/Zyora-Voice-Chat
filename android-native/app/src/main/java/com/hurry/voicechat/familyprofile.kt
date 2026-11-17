@@ -42,7 +42,7 @@ import java.util.concurrent.TimeUnit
 private const val FAMILY_API = "https://zyora-server.onrender.com"
 private const val FAMILY_ASSETS = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/"
 internal data class FamilyMemberRow(val uid:String,val accountId:String,val name:String,val image:String,val gender:String,val coins:Long,val tag:String="")
-internal data class FamilyRecord(val id:String,val name:String,val image:String,val announcement:String,val ownerUid:String,val members:List<FamilyMemberRow>,val totalCoinsSent:Long=0L)
+internal data class FamilyRecord(val id:String,val name:String,val image:String,val announcement:String,val ownerUid:String,val members:List<FamilyMemberRow>,val totalCoinsSent:Long=0L,val ownerAccountId:String="")
 
 internal object FamilyProfileApi {
     private suspend fun request(path:String, method:String="GET", body:JSONObject?=null):JSONObject = withContext(Dispatchers.IO) {
@@ -64,7 +64,7 @@ internal object FamilyProfileApi {
     private fun parse(root:JSONObject):FamilyRecord {
         val f=root.optJSONObject("family")?:root; val a=f.optJSONArray("members")?:JSONArray()
         val rows=(0 until a.length()).mapNotNull{i->a.optJSONObject(i)?.let{m->FamilyMemberRow(m.optString("uid",m.optString("id")),m.optString("accountId"),m.optString("name","User"),m.optString("image"),m.optString("gender"),m.optLong("coinsSent").coerceAtLeast(0),m.optString("tag"))}}.sortedByDescending{it.coins}
-        return FamilyRecord(f.optString("familyId"),f.optString("name"),f.optString("image"),f.optString("announcement"),f.optString("ownerUid"),rows,f.optLong("totalCoinsSent",0L))
+        return FamilyRecord(f.optString("familyId"),f.optString("name"),f.optString("image"),f.optString("announcement"),f.optString("ownerUid"),rows,f.optLong("totalCoinsSent",0L),f.optString("ownerAccountId",f.optString("creatorAccountId")))
     }
     suspend fun create(id:String,name:String,image:String,announcement:String)=request("/api/families","POST",JSONObject().put("familyId",id).put("name",name).put("image",image).put("announcement",announcement))
     suspend fun load(id:String)=parse(request("/api/families/${URLEncoder.encode(id,"UTF-8")}"))
@@ -137,7 +137,7 @@ fun FamilyProfile(familyId:String,onBack:()->Unit,onOpenChat:(String,String,Stri
                                     }
                                 }
                             }
-                            Text("Family ID: ${family?.id?:familyId}",color=Color.White,fontSize=12.sp)
+                            Text("Family ID: ${family?.ownerAccountId?.ifBlank { family?.members?.firstOrNull { it.uid == family?.ownerUid }?.accountId.orEmpty() }.orEmpty().ifBlank { "—" }}",color=Color.White,fontSize=12.sp)
                         }
                     }
                 }
