@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
@@ -41,7 +42,7 @@ import java.util.concurrent.TimeUnit
 
 private const val FAMILY_API = "https://zyora-server.onrender.com"
 private const val FAMILY_ASSETS = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/"
-internal data class FamilyMemberRow(val uid:String,val accountId:String,val name:String,val image:String,val gender:String,val coins:Long,val tag:String="")
+internal data class FamilyMemberRow(val uid:String,val accountId:String,val name:String,val image:String,val gender:String,val coins:Long,val tag:String="",val role:String="member")
 internal data class FamilyRecord(val id:String,val name:String,val image:String,val announcement:String,val ownerUid:String,val members:List<FamilyMemberRow>,val totalCoinsSent:Long=0L,val ownerAccountId:String="")
 
 internal object FamilyProfileApi {
@@ -63,7 +64,7 @@ internal object FamilyProfileApi {
     }
     private fun parse(root:JSONObject):FamilyRecord {
         val f=root.optJSONObject("family")?:root; val a=f.optJSONArray("members")?:JSONArray()
-        val rows=(0 until a.length()).mapNotNull{i->a.optJSONObject(i)?.let{m->FamilyMemberRow(m.optString("uid",m.optString("id")),m.optString("accountId"),m.optString("name","User"),m.optString("image"),m.optString("gender"),m.optLong("coinsSent").coerceAtLeast(0),m.optString("tag"))}}.sortedByDescending{it.coins}
+        val rows=(0 until a.length()).mapNotNull{i->a.optJSONObject(i)?.let{m->FamilyMemberRow(m.optString("uid",m.optString("id")),m.optString("accountId"),m.optString("name","User"),m.optString("image"),m.optString("gender"),m.optLong("coinsSent").coerceAtLeast(0),m.optString("tag"),m.optString("role","member"))}}.sortedByDescending{it.coins}
         return FamilyRecord(f.optString("familyId"),f.optString("name"),f.optString("image"),f.optString("announcement"),f.optString("ownerUid"),rows,f.optLong("totalCoinsSent",0L),f.optString("ownerAccountId",f.optString("creatorAccountId")))
     }
     suspend fun create(id:String,name:String,image:String,announcement:String)=request("/api/families","POST",JSONObject().put("familyId",id).put("name",name).put("image",image).put("announcement",announcement))
@@ -93,6 +94,8 @@ internal object FamilyProfileApi {
         return (0 until a.length()).mapNotNull{x->a.optJSONObject(x)?.let{m->FamilyMemberRow(m.optString("uid"),m.optString("accountId"),m.optString("name","User"),m.optString("image"),m.optString("gender"),0,m.optString("tag"))}}
     }
     suspend fun approve(id:String,uid:String)=request("/api/families/${URLEncoder.encode(id,"UTF-8")}/applications/${URLEncoder.encode(uid,"UTF-8")}/approve","POST",JSONObject())
+    suspend fun setAdmin(id:String,uid:String)=request("/api/families/${URLEncoder.encode(id,"UTF-8")}/members/${URLEncoder.encode(uid,"UTF-8")}/admin","POST",JSONObject())
+    suspend fun removeMember(id:String,uid:String)=request("/api/families/${URLEncoder.encode(id,"UTF-8")}/members/${URLEncoder.encode(uid,"UTF-8")}/leave","POST",JSONObject())
     suspend fun search(id:String,q:String):List<FamilyMemberRow>{
         val r=request("/api/families/${URLEncoder.encode(id,"UTF-8")}/search-users?q=${URLEncoder.encode(q,"UTF-8")}")
         val a=r.optJSONArray("users")?:JSONArray()
@@ -109,8 +112,10 @@ fun FamilyProfile(familyId:String,onBack:()->Unit,onOpenChat:(String,String,Stri
     var loading by remember{mutableStateOf(true)}; var error by remember{mutableStateOf("")}
     var inviteSheet by remember{mutableStateOf(false)}; var editDialog by remember{mutableStateOf(false)}; var savingEdit by remember{mutableStateOf(false)}
     var query by remember{mutableStateOf("")}; var results by remember{mutableStateOf<List<FamilyMemberRow>>(emptyList())}; var applications by remember{mutableStateOf<List<FamilyMemberRow>>(emptyList())}; var applicationSent by remember(familyId){mutableStateOf(false)}
-    var searching by remember{mutableStateOf(false)}; var busy by remember{mutableStateOf("")}
+    var searching by remember{mutableStateOf(false)}; var busy by remember{mutableStateOf("")}; var selectedMember by remember{mutableStateOf<FamilyMemberRow?>(null)}
     val isOwner=family?.ownerUid==auth?.uid
+    val currentMember=family?.members?.firstOrNull{it.uid==auth?.uid}
+    val isAdmin=currentMember?.role=="admin"
     fun reload(){scope.launch{loading=true;runCatching{FamilyProfileApi.load(familyId)}.onSuccess{family=it;error=""}.onFailure{error=it.message?:"Could not load Family."};if(isOwner)runCatching{FamilyProfileApi.applications(familyId)}.onSuccess{applications=it};loading=false}}
     LaunchedEffect(familyId){reload()}
     LaunchedEffect(inviteSheet,isOwner){if(inviteSheet&&isOwner)runCatching{FamilyProfileApi.applications(familyId)}.onSuccess{applications=it}}
@@ -158,17 +163,21 @@ fun FamilyProfile(familyId:String,onBack:()->Unit,onOpenChat:(String,String,Stri
                     Row(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=3.dp).clip(RoundedCornerShape(12.dp)).background(bg).padding(10.dp),verticalAlignment=Alignment.CenterVertically){
                         Text("TOP ${index+1}",color=Color.White,fontWeight=FontWeight.Black,fontSize=12.sp,modifier=Modifier.width(52.dp))
                         Box(Modifier.size(52.dp)){
-                            AsyncImage(model=m.image.ifBlank{FAMILY_ASSETS+"IMG_20261116_162146.png"},contentDescription=m.name,modifier=Modifier.size(42.dp).align(Alignment.Center).clip(RoundedCornerShape(12.dp)),contentScale=ContentScale.Crop)
+                            AsyncImage(model=m.image.ifBlank{FAMILY_ASSETS+"IMG_20261116_162146.png"},contentDescription=m.name,modifier=Modifier.size(42.dp).align(Alignment.Center).clip(CircleShape).clickable { if(m.uid==auth?.uid || isOwner || isAdmin) selectedMember=m },contentScale=ContentScale.Crop)
+                            if(m.role=="admin") Box(Modifier.align(Alignment.BottomCenter).offset(y=3.dp).clip(RoundedCornerShape(50)).background(Color(0xFF2588F5)).border(1.dp,Color.White,RoundedCornerShape(50)).padding(horizontal=5.dp,vertical=1.dp)){Text("Admin",color=Color.White,fontSize=7.sp,fontWeight=FontWeight.Bold)}
                             AsyncImage(model=FAMILY_ASSETS+when(index){0->"IMG_20261115_135339.png";1->"IMG_20261115_135356.png";else->"IMG_20261115_135419.png"},contentDescription="Rank frame",modifier=Modifier.fillMaxSize(),contentScale=ContentScale.Fit)
                         }
-                        Column(Modifier.weight(1f).padding(start=8.dp)){Text(m.name,color=Color.White,fontSize=14.sp,fontWeight=FontWeight.Bold,maxLines=1);Text(listOf(m.accountId,m.gender,m.tag).filter{it.isNotBlank()}.joinToString(" · "),color=Color.White,fontSize=11.sp)}
+                        Column(Modifier.weight(1f).padding(start=8.dp)){Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(5.dp)){Text(m.name,color=Color.White,fontSize=14.sp,fontWeight=FontWeight.Bold,maxLines=1);val female=m.gender.equals("female",true);Box(Modifier.size(17.dp).clip(CircleShape).background(if(female)Color(0xFFFF5874) else Color(0xFF3B82F6)),contentAlignment=Alignment.Center){CustomGenderIcon(isFemale=female,modifier=Modifier.size(9.dp))}};Text(listOf(m.accountId,m.tag).filter{it.isNotBlank()}.joinToString(" · "),color=Color.White,fontSize=11.sp)}
                         Column(horizontalAlignment=Alignment.End){AsyncImage(model=FAMILY_ASSETS+"file_00000000e56882119c217d508b6733dc.png",contentDescription="Coins",modifier=Modifier.size(17.dp));Text("******",color=Color.White,fontSize=12.sp,fontWeight=FontWeight.Bold)}
                     }
                 }else{
                     Row(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=2.dp).clip(RoundedCornerShape(10.dp)).background(Color.White).padding(9.dp),verticalAlignment=Alignment.CenterVertically){
                         Text("${index+1}",color=Color.Gray,fontSize=13.sp,modifier=Modifier.width(28.dp))
-                        AsyncImage(model=m.image.ifBlank{FAMILY_ASSETS+"IMG_20261116_162146.png"},contentDescription=m.name,modifier=Modifier.size(40.dp).clip(RoundedCornerShape(10.dp)),contentScale=ContentScale.Crop)
-                        Column(Modifier.weight(1f).padding(start=9.dp)){Text(m.name,color=Color(0xFF222222),fontSize=13.sp,fontWeight=FontWeight.SemiBold);Text(listOf(m.accountId,m.gender,m.tag).filter{it.isNotBlank()}.joinToString(" · "),color=Color.Gray,fontSize=10.sp)}
+                        Box(Modifier.size(44.dp)){
+                            AsyncImage(model=m.image.ifBlank{FAMILY_ASSETS+"IMG_20261116_162146.png"},contentDescription=m.name,modifier=Modifier.size(40.dp).align(Alignment.Center).clip(CircleShape).clickable { if(m.uid==auth?.uid || isOwner || isAdmin) selectedMember=m },contentScale=ContentScale.Crop)
+                            if(m.role=="admin") Box(Modifier.align(Alignment.BottomCenter).offset(y=2.dp).clip(RoundedCornerShape(50)).background(Color(0xFF2588F5)).border(1.dp,Color.White,RoundedCornerShape(50)).padding(horizontal=5.dp,vertical=1.dp)){Text("Admin",color=Color.White,fontSize=7.sp,fontWeight=FontWeight.Bold)}
+                        }
+                        Column(Modifier.weight(1f).padding(start=9.dp)){Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(5.dp)){Text(m.name,color=Color(0xFF222222),fontSize=13.sp,fontWeight=FontWeight.SemiBold);val female=m.gender.equals("female",true);Box(Modifier.size(17.dp).clip(CircleShape).background(if(female)Color(0xFFFF5874) else Color(0xFF3B82F6)),contentAlignment=Alignment.Center){CustomGenderIcon(isFemale=female,modifier=Modifier.size(9.dp))}};Text(listOf(m.accountId,m.tag).filter{it.isNotBlank()}.joinToString(" · "),color=Color.Gray,fontSize=10.sp)}
                         Column(horizontalAlignment=Alignment.End){AsyncImage(model=FAMILY_ASSETS+"file_00000000e56882119c217d508b6733dc.png",contentDescription="Coins",modifier=Modifier.size(15.dp));Text("******",color=Color.DarkGray,fontSize=11.sp,fontWeight=FontWeight.Bold)}
                     }
                 }
@@ -207,6 +216,21 @@ fun FamilyProfile(familyId:String,onBack:()->Unit,onOpenChat:(String,String,Stri
                     TextButton(enabled=busy!=m.uid,onClick={scope.launch{busy=m.uid;runCatching{FamilyProfileApi.invite(familyId,m.accountId.ifBlank{m.uid})}.onSuccess{error="Invitation sent to ${m.name}."}.onFailure{error=it.message?:"Invitation failed."};busy=""}}){Text(if(busy==m.uid)"Sending..." else "Invite")}
                 };HorizontalDivider(color=Color(0xFFECECEC))
             }}
+        }
+    }
+    selectedMember?.let { member ->
+        val canPromote=isOwner && member.role!="admin" && member.uid!=auth?.uid
+        val canRemove=(isOwner || isAdmin) && member.uid!=family?.ownerUid
+        val canSelfLeave=member.uid==auth?.uid && member.uid!=family?.ownerUid
+        ModalBottomSheet(onDismissRequest={selectedMember=null},shape=RoundedCornerShape(topStart=12.dp,topEnd=12.dp),containerColor=Color.White,dragHandle=null){
+            Column(Modifier.fillMaxWidth().padding(horizontal=20.dp).padding(bottom=24.dp)){
+                Row(verticalAlignment=Alignment.CenterVertically,modifier=Modifier.fillMaxWidth().padding(bottom=14.dp)){
+                    AsyncImage(model=member.image,contentDescription=member.name,modifier=Modifier.size(42.dp).clip(CircleShape),contentScale=ContentScale.Crop)
+                    Text(member.name,color=Color(0xFF222222),fontSize=15.sp,fontWeight=FontWeight.Bold,modifier=Modifier.padding(start=10.dp))
+                }
+                if(canPromote) TextButton(onClick={scope.launch{busy=member.uid;runCatching{FamilyProfileApi.setAdmin(familyId,member.uid)}.onSuccess{selectedMember=null;reload()}.onFailure{error=it.message?:"Could not add Admin."};busy=""}},modifier=Modifier.fillMaxWidth(),enabled=busy!=member.uid){Text("Add Admin",color=Color(0xFF222222),fontSize=15.sp)}
+                if(canRemove || canSelfLeave) TextButton(onClick={scope.launch{busy=member.uid;runCatching{FamilyProfileApi.removeMember(familyId,member.uid)}.onSuccess{selectedMember=null;if(canSelfLeave)onBack()else reload()}.onFailure{error=it.message?:"Could not remove member."};busy=""}},modifier=Modifier.fillMaxWidth(),enabled=busy!=member.uid){Text("Leave Family",color=Color(0xFFD32F2F),fontSize=15.sp)}
+            }
         }
     }
     if(editDialog&&family!=null)FamilyEditDialog(family!!,busy=savingEdit,error=error,onDismiss={editDialog=false}){n,i,a->scope.launch{
