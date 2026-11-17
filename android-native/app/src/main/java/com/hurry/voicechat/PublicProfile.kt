@@ -556,7 +556,15 @@ fun PublicProfileScreen(
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             Text(displayName, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.Black)
-                            
+                            if (hasOwnFamily) {
+                                Box(
+                                    modifier = Modifier.clip(RoundedCornerShape(5.dp)).background(Color(0xFF2878D8)).padding(horizontal = 7.dp, vertical = 3.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text("Family", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                                }
+                            }
+
                             Box(
                                 modifier = Modifier
                                     .size(20.dp) 
@@ -602,16 +610,23 @@ fun PublicProfileScreen(
                     }
 
                     Row(modifier = Modifier.padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        
                         Box(contentAlignment = Alignment.CenterEnd, modifier = Modifier.height(24.dp).width(48.dp)) {
                             AsyncImage(model = profileAsset("/IMG_20261028_004355.png"), contentDescription = "Level", contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
                             Text(
-                                text = "Lv.1", 
-                                color = Color.White, 
-                                fontSize = 9.sp, 
-                                fontWeight = FontWeight.Normal, 
-                                modifier = Modifier.padding(end = 6.dp) 
+                                text = "Lv.1",
+                                color = Color.White,
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Normal,
+                                modifier = Modifier.padding(end = 6.dp)
                             )
+                        }
+                        if (hasOwnFamily) {
+                            Box(
+                                modifier = Modifier.clip(RoundedCornerShape(5.dp)).background(Color(0xFF2878D8)).padding(horizontal = 7.dp, vertical = 4.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("Family", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                            }
                         }
                     }
 
@@ -675,40 +690,47 @@ fun PublicProfileScreen(
                                     .clickable { if (ownFamilyCode.isNotBlank()) onOpenFamily(ownFamilyCode) }
                             ) {
                                 AsyncImage(
-                                    model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261116_163413.png",
+                                    model = profileAsset("/IMG_20261117_130644.png"),
                                     contentDescription = "Family background",
                                     modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Fit // No stretch no crop per instruction
+                                    contentScale = ContentScale.Fit
                                 )
                                 Box(
                                     Modifier
-                                        .align(Alignment.CenterStart) // Center left part main
-                                        .padding(start = 16.dp) 
-                                        .size(62.dp), 
+                                        .align(Alignment.CenterStart)
+                                        .padding(start = 16.dp)
+                                        .size(62.dp),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     if (ownFamilyImage.isNotBlank()) {
                                         AsyncImage(
                                             model = ownFamilyImage,
                                             contentDescription = "Family DP",
-                                            modifier = Modifier.size(44.dp).clip(CircleShape), // <-- CHANGED TO CircleShape as requested
+                                            modifier = Modifier.size(44.dp).clip(CircleShape),
                                             contentScale = ContentScale.Crop
                                         )
                                     }
                                     AsyncImage(
-                                        model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261116_164433.png",
+                                        model = profileAsset("/IMG_20261116_164433.png"),
                                         contentDescription = "Family avatar frame",
                                         modifier = Modifier.size(62.dp),
                                         contentScale = ContentScale.Fit
                                     )
                                 }
                                 Column(
-                                    Modifier
-                                        .align(Alignment.CenterStart)
-                                        .padding(start = 90.dp, end = 12.dp), // Gap adjust kiya ID ke taraf
-                                    verticalArrangement = Arrangement.spacedBy(0.dp) // Text slightly tighter and nearer to center ID
+                                    Modifier.align(Alignment.Center),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(2.dp)
                                 ) {
-                                    Text(ownFamilyName, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                                        Text(ownFamilyName, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                        Box(
+                                            modifier = Modifier.clip(RoundedCornerShape(5.dp)).background(Color(0xFF2878D8)).padding(horizontal = 6.dp, vertical = 2.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text("Family", color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                                        }
+                                    }
                                     Text("Family ID: $ownFamilyCreatorId", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium, maxLines = 1)
                                     Text("Members $ownFamilyMemberCount/50", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium)
                                 }
