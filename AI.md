@@ -1173,3 +1173,8 @@ Current documentation does not certify that all historical features are build-, 
 - Fixed the local-profile early-return path so a joined/created family saved in local family preferences can still hydrate and display the Family card when both remote and cached profile records are unavailable.
 - Family banner continues to use `public/IMG_20261117_130644.png`, with the family name and details overlaid at the center.
 - Build and device rendering still require verification.
+
+## 2026-11-17 — Family System invitations and applications
+- Family owner invitation sends the invited user the existing Family invitation card and sends the owner a Zyora System message: “Invite Send to (User name) from (Family name)”.
+- Family applications send the applicant a Zyora System message: “Apply Sended to (Family name)”. The owner receives an applicant card with avatar, name, account ID, the requested join text, and an Approve action that uses the existing family-application approval API.
+- Family Profile member rows no longer display boolean “True”/“False” values beside account IDs when those values appear in the optional tag field.
