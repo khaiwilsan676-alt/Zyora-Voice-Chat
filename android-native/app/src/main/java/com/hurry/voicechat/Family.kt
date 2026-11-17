@@ -120,12 +120,36 @@ fun Family(onBack: () -> Unit) {
     var familyName by remember { mutableStateOf(prefs.getString("familyName", "") ?: "") }
     var announcement by remember { mutableStateOf(prefs.getString("familyAnnouncement", "") ?: "") }
     var familyImage by remember { mutableStateOf(prefs.getString("familyImage", "") ?: "") }
+    var familyCode by remember { mutableStateOf(prefs.getString("familyCode", "").orEmpty()) }
+    var joinedFamily by remember { mutableStateOf<FamilyRecord?>(null) }
     var createBusy by remember { mutableStateOf(false) }
     var createError by remember { mutableStateOf<String?>(null) }
 
     var activeModal by remember { mutableStateOf<RewardModalData?>(null) }
 
     val scope = rememberCoroutineScope()
+    LaunchedEffect(familyCreatorId, view) {
+        if (view == "main" && familyCreatorId.isNotBlank()) {
+            runCatching {
+                val profile = ProfilePersistence.load(TargetUser(id = familyAuthId, uid = familyAuthUid, accountId = familyCreatorId, displayAccountNumber = familyCreatorId))
+                val code = profile?.optString("familyCode").orEmpty().takeIf { it.isNotBlank() && it != "null" }
+                    ?: profile?.optString("familyId").orEmpty().takeIf { it.isNotBlank() && it != "null" }
+                    ?: prefs.getString("familyCode", "").orEmpty()
+                if (code.isNotBlank()) FamilyProfileApi.load(code) else null
+            }.onSuccess { record ->
+                joinedFamily = record
+                if (record != null) {
+                    familyCode = record.id
+                    familyName = record.name
+                    familyImage = record.image
+                    announcement = record.announcement
+                    prefs.edit().putString("familyCode", record.id).putString("familyName", record.name)
+                        .putString("familyImage", record.image).putString("familyAnnouncement", record.announcement)
+                        .putString("familyCreatorId", record.ownerAccountId).putBoolean("familyCreated", true).apply()
+                } else joinedFamily = null
+            }
+        }
+    }
     val walletDao = remember { WalletDatabase.get(context).walletDao() }
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
         if (uri != null) runCatching { context.contentResolver.takePersistableUriPermission(uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION) }
@@ -255,10 +279,11 @@ fun Family(onBack: () -> Unit) {
                         }
                     }, 
                     onCreate = { view = "create" },
-                    familyCreated = prefs.getBoolean("familyCreated", false),
-                    familyName = familyName,
-                    familyImage = familyImage,
-                    familyCreatorId = familyCreatorId,
+                    familyCreated = joinedFamily != null || prefs.getBoolean("familyCreated", false),
+                    familyName = joinedFamily?.name ?: familyName,
+                    familyImage = joinedFamily?.image ?: familyImage,
+                    familyCreatorId = joinedFamily?.ownerAccountId?.ifBlank { familyCreatorId } ?: familyCreatorId,
+                    familyCode = joinedFamily?.id ?: familyCode,
                     topFamilies = topFamilies
                 )
             }
@@ -282,9 +307,9 @@ fun Family(onBack: () -> Unit) {
 // MAIN HOME SCREEN
 // --------------------------------------------------------
 @Composable
-private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, onOpenFamily: (String) -> Unit, seconds: Int, activeRank: Int, onRank: (Int) -> Unit, onCreate: () -> Unit, familyCreated: Boolean, familyName: String, familyImage: String, familyCreatorId: String, topFamilies: List<FamilyRecord>) {
+private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, onOpenFamily: (String) -> Unit, seconds: Int, activeRank: Int, onRank: (Int) -> Unit, onCreate: () -> Unit, familyCreated: Boolean, familyName: String, familyImage: String, familyCreatorId: String, familyCode: String, topFamilies: List<FamilyRecord>) {
     val context = LocalContext.current
-    val ownFamilyCode = remember { context.getSharedPreferences("hurry_user", Context.MODE_PRIVATE).getString("familyCode", "").orEmpty() }
+    val ownFamilyCode = familyCode.ifBlank { context.getSharedPreferences("hurry_user", Context.MODE_PRIVATE).getString("familyCode", "").orEmpty() }
     var ownFamilyMemberCount by remember(ownFamilyCode) { mutableIntStateOf(0) }
     LaunchedEffect(familyCreated, ownFamilyCode) {
         if (familyCreated && ownFamilyCode.isNotBlank()) {
@@ -434,7 +459,7 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, onOpenFamily: (S
                     AsyncImage(
                         model = familyImage.takeIf { it.isNotBlank() } ?: familyAsset("IMG_20261116_162146.png"),
                         contentDescription = "Family DP",
-                        modifier = Modifier.size(54.dp).clip(RoundedCornerShape(15.dp)).clickable { topFamilies.firstOrNull { it.name == familyName }?.let { onOpenFamily(it.id) } },
+                        modifier = Modifier.size(54.dp).clip(RoundedCornerShape(15.dp)).clickable { if (ownFamilyCode.isNotBlank()) onOpenFamily(ownFamilyCode) },
                         contentScale = ContentScale.Crop
                     )
                     Spacer(Modifier.width(10.dp))
