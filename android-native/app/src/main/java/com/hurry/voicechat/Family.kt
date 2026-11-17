@@ -107,7 +107,7 @@ private data class RewardModalData(
 )
 
 @Composable
-fun Family(onBack: () -> Unit) {
+fun Family(onBack: () -> Unit, onOpenFamily: (String) -> Unit = {}) {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("hurry_user", Context.MODE_PRIVATE) }
     val authPrefs = remember { context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE) }
@@ -133,7 +133,50 @@ fun Family(onBack: () -> Unit) {
     var activeRank by remember { mutableIntStateOf(0) }
     var seconds by remember { mutableIntStateOf(0) }
     var topFamilies by remember { mutableStateOf<List<FamilyRecord>>(emptyList()) }
+    var myFamilyRecord by remember { mutableStateOf<FamilyRecord?>(null) }
     LaunchedEffect(Unit) { while (true) { runCatching { FamilyProfileApi.leaderboard() }.onSuccess { topFamilies = it }; delay(30000) } }
+
+    // Resolve the signed-in user's family from the server profile first, then local prefs.
+    // This covers both the family creator and users who joined an existing family.
+    LaunchedEffect(familyAuthUid, familyAuthId, familyCreatorId) {
+        val profileTarget = TargetUser(
+            id = familyAuthId,
+            uid = familyAuthUid,
+            accountId = familyCreatorId,
+            displayAccountNumber = familyCreatorId
+        )
+        val remoteProfile = runCatching { ProfilePersistence.load(profileTarget) }.getOrNull()
+        val remoteFamilyCode = remoteProfile?.optString("familyCode").orEmpty()
+            .takeIf { it.isNotBlank() && it != "null" }
+            ?: remoteProfile?.optString("familyId").orEmpty()
+                .takeIf { it.isNotBlank() && it != "null" }
+        val localFamilyCode = prefs.getString("familyCode", "").orEmpty()
+            .ifBlank { prefs.getString("familyId", "").orEmpty() }
+        val resolvedFamilyCode = remoteFamilyCode ?: localFamilyCode
+
+        if (resolvedFamilyCode.isNotBlank()) {
+            prefs.edit().putBoolean("familyCreated", true)
+                .putString("familyCode", resolvedFamilyCode).apply()
+            remoteProfile?.optString("familyName")?.takeIf { it.isNotBlank() && it != "null" }?.let { familyName = it }
+            remoteProfile?.optString("familyImage")?.takeIf { it.isNotBlank() && it != "null" }?.let { familyImage = it }
+            remoteProfile?.optString("familyAnnouncement")?.takeIf { it.isNotBlank() && it != "null" }?.let { announcement = it }
+
+            runCatching { FamilyProfileApi.load(resolvedFamilyCode) }.onSuccess { family ->
+                myFamilyRecord = family
+                familyName = family.name
+                familyImage = family.image
+                announcement = family.announcement
+                prefs.edit()
+                    .putBoolean("familyCreated", true)
+                    .putString("familyCode", resolvedFamilyCode)
+                    .putString("familyName", family.name)
+                    .putString("familyImage", family.image)
+                    .putString("familyAnnouncement", family.announcement)
+                    .putString("familyCreatorId", family.ownerAccountId)
+                    .apply()
+            }
+        }
+    }
 
     LaunchedEffect(Unit) {
         while (true) {
@@ -217,6 +260,7 @@ fun Family(onBack: () -> Unit) {
                                     .putString("familyCreatorId", familyCreatorId)
                                     .putString("familyCode", createdFamilyCode)
                                     .putBoolean("familyCreated", true).apply()
+                                myFamilyRecord = runCatching { FamilyProfileApi.load(createdFamilyCode) }.getOrNull()
                                 view = "main"
                                 Toast.makeText(context, "Family created successfully", Toast.LENGTH_SHORT).show()
                             } else createError = result
@@ -251,11 +295,15 @@ fun Family(onBack: () -> Unit) {
                         }
                     }, 
                     onCreate = { view = "create" },
-                    familyCreated = prefs.getBoolean("familyCreated", false),
-                    familyName = familyName,
-                    familyImage = familyImage,
-                    familyCreatorId = familyCreatorId,
-                    topFamilies = topFamilies
+                    familyCreated = myFamilyRecord != null || prefs.getBoolean("familyCreated", false),
+                    familyName = myFamilyRecord?.name?.takeIf { it.isNotBlank() } ?: familyName,
+                    familyImage = myFamilyRecord?.image?.takeIf { it.isNotBlank() } ?: familyImage,
+                    familyCreatorId = myFamilyRecord?.ownerAccountId?.takeIf { it.isNotBlank() } ?: familyCreatorId,
+                    topFamilies = topFamilies,
+                    myFamily = myFamilyRecord,
+                    familyCode = myFamilyRecord?.id?.takeIf { it.isNotBlank() }
+                        ?: prefs.getString("familyCode", "").orEmpty().ifBlank { prefs.getString("familyId", "").orEmpty() },
+                    onOpenFamily = onOpenFamily
                 )
             }
         }
@@ -278,8 +326,9 @@ fun Family(onBack: () -> Unit) {
 // MAIN HOME SCREEN
 // --------------------------------------------------------
 @Composable
-private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, activeRank: Int, onRank: (Int) -> Unit, onCreate: () -> Unit, familyCreated: Boolean, familyName: String, familyImage: String, familyCreatorId: String, topFamilies: List<FamilyRecord>) {
+private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, activeRank: Int, onRank: (Int) -> Unit, onCreate: () -> Unit, familyCreated: Boolean, familyName: String, familyImage: String, familyCreatorId: String, topFamilies: List<FamilyRecord>, myFamily: FamilyRecord?, familyCode: String, onOpenFamily: (String) -> Unit) {
     val scrollState = rememberScrollState()
+    val familyMemberCountText = myFamily?.members?.size?.coerceAtMost(50)?.toString() ?: "—"
     val activeFilter = null
     val inactiveFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
 
@@ -365,7 +414,7 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, ac
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     AsyncImage(model = familyAsset("IMG_20261116_162146.png"), contentDescription = "Members", modifier = Modifier.size(10.dp))
                                     Spacer(Modifier.width(2.dp))
-                                    Text("0/50", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Medium)
+                                    Text("${family.members.size.coerceAtMost(50)}/50", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Medium)
                                 }
                             }
                             // RIGHT CORNER COINS
@@ -419,7 +468,8 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, ac
                     AsyncImage(
                         model = familyImage.takeIf { it.isNotBlank() } ?: familyAsset("IMG_20261116_162146.png"),
                         contentDescription = "Family DP",
-                        modifier = Modifier.size(54.dp).clip(RoundedCornerShape(15.dp)),
+                        modifier = Modifier.size(54.dp).clip(RoundedCornerShape(15.dp))
+                            .clickable(enabled = familyCode.isNotBlank()) { onOpenFamily(familyCode) },
                         contentScale = ContentScale.Crop
                     )
                     Spacer(Modifier.width(10.dp))
@@ -428,7 +478,7 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, ac
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             AsyncImage(model = familyAsset("IMG_20261116_162146.png"), contentDescription = "Members", modifier = Modifier.size(12.dp))
                             Spacer(Modifier.width(4.dp))
-                            Text("0/50", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                            Text("$familyMemberCountText/50", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium)
                         }
                     }
                     
