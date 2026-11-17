@@ -1207,3 +1207,10 @@ Current documentation does not certify that all historical features are build-, 
 - Zyora-Server records recipient-side gift totals in addition to sender-side totals and exposes `GET /api/leaderboard`. Legacy sender records remain included in Rich and Room totals.
 - Countdown uses each period's next boundary in India Standard Time.
 - Note: Charm totals begin accumulating from the server deployment onward because historical contribution records only stored senders, not recipients. No build or live Render deployment verification has been performed in this change.
+
+
+## 2026-11-18 — Room Active Users moved into Room Cup Online User tab
+- The room's top-right active-user count/icon now opens the existing Room Cup sheet directly on its Online User tab; the Cup icon still opens the same sheet on Contribution.
+- The Online User tab renders the room's live active-user list, with owner/admin tags, country flag, level badge, avatar, and profile-open behavior.
+- Removed the separate normal Active Users sheet entry point and overlay. The separate Invite User sheet remains unchanged.
+- No other room UI styling or layout was intentionally changed. Native APK build and device verification remain pending.
