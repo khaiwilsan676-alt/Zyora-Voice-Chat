@@ -38,7 +38,9 @@ fun RoomCupSheet(roomId:String,userId:String,userName:String,userImage:String,on
     var entries by remember { mutableStateOf(emptyList<CupEntry>()) }
     var mine by remember { mutableStateOf<CupEntry?>(null) }
     var loading by remember { mutableStateOf(true) }
-    LaunchedEffect(roomId,period) {
+    var refreshTick by remember { mutableIntStateOf(0) }
+    LaunchedEffect(roomId,period) { while (true) { kotlinx.coroutines.delay(10000); refreshTick++ } }
+    LaunchedEffect(roomId,period,refreshTick) {
         loading=true
         val data=withContext(Dispatchers.IO) { runCatching {
             val r=java.net.URLEncoder.encode(roomId,"UTF-8")
