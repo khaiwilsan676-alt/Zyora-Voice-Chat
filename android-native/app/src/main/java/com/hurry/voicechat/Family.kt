@@ -115,6 +115,7 @@ fun Family(onBack: () -> Unit) {
     val familyAuthUid = authPrefs.getString("uid", "").orEmpty().ifBlank { familyCreatorId }
     val familyAuthId = authPrefs.getString("id", "").orEmpty().ifBlank { familyAuthUid }
     var view by remember { mutableStateOf("main") }
+    var openedFamilyId by remember { mutableStateOf<String?>(null) }
     var showRules by remember { mutableStateOf(false) }
     var familyName by remember { mutableStateOf(prefs.getString("familyName", "") ?: "") }
     var announcement by remember { mutableStateOf(prefs.getString("familyAnnouncement", "") ?: "") }
@@ -153,6 +154,7 @@ fun Family(onBack: () -> Unit) {
     Box(Modifier.fillMaxSize().background(bgColor)) {
         androidx.compose.animation.Crossfade(targetState = view, label = "viewFade") { currentView ->
             when (currentView) {
+                "profile" -> openedFamilyId?.let { id -> FamilyProfile(familyId = id, onBack = { openedFamilyId = null; view = "main" }) }
                 "create" -> FamilyCreate(onBack = { view = "main" }, name = familyName, onName = { familyName = it }, announcement = announcement, onAnnouncement = { announcement = it }, image = familyImage, onImage = { imagePicker.launch(arrayOf("image/*")) }, busy = createBusy, error = createError, onCreate = {
                     if (createBusy) return@FamilyCreate
                     if (familyName.isBlank()) {
@@ -224,6 +226,7 @@ fun Family(onBack: () -> Unit) {
                     }
                 })
                 "top" -> FamilyTop(
+                    onOpenFamily = { id -> openedFamilyId = id; view = "profile" },
                     onBack = { 
                         view = "main" 
                         activeRank = 0
@@ -240,6 +243,7 @@ fun Family(onBack: () -> Unit) {
                     topFamilies = topFamilies
                 )
                 else -> FamilyHome(
+                    onOpenFamily = { id -> openedFamilyId = id; view = "profile" },
                     onBack = onBack, 
                     onRules = { showRules = true }, 
                     seconds = seconds, 
@@ -278,7 +282,7 @@ fun Family(onBack: () -> Unit) {
 // MAIN HOME SCREEN
 // --------------------------------------------------------
 @Composable
-private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, activeRank: Int, onRank: (Int) -> Unit, onCreate: () -> Unit, familyCreated: Boolean, familyName: String, familyImage: String, familyCreatorId: String, topFamilies: List<FamilyRecord>) {
+private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, onOpenFamily: (String) -> Unit, seconds: Int, activeRank: Int, onRank: (Int) -> Unit, onCreate: () -> Unit, familyCreated: Boolean, familyName: String, familyImage: String, familyCreatorId: String, topFamilies: List<FamilyRecord>) {
     val context = LocalContext.current
     val ownFamilyCode = remember { context.getSharedPreferences("hurry_user", Context.MODE_PRIVATE).getString("familyCode", "").orEmpty() }
     var ownFamilyMemberCount by remember(ownFamilyCode) { mutableIntStateOf(0) }
@@ -316,10 +320,10 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, ac
 
                 // 1 frame Middle m 1 row, 2nd row m 2,3 frame
                 Column(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    FamilyPodiumCard(family = topFamilies.getOrNull(0), frame = "IMG_20261115_135339.png", size = 175.dp, modifier = Modifier.zIndex(2f).offset(y = (-20).dp))
+                    FamilyPodiumCard(family = topFamilies.getOrNull(0), frame = "IMG_20261115_135339.png", size = 175.dp, modifier = Modifier.zIndex(2f).offset(y = (-20).dp), onAvatarClick = { topFamilies.getOrNull(0)?.let { onOpenFamily(it.id) } })
                     Row(Modifier.fillMaxWidth().offset(y = (-35).dp).padding(horizontal = 25.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                        FamilyPodiumCard(family = topFamilies.getOrNull(1), frame = "IMG_20261115_135356.png", size = 130.dp)
-                        FamilyPodiumCard(family = topFamilies.getOrNull(2), frame = "IMG_20261115_135419.png", size = 130.dp)
+                        FamilyPodiumCard(family = topFamilies.getOrNull(1), frame = "IMG_20261115_135356.png", size = 130.dp, onAvatarClick = { topFamilies.getOrNull(1)?.let { onOpenFamily(it.id) } })
+                        FamilyPodiumCard(family = topFamilies.getOrNull(2), frame = "IMG_20261115_135419.png", size = 130.dp, onAvatarClick = { topFamilies.getOrNull(2)?.let { onOpenFamily(it.id) } })
                     }
                 }
                 
@@ -369,7 +373,7 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, ac
                                 1 -> "IMG_20261115_135356.png"
                                 else -> "IMG_20261115_135419.png"
                             }
-                            FamilyPodiumCard(family = family, frame = listFrame, size = 65.dp)
+                            FamilyPodiumCard(family = family, frame = listFrame, size = 65.dp, onAvatarClick = { onOpenFamily(family.id) })
                             
                             Column(Modifier.weight(1f).padding(start = 8.dp)) {
                                 Text(family.name, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1)
@@ -398,7 +402,7 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, ac
                         Row(Modifier.align(Alignment.CenterStart).padding(start = 65.dp, end = 26.dp), verticalAlignment = Alignment.CenterVertically) {
                             
                             // SQUARE AVATARS FOR 4 TO 50 (SIZE BADI KAR DI HAI: 48.dp)
-                            AsyncImage(model = family.image, contentDescription = family.name, modifier = Modifier.size(48.dp).clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.Crop)
+                            AsyncImage(model = family.image, contentDescription = family.name, modifier = Modifier.size(48.dp).clip(RoundedCornerShape(8.dp)).clickable { onOpenFamily(family.id) }, contentScale = ContentScale.Crop)
                             
                             Column(Modifier.weight(1f).padding(start = 10.dp)) {
                                 Text(family.name, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1)
@@ -430,7 +434,7 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, ac
                     AsyncImage(
                         model = familyImage.takeIf { it.isNotBlank() } ?: familyAsset("IMG_20261116_162146.png"),
                         contentDescription = "Family DP",
-                        modifier = Modifier.size(54.dp).clip(RoundedCornerShape(15.dp)),
+                        modifier = Modifier.size(54.dp).clip(RoundedCornerShape(15.dp)).clickable { topFamilies.firstOrNull { it.name == familyName }?.let { onOpenFamily(it.id) } },
                         contentScale = ContentScale.Crop
                     )
                     Spacer(Modifier.width(10.dp))
@@ -462,11 +466,11 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, ac
 
 // AVATAR IN CIRCLE BEHIND THE FRAME (Perfectly used for Top Podium & List 1,2,3 Cards too)
 @Composable
-private fun FamilyPodiumCard(family: FamilyRecord?, frame: String, size: androidx.compose.ui.unit.Dp, modifier: Modifier = Modifier) {
+private fun FamilyPodiumCard(family: FamilyRecord?, frame: String, size: androidx.compose.ui.unit.Dp, modifier: Modifier = Modifier, onAvatarClick: () -> Unit = {}) {
     Box(modifier.size(size), contentAlignment = Alignment.Center) {
         // AVATAR RENDERED FIRST SO IT IS BEHIND THE FRAME
         val avatarSize = size * 0.38f // Perfectly scaled with size
-        Box(Modifier.align(Alignment.BottomCenter).padding(bottom = size * 0.08f)) {
+        Box(Modifier.align(Alignment.BottomCenter).padding(bottom = size * 0.08f).clickable(enabled = family != null, onClick = onAvatarClick)) {
             if (family != null) {
                 AsyncImage(
                     model = family.image, 
@@ -493,7 +497,7 @@ private fun FamilyPodiumCard(family: FamilyRecord?, frame: String, size: android
 // TOP RANKINGS REWARDS CARDS
 // --------------------------------------------------------
 @Composable
-private fun FamilyTop(onBack: () -> Unit, onRules: () -> Unit, activeRank: Int, onRank: (Int) -> Unit, onOpenModal: (String, String, Boolean, String) -> Unit, topFamilies: List<FamilyRecord>) {
+private fun FamilyTop(onBack: () -> Unit, onRules: () -> Unit, onOpenFamily: (String) -> Unit, activeRank: Int, onRank: (Int) -> Unit, onOpenModal: (String, String, Boolean, String) -> Unit, topFamilies: List<FamilyRecord>) {
     val scrollState = rememberScrollState()
     val activeFilter = null
     val inactiveFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
@@ -513,7 +517,7 @@ private fun FamilyTop(onBack: () -> Unit, onRules: () -> Unit, activeRank: Int, 
             }
 
             Column(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                FamilyPodiumCard(family = topFamilies.getOrNull(0), frame = "IMG_20261115_135339.png", size = 175.dp, modifier = Modifier.zIndex(2f).offset(y = (-15).dp))
+                FamilyPodiumCard(family = topFamilies.getOrNull(0), frame = "IMG_20261115_135339.png", size = 175.dp, modifier = Modifier.zIndex(2f).offset(y = (-15).dp), onAvatarClick = { topFamilies.getOrNull(0)?.let { onOpenFamily(it.id) } })
                 Row(Modifier.fillMaxWidth().offset(y = (-35).dp).padding(horizontal = 25.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                     FamilyPodiumCard(family = topFamilies.getOrNull(1), frame = "IMG_20261115_135356.png", size = 130.dp)
                     FamilyPodiumCard(family = topFamilies.getOrNull(2), frame = "IMG_20261115_135419.png", size = 130.dp)
