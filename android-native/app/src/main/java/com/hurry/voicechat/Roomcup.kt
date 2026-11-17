@@ -19,7 +19,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
+import coil3.compose.AsyncImage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -128,4 +128,4 @@ fun RoomCupSheet(roomId:String,userId:String,userName:String,userImage:String,on
         Box(Modifier.width(30.dp).height(3.dp).clip(CircleShape).background(if(selected)Color.White else Color.Transparent))
     }
 }
-@Composable private fun CupPeriod(label:String,selected:Boolean,modifier:Modifier,onClick:()->Unit){Box(modifier.height(29.dp).clip(CircleShape).background(if(selected)Color.White else Color.Transparent).clickable{onClick()},contentAlignment=Alignment.Center){Text(label,color=if(selected)Color.Black else Color.Gray,fontSize=11.sp,fontWeight=if(selected)FontWeight.SemiBold)}}
+@Composable private fun CupPeriod(label:String,selected:Boolean,modifier:Modifier,onClick:()->Unit){Box(modifier.height(29.dp).clip(CircleShape).background(if(selected)Color.White else Color.Transparent).clickable{onClick()},contentAlignment=Alignment.Center){Text(label,color=if(selected)Color.Black else Color.Gray,fontSize=11.sp,fontWeight=if(selected)FontWeight.SemiBold else FontWeight.Normal)}}
