@@ -443,7 +443,7 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, ac
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     AsyncImage(model = familyAsset("IMG_20261116_162146.png"), contentDescription = "Members", modifier = Modifier.size(10.dp))
                                     Spacer(Modifier.width(2.dp))
-                                    Text("0/50", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Medium)
+                                    Text("${family.members.size.coerceAtMost(50)}/50", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Medium)
                                 }
                             }
                             // RIGHT CORNER COINS
