@@ -1,562 +1,233 @@
 package com.hurry.voicechat
 
-import android.graphics.BitmapFactory
-import android.util.LruCache
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.Image
+import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
-import coil3.compose.AsyncImage
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import coil3.compose.AsyncImage
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import org.json.JSONObject
+import java.net.HttpURLConnection
 import java.net.URL
+import java.net.URLEncoder
+import java.util.Locale
 
-private object LeaderboardChromaCache {
-    // Keep decoded podium/avatar images bounded across screen visits.
-    val images = object : LruCache<String, ImageBitmap>(16 * 1024) {
-        override fun sizeOf(key: String, value: ImageBitmap): Int =
-            ((value.width.toLong() * value.height.toLong() * 4L) / 1024L)
-                .coerceAtLeast(1L).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+private data class ZyoraRank(
+    val id: String, val name: String, val image: String, val coins: Long,
+    val country: String = "", val gender: String = "", val level: Int = 1, val rank: Int = 0
+)
+
+private data class ZyoraLeaderboardData(val rows: List<ZyoraRank>, val endsAt: Long)
+
+private suspend fun loadZyoraLeaderboard(tab: String, period: String): ZyoraLeaderboardData =
+    withContext(Dispatchers.IO) {
+        val url = URL("https://zyora-server.onrender.com/api/leaderboard?tab=${URLEncoder.encode(tab, "UTF-8")}&period=${URLEncoder.encode(period, "UTF-8")}")
+        val connection = url.openConnection() as HttpURLConnection
+        connection.connectTimeout = 10000
+        connection.readTimeout = 12000
+        try {
+            if (connection.responseCode !in 200..299) return@withContext ZyoraLeaderboardData(emptyList(), 0L)
+            val root = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
+            val array = root.optJSONArray("leaderboard")
+            val rows = (0 until (array?.length() ?: 0)).mapNotNull { index ->
+                val item = array?.optJSONObject(index) ?: return@mapNotNull null
+                ZyoraRank(
+                    id = item.optString(if (tab == "room") "roomId" else "userId"),
+                    name = item.optString("name", "User"),
+                    image = item.optString("image"),
+                    coins = item.optLong("coins"),
+                    country = item.optString("country"),
+                    gender = item.optString("gender"),
+                    level = item.optInt("level", 1),
+                    rank = item.optInt("rank", index + 1)
+                )
+            }
+            ZyoraLeaderboardData(rows, root.optLong("endsAt"))
+        } finally { connection.disconnect() }
+    }
+
+private fun zyoraFlagCode(country: String): String {
+    val value = country.trim().lowercase(Locale.ROOT)
+    return when (value) {
+        "india" -> "in"; "singapore" -> "sg"; "saudi arabia", "saudi" -> "sa"
+        "united states", "usa", "us" -> "us"; "united kingdom", "uk" -> "gb"
+        "pakistan" -> "pk"; "bangladesh" -> "bd"; "nepal" -> "np"
+        "indonesia" -> "id"; "philippines" -> "ph"; "thailand" -> "th"
+        "malaysia" -> "my"; "uae", "united arab emirates" -> "ae"
+        else -> value.takeIf { it.length == 2 } ?: ""
     }
 }
 
-// VIDEO PLAYER (Green remove logic hat gaya hai)
-@Composable
-fun ChromaVideoPlayer(url: String, modifier: Modifier = Modifier) {
-    AndroidView(
-        modifier = modifier,
-        factory = { context ->
-            android.webkit.WebView(context).apply {
-                setBackgroundColor(android.graphics.Color.TRANSPARENT)
-                setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null)
-                settings.javaScriptEnabled = true
-                settings.mediaPlaybackRequiresUserGesture = false
-                
-                val htmlData = """
-                    <!DOCTYPE html>
-                    <html>
-                    <head>
-                    <style>
-                        body { margin: 0; overflow: hidden; background-color: transparent !important; }
-                        canvas { width: 100%; height: 100%; object-fit: contain; background: transparent; }
-                        video { display: none; }
-                    </style>
-                    </head>
-                    <body style="background:transparent;">
-                    <video id="v" src="$url" autoplay loop muted playsinline crossorigin="anonymous"></video>
-                    <canvas id="c"></canvas>
-                    <script>
-                        const v = document.getElementById('v');
-                        const c = document.getElementById('c');
-                        const ctx = c.getContext('2d', { willReadFrequently: true });
-                        
-                        v.addEventListener('loadedmetadata', function() {
-                            c.width = v.videoWidth || 400;
-                            c.height = v.videoHeight || 400;
-                        });
-                        
-                        // Agar video load hone mein error aaye toh canvas clear rakho (No Black Screen)
-                        v.addEventListener('error', function() {
-                            ctx.clearRect(0, 0, c.width, c.height);
-                        });
-
-                        v.addEventListener('play', function() {
-                            function step() {
-                                if(v.paused || v.ended) return;
-                                try {
-                                    // Sirf video draw ho raha hai, green remove logic removed
-                                    ctx.drawImage(v, 0, 0, c.width, c.height);
-                                } catch(e) {
-                                    // Crossorigin ya render issue hone par blank/transparent chor do
-                                    ctx.clearRect(0, 0, c.width, c.height);
-                                }
-                                requestAnimationFrame(step);
-                            }
-                            requestAnimationFrame(step);
-                        });
-                    </script>
-                    </body>
-                    </html>
-                """.trimIndent()
-                loadDataWithBaseURL(null, htmlData, "text/html", "UTF-8", null)
-            }
-        }
-    )
-}
-
-// IMAGE LOADER (Green remove logic hat gaya hai)
-@Composable
-private fun LeaderboardChromaImage(url: String, contentDescription: String?, modifier: Modifier, contentScale: ContentScale = ContentScale.Fit) {
-    var bitmap by remember(url) { mutableStateOf(LeaderboardChromaCache.images[url]) }
-    LaunchedEffect(url) {
-        if (bitmap == null) {
-            bitmap = withContext(Dispatchers.IO) {
-                runCatching {
-                    LeaderboardChromaCache.images.get(url) ?: run {
-                        val connection = URL(url).openConnection().apply {
-                            connectTimeout = 7_000
-                            readTimeout = 9_000
-                            useCaches = true
-                        }
-                        val source = connection.getInputStream().use { BitmapFactory.decodeStream(it) }
-                        if (source == null) null else {
-                            // Direct bitmap convert ho raha hai, pixel loop removed
-                            source.asImageBitmap().also { LeaderboardChromaCache.images.put(url, it) }
-                        }
-                    }
-                }.getOrNull()
-            }
-        }
-    }
-    bitmap?.let { Image(bitmap=it, contentDescription=contentDescription, modifier=modifier, contentScale=contentScale) }
+private fun zyoraCoinText(value: Long): String = when {
+    value >= 1_000_000_000 -> String.format(Locale.US, "%.1fB", value / 1_000_000_000.0)
+    value >= 1_000_000 -> String.format(Locale.US, "%.1fM", value / 1_000_000.0)
+    value >= 1_000 -> String.format(Locale.US, "%.1fK", value / 1_000.0)
+    else -> value.toString()
 }
 
 @Composable
-fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
-    var tab by remember { mutableStateOf(initialTab) }
+fun Leaderboard(onBack: () -> Unit = {}, initialTab: String = "rich") {
+    var tab by remember { mutableStateOf(if (initialTab == "honour") "rich" else initialTab) }
     var period by remember { mutableStateOf("daily") }
-    var showRules by remember { mutableStateOf(false) }
-    
-    val tabs=listOf("honour" to "Honour","charm" to "Charm","room" to "Room")
-    val periods=listOf("daily" to "Daily","weekly" to "Weekly","monthly" to "Monthly")
-    val raw = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/"
-    
-    val topImage = when (tab) {
-        "charm" -> "IMG_20261105_230141.png"
-        "room" -> "IMG_20261105_230309.png"
-        else -> "IMG_20261105_230210.png"
-    }
-    
+    var rows by remember { mutableStateOf<List<ZyoraRank>>(emptyList()) }
+    var endsAt by remember { mutableLongStateOf(0L) }
+    var loading by remember { mutableStateOf(true) }
+    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     val context = LocalContext.current
-    val authPrefs = remember { context.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE) }
-    val ownName = authPrefs.getString("name", authPrefs.getString("displayName", "You")).orEmpty().ifBlank { "You" }
-    val ownAvatar = authPrefs.getString("avatar", authPrefs.getString("image", "/default-avatar.png")).orEmpty().let { if (it.startsWith("http", ignoreCase = true)) it else raw + it.removePrefix("/") }
-    
-    val screenHeight = LocalConfiguration.current.screenHeightDp.dp
-    val screenWidthDp = LocalConfiguration.current.screenWidthDp
-    
-    val podiumTopWidth = (screenWidthDp * 0.55f).coerceAtMost(240f).dp
-    val podiumSideWidth = (screenWidthDp * 0.50f).coerceAtMost(220f).dp
+    val auth = remember { context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE) }
+    val ownName = auth.getString("name", auth.getString("displayName", "You")).orEmpty().ifBlank { "You" }
+    val ownAvatar = auth.getString("avatar", auth.getString("image", "")).orEmpty()
+    val base = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/"
+    val tabs = listOf("rich" to "Rich", "charm" to "Charm", "room" to "Room")
+    val periods = listOf("daily" to "Daily", "weekly" to "Weekly", "monthly" to "Monthly")
+
+    LaunchedEffect(tab, period) {
+        loading = true
+        while (true) {
+            runCatching { loadZyoraLeaderboard(tab, period) }.onSuccess {
+                rows = it.rows
+                endsAt = it.endsAt
+            }.onFailure { rows = emptyList() }
+            loading = false
+            delay(15000)
+        }
+    }
+    LaunchedEffect(Unit) {
+        while (true) { now = System.currentTimeMillis(); delay(1000) }
+    }
+    val remaining = ((endsAt - now).coerceAtLeast(0L) / 1000L)
+    val countdown = String.format(Locale.US, "%02d:%02d:%02d:%02d",
+        remaining / 86400, (remaining % 86400) / 3600, (remaining % 3600) / 60, remaining % 60)
 
     Box(Modifier.fillMaxSize().background(Color(0xFF1A0204))) {
-        Box(Modifier.fillMaxWidth().height(screenHeight * 0.60f).align(Alignment.TopCenter)) {
-            AsyncImage(
-                model = raw + topImage,
-                contentDescription = null,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop
-            )
-            Box(
-                Modifier.fillMaxSize().background(
-                    Brush.verticalGradient(
-                        0f to Color.Transparent,
-                        0.45f to Color(0x331A0204),
-                        1f to Color(0xFF1A0204)
-                    )
-                )
-            )
-        }
-        
-        Column(Modifier.fillMaxSize().statusBarsPadding()) {
-            
-            // TOP ROW
-            Row(Modifier.fillMaxWidth().height(48.dp).padding(horizontal = 12.dp), verticalAlignment=Alignment.CenterVertically) {
-                AsyncImage(
-                    model = raw + "file_0000000051d881f5af4f9cf84a56dcd3.png",
-                    contentDescription = "Back",
-                    modifier = Modifier.size(32.dp).clickable(onClick=onBack),
-                    contentScale = ContentScale.Fit
-                )
-                
-                Row(
-                    Modifier.weight(1f),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    tabs.forEach { (id, label) ->
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.clickable { tab = id }.padding(horizontal = 8.dp)
-                        ) {
-                            Text(
-                                text = label,
-                                color = if (tab == id) Color(0xFFE7B865) else Color(0xFFAAAAAA),
-                                fontSize = 16.sp,
-                                fontWeight = if (tab == id) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.SemiBold
-                            )
-                            if (tab == id) {
-                                Spacer(Modifier.height(4.dp))
-                                Canvas(modifier = Modifier.size(width = 24.dp, height = 6.dp)) {
-                                    drawArc(
-                                        color = Color(0xFFE7B865),
-                                        startAngle = 0f,
-                                        sweepAngle = 180f,
-                                        useCenter = false,
-                                        style = Stroke(width = 5f, cap = StrokeCap.Round)
-                                    )
-                                }
-                            } else {
-                                Spacer(Modifier.height(10.dp))
-                            }
+        Column(Modifier.fillMaxSize()) {
+            Row(Modifier.fillMaxWidth().height(52.dp).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                AsyncImage(model = base + "file_0000000051d881f5af4f9cf84a56dcd3.png", contentDescription = "Back",
+                    modifier = Modifier.size(32.dp).clickable(onClick = onBack))
+                Row(Modifier.weight(1f), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+                    tabs.forEach { (key, label) ->
+                        Column(Modifier.clickable { tab = key }.padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(label, color = if (tab == key) Color(0xFFE7B865) else Color.LightGray, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                            if (tab == key) Spacer(Modifier.padding(top = 3.dp).width(24.dp).height(3.dp).clip(CircleShape).background(Color(0xFFE7B865)))
                         }
                     }
                 }
-                
-                AsyncImage(
-                    model = raw + "file_0000000073ec820b832b6dafb168dabe.png",
-                    contentDescription = "Leaderboard rules",
-                    modifier = Modifier.size(32.dp).clickable { showRules = true },
-                    contentScale = ContentScale.Fit
-                )
+                AsyncImage(model = base + "file_0000000073ec820b832b6dafb168dabe.png", contentDescription = "Rules", modifier = Modifier.size(30.dp))
             }
-            
-            // SECOND ROW
-            Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp), horizontalArrangement = Arrangement.Start) {
-                Row(
-                    Modifier.width(220.dp).height(30.dp)
-                        .border(1.dp, Color(0xFFD4AF37), RoundedCornerShape(24.dp))
-                        .background(Color(0xCC110A07), RoundedCornerShape(24.dp))
-                        .padding(2.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    periods.forEach { (id, label) ->
-                        Box(
-                            Modifier.weight(1f).fillMaxHeight()
-                                .clip(RoundedCornerShape(22.dp))
-                                .background(
-                                    if (period == id) Brush.verticalGradient(
-                                        listOf(Color(0xFFE7B865), Color(0xFFBA7627), Color(0xFF743410))
-                                    ) else Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent))
-                                )
-                                .clickable { period = id },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(label, color = if(period == id) Color.White else Color(0xFF8A857D),
-                                fontSize = 13.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
-                        }
+            Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp).widthIn(max = 250.dp)
+                .clip(CircleShape).background(Color(0xCC110A07)).border(1.dp, Color(0xFFD4AF37), CircleShape).padding(3.dp)) {
+                periods.forEach { (key, label) ->
+                    Box(Modifier.weight(1f).height(29.dp).clip(CircleShape)
+                        .background(if (period == key) Brush.verticalGradient(listOf(Color(0xFFE7B865), Color(0xFF743410))) else Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent)))
+                        .clickable { period = key }, contentAlignment = Alignment.Center) {
+                        Text(label, color = if (period == key) Color.White else Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
-            
-            LazyColumn(Modifier.weight(1f).fillMaxWidth(),contentPadding=PaddingValues(bottom=0.dp),verticalArrangement=Arrangement.spacedBy(0.dp)) {
-                // Podium Section
-                item {
-                    Column(Modifier.fillMaxWidth().padding(top=18.dp, bottom=0.dp),horizontalAlignment=Alignment.CenterHorizontally) {
-                        
-                        // TOP 1 BOX (Height badha di hai 200.dp se 260.dp taki frame cut na ho)
-                        Box(
-                            modifier = Modifier.width(podiumTopWidth).height(260.dp).offset(y = (-10).dp), 
-                            contentAlignment = Alignment.Center
-                        ) {
-                            // Rank 1 Avatar (Frame 300dp hua toh isko bhi thoda 72dp kar diya fit aane ke liye)
-                            AsyncImage(
-                                model = raw + "default_avatar.png",
-                                contentDescription = "Rank 1 Avatar",
-                                modifier = Modifier
-                                    .size(72.dp)
-                                    .clip(RoundedCornerShape(50)),
-                                contentScale = ContentScale.Crop
-                            )
-                            // TOP 1 FRAME (Exact 300.dp)
-                            LeaderboardChromaImage(
-                                url = raw + "file_00000000a0e48207ade38b36ab946ecb.png",
-                                contentDescription = "Rank 1 Frame",
-                                modifier = Modifier.requiredSize(300.dp)
-                            )
-                        }
-                        
-                        Spacer(Modifier.height(25.dp)) // Upar ki height badhi isliye isko adjust kiya
-                        
-                        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically) {
-                            Box(modifier = Modifier.width(podiumSideWidth).height(175.dp), contentAlignment = Alignment.Center) {
-                                // Rank 2 Avatar
-                                AsyncImage(
-                                    model = raw + "default_avatar.png",
-                                    contentDescription = "Rank 2 Avatar",
-                                    modifier = Modifier
-                                        .align(Alignment.TopCenter)
-                                        .offset(y = 35.dp)
-                                        .size(60.dp)
-                                        .clip(RoundedCornerShape(50)),
-                                    contentScale = ContentScale.Crop
-                                )
-                                // Rank 2 Frame 
-                                LeaderboardChromaImage(url=raw+"file_0000000069b88207b9fdd01576b71ee9.png",contentDescription="Rank 2 frame",modifier=Modifier.requiredSize(260.dp),contentScale=ContentScale.Fit)
+            Row(Modifier.fillMaxWidth().padding(vertical = 7.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                Text("⏳ $countdown", color = Color(0xFFE7B865), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+            }
+            if (loading && rows.isEmpty()) {
+                Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) { Text("Loading...", color = Color.Gray) }
+            } else if (rows.isEmpty()) {
+                Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) { Text("No data", color = Color.Gray, fontSize = 13.sp) }
+            } else if (tab == "room") {
+                LazyColumn(Modifier.weight(1f).fillMaxWidth(), contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                    itemsIndexed(rows.take(50), key = { _, item -> item.id }) { index, item ->
+                        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(Color.Black).padding(horizontal = 12.dp, vertical = 11.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text("${index + 1}", Modifier.width(30.dp), color = Color(0xFFE7B865), fontSize = 17.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                            AsyncImage(model = item.image.ifBlank { base + "default_avatar.png" }, contentDescription = item.name, modifier = Modifier.padding(start = 8.dp).size(46.dp).clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.Crop)
+                            Column(Modifier.weight(1f).padding(start = 10.dp)) {
+                                Text(item.name, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text("Room", color = Color.Gray, fontSize = 10.sp)
                             }
-                            Box(modifier = Modifier.width(podiumSideWidth).height(175.dp), contentAlignment = Alignment.Center) {
-                                // Rank 3 Avatar 
-                                AsyncImage(
-                                    model = raw + "default_avatar.png",
-                                    contentDescription = "Rank 3 Avatar",
-                                    modifier = Modifier
-                                        .align(Alignment.TopCenter)
-                                        .offset(y = 35.dp)
-                                        .size(60.dp)
-                                        .clip(RoundedCornerShape(50)),
-                                    contentScale = ContentScale.Crop
-                                )
-                                // Rank 3 Frame
-                                LeaderboardChromaImage(url=raw+"file_00000000ecc882079f34a9356b53dc8e.png",contentDescription="Rank 3 frame",modifier=Modifier.requiredSize(250.dp),contentScale=ContentScale.Fit)
-                            }
+                            Text(zyoraCoinText(item.coins), color = Color(0xFFE7B865), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                            AsyncImage(model = base + "file_00000000e56882119c217d508b6733dc.png", contentDescription = "Coins", modifier = Modifier.padding(start = 5.dp).size(18.dp))
                         }
                     }
                 }
-                
-                item {
-                    Spacer(Modifier.height(10.dp))
-                }
-
-                // Card and Timer Block (4 to 50 rank list)
-                item {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 8.dp)
-                            .padding(top = 35.dp) 
-                            .background(Color(0xE60A0505), RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)) 
-                            .border(1.dp, Color(0xFFD4AF37), RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-                    ) {
-                        
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 12.dp)
-                                .background(
-                                    Brush.horizontalGradient(
-                                        0.0f to Color.Transparent,
-                                        0.2f to Color(0xFF4A2511), 
-                                        0.8f to Color(0xFF4A2511), 
-                                        1.0f to Color.Transparent
-                                    )
-                                )
-                                .padding(vertical = 4.dp), 
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text("— ∞ ", color = Color(0xFFD4AF37), fontSize = 14.sp)
-                            Text(
-                                text = "⏳ 01:27:36 (GMT+5.5)",
-                                color = Color(0xFFD4AF37),
-                                fontSize = 14.sp,
-                                fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
-                            )
-                            Text(" ∞ —", color = Color(0xFFD4AF37), fontSize = 14.sp)
+            } else {
+                LazyColumn(Modifier.weight(1f).fillMaxWidth(), contentPadding = PaddingValues(bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(0.dp)) {
+                    item {
+                        Row(Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 14.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.Bottom) {
+                            if (rows.size > 1) PodiumUser(rows[1], 2, base, 60, 175)
+                            if (rows.isNotEmpty()) PodiumUser(rows[0], 1, base, 72, 230)
+                            if (rows.size > 2) PodiumUser(rows[2], 3, base, 60, 175)
                         }
-
-                        (0 until 47).forEach { i ->
-                            
-                            val rawAvatarPath = "default_avatar.png"
-                            val resolvedAvatarUrl = if (rawAvatarPath.startsWith("http", ignoreCase = true)) rawAvatarPath else raw + rawAvatarPath.removePrefix("/")
-                            
-                            Row(
-                                Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 14.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = "${i + 4}",
-                                    color = Color(0xFFE7B865),
-                                    fontSize = 18.sp,
-                                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                                    modifier = Modifier.width(32.dp),
-                                    textAlign = TextAlign.Center
-                                )
-                                Spacer(Modifier.width(6.dp))
-                                AsyncImage(
-                                    model = resolvedAvatarUrl,
-                                    contentDescription = "Avatar",
-                                    modifier = Modifier
-                                        .size(44.dp)
-                                        .clip(RoundedCornerShape(50))
-                                        .border(1.5.dp, Color(0x33FFFFFF), RoundedCornerShape(50)),
-                                    contentScale = ContentScale.Crop
-                                )
-                                Spacer(Modifier.width(12.dp))
-                                Column(Modifier.weight(1f)) {
-                                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                                        Text(
-                                            text = "User Name ${i+4}",
-                                            color = Color.White,
-                                            fontSize = 14.sp,
-                                            fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                        Spacer(Modifier.width(6.dp))
-                                        
-                                        Box(
-                                            modifier = Modifier
-                                                .size(14.dp)
-                                                .background(if (i % 2 == 0) Color(0xFF4A90E2) else Color(0xFFFF69B4), RoundedCornerShape(50)),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Text(
-                                                text = if (i % 2 == 0) "♂" else "♀", 
-                                                color = Color.White, 
-                                                fontSize = 9.sp, 
-                                                style = androidx.compose.ui.text.TextStyle(
-                                                    platformStyle = androidx.compose.ui.text.PlatformTextStyle(
-                                                        includeFontPadding = false
-                                                    )
-                                                ),
-                                                modifier = Modifier.offset(y = (-1).dp) 
-                                            )
-                                        }
-                                        
-                                        Spacer(Modifier.weight(1f)) 
-                                        
-                                        Text(
-                                            text = "${796 - (i * 12)}.9K",
-                                            color = Color(0xFFE7B865),
-                                            fontSize = 14.sp,
-                                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
-                                        )
-                                        Spacer(Modifier.width(4.dp))
-                                        AsyncImage(
-                                            model = raw + "file_00000000e56882119c217d508b6733dc.png",
-                                            contentDescription = "Coins Icon",
-                                            modifier = Modifier.size(16.dp),
-                                            contentScale = ContentScale.Fit
-                                        )
-                                    }
-                                    Spacer(Modifier.height(4.dp))
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text(if (i % 2 == 0) "🇮🇳" else "🇸🇦", fontSize = 14.sp) 
-                                        Spacer(Modifier.width(6.dp))
-                                        
-                                        Box { 
-                                            AsyncImage(
-                                                model = raw + "IMG_20261028_004355.png",
-                                                contentDescription = "Level Image",
-                                                modifier = Modifier.height(18.dp),
-                                                contentScale = ContentScale.Fit
-                                            )
-                                            Text(
-                                                text = "Lv.${10 + i}",
-                                                color = Color.White,
-                                                fontSize = 9.sp, 
-                                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                                                modifier = Modifier.align(Alignment.CenterEnd).padding(end = 4.dp) 
-                                            )
-                                        }
-                                    }
+                    }
+                    itemsIndexed(rows.drop(3).take(47), key = { _, item -> item.id }) { index, item ->
+                        Row(Modifier.fillMaxWidth().padding(horizontal = 9.dp, vertical = 5.dp).clip(RoundedCornerShape(9.dp)).background(Color.Black).padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text("${index + 4}", Modifier.width(30.dp), color = Color(0xFFE7B865), fontSize = 16.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                            AsyncImage(model = item.image.ifBlank { base + "default_avatar.png" }, contentDescription = item.name, modifier = Modifier.padding(start = 7.dp).size(43.dp).clip(CircleShape), contentScale = ContentScale.Crop)
+                            Column(Modifier.weight(1f).padding(start = 10.dp)) {
+                                Text(item.name, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(item.country, color = Color.LightGray, fontSize = 10.sp)
+                                    if (item.gender.isNotBlank()) Text(if (item.gender.equals("female", true)) " ♀ " else " ♂ ", color = if (item.gender.equals("female", true)) Color(0xFFFF77B7) else Color(0xFF66B8FF), fontSize = 11.sp)
+                                    Text("Lv.${item.level}", color = Color.Gray, fontSize = 10.sp)
                                 }
                             }
-                        }
-                        
-                        Spacer(Modifier.height(130.dp))
-                    }
-                }
-            }
-        }
-
-        // BOTTOM BAR
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.BottomCenter)
-                .offset(y = 10.dp) 
-                .height(150.dp) 
-        ) {
-            AsyncImage(
-                model = raw + "IMG_20261106_021443.png",
-                contentDescription = "Bottom Bar Background",
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop
-            )
-            Row(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 24.dp)
-                    .padding(top = 30.dp), 
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                AsyncImage(
-                    model = ownAvatar,
-                    contentDescription = "Your avatar",
-                    modifier = Modifier
-                        .size(46.dp)
-                        .clip(RoundedCornerShape(50)),
-                    contentScale = ContentScale.Crop
-                )
-                Spacer(Modifier.width(12.dp))
-                Text(
-                    text = ownName, 
-                    color = Color.White, 
-                    fontSize = 15.sp, 
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, 
-                    modifier = Modifier.weight(1f), 
-                    maxLines = 1
-                )
-                Text(
-                    text = "+100", 
-                    color = Color(0xFFE7B865), 
-                    fontSize = 18.sp, 
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
-                )
-            }
-        }
-
-        if (showRules) {
-            androidx.compose.ui.window.Dialog(
-                onDismissRequest = { showRules = false },
-                properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
-            ) {
-                Box(Modifier.fillMaxSize().background(Color(0x99000000)).clickable { showRules = false },contentAlignment=Alignment.BottomCenter) {
-                    Column(
-                        Modifier.fillMaxWidth()
-                            .fillMaxHeight(0.60f)
-                            .clip(RoundedCornerShape(topStart=16.dp,topEnd=16.dp))
-                            .background(Color(0xFF1A0204))
-                            .clickable { }
-                            .padding(20.dp)
-                    ) {
-                        Text("Rules",color=Color(0xFFE7B865),fontSize=18.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Bold,modifier=Modifier.align(Alignment.CenterHorizontally))
-                        Spacer(Modifier.height(16.dp))
-                        
-                        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(10.dp)) {
-                            Text("Contribution Leaderboard: Your ranking on this leaderboard is determined by the total number of Coins you have spent in the room. The higher the amount spent, the higher your position on the leaderboard.",color=Color.White, fontSize = 12.sp)
-                            Text("Charm Leaderboard: Your ranking on this leaderboard is determined by the total number of Coins you Receive. The higher the amount spent, the higher your position on the leaderboard.",color=Color.White, fontSize = 12.sp)
-                            Text("Room Leaderboard: Your ranking on this leaderboard is determined by the total number of Coins you have spent in the room. The higher the amount spent, the higher your position on the leaderboard.",color=Color.White, fontSize = 12.sp)
-                            
-                            Spacer(Modifier.height(4.dp))
-                            Text("Data Periods",color=Color(0xFFE7B865),fontSize = 14.sp, fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold)
-                            Text("1. Daily leaderboard data is finalized every day at (5:30+GMT).\n2. Weekly leaderboard data is finalized every Monday at (5:30+GMT).\n3. Monthly leaderboard data is finalized on the first day of every month at (5:30+GMT).",color=Color.White, fontSize = 12.sp)
-                            
-                            Spacer(Modifier.height(4.dp))
-                            Text("Note: Users who violate platform rules are ineligible to participate in the rankings.",color=Color.White, fontSize = 12.sp)
-                            Text("The platform reserves the right to make the final decision.",color=Color.White, fontSize = 12.sp)
-                            
-                            Spacer(Modifier.height(12.dp))
-                            Text("Regard Zyora team",color=Color(0xFFE7B865), fontSize = 12.sp, modifier=Modifier.fillMaxWidth(), textAlign = TextAlign.End)
+                            Text(zyoraCoinText(item.coins), color = Color(0xFFE7B865), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                            AsyncImage(model = base + "file_00000000e56882119c217d508b6733dc.png", contentDescription = "Coins", modifier = Modifier.padding(start = 5.dp).size(17.dp))
                         }
                     }
                 }
             }
+        }
+        Row(Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(12.dp).clip(RoundedCornerShape(12.dp)).background(Color(0xFF263B54)).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            AsyncImage(model = ownAvatar.ifBlank { base + "default_avatar.png" }, contentDescription = ownName, modifier = Modifier.size(38.dp).clip(CircleShape), contentScale = ContentScale.Crop)
+            Text(ownName, Modifier.weight(1f).padding(start = 9.dp), color = Color.White, fontSize = 13.sp, maxLines = 1)
+        }
+    }
+}
+
+@Composable
+private fun PodiumUser(user: ZyoraRank, rank: Int, base: String, avatarSize: Int, frameSize: Int) {
+    val frame = when (rank) {
+        1 -> "file_00000000a0e48207ade38b36ab946ecb.png"
+        2 -> "file_0000000069b88207b9fdd01576b71ee9.png"
+        else -> "file_00000000ecc882079f34a9356b53dc8e.png"
+    }
+    Column(Modifier.width(if (rank == 1) 150.dp else 112.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(Modifier.size(frameSize.dp), contentAlignment = Alignment.Center) {
+            AsyncImage(model = user.image.ifBlank { base + "default_avatar.png" }, contentDescription = user.name,
+                modifier = Modifier.size(avatarSize.dp).clip(CircleShape), contentScale = ContentScale.Crop)
+            AsyncImage(model = base + frame, contentDescription = "Rank $rank frame",
+                modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
+        }
+        Text(user.name, color = Color.White, fontSize = if (rank == 1) 13.sp else 11.sp, fontWeight = FontWeight.Bold,
+            maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+            val code = zyoraFlagCode(user.country)
+            if (code.isNotBlank()) AsyncImage(model = "https://flagcdn.com/w40/$code.png", contentDescription = "Country flag", modifier = Modifier.size(width = 18.dp, height = 12.dp), contentScale = ContentScale.Crop)
+            if (user.gender.isNotBlank()) Text(if (user.gender.equals("female", true)) "♀" else "♂", color = if (user.gender.equals("female", true)) Color(0xFFFF77B7) else Color(0xFF66B8FF), fontSize = 12.sp, modifier = Modifier.padding(start = 4.dp))
+        }
+        AsyncImage(model = base + "IMG_20261028_004355.png", contentDescription = "Level",
+            modifier = Modifier.width(36.dp).height(16.dp), contentScale = ContentScale.FillBounds)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(zyoraCoinText(user.coins), color = Color(0xFFE7B865), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            AsyncImage(model = base + "file_00000000e56882119c217d508b6733dc.png", contentDescription = "Coins", modifier = Modifier.padding(start = 3.dp).size(15.dp))
         }
     }
 }
