@@ -1198,3 +1198,12 @@ Current documentation does not certify that all historical features are build-, 
 - Room cup icon opens the sheet; Online User tab hands off to the existing ActiveUsers sheet. The top active-user pill continues to open that same ActiveUsers sheet.
 - Zyora-Server records successful room gift amounts in `room_gift_contributions` and exposes `/api/rooms/:roomId/contributions` for rolling 24-hour / 7-day totals.
 - Status: source changes committed; Android build and live Render deployment still require verification.
+
+## 2026-11-17 — Global Rich, Charm and Room leaderboards
+- Native `Leaderboard.kt` now loads real rankings from Zyora-Server for Daily, Weekly and Monthly periods and refreshes every 15 seconds.
+- Rich ranks users by total sent gift coins across all rooms; Charm ranks users by received gift coins across all rooms.
+- Room ranks rooms by total sent gift coins and displays the room DP/name; no fabricated users or placeholder rows are rendered.
+- Top three user positions use the existing rank frames and real profile avatar/details; ranks 4–50 render only returned accounts.
+- Zyora-Server records recipient-side gift totals in addition to sender-side totals and exposes `GET /api/leaderboard`. Legacy sender records remain included in Rich and Room totals.
+- Countdown uses each period's next boundary in India Standard Time.
+- Note: Charm totals begin accumulating from the server deployment onward because historical contribution records only stored senders, not recipients. No build or live Render deployment verification has been performed in this change.
