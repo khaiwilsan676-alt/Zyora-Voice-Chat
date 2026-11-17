@@ -621,6 +621,7 @@ fun PublicProfileScreen(
                         Text("${if (followers >= 0) followers.toString() else "—"} Fans", fontSize = 12.sp, color = Color.Gray)
                     }
 
+                    // --- EDITED: Lv.1 Ke side Family tag aur Name Center ---
                     Row(modifier = Modifier.padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         Box(contentAlignment = Alignment.CenterEnd, modifier = Modifier.height(24.dp).width(48.dp)) {
                             AsyncImage(model = profileAsset("/IMG_20261028_004355.png"), contentDescription = "Level", contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
@@ -633,14 +634,26 @@ fun PublicProfileScreen(
                             )
                         }
                         if (hasFamilyMembership) {
-                            AsyncImage(
-                                model = PUBLIC_PROFILE_FAMILY_IMAGE_URL,
-                                contentDescription = "Family tag",
-                                contentScale = ContentScale.Fit,
-                                modifier = Modifier.height(18.dp).widthIn(max = 42.dp)
-                            )
+                            Box(contentAlignment = Alignment.Center, modifier = Modifier.height(24.dp).widthIn(min = 60.dp, max = 100.dp)) {
+                                AsyncImage(
+                                    model = PUBLIC_PROFILE_FAMILY_IMAGE_URL,
+                                    contentDescription = "Family tag",
+                                    contentScale = ContentScale.FillBounds,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                                Text(
+                                    text = ownFamilyName,
+                                    color = Color.White,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.padding(horizontal = 8.dp)
+                                )
+                            }
                         }
                     }
+                    // -----------------------------------------------------
 
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 12.dp)) {
                         Icon(Icons.Outlined.LocationOn, "Location", tint = Color.Gray, modifier = Modifier.size(16.dp))
@@ -685,7 +698,7 @@ fun PublicProfileScreen(
                 Column(modifier = Modifier
                     .fillMaxWidth()
                     .offset(y = (-12).dp) 
-                    .padding(vertical = 8.dp) // Removed horizontal 20.dp here for edge-to-edge family banner
+                    .padding(vertical = 8.dp)
                 ) {
                     
                     // Family
@@ -694,59 +707,82 @@ fun PublicProfileScreen(
                             SectionHeader("Family")
                         }
                         if (hasFamilyMembership) {
+                            // --- EDITED: Family Card Update ---
                             Box(
                                 Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 8.dp) // <-- ADDED GAP HERE as requested
-                                    .height(112.dp) // Edge to edge background height limit (you can remove if wrap needed)
+                                    .padding(horizontal = 8.dp)
+                                    .height(112.dp)
                                     .clickable { if (ownFamilyCode.isNotBlank()) onOpenFamily(ownFamilyCode) }
                             ) {
+                                // Background updated
                                 AsyncImage(
-                                    model = PUBLIC_PROFILE_FAMILY_IMAGE_URL,
+                                    model = profileAsset("/IMG_20261116_163413.png"),
                                     contentDescription = "Family background",
                                     modifier = Modifier.fillMaxSize(),
                                     contentScale = ContentScale.Fit
                                 )
-                                Box(
+                                
+                                // Row layout to put Text right next to Avatar
+                                Row(
                                     Modifier
-                                        .align(Alignment.CenterStart)
-                                        .padding(start = 16.dp)
-                                        .size(62.dp),
-                                    contentAlignment = Alignment.Center
+                                        .fillMaxSize()
+                                        .padding(start = 16.dp),
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    if (ownFamilyImage.isNotBlank()) {
+                                    // Avatar overlapping Frame Box
+                                    Box(
+                                        Modifier.size(62.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        if (ownFamilyImage.isNotBlank()) {
+                                            AsyncImage(
+                                                model = ownFamilyImage,
+                                                contentDescription = "Family DP",
+                                                modifier = Modifier.size(44.dp).clip(CircleShape),
+                                                contentScale = ContentScale.Crop
+                                            )
+                                        }
                                         AsyncImage(
-                                            model = ownFamilyImage,
-                                            contentDescription = "Family DP",
-                                            modifier = Modifier.size(44.dp).clip(CircleShape),
-                                            contentScale = ContentScale.Crop
+                                            model = profileAsset("/IMG_20261116_164433.png"),
+                                            contentDescription = "Family avatar frame",
+                                            modifier = Modifier.size(62.dp),
+                                            contentScale = ContentScale.Fit
                                         )
                                     }
-                                    AsyncImage(
-                                        model = profileAsset("/IMG_20261116_164433.png"),
-                                        contentDescription = "Family avatar frame",
-                                        modifier = Modifier.size(62.dp),
-                                        contentScale = ContentScale.Fit
-                                    )
-                                }
-                                Column(
-                                    Modifier.align(Alignment.Center),
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.spacedBy(2.dp)
-                                ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                                        Text(ownFamilyName, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                        AsyncImage(
-                                            model = PUBLIC_PROFILE_FAMILY_IMAGE_URL,
-                                            contentDescription = "Family tag",
-                                            contentScale = ContentScale.Fit,
-                                            modifier = Modifier.height(18.dp).widthIn(max = 42.dp)
+                                    
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    
+                                    // Text aligned to start (left), NOT center
+                                    Column(
+                                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                                        horizontalAlignment = Alignment.Start
+                                    ) {
+                                        Text(
+                                            text = ownFamilyName, 
+                                            color = Color.White, 
+                                            fontSize = 15.sp, 
+                                            fontWeight = FontWeight.Bold, 
+                                            maxLines = 1, 
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        Text(
+                                            text = "Family ID: $ownFamilyCreatorId", 
+                                            color = Color.White, 
+                                            fontSize = 11.sp, 
+                                            fontWeight = FontWeight.Medium, 
+                                            maxLines = 1
+                                        )
+                                        Text(
+                                            text = "Members $ownFamilyMemberCount/50", 
+                                            color = Color.White, 
+                                            fontSize = 11.sp, 
+                                            fontWeight = FontWeight.Medium
                                         )
                                     }
-                                    Text("Family ID: $ownFamilyCreatorId", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium, maxLines = 1)
-                                    Text("Members $ownFamilyMemberCount/50", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium)
                                 }
                             }
+                            // ---------------------------------
                         } else {
                             Box(modifier = Modifier.padding(horizontal = 20.dp).fillMaxWidth()) {
                                 EmptySectionCard(
