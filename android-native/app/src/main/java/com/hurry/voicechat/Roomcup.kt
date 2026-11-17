@@ -33,7 +33,8 @@ import java.util.TimeZone
 private data class CupEntry(val id:String,val name:String,val image:String,val coins:Long,val rank:Int)
 
 @Composable
-fun RoomCupSheet(roomId:String,userId:String,userName:String,userImage:String,onClose:()->Unit,onOnline:()->Unit) {
+fun RoomCupSheet(roomId:String,userId:String,userName:String,userImage:String,onClose:()->Unit,initialOnline:Boolean=false,roomUsers:List<ActiveUserNative> = emptyList(),roomOwnerId:String="",roomAdminIds:List<String> = emptyList(),onOpenProfile:(ActiveUserNative)->Unit={},onCopyUserId:(String)->Unit={}) {
+    var selectedOnline by remember(initialOnline) { mutableStateOf(initialOnline) }
     var period by remember { mutableStateOf("daily") }
     var entries by remember { mutableStateOf(emptyList<CupEntry>()) }
     var mine by remember { mutableStateOf<CupEntry?>(null) }
@@ -65,10 +66,36 @@ fun RoomCupSheet(roomId:String,userId:String,userName:String,userImage:String,on
         Column(Modifier.fillMaxWidth().fillMaxHeight(.70f).clip(RoundedCornerShape(topStart=15.dp,topEnd=15.dp)).background(Color(0xFF050505)).clickable(enabled=false){},horizontalAlignment=Alignment.CenterHorizontally) {
             Spacer(Modifier.height(13.dp))
             Row(horizontalArrangement=Arrangement.spacedBy(34.dp),verticalAlignment=Alignment.CenterVertically) {
-                CupTab("Contribution",true){}
-                CupTab("Online User",false,onOnline)
+                CupTab("Contribution",!selectedOnline){selectedOnline=false}
+                CupTab("Online User",selectedOnline){selectedOnline=true}
             }
             Spacer(Modifier.height(16.dp))
+            if(selectedOnline) {
+                val visibleUsers = remember(roomUsers,roomOwnerId) { roomUsers.filter { it.accountId.isNotBlank() }.distinctBy { it.accountId }.sortedWith(compareBy<ActiveUserNative> { if(it.accountId==roomOwnerId) 0 else 1 }.thenBy { it.name.lowercase() }) }
+                LazyColumn(Modifier.weight(1f).fillMaxWidth(),contentPadding=PaddingValues(horizontal=12.dp,vertical=8.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                    itemsIndexed(visibleUsers,key={_,u->u.accountId}) { _,u ->
+                        Row(Modifier.fillMaxWidth().clickable { onOpenProfile(u) }.padding(horizontal=4.dp),verticalAlignment=Alignment.CenterVertically) {
+                            AsyncImage(model=u.image.ifBlank{"https://zyora-server.onrender.com/default-avatar.png"},contentDescription=u.name,modifier=Modifier.size(38.dp).clip(CircleShape),contentScale=ContentScale.Crop)
+                            Column(Modifier.weight(1f).padding(start=9.dp)) {
+                                Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(3.dp)) {
+                                    Text(u.name.ifBlank{"User"},color=Color.White,fontSize=13.sp,fontWeight=FontWeight.SemiBold,maxLines=1,overflow=TextOverflow.Ellipsis)
+                                    if(u.accountId==roomOwnerId) AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261027_235537.png",contentDescription="Owner",modifier=Modifier.width(36.dp).height(16.dp),contentScale=ContentScale.Fit)
+                                    else if(u.accountId in roomAdminIds) AsyncImage(model=ROOM_ADMIN_TAG,contentDescription="Room Admin",modifier=Modifier.width(36.dp).height(16.dp),contentScale=ContentScale.Fit)
+                                }
+                                Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+                                    if(u.country.isNotBlank()) CountryFlagImage(u.country,Modifier.size(18.dp,12.dp)) else Spacer(Modifier.width(18.dp))
+                                    Box(Modifier.height(16.dp).width(36.dp),contentAlignment=Alignment.CenterEnd) {
+                                        AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261028_004355.png",contentDescription="Level",modifier=Modifier.fillMaxSize(),contentScale=ContentScale.FillBounds)
+                                        Text("Lv.1",color=Color.White,fontSize=8.sp,fontWeight=FontWeight.Bold,modifier=Modifier.offset(x=2.dp,y=(-3).dp).padding(end=5.dp))
+                                    }
+                                }
+                            }
+                            Text(u.accountId,color=Color.White.copy(alpha=.65f),fontSize=10.sp,maxLines=1)
+                        }
+                    }
+                    if(visibleUsers.isEmpty()) item { Text("No active users",Modifier.fillMaxWidth().padding(18.dp),color=Color.White.copy(alpha=.65f),fontSize=12.sp,textAlign=TextAlign.Center) }
+                }
+            } else {
             Row(Modifier.fillMaxWidth().padding(horizontal=13.dp),verticalAlignment=Alignment.CenterVertically) {
                 Row(Modifier.weight(1f).clip(CircleShape).background(Color(0xFF242424)).padding(3.dp)) {
                     CupPeriod("Daily",period=="daily",Modifier.weight(1f)){period="daily"}
@@ -118,6 +145,7 @@ fun RoomCupSheet(roomId:String,userId:String,userName:String,userImage:String,on
                 Text(mine?.coins?.toString()?: "0",color=Color.White,fontSize=12.sp,fontWeight=FontWeight.Bold)
                 AsyncImage(model="https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_00000000e56882119c217d508b6733dc.png",contentDescription="Coins",modifier=Modifier.padding(start=4.dp).size(17.dp),contentScale=ContentScale.Fit)
                 Text(if((mine?.rank?:0)>0)"#${mine?.rank}" else "#--",color=Color.White,fontSize=12.sp,modifier=Modifier.padding(start=10.dp))
+            }
             }
         }
     }
