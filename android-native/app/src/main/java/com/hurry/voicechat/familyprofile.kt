@@ -130,7 +130,7 @@ fun FamilyProfile(familyId:String,onBack:()->Unit,onOpenChat:(String,String,Stri
                     Row(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal=4.dp),verticalAlignment=Alignment.CenterVertically){
                         IconButton(onClick=onBack){Icon(Icons.AutoMirrored.Filled.ArrowBack,"Back",tint=Color.White,modifier=Modifier.size(27.dp))}
                         Spacer(Modifier.weight(1f))
-                        if(isOwner)IconButton(onClick={editDialog=true}){Icon(Icons.Default.Edit,"Edit Family",tint=Color.White)}
+                        if(isOwner)IconButton(onClick={editDialog=true}){LucidePublicProfileIcon(warning=false,modifier=Modifier.size(22.dp),tint=Color.White)}
                     }
                     Row(Modifier.align(Alignment.BottomStart).padding(start=16.dp,bottom=27.dp),verticalAlignment=Alignment.CenterVertically){
                         AsyncImage(model=family?.image?.takeIf{it.isNotBlank()}?:FAMILY_ASSETS+"IMG_20261116_162146.png",contentDescription="Family DP",modifier=Modifier.size(88.dp).clip(RoundedCornerShape(12.dp)),contentScale=ContentScale.Crop)
