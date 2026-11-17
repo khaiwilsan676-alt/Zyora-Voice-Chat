@@ -156,7 +156,7 @@ fun PublicProfileScreen(
     val currentUserId = authPrefs.getString("accountId", "").orEmpty().ifBlank { authPrefs.getString("uid", "").orEmpty() }
     val familyPrefs = remember(context) { context.getSharedPreferences("hurry_user", Context.MODE_PRIVATE) }
     var hasOwnFamily by remember(familyPrefs, isOtherUser, targetUser?.uid, targetUser?.id, targetUser?.accountId) {
-        mutableStateOf(!isOtherUser && familyPrefs.getBoolean("familyCreated", false))
+        mutableStateOf(!isOtherUser && (familyPrefs.getBoolean("familyCreated", false) || familyPrefs.getString("familyCode", "").orEmpty().isNotBlank()))
     }
     var ownFamilyName by remember(targetUser?.uid, targetUser?.id, targetUser?.accountId) {
         mutableStateOf(if (!isOtherUser) familyPrefs.getString("familyName", "").orEmpty() else "")
@@ -352,7 +352,24 @@ fun PublicProfileScreen(
                 }
             }
         }
-        if (remote == null && cached == null) return@LaunchedEffect
+        if (remote == null && cached == null) {
+            val localFamilyCode = familyPrefs.getString("familyCode", "").orEmpty()
+            if (!isOtherUser && (localFamilyCode.isNotBlank() || familyPrefs.getBoolean("familyCreated", false))) {
+                hasOwnFamily = true
+                ownFamilyCode = localFamilyCode
+                ownFamilyName = familyPrefs.getString("familyName", "").orEmpty()
+                ownFamilyImage = familyPrefs.getString("familyImage", "").orEmpty()
+                ownFamilyCreatorId = familyPrefs.getString("familyCreatorId", "").orEmpty().ifBlank { currentUserId }
+                if (localFamilyCode.isNotBlank()) runCatching {
+                    val family = FamilyProfileApi.load(localFamilyCode)
+                    ownFamilyName = family.name
+                    ownFamilyImage = family.image
+                    ownFamilyCreatorId = family.ownerAccountId.ifBlank { ownFamilyCreatorId }
+                    ownFamilyMemberCount = family.members.size
+                }
+            }
+            return@LaunchedEffect
+        }
 
         val merged = org.json.JSONObject(cached?.toString() ?: "{}")
         
@@ -613,12 +630,12 @@ fun PublicProfileScreen(
                             )
                         }
                         if (hasOwnFamily) {
-                            Box(
-                                modifier = Modifier.clip(RoundedCornerShape(5.dp)).background(Color(0xFF2878D8)).padding(horizontal = 7.dp, vertical = 4.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text("Family", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-                            }
+                            AsyncImage(
+                                model = profileAsset("/IMG_20261117_130644.png"),
+                                contentDescription = "Family tag",
+                                contentScale = ContentScale.Fit,
+                                modifier = Modifier.height(18.dp).widthIn(max = 42.dp)
+                            )
                         }
                     }
 
@@ -716,12 +733,12 @@ fun PublicProfileScreen(
                                 ) {
                                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                                         Text(ownFamilyName, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                        Box(
-                                            modifier = Modifier.clip(RoundedCornerShape(5.dp)).background(Color(0xFF2878D8)).padding(horizontal = 6.dp, vertical = 2.dp),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Text("Family", color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-                                        }
+                                        AsyncImage(
+                                            model = profileAsset("/IMG_20261117_130644.png"),
+                                            contentDescription = "Family tag",
+                                            contentScale = ContentScale.Fit,
+                                            modifier = Modifier.height(18.dp).widthIn(max = 42.dp)
+                                        )
                                     }
                                     Text("Family ID: $ownFamilyCreatorId", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium, maxLines = 1)
                                     Text("Members $ownFamilyMemberCount/50", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium)
