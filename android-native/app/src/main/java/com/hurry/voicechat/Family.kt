@@ -519,8 +519,8 @@ private fun FamilyTop(onBack: () -> Unit, onRules: () -> Unit, onOpenFamily: (St
             Column(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 FamilyPodiumCard(family = topFamilies.getOrNull(0), frame = "IMG_20261115_135339.png", size = 175.dp, modifier = Modifier.zIndex(2f).offset(y = (-15).dp), onAvatarClick = { topFamilies.getOrNull(0)?.let { onOpenFamily(it.id) } })
                 Row(Modifier.fillMaxWidth().offset(y = (-35).dp).padding(horizontal = 25.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                    FamilyPodiumCard(family = topFamilies.getOrNull(1), frame = "IMG_20261115_135356.png", size = 130.dp)
-                    FamilyPodiumCard(family = topFamilies.getOrNull(2), frame = "IMG_20261115_135419.png", size = 130.dp)
+                    FamilyPodiumCard(family = topFamilies.getOrNull(1), frame = "IMG_20261115_135356.png", size = 130.dp, onAvatarClick = { topFamilies.getOrNull(1)?.let { onOpenFamily(it.id) } })
+                    FamilyPodiumCard(family = topFamilies.getOrNull(2), frame = "IMG_20261115_135419.png", size = 130.dp, onAvatarClick = { topFamilies.getOrNull(2)?.let { onOpenFamily(it.id) } })
                 }
             }
 
