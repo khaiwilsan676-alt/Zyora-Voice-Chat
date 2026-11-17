@@ -698,7 +698,7 @@ fun PublicProfileScreen(
                                     verticalArrangement = Arrangement.spacedBy(0.dp) // Text slightly tighter and nearer to center ID
                                 ) {
                                     Text(ownFamilyName, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-                                    Text("Family ID: ${ownFamilyCode.ifBlank { ownFamilyCreatorId }}", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+                                    Text("Family ID: $ownFamilyCreatorId", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium, maxLines = 1)
                                     Text("Members $ownFamilyMemberCount/50", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium)
                                 }
                             }
