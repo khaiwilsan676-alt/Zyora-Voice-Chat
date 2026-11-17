@@ -683,8 +683,8 @@ fun RoomPage(
     var showExitMenu by remember{mutableStateOf(false)}
     var keepingRoomForMini by remember { mutableStateOf(false) }
     var showInfo by remember{mutableStateOf(false)}
-    var showActiveUsers by remember{mutableStateOf(false)}
     var showRoomCup by remember { mutableStateOf(false) }
+    var showRoomCupOnline by remember { mutableStateOf(false) }
     var showSettings by remember{mutableStateOf(false)}
     var showGift by remember{mutableStateOf(false)}
     var showEmoji by remember{mutableStateOf(false)}
@@ -895,7 +895,6 @@ fun RoomPage(
             showMenu -> showMenu = false
             showStore -> showStore = false
             showInfo -> showInfo = false
-            showActiveUsers -> showActiveUsers = false
             showSettings -> showSettings = false
             showGift -> showGift = false
             showEmoji -> showEmoji = false
@@ -1686,7 +1685,7 @@ fun RoomPage(
 
         // CUP AND MUSIC PILLS REVERTED TO ORIGINAL TOP LEFT OVERLAY POSITION
         Row(modifier = Modifier.align(Alignment.TopStart).padding(top = 88.dp, start = 4.dp),verticalAlignment = Alignment.CenterVertically,horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Row(modifier = Modifier.height(22.dp).background(Brush.horizontalGradient(listOf(Color(0xE6242B35),Color(0x99242B35),Color.Transparent))).clickable { showRoomCup = true }.padding(start = 12.dp, end = 12.dp),verticalAlignment = Alignment.CenterVertically) {
+            Row(modifier = Modifier.height(22.dp).background(Brush.horizontalGradient(listOf(Color(0xE6242B35),Color(0x99242B35),Color.Transparent))).clickable { showRoomCupOnline = false; showRoomCup = true }.padding(start = 12.dp, end = 12.dp),verticalAlignment = Alignment.CenterVertically) {
                 TransparentGreenImage(url = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/1788258883971~2.jpg",modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(6.dp))
                 Text("0", color = Color(0xFFEEF3A3), fontSize = 12.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, letterSpacing = 0.1.sp)
@@ -1781,7 +1780,7 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                         Spacer(Modifier.weight(1f))
                         // Right aligned Top Icons
                         Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){
-                            Row(modifier=Modifier.height(32.dp).clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha=.30f)).clickable{showActiveUsers=true}.padding(horizontal=12.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){
+                            Row(modifier=Modifier.height(32.dp).clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha=.30f)).clickable{showRoomCupOnline=true;showRoomCup=true}.padding(horizontal=12.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){
                                 Image(painterResource(R.drawable.ic_hurry_people),contentDescription="Active users",modifier=Modifier.size(16.dp))
                                 Text(backendRoomUsers.size.toString(),color=Color.White,fontSize=12.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold)
                             }
@@ -2562,8 +2561,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                 showInfo=false
             }
         )
-        if (showRoomCup) RoomCupSheet(roomId, accountId, roomDisplayName, roomDisplayImage, { showRoomCup = false }, { showRoomCup = false; showActiveUsers = true })
-        if(showActiveUsers) ActiveUsers(isOpen=true,onClose={showActiveUsers=false},roomUsers=activeRoomUsers,roomOwnerId=roomOwner.accountId.ifBlank{roomOwner.id},roomAdminIds=roomAdminIds,onOpenProfile={ user -> selectedChatProfile=NativeRoomMessage("active-profile-" + user.accountId,"",user.name,user.image,user.accountId);showActiveUsers=false },onCopyUserId={ id -> clipboard.setText(AnnotatedString(id));copiedId=id })
+        if (showRoomCup) RoomCupSheet(roomId, accountId, roomDisplayName, roomDisplayImage, { showRoomCup = false; showRoomCupOnline = false }, showRoomCupOnline, activeRoomUsers, roomOwner.accountId.ifBlank{roomOwner.id}, roomAdminIds, { user -> selectedChatProfile=NativeRoomMessage("active-profile-" + user.accountId,"",user.name,user.image,user.accountId); showRoomCup=false; showRoomCupOnline=false }, { id -> clipboard.setText(AnnotatedString(id)); copiedId=id })
         if(showSeatInviteUsers) ActiveUsers(
             isOpen=true,
             onClose={showSeatInviteUsers=false},
