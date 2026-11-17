@@ -254,7 +254,7 @@ private fun FamilyEditDialog(family:FamilyRecord,busy:Boolean,error:String,onDis
             image=uri.toString()
         }
     }
-    Dialog(onDismissRequest={if(!busy)onDismiss()},properties=DialogProperties(usePlatformDefaultWidth=false)){
+    Dialog(onDismissRequest={if(!busy)onDismiss()},properties=DialogProperties(usePlatformDefaultWidth=false,decorFitsSystemWindows=false)){
         FamilyCreate(
             onBack={if(!busy)onDismiss()},
             name=name,onName={name=it.take(40)},
