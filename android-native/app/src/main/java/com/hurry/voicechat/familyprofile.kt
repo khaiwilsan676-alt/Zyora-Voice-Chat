@@ -116,9 +116,10 @@ fun FamilyProfile(familyId:String,onBack:()->Unit,onOpenChat:(String,String,Stri
     val isOwner=family?.ownerUid==auth?.uid
     val currentMember=family?.members?.firstOrNull{it.uid==auth?.uid}
     val isAdmin=currentMember?.role=="admin"
-    fun reload(){scope.launch{loading=true;runCatching{FamilyProfileApi.load(familyId)}.onSuccess{family=it;error=""}.onFailure{error=it.message?:"Could not load Family."};if(isOwner)runCatching{FamilyProfileApi.applications(familyId)}.onSuccess{applications=it};loading=false}}
+    val isMember=family?.members?.any{it.uid==auth?.uid}==true
+    fun reload(){scope.launch{loading=true;runCatching{FamilyProfileApi.load(familyId)}.onSuccess{family=it;error=""}.onFailure{error=it.message?:"Could not load Family."};if(isOwner||isAdmin)runCatching{FamilyProfileApi.applications(familyId)}.onSuccess{applications=it};loading=false}}
     LaunchedEffect(familyId){reload()}
-    LaunchedEffect(inviteSheet,isOwner){if(inviteSheet&&isOwner)runCatching{FamilyProfileApi.applications(familyId)}.onSuccess{applications=it}}
+    LaunchedEffect(inviteSheet,isOwner,isAdmin){if(inviteSheet&&(isOwner||isAdmin))runCatching{FamilyProfileApi.applications(familyId)}.onSuccess{applications=it}}
     Box(Modifier.fillMaxSize().background(Color(0xFFF1F2F4))){
         LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(bottom=82.dp)){
             item{
@@ -168,7 +169,7 @@ fun FamilyProfile(familyId:String,onBack:()->Unit,onOpenChat:(String,String,Stri
                             AsyncImage(model=FAMILY_ASSETS+when(index){0->"IMG_20261115_135339.png";1->"IMG_20261115_135356.png";else->"IMG_20261115_135419.png"},contentDescription="Rank frame",modifier=Modifier.fillMaxSize(),contentScale=ContentScale.Fit)
                         }
                         Column(Modifier.weight(1f).padding(start=8.dp)){Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(5.dp)){Text(m.name,color=Color.White,fontSize=14.sp,fontWeight=FontWeight.Bold,maxLines=1);val female=m.gender.equals("female",true);Box(Modifier.size(17.dp).clip(CircleShape).background(if(female)Color(0xFFFF5874) else Color(0xFF3B82F6)),contentAlignment=Alignment.Center){CustomGenderIcon(isFemale=female,modifier=Modifier.size(9.dp))}};Text(listOf(m.accountId,m.tag).filter{it.isNotBlank()}.joinToString(" · "),color=Color.White,fontSize=11.sp)}
-                        Column(horizontalAlignment=Alignment.End){AsyncImage(model=FAMILY_ASSETS+"file_00000000e56882119c217d508b6733dc.png",contentDescription="Coins",modifier=Modifier.size(17.dp));Text("******",color=Color.White,fontSize=12.sp,fontWeight=FontWeight.Bold)}
+                        Column(horizontalAlignment=Alignment.End){AsyncImage(model=FAMILY_ASSETS+"file_00000000e56882119c217d508b6733dc.png",contentDescription="Coins",modifier=Modifier.size(17.dp));Text(if(isOwner||isAdmin)m.coins.toString() else "******",color=Color.White,fontSize=12.sp,fontWeight=FontWeight.Bold)}
                     }
                 }else{
                     Row(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=2.dp).clip(RoundedCornerShape(10.dp)).background(Color.White).padding(9.dp),verticalAlignment=Alignment.CenterVertically){
@@ -178,14 +179,14 @@ fun FamilyProfile(familyId:String,onBack:()->Unit,onOpenChat:(String,String,Stri
                             if(m.role=="admin") Box(Modifier.align(Alignment.BottomCenter).offset(y=2.dp).clip(RoundedCornerShape(50)).background(Color(0xFF2588F5)).border(1.dp,Color.White,RoundedCornerShape(50)).padding(horizontal=5.dp,vertical=1.dp)){Text("Admin",color=Color.White,fontSize=7.sp,fontWeight=FontWeight.Bold)}
                         }
                         Column(Modifier.weight(1f).padding(start=9.dp)){Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(5.dp)){Text(m.name,color=Color(0xFF222222),fontSize=13.sp,fontWeight=FontWeight.SemiBold);val female=m.gender.equals("female",true);Box(Modifier.size(17.dp).clip(CircleShape).background(if(female)Color(0xFFFF5874) else Color(0xFF3B82F6)),contentAlignment=Alignment.Center){CustomGenderIcon(isFemale=female,modifier=Modifier.size(9.dp))}};Text(listOf(m.accountId,m.tag).filter{it.isNotBlank()}.joinToString(" · "),color=Color.Gray,fontSize=10.sp)}
-                        Column(horizontalAlignment=Alignment.End){AsyncImage(model=FAMILY_ASSETS+"file_00000000e56882119c217d508b6733dc.png",contentDescription="Coins",modifier=Modifier.size(15.dp));Text("******",color=Color.DarkGray,fontSize=11.sp,fontWeight=FontWeight.Bold)}
+                        Column(horizontalAlignment=Alignment.End){AsyncImage(model=FAMILY_ASSETS+"file_00000000e56882119c217d508b6733dc.png",contentDescription="Coins",modifier=Modifier.size(15.dp));Text(if(isOwner||isAdmin)m.coins.toString() else "******",color=Color.DarkGray,fontSize=11.sp,fontWeight=FontWeight.Bold)}
                     }
                 }
             }
             if(error.isNotBlank()&&!loading)item{Text(error,color=Color(0xFFB3261E),fontSize=12.sp,modifier=Modifier.padding(12.dp))}
         }
-        if(family!=null)Button(onClick={if(isOwner)inviteSheet=true else scope.launch{runCatching{FamilyProfileApi.apply(familyId)}.onSuccess{applicationSent=true;error="Application sent. Waiting for family owner approval."}.onFailure{error=it.message?:"Could not apply."}}},enabled=isOwner||!applicationSent,modifier=Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal=16.dp,vertical=10.dp).height(50.dp),shape=RoundedCornerShape(12.dp),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF2878E8))){
-            Text(if(isOwner)"Add Members" else if(applicationSent)"Applied" else "Apply",color=Color.White,fontWeight=FontWeight.Bold)
+        if(family!=null && (isOwner || isAdmin || !isMember))Button(onClick={if(isOwner||isAdmin)inviteSheet=true else scope.launch{runCatching{FamilyProfileApi.apply(familyId)}.onSuccess{applicationSent=true;error="Application sent. Waiting for family owner approval."}.onFailure{error=it.message?:"Could not apply."}}},enabled=(isOwner||isAdmin)||!applicationSent,modifier=Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal=16.dp,vertical=10.dp).height(50.dp),shape=RoundedCornerShape(12.dp),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF2878E8))){
+            Text(if(isOwner||isAdmin)"Add Members" else if(applicationSent)"Applied" else "Apply",color=Color.White,fontWeight=FontWeight.Bold)
         }
     }
     if(inviteSheet)ModalBottomSheet(onDismissRequest={inviteSheet=false},modifier=Modifier.fillMaxHeight(.70f),shape=RoundedCornerShape(topStart=12.dp,topEnd=12.dp),containerColor=Color.White,dragHandle=null){
@@ -195,7 +196,7 @@ fun FamilyProfile(familyId:String,onBack:()->Unit,onOpenChat:(String,String,Stri
                 Text("Invite Members",color=Color.Black,fontSize=17.sp,fontWeight=FontWeight.Bold,modifier=Modifier.align(Alignment.Center))
             }
             OutlinedTextField(value=query,onValueChange={query=it},modifier=Modifier.fillMaxWidth(),singleLine=true,shape=RoundedCornerShape(12.dp),placeholder={Text("Search by ID or name")},leadingIcon={Icon(Icons.Default.Search,null)},colors=OutlinedTextFieldDefaults.colors(unfocusedContainerColor=Color(0xFFF1F2F4),focusedContainerColor=Color(0xFFF1F2F4),unfocusedBorderColor=Color.Transparent,focusedBorderColor=Color.Transparent))
-            if(isOwner && applications.isNotEmpty()){
+            if((isOwner || isAdmin) && applications.isNotEmpty()){
                 Text("Family Applications",color=Color(0xFF222222),fontWeight=FontWeight.Bold,fontSize=14.sp,modifier=Modifier.padding(top=12.dp,bottom=4.dp))
                 Column(Modifier.heightIn(max=160.dp).verticalScroll(rememberScrollState())){
                     applications.forEach { applicant ->
@@ -213,7 +214,7 @@ fun FamilyProfile(familyId:String,onBack:()->Unit,onOpenChat:(String,String,Stri
                 Row(Modifier.fillMaxWidth().padding(vertical=8.dp),verticalAlignment=Alignment.CenterVertically){
                     AsyncImage(model=m.image,contentDescription=null,modifier=Modifier.size(44.dp).clip(RoundedCornerShape(10.dp)),contentScale=ContentScale.Crop)
                     Column(Modifier.weight(1f).padding(start=10.dp)){Text(m.name,color=Color.Black,fontWeight=FontWeight.SemiBold);Text("${m.accountId} · ${m.gender}",color=Color.Gray,fontSize=11.sp)}
-                    TextButton(enabled=busy!=m.uid,onClick={scope.launch{busy=m.uid;runCatching{FamilyProfileApi.invite(familyId,m.accountId.ifBlank{m.uid})}.onSuccess{error="Invitation sent to ${m.name}."}.onFailure{error=it.message?:"Invitation failed."};busy=""}}){Text(if(busy==m.uid)"Sending..." else "Invite")}
+                    Button(enabled=busy!=m.uid,onClick={scope.launch{busy=m.uid;runCatching{FamilyProfileApi.invite(familyId,m.accountId.ifBlank{m.uid})}.onSuccess{error="Invitation sent to ${m.name}."}.onFailure{error=it.message?:"Invitation failed."};busy=""}},shape=RoundedCornerShape(8.dp),contentPadding=PaddingValues(horizontal=12.dp,vertical=5.dp),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF2878E8))){Text(if(busy==m.uid)"..." else "Invite",fontSize=12.sp,color=Color.White)}
                 };HorizontalDivider(color=Color(0xFFECECEC))
             }}
         }
