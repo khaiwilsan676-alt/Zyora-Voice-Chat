@@ -211,8 +211,11 @@ private suspend fun fetchWalletAgentSellers(): List<WalletAgentSeller> = withCon
             val user = users.optJSONObject(index) ?: return@mapNotNull null
             val uid = user.optString("uid").ifBlank { user.optString("id") }
             val account = user.optString("accountId").ifBlank { user.optString("accountNumber") }
-            // /api/users?sellers=true returns only users with Seller Center active.
-            if (uid.isBlank() || account.isBlank()) return@mapNotNull null
+            val sellerCenterActive =
+                user.optBoolean("coinSellerTag", false) ||
+                user.optBoolean("coinSeller", false) ||
+                user.optBoolean("sellerTag", false)
+            if (uid.isBlank() || account.isBlank() || !sellerCenterActive) return@mapNotNull null
             WalletAgentSeller(
                 uid = uid,
                 accountId = account,
@@ -816,17 +819,21 @@ private fun AgentContent(onChat: (String, String, String) -> Unit, currentUserId
                                 ),
                             contentScale = ContentScale.Crop
                         )
-                        // Pill at exact bottom center with patli si padding
-                        Box(Modifier.align(Alignment.BottomCenter).offset(y = 2.dp)) {
+                        // Keep the Online/Offline label vertically and horizontally centered.
+                        Box(
+                            Modifier.align(Alignment.BottomCenter).offset(y = 2.dp)
+                                .height(12.dp)
+                                .clip(RoundedCornerShape(50))
+                                .background(if (isOnline) Color(0xFF0044FF) else Color(0xFFD1D5DB))
+                                .border(1.dp, Color.White, RoundedCornerShape(50))
+                                .padding(horizontal = 5.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
                             Text(
                                 text = if (isOnline) "online" else "offline",
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(50))
-                                    .background(if (isOnline) Color(0xFF0044FF) else Color(0xFFD1D5DB))
-                                    .border(1.dp, Color.White, RoundedCornerShape(50))
-                                    .height(10.dp)
-                                    .padding(horizontal = 4.dp, vertical = 0.dp),
-                                fontSize = 8.sp, // Choti font
+                                fontSize = 8.sp,
+                                lineHeight = 8.sp,
+                                textAlign = TextAlign.Center,
                                 color = Color.White,
                                 fontWeight = FontWeight.Bold
                             )
