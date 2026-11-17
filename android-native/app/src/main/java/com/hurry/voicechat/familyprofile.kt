@@ -203,7 +203,7 @@ fun FamilyProfile(familyId:String,onBack:()->Unit,onOpenChat:(String,String,Stri
                         Row(Modifier.fillMaxWidth().padding(vertical=6.dp),verticalAlignment=Alignment.CenterVertically){
                             AsyncImage(model=applicant.image,contentDescription=null,modifier=Modifier.size(38.dp).clip(RoundedCornerShape(9.dp)),contentScale=ContentScale.Crop)
                             Column(Modifier.weight(1f).padding(start=9.dp)){Text(applicant.name,color=Color.Black,fontWeight=FontWeight.SemiBold,fontSize=13.sp);Text(listOf(applicant.accountId,applicant.gender,applicant.tag).filter{it.isNotBlank()}.joinToString(" · "),color=Color.Gray,fontSize=10.sp)}
-                            TextButton(enabled=busy!=applicant.uid,onClick={scope.launch{busy=applicant.uid;runCatching{FamilyProfileApi.approve(familyId,applicant.uid)}.onSuccess{applications=applications.filterNot{it.uid==applicant.uid};reload()}.onFailure{error=it.message?:"Approval failed."};busy=""}}){Text(if(busy==applicant.uid)"..." else "Approve")}
+                            Button(enabled=busy!=applicant.uid,onClick={scope.launch{busy=applicant.uid;runCatching{FamilyProfileApi.approve(familyId,applicant.uid)}.onSuccess{applications=applications.filterNot{it.uid==applicant.uid};reload()}.onFailure{error=it.message?:"Approval failed."};busy=""}},shape=RoundedCornerShape(8.dp),contentPadding=PaddingValues(horizontal=12.dp,vertical=5.dp),colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF2878E8))){Text(if(busy==applicant.uid)"..." else "Apply",fontSize=12.sp,color=Color.White)}
                         }
                     }
                 }
