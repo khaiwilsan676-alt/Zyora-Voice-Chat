@@ -276,7 +276,7 @@ fun PublicProfileScreen(
     val displayAccNum = targetUser?.displayAccountNumber?.takeIf { it.isNotBlank() } ?: targetUser?.accountId?.takeIf { it.isNotBlank() } ?: "—"
     val isCoreOfficial = displayAccNum == "100002" || displayAccNum == "100003"
     val isRedOfficial = displayAccNum == "500001"
-    val is500002Official = displayAccNum in setOf("500002", "500003", "500004")
+    val is500002Official = displayAccNum in setOf("500002", "500003", "500004", "500005", "500005")
     val showOfficialHead = !is500002Official && (isCoreOfficial || targetUser?.officialHeadTag == true || liveProfileTags?.optBoolean("officialHeadTag", false) == true)
     val showOfficial = isCoreOfficial || isRedOfficial || is500002Official || targetUser?.officialTag == true || liveProfileTags?.optBoolean("officialTag", false) == true
     val showAdmin = !is500002Official && (isCoreOfficial || targetUser?.adminTag == true || liveProfileTags?.optBoolean("adminTag", false) == true)
@@ -631,7 +631,7 @@ fun PublicProfileScreen(
                     }
 
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
-                        if (isCoreOfficial || isRedOfficial || is500002Official || displayAccNum in setOf("500003", "500004")) {
+                        if (isCoreOfficial || isRedOfficial || is500002Official || displayAccNum in setOf("500003", "500004", "500005")) {
                             AsyncImage(model = profileAsset("/IMG_20261101_125212.png"), contentDescription = "Purple ID Badge", contentScale = ContentScale.Fit, modifier = Modifier.height(25.dp).widthIn(min = 22.dp, max = 35.dp).padding(end = 4.dp))
                             Text(displayAccNum, fontSize = 12.sp, color = Color.Gray)
                         } else Text("ID: $displayAccNum", fontSize = 12.sp, color = Color.Gray)
@@ -1292,7 +1292,7 @@ fun PublicProfileScreen(
             targetName = userName,
             targetImage = userPhoto,
             targetId = displayAccNum.toString(),
-            idBadgeImage = if (displayAccNum.toString() in setOf("500002", "500003", "500004")) profileAsset("/IMG_20261101_125212.png") else null,
+            idBadgeImage = if (displayAccNum.toString() in setOf("500002", "500003", "500004", "500005", "500005")) profileAsset("/IMG_20261101_125212.png") else null,
             onDismiss = { showUserReport = false }
         )
     }
