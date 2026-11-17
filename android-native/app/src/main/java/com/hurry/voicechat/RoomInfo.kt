@@ -259,7 +259,7 @@ fun RoomInfo(
                     Text(roomData.roomName.ifBlank { "Room" }, fontSize = 15.sp,
                         fontWeight = FontWeight.SemiBold, color = Color.White, maxLines = 1)
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (roomData.roomId in setOf("100002","100003","500002","500003","500004","500005")) {
+                        if (roomData.roomId in setOf("100002","100003","500002","500003","500004","500005","500005")) {
                             AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261101_125212.png",
                                 contentDescription="Purple ID Badge",
                                 modifier=Modifier.height(16.dp).widthIn(min=22.dp,max=30.dp), contentScale=ContentScale.Fit)
