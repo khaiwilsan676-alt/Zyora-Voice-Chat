@@ -208,7 +208,7 @@ fun RoomProfile(
 
     val isCoreOfficialAccount = user.accountId == "100002" || user.accountId == "100003" || user.id == "100002" || user.id == "100003"
     val isRedOfficialAccount = user.accountId == "500001" || user.id == "500001"
-    val is500002OfficialAccount = user.accountId in setOf("500002", "500003", "500004") || user.id in setOf("500002", "500003", "500004")
+    val is500002OfficialAccount = user.accountId in setOf("500002", "500003", "500004", "500005", "500005") || user.id in setOf("500002", "500003", "500004", "500005", "500005")
     var adminTag by remember(user.adminTag, cachedProfile, isCoreOfficialAccount) { mutableStateOf(isCoreOfficialAccount || user.adminTag == true || cachedProfile?.optBoolean("adminTag", false) == true) }
     var officialTag by remember(user.officialTag, cachedProfile, isCoreOfficialAccount, isRedOfficialAccount, is500002OfficialAccount) { mutableStateOf(isCoreOfficialAccount || isRedOfficialAccount || is500002OfficialAccount || user.officialTag == true || cachedProfile?.optBoolean("officialTag", false) == true) }
     var officialHeadTag by remember(user.officialHeadTag, cachedProfile, isCoreOfficialAccount) { mutableStateOf(isCoreOfficialAccount || user.officialHeadTag == true || cachedProfile?.optBoolean("officialHeadTag", false) == true) }
@@ -795,7 +795,7 @@ fun RoomProfile(
             targetName = displayName,
             targetImage = displayProfileImage,
             targetId = user.accountId.orEmpty().ifBlank { user.uid.orEmpty().ifBlank { user.id.orEmpty() } },
-            idBadgeImage = if (user.accountId.orEmpty().ifBlank { user.uid.orEmpty().ifBlank { user.id.orEmpty() } } in setOf("500002", "500003", "500004")) "IMG_20261101_125212.png".fullUrl() else null,
+            idBadgeImage = if (user.accountId.orEmpty().ifBlank { user.uid.orEmpty().ifBlank { user.id.orEmpty() } } in setOf("500002", "500003", "500004", "500005", "500005")) "IMG_20261101_125212.png".fullUrl() else null,
             onDismiss = { showReports = false }
         )
     }
