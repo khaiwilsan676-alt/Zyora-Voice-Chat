@@ -354,7 +354,7 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, ac
 
                 // 1 frame Middle m 1 row, 2nd row m 2,3 frame
                 Column(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    FamilyPodiumCard(family = topFamilies.getOrNull(0), frame = "IMG_20261115_135339.png", size = 175.dp, modifier = Modifier.zIndex(2f).offset(y = (-20).dp))
+                    FamilyPodiumCard(family = topFamilies.getOrNull(0), frame = "IMG_20261115_135339.png", size = 175.dp, modifier = Modifier.zIndex(2f).offset(y = (-20).dp), avatarSize = 145.dp)
                     Row(Modifier.fillMaxWidth().offset(y = (-35).dp).padding(horizontal = 25.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                         FamilyPodiumCard(family = topFamilies.getOrNull(1), frame = "IMG_20261115_135356.png", size = 130.dp)
                         FamilyPodiumCard(family = topFamilies.getOrNull(2), frame = "IMG_20261115_135419.png", size = 130.dp)
@@ -407,7 +407,7 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, ac
                                 1 -> "IMG_20261115_135356.png"
                                 else -> "IMG_20261115_135419.png"
                             }
-                            FamilyPodiumCard(family = family, frame = listFrame, size = 65.dp)
+                            FamilyPodiumCard(family = family, frame = listFrame, size = 65.dp, avatarSize = if (index == 0) 52.dp else 65.dp * 0.85f)
                             
                             Column(Modifier.weight(1f).padding(start = 8.dp)) {
                                 Text(family.name, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1)
@@ -501,10 +501,9 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, ac
 
 // AVATAR IN CIRCLE BEHIND THE FRAME (Perfectly used for Top Podium & List 1,2,3 Cards too)
 @Composable
-private fun FamilyPodiumCard(family: FamilyRecord?, frame: String, size: androidx.compose.ui.unit.Dp, modifier: Modifier = Modifier) {
+private fun FamilyPodiumCard(family: FamilyRecord?, frame: String, size: androidx.compose.ui.unit.Dp, modifier: Modifier = Modifier, avatarSize: androidx.compose.ui.unit.Dp = size * 0.85f) {
     Box(modifier.size(size), contentAlignment = Alignment.Center) {
         // AVATAR RENDERED FIRST SO IT IS BEHIND THE FRAME (SIZE INCREASED & CENTERED!)
-        val avatarSize = size * 0.85f // Frame ko full cover karne ke liye size bada kar diya
         Box(Modifier.align(Alignment.Center)) { // Yahan ekdam exact Center align kar diya
             if (family != null) {
                 AsyncImage(
@@ -552,7 +551,7 @@ private fun FamilyTop(onBack: () -> Unit, onRules: () -> Unit, activeRank: Int, 
             }
 
             Column(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                FamilyPodiumCard(family = topFamilies.getOrNull(0), frame = "IMG_20261115_135339.png", size = 175.dp, modifier = Modifier.zIndex(2f).offset(y = (-15).dp))
+                FamilyPodiumCard(family = topFamilies.getOrNull(0), frame = "IMG_20261115_135339.png", size = 175.dp, modifier = Modifier.zIndex(2f).offset(y = (-15).dp), avatarSize = 145.dp)
                 Row(Modifier.fillMaxWidth().offset(y = (-35).dp).padding(horizontal = 25.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                     FamilyPodiumCard(family = topFamilies.getOrNull(1), frame = "IMG_20261115_135356.png", size = 130.dp)
                     FamilyPodiumCard(family = topFamilies.getOrNull(2), frame = "IMG_20261115_135419.png", size = 130.dp)
