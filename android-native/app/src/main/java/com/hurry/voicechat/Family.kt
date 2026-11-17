@@ -299,7 +299,8 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, ac
                 Row(Modifier.fillMaxWidth().statusBarsPadding().padding(start = 8.dp, end = 16.dp, top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Back", tint = Color.White, modifier = Modifier.size(28.dp)) }
                     Spacer(Modifier.weight(1f))
-                    FamilyQuestion(Modifier.size(20.dp).clickable(onClick = onRules))
+                    // BSS YEAHI HAI USER ICON JISKE HEAD KE ANDAR '?' OVERLAP KAREGA!
+                    FamilyQuestion(Modifier.size(28.dp).clickable(onClick = onRules))
                 }
 
                 // 1 frame Middle m 1 row, 2nd row m 2,3 frame
@@ -336,7 +337,7 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, ac
 
                 Spacer(Modifier.height(10.dp))
 
-                // 1, 2, 3 Cards dynamically loading their specific users just like 4-50
+                // 1, 2, 3 Cards
                 val topOffsets = listOf(0.dp, (-10).dp, (-19).dp)
                 topFamilies.take(3).forEachIndexed { index, family ->
                     Box(Modifier.fillMaxWidth().padding(horizontal = 4.dp).wrapContentHeight().offset(y = topOffsets[index]), contentAlignment = Alignment.CenterStart) {
@@ -349,9 +350,16 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, ac
                         
                         Text("Top ${index + 1}", color = familyGold, fontSize = 16.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(start = 14.dp))
                         
-                        Row(Modifier.align(Alignment.CenterStart).padding(start = 75.dp, end = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-                            // SQUARE AVATAR
-                            AsyncImage(model = family.image, contentDescription = family.name, modifier = Modifier.size(38.dp).clip(RoundedCornerShape(6.dp)), contentScale = ContentScale.Crop)
+                        Row(Modifier.align(Alignment.CenterStart).padding(start = 60.dp, end = 26.dp), verticalAlignment = Alignment.CenterVertically) {
+                            
+                            // LIST AVATARS TOP 1, 2, 3 (CIRCLE AVATAR WITH FRAME EXACTLY LIKE PODIUM!)
+                            val listFrame = when(index) {
+                                0 -> "IMG_20261115_135339.png"
+                                1 -> "IMG_20261115_135356.png"
+                                else -> "IMG_20261115_135419.png"
+                            }
+                            FamilyPodiumCard(family = family, frame = listFrame, size = 65.dp)
+                            
                             Column(Modifier.weight(1f).padding(start = 8.dp)) {
                                 Text(family.name, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1)
                                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -360,7 +368,7 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, ac
                                     Text("0/50", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Medium)
                                 }
                             }
-                            // RIGHT CORNER COINS OVER TEXT (10K format)
+                            // RIGHT CORNER COINS
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 AsyncImage(model = familyAsset("file_00000000e56882119c217d508b6733dc.png"), contentDescription = "Coins", modifier = Modifier.size(16.dp))
                                 Spacer(Modifier.height(2.dp))
@@ -375,10 +383,13 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, ac
                     Box(Modifier.fillMaxWidth().padding(horizontal = 4.dp).wrapContentHeight().offset(y = (-25).dp), contentAlignment = Alignment.CenterStart) {
                         AsyncImage(model = familyAsset("IMG_20261115_134839.png"), contentDescription = null, modifier = Modifier.fillMaxWidth(), contentScale = ContentScale.FillWidth)
                         Text((index + 4).toString(), color = familyGold, fontSize = 22.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(start = 24.dp))
-                        Row(Modifier.align(Alignment.CenterStart).padding(start = 65.dp, end = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-                            // SQUARE AVATAR
-                            AsyncImage(model = family.image, contentDescription = family.name, modifier = Modifier.size(38.dp).clip(RoundedCornerShape(6.dp)), contentScale = ContentScale.Crop)
-                            Column(Modifier.weight(1f).padding(start = 8.dp)) {
+                        
+                        Row(Modifier.align(Alignment.CenterStart).padding(start = 65.dp, end = 26.dp), verticalAlignment = Alignment.CenterVertically) {
+                            
+                            // SQUARE AVATARS FOR 4 TO 50 (SIZE BADI KAR DI HAI: 48.dp)
+                            AsyncImage(model = family.image, contentDescription = family.name, modifier = Modifier.size(48.dp).clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.Crop)
+                            
+                            Column(Modifier.weight(1f).padding(start = 10.dp)) {
                                 Text(family.name, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1)
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     AsyncImage(model = familyAsset("IMG_20261116_162146.png"), contentDescription = "Members", modifier = Modifier.size(10.dp))
@@ -386,7 +397,7 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, ac
                                     Text("0/50", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Medium)
                                 }
                             }
-                            // RIGHT CORNER COINS OVER TEXT (10K format)
+                            // RIGHT CORNER COINS
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 AsyncImage(model = familyAsset("file_00000000e56882119c217d508b6733dc.png"), contentDescription = "Coins", modifier = Modifier.size(16.dp))
                                 Spacer(Modifier.height(2.dp))
@@ -438,20 +449,32 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, ac
     }
 }
 
-// BSS AVATAR IN CIRCLE (KOI NAME YA TARGET NAHI)
+// AVATAR IN CIRCLE BEHIND THE FRAME (Perfectly used for Top Podium & List 1,2,3 Cards too)
 @Composable
 private fun FamilyPodiumCard(family: FamilyRecord?, frame: String, size: androidx.compose.ui.unit.Dp, modifier: Modifier = Modifier) {
     Box(modifier.size(size), contentAlignment = Alignment.Center) {
-        AsyncImage(model = familyAsset(frame), contentDescription = "Top family frame", modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
-        Box(Modifier.align(Alignment.BottomCenter).padding(bottom = size * 0.13f)) {
+        // AVATAR RENDERED FIRST SO IT IS BEHIND THE FRAME
+        val avatarSize = size * 0.38f // Perfectly scaled with size
+        Box(Modifier.align(Alignment.BottomCenter).padding(bottom = size * 0.08f)) {
             if (family != null) {
-                AsyncImage(model = family.image, contentDescription = null, modifier = Modifier.size(size * 0.31f).clip(CircleShape).border(1.dp, Color.White, CircleShape), contentScale = ContentScale.Crop)
+                AsyncImage(
+                    model = family.image, 
+                    contentDescription = null, 
+                    modifier = Modifier.size(avatarSize).clip(CircleShape), 
+                    contentScale = ContentScale.Crop
+                )
             } else {
-                Box(modifier = Modifier.size(size * 0.31f).clip(CircleShape).background(Color(0xFF5C1A06)).border(1.dp, Color.White, CircleShape), contentAlignment = Alignment.Center) {
-                    Icon(Icons.Default.Person, contentDescription = "Default Avatar", tint = Color.White, modifier = Modifier.size(size * 0.2f))
+                Box(
+                    modifier = Modifier.size(avatarSize).clip(CircleShape).background(Color(0xFF5C1A06)), 
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.Person, contentDescription = "Default Avatar", tint = Color.White, modifier = Modifier.size(avatarSize * 0.6f))
                 }
             }
         }
+        
+        // FRAME RENDERED ON TOP
+        AsyncImage(model = familyAsset(frame), contentDescription = "Top family frame", modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
     }
 }
 
@@ -473,7 +496,9 @@ private fun FamilyTop(onBack: () -> Unit, onRules: () -> Unit, activeRank: Int, 
         Column(Modifier.fillMaxSize()) {
             Row(Modifier.fillMaxWidth().statusBarsPadding().padding(top = 8.dp, start = 8.dp, end = 16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Back", tint = Color.White, modifier = Modifier.size(28.dp)) }
-                FamilyQuestion(Modifier.size(20.dp).clickable(onClick = onRules))
+                Spacer(Modifier.weight(1f))
+                // USER ICON JISKE HEAD KE ANDAR '?' HAI
+                FamilyQuestion(Modifier.size(28.dp).clickable(onClick = onRules))
             }
 
             Column(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -727,10 +752,11 @@ private fun FamilyRules(onClose:()->Unit) {
     }
 }
 
+// DEFAULT USER ICON JISKE HEAD KE ANDAR '?' OVERLAP HO RAHA HAI!
 @Composable
 private fun FamilyQuestion(modifier:Modifier=Modifier) {
-    Canvas(modifier) {
-        drawCircle(Color.White,style=Stroke(2.dp.toPx()))
-        drawContext.canvas.nativeCanvas.drawText("?",size.width/2f,size.height*.73f,android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply{color=android.graphics.Color.WHITE;textSize=size.minDimension*.72f;textAlign=android.graphics.Paint.Align.CENTER;typeface=android.graphics.Typeface.DEFAULT_BOLD})
+    Box(modifier, contentAlignment = Alignment.TopCenter) {
+        Icon(Icons.Default.Person, contentDescription = "Rules", tint = Color.White, modifier = Modifier.fillMaxSize())
+        Text("?", color = Color(0xFF3B0C06), fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.offset(y = 3.dp))
     }
 }
