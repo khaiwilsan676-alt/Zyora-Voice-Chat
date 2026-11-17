@@ -100,7 +100,7 @@ fun RoomCupSheet(roomId:String,userId:String,userName:String,userImage:String,on
                             }
                         }
                         Text(e.coins.toString(),color=Color.White,fontSize=12.sp,fontWeight=FontWeight.SemiBold)
-                        AsyncImage(model="https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/1788258883971~2.jpg",contentDescription="Coins",modifier=Modifier.padding(start=4.dp).size(17.dp),contentScale=ContentScale.Fit)
+                        AsyncImage(model="https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_00000000e56882119c217d508b6733dc.png",contentDescription="Coins",modifier=Modifier.padding(start=4.dp).size(17.dp),contentScale=ContentScale.Fit)
                     }
                 }
             }
@@ -114,7 +114,7 @@ fun RoomCupSheet(roomId:String,userId:String,userName:String,userImage:String,on
                     }
                 }
                 Text(mine?.coins?.toString()?: "0",color=Color.White,fontSize=12.sp,fontWeight=FontWeight.Bold)
-                AsyncImage(model="https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/1788258883971~2.jpg",contentDescription="Coins",modifier=Modifier.padding(start=4.dp).size(17.dp),contentScale=ContentScale.Fit)
+                AsyncImage(model="https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_00000000e56882119c217d508b6733dc.png",contentDescription="Coins",modifier=Modifier.padding(start=4.dp).size(17.dp),contentScale=ContentScale.Fit)
                 Text(if((mine?.rank?:0)>0)"#${mine?.rank}" else "#--",color=Color.White,fontSize=12.sp,modifier=Modifier.padding(start=10.dp))
             }
         }
