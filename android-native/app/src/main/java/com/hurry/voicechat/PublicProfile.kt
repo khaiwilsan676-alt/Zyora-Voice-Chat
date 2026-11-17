@@ -659,6 +659,7 @@ fun PublicProfileScreen(
                             Box(
                                 Modifier
                                     .fillMaxWidth()
+                                    .padding(horizontal = 8.dp) // <-- ADDED GAP HERE as requested
                                     .height(112.dp) // Edge to edge background height limit (you can remove if wrap needed)
                                     .clickable { if (ownFamilyCode.isNotBlank()) onOpenFamily(ownFamilyCode) }
                             ) {
@@ -679,7 +680,7 @@ fun PublicProfileScreen(
                                         AsyncImage(
                                             model = ownFamilyImage,
                                             contentDescription = "Family DP",
-                                            modifier = Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)),
+                                            modifier = Modifier.size(44.dp).clip(CircleShape), // <-- CHANGED TO CircleShape as requested
                                             contentScale = ContentScale.Crop
                                         )
                                     }
@@ -968,7 +969,7 @@ fun PublicProfileScreen(
 
     if (isOtherUser && showChat) {
         val authPrefs = context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE)
-        val chatPrefs = context.getSharedPreferences("hurry_user", Context.MODE_PRIVATE)
+        val chatPrefs = context.getSharedPreferences("hurry_user", Context.MODEPRIVATE)
         val currentAccountId = authPrefs.getString("accountId", "").orEmpty()
             .ifBlank { chatPrefs.getString("accountId", "").orEmpty() }
         val currentUserId = authPrefs.getString("uid", "").orEmpty()
