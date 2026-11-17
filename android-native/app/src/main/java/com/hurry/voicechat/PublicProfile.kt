@@ -106,7 +106,7 @@ fun LucidePublicProfileIcon(
     }
 }
 
-private const val PUBLIC_PROFILE_FAMILY_IMAGE_URL = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261117_130644.png"
+private const val PUBLIC_PROFILE_FAMILY_IMAGE_URL = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261117_203437.png"
 
 // --- DATA CLASSES ---
 
@@ -747,7 +747,7 @@ fun PublicProfileScreen(
                                             )
                                         }
                                         AsyncImage(
-                                            model = profileAsset("/IMG_20261116_164433.png"),
+                                            model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261116_164433.png",
                                             contentDescription = "Family avatar frame",
                                             modifier = Modifier.size(62.dp),
                                             contentScale = ContentScale.Fit
@@ -776,12 +776,25 @@ fun PublicProfileScreen(
                                             fontWeight = FontWeight.Medium, 
                                             maxLines = 1
                                         )
-                                        Text(
-                                            text = "Members $ownFamilyMemberCount/50", 
-                                            color = Color.White, 
-                                            fontSize = 11.sp, 
-                                            fontWeight = FontWeight.Medium
-                                        )
+                                        
+                                        // EDITED: Added the image instead of 'Members' word
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            AsyncImage(
+                                                model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261116_162146.png",
+                                                contentDescription = "Members Icon",
+                                                modifier = Modifier.size(14.dp),
+                                                contentScale = ContentScale.Fit
+                                            )
+                                            Text(
+                                                text = "$ownFamilyMemberCount/50", 
+                                                color = Color.White, 
+                                                fontSize = 11.sp, 
+                                                fontWeight = FontWeight.Medium
+                                            )
+                                        }
                                     }
                                 }
                             }
