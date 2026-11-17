@@ -413,8 +413,10 @@ fun PublicProfileScreen(
             ownFamilyName = merged.optString("familyName", "")
             ownFamilyImage = merged.optString("familyImage", "")
             ownFamilyCreatorId = merged.optString("familyCreatorId", targetUser?.accountId ?: targetUser?.id.orEmpty())
-        } else if (ownFamilyCode.isNotBlank() || familyPrefs.getBoolean("familyCreated", false)) {
-            hasOwnFamily = true
+        } else {
+            // Never show a Family card/tag from stale local profile flags alone.
+            // The Family API response is the source of truth.
+            hasOwnFamily = false
             ownFamilyName = merged.optString("familyName").takeIf { it.isNotBlank() && it != "null" }
                 ?: familyPrefs.getString("familyName", "").orEmpty()
             ownFamilyImage = merged.optString("familyImage").takeIf { it.isNotBlank() && it != "null" }
@@ -422,13 +424,15 @@ fun PublicProfileScreen(
             ownFamilyCreatorId = merged.optString("familyCreatorId").takeIf { it.isNotBlank() && it != "null" }
                 ?: familyPrefs.getString("familyCreatorId", "").orEmpty().ifBlank { currentUserId }
         }
+        // A failed/missing Family lookup must keep both the card and image tag hidden.
+        hasOwnFamily = false
         if (ownFamilyCode.isNotBlank()) runCatching {
             val joinedFamily = FamilyProfileApi.load(ownFamilyCode)
+            ownFamilyMemberCount = joinedFamily.members.size
             hasOwnFamily = joinedFamily.members.isNotEmpty()
             ownFamilyName = joinedFamily.name
             ownFamilyImage = joinedFamily.image
             ownFamilyCreatorId = joinedFamily.ownerAccountId.ifBlank { ownFamilyCreatorId }
-            ownFamilyMemberCount = joinedFamily.members.size
         }
         merged.optString("name").takeIf { it.isNotBlank() && it != "null" }?.let { userName = it }
         
