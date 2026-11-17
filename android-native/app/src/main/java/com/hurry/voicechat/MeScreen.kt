@@ -282,7 +282,7 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(5.dp)
                             ) {
-                                if (account in setOf("100002", "100003", "500001", "500002", "500003", "500004")) {
+                                if (account in setOf("100002", "100003", "500001", "500002", "500003", "500004", "500005", "500005", "500005")) {
                                     Image(
                                         painter = painterResource(R.drawable.wp_img_20261101_125212),
                                         contentDescription = "Official ID",
@@ -378,12 +378,13 @@ private fun nativeMeAccountNumber(uid: String): String {
         "ADqW31RGBMaosOzy0HiqexKSD7h1" -> "100003"
         "nB0zGbJu5yf7ZeHMt5pnMIhzjGB3" -> "500003"
         "i8uHx21ZMOSL8tR2Gim14bDJ36E3" -> "500004"
+        "t8wb0Hhj6aeArzxBhLdRkrzFOMz2" -> "500005"
         "100002" -> "100002"
         "100003" -> "100003"
         else -> null
     }
     if (special != null) return special
-    if (uid in setOf("500001", "500002", "500003", "500004", "500005", "700001", "700002", "700003")) return uid
+    if (uid in setOf("500001", "500002", "500003", "500004", "500005", "500005", "500005", "500005", "700001", "700002", "700003")) return uid
     return (10000000L + kotlin.math.abs(uid.hashCode().toLong()) % 90000000L).toString()
 }
 
