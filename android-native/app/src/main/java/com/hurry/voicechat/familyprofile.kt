@@ -229,7 +229,7 @@ fun FamilyProfile(familyId:String,onBack:()->Unit,onOpenChat:(String,String,Stri
                     Text(member.name,color=Color(0xFF222222),fontSize=15.sp,fontWeight=FontWeight.Bold,modifier=Modifier.padding(start=10.dp))
                 }
                 if(canPromote) TextButton(onClick={scope.launch{busy=member.uid;runCatching{FamilyProfileApi.setAdmin(familyId,member.uid)}.onSuccess{selectedMember=null;reload()}.onFailure{error=it.message?:"Could not add Admin."};busy=""}},modifier=Modifier.fillMaxWidth(),enabled=busy!=member.uid){Text("Add Admin",color=Color(0xFF222222),fontSize=15.sp)}
-                if(canRemove || canSelfLeave) TextButton(onClick={scope.launch{busy=member.uid;runCatching{FamilyProfileApi.removeMember(familyId,member.uid)}.onSuccess{selectedMember=null;if(canSelfLeave)onBack()else reload()}.onFailure{error=it.message?:"Could not remove member."};busy=""}},modifier=Modifier.fillMaxWidth(),enabled=busy!=member.uid){Text("Leave Family",color=Color(0xFFD32F2F),fontSize=15.sp)}
+                if(canRemove || canSelfLeave) TextButton(onClick={scope.launch{busy=member.uid;runCatching{FamilyProfileApi.removeMember(familyId,member.uid)}.onSuccess{selectedMember=null;if(canSelfLeave){context.getSharedPreferences("hurry_user",Context.MODE_PRIVATE).edit().remove("familyCreated").remove("familyCode").remove("familyName").remove("familyImage").remove("familyAnnouncement").remove("familyCreatorId").apply();onBack()}else reload()}.onFailure{error=it.message?:"Could not remove member."};busy=""}},modifier=Modifier.fillMaxWidth(),enabled=busy!=member.uid){Text("Leave Family",color=Color(0xFFD32F2F),fontSize=15.sp)}
             }
         }
     }
