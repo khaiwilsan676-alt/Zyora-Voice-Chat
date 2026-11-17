@@ -115,41 +115,16 @@ fun Family(onBack: () -> Unit) {
     val familyAuthUid = authPrefs.getString("uid", "").orEmpty().ifBlank { familyCreatorId }
     val familyAuthId = authPrefs.getString("id", "").orEmpty().ifBlank { familyAuthUid }
     var view by remember { mutableStateOf("main") }
-    var openedFamilyId by remember { mutableStateOf<String?>(null) }
     var showRules by remember { mutableStateOf(false) }
     var familyName by remember { mutableStateOf(prefs.getString("familyName", "") ?: "") }
     var announcement by remember { mutableStateOf(prefs.getString("familyAnnouncement", "") ?: "") }
     var familyImage by remember { mutableStateOf(prefs.getString("familyImage", "") ?: "") }
-    var familyCode by remember { mutableStateOf(prefs.getString("familyCode", "").orEmpty()) }
-    var joinedFamily by remember { mutableStateOf<FamilyRecord?>(null) }
     var createBusy by remember { mutableStateOf(false) }
     var createError by remember { mutableStateOf<String?>(null) }
 
     var activeModal by remember { mutableStateOf<RewardModalData?>(null) }
 
     val scope = rememberCoroutineScope()
-    LaunchedEffect(familyCreatorId, view) {
-        if (view == "main" && familyCreatorId.isNotBlank()) {
-            runCatching {
-                val profile = ProfilePersistence.load(TargetUser(id = familyAuthId, uid = familyAuthUid, accountId = familyCreatorId, displayAccountNumber = familyCreatorId))
-                val code = profile?.optString("familyCode").orEmpty().takeIf { it.isNotBlank() && it != "null" }
-                    ?: profile?.optString("familyId").orEmpty().takeIf { it.isNotBlank() && it != "null" }
-                    ?: prefs.getString("familyCode", "").orEmpty()
-                if (code.isNotBlank()) FamilyProfileApi.load(code) else null
-            }.onSuccess { record ->
-                joinedFamily = record
-                if (record != null) {
-                    familyCode = record.id
-                    familyName = record.name
-                    familyImage = record.image
-                    announcement = record.announcement
-                    prefs.edit().putString("familyCode", record.id).putString("familyName", record.name)
-                        .putString("familyImage", record.image).putString("familyAnnouncement", record.announcement)
-                        .putString("familyCreatorId", record.ownerAccountId).putBoolean("familyCreated", true).apply()
-                } else joinedFamily = null
-            }
-        }
-    }
     val walletDao = remember { WalletDatabase.get(context).walletDao() }
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
         if (uri != null) runCatching { context.contentResolver.takePersistableUriPermission(uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION) }
@@ -178,7 +153,6 @@ fun Family(onBack: () -> Unit) {
     Box(Modifier.fillMaxSize().background(bgColor)) {
         androidx.compose.animation.Crossfade(targetState = view, label = "viewFade") { currentView ->
             when (currentView) {
-                "profile" -> openedFamilyId?.let { id -> FamilyProfile(familyId = id, onBack = { openedFamilyId = null; view = "main" }) }
                 "create" -> FamilyCreate(onBack = { view = "main" }, name = familyName, onName = { familyName = it }, announcement = announcement, onAnnouncement = { announcement = it }, image = familyImage, onImage = { imagePicker.launch(arrayOf("image/*")) }, busy = createBusy, error = createError, onCreate = {
                     if (createBusy) return@FamilyCreate
                     if (familyName.isBlank()) {
@@ -250,7 +224,6 @@ fun Family(onBack: () -> Unit) {
                     }
                 })
                 "top" -> FamilyTop(
-                    onOpenFamily = { id -> openedFamilyId = id; view = "profile" },
                     onBack = { 
                         view = "main" 
                         activeRank = 0
@@ -267,7 +240,6 @@ fun Family(onBack: () -> Unit) {
                     topFamilies = topFamilies
                 )
                 else -> FamilyHome(
-                    onOpenFamily = { id -> openedFamilyId = id; view = "profile" },
                     onBack = onBack, 
                     onRules = { showRules = true }, 
                     seconds = seconds, 
@@ -279,11 +251,10 @@ fun Family(onBack: () -> Unit) {
                         }
                     }, 
                     onCreate = { view = "create" },
-                    familyCreated = joinedFamily != null || prefs.getBoolean("familyCreated", false),
-                    familyName = joinedFamily?.name ?: familyName,
-                    familyImage = joinedFamily?.image ?: familyImage,
-                    familyCreatorId = joinedFamily?.ownerAccountId?.ifBlank { familyCreatorId } ?: familyCreatorId,
-                    familyCode = joinedFamily?.id ?: familyCode,
+                    familyCreated = prefs.getBoolean("familyCreated", false),
+                    familyName = familyName,
+                    familyImage = familyImage,
+                    familyCreatorId = familyCreatorId,
                     topFamilies = topFamilies
                 )
             }
@@ -307,18 +278,7 @@ fun Family(onBack: () -> Unit) {
 // MAIN HOME SCREEN
 // --------------------------------------------------------
 @Composable
-private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, onOpenFamily: (String) -> Unit, seconds: Int, activeRank: Int, onRank: (Int) -> Unit, onCreate: () -> Unit, familyCreated: Boolean, familyName: String, familyImage: String, familyCreatorId: String, familyCode: String, topFamilies: List<FamilyRecord>) {
-    val context = LocalContext.current
-    val ownFamilyCode = familyCode.ifBlank { context.getSharedPreferences("hurry_user", Context.MODE_PRIVATE).getString("familyCode", "").orEmpty() }
-    var ownFamilyMemberCount by remember(ownFamilyCode) { mutableIntStateOf(0) }
-    LaunchedEffect(familyCreated, ownFamilyCode) {
-        if (familyCreated && ownFamilyCode.isNotBlank()) {
-            while (true) {
-                runCatching { FamilyProfileApi.memberCount(ownFamilyCode) }.onSuccess { ownFamilyMemberCount = it }
-                delay(30000)
-            }
-        }
-    }
+private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, seconds: Int, activeRank: Int, onRank: (Int) -> Unit, onCreate: () -> Unit, familyCreated: Boolean, familyName: String, familyImage: String, familyCreatorId: String, topFamilies: List<FamilyRecord>) {
     val scrollState = rememberScrollState()
     val activeFilter = null
     val inactiveFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
@@ -339,16 +299,16 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, onOpenFamily: (S
                 Row(Modifier.fillMaxWidth().statusBarsPadding().padding(start = 8.dp, end = 16.dp, top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Back", tint = Color.White, modifier = Modifier.size(28.dp)) }
                     Spacer(Modifier.weight(1f))
-                    // BSS YEAHI HAI USER ICON JISKE HEAD KE ANDAR '?' OVERLAP KAREGA!
-                    FamilyQuestion(Modifier.size(28.dp).clickable(onClick = onRules))
+                    // DEFAULT TOP RIGHT QUESTION MARK BACK!
+                    FamilyQuestion(Modifier.size(20.dp).clickable(onClick = onRules))
                 }
 
                 // 1 frame Middle m 1 row, 2nd row m 2,3 frame
                 Column(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    FamilyPodiumCard(family = topFamilies.getOrNull(0), frame = "IMG_20261115_135339.png", size = 175.dp, modifier = Modifier.zIndex(2f).offset(y = (-20).dp), onAvatarClick = { topFamilies.getOrNull(0)?.let { onOpenFamily(it.id) } })
+                    FamilyPodiumCard(family = topFamilies.getOrNull(0), frame = "IMG_20261115_135339.png", size = 175.dp, modifier = Modifier.zIndex(2f).offset(y = (-20).dp))
                     Row(Modifier.fillMaxWidth().offset(y = (-35).dp).padding(horizontal = 25.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                        FamilyPodiumCard(family = topFamilies.getOrNull(1), frame = "IMG_20261115_135356.png", size = 130.dp, onAvatarClick = { topFamilies.getOrNull(1)?.let { onOpenFamily(it.id) } })
-                        FamilyPodiumCard(family = topFamilies.getOrNull(2), frame = "IMG_20261115_135419.png", size = 130.dp, onAvatarClick = { topFamilies.getOrNull(2)?.let { onOpenFamily(it.id) } })
+                        FamilyPodiumCard(family = topFamilies.getOrNull(1), frame = "IMG_20261115_135356.png", size = 130.dp)
+                        FamilyPodiumCard(family = topFamilies.getOrNull(2), frame = "IMG_20261115_135419.png", size = 130.dp)
                     }
                 }
                 
@@ -398,14 +358,14 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, onOpenFamily: (S
                                 1 -> "IMG_20261115_135356.png"
                                 else -> "IMG_20261115_135419.png"
                             }
-                            FamilyPodiumCard(family = family, frame = listFrame, size = 65.dp, onAvatarClick = { onOpenFamily(family.id) })
+                            FamilyPodiumCard(family = family, frame = listFrame, size = 65.dp)
                             
                             Column(Modifier.weight(1f).padding(start = 8.dp)) {
                                 Text(family.name, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1)
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     AsyncImage(model = familyAsset("IMG_20261116_162146.png"), contentDescription = "Members", modifier = Modifier.size(10.dp))
                                     Spacer(Modifier.width(2.dp))
-                                    Text("${family.members.size}/50", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Medium)
+                                    Text("0/50", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Medium)
                                 }
                             }
                             // RIGHT CORNER COINS
@@ -427,14 +387,14 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, onOpenFamily: (S
                         Row(Modifier.align(Alignment.CenterStart).padding(start = 65.dp, end = 26.dp), verticalAlignment = Alignment.CenterVertically) {
                             
                             // SQUARE AVATARS FOR 4 TO 50 (SIZE BADI KAR DI HAI: 48.dp)
-                            AsyncImage(model = family.image, contentDescription = family.name, modifier = Modifier.size(48.dp).clip(RoundedCornerShape(8.dp)).clickable { onOpenFamily(family.id) }, contentScale = ContentScale.Crop)
+                            AsyncImage(model = family.image, contentDescription = family.name, modifier = Modifier.size(48.dp).clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.Crop)
                             
                             Column(Modifier.weight(1f).padding(start = 10.dp)) {
                                 Text(family.name, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1)
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     AsyncImage(model = familyAsset("IMG_20261116_162146.png"), contentDescription = "Members", modifier = Modifier.size(10.dp))
                                     Spacer(Modifier.width(2.dp))
-                                    Text("${family.members.size}/50", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Medium)
+                                    Text("0/50", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Medium)
                                 }
                             }
                             // RIGHT CORNER COINS
@@ -459,7 +419,7 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, onOpenFamily: (S
                     AsyncImage(
                         model = familyImage.takeIf { it.isNotBlank() } ?: familyAsset("IMG_20261116_162146.png"),
                         contentDescription = "Family DP",
-                        modifier = Modifier.size(54.dp).clip(RoundedCornerShape(15.dp)).clickable { if (ownFamilyCode.isNotBlank()) onOpenFamily(ownFamilyCode) },
+                        modifier = Modifier.size(54.dp).clip(RoundedCornerShape(15.dp)),
                         contentScale = ContentScale.Crop
                     )
                     Spacer(Modifier.width(10.dp))
@@ -468,7 +428,7 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, onOpenFamily: (S
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             AsyncImage(model = familyAsset("IMG_20261116_162146.png"), contentDescription = "Members", modifier = Modifier.size(12.dp))
                             Spacer(Modifier.width(4.dp))
-                            Text("$ownFamilyMemberCount/50", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                            Text("0/50", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium)
                         }
                     }
                     
@@ -491,11 +451,11 @@ private fun FamilyHome(onBack: () -> Unit, onRules: () -> Unit, onOpenFamily: (S
 
 // AVATAR IN CIRCLE BEHIND THE FRAME (Perfectly used for Top Podium & List 1,2,3 Cards too)
 @Composable
-private fun FamilyPodiumCard(family: FamilyRecord?, frame: String, size: androidx.compose.ui.unit.Dp, modifier: Modifier = Modifier, onAvatarClick: () -> Unit = {}) {
+private fun FamilyPodiumCard(family: FamilyRecord?, frame: String, size: androidx.compose.ui.unit.Dp, modifier: Modifier = Modifier) {
     Box(modifier.size(size), contentAlignment = Alignment.Center) {
-        // AVATAR RENDERED FIRST SO IT IS BEHIND THE FRAME
-        val avatarSize = size * 0.38f // Perfectly scaled with size
-        Box(Modifier.align(Alignment.BottomCenter).padding(bottom = size * 0.08f).clickable(enabled = family != null, onClick = onAvatarClick)) {
+        // AVATAR RENDERED FIRST SO IT IS BEHIND THE FRAME (SIZE INCREASED & CENTERED!)
+        val avatarSize = size * 0.85f // Frame ko full cover karne ke liye size bada kar diya
+        Box(Modifier.align(Alignment.Center)) { // Yahan ekdam exact Center align kar diya
             if (family != null) {
                 AsyncImage(
                     model = family.image, 
@@ -522,7 +482,7 @@ private fun FamilyPodiumCard(family: FamilyRecord?, frame: String, size: android
 // TOP RANKINGS REWARDS CARDS
 // --------------------------------------------------------
 @Composable
-private fun FamilyTop(onBack: () -> Unit, onRules: () -> Unit, onOpenFamily: (String) -> Unit, activeRank: Int, onRank: (Int) -> Unit, onOpenModal: (String, String, Boolean, String) -> Unit, topFamilies: List<FamilyRecord>) {
+private fun FamilyTop(onBack: () -> Unit, onRules: () -> Unit, activeRank: Int, onRank: (Int) -> Unit, onOpenModal: (String, String, Boolean, String) -> Unit, topFamilies: List<FamilyRecord>) {
     val scrollState = rememberScrollState()
     val activeFilter = null
     val inactiveFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
@@ -537,15 +497,15 @@ private fun FamilyTop(onBack: () -> Unit, onRules: () -> Unit, onOpenFamily: (St
             Row(Modifier.fillMaxWidth().statusBarsPadding().padding(top = 8.dp, start = 8.dp, end = 16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Back", tint = Color.White, modifier = Modifier.size(28.dp)) }
                 Spacer(Modifier.weight(1f))
-                // USER ICON JISKE HEAD KE ANDAR '?' HAI
-                FamilyQuestion(Modifier.size(28.dp).clickable(onClick = onRules))
+                // QUESTION MARK ICON WAPAS PEHLE JAISA ADD KAR DIYA
+                FamilyQuestion(Modifier.size(20.dp).clickable(onClick = onRules))
             }
 
             Column(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                FamilyPodiumCard(family = topFamilies.getOrNull(0), frame = "IMG_20261115_135339.png", size = 175.dp, modifier = Modifier.zIndex(2f).offset(y = (-15).dp), onAvatarClick = { topFamilies.getOrNull(0)?.let { onOpenFamily(it.id) } })
+                FamilyPodiumCard(family = topFamilies.getOrNull(0), frame = "IMG_20261115_135339.png", size = 175.dp, modifier = Modifier.zIndex(2f).offset(y = (-15).dp))
                 Row(Modifier.fillMaxWidth().offset(y = (-35).dp).padding(horizontal = 25.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                    FamilyPodiumCard(family = topFamilies.getOrNull(1), frame = "IMG_20261115_135356.png", size = 130.dp, onAvatarClick = { topFamilies.getOrNull(1)?.let { onOpenFamily(it.id) } })
-                    FamilyPodiumCard(family = topFamilies.getOrNull(2), frame = "IMG_20261115_135419.png", size = 130.dp, onAvatarClick = { topFamilies.getOrNull(2)?.let { onOpenFamily(it.id) } })
+                    FamilyPodiumCard(family = topFamilies.getOrNull(1), frame = "IMG_20261115_135356.png", size = 130.dp)
+                    FamilyPodiumCard(family = topFamilies.getOrNull(2), frame = "IMG_20261115_135419.png", size = 130.dp)
                 }
             }
 
@@ -682,7 +642,7 @@ internal fun FamilyCreate(onBack:()->Unit, name:String, onName:(String)->Unit, a
         }
 
         Column(Modifier.fillMaxSize()) {
-            Row(Modifier.fillMaxWidth().statusBarsPadding().padding(start = 8.dp, end = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().statusBarsPadding().padding(top = 16.dp, start = 8.dp, end = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Back", tint = Color.Black, modifier = Modifier.size(28.dp)) }
                 Text(if (editMode) "Edit my family" else "Create my family", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 18.sp, modifier = Modifier.weight(1f).padding(end = 48.dp), textAlign = TextAlign.Center)
             }
@@ -755,7 +715,7 @@ internal fun FamilyCreate(onBack:()->Unit, name:String, onName:(String)->Unit, a
                     Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(Color(0xFFFFD700), Color(0xFFD2691E))), RoundedCornerShape(50)), contentAlignment = Alignment.Center) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(if (busy) (if (editMode) "Saving..." else "Creating family...") else (if (editMode) "Save Changes" else "Create with 30000000 Coins "), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                            if (!busy && !editMode) {
+                            if (!busy) {
                                 AsyncImage(
                                     model = familyAsset("file_00000000e56882119c217d508b6733dc.png"),
                                     contentDescription = "Coins",
@@ -792,11 +752,11 @@ private fun FamilyRules(onClose:()->Unit) {
     }
 }
 
-// DEFAULT USER ICON JISKE HEAD KE ANDAR '?' OVERLAP HO RAHA HAI!
+// ORIGINAL QUESTION MARK ICON WAPAS KAR DIYA
 @Composable
 private fun FamilyQuestion(modifier:Modifier=Modifier) {
-    Box(modifier, contentAlignment = Alignment.TopCenter) {
-        Icon(Icons.Default.Person, contentDescription = "Rules", tint = Color.White, modifier = Modifier.fillMaxSize())
-        Text("?", color = Color(0xFF3B0C06), fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.offset(y = 3.dp))
+    Canvas(modifier) {
+        drawCircle(Color.White,style=Stroke(2.dp.toPx()))
+        drawContext.canvas.nativeCanvas.drawText("?",size.width/2f,size.height*.73f,android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply{color=android.graphics.Color.WHITE;textSize=size.minDimension*.72f;textAlign=android.graphics.Paint.Align.CENTER;typeface=android.graphics.Typeface.DEFAULT_BOLD})
     }
 }
