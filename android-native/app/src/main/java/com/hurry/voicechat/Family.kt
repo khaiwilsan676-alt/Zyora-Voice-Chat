@@ -657,7 +657,7 @@ internal fun FamilyCreate(onBack:()->Unit, name:String, onName:(String)->Unit, a
         }
 
         Column(Modifier.fillMaxSize()) {
-            Row(Modifier.fillMaxWidth().statusBarsPadding().padding(top = 16.dp, start = 8.dp, end = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().statusBarsPadding().padding(start = 8.dp, end = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Back", tint = Color.Black, modifier = Modifier.size(28.dp)) }
                 Text(if (editMode) "Edit my family" else "Create my family", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 18.sp, modifier = Modifier.weight(1f).padding(end = 48.dp), textAlign = TextAlign.Center)
             }
@@ -730,7 +730,7 @@ internal fun FamilyCreate(onBack:()->Unit, name:String, onName:(String)->Unit, a
                     Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(Color(0xFFFFD700), Color(0xFFD2691E))), RoundedCornerShape(50)), contentAlignment = Alignment.Center) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(if (busy) (if (editMode) "Saving..." else "Creating family...") else (if (editMode) "Save Changes" else "Create with 30000000 Coins "), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                            if (!busy) {
+                            if (!busy && !editMode) {
                                 AsyncImage(
                                     model = familyAsset("file_00000000e56882119c217d508b6733dc.png"),
                                     contentDescription = "Coins",
