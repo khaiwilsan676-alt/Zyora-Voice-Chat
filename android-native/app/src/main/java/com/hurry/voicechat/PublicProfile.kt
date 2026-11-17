@@ -717,7 +717,7 @@ fun PublicProfileScreen(
                             ) {
                                 // Background updated
                                 AsyncImage(
-                                    model = profileAsset("/IMG_20261116_163413.png"),
+                                    model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261117_130644.png",
                                     contentDescription = "Family background",
                                     modifier = Modifier.fillMaxSize(),
                                     contentScale = ContentScale.Fit
