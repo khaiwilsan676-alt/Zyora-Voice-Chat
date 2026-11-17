@@ -718,7 +718,10 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                                 "Coins" -> CoinsNativePage(onBack = { openedMePage = null }, onChat = { uid, name, image -> openedMePage = null; openedChat = Triple(uid, name, image) })
                                 "Diamonds" -> DiamondsNativePage(onBack = { openedMePage = null })
                                 "Invite Friends" -> InviteFriends(onBack = { openedMePage = null })
-                                "Family" -> Family(onBack = { openedMePage = null })
+                                "Family" -> Family(
+                                    onBack = { openedMePage = null },
+                                    onOpenFamily = { familyId -> openedFamilyId = familyId }
+                                )
                                 "Level" -> Level(onBack = { openedMePage = null })
                                 "Medal" -> MedalScreen(onBack = { openedMePage = null })
                                 "Store" -> StorePage(onBack = { openedMePage = null }, userId = authPrefs.getString("accountId", userId).orEmpty().ifBlank { userId })
