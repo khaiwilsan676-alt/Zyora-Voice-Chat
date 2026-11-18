@@ -3495,37 +3495,23 @@ private fun RoomSeatInviteDialog(
         Box(Modifier.size(seatSize),contentAlignment=Alignment.Center){ 
             Canvas(Modifier.fillMaxSize()) {
                 val center = Offset(size.width / 2f, size.height / 2f)
-                val baseRadius = size.minDimension * 225f / 512f
-                val borderWidth = size.minDimension * 38f / 512f
+                val avatarRadius = size.minDimension * 225f / 512f
                 val phase = waveProgress * (2f * Math.PI.toFloat())
-                val zoomPulse = if (isSpeaking) 0.5f + 0.5f * kotlin.math.sin(phase) else 0f
-                val radius = baseRadius + if (isSpeaking) size.minDimension * (zoomPulse * 7f / 512f) else 0f
+                val pulse = if (isSpeaking) 0.5f + 0.5f * kotlin.math.sin(phase) else 0f
+                val ringRadius = avatarRadius + size.minDimension * (if (isSpeaking) 13f + pulse * 3f else 10f) / 512f
 
-                // Keep the avatar's solid circular border; animate a continuous
-                // Wafa-style radial audio waveform around it while the user speaks.
-                drawCircle(
-                    color = Color(0xFF87949A),
-                    radius = radius + borderWidth * 0.18f,
-                    center = center,
-                    style = Stroke(width = borderWidth)
-                )
-                drawCircle(
-                    color = Color.White.copy(alpha = 0.96f),
-                    radius = radius - borderWidth * 0.48f,
-                    center = center,
-                    style = Stroke(width = size.minDimension * 8f / 512f)
-                )
-
+                // One continuous WHITE circular voice-wave ring. Its whole
+                // circumference ripples outward while the seat is speaking.
                 if (isSpeaking) {
                     val wavePath = Path()
-                    val points = 144
+                    val points = 240
                     for (i in 0..points) {
                         val angle = (i.toFloat() / points) * (2f * Math.PI.toFloat())
-                        val waveA = kotlin.math.sin(angle * 7f + phase)
-                        val waveB = kotlin.math.sin(angle * 13f - phase * 1.35f)
-                        val waveC = kotlin.math.sin(angle * 19f + phase * 0.7f)
-                        val amplitude = borderWidth * (0.13f + 0.12f * waveA + 0.09f * waveB + 0.05f * waveC)
-                        val waveRadius = radius + borderWidth * 0.72f + amplitude
+                        val waveA = kotlin.math.sin(angle * 9f + phase)
+                        val waveB = kotlin.math.sin(angle * 17f - phase * 1.25f)
+                        val waveC = kotlin.math.sin(angle * 25f + phase * 0.8f)
+                        val displacement = size.minDimension * (5f * waveA + 3.2f * waveB + 1.8f * waveC) / 512f
+                        val waveRadius = ringRadius + displacement
                         val point = Offset(
                             center.x + kotlin.math.cos(angle) * waveRadius,
                             center.y + kotlin.math.sin(angle) * waveRadius
@@ -3535,8 +3521,15 @@ private fun RoomSeatInviteDialog(
                     wavePath.close()
                     drawPath(
                         path = wavePath,
-                        color = Color.White.copy(alpha = 0.98f),
-                        style = Stroke(width = size.minDimension * 9f / 512f, cap = StrokeCap.Round)
+                        color = Color.White,
+                        style = Stroke(width = size.minDimension * 13f / 512f, cap = StrokeCap.Round)
+                    )
+                } else {
+                    drawCircle(
+                        color = Color.White.copy(alpha = 0.9f),
+                        radius = ringRadius,
+                        center = center,
+                        style = Stroke(width = size.minDimension * 9f / 512f)
                     )
                 }
             }
