@@ -3496,7 +3496,7 @@ private fun RoomSeatInviteDialog(
             initialValue = 0f,
             targetValue = 1f,
             animationSpec = infiniteRepeatable(
-                animation = tween(1900, easing = LinearEasing),
+                animation = tween(1700, easing = LinearEasing),
                 repeatMode = RepeatMode.Restart
             ),
             label = "voice-wave-progress"
