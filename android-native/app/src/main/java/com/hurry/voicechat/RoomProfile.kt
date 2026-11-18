@@ -376,53 +376,67 @@ fun RoomProfile(
                             Text(" Fans", color = Color.Gray, fontSize = 14.sp, modifier = Modifier.padding(start = 4.dp))
                         }
 
-                        // 3rd: Lv.1 image, Officialhead, official, Admin tag
+                        // Tags flow in their current availability order: 3 per row.
+                        // Lv.1 artwork and its sizing remain unchanged.
+                        val roomProfileTags = listOfNotNull(
+                            if (officialHeadTag) Triple("file_00000000ef2c82118b2266596d0e992d.png", "Official Head", 27) else null,
+                            if (officialTag) Triple("IMG_20261027_102250.png", "Official", 19) else null,
+                            if (adminTag) Triple("IMG_20261027_114117.png", "Admin", 19) else null,
+                            if (serviceTag) Triple("IMG_20261027_102207.png", "Service / CS", 19) else null,
+                            if (hostTag) Triple("IMG_20261028_154914.png", "Host", 17) else null,
+                            if (coinSellerTag) Triple("IMG_20261027_105359.png", "Coin Seller", 19) else null,
+                            if (vipTag) Triple("IMG_20261027_102250.png", "VIP", 19) else null,
+                            if (premiumTag) Triple("IMG_20261027_102250.png", "Premium", 19) else null
+                        )
+
                         Row(
-                            modifier = Modifier.padding(top = 10.dp).horizontalScroll(rememberScrollState()),
+                            modifier = Modifier.padding(top = 10.dp),
                             horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-
-                            // Lv.1 Image 
+                            // Lv.1 image: intentionally untouched.
                             Box(
                                 contentAlignment = Alignment.CenterEnd,
-                                modifier = Modifier.height(22.dp) 
+                                modifier = Modifier.height(22.dp)
                             ) {
                                 AsyncImage(
-                                    model = "IMG_20261028_004355.png".fullUrl(), 
-                                    contentDescription = "Level", 
+                                    model = "IMG_20261028_004355.png".fullUrl(),
+                                    contentDescription = "Level",
                                     modifier = Modifier.height(22.dp),
                                     contentScale = ContentScale.Fit
                                 )
                                 Text(
-                                    text = "Lv.1", 
+                                    text = "Lv.1",
                                     color = Color.White,
-                                    fontSize = 10.sp, 
+                                    fontSize = 10.sp,
                                     fontWeight = FontWeight.Normal,
                                     modifier = Modifier.padding(end = 4.dp)
                                 )
                             }
-
-                            // Officialhead
-                            if (officialHeadTag) AsyncImage(model = "file_00000000ef2c82118b2266596d0e992d.png".fullUrl(), contentDescription = "Official Head", contentScale = ContentScale.Fit, modifier = Modifier.height(27.dp).widthIn(max = 80.dp))
-                            
-                            // Official Tag
-                            if (officialTag) AsyncImage(model = "IMG_20261027_102250.png".fullUrl(), contentDescription = "Official", contentScale = ContentScale.Fit, modifier = Modifier.height(19.dp).widthIn(max = 60.dp))
-                            
-                            // Admin Tag
-                            if (adminTag) AsyncImage(model = "IMG_20261027_114117.png".fullUrl(), contentDescription = "Admin", contentScale = ContentScale.Fit, modifier = Modifier.height(19.dp).widthIn(max = 60.dp))
+                            roomProfileTags.take(3).forEach { (image, description, height) ->
+                                AsyncImage(
+                                    model = image.fullUrl(),
+                                    contentDescription = description,
+                                    contentScale = ContentScale.Fit,
+                                    modifier = Modifier.height(height.dp).widthIn(max = 80.dp)
+                                )
+                            }
                         }
 
-                        // 4th: Baaki other tags (Service, Host, Coin Seller) agar hain toh
-                        if (serviceTag || hostTag || coinSellerTag) {
+                        roomProfileTags.drop(3).chunked(3).forEach { tagRow ->
                             Row(
-                                modifier = Modifier.padding(top = 8.dp).horizontalScroll(rememberScrollState()),
+                                modifier = Modifier.padding(top = 8.dp),
                                 horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                if (serviceTag) AsyncImage(model = "IMG_20261027_102207.png".fullUrl(), contentDescription = "Service / CS", contentScale = ContentScale.Fit, modifier = Modifier.height(19.dp).widthIn(max = 60.dp))
-                                if (hostTag) AsyncImage(model = "IMG_20261028_154914.png".fullUrl(), contentDescription = "Host", contentScale = ContentScale.Fit, modifier = Modifier.height(17.dp).widthIn(max = 60.dp))
-                                if (coinSellerTag) AsyncImage(model = "IMG_20261027_105359.png".fullUrl(), contentDescription = "Coin Seller", contentScale = ContentScale.Fit, modifier = Modifier.height(19.dp).widthIn(max = 60.dp))
+                                tagRow.forEach { (image, description, height) ->
+                                    AsyncImage(
+                                        model = image.fullUrl(),
+                                        contentDescription = description,
+                                        contentScale = ContentScale.Fit,
+                                        modifier = Modifier.height(height.dp).widthIn(max = 80.dp)
+                                    )
+                                }
                             }
                         }
 
