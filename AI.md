@@ -1318,3 +1318,7 @@ Current documentation does not certify that all historical features are build-, 
 - Native `RoomPage.kt`: reduced the visual wave scale from 1.6x to 1.45x and the maximum circle radius from 0.46 to 0.42, keeping the avatar and seat dimensions unchanged.
 - Increased each wave's white opacity from 20% to 30% and slowed the repeating three-circle cycle from 1,500 ms to 1,900 ms. The three staggered circles and existing voice/music activation sources remain unchanged.
 - No other room UI, seat, avatar, voice-routing, or music behavior was changed. Native APK build and device verification remain pending.
+## 2026-11-18 — Leaderboard period countdown correction
+- Daily, Weekly and Monthly leaderboard totals remain independently filtered by the server using India Standard Time boundaries: Daily resets at midnight, Weekly runs Monday through Sunday, and Monthly ends at the next month's first midnight (after the calendar month's last day).
+- Native `Leaderboard.kt` now labels the active reset countdown as Daily, Weekly or Monthly. Daily shows hours/minutes/seconds; Weekly and Monthly also show remaining days so longer periods do not wrap every 24 hours.
+- Updated the Rules copy to state the exact IST reset schedule. No ranking UI or aggregation logic changed.
