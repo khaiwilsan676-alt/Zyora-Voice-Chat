@@ -1258,3 +1258,10 @@ Current documentation does not certify that all historical features are build-, 
 - The Speaker toggle is persisted per account and gates only incoming room voice packets on that device. It does not mute the user's microphone, suppress room music packets, alter other users' audio, or change server room voice state. Turning it back ON resumes incoming voice playback.
 - No room UI/layout, Store preview, gift sending, seat, or server behavior was intentionally changed.
 - Verification status: source-level changes only; native APK build and multi-device playback tests remain pending.
+
+
+## 2026-11-18 — Per-user Four Grid effects and Speaker playback
+- Native `RoomPage.kt`: Entry Effect and Gift Effect preferences are strictly local to the signed-in account. Removed the legacy room-ID preference fallback so one room member cannot inherit another member's prior setting. Turning either effect OFF immediately dismisses that user's currently visible corresponding video; vehicle and gift event listeners/fallbacks continue to gate new playback using the same account-local state.
+- Native `JitsiRoomAudio.kt`: Speaker OFF filters only incoming `room_voice_chunk` packets for that device. Pending voice frames are discarded and an in-flight voice frame stops at its next packet boundary. Incoming `room_music_chunk` playback remains enabled; mic publishing, room socket, seat state, and other users are unaffected.
+- Four Grid layout and controls are unchanged. No server broadcast or shared room preference was added.
+- Verification: source-level changes committed; APK build and two-device runtime verification remain pending.
