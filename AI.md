@@ -1304,3 +1304,4 @@ Current documentation does not certify that all historical features are build-, 
 - Native RoomPage.kt retains instant local rendering, then reconciles the canonical profile in the background. Existing room UI, seats, voice, chat, and layout are untouched.
 - Commits: 8859415 (API normalization + Mongo lookup), eeeb66b (room presence/entry name), ffe2c49 (canonical avatar use), 5bc83ef (native background profile refresh).
 - Deployment and build verification are still required; test account 500005 after Render deploy and native APK rebuild.
+- Performance follow-up: the room_join profile reconciliation uses one MongoDB $or lookup (instead of sequential per-identifier queries) to avoid multiple round trips on room entry. Commit: 8443bfc.
