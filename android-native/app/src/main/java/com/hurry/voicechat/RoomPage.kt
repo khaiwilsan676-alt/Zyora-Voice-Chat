@@ -3690,7 +3690,6 @@ private fun RoomSeatInviteDialog(
                     .twoSecondLongPress { if (m.text.isNotBlank()) onCopyMessage(m.text) }
                     .clip(RoundedCornerShape(topStart=2.dp,topEnd=12.dp,bottomStart=12.dp,bottomEnd=12.dp))
                     .border(0.5.dp, Color.White.copy(alpha=.15f), RoundedCornerShape(topStart=2.dp,topEnd=12.dp,bottomStart=12.dp,bottomEnd=12.dp))
-                    .padding(horizontal=10.dp, vertical=8.dp)
             ) {
                 Box(Modifier.padding(horizontal=10.dp, vertical=8.dp)) {
                     if (m.mentions.isEmpty()) {
