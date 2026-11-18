@@ -965,7 +965,7 @@ internal fun FamilyCreate(onBack:()->Unit, name:String, onName:(String)->Unit, a
 // FULL SCREEN FAMILY RULES (BORDERS REMOVED)
 @Composable
 private fun FamilyRules(onClose: () -> Unit) {
-    Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+    Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
         Box(
             Modifier.fillMaxSize()
                 .background(Brush.verticalGradient(listOf(Color(0xFF3B0C06), Color(0xFF1A0D06))))
