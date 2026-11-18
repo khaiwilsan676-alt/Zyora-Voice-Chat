@@ -688,29 +688,29 @@ private fun RewardItemBox(item: RewardItemData, onClick: (String, String, Boolea
             Box(Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp))) {
                 if (item.thumbnail.isNotBlank()) {
                     if (item.thumbnail.substringBefore("?").substringAfterLast(".").lowercase() in setOf("mp4", "webm", "m4v")) {
-                        FamilyRewardVideo(
-                            url = familyAsset(item.thumbnail), 
-                            modifier = Modifier.fillMaxSize().then(
-                                if (isVehicle) {
-                                    Modifier.graphicsLayer { alpha = 0.99f }.drawWithContent {
-                                        drawContent()
-                                        // TOP 10% AND BOTTOM 15% VIDEO FADE
-                                        drawRect(
-                                            brush = Brush.verticalGradient(
-                                                0f to Color.Transparent,
-                                                0.10f to Color.Black,
-                                                0.85f to Color.Black,
-                                                1f to Color.Transparent
-                                            ),
-                                            blendMode = BlendMode.DstIn
-                                        )
-                                    }
-                                } else Modifier
-                            ), 
-                            rounded = false, 
-                            autoplay = true,
-                            hasSound = isVehicle // VEHICLE ME SOUND ON RAKHNE KE LIYE
-                        )
+                        if (isVehicle) {
+                            // Match Store vehicle preview: same decoder, green-screen handling,
+                            // and exact 10% top / 15% bottom alpha fade.
+                            StoreVideoPreview(
+                                url = familyAsset(item.thumbnail),
+                                modifier = Modifier.fillMaxSize(),
+                                pause = false,
+                                topFade = 0.10f,
+                                bottomFade = 0.15f,
+                                removeGreenScreen = true,
+                                mute = false,
+                                loop = true,
+                                cacheVideo = false
+                            )
+                        } else {
+                            FamilyRewardVideo(
+                                url = familyAsset(item.thumbnail),
+                                modifier = Modifier.fillMaxSize(),
+                                rounded = false,
+                                autoplay = true,
+                                hasSound = false
+                            )
+                        }
                     } else {
                         AsyncImage(
                             model = familyAsset(item.thumbnail), 
@@ -820,20 +820,20 @@ private fun FamilyRewardModal(url: String, title: String, isWinnerReward: Boolea
                 } else Modifier.fillMaxWidth().fillMaxHeight(0.75f).zIndex(1f)
                 
                 Box(contentModifier) {
-                    if (isVideo) { 
-                        FamilyRewardVideo(
-                            url = familyAsset(url), 
-                            modifier = Modifier.fillMaxSize().then(
-                                if (isFrameVideo) Modifier.graphicsLayer { 
-                                    alpha = 0.99f
-                                    blendMode = BlendMode.Screen 
-                                } else Modifier
-                            ), 
-                            rounded = false, 
-                            autoplay = true,
-                            // MODAL KE ANDAR BHI SOUND FIX KAR DIYA!
-                            hasSound = type == "vehicle"
-                        ) 
+                    if (isVideo) {
+                        // Use the exact Store video renderer in the Family preview modal.
+                        // This fixes frame-video playback and keeps vehicle audio enabled.
+                        StoreVideoPreview(
+                            url = familyAsset(url),
+                            modifier = Modifier.fillMaxSize(),
+                            pause = false,
+                            topFade = if (type == "vehicle") 0.10f else 0f,
+                            bottomFade = if (type == "vehicle") 0.15f else 0f,
+                            removeGreenScreen = isFrameVideo,
+                            mute = false,
+                            loop = true,
+                            cacheVideo = false
+                        )
                     } else { 
                         AsyncImage(model = familyAsset(url), contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit) 
                     }
