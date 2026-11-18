@@ -3504,13 +3504,14 @@ private fun RoomSeatInviteDialog(
                 // circumference ripples outward while the seat is speaking.
                 if (isSpeaking) {
                     val wavePath = Path()
-                    val points = 240
-                    for (i in 0..points) {
+                    val points = 720
+                    for (i in 0 until points) {
                         val angle = (i.toFloat() / points) * (2f * Math.PI.toFloat())
-                        val waveA = kotlin.math.sin(angle * 9f + phase)
-                        val waveB = kotlin.math.sin(angle * 17f - phase * 1.25f)
-                        val waveC = kotlin.math.sin(angle * 25f + phase * 0.8f)
-                        val displacement = size.minDimension * (5f * waveA + 3.2f * waveB + 1.8f * waveC) / 512f
+                        // Smooth, evenly spaced circular ripples — no sharp spikes
+                        // or straight cross-lines.
+                        val primaryWave = kotlin.math.sin(angle * 10f + phase)
+                        val softWave = kotlin.math.sin(angle * 20f + phase * 0.65f) * 0.12f
+                        val displacement = size.minDimension * (5.5f * primaryWave + 5.5f * softWave) / 512f
                         val waveRadius = ringRadius + displacement
                         val point = Offset(
                             center.x + kotlin.math.cos(angle) * waveRadius,
