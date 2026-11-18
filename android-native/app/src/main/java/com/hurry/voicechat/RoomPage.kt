@@ -1877,10 +1877,10 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                         
                         if (roomMicMode == 5) {
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-                                seats.take(1).forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, roomAdminIds = seatAdminIds, isSpeaking = seat.speaking || (seat.accountId == accountId && localVoiceSpeaking), seatSize = micSize) { handleSeatTap(seat) } }
+                                seats.take(1).forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, roomAdminIds = seatAdminIds, isSpeaking = seat.speaking || (seat.accountId == accountId && (localVoiceSpeaking || isMusicPlaying)), seatSize = micSize) { handleSeatTap(seat) } }
                             }
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                seats.drop(1).take(4).forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, roomAdminIds = seatAdminIds, isSpeaking = seat.speaking || (seat.accountId == accountId && localVoiceSpeaking), seatSize = micSize) { handleSeatTap(seat) } }
+                                seats.drop(1).take(4).forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, roomAdminIds = seatAdminIds, isSpeaking = seat.speaking || (seat.accountId == accountId && (localVoiceSpeaking || isMusicPlaying)), seatSize = micSize) { handleSeatTap(seat) } }
                             }
                         } else {
                             val rowSizes = when (roomMicMode) {
@@ -1896,10 +1896,10 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = arrangement) {
                                     if (roomMicMode == 10 && rowSize == 2) {
                                         Spacer(modifier = Modifier.width(micSize)) 
-                                        rowSeats.forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, roomAdminIds = seatAdminIds, isSpeaking = seat.speaking || (seat.accountId == accountId && localVoiceSpeaking), seatSize = micSize) { handleSeatTap(seat) } }
+                                        rowSeats.forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, roomAdminIds = seatAdminIds, isSpeaking = seat.speaking || (seat.accountId == accountId && (localVoiceSpeaking || isMusicPlaying)), seatSize = micSize) { handleSeatTap(seat) } }
                                         Spacer(modifier = Modifier.width(micSize))
                                     } else {
-                                        rowSeats.forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, roomAdminIds = seatAdminIds, isSpeaking = seat.speaking || (seat.accountId == accountId && localVoiceSpeaking), seatSize = micSize) { handleSeatTap(seat) } }
+                                        rowSeats.forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, roomAdminIds = seatAdminIds, isSpeaking = seat.speaking || (seat.accountId == accountId && (localVoiceSpeaking || isMusicPlaying)), seatSize = micSize) { handleSeatTap(seat) } }
                                     }
                                 }
                             }
@@ -3432,29 +3432,31 @@ private fun RoomSeatInviteDialog(
 
     Column(horizontalAlignment=Alignment.CenterHorizontally,modifier=Modifier.width(seatSize).clickable(onClick=onClick)){
         Box(Modifier.size(seatSize),contentAlignment=Alignment.Center){ 
-            Canvas(Modifier.fillMaxSize()) {
+            Canvas(Modifier.fillMaxSize().graphicsLayer { scaleX = 1.42f }) {
                 val blue = !seat.locked
                 val ringBrush = Brush.linearGradient(colors = if(blue) listOf(Color(0xFFD9F7FF),Color(0xFF91E1FF),Color(0xFF4DBFEF),Color(0xFF299DD6),Color(0xFF167DB9)) else listOf(Color(0xFFF3F4F6),Color(0xFFD1D5DB),Color(0xFF9CA3AF),Color(0xFF6B7280),Color(0xFF4B5563)),start=Offset(size.width*100f/512f,size.height*55f/512f),end=Offset(size.width*420f/512f,size.height*460f/512f))
                 val radius=size.minDimension*225f/512f
                 val center=Offset(size.width/2f,size.height/2f)
                 drawCircle(color=if(blue) Color(0xFF55C6F3).copy(alpha=.25f) else Color(0xFF9CA3AF).copy(alpha=.25f),radius=radius+size.minDimension*7.5f/512f,center=center,style=Stroke(width=size.minDimension*15f/512f))
                 if (isSpeaking) {
-                    // Soft white/10 voice ripples; keep the avatar and seat layout unchanged.
-                    val firstRadius = size.minDimension * (0.52f + waveProgress * 0.16f)
-                    val secondProgress = (waveProgress + 0.5f) % 1f
-                    val secondRadius = size.minDimension * (0.52f + secondProgress * 0.16f)
-                    drawCircle(
-                        color = Color.White.copy(alpha = 0.10f * (1f - waveProgress)),
-                        radius = firstRadius,
-                        center = center,
-                        style = Stroke(width = size.minDimension * 0.060f)
-                    )
-                    drawCircle(
-                        color = Color.White.copy(alpha = 0.10f * (1f - secondProgress)),
-                        radius = secondRadius,
-                        center = center,
-                        style = Stroke(width = size.minDimension * 0.048f)
-                    )
+                    // White audio waveform behind the avatar (not a circular ring).
+                    // The canvas is widened so the waveform remains visible at both sides.
+                    val barCount = 19
+                    val gap = size.width / (barCount + 1)
+                    for (index in 0 until barCount) {
+                        val phase = (index * 0.72f) + (waveProgress * 6.28318f)
+                        val envelope = kotlin.math.abs(kotlin.math.sin(phase)) * 0.72f +
+                            kotlin.math.abs(kotlin.math.sin(phase * 0.47f + 1.1f)) * 0.28f
+                        val height = size.height * (0.10f + envelope * 0.25f)
+                        val x = gap * (index + 1)
+                        drawLine(
+                            color = Color.White.copy(alpha = 0.78f),
+                            start = Offset(x, center.y - height / 2f),
+                            end = Offset(x, center.y + height / 2f),
+                            strokeWidth = size.minDimension * 0.025f,
+                            cap = StrokeCap.Round
+                        )
+                    }
                 }
                 drawCircle(brush=ringBrush,radius=radius,center=center,style=Stroke(width=size.minDimension*10f/512f))
                 val shine = Brush.horizontalGradient(colors=listOf(Color.White.copy(alpha=0f),Color.White.copy(alpha=.75f),Color.White.copy(alpha=.95f),Color.White.copy(alpha=0f)),startX=0f,endX=size.width)
