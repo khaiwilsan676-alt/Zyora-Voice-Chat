@@ -667,11 +667,11 @@ fun RoomPage(
         }
     }
     val roomEffectsPrefs = remember { appContext.getSharedPreferences("hurry_room_tools", android.content.Context.MODE_PRIVATE) }
-    val entryEffectPrefKey = "entry_effect_local"
-    val giftEffectPrefKey = "gift_effect_local"
+    val entryEffectPrefKey = "entry_effect_$accountId"
+    val giftEffectPrefKey = "gift_effect_$accountId"
     val speakerPrefKey = "speaker_enabled_$accountId"
-    var entryEffectEnabled by remember(accountId) { mutableStateOf(roomEffectsPrefs.getBoolean(entryEffectPrefKey, true)) }
-    var giftEffectEnabled by remember(accountId) { mutableStateOf(roomEffectsPrefs.getBoolean(giftEffectPrefKey, true)) }
+    var entryEffectEnabled by remember(accountId) { mutableStateOf(roomEffectsPrefs.getBoolean(entryEffectPrefKey, roomEffectsPrefs.getBoolean("entry_effect_$roomId", true))) }
+    var giftEffectEnabled by remember(accountId) { mutableStateOf(roomEffectsPrefs.getBoolean(giftEffectPrefKey, roomEffectsPrefs.getBoolean("gift_effect_$roomId", true))) }
     var speaker by remember(accountId) { mutableStateOf(roomEffectsPrefs.getBoolean(speakerPrefKey, true)) }
     var localVoiceSpeaking by remember { mutableStateOf(false) }
     // Public room messages stay ON unless the owner explicitly disables them.
