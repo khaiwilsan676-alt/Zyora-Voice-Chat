@@ -1250,3 +1250,11 @@ Current documentation does not certify that all historical features are build-, 
 - No UI changes.
 - Server commit: `f87b3c88c844beaa2b542384258f62f74245b0de`.
 - Verification: fetched the committed server file and confirmed the new disconnect, target-only leave, and moderator voice-preservation logic. Live multi-device/app-force-close testing remains pending.
+
+
+## 2026-11-18 — Per-user room playback effect controls
+- Native Fourgride.kt now reports Entry Effect and Gift Effect toggles to the owning RoomPage; the existing visual controls are unchanged.
+- Native RoomPage.kt stores these preferences locally on the current device, globally across rooms for that local user. Entry Effect OFF suppresses the room-entry vehicle event and equipped-vehicle fallback, including Store-owned Vehicle MP4 playback in the room. Gift Effect OFF suppresses incoming gift-video playback for that local user only.
+- The Speaker toggle is persisted per account on the device and gates that client's incoming room audio playback. It does not mute the user's microphone, alter other users' audio, or change server room voice state. Turning it back ON resumes incoming playback.
+- No room UI/layout, Store preview, gift sending, seat, or server behavior was intentionally changed.
+- Verification status: source-level changes only; native APK build and multi-device playback tests remain pending.
