@@ -3684,36 +3684,45 @@ private fun RoomSeatInviteDialog(
                         }
                     }
                 }
-            } else Box(Modifier.align(Alignment.Start).twoSecondLongPress { if (m.text.isNotBlank()) onCopyMessage(m.text) }.clip(RoundedCornerShape(topStart=2.dp,topEnd=12.dp,bottomStart=12.dp,bottomEnd=12.dp)).background(Color.Black.copy(alpha=.40f)).border(0.5.dp,Color.White.copy(alpha=.15f),RoundedCornerShape(topStart=2.dp,topEnd=12.dp,bottomStart=12.dp,bottomEnd=12.dp)).padding(horizontal=10.dp,vertical=8.dp)){
-                if (m.mentions.isEmpty()) {
-                    Text(m.text,color=Color.White,fontSize=13.sp,lineHeight=18.sp,softWrap=true)
-                } else {
-                    val annotated = androidx.compose.ui.text.buildAnnotatedString {
-                        var cursor = 0
-                        val matches = m.mentions.mapNotNull { mention ->
-                            val start = m.text.indexOf("@${mention.name}")
-                            if (start >= 0) Triple(start, start + mention.name.length + 1, mention) else null
-                        }.sortedBy { it.first }
-                        matches.forEach { (start, end, mention) ->
-                            if (start < cursor) return@forEach
-                            append(m.text.substring(cursor, start))
-                            pushStringAnnotation(tag = "room-mention", annotation = mention.accountId)
-                            pushStyle(androidx.compose.ui.text.SpanStyle(color = Color(0xFFE2C67D), fontWeight = FontWeight.SemiBold))
-                            append(m.text.substring(start, end))
-                            pop()
-                            pop()
-                            cursor = end
+            } else NativeChatBubbleMessage(
+                userId = m.senderAccountId,
+                modifier = Modifier.align(Alignment.Start)
+                    .twoSecondLongPress { if (m.text.isNotBlank()) onCopyMessage(m.text) }
+                    .clip(RoundedCornerShape(topStart=2.dp,topEnd=12.dp,bottomStart=12.dp,bottomEnd=12.dp))
+                    .border(0.5.dp, Color.White.copy(alpha=.15f), RoundedCornerShape(topStart=2.dp,topEnd=12.dp,bottomStart=12.dp,bottomEnd=12.dp))
+                    .padding(horizontal=10.dp, vertical=8.dp)
+            ) {
+                Box(Modifier.padding(horizontal=10.dp, vertical=8.dp)) {
+                    if (m.mentions.isEmpty()) {
+                        Text(m.text,color=Color.White,fontSize=13.sp,lineHeight=18.sp,softWrap=true)
+                    } else {
+                        val annotated = androidx.compose.ui.text.buildAnnotatedString {
+                            var cursor = 0
+                            val matches = m.mentions.mapNotNull { mention ->
+                                val start = m.text.indexOf("@${mention.name}")
+                                if (start >= 0) Triple(start, start + mention.name.length + 1, mention) else null
+                            }.sortedBy { it.first }
+                            matches.forEach { (start, end, mention) ->
+                                if (start < cursor) return@forEach
+                                append(m.text.substring(cursor, start))
+                                pushStringAnnotation(tag = "room-mention", annotation = mention.accountId)
+                                pushStyle(androidx.compose.ui.text.SpanStyle(color = Color(0xFFE2C67D), fontWeight = FontWeight.SemiBold))
+                                append(m.text.substring(start, end))
+                                pop()
+                                pop()
+                                cursor = end
+                            }
+                            if (cursor < m.text.length) append(m.text.substring(cursor))
                         }
-                        if (cursor < m.text.length) append(m.text.substring(cursor))
+                        androidx.compose.foundation.text.ClickableText(
+                            text = annotated,
+                            style = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 13.sp, lineHeight = 18.sp),
+                            onClick = { offset ->
+                                val account = annotated.getStringAnnotations("room-mention", offset, offset).firstOrNull()?.item
+                                m.mentions.firstOrNull { it.accountId == account }?.let(onMentionClick)
+                            }
+                        )
                     }
-                    androidx.compose.foundation.text.ClickableText(
-                        text = annotated,
-                        style = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 13.sp, lineHeight = 18.sp),
-                        onClick = { offset ->
-                            val account = annotated.getStringAnnotations("room-mention", offset, offset).firstOrNull()?.item
-                            m.mentions.firstOrNull { it.accountId == account }?.let(onMentionClick)
-                        }
-                    )
                 }
             }
         }
