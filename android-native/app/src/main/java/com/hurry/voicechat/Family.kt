@@ -703,12 +703,16 @@ private fun RewardItemBox(item: RewardItemData, onClick: (String, String, Boolea
                                 cacheVideo = false
                             )
                         } else {
-                            FamilyRewardVideo(
+                            // Frame video: remove its black/green backing so only the
+                            // animated frame remains transparent over the Family card.
+                            StoreVideoPreview(
                                 url = familyAsset(item.thumbnail),
                                 modifier = Modifier.fillMaxSize(),
-                                rounded = false,
-                                autoplay = true,
-                                hasSound = false
+                                pause = false,
+                                removeGreenScreen = true,
+                                mute = true,
+                                loop = true,
+                                cacheVideo = false
                             )
                         }
                     } else {
