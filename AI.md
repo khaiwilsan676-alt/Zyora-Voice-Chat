@@ -1305,3 +1305,10 @@ Current documentation does not certify that all historical features are build-, 
 - Commits: 8859415 (API normalization + Mongo lookup), eeeb66b (room presence/entry name), ffe2c49 (canonical avatar use), 5bc83ef (native background profile refresh).
 - Deployment and build verification are still required; test account 500005 after Render deploy and native APK rebuild.
 - Performance follow-up: the room_join profile reconciliation uses one MongoDB $or lookup (instead of sequential per-identifier queries) to avoid multiple round trips on room entry. Commit: 8443bfc.
+
+## 2026-11-18 — Room avatar voice and music waves
+- Native `RoomPage.kt`: replaced the single white speaking outline with three solid, concentric white circles at 20% opacity. Each starts small, expands beyond the avatar, fades out, and repeats with staggered timing behind the avatar.
+- Waves activate for remote microphone speakers from the existing room speaking state, for the local user's detected microphone speech, and for music playback.
+- Native `JitsiRoomAudio.kt`: observes existing `room_music_chunk` packets and tracks the publishing account ID while packets arrive; a short inactivity timeout clears that publisher's avatar wave. The local sender remains handled by the existing local music-playing state.
+- No seat positions, avatar dimensions, seat layout, music playback, voice routing, or other UI styling was changed.
+- Commits: `e09762e` (remote music activity tracking), `dad02d4` (three-circle avatar wave), followed by main-thread callback safety update. APK build and multi-device runtime verification remain pending.
