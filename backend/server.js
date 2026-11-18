@@ -2545,8 +2545,7 @@ io.on("connection", (socket) => {
         addUserToRoom(room, accId, {
           name: roomProfileName,
           image:
-            dp ||
-            "/default-avatar.png",
+            roomProfileImage,
           email: email || "",
           userId: userId ? String(userId) : accId,
           accountId: accId,
@@ -2575,8 +2574,7 @@ io.on("connection", (socket) => {
               userId: userId ? String(userId) : accId,
               name: roomProfileName,
               image:
-                dp ||
-                "/default-avatar.png",
+                roomProfileImage,
               email: email || "",
             },
           });
