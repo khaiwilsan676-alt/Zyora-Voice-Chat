@@ -191,6 +191,19 @@ fun RoomProfile(
                     (value.endsWith("/default-avatar.png") || value == "default-avatar.png")
                 if (value.isNotBlank() && value != "null" && !isPlaceholderName && (!isPlaceholderAvatar || key == "image")) merged.put(key, value)
             }
+            // Always refresh tag flags from the same remote profile source used by Public Profile.
+            // Cached profile data must not hide a newly assigned Seller tag.
+            sequenceOf("officialHeadTag", "officialTag", "adminTag", "serviceTag", "csTag", "hostTag", "isHost", "coinSellerTag", "coinSeller", "sellerTag", "vipTag", "premiumTag").forEach { key ->
+                if (latest.has(key)) merged.put(key, latest.opt(key))
+            }
+            val sellerEnabled = latest.optBoolean("coinSellerTag", false) ||
+                latest.optBoolean("coinSeller", false) || latest.optBoolean("sellerTag", false)
+            if (latest.has("coinSellerTag") || latest.has("coinSeller") || latest.has("sellerTag")) {
+                merged.put("coinSellerTag", sellerEnabled)
+            }
+            if (latest.has("serviceTag") || latest.has("csTag")) {
+                merged.put("serviceTag", latest.optBoolean("serviceTag", false) || latest.optBoolean("csTag", false))
+            }
         }
         profileCacheKeys.forEach { profileDb.saveProfile(it, merged) }
         loadedProfile = merged
@@ -230,8 +243,8 @@ fun RoomProfile(
         if (profile.has("officialHeadTag")) officialHeadTag = isCoreOfficialAccount || profile.optBoolean("officialHeadTag")
         if (profile.has("officialTag")) officialTag = isCoreOfficialAccount || isRedOfficialAccount || profile.optBoolean("officialTag")
         if (profile.has("adminTag")) adminTag = isCoreOfficialAccount || profile.optBoolean("adminTag")
-        if (profile.has("serviceTag")) serviceTag = isCoreOfficialAccount || profile.optBoolean("serviceTag")
-        if (profile.has("coinSellerTag")) coinSellerTag = isCoreOfficialAccount || profile.optBoolean("coinSellerTag")
+        serviceTag = isCoreOfficialAccount || profile.optBoolean("serviceTag", false) || profile.optBoolean("csTag", false)
+        coinSellerTag = isCoreOfficialAccount || profile.optBoolean("coinSellerTag", false) || profile.optBoolean("coinSeller", false) || profile.optBoolean("sellerTag", false)
         hostTag = isCoreOfficialAccount || profile.optBoolean("hostTag", false) || profile.optBoolean("isHost", false)
         if (profile.has("vipTag")) vipTag = profile.optBoolean("vipTag")
         if (profile.has("premiumTag")) premiumTag = profile.optBoolean("premiumTag")
