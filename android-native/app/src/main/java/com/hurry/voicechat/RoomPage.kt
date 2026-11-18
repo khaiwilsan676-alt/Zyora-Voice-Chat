@@ -3533,7 +3533,7 @@ private fun RoomSeatInviteDialog(
             if (isSpeaking) {
                 // Three solid white 20% circles expand concentrically behind the avatar.
                 // Each starts tiny, grows beyond the avatar, fades, and repeats in sequence.
-                Canvas(Modifier.size(seatSize * 1.6f).align(Alignment.Center)) {
+                Canvas(Modifier.fillMaxSize().graphicsLayer { scaleX = 1.6f; scaleY = 1.6f }.align(Alignment.Center)) {
                     val center = Offset(size.width / 2f, size.height / 2f)
                     val maxRadius = size.minDimension * 0.46f
                     val phases = listOf(
