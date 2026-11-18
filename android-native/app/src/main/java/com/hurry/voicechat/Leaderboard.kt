@@ -233,8 +233,20 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
         while (true) { leaderboardNow = System.currentTimeMillis(); delay(1000) }
     }
     val remainingSeconds = ((leaderboardEndsAt - leaderboardNow) / 1000L).coerceAtLeast(0L)
-    val leaderboardCountdown = String.format(Locale.US, "%02d:%02d:%02d",
-        (remainingSeconds % 86400) / 3600, (remainingSeconds % 3600) / 60, remainingSeconds % 60)
+    val remainingDays = remainingSeconds / 86400L
+    val leaderboardCountdown = if (period == "daily") {
+        String.format(Locale.US, "%02d:%02d:%02d",
+            remainingSeconds / 3600L, (remainingSeconds % 3600L) / 60L, remainingSeconds % 60L)
+    } else {
+        String.format(Locale.US, "%dd %02d:%02d:%02d",
+            remainingDays, (remainingSeconds % 86400L) / 3600L,
+            (remainingSeconds % 3600L) / 60L, remainingSeconds % 60L)
+    }
+    val leaderboardResetLabel = when (period) {
+        "weekly" -> "Weekly reset in"
+        "monthly" -> "Monthly reset in"
+        else -> "Daily reset in"
+    }
     
     val screenHeight = LocalConfiguration.current.screenHeightDp.dp
     val screenWidthDp = LocalConfiguration.current.screenWidthDp
@@ -520,7 +532,7 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                         ) {
                             Text("— ∞ ", color = Color(0xFFD4AF37), fontSize = 14.sp)
                             Text(
-                                text = "⏳ $leaderboardCountdown (GMT+5.5)",
+                                text = "⏳ $leaderboardResetLabel $leaderboardCountdown (IST)",
                                 color = Color(0xFFD4AF37),
                                 fontSize = 14.sp,
                                 fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
@@ -694,7 +706,7 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                             
                             Spacer(Modifier.height(4.dp))
                             Text("Data Periods",color=Color(0xFFE7B865),fontSize = 14.sp, fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold)
-                            Text("1. Daily leaderboard data is finalized every day at (5:30+GMT).\n2. Weekly leaderboard data is finalized every Monday at (5:30+GMT).\n3. Monthly leaderboard data is finalized on the first day of every month at (5:30+GMT).",color=Color.White, fontSize = 12.sp)
+                            Text("1. Daily counts only today and resets every day at 12:00 AM IST.\n2. Weekly counts Monday through Sunday and resets every Monday at 12:00 AM IST.\n3. Monthly counts the current calendar month and resets at 12:00 AM IST on the first day of the next month (after the month's last day).",color=Color.White, fontSize = 12.sp)
                             
                             Spacer(Modifier.height(4.dp))
                             Text("Note: Users who violate platform rules are ineligible to participate in the rankings.",color=Color.White, fontSize = 12.sp)
