@@ -980,7 +980,7 @@ fun RoomListCard(
                 maxLines = 1,
                 modifier = Modifier.weight(1f).then(
                     if (roomName.length > 16) {
-                        Modifier.basicMarquee(iterations = 1, velocity = 25.dp)
+                        Modifier.basicMarquee(iterations = Int.MAX_VALUE, velocity = 25.dp)
                     } else {
                         Modifier
                     }
