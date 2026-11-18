@@ -1328,3 +1328,7 @@ Current documentation does not certify that all historical features are build-, 
 - Sent image attachments use a neutral light-grey bubble background and render as a compact 190dp square thumbnail (approximately 5cm).
 - Tapping an image opens a full-size preview with a close (X) control in the top-left corner.
 - Video attachment rendering and the rest of the Daisy support chat UI remain unchanged.
+
+## 2026-11-18 — Family Rules fullscreen
+- Updated the Family Rules dialog to render edge-to-edge by disabling dialog window system fitting while retaining its existing full-size layout, status-bar spacing, colours, typography, and content.
+- No other Family UI or layout was changed.
