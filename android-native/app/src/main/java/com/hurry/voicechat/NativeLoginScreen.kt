@@ -122,7 +122,7 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
                 error = ""
                 try {
                     val user = withContext(Dispatchers.IO) { legacyGoogleBackendSignIn(context, result.data!!) }
-                    val deviceLock = withContext(Dispatchers.IO) { verifyDeviceGoogleAccount(user, context) }
+                    val deviceLock = if (isOfficialAuthUser(user)) JSONObject().put("allowed", true) else withContext(Dispatchers.IO) { verifyDeviceGoogleAccount(user, context) }
                     if (!deviceLock.optBoolean("allowed", false)) {
                         registeredDeviceAccountId = deviceLock.optString("registeredAccountId")
                         registeredDeviceEmail = deviceLock.optString("registeredEmail")
@@ -133,7 +133,7 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
                     }
                     googleLoading = true
                     withContext(Dispatchers.IO) { syncHurryUser(user, context) }
-                    rememberRegisteredGoogleAccount(user, context)
+                    if (!isOfficialAuthUser(user)) rememberRegisteredGoogleAccount(user, context)
                     context.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE).edit()
                         .putString("uid", user.optString("localId"))
                         .putString("email", user.optString("email"))
@@ -175,7 +175,7 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
                 val user = withContext(Dispatchers.IO) {
                     backendEmailAuth(context, email.trim(), password, create)
                 }
-                val deviceLock = withContext(Dispatchers.IO) {
+                val deviceLock = if (isOfficialAuthUser(user)) JSONObject().put("allowed", true) else withContext(Dispatchers.IO) {
                     verifyDeviceGoogleAccount(user, context, "Email/Password")
                 }
                 if (!deviceLock.optBoolean("allowed", false)) {
@@ -466,7 +466,7 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
                             loading = true
                             try {
                                 val user = googleBackendSignIn(context)
-                                val deviceLock = withContext(Dispatchers.IO) { verifyDeviceGoogleAccount(user, context) }
+                                val deviceLock = if (isOfficialAuthUser(user)) JSONObject().put("allowed", true) else withContext(Dispatchers.IO) { verifyDeviceGoogleAccount(user, context) }
                                 if (!deviceLock.optBoolean("allowed", false)) {
                                     registeredDeviceAccountId = deviceLock.optString("registeredAccountId")
                                     registeredDeviceEmail = deviceLock.optString("registeredEmail")
@@ -477,7 +477,7 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
                                 }
                                 googleLoading = true
                                 withContext(Dispatchers.IO) { syncHurryUser(user, context) }
-                                rememberRegisteredGoogleAccount(user, context)
+                                if (!isOfficialAuthUser(user)) rememberRegisteredGoogleAccount(user, context)
                                 context.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE).edit()
                                     .putString("uid", user.optString("localId"))
                                     .putString("email", user.optString("email"))
@@ -776,6 +776,26 @@ private fun getDeviceRegistration(
     return postAuthJson(
         "/api/auth/device-registration",
         JSONObject().put("deviceId", deviceId).put("registerMethod", registerMethod)
+    )
+}
+
+// Official/support IDs are provisioned identities, not user registrations.
+// Keep them completely outside the one-Google + one-Email/Password device slots.
+private fun isOfficialAuthUser(user: JSONObject): Boolean {
+    val uid = user.optString("localId").trim()
+    return uid in setOf(
+        "mhg5MzmPcAMbH7InQwZClPfF42M2",
+        "na7uRGa4ZPU4Suq6P63fxX6q1P12",
+        "dCt4l5GbjnMpOeBywiDSH6XfCoj1",
+        "a0yVqX9dEiS2ZZH6eQmpjs3QrUf1",
+        "g0d2pU1SIcMdSAA9UjayDsIPjYv1",
+        "nB0zGbJu5yf7ZeHMt5pnMIhzjGB3",
+        "i8uHx21ZMOSL8tR2Gim14bDJ36E3",
+        "t8wb0Hhj6aeArzxBhLdRkrzFOMz2",
+        "HUSxSvQnabgU029dWYt1TUV04hd2",
+        "ADqW31RGBMaosOzy0HiqexKSD7h1",
+        "100002",
+        "100003"
     )
 }
 
