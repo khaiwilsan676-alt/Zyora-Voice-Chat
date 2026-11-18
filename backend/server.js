@@ -2543,7 +2543,7 @@ io.on("connection", (socket) => {
         socket.roomPresenceKey = accId;
 
         addUserToRoom(room, accId, {
-          name: name || "User",
+          name: roomProfileName,
           image:
             dp ||
             "/default-avatar.png",
@@ -2573,7 +2573,7 @@ io.on("connection", (socket) => {
             user: {
               accountId: accId,
               userId: userId ? String(userId) : accId,
-              name: name || "User",
+              name: roomProfileName,
               image:
                 dp ||
                 "/default-avatar.png",
@@ -2687,9 +2687,9 @@ io.on("connection", (socket) => {
           roomId: room,
           senderId: accId,
           senderAccountId: accId,
-          senderName: String(name || "User"),
-          senderAvatar: String(dp || ""),
-          senderImage: String(dp || ""),
+          senderName: roomProfileName,
+          senderAvatar: roomProfileImage,
+          senderImage: roomProfileImage,
           text: "Enter the Room",
           type: "join",
           createdAt: entryTimestamp,
