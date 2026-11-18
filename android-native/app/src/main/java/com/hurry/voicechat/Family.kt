@@ -830,7 +830,7 @@ private fun FamilyRewardModal(url: String, title: String, isWinnerReward: Boolea
                             topFade = if (type == "vehicle") 0.10f else 0f,
                             bottomFade = if (type == "vehicle") 0.15f else 0f,
                             removeGreenScreen = isFrameVideo,
-                            mute = false,
+                            mute = type != "vehicle",
                             loop = true,
                             cacheVideo = false
                         )
