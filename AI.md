@@ -1322,3 +1322,9 @@ Current documentation does not certify that all historical features are build-, 
 - Daily, Weekly and Monthly leaderboard totals remain independently filtered by the server using India Standard Time boundaries: Daily resets at midnight, Weekly runs Monday through Sunday, and Monthly ends at the next month's first midnight (after the calendar month's last day).
 - Native `Leaderboard.kt` now labels the active reset countdown as Daily, Weekly or Monthly. Daily shows hours/minutes/seconds; Weekly and Monthly also show remaining days so longer periods do not wrap every 24 hours.
 - Updated the Rules copy to state the exact IST reset schedule. No ranking UI or aggregation logic changed.
+
+## 2026-11-18 — Daisy support image attachment UI
+- HurrySupport.kt: moved the Daisy image attachment icon to a neutral grey tint (no blue icon tint).
+- Sent image attachments use a neutral light-grey bubble background and render as a compact 190dp square thumbnail (approximately 5cm).
+- Tapping an image opens a full-size preview with a close (X) control in the top-left corner.
+- Video attachment rendering and the rest of the Daisy support chat UI remain unchanged.
