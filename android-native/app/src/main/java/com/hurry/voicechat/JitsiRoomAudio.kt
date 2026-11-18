@@ -51,6 +51,7 @@ fun JitsiRoomAudio(
     localAccountId: String = "",
     canSpeak: Boolean,
     canShareMusic: Boolean = canSpeak,
+    playbackVoiceEnabled: Boolean = true,
     roomSocket: Socket?,
     musicUri: String? = null,
     musicPlaying: Boolean = false,
@@ -60,6 +61,7 @@ fun JitsiRoomAudio(
     val latestMusicUri by rememberUpdatedState(musicUri)
     val latestCanSpeak by rememberUpdatedState(canSpeak)
     val latestCanShareMusic by rememberUpdatedState(canShareMusic)
+    val latestPlaybackVoiceEnabled by rememberUpdatedState(playbackVoiceEnabled)
     val latestMusicPlaying by rememberUpdatedState(musicPlaying)
     var hasMicPermission by remember {
         mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED)
@@ -334,6 +336,7 @@ fun JitsiRoomAudio(
             }
         }
         val chunkListener = Emitter.Listener { args ->
+            if (!latestPlaybackVoiceEnabled) return@Listener
             val data = args.firstOrNull() as? JSONObject ?: return@Listener
             if (data.optString("roomId") != roomId || !alive.get()) return@Listener
             // Never play our own published audio back locally. Servers/older clients may
@@ -404,6 +407,7 @@ fun JitsiRoomAudio(
                         } catch (_: InterruptedException) {
                             if (!alive.get()) break else null
                         } ?: continue
+                        if (!latestPlaybackVoiceEnabled) continue
                         val track = synchronized(playerLock) { player } ?: continue
                         var offset = 0
                         var playbackFailed = false
@@ -435,6 +439,7 @@ fun JitsiRoomAudio(
                     }
                 }
             }
+            if (!latestPlaybackVoiceEnabled) return@Listener
             if (!playbackQueue.offer(bytes.copyOf())) {
                 playbackQueue.poll()
                 playbackQueue.offer(bytes.copyOf())
@@ -467,8 +472,17 @@ fun JitsiRoomAudio(
         // Keep the room audio session and Socket.IO listeners alive across mute toggles.
         // Only stop publishing mic frames while muted; request permission again on unmute.
         var lastMicEnabled = latestCanSpeak
+        var lastPlaybackEnabled = latestPlaybackVoiceEnabled
         val micMuteWatcherThread = thread(name = "ZyoraRoomMicMuteWatch", isDaemon = true) {
             while (alive.get()) {
+                val playbackEnabled = latestPlaybackVoiceEnabled
+                if (playbackEnabled != lastPlaybackEnabled) {
+                    lastPlaybackEnabled = playbackEnabled
+                    if (!playbackEnabled) {
+                        playbackQueue.clear()
+                        synchronized(playerLock) { runCatching { player?.pause(); player?.flush() } }
+                    }
+                }
                 val micEnabled = latestCanSpeak
                 if (micEnabled != lastMicEnabled) {
                     lastMicEnabled = micEnabled
