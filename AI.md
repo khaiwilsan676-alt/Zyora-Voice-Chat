@@ -1312,3 +1312,9 @@ Current documentation does not certify that all historical features are build-, 
 - Native `JitsiRoomAudio.kt`: observes existing `room_music_chunk` packets and tracks the publishing account ID while packets arrive; a short inactivity timeout clears that publisher's avatar wave. The local sender remains handled by the existing local music-playing state.
 - No seat positions, avatar dimensions, seat layout, music playback, voice routing, or other UI styling was changed.
 - Commits: `e09762e` (remote music activity tracking), `dad02d4` (three-circle avatar wave), followed by main-thread callback safety update. APK build and multi-device runtime verification remain pending.
+
+
+## 2026-11-18 — Room avatar voice/music wave tuning
+- Native `RoomPage.kt`: reduced the visual wave scale from 1.6x to 1.45x and the maximum circle radius from 0.46 to 0.42, keeping the avatar and seat dimensions unchanged.
+- Increased each wave's white opacity from 20% to 30% and slowed the repeating three-circle cycle from 1,500 ms to 1,900 ms. The three staggered circles and existing voice/music activation sources remain unchanged.
+- No other room UI, seat, avatar, voice-routing, or music behavior was changed. Native APK build and device verification remain pending.
