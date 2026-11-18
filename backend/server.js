@@ -931,7 +931,9 @@ app.get("/api/users", async (req, res) => {
         accountId: numberId,
         accountNumber: numberId,
         displayUserNumber: numberId,
-        name: user.name || user.displayName || user.userName || user.profile?.name || user.profile?.displayName || user.userData?.name || "User",
+        name: [user.name, user.displayName, user.userName, user.nickname, user.profile?.name, user.profile?.displayName, user.userData?.name]
+          .map((value) => String(value || "").trim())
+          .find((value) => value && value.toLowerCase() !== "user" && value !== "null") || "User",
         email: user.email || user.gmail || user.emailPhone || user.emailAddress || user.Email || "",
         image: [user.image, user.dp, user.photo, user.photoURL, user.photoUrl, user.avatar, user.avatarUrl, user.profileImage, user.profileImageUrl, user.profile_image, user.imageUrl, user.picture, user.profile?.image, user.profile?.avatar, user.profile?.photo, user.userData?.image, user.userData?.avatar].find((value) => typeof value === "string" && value.trim() && value.trim() !== "null" && value.trim() !== "undefined") || "/default-avatar.png",
         country: user.country || "🇮🇳",
@@ -2425,6 +2427,51 @@ io.on("connection", (socket) => {
       const room = String(roomId);
       const accId = accountId ? String(accountId) : String(userId);
       const requestedOwnerId = String(roomOwnerId || "");
+
+      // Resolve the authoritative profile on the server before publishing room
+      // presence. Native caches/client join payloads can still contain "User"
+      // after an official account has changed its nickname.
+      let roomProfileName = String(name || "").trim();
+      let roomProfileImage = String(dp || "").trim();
+      if (db) {
+        try {
+          const users = db.collection("users");
+          const profileQueries = [
+            { accountId: accId },
+            { accountNumber: accId },
+            { displayUserNumber: accId },
+            { uid: String(userId || "") },
+            { id: String(userId || "") },
+            { appLongId: String(userId || "") },
+          ].filter((query) => Object.values(query).some(Boolean));
+          let profile = null;
+          for (const query of profileQueries) {
+            profile = await users.findOne(query);
+            if (profile) break;
+          }
+          if (profile) {
+            const savedName = [
+              profile.name, profile.displayName, profile.userName, profile.nickname,
+              profile.profile?.name, profile.profile?.displayName,
+              profile.userData?.name
+            ].map((value) => String(value || "").trim())
+              .find((value) => value && value.toLowerCase() !== "user" && value !== "null");
+            const savedImage = [
+              profile.image, profile.avatar, profile.photoURL, profile.photo,
+              profile.profileImageUrl, profile.dp, profile.profile?.image,
+              profile.userData?.image
+            ].map((value) => String(value || "").trim())
+              .find((value) => value && value !== "null" && value !== "undefined" &&
+                !value.endsWith("/default-avatar.png"));
+            if (savedName) roomProfileName = savedName;
+            if (savedImage) roomProfileImage = savedImage;
+          }
+        } catch (profileError) {
+          console.error("Room join profile lookup failed:", profileError.message);
+        }
+      }
+      roomProfileName = roomProfileName && roomProfileName.toLowerCase() !== "user" ? roomProfileName : "User";
+      roomProfileImage = roomProfileImage || "/default-avatar.png";
 
       // Do not allow a client to impersonate a different account identity.
       if (socket.userId || socket.accountId || socket.roomUserId || socket.roomAccountId) {
