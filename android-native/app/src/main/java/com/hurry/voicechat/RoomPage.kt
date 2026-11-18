@@ -3494,25 +3494,26 @@ private fun RoomSeatInviteDialog(
     Column(horizontalAlignment=Alignment.CenterHorizontally,modifier=Modifier.width(seatSize).clickable(onClick=onClick)){
         Box(Modifier.size(seatSize),contentAlignment=Alignment.Center){ 
             Canvas(Modifier.fillMaxSize()) {
-                val center = Offset(size.width / 2f, size.height / 2f)
-                val avatarRadius = size.minDimension * 225f / 512f
-                val phase = waveProgress * (2f * Math.PI.toFloat())
-                val pulse = if (isSpeaking) 0.5f + 0.5f * kotlin.math.sin(phase) else 0f
-                val ringRadius = avatarRadius + size.minDimension *
-                    (if (isSpeaking) 11.5f + pulse * 2.5f else 10f) / 512f
+                if (isSpeaking) {
+                    val center = Offset(size.width / 2f, size.height / 2f)
+                    val avatarRadius = size.minDimension * 225f / 512f
+                    val phase = waveProgress * (2f * Math.PI.toFloat())
+                    val pulse = 0.5f + 0.5f * kotlin.math.sin(phase)
+                    val ringRadius = avatarRadius + size.minDimension *
+                        (11.5f + pulse * 2.5f) / 512f
 
-                // Keep one perfectly round, unbroken WHITE ring.
-                // Voice activity gently expands and contracts the whole circle;
-                // it never creates lobes, bars, spikes, or extra rings.
-                drawCircle(
-                    color = Color.White.copy(alpha = if (isSpeaking) 1f else 0.9f),
-                    radius = ringRadius,
-                    center = center,
-                    style = Stroke(
-                        width = size.minDimension * (if (isSpeaking) 11f else 9f) / 512f,
-                        cap = StrokeCap.Round
+                    // Speaking ON ring remains exactly unchanged.
+                    drawCircle(
+                        color = Color.White,
+                        radius = ringRadius,
+                        center = center,
+                        style = Stroke(
+                            width = size.minDimension * 11f / 512f,
+                            cap = StrokeCap.Round
+                        )
                     )
-                )
+                }
+                // Speaking OFF: draw nothing — no white ring or border.
             }
             Box(Modifier.fillMaxSize(.91f),contentAlignment=Alignment.Center){
                 if(seat.locked) AsyncImage(model=raw+"file_0000000015a48211b000ee447a786f7c.png",contentDescription="Locked seat",modifier=Modifier.fillMaxSize(.62f),contentScale=ContentScale.Fit)
