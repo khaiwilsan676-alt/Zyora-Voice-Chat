@@ -12,6 +12,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -77,7 +78,7 @@ fun RoomCupSheet(roomId:String,userId:String,userName:String,userImage:String,on
     LaunchedEffect(Unit){while(true){now=clock.format(Date());kotlinx.coroutines.delay(30000)}}
     
     Box(Modifier.fillMaxSize().background(Color.Black.copy(.38f)).clickable{onClose()},contentAlignment=Alignment.BottomCenter) {
-        Column(Modifier.fillMaxWidth().fillMaxHeight(.70f).clip(RoundedCornerShape(topStart=15.dp,topEnd=15.dp)).background(Color(0xFF050505)).clickable(enabled=false){},horizontalAlignment=Alignment.CenterHorizontally) {
+        Column(Modifier.fillMaxWidth().fillMaxHeight(.62f).clip(RoundedCornerShape(topStart=15.dp,topEnd=15.dp)).background(Color(0xFF181818)).clickable(enabled=false){},horizontalAlignment=Alignment.CenterHorizontally) {
             Spacer(Modifier.height(13.dp))
             Row(horizontalArrangement=Arrangement.spacedBy(34.dp),verticalAlignment=Alignment.CenterVertically) {
                 CupTab("Contribution",!selectedOnline){selectedOnline=false}
@@ -105,19 +106,17 @@ fun RoomCupSheet(roomId:String,userId:String,userName:String,userImage:String,on
                                     }
                                 }
                             }
-                            Text(u.accountId,color=Color.White.copy(alpha=.65f),fontSize=10.sp,maxLines=1)
                         }
                     }
                     if(visibleUsers.isEmpty()) item { Text("No active users",Modifier.fillMaxWidth().padding(18.dp),color=Color.White.copy(alpha=.65f),fontSize=12.sp,textAlign=TextAlign.Center) }
                 }
             } else {
                 Row(Modifier.fillMaxWidth().padding(horizontal=13.dp),verticalAlignment=Alignment.CenterVertically) {
-                    // Pill ka width set kiya 150.dp jisse wo chota rahe jaisa tune image me dikhaya hai
-                    Row(Modifier.width(150.dp).clip(CircleShape).background(Color(0xFF242424)).padding(3.dp)) {
+                    Row(Modifier.width(150.dp).height(34.dp).clip(CircleShape).background(Color(0xFF242424)).padding(3.dp)) {
                         CupPeriod("Daily",period=="daily",Modifier.weight(1f)){period="daily"}
                         CupPeriod("Weekly",period=="weekly",Modifier.weight(1f)){period="weekly"}
                     }
-                    Spacer(Modifier.weight(1f)) // Ye time ko right side push karega
+                    Spacer(Modifier.weight(1f))
                     Text("$now (GMT+5:30)",color=Color.LightGray,fontSize=10.sp)
                 }
                 Spacer(Modifier.height(12.dp))
@@ -152,8 +151,8 @@ fun RoomCupSheet(roomId:String,userId:String,userName:String,userImage:String,on
                     }
                 }
                 
-                // Color change karke dark blue kiya: Color(0xFF0A192F)
-                Row(Modifier.fillMaxWidth().background(Color(0xFF0A192F)).padding(horizontal=16.dp,vertical=10.dp),verticalAlignment=Alignment.CenterVertically) {
+                // Ye raha tera Shining Blue to Grey mixing gradient jaisa manga tha
+                Row(Modifier.fillMaxWidth().background(Brush.verticalGradient(colors = listOf(Color(0xFF1E88E5), Color(0xFF181818)))).padding(horizontal=16.dp,vertical=10.dp),verticalAlignment=Alignment.CenterVertically) {
                     Text(if((mine?.rank?:0)>0) "${mine?.rank}" else "-",color=Color.White,fontSize=16.sp,fontWeight=FontWeight.Bold,modifier=Modifier.width(28.dp).padding(end=12.dp))
                     
                     AsyncImage(model=userImage.ifBlank{"https://zyora-server.onrender.com/default-avatar.png"},contentDescription=userName,modifier=Modifier.size(42.dp).clip(CircleShape),contentScale=ContentScale.Crop)
@@ -179,4 +178,8 @@ fun RoomCupSheet(roomId:String,userId:String,userName:String,userImage:String,on
         Box(Modifier.width(30.dp).height(3.dp).clip(CircleShape).background(if(selected)Color.White else Color.Transparent))
     }
 }
-@Composable private fun CupPeriod(label:String,selected:Boolean,modifier:Modifier,onClick:()->Unit){Box(modifier.height(29.dp).clip(CircleShape).background(if(selected)Color.White else Color.Transparent).clickable{onClick()},contentAlignment=Alignment.Center){Text(label,color=if(selected)Color.Black else Color.Gray,fontSize=11.sp,fontWeight=if(selected)FontWeight.SemiBold else FontWeight.Normal)}}
+@Composable private fun CupPeriod(label:String,selected:Boolean,modifier:Modifier,onClick:()->Unit){
+    Box(modifier.fillMaxHeight().clip(CircleShape).background(if(selected)Color.White else Color.Transparent).clickable{onClick()},contentAlignment=Alignment.Center) {
+        Text(label,color=if(selected)Color.Black else Color.Gray,fontSize=12.sp,fontWeight=FontWeight.SemiBold)
+    }
+}
