@@ -1290,3 +1290,9 @@ Current documentation does not certify that all historical features are build-, 
 
 - Follow-up source commit `615a50dc5714873f547a7fde9c2bf1928a0c0174` preserves the existing audio behavior: Family Vehicle previews remain audible and Avatar Frame previews remain muted.
 
+
+
+## 2026-11-18 — Room top Cup pill daily total
+- Replaced the hardcoded zero in the room's top-left Cup pill with the sum of all users' daily contribution values from the same room contributions endpoint used by the Cup leaderboard.
+- The pill refreshes every 10 seconds and uses the existing K/M/B formatter. When the server daily period resets and the daily leaderboard is empty, the displayed total becomes 0.
+- No room layout, seat, or other UI styling was changed.
