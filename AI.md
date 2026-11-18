@@ -1240,3 +1240,13 @@ Current documentation does not certify that all historical features are build-, 
 - Exit preserves the last selected track in local preferences and shared music state; it does not auto-resume playback. On the next room entry, the top Music pill and mini-controller can restore that track.
 - Reopening Music from the four-grid/controller path restores the previous track directly into the mini-controller instead of forcing the music library open. The library remains available when no previous track exists.
 - The Music pill continues to be driven by the selected track and tapping it reveals the controller; stopping with the controller Power action still clears the saved track.
+
+
+## Room seat disconnect and moderator leave correction (2026-11-18)
+- Server repo: `khaiwilsan676-alt/Zyora-Server`, `server.js`.
+- Root cause: the disconnect handler intentionally preserved occupied microphone seats even after the user's final live room socket disconnected. It now releases the seat only after a successful cross-process check confirms no other live session remains; seat state, mute, speaking, GIF, and socket ownership are cleared and `room_seats` is broadcast. Socket-ID protection prevents an older disconnect from clearing a seat already rebound to a reconnecting socket.
+- Root cause: the `leave` handler cleared both the moderator's own occupied seat and the selected target seat because it treated requester ownership as sufficient even when `targetUserId` identified another user. It now clears only the selected target seat for verified room owners/admins; normal self-leave clears only the authenticated user's seat.
+- Removing another user's seat no longer calls `stopRoomVoice()` for the moderator, so their own microphone session stays active.
+- No UI changes.
+- Server commit: `f87b3c88c844beaa2b542384258f62f74245b0de`.
+- Verification: fetched the committed server file and confirmed the new disconnect, target-only leave, and moderator voice-preservation logic. Live multi-device/app-force-close testing remains pending.
