@@ -1380,6 +1380,7 @@ fun StoreVideoPreview(
     topFade: Float = 0f,
     bottomFade: Float = 0f,
     removeGreenScreen: Boolean = false,
+    removeBlackBackground: Boolean = false,
     mute: Boolean = false, // New Parameter for mute
     loop: Boolean = true,
     onComplete: (() -> Unit)? = null,
@@ -1438,6 +1439,18 @@ fun StoreVideoPreview(
         ))
     }
 
+    // Black-background removal for Family avatar-frame videos.
+    // RGB stays unchanged; only alpha is derived from brightness so black
+    // becomes transparent while the frame animation remains visible.
+    val blackBackgroundMatrix = remember {
+        ColorMatrix(floatArrayOf(
+            1f, 0f, 0f, 0f, 0f,
+            0f, 1f, 0f, 0f, 0f,
+            0f, 0f, 1f, 0f, 0f,
+            1.5f, 1.5f, 1.5f, 0f, -0.08f
+        ))
+    }
+
     val fadeModifier = if (topFade > 0f || bottomFade > 0f) {
         Modifier
             .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
@@ -1474,9 +1487,11 @@ fun StoreVideoPreview(
             .then(ratioModifier)
             .alpha(if (isVideoReady) 1f else 0f)
             .graphicsLayer {
-                if (removeGreenScreen) {
+                if (removeGreenScreen || removeBlackBackground) {
                     compositingStrategy = CompositingStrategy.Offscreen
-                    colorFilter = ColorFilter.colorMatrix(chromaMatrix)
+                    colorFilter = ColorFilter.colorMatrix(
+                        if (removeBlackBackground) blackBackgroundMatrix else chromaMatrix
+                    )
                 }
             },
         contentAlignment = Alignment.Center
