@@ -32,6 +32,16 @@ import java.util.TimeZone
 
 private data class CupEntry(val id:String,val name:String,val image:String,val coins:Long,val rank:Int)
 
+private fun formatCupCoins(value: Long): String {
+    val amount = value.coerceAtLeast(0L).toDouble()
+    return when {
+        amount >= 1_000_000_000.0 -> String.format(Locale.US, "%.1fB", amount / 1_000_000_000.0).removeSuffix(".0B")
+        amount >= 1_000_000.0 -> String.format(Locale.US, "%.1fM", amount / 1_000_000.0).removeSuffix(".0M")
+        amount >= 1_000.0 -> String.format(Locale.US, "%.1fK", amount / 1_000.0).removeSuffix(".0K")
+        else -> value.coerceAtLeast(0L).toString()
+    }
+}
+
 @Composable
 fun RoomCupSheet(roomId:String,userId:String,userName:String,userImage:String,onClose:()->Unit,initialOnline:Boolean=false,roomUsers:List<ActiveUserNative> = emptyList(),roomOwnerId:String="",roomAdminIds:List<String> = emptyList(),onOpenProfile:(ActiveUserNative)->Unit={},onCopyUserId:(String)->Unit={}) {
     var selectedOnline by remember(initialOnline) { mutableStateOf(initialOnline) }
@@ -128,7 +138,7 @@ fun RoomCupSheet(roomId:String,userId:String,userName:String,userImage:String,on
                                 Text("Lv.1",color=Color.White,fontSize=8.sp,fontWeight=FontWeight.Bold,modifier=Modifier.offset(x=(-31).dp))
                             }
                         }
-                        Text(e.coins.toString(),color=Color.White,fontSize=12.sp,fontWeight=FontWeight.SemiBold)
+                        Text(formatCupCoins(e.coins),color=Color.White,fontSize=12.sp,fontWeight=FontWeight.SemiBold)
                         AsyncImage(model="https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_00000000e56882119c217d508b6733dc.png",contentDescription="Coins",modifier=Modifier.padding(start=4.dp).size(17.dp),contentScale=ContentScale.Fit)
                     }
                 }
@@ -142,7 +152,7 @@ fun RoomCupSheet(roomId:String,userId:String,userName:String,userImage:String,on
                         Text("Lv.1",color=Color.White,fontSize=8.sp,fontWeight=FontWeight.Bold,modifier=Modifier.offset(x=(-31).dp))
                     }
                 }
-                Text(mine?.coins?.toString()?: "0",color=Color.White,fontSize=12.sp,fontWeight=FontWeight.Bold)
+                Text(formatCupCoins(mine?.coins ?: 0L),color=Color.White,fontSize=12.sp,fontWeight=FontWeight.Bold)
                 AsyncImage(model="https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_00000000e56882119c217d508b6733dc.png",contentDescription="Coins",modifier=Modifier.padding(start=4.dp).size(17.dp),contentScale=ContentScale.Fit)
                 Text(if((mine?.rank?:0)>0)"#${mine?.rank}" else "#--",color=Color.White,fontSize=12.sp,modifier=Modifier.padding(start=10.dp))
             }
