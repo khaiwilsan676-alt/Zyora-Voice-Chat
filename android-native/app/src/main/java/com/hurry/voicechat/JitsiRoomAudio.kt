@@ -104,12 +104,13 @@ fun JitsiRoomAudio(
         }
         var recorder: AudioRecord? = null
         var echoCanceler: AcousticEchoCanceler? = null
-        var player: AudioTrack? = null
+        var voicePlayer: AudioTrack? = null
+        var musicPlayer: AudioTrack? = null
         val playerLock = Any()
-        var playbackThread: Thread? = null
-        // 20 ms PCM frames: six packets cap stale playback to about 120 ms
-        // instead of allowing nearly one second of delayed voice to accumulate.
-        val playbackQueue = ArrayBlockingQueue<Pair<ByteArray, Boolean>>(6)
+        var voicePlaybackThread: Thread? = null
+        var musicPlaybackThread: Thread? = null
+        val voicePlaybackQueue = ArrayBlockingQueue<ByteArray>(6)
+        val musicPlaybackQueue = ArrayBlockingQueue<ByteArray>(6)
         var captureThread: Thread? = null
         var musicRelayThread: Thread? = null
         var musicWatcherThread: Thread? = null
@@ -335,121 +336,89 @@ fun JitsiRoomAudio(
                 scheduleVoiceRetry(500L)
             }
         }
-        fun createChunkListener(isVoicePacket: Boolean) = Emitter.Listener { args ->
-            val data = args.firstOrNull() as? JSONObject ?: return@Listener
-            if (data.optString("roomId") != roomId || !alive.get()) return@Listener
-            // Never play our own published audio back locally. Servers/older clients may
-            // identify the publisher with different identity keys, so check every supported
-            // account/user/sender field before queuing either voice or music packets.
-            if (localAccountId.isNotBlank()) {
-                val packetOwners = listOf(
-                    data.optString("userId"),
-                    data.optString("accountId"),
-                    data.optString("senderId"),
-                    data.optString("senderAccountId"),
-                    data.optString("publisherId")
-                )
-                if (packetOwners.any { it.isNotBlank() && it == localAccountId }) return@Listener
-            }
-            // JSONObject serializes Kotlin ByteArray payloads as JSON number arrays.
-            // Accept both Socket.IO binary buffers and JSON arrays so relayed mic/music
-            // packets are decoded consistently on every Android client.
-            val rawAudio = args.getOrNull(1) ?: data.opt("audio")
-            val bytes = when (rawAudio) {
-                is ByteArray -> rawAudio
-                is org.json.JSONArray -> ByteArray(rawAudio.length()) { index ->
-                    rawAudio.optInt(index, 0).coerceIn(0, 255).toByte()
-                }
-                else -> return@Listener
-            }
-            if (bytes.isEmpty() || bytes.size > 4096 || bytes.size % 2 != 0) return@Listener
-            val output = synchronized(playerLock) {
-                player?.takeIf { it.state == AudioTrack.STATE_INITIALIZED } ?: run {
-                    val minOut = AudioTrack.getMinBufferSize(
-                        ROOM_VOICE_SAMPLE_RATE,
-                        AudioFormat.CHANNEL_OUT_MONO,
-                        AudioFormat.ENCODING_PCM_16BIT
-                    )
-                    if (minOut <= 0) return@Listener
-                    runCatching {
-                        AudioTrack.Builder()
-                            .setAudioAttributes(
-                                AudioAttributes.Builder()
-                                    .setUsage(AudioAttributes.USAGE_MEDIA)
-                                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                                    .build()
-                            )
-                            .setAudioFormat(
-                                AudioFormat.Builder()
-                                    .setSampleRate(ROOM_VOICE_SAMPLE_RATE)
-                                    .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-                                    .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
-                                    .build()
-                            )
-                            // Keep AudioTrack's device minimum, but avoid a needlessly deep
-                            // output buffer that adds latency on top of the jitter queue.
-                            .setBufferSizeInBytes(maxOf(minOut * 2, ROOM_VOICE_FRAME_BYTES * 8))
-                            .setTransferMode(AudioTrack.MODE_STREAM)
-                            .build()
-                            .takeIf { it.state == AudioTrack.STATE_INITIALIZED }
-                            ?.also { player = it }
-                    }.getOrNull() ?: return@Listener
-                }
-            }
-            // Never block Socket.IO's event thread on AudioTrack.write(). A dedicated
-            // consumer drains a bounded jitter queue so network callbacks stay responsive.
-            if (playbackThread?.isAlive != true) {
-                playbackThread = thread(name = "ZyoraRoomPlayback", isDaemon = true) {
+        fun createOutputTrack(): AudioTrack? {
+            val minOut = AudioTrack.getMinBufferSize(ROOM_VOICE_SAMPLE_RATE, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT)
+            if (minOut <= 0) return null
+            return runCatching {
+                AudioTrack.Builder()
+                    .setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).build())
+                    .setAudioFormat(AudioFormat.Builder().setSampleRate(ROOM_VOICE_SAMPLE_RATE).setEncoding(AudioFormat.ENCODING_PCM_16BIT).setChannelMask(AudioFormat.CHANNEL_OUT_MONO).build())
+                    .setBufferSizeInBytes(maxOf(minOut * 2, ROOM_VOICE_FRAME_BYTES * 8))
+                    .setTransferMode(AudioTrack.MODE_STREAM).build()
+                    .takeIf { it.state == AudioTrack.STATE_INITIALIZED }
+            }.getOrNull()
+        }
+
+        fun ensurePlaybackWorker(isVoicePacket: Boolean) {
+            synchronized(playerLock) {
+                val current = if (isVoicePacket) voicePlaybackThread else musicPlaybackThread
+                if (current?.isAlive == true) return
+                val worker = thread(name = if (isVoicePacket) "ZyoraRoomVoicePlayback" else "ZyoraRoomMusicPlayback", isDaemon = true) {
+                    val queue = if (isVoicePacket) voicePlaybackQueue else musicPlaybackQueue
                     while (alive.get()) {
-                        val queuedPacket = try {
-                            playbackQueue.poll(100, TimeUnit.MILLISECONDS)
-                        } catch (_: InterruptedException) {
-                            if (!alive.get()) break else null
-                        } ?: continue
-                        val packet = queuedPacket.first
-                        val isVoicePacket = queuedPacket.second
+                        val packet = try { queue.poll(100, TimeUnit.MILLISECONDS) }
+                        catch (_: InterruptedException) { if (!alive.get()) break else null } ?: continue
                         if (isVoicePacket && !latestPlaybackVoiceEnabled) continue
-                        val track = synchronized(playerLock) { player } ?: continue
+                        val track = synchronized(playerLock) { if (isVoicePacket) voicePlayer else musicPlayer } ?: continue
                         var offset = 0
-                        var playbackFailed = false
+                        var failed = false
                         try {
                             if (track.playState != AudioTrack.PLAYSTATE_PLAYING) track.play()
-                            while (offset < packet.size && alive.get() &&
-                                (!isVoicePacket || latestPlaybackVoiceEnabled)
-                            ) {
-                                val written = track.write(
-                                    packet, offset, packet.size - offset, AudioTrack.WRITE_BLOCKING
-                                )
-                                if (written <= 0) {
-                                    playbackFailed = true
-                                    break
-                                }
+                            while (offset < packet.size && alive.get() && (!isVoicePacket || latestPlaybackVoiceEnabled)) {
+                                val written = track.write(packet, offset, packet.size - offset, AudioTrack.WRITE_BLOCKING)
+                                if (written <= 0) { failed = true; break }
                                 offset += written
                             }
-                        } catch (_: Throwable) {
-                            playbackFailed = true
-                        }
-                        // If Speaker was switched OFF during this packet, discard only
-                        // this voice frame; music packets use the same output track independently.
-                        if (isVoicePacket && !latestPlaybackVoiceEnabled) continue
-                        if (playbackFailed) {
-                            synchronized(playerLock) {
-                                if (player === track) {
-                                    player = null
-                                    runCatching { track.pause(); track.flush(); track.stop(); track.release() }
-                                }
+                        } catch (_: Throwable) { failed = true }
+                        if (failed) synchronized(playerLock) {
+                            if (isVoicePacket && voicePlayer === track) {
+                                voicePlayer = null
+                                runCatching { track.pause(); track.flush(); track.stop(); track.release() }
+                            } else if (!isVoicePacket && musicPlayer === track) {
+                                musicPlayer = null
+                                runCatching { track.pause(); track.flush(); track.stop(); track.release() }
                             }
-                            // Drop stale buffered audio; the next incoming packet recreates AudioTrack.
-                            playbackQueue.clear()
+                            queue.clear()
                         }
                     }
                 }
+                if (isVoicePacket) voicePlaybackThread = worker else musicPlaybackThread = worker
             }
-            val queued = bytes.copyOf() to isVoicePacket
-            if (!playbackQueue.offer(queued)) {
-                playbackQueue.poll()
-                playbackQueue.offer(queued)
+        }
+
+        fun createChunkListener(isVoicePacket: Boolean) = Emitter.Listener { args ->
+            val data = args.firstOrNull() as? JSONObject ?: return@Listener
+            if (data.optString("roomId") != roomId || !alive.get()) return@Listener
+            if (localAccountId.isNotBlank()) {
+                val packetOwners = listOf(data.optString("userId"), data.optString("accountId"), data.optString("senderId"), data.optString("senderAccountId"), data.optString("publisherId"))
+                if (packetOwners.any { it.isNotBlank() && it == localAccountId }) return@Listener
             }
+            val rawAudio = args.getOrNull(1) ?: data.opt("audio")
+            val bytes = when (rawAudio) {
+                is ByteArray -> rawAudio
+                is org.json.JSONArray -> ByteArray(rawAudio.length()) { index -> rawAudio.optInt(index, 0).coerceIn(0, 255).toByte() }
+                else -> return@Listener
+            }
+            if (bytes.isEmpty() || bytes.size > 4096 || bytes.size % 2 != 0) return@Listener
+            val ready = synchronized(playerLock) {
+                if (isVoicePacket) {
+                    if (voicePlayer?.state != AudioTrack.STATE_INITIALIZED) {
+                        runCatching { voicePlayer?.release() }
+                        voicePlayer = createOutputTrack()
+                    }
+                    voicePlayer != null
+                } else {
+                    if (musicPlayer?.state != AudioTrack.STATE_INITIALIZED) {
+                        runCatching { musicPlayer?.release() }
+                        musicPlayer = createOutputTrack()
+                    }
+                    musicPlayer != null
+                }
+            }
+            if (!ready) return@Listener
+            ensurePlaybackWorker(isVoicePacket)
+            val queue = if (isVoicePacket) voicePlaybackQueue else musicPlaybackQueue
+            if (!queue.offer(bytes.copyOf())) { queue.poll(); queue.offer(bytes.copyOf()) }
         }
 
         val voiceChunkListener = createChunkListener(true)
@@ -462,18 +431,15 @@ fun JitsiRoomAudio(
             voiceAllowed.set(false)
             stopMusicRelay()
             stopCapture()
-            playbackQueue.clear()
-            runCatching { player?.pause(); player?.flush() }
+            voicePlaybackQueue.clear()
+            runCatching { voicePlayer?.pause(); voicePlayer?.flush() }
+            runCatching { musicPlayer?.pause(); musicPlayer?.flush() }
         }
         roomSocket.on(Socket.EVENT_DISCONNECT, disconnectListener)
 
         val playbackVoiceMuteWatcherThread = thread(name = "ZyoraRoomSpeakerWatch", isDaemon = true) {
             while (alive.get()) {
-                if (!latestPlaybackVoiceEnabled && playbackQueue.isNotEmpty()) {
-                    val pending = ArrayList<Pair<ByteArray, Boolean>>(playbackQueue.size)
-                    playbackQueue.drainTo(pending)
-                    pending.filter { !it.second }.forEach { playbackQueue.offer(it) }
-                }
+                if (!latestPlaybackVoiceEnabled) voicePlaybackQueue.clear()
                 try { Thread.sleep(50) } catch (_: InterruptedException) { }
             }
         }
@@ -540,8 +506,10 @@ fun JitsiRoomAudio(
             micMuteWatcherThread.interrupt()
             playbackVoiceMuteWatcherThread.interrupt()
             musicWatcherThread?.interrupt()
-            playbackQueue.clear()
-            playbackThread?.interrupt()
+            voicePlaybackQueue.clear()
+            musicPlaybackQueue.clear()
+            voicePlaybackThread?.interrupt()
+            musicPlaybackThread?.interrupt()
             runCatching { recorder?.stop() }
             captureThread?.interrupt()
             roomSocket.emit("room_voice_stop", JSONObject().put("roomId", roomId))
@@ -557,8 +525,10 @@ fun JitsiRoomAudio(
             val cleanupEchoCanceler = echoCanceler
             recorder = null
             echoCanceler = null
-            val cleanupPlayerThread = playbackThread
-            playbackThread = null
+            val cleanupVoicePlayerThread = voicePlaybackThread
+            val cleanupMusicPlayerThread = musicPlaybackThread
+            voicePlaybackThread = null
+            musicPlaybackThread = null
             val cleanupMusicThread = musicRelayThread
             val cleanupMusicWatcher = musicWatcherThread
             thread(name = "ZyoraRoomAudioCleanup", isDaemon = true) {
@@ -569,10 +539,13 @@ fun JitsiRoomAudio(
                 runCatching { captureThread?.join(350) }
                 runCatching { cleanupRecorder?.release() }
                 runCatching { cleanupEchoCanceler?.release() }
-                runCatching { cleanupPlayerThread?.join(500) }
+                runCatching { cleanupVoicePlayerThread?.join(500) }
+                runCatching { cleanupMusicPlayerThread?.join(500) }
                 synchronized(playerLock) {
-                    runCatching { player?.pause(); player?.flush(); player?.stop(); player?.release() }
-                    player = null
+                    runCatching { voicePlayer?.pause(); voicePlayer?.flush(); voicePlayer?.stop(); voicePlayer?.release() }
+                    runCatching { musicPlayer?.pause(); musicPlayer?.flush(); musicPlayer?.stop(); musicPlayer?.release() }
+                    voicePlayer = null
+                    musicPlayer = null
                 }
                 runCatching {
                     // Restore only the global mode changed by this room session.
