@@ -750,6 +750,8 @@ fun RoomPage(
             MusicPlaybackState.isPlaying = false
         }
     }
+    // Controller UI is opt-in for each room visit. Restoring a saved track must not show it.
+    var musicControllerVisible by remember { mutableStateOf(false) }
     var musicControllerMinimized by remember { mutableStateOf(false) }
     val musicCardDragOffset = remember { Animatable(0f) }
     val musicDragScope = rememberCoroutineScope()
@@ -929,6 +931,8 @@ fun RoomPage(
             appContext.startService(Intent(appContext, RoomMusicService::class.java).setAction(RoomMusicService.ACTION_STOP))
         }
         miniMusicTrack = null
+        musicControllerVisible = false
+        musicControllerMinimized = false
         persistLastRoomTrack(null)
         isMusicPlaying = false
         MusicPlaybackState.currentPlayingUri = null
@@ -946,6 +950,8 @@ fun RoomPage(
             appContext.startService(Intent(appContext, RoomMusicService::class.java).setAction(RoomMusicService.ACTION_STOP))
         }
         isMusicPlaying = false
+        musicControllerVisible = false
+        musicControllerMinimized = false
         MusicPlaybackState.isPlaying = false
         MusicPlaybackState.currentPlayingUri = null
         miniMusicTrack?.let {
@@ -1673,6 +1679,21 @@ fun RoomPage(
             roomSocket.connect()
         }
         onDispose {
+            // A real room exit must stop the foreground music service even when navigation
+            // bypasses the Exit-menu button. Keep the saved track metadata for the next visit.
+            if (!latestKeepingRoomForMini) {
+                runCatching {
+                    appContext.startService(Intent(appContext, RoomMusicService::class.java)
+                        .setAction(RoomMusicService.ACTION_STOP))
+                }
+                miniMusicTrack?.let { track ->
+                    persistLastRoomTrack(track)
+                    MusicPlaybackState.currentTrack = track
+                }
+                isMusicPlaying = false
+                MusicPlaybackState.isPlaying = false
+                MusicPlaybackState.currentPlayingUri = null
+            }
             // Stop pending room-only fetches and queued UI callbacks before releasing listeners.
             roomIoScope.cancel()
             mainHandler.removeCallbacksAndMessages(null)
@@ -1775,7 +1796,7 @@ fun RoomPage(
                 Text("0", color = Color(0xFFEEF3A3), fontSize = 12.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, letterSpacing = 0.1.sp)
                 Icon(Icons.Default.ChevronRight, null, tint = Color(0xFFEEF3A3), modifier = Modifier.padding(start = 4.dp).size(10.dp))
             }
-            if (miniMusicTrack != null) {
+            if (musicControllerVisible && miniMusicTrack != null) {
                 Row(modifier = Modifier.height(26.dp).clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha = 0.30f)).clickable { musicControllerMinimized = false }.padding(start = 2.dp, end = 10.dp),verticalAlignment = Alignment.CenterVertically,horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     AsyncImage(model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_00000000ee70820b9fd0dfe71739874e.png",contentDescription = "Music",modifier = Modifier.size(22.dp),contentScale = ContentScale.Fit)
                     Text(text = miniMusicTrack?.name.orEmpty(),color = Color.White,fontSize = 11.sp,fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,maxLines = 1,overflow = TextOverflow.Clip,modifier = Modifier.widthIn(max = 68.dp).basicMarquee(iterations = Int.MAX_VALUE))
@@ -2335,7 +2356,7 @@ Column(Modifier.align(Alignment.BottomStart).padding(bottom=LocalConfiguration.c
         }
 
         RoomPageBlock {
-if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.isMusicPageOpen) {
+if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.isMusicPageOpen) {
             val track = miniMusicTrack!!
             Box(
                 Modifier.align(Alignment.BottomCenter)
@@ -2544,6 +2565,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                 if (selectedIndex >= 0) currentTrackIndex = selectedIndex
             },
             onMusicPlay={ track ->
+                musicControllerVisible = true
                 miniMusicTrack = track
                 persistLastRoomTrack(track)
                 MusicPlaybackState.wasPlayedOnMusicPage = true
@@ -2568,6 +2590,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
             },
             onMusicMinimize={ track ->
                 openMusicPageFromController = false
+                musicControllerVisible = track != null
                 if (track != null) {
                     miniMusicTrack = track
                     persistLastRoomTrack(track)
