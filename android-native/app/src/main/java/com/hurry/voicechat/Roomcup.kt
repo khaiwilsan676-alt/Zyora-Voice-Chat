@@ -5,8 +5,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -24,7 +22,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.HttpURLConnection
@@ -46,12 +43,7 @@ private fun formatCupCoins(value: Long): String {
     }
 }
 
-
-/** Daily room cup total shown in the room's top cup pill.
- * Uses the same daily contributions source as the Cup leaderboard, summing
- * every user's daily contribution. The server's daily period reset therefore
- * naturally returns this value to zero.
- */
+/** Daily room cup total shown in the room's top cup pill. */
 @Composable
 fun RoomDailyCupTotal(roomId: String) {
     var total by remember(roomId) { mutableStateOf(0L) }
@@ -96,20 +88,14 @@ fun RoomDailyCupTotal(roomId: String) {
 
 @Composable
 fun RoomCupSheet(roomId:String,userId:String,userName:String,userImage:String,onClose:()->Unit,initialOnline:Boolean=false,roomUsers:List<ActiveUserNative> = emptyList(),roomOwnerId:String="",roomAdminIds:List<String> = emptyList(),onOpenProfile:(ActiveUserNative)->Unit={},onCopyUserId:(String)->Unit={}) {
-    val pagerState = rememberPagerState(initialPage = if (initialOnline) 2 else 0, pageCount = { 3 })
-    val coroutineScope = rememberCoroutineScope()
+    // Pager hata diya hai, ab galti se poora page slide nahi hoga
+    var selectedOnline by remember(initialOnline) { mutableStateOf(initialOnline) }
     
     var period by remember { mutableStateOf("daily") }
     var entries by remember { mutableStateOf(emptyList<CupEntry>()) }
     var mine by remember { mutableStateOf<CupEntry?>(null) }
     var loading by remember { mutableStateOf(true) }
     var refreshTick by remember { mutableIntStateOf(0) }
-    
-    // Page update hone par period change kar rahe hain data laane ke liye
-    LaunchedEffect(pagerState.currentPage) {
-        if (pagerState.currentPage == 0) period = "daily"
-        else if (pagerState.currentPage == 1) period = "weekly"
-    }
     
     LaunchedEffect(roomId,period) { while (true) { kotlinx.coroutines.delay(10000); refreshTick++ } }
     
@@ -137,108 +123,96 @@ fun RoomCupSheet(roomId:String,userId:String,userName:String,userImage:String,on
     LaunchedEffect(Unit){while(true){now=clock.format(Date());kotlinx.coroutines.delay(30000)}}
     
     Box(Modifier.fillMaxSize().background(Color.Black.copy(.38f)).clickable{onClose()},contentAlignment=Alignment.BottomCenter) {
-        // Wapas Black background laga diya: Color(0xFF050505)
         Column(Modifier.fillMaxWidth().fillMaxHeight(.62f).clip(RoundedCornerShape(topStart=15.dp,topEnd=15.dp)).background(Color(0xFF050505)).clickable(enabled=false){},horizontalAlignment=Alignment.CenterHorizontally) {
             Spacer(Modifier.height(13.dp))
             Row(horizontalArrangement=Arrangement.spacedBy(34.dp),verticalAlignment=Alignment.CenterVertically) {
-                CupTab("Contribution", pagerState.currentPage in 0..1) {
-                    coroutineScope.launch { pagerState.animateScrollToPage(if (period == "weekly") 1 else 0) }
-                }
-                CupTab("Online Users", pagerState.currentPage == 2) {
-                    coroutineScope.launch { pagerState.animateScrollToPage(2) }
-                }
+                CupTab("Contribution", !selectedOnline) { selectedOnline = false }
+                CupTab("Online Users", selectedOnline) { selectedOnline = true }
             }
             Spacer(Modifier.height(16.dp))
             
-            HorizontalPager(state = pagerState, modifier = Modifier.weight(1f).fillMaxWidth()) { page ->
-                if (page == 2) {
-                    val visibleUsers = remember(roomUsers,roomOwnerId) { roomUsers.filter { it.accountId.isNotBlank() }.distinctBy { it.accountId }.sortedWith(compareBy<ActiveUserNative> { if(it.accountId==roomOwnerId) 0 else 1 }.thenBy { it.name.lowercase() }) }
-                    LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(horizontal=12.dp,vertical=8.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
-                        itemsIndexed(visibleUsers,key={_,u->u.accountId}) { _,u ->
-                            Row(Modifier.fillMaxWidth().clickable { onOpenProfile(u) }.padding(horizontal=4.dp),verticalAlignment=Alignment.CenterVertically) {
-                                AsyncImage(model=u.image.ifBlank{"https://zyora-server.onrender.com/default-avatar.png"},contentDescription=u.name,modifier=Modifier.size(38.dp).clip(CircleShape),contentScale=ContentScale.Crop)
-                                Column(Modifier.weight(1f).padding(start=9.dp)) {
-                                    Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(3.dp)) {
-                                        Text(u.name.ifBlank{"User"},color=Color.White,fontSize=13.sp,fontWeight=FontWeight.SemiBold,maxLines=1,overflow=TextOverflow.Ellipsis)
-                                        if(u.accountId==roomOwnerId) AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261027_235537.png",contentDescription="Owner",modifier=Modifier.width(36.dp).height(16.dp),contentScale=ContentScale.Fit)
-                                        else if(u.accountId in roomAdminIds) AsyncImage(model=ROOM_ADMIN_TAG,contentDescription="Room Admin",modifier=Modifier.width(36.dp).height(16.dp),contentScale=ContentScale.Fit)
-                                    }
-                                    Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(6.dp)) {
-                                        if(u.country.isNotBlank()) CountryFlagImage(u.country,Modifier.size(18.dp,12.dp)) else Spacer(Modifier.width(18.dp))
-                                        Box(Modifier.height(16.dp).width(36.dp),contentAlignment=Alignment.CenterEnd) {
-                                            AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261028_004355.png",contentDescription="Level",modifier=Modifier.fillMaxSize(),contentScale=ContentScale.FillBounds)
-                                            // 5dp right shift (x = 2.dp se 7.dp)
-                                            Text("Lv.1",color=Color.White,fontSize=8.sp,fontWeight=FontWeight.Bold,modifier=Modifier.offset(x=7.dp,y=(-3).dp).padding(end=5.dp))
-                                        }
+            if (selectedOnline) {
+                val visibleUsers = remember(roomUsers,roomOwnerId) { roomUsers.filter { it.accountId.isNotBlank() }.distinctBy { it.accountId }.sortedWith(compareBy<ActiveUserNative> { if(it.accountId==roomOwnerId) 0 else 1 }.thenBy { it.name.lowercase() }) }
+                LazyColumn(Modifier.weight(1f).fillMaxWidth(),contentPadding=PaddingValues(horizontal=12.dp,vertical=8.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                    itemsIndexed(visibleUsers,key={_,u->u.accountId}) { _,u ->
+                        Row(Modifier.fillMaxWidth().clickable { onOpenProfile(u) }.padding(horizontal=4.dp),verticalAlignment=Alignment.CenterVertically) {
+                            AsyncImage(model=u.image.ifBlank{"https://zyora-server.onrender.com/default-avatar.png"},contentDescription=u.name,modifier=Modifier.size(38.dp).clip(CircleShape),contentScale=ContentScale.Crop)
+                            Column(Modifier.weight(1f).padding(start=9.dp)) {
+                                Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(3.dp)) {
+                                    Text(u.name.ifBlank{"User"},color=Color.White,fontSize=13.sp,fontWeight=FontWeight.SemiBold,maxLines=1,overflow=TextOverflow.Ellipsis)
+                                    if(u.accountId==roomOwnerId) AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261027_235537.png",contentDescription="Owner",modifier=Modifier.width(36.dp).height(16.dp),contentScale=ContentScale.Fit)
+                                    else if(u.accountId in roomAdminIds) AsyncImage(model=ROOM_ADMIN_TAG,contentDescription="Room Admin",modifier=Modifier.width(36.dp).height(16.dp),contentScale=ContentScale.Fit)
+                                }
+                                Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+                                    if(u.country.isNotBlank()) CountryFlagImage(u.country,Modifier.size(18.dp,12.dp)) else Spacer(Modifier.width(18.dp))
+                                    Box(Modifier.height(16.dp).width(36.dp),contentAlignment=Alignment.CenterEnd) {
+                                        AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261028_004355.png",contentDescription="Level",modifier=Modifier.fillMaxSize(),contentScale=ContentScale.FillBounds)
+                                        Text("Lv.1",color=Color.White,fontSize=8.sp,fontWeight=FontWeight.Bold,modifier=Modifier.offset(x=7.dp,y=(-3).dp).padding(end=5.dp))
                                     }
                                 }
                             }
                         }
-                        if(visibleUsers.isEmpty()) item { Text("No active users",Modifier.fillMaxWidth().padding(18.dp),color=Color.White.copy(alpha=.65f),fontSize=12.sp,textAlign=TextAlign.Center) }
                     }
-                } else {
-                    Column(Modifier.fillMaxSize()) {
-                        Row(Modifier.fillMaxWidth().padding(horizontal=13.dp),verticalAlignment=Alignment.CenterVertically) {
-                            Row(Modifier.width(150.dp).height(34.dp).clip(CircleShape).background(Color(0xFF242424)).padding(3.dp)) {
-                                CupPeriod("Daily", page == 0, Modifier.weight(1f)) { coroutineScope.launch { pagerState.animateScrollToPage(0) } }
-                                CupPeriod("Weekly", page == 1, Modifier.weight(1f)) { coroutineScope.launch { pagerState.animateScrollToPage(1) } }
+                    if(visibleUsers.isEmpty()) item { Text("No active users",Modifier.fillMaxWidth().padding(18.dp),color=Color.White.copy(alpha=.65f),fontSize=12.sp,textAlign=TextAlign.Center) }
+                }
+            } else {
+                Row(Modifier.fillMaxWidth().padding(horizontal=13.dp),verticalAlignment=Alignment.CenterVertically) {
+                    Row(Modifier.width(150.dp).height(34.dp).clip(CircleShape).background(Color(0xFF242424)).padding(3.dp)) {
+                        CupPeriod("Daily", period == "daily", Modifier.weight(1f)) { period = "daily" }
+                        CupPeriod("Weekly", period == "weekly", Modifier.weight(1f)) { period = "weekly" }
+                    }
+                    Spacer(Modifier.weight(1f))
+                    Text("$now (GMT+5:30)",color=Color.LightGray,fontSize=10.sp)
+                }
+                Spacer(Modifier.height(12.dp))
+                
+                if(loading) Box(Modifier.weight(1f).fillMaxWidth(),contentAlignment=Alignment.Center){Text("Loading...",color=Color.Gray,fontSize=12.sp)}
+                else if(entries.isEmpty()) Box(Modifier.weight(1f).fillMaxWidth(),contentAlignment=Alignment.Center) {
+                    Column(horizontalAlignment=Alignment.CenterHorizontally) {
+                        AsyncImage(model="https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_0000000047308211a02722299d1fda2e.png",contentDescription="No data",modifier=Modifier.size(75.dp),contentScale=ContentScale.Fit)
+                        Spacer(Modifier.height(8.dp))
+                        Text("No data.",color=Color.Gray,fontSize=12.sp)
+                    }
+                } else LazyColumn(Modifier.weight(1f).fillMaxWidth(),contentPadding=PaddingValues(horizontal=14.dp,vertical=4.dp),verticalArrangement=Arrangement.spacedBy(13.dp)) {
+                    itemsIndexed(entries.take(20),key={_,e->e.id}){index,e->
+                        Row(Modifier.fillMaxWidth().height(46.dp),verticalAlignment=Alignment.CenterVertically) {
+                            when(index){
+                                0->AsyncImage(model="https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261117_190736.jpg",contentDescription="Rank 1",modifier=Modifier.size(25.dp),contentScale=ContentScale.Fit)
+                                1->AsyncImage(model="https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261117_190720.jpg",contentDescription="Rank 2",modifier=Modifier.size(25.dp),contentScale=ContentScale.Fit)
+                                2->AsyncImage(model="https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261117_190658.jpg",contentDescription="Rank 3",modifier=Modifier.size(25.dp),contentScale=ContentScale.Fit)
+                                else->Text("${index+1}",Modifier.width(25.dp),color=Color.White,fontSize=14.sp,textAlign=TextAlign.Center)
                             }
-                            Spacer(Modifier.weight(1f))
-                            Text("$now (GMT+5:30)",color=Color.LightGray,fontSize=10.sp)
-                        }
-                        Spacer(Modifier.height(12.dp))
-                        
-                        if(loading) Box(Modifier.weight(1f).fillMaxWidth(),contentAlignment=Alignment.Center){Text("Loading...",color=Color.Gray,fontSize=12.sp)}
-                        else if(entries.isEmpty()) Box(Modifier.weight(1f).fillMaxWidth(),contentAlignment=Alignment.Center) {
-                            Column(horizontalAlignment=Alignment.CenterHorizontally) {
-                                AsyncImage(model="https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_0000000047308211a02722299d1fda2e.png",contentDescription="No data",modifier=Modifier.size(75.dp),contentScale=ContentScale.Fit)
-                                Spacer(Modifier.height(8.dp))
-                                Text("No data.",color=Color.Gray,fontSize=12.sp)
-                            }
-                        } else LazyColumn(Modifier.weight(1f).fillMaxWidth(),contentPadding=PaddingValues(horizontal=14.dp,vertical=4.dp),verticalArrangement=Arrangement.spacedBy(13.dp)) {
-                            itemsIndexed(entries.take(20),key={_,e->e.id}){index,e->
-                                Row(Modifier.fillMaxWidth().height(46.dp),verticalAlignment=Alignment.CenterVertically) {
-                                    when(index){
-                                        0->AsyncImage(model="https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261117_190736.jpg",contentDescription="Rank 1",modifier=Modifier.size(25.dp),contentScale=ContentScale.Fit)
-                                        1->AsyncImage(model="https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261117_190720.jpg",contentDescription="Rank 2",modifier=Modifier.size(25.dp),contentScale=ContentScale.Fit)
-                                        2->AsyncImage(model="https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261117_190658.jpg",contentDescription="Rank 3",modifier=Modifier.size(25.dp),contentScale=ContentScale.Fit)
-                                        else->Text("${index+1}",Modifier.width(25.dp),color=Color.White,fontSize=14.sp,textAlign=TextAlign.Center)
-                                    }
-                                    AsyncImage(model=e.image.ifBlank{"https://zyora-server.onrender.com/default-avatar.png"},contentDescription=e.name,modifier=Modifier.padding(start=9.dp).size(38.dp).clip(CircleShape),contentScale=ContentScale.Crop)
-                                    Column(Modifier.weight(1f).padding(start=9.dp),verticalArrangement=Arrangement.Center) {
-                                        Text(e.name,color=Color.White,fontSize=12.sp,fontWeight=FontWeight.SemiBold,maxLines=1,overflow=TextOverflow.Ellipsis)
-                                        Row(verticalAlignment=Alignment.CenterVertically) {
-                                            AsyncImage(model="https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261028_004355.png",contentDescription="Level",modifier=Modifier.width(36.dp).height(16.dp),contentScale=ContentScale.FillBounds)
-                                            // 5dp right shift (x = -31.dp se -26.dp)
-                                            Text("Lv.1",color=Color.White,fontSize=8.sp,fontWeight=FontWeight.Bold,modifier=Modifier.offset(x=(-26).dp))
-                                        }
-                                    }
-                                    Text(formatCupCoins(e.coins),color=Color.White,fontSize=12.sp,fontWeight=FontWeight.SemiBold)
-                                    AsyncImage(model="https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_00000000e56882119c217d508b6733dc.png",contentDescription="Coins",modifier=Modifier.padding(start=4.dp).size(17.dp),contentScale=ContentScale.Fit)
+                            AsyncImage(model=e.image.ifBlank{"https://zyora-server.onrender.com/default-avatar.png"},contentDescription=e.name,modifier=Modifier.padding(start=9.dp).size(38.dp).clip(CircleShape),contentScale=ContentScale.Crop)
+                            Column(Modifier.weight(1f).padding(start=9.dp),verticalArrangement=Arrangement.Center) {
+                                Text(e.name,color=Color.White,fontSize=12.sp,fontWeight=FontWeight.SemiBold,maxLines=1,overflow=TextOverflow.Ellipsis)
+                                Row(verticalAlignment=Alignment.CenterVertically) {
+                                    AsyncImage(model="https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261028_004355.png",contentDescription="Level",modifier=Modifier.width(36.dp).height(16.dp),contentScale=ContentScale.FillBounds)
+                                    Text("Lv.1",color=Color.White,fontSize=8.sp,fontWeight=FontWeight.Bold,modifier=Modifier.offset(x=(-26).dp))
                                 }
                             }
+                            Text(formatCupCoins(e.coins),color=Color.White,fontSize=12.sp,fontWeight=FontWeight.SemiBold)
+                            AsyncImage(model="https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_00000000e56882119c217d508b6733dc.png",contentDescription="Coins",modifier=Modifier.padding(start=4.dp).size(17.dp),contentScale=ContentScale.Fit)
                         }
                     }
                 }
-            }
-            
-            // Yahan 2% blue aur baki black ka perfect mix lagaya hai
-            Row(Modifier.fillMaxWidth().background(Brush.verticalGradient(0.0f to Color(0xFF1E88E5), 0.02f to Color.Black, 1.0f to Color.Black)).padding(horizontal=16.dp,vertical=10.dp),verticalAlignment=Alignment.CenterVertically) {
-                Text(if((mine?.rank?:0)>0) "${mine?.rank}" else "-",color=Color.White,fontSize=16.sp,fontWeight=FontWeight.Bold,modifier=Modifier.width(28.dp).padding(end=12.dp))
                 
-                AsyncImage(model=userImage.ifBlank{"https://zyora-server.onrender.com/default-avatar.png"},contentDescription=userName,modifier=Modifier.size(42.dp).clip(CircleShape),contentScale=ContentScale.Crop)
-                
-                Column(Modifier.weight(1f).padding(start=10.dp),verticalArrangement=Arrangement.spacedBy(2.dp)) {
-                    Text(userName.ifBlank{"User"},color=Color.White,fontSize=14.sp,fontWeight=FontWeight.SemiBold,maxLines=1)
-                    Row(verticalAlignment=Alignment.CenterVertically) {
-                        AsyncImage(model="https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261028_004355.png",contentDescription="Level",modifier=Modifier.width(36.dp).height(16.dp),contentScale=ContentScale.FillBounds)
-                        // 5dp right shift (x = -31.dp se -26.dp)
-                        Text("Lv.1",color=Color.White,fontSize=8.sp,fontWeight=FontWeight.Bold,modifier=Modifier.offset(x=(-26).dp))
+                // 15% Blue then smooth mix to Black
+                Row(Modifier.fillMaxWidth().background(Brush.verticalGradient(0.0f to Color(0xFF1E88E5), 0.15f to Color.Black, 1.0f to Color.Black)).padding(horizontal=16.dp,vertical=10.dp),verticalAlignment=Alignment.CenterVertically) {
+                    Text(if((mine?.rank?:0)>0) "${mine?.rank}" else "-",color=Color.White,fontSize=16.sp,fontWeight=FontWeight.Bold,modifier=Modifier.width(28.dp).padding(end=12.dp))
+                    
+                    AsyncImage(model=userImage.ifBlank{"https://zyora-server.onrender.com/default-avatar.png"},contentDescription=userName,modifier=Modifier.size(42.dp).clip(CircleShape),contentScale=ContentScale.Crop)
+                    
+                    Column(Modifier.weight(1f).padding(start=10.dp),verticalArrangement=Arrangement.spacedBy(2.dp)) {
+                        Text(userName.ifBlank{"User"},color=Color.White,fontSize=14.sp,fontWeight=FontWeight.SemiBold,maxLines=1)
+                        Row(verticalAlignment=Alignment.CenterVertically) {
+                            AsyncImage(model="https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261028_004355.png",contentDescription="Level",modifier=Modifier.width(36.dp).height(16.dp),contentScale=ContentScale.FillBounds)
+                            Text("Lv.1",color=Color.White,fontSize=8.sp,fontWeight=FontWeight.Bold,modifier=Modifier.offset(x=(-26).dp))
+                        }
                     }
+                    
+                    Text(formatCupCoins(mine?.coins ?: 0L),color=Color.White,fontSize=14.sp,fontWeight=FontWeight.Bold)
+                    AsyncImage(model="https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_00000000e56882119c217d508b6733dc.png",contentDescription="Coins",modifier=Modifier.padding(start=6.dp).size(18.dp),contentScale=ContentScale.Fit)
                 }
-                
-                Text(formatCupCoins(mine?.coins ?: 0L),color=Color.White,fontSize=14.sp,fontWeight=FontWeight.Bold)
-                AsyncImage(model="https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_00000000e56882119c217d508b6733dc.png",contentDescription="Coins",modifier=Modifier.padding(start=6.dp).size(18.dp),contentScale=ContentScale.Fit)
             }
         }
     }
