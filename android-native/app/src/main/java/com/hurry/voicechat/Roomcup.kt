@@ -187,8 +187,8 @@ fun RoomCupSheet(roomId:String,userId:String,userName:String,userImage:String,on
                                     if(u.country.isNotBlank()) CountryFlagImage(u.country,Modifier.size(18.dp,12.dp)) else Spacer(Modifier.width(18.dp))
                                     Box(Modifier.height(16.dp).width(36.dp),contentAlignment=Alignment.CenterEnd) {
                                         AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261028_004355.png",contentDescription="Level",modifier=Modifier.fillMaxSize(),contentScale=ContentScale.FillBounds)
-                                        // 3dp Left (x=7.dp se x=4.dp)
-                                        Text("Lv.1",color=Color.White,fontSize=8.sp,fontWeight=FontWeight.Bold,modifier=Modifier.offset(x=4.dp,y=(-3).dp).padding(end=5.dp))
+                                        // 1dp Left (x=4.dp se x=3.dp)
+                                        Text("Lv.1",color=Color.White,fontSize=8.sp,fontWeight=FontWeight.Bold,modifier=Modifier.offset(x=3.dp,y=(-3).dp).padding(end=5.dp))
                                     }
                                 }
                             }
@@ -228,8 +228,8 @@ fun RoomCupSheet(roomId:String,userId:String,userName:String,userImage:String,on
                                 Text(e.name,color=Color.White,fontSize=12.sp,fontWeight=FontWeight.SemiBold,maxLines=1,overflow=TextOverflow.Ellipsis)
                                 Row(verticalAlignment=Alignment.CenterVertically) {
                                     AsyncImage(model="https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261028_004355.png",contentDescription="Level",modifier=Modifier.width(36.dp).height(16.dp),contentScale=ContentScale.FillBounds)
-                                    // 3dp Right (x=-26.dp se x=-23.dp)
-                                    Text("Lv.1",color=Color.White,fontSize=8.sp,fontWeight=FontWeight.Bold,modifier=Modifier.offset(x=(-23).dp))
+                                    // 1dp Right (x=-23.dp se x=-22.dp)
+                                    Text("Lv.1",color=Color.White,fontSize=8.sp,fontWeight=FontWeight.Bold,modifier=Modifier.offset(x=(-22).dp))
                                 }
                             }
                             Text(formatCupCoins(e.coins),color=Color.White,fontSize=12.sp,fontWeight=FontWeight.SemiBold)
@@ -259,8 +259,8 @@ fun RoomCupSheet(roomId:String,userId:String,userName:String,userImage:String,on
                         Text(userName.ifBlank{"User"},color=Color.White,fontSize=14.sp,fontWeight=FontWeight.SemiBold,maxLines=1)
                         Row(verticalAlignment=Alignment.CenterVertically) {
                             AsyncImage(model="https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261028_004355.png",contentDescription="Level",modifier=Modifier.width(36.dp).height(16.dp),contentScale=ContentScale.FillBounds)
-                            // 3dp Right (x=-26.dp se x=-23.dp)
-                            Text("Lv.1",color=Color.White,fontSize=8.sp,fontWeight=FontWeight.Bold,modifier=Modifier.offset(x=(-23).dp))
+                            // 1dp Right (x=-23.dp se x=-22.dp)
+                            Text("Lv.1",color=Color.White,fontSize=8.sp,fontWeight=FontWeight.Bold,modifier=Modifier.offset(x=(-22).dp))
                         }
                     }
                     
