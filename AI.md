@@ -1287,3 +1287,5 @@ Current documentation does not certify that all historical features are build-, 
 - Family Vehicle video previews and their modal use the Store alpha-mask fade settings: 10% from the top and 15% from the bottom. Vehicle audio remains enabled; looping remains enabled.
 - Family card/modal layout and the Store UI were not changed.
 - Source commit: `3cfdec7458c501e071b0327783829c30785267b6`. Native APK build and on-device playback verification are pending.
+
+- Follow-up source commit `615a50dc5714873f547a7fde9c2bf1928a0c0174` preserves the existing audio behavior: Family Vehicle previews remain audible and Avatar Frame previews remain muted.
