@@ -19,6 +19,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -746,8 +747,8 @@ fun RoomPage(
     var musicCurrentTime by remember { mutableFloatStateOf(0f) }
     var musicDuration by remember { mutableFloatStateOf(0f) }
 
-    var input by remember{mutableStateOf("")}
-    var inputSelection by remember { mutableIntStateOf(0) }
+    var inputValue by remember { mutableStateOf(TextFieldValue("")) }
+    val input = inputValue.text
     var pendingMentions by remember { mutableStateOf<List<NativeMention>>(emptyList()) }
     val chatFocusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -1967,11 +1968,12 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                             verticalAlignment=Alignment.CenterVertically
                         ) {
                             androidx.compose.foundation.text.BasicTextField(
-                                value=TextFieldValue(text=input, selection=TextRange(inputSelection.coerceIn(0, input.length))),
-                                onValueChange={ input=it.text; inputSelection=it.selection.start },
+                                value=inputValue,
+                                onValueChange={ inputValue=it },
                                 singleLine=true,
                                 keyboardOptions=KeyboardOptions(
                                     capitalization=KeyboardCapitalization.None,
+                                    keyboardType=KeyboardType.Text,
                                     autoCorrect=false
                                 ),
                                 textStyle=androidx.compose.ui.text.TextStyle(color=Color.Black,fontSize=15.sp),
@@ -2007,7 +2009,7 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                                                 .put("senderAvatar",roomDisplayImage).put("senderImage",roomDisplayImage)
                                                 .put("text",text).put("mentions",mentionsJson).put("type","message").put("createdAt",createdAt)
                                         )
-                                        input=""; inputSelection=0
+                                        inputValue=TextFieldValue("")
                                         pendingMentions=emptyList()
                                         }
                                     },
@@ -2110,12 +2112,13 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                         verticalAlignment=Alignment.CenterVertically
                     ) {
                         androidx.compose.foundation.text.BasicTextField(
-                            value=TextFieldValue(text=input, selection=TextRange(inputSelection.coerceIn(0, input.length))),
-                            onValueChange={ input=it.text; inputSelection=it.selection.start },
+                            value=inputValue,
+                                onValueChange={ inputValue=it },
                             singleLine=true,
                             keyboardOptions=KeyboardOptions(
                                 capitalization=KeyboardCapitalization.None,
-                                autoCorrect=false
+                                    keyboardType=KeyboardType.Text,
+                                    autoCorrect=false
                             ),
                             textStyle=androidx.compose.ui.text.TextStyle(color=Color.Black,fontSize=15.sp),
                             cursorBrush=SolidColor(Color(0xFF3B82F6)),
@@ -2149,7 +2152,7 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                                                 .put("senderAvatar",roomDisplayImage).put("senderImage",roomDisplayImage)
                                                 .put("text",text).put("mentions",mentionsJson).put("type","message").put("createdAt",createdAt)
                                         )
-                                        input=""; inputSelection=0
+                                        inputValue=TextFieldValue("")
                                         pendingMentions=emptyList()
                                     }
                                 },
@@ -2752,10 +2755,10 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                 onMention = { name, targetId ->
                     val cleanName = name.trim().ifBlank { "User" }
                     run {
-                        val cursor = inputSelection.coerceIn(0, input.length)
+                        val cursor = inputValue.selection.start.coerceIn(0, input.length)
                         val insertion = (if (cursor > 0 && !input[cursor - 1].isWhitespace()) " " else "") + "@$cleanName "
-                        input = input.substring(0, cursor) + insertion + input.substring(cursor)
-                        inputSelection = cursor + insertion.length
+                        val updated = input.substring(0, cursor) + insertion + input.substring(cursor)
+                        inputValue = TextFieldValue(updated, selection=TextRange(cursor + insertion.length))
                     }
                     if (targetId.isNotBlank()) pendingMentions = (pendingMentions.filterNot { it.accountId == targetId } + NativeMention(targetId, cleanName))
                     showChat = true
@@ -2907,10 +2910,10 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                 onMention = { name, targetId ->
                     val cleanName = name.trim().ifBlank { "User" }
                     run {
-                        val cursor = inputSelection.coerceIn(0, input.length)
+                        val cursor = inputValue.selection.start.coerceIn(0, input.length)
                         val insertion = (if (cursor > 0 && !input[cursor - 1].isWhitespace()) " " else "") + "@$cleanName "
-                        input = input.substring(0, cursor) + insertion + input.substring(cursor)
-                        inputSelection = cursor + insertion.length
+                        val updated = input.substring(0, cursor) + insertion + input.substring(cursor)
+                        inputValue = TextFieldValue(updated, selection=TextRange(cursor + insertion.length))
                     }
                     if (targetId.isNotBlank()) pendingMentions = (pendingMentions.filterNot { it.accountId == targetId } + NativeMention(targetId, cleanName))
                     showChat = true
