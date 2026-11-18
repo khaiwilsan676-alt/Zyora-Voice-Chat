@@ -3544,7 +3544,7 @@ private fun RoomSeatInviteDialog(
                     phases.forEach { phase ->
                         val fade = if (phase < 0.82f) 1f else ((1f - phase) / 0.18f).coerceIn(0f, 1f)
                         drawCircle(
-                            color = Color.White.copy(alpha = 0.30f * fade),
+                            color = Color.White.copy(alpha = 0.50f * fade),
                             radius = maxRadius * phase,
                             center = center
                         )
