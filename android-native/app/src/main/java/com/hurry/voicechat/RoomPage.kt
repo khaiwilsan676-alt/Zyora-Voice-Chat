@@ -3495,10 +3495,14 @@ private fun RoomSeatInviteDialog(
         Box(Modifier.size(seatSize),contentAlignment=Alignment.Center){ 
             Canvas(Modifier.fillMaxSize()) {
                 val center = Offset(size.width / 2f, size.height / 2f)
-                val radius = size.minDimension * 225f / 512f
+                val baseRadius = size.minDimension * 225f / 512f
                 val borderWidth = size.minDimension * 38f / 512f
+                val phase = waveProgress * (2f * Math.PI.toFloat())
+                val zoomPulse = if (isSpeaking) 0.5f + 0.5f * kotlin.math.sin(phase) else 0f
+                val radius = baseRadius + if (isSpeaking) size.minDimension * (zoomPulse * 7f / 512f) else 0f
 
-                // Thick, smooth avatar border matching the supplied reference.
+                // Keep the avatar's solid circular border; animate a continuous
+                // Wafa-style radial audio waveform around it while the user speaks.
                 drawCircle(
                     color = Color(0xFF87949A),
                     radius = radius + borderWidth * 0.18f,
@@ -3513,26 +3517,27 @@ private fun RoomSeatInviteDialog(
                 )
 
                 if (isSpeaking) {
-                    // Continuous 360-degree voice wave travels around the thick border.
-                    val waveBrush = Brush.sweepGradient(
-                        colors = listOf(
-                            Color(0xFF64747B), Color(0xFFF8FFFF),
-                            Color(0xFFB9D0D7), Color(0xFFFFFFFF),
-                            Color(0xFF64747B)
-                        ),
-                        center = center
-                    )
-                    androidx.compose.ui.graphics.drawscope.rotate(
-                        degrees = waveProgress * 360f,
-                        pivot = center
-                    ) {
-                        drawCircle(
-                            brush = waveBrush,
-                            radius = radius + borderWidth * 0.18f,
-                            center = center,
-                            style = Stroke(width = borderWidth)
+                    val wavePath = Path()
+                    val points = 144
+                    for (i in 0..points) {
+                        val angle = (i.toFloat() / points) * (2f * Math.PI.toFloat())
+                        val waveA = kotlin.math.sin(angle * 7f + phase)
+                        val waveB = kotlin.math.sin(angle * 13f - phase * 1.35f)
+                        val waveC = kotlin.math.sin(angle * 19f + phase * 0.7f)
+                        val amplitude = borderWidth * (0.13f + 0.12f * waveA + 0.09f * waveB + 0.05f * waveC)
+                        val waveRadius = radius + borderWidth * 0.72f + amplitude
+                        val point = Offset(
+                            center.x + kotlin.math.cos(angle) * waveRadius,
+                            center.y + kotlin.math.sin(angle) * waveRadius
                         )
+                        if (i == 0) wavePath.moveTo(point.x, point.y) else wavePath.lineTo(point.x, point.y)
                     }
+                    wavePath.close()
+                    drawPath(
+                        path = wavePath,
+                        color = Color.White.copy(alpha = 0.98f),
+                        style = Stroke(width = size.minDimension * 9f / 512f, cap = StrokeCap.Round)
+                    )
                 }
             }
             Box(Modifier.fillMaxSize(.91f),contentAlignment=Alignment.Center){
