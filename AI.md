@@ -1280,3 +1280,10 @@ Current documentation does not certify that all historical features are build-, 
 - Tapping Four-grid → Music restores the previous track into the controller without autoplay. The pill and card remain available together after that deliberate action.
 - Real room disposal/exit sends `RoomMusicService.ACTION_STOP`, clears active playback state, and preserves the last selected track metadata. Intentionally keeping the room miniaturized does not trigger this room-exit cleanup; swiping Zyora away from Recents is handled by `RoomMusicService.onTaskRemoved`.
 - No room layout, colors, card dimensions, or unrelated controls were changed.
+
+
+## 2026-11-18 — Family frame video playback and Store-matched vehicle fades
+- Native `Family.kt`: Family reward video previews and the tapped reward modal now use the shared `StoreVideoPreview` renderer instead of the separate ExoPlayer/TextureView path for these previews. This aligns playback with the Store decoder/surface lifecycle and reuses Store green-screen removal for Family frame videos.
+- Family Vehicle video previews and their modal use the Store alpha-mask fade settings: 10% from the top and 15% from the bottom. Vehicle audio remains enabled; looping remains enabled.
+- Family card/modal layout and the Store UI were not changed.
+- Source commit: `3cfdec7458c501e071b0327783829c30785267b6`. Native APK build and on-device playback verification are pending.
