@@ -1232,3 +1232,5 @@ Current documentation does not certify that all historical features are build-, 
 - Cached each room card's normalized image model by room image URL to avoid repeating URL normalization during scroll-driven recompositions.
 - Changed long room-name marquee from an infinite animation to one pass, removing continuous per-card animation work while preserving the existing card layout and text treatment.
 - Kept the existing two-column room grid, card dimensions, images, frames, header, banner, category cards, country pills, and bottom navigation unchanged.
+
+- Correction (2026-11-18): restored the original infinite room-name marquee animation; continuous marquee is intentional and must not be removed as part of scrolling optimization.
