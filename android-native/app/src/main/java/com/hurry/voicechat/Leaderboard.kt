@@ -355,8 +355,8 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                                 model = leaderboardRows.getOrNull(0)?.image?.takeIf { it.isNotBlank() } ?: (raw + "default_avatar.png"),
                                 contentDescription = "Rank 1 Avatar",
                                 modifier = Modifier
-                                    .offset(y = (-15).dp)
-                                    .size(95.dp)
+                                    .offset(y = (-13).dp)
+                                    .size(100.dp)
                                     .clip(RoundedCornerShape(50)),
                                 contentScale = ContentScale.Crop
                             )
@@ -372,7 +372,7 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                         if (rank1 != null) {
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
-                                modifier = Modifier.offset(y = (-35).dp)
+                                modifier = Modifier.offset(y = (-45).dp) // Pehle -35.dp tha, ab 10.dp upar shift kar diya (-45.dp)
                             ) {
                                 Text(
                                     text = rank1.name, 
@@ -393,7 +393,7 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                         
                         Spacer(Modifier.height(5.dp)) 
                         
-                        // Rank 2 and 3 Section (EDGE-TO-EDGE MIDDLE, LEFT/RIGHT PADDING 5.dp)
+                        // Rank 2 and 3 Section 
                         Row(
                             Modifier.fillMaxWidth().padding(horizontal = 5.dp),
                             verticalAlignment = Alignment.CenterVertically
@@ -410,14 +410,14 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                                         .clip(RoundedCornerShape(50)),
                                     contentScale = ContentScale.Crop
                                 )
-                                LeaderboardChromaImage(url=raw+"file_0000000069b88207b9fdd01576b71ee9.png",contentDescription="Rank 2 frame",modifier=Modifier.requiredSize(200.dp),contentScale=ContentScale.Fit)
+                                LeaderboardChromaImage(url=raw+"file_0000000069b88207b9fdd01576b71ee9.png",contentDescription="Rank 2 frame",modifier=Modifier.requiredSize(225.dp),contentScale=ContentScale.Fit) // Frame size 200.dp se 215.dp kiya
                                 
                                 // TOP 2 INFO
                                 val rank2 = leaderboardRows.getOrNull(1)
                                 if (rank2 != null) {
                                     Column(
                                         horizontalAlignment = Alignment.CenterHorizontally,
-                                        modifier = Modifier.align(Alignment.TopCenter).offset(y = 105.dp) // Pushed down by 15.dp (90 -> 105)
+                                        modifier = Modifier.align(Alignment.TopCenter).offset(y = 113.dp) // Pushed down by 8.dp (105 -> 113)
                                     ) {
                                         Text(
                                             text = rank2.name,
@@ -449,14 +449,14 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                                         .clip(RoundedCornerShape(50)),
                                     contentScale = ContentScale.Crop
                                 )
-                                LeaderboardChromaImage(url=raw+"file_00000000ecc882079f34a9356b53dc8e.png",contentDescription="Rank 3 frame",modifier=Modifier.requiredSize(190.dp),contentScale=ContentScale.Fit)
+                                LeaderboardChromaImage(url=raw+"file_00000000ecc882079f34a9356b53dc8e.png",contentDescription="Rank 3 frame",modifier=Modifier.requiredSize(215.dp),contentScale=ContentScale.Fit) // Frame size 190.dp se 205.dp kiya
                                 
                                 // TOP 3 INFO
                                 val rank3 = leaderboardRows.getOrNull(2)
                                 if (rank3 != null) {
                                     Column(
                                         horizontalAlignment = Alignment.CenterHorizontally,
-                                        modifier = Modifier.align(Alignment.TopCenter).offset(y = 105.dp) // Pushed down by 15.dp (90 -> 105)
+                                        modifier = Modifier.align(Alignment.TopCenter).offset(y = 113.dp) // Pushed down by 8.dp (105 -> 113)
                                     ) {
                                         Text(
                                             text = rank3.name,
