@@ -600,25 +600,7 @@ fun PublicProfileScreen(
                         modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Text(displayName, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.Black)
-
-                            Box(
-                                modifier = Modifier
-                                    .size(20.dp) 
-                                    .clip(CircleShape)
-                                    .background(if (isFemale) Color(0xFFFF5874) else Color(0xFF3B82F6)),
-                                contentAlignment = Alignment.Center 
-                            ) {
-                                CustomGenderIcon(isFemale = isFemale, modifier = Modifier.size(10.dp))
-                            }
-
-                        }
-
-                        // Original layout: first two tags beside the name; remaining tags on the line below.
+                        // Original layout: first two tags stay beside the name; all remaining tags sit below.
                         val publicProfileTags = listOfNotNull(
                             if (showOfficialHead) Triple("/file_000000005c388246a5d95dba880d7eb9.png", "Official Head", 31) else null,
                             if (showOfficial) Triple("/IMG_20261027_102250.png", "Official", 22) else null,
@@ -633,6 +615,17 @@ fun PublicProfileScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
+                            Text(displayName, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+
+                            Box(
+                                modifier = Modifier
+                                    .size(20.dp)
+                                    .clip(CircleShape)
+                                    .background(if (isFemale) Color(0xFFFF5874) else Color(0xFF3B82F6)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CustomGenderIcon(isFemale = isFemale, modifier = Modifier.size(10.dp))
+                            }
                             publicProfileTags.take(2).forEach { (asset, description, height) ->
                                 AsyncImage(
                                     model = profileAsset(asset),
