@@ -1332,3 +1332,9 @@ Current documentation does not certify that all historical features are build-, 
 ## 2026-11-18 — Family Rules fullscreen
 - Updated the Family Rules dialog to render edge-to-edge by disabling dialog window system fitting while retaining its existing full-size layout, status-bar spacing, colours, typography, and content.
 - No other Family UI or layout was changed.
+
+## 2026-11-18 — Room avatar voice/music wave approved animation
+- Updated the existing three staggered avatar waves in native `RoomPage.kt` to a 1.5x visual scale and a 1,900 ms repeating cycle.
+- Kept the existing 30% white circle opacity, radius, three-circle phase offsets, and voice/music activation logic unchanged. The stagger means each next circle begins before the preceding circle completes its fade.
+- Avatar dimensions, seat layout, colors outside the wave, voice routing, and music behavior were not changed.
+- Source committed; APK build and on-device animation verification remain pending.
