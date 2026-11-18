@@ -670,8 +670,10 @@ fun RoomPage(
     val entryEffectPrefKey = "entry_effect_$accountId"
     val giftEffectPrefKey = "gift_effect_$accountId"
     val speakerPrefKey = "speaker_enabled_$accountId"
-    var entryEffectEnabled by remember(accountId) { mutableStateOf(roomEffectsPrefs.getBoolean(entryEffectPrefKey, roomEffectsPrefs.getBoolean("entry_effect_$roomId", true))) }
-    var giftEffectEnabled by remember(accountId) { mutableStateOf(roomEffectsPrefs.getBoolean(giftEffectPrefKey, roomEffectsPrefs.getBoolean("gift_effect_$roomId", true))) }
+    // These are device-local preferences keyed by the signed-in account.
+    // Never inherit another room member's/room owner's previous room-level toggle.
+    var entryEffectEnabled by remember(accountId) { mutableStateOf(roomEffectsPrefs.getBoolean(entryEffectPrefKey, true)) }
+    var giftEffectEnabled by remember(accountId) { mutableStateOf(roomEffectsPrefs.getBoolean(giftEffectPrefKey, true)) }
     var speaker by remember(accountId) { mutableStateOf(roomEffectsPrefs.getBoolean(speakerPrefKey, true)) }
     var localVoiceSpeaking by remember { mutableStateOf(false) }
     // Public room messages stay ON unless the owner explicitly disables them.
@@ -1057,6 +1059,18 @@ fun RoomPage(
         java.util.concurrent.atomic.AtomicBoolean(false)
     }
     var roomGiftVideoPreview by remember(roomId) { mutableStateOf("") }
+    // Turning an effect OFF also dismisses an already-running local preview.
+    // This is local-only and does not broadcast a setting to other room members.
+    LaunchedEffect(entryEffectEnabled) {
+        if (!entryEffectEnabled) {
+            roomVehiclePreview = ""
+            roomVehiclePreviewItemId = ""
+            roomVehiclePlaybackClaimed.set(false)
+        }
+    }
+    LaunchedEffect(giftEffectEnabled) {
+        if (!giftEffectEnabled) roomGiftVideoPreview = ""
+    }
     val seats=remember{mutableStateListOf<NativeRoomSeat>().apply{for(i in 1..15)add(NativeRoomSeat(i))}}
     // The owner gets one automatic attempt on the first authoritative seat snapshot only.
     val ownerAutoSeatAttempted = remember(roomId, accountId) { java.util.concurrent.atomic.AtomicBoolean(false) }
