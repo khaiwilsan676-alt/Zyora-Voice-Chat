@@ -240,7 +240,6 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
     val screenWidthDp = LocalConfiguration.current.screenWidthDp
     
     val podiumTopWidth = (screenWidthDp * 0.55f).coerceAtMost(240f).dp
-    val podiumSideWidth = (screenWidthDp * 0.45f).coerceAtMost(180f).dp
 
     Box(Modifier.fillMaxSize().background(Color(0xFF1A0204))) {
         Box(Modifier.fillMaxWidth().height(screenHeight * 0.60f).align(Alignment.TopCenter)) {
@@ -394,10 +393,13 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                         
                         Spacer(Modifier.height(5.dp)) 
                         
-                        // Rank 2 and 3 Section (Yahan Arrangement.Center kar diya, gap ekdam khatam!)
-                        Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp),horizontalArrangement=Arrangement.Center,verticalAlignment=Alignment.CenterVertically) {
+                        // Rank 2 and 3 Section (EDGE-TO-EDGE MIDDLE, LEFT/RIGHT PADDING 5.dp)
+                        Row(
+                            Modifier.fillMaxWidth().padding(horizontal = 5.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                             // Rank 2 Box
-                            Box(modifier = Modifier.width(podiumSideWidth).height(175.dp), contentAlignment = Alignment.Center) {
+                            Box(modifier = Modifier.weight(1f).height(175.dp), contentAlignment = Alignment.Center) {
                                 AsyncImage(
                                     model = leaderboardRows.getOrNull(1)?.image?.takeIf { it.isNotBlank() } ?: (raw + "default_avatar.png"),
                                     contentDescription = "Rank 2 Avatar",
@@ -415,7 +417,7 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                                 if (rank2 != null) {
                                     Column(
                                         horizontalAlignment = Alignment.CenterHorizontally,
-                                        modifier = Modifier.align(Alignment.TopCenter).offset(y = 90.dp) 
+                                        modifier = Modifier.align(Alignment.TopCenter).offset(y = 105.dp) // Pushed down by 15.dp (90 -> 105)
                                     ) {
                                         Text(
                                             text = rank2.name,
@@ -436,7 +438,7 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                             }
                             
                             // Rank 3 Box
-                            Box(modifier = Modifier.width(podiumSideWidth).height(175.dp), contentAlignment = Alignment.Center) {
+                            Box(modifier = Modifier.weight(1f).height(175.dp), contentAlignment = Alignment.Center) {
                                 AsyncImage(
                                     model = leaderboardRows.getOrNull(2)?.image?.takeIf { it.isNotBlank() } ?: (raw + "default_avatar.png"),
                                     contentDescription = "Rank 3 Avatar",
@@ -454,7 +456,7 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                                 if (rank3 != null) {
                                     Column(
                                         horizontalAlignment = Alignment.CenterHorizontally,
-                                        modifier = Modifier.align(Alignment.TopCenter).offset(y = 90.dp) 
+                                        modifier = Modifier.align(Alignment.TopCenter).offset(y = 105.dp) // Pushed down by 15.dp (90 -> 105)
                                     ) {
                                         Text(
                                             text = rank3.name,
@@ -521,7 +523,7 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
 
                         val remainingUsers = leaderboardRows.drop(3).take(47)
                         
-                        // EMPTY STATE CHECK 
+                        // EMPTY STATE CHECK (Agar 4 se leke 50 tak koi na ho)
                         if (remainingUsers.isEmpty()) {
                             Box(
                                 modifier = Modifier
@@ -532,8 +534,8 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                                 AsyncImage(
                                     model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_00000000777481f588df50d28908ce63.png",
                                     contentDescription = "No Users",
-                                    modifier = Modifier.size(100.dp),
-                                    alpha = 0.5f,
+                                    modifier = Modifier.size(100.dp), 
+                                    alpha = 0.5f, 
                                     colorFilter = androidx.compose.ui.graphics.ColorFilter.colorMatrix(
                                         androidx.compose.ui.graphics.ColorMatrix().apply { setToSaturation(0f) } 
                                     ),
@@ -638,7 +640,7 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                                 }
                             }
                         }
-
+                        
                         Spacer(Modifier.height(180.dp)) 
                     }
                 }
