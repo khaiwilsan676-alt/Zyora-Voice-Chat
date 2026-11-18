@@ -3106,7 +3106,15 @@ io.on("connection", (socket) => {
           String(current.user?.accountId || current.user?.userId || "") === actorId &&
           typeof data.src === "string" && data.src.trim()) {
         const emojiTimestamp = Number(data.timestamp || Date.now());
-        seats.set(seatNumber, { ...current, gif: { src: data.src, timestamp: emojiTimestamp } });
+        const emojiScale = Number(data.scale);
+        seats.set(seatNumber, {
+          ...current,
+          gif: {
+            src: data.src,
+            timestamp: emojiTimestamp,
+            scale: Number.isFinite(emojiScale) ? Math.max(0.45, Math.min(1.15, emojiScale)) : 0.8,
+          },
+        });
         setTimeout(() => {
           const currentSeats = roomSeats.get(roomId);
           const seat = currentSeats?.get(seatNumber);
