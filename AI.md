@@ -1289,3 +1289,5 @@ Current documentation does not certify that all historical features are build-, 
 - Source commit: `3cfdec7458c501e071b0327783829c30785267b6`. Native APK build and on-device playback verification are pending.
 
 - Follow-up source commit `615a50dc5714873f547a7fde9c2bf1928a0c0174` preserves the existing audio behavior: Family Vehicle previews remain audible and Avatar Frame previews remain muted.
+
+- Room mic echo fix: switch Android audio mode to `MODE_IN_COMMUNICATION` only while microphone capture is active so `AcousticEchoCanceler` can suppress local speaker-to-mic music feedback; restore the previous audio mode on mute/stop and on capture-start failure. No room UI, seat permissions, socket relay, or music publishing rules changed. Verify clean identical music playback with self-mute ON and OFF on physical devices; hardware/device routing behavior still requires live testing.
