@@ -107,7 +107,6 @@ private fun fruitSaveHistory(context:Context,list:List<FruitHistory>){
  context.getSharedPreferences("fruit_party_native",Context.MODE_PRIVATE).edit().putString("history",a.toString()).apply()
 }
 
-
 @Composable
 private fun FruitTopGlyph(kind:String, disabled:Boolean=false){
  Canvas(Modifier.size(15.dp)){
@@ -135,7 +134,6 @@ private fun FruitTopGlyph(kind:String, disabled:Boolean=false){
  }
 }
 
-/** Fully native Fruit Party game. Artwork is bundled in Android drawable resources; no WebView or network page. */
 @Composable
 fun Fruitparty(onClose:()->Unit,onMinimize:(()->Unit)?=null,isMinimized:Boolean=false){
  val context= LocalContext.current
@@ -150,7 +148,7 @@ fun Fruitparty(onClose:()->Unit,onMinimize:(()->Unit)?=null,isMinimized:Boolean=
  var handPointer by remember{mutableIntStateOf(0)}
  var countdown by remember{mutableIntStateOf(30)}
  var chipIndex by remember{mutableIntStateOf(0)}
- var bets by remember{mutableStateOf<Map<Int,Long>>(emptyMap())}
+ var bets by remember{mutableStateOf>(emptyMap())}
  var history by remember{mutableStateOf<List<FruitHistory>>(emptyList())}
  var winners by remember{mutableStateOf<List<Int>>(emptyList())}
  var showHistory by remember{mutableStateOf(false)}
@@ -238,6 +236,8 @@ fun Fruitparty(onClose:()->Unit,onMinimize:(()->Unit)?=null,isMinimized:Boolean=
    val bg=fruitAsset(context,"fp_file_000000005f948210bbb51c62a68f797a")
    if(bg!=0)Image(painterResource(bg),null,Modifier.fillMaxSize(),contentScale=ContentScale.FillBounds)
    else Box(Modifier.fillMaxSize().background(fruitPurple))
+   
+   // Top Header Row
    Row(Modifier.fillMaxWidth().align(Alignment.TopCenter).padding(horizontal=22.dp, vertical=5.dp),verticalAlignment=Alignment.CenterVertically){
     Row(horizontalArrangement=Arrangement.spacedBy(2.dp),verticalAlignment=Alignment.CenterVertically){
      Box(Modifier.size(24.dp).border(2.dp,fruitBrown,CircleShape).clickable(interactionSource=null,indication=null){vibration=!vibration},contentAlignment=Alignment.Center){FruitTopGlyph("vibration",!vibration)}
@@ -253,10 +253,8 @@ fun Fruitparty(onClose:()->Unit,onMinimize:(()->Unit)?=null,isMinimized:Boolean=
      Box(Modifier.size(24.dp).border(2.dp,fruitBrown,CircleShape).clickable(interactionSource=null,indication=null){onClose()},contentAlignment=Alignment.Center){FruitTopGlyph("close")}
     }
    }
-   Row(Modifier.fillMaxWidth().align(Alignment.TopCenter).padding(top=34.dp,start=26.dp,end=26.dp),horizontalArrangement=Arrangement.SpaceBetween){
-    Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){val coin=fruitAsset(context,"fp_file_00000000e56882119c217d508b6733dc");if(coin!=0)Image(painterResource(coin),null,Modifier.size(20.dp));Text(balance.toString(),color=Color.White,fontSize=12.sp,fontWeight=FontWeight.Bold)}
-    Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){val coin=fruitAsset(context,"fp_file_00000000e56882119c217d508b6733dc");if(coin!=0)Image(painterResource(coin),null,Modifier.size(20.dp));Text(totalWon.toString(),color=Color.White,fontSize=12.sp,fontWeight=FontWeight.Bold)}
-   }
+   
+   // History Row at Bottom
    Row(Modifier.align(Alignment.BottomCenter).padding(bottom=(screenH*.025f-2.dp)).fillMaxWidth().horizontalScroll(rememberScrollState()).padding(start=(screenH*.12f-8.dp)),horizontalArrangement=Arrangement.spacedBy(8.dp)){
     winners.asReversed().forEachIndexed{i,id->
      Box(Modifier.size(19.dp).border(1.dp,Color(0xFF3A1D09),CircleShape),contentAlignment=Alignment.Center){
@@ -266,7 +264,14 @@ fun Fruitparty(onClose:()->Unit,onMinimize:(()->Unit)?=null,isMinimized:Boolean=
      }
     }
    }
-   // Keep all four betting chips on one evenly spaced row; prevent the 5M chip from slipping behind adjacent artwork.
+
+   // Today Balance & Wallet Balance - Ab History se theek upar
+   Row(Modifier.fillMaxWidth().align(Alignment.BottomCenter).padding(bottom=screenH*.08f).padding(horizontal=26.dp),horizontalArrangement=Arrangement.SpaceBetween){
+    Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){val coin=fruitAsset(context,"fp_file_00000000e56882119c217d508b6733dc");if(coin!=0)Image(painterResource(coin),null,Modifier.size(20.dp));Text(balance.toString(),color=Color.White,fontSize=12.sp,fontWeight=FontWeight.Bold)}
+    Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){val coin=fruitAsset(context,"fp_file_00000000e56882119c217d508b6733dc");if(coin!=0)Image(painterResource(coin),null,Modifier.size(20.dp));Text(totalWon.toString(),color=Color.White,fontSize=12.sp,fontWeight=FontWeight.Bold)}
+   }
+
+   // Chips Row
    Row(Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal=4.dp).padding(bottom=screenH*.14f),horizontalArrangement=Arrangement.SpaceEvenly,verticalAlignment=Alignment.Bottom){
     fruitChipLabels.forEachIndexed{i,label->
      Box(Modifier.weight(1f).height(120.dp).clickable(interactionSource=null,indication=null){chipIndex=i},contentAlignment=Alignment.TopCenter){
@@ -278,14 +283,16 @@ fun Fruitparty(onClose:()->Unit,onMinimize:(()->Unit)?=null,isMinimized:Boolean=
      }
     }
    }
-  // Eight original fruit tiles around the timer.
+   
+  // Eight original fruit tiles around the timer - Padding 0 kardi chipkane ke liye
   Column(Modifier.fillMaxWidth().padding(horizontal=screenH*.055f).offset(y=screenH*.045f),verticalArrangement=Arrangement.spacedBy(0.dp)){
    val rows=listOf(fruitOrder.take(3),listOf(fruitOrder[3],0,fruitOrder[4]),fruitOrder.drop(5))
    rows.forEachIndexed{rowIndex,row->
     Row(Modifier.fillMaxWidth().height(screenH*.115f),horizontalArrangement=Arrangement.SpaceEvenly,verticalAlignment=Alignment.CenterVertically){
      row.forEach{index->
       if(index==0){
-       Box(Modifier.weight(1f).fillMaxHeight().padding(5.dp),contentAlignment=Alignment.Center){
+       // Timer Box - Padding 0
+       Box(Modifier.weight(1f).fillMaxHeight().padding(0.dp),contentAlignment=Alignment.Center){
         val timerTile=fruitAsset(context,"fp_file_0000000023cc8230baec62632d74e698")
         if(timerTile!=0)Image(painterResource(timerTile),null,Modifier.fillMaxSize(),contentScale=ContentScale.FillBounds)
         Column(horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(2.dp)){
@@ -306,30 +313,49 @@ fun Fruitparty(onClose:()->Unit,onMinimize:(()->Unit)?=null,isMinimized:Boolean=
          setConcat(hue,saturation)
         }.array
        )
-       Box(Modifier.weight(1f).fillMaxHeight().padding(3.dp).clickable(interactionSource=null,indication=null){placeBet(item.id)},contentAlignment=Alignment.Center){
+       // Fruit Cards - Padding 0
+       Box(Modifier.weight(1f).fillMaxHeight().padding(0.dp).clickable(interactionSource=null,indication=null){placeBet(item.id)},contentAlignment=Alignment.Center){
         val tile=fruitAsset(context,"fp_file_00000000d0ec820ba666eab8bea30204");if(tile!=0)Image(painterResource(tile),null,Modifier.fillMaxSize(),contentScale=ContentScale.FillBounds,colorFilter=if(applyGreen)ColorFilter.colorMatrix(highlightMatrix)else null)
         val image=fruitAsset(context,item.image);if(image!=0)Image(painterResource(image),null,Modifier.fillMaxSize(.57f).align(Alignment.Center).padding(bottom=12.dp),contentScale=ContentScale.Fit)
         if(phase==FruitPhase.BETTING&&handPointer==gridIndex){val pointer=fruitAsset(context,"fp_file_000000000f0c820b95490c9d927692d9");if(pointer!=0)Image(painterResource(pointer),null,Modifier.align(Alignment.BottomEnd).size(40.dp).graphicsLayer{rotationZ=-45f},contentScale=ContentScale.Fit)}
         Text("×${item.multiplier}",Modifier.align(Alignment.BottomCenter).padding(bottom=5.dp),color=Color.White,fontSize=11.sp,fontWeight=FontWeight.Black)
+        
         val bet=bets[item.id]?:0L
-        if(bet>0)Row(Modifier.align(Alignment.Center).offset(y=12.dp).clip(RoundedCornerShape(4.dp)).background(Color(0xCC4F65B9)).padding(horizontal=3.dp,vertical=1.dp),verticalAlignment=Alignment.CenterVertically){val coin=fruitAsset(context,"fp_file_00000000e56882119c217d508b6733dc");if(coin!=0)Image(painterResource(coin),null,Modifier.size(10.dp));Text(fruitFormat(bet),color=Color.White,fontSize=7.sp,fontWeight=FontWeight.Bold)}
+        // Patla blue faded banner for placed bets
+        if(bet>0){
+         Row(
+          Modifier
+           .align(Alignment.Center)
+           .offset(y=12.dp)
+           .fillMaxWidth()
+           .background(androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(Color.Transparent, Color(0xFF1E3A8A), Color.Transparent)))
+           .padding(vertical=1.dp),
+          horizontalArrangement=Arrangement.Center,
+          verticalAlignment=Alignment.CenterVertically
+         ){
+          val coin=fruitAsset(context,"fp_file_00000000e56882119c217d508b6733dc")
+          if(coin!=0)Image(painterResource(coin),null,Modifier.size(10.dp))
+          Spacer(Modifier.width(2.dp))
+          Text(fruitFormat(bet),color=Color.White,fontSize=9.sp,fontWeight=FontWeight.Bold)
+         }
+        }
        }
       }
      }
     }
    }
   }
-  // Left and right mix cards.
+  
+  // Left and right mix cards (10 & 11) - Click aur text hata diya aur height stretch kardi (lambe dikhenge)
   Row(Modifier.fillMaxWidth().align(Alignment.BottomCenter).padding(horizontal=screenH*.13f).offset(y=-screenH*.19f),horizontalArrangement=Arrangement.spacedBy(14.dp)){
    listOf(10,11).forEach{id->
-    Box(Modifier.weight(1f).height(screenH*.105f).clickable(interactionSource=null,indication=null){placeBet(id)},contentAlignment=Alignment.Center){
+    Box(Modifier.weight(1f).height(screenH*.13f),contentAlignment=Alignment.Center){
      val frame=fruitAsset(context,"fp_img_20260910_114625");if(frame!=0)Image(painterResource(frame),null,Modifier.fillMaxSize(),contentScale=ContentScale.FillBounds)
-     val image=fruitAsset(context,fruitImage(id));if(image!=0)Image(painterResource(image),null,Modifier.fillMaxSize(.60f),contentScale=ContentScale.Fit)
-     Text(if(id==10)"MIX ×5" else "MIX ×10–95",Modifier.align(Alignment.BottomCenter).padding(bottom=2.dp),color=Color.White,fontSize=8.sp,fontWeight=FontWeight.Black)
-     val bet=bets[id]?:0L;if(bet>0)Text(fruitFormat(bet),Modifier.align(Alignment.TopCenter).background(Color(0xCC4F65B9)).padding(2.dp),color=Color.White,fontSize=8.sp)
+     val image=fruitAsset(context,fruitImage(id));if(image!=0)Image(painterResource(image),null,Modifier.fillMaxSize(.65f),contentScale=ContentScale.Fit)
     }
    }
   }
+
   if(showResult&&phase==FruitPhase.RESULT){
    Box(Modifier.fillMaxSize(),contentAlignment=Alignment.BottomCenter){
     Box(Modifier.fillMaxWidth().fillMaxHeight(.647f).clip(RoundedCornerShape(topStart=8.dp,topEnd=8.dp))){
