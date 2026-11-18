@@ -46,6 +46,54 @@ private fun formatCupCoins(value: Long): String {
     }
 }
 
+
+/** Daily room cup total shown in the room's top cup pill.
+ * Uses the same daily contributions source as the Cup leaderboard, summing
+ * every user's daily contribution. The server's daily period reset therefore
+ * naturally returns this value to zero.
+ */
+@Composable
+fun RoomDailyCupTotal(roomId: String) {
+    var total by remember(roomId) { mutableStateOf(0L) }
+    var refresh by remember(roomId) { mutableIntStateOf(0) }
+    LaunchedEffect(roomId) {
+        while (true) {
+            kotlinx.coroutines.delay(10_000)
+            refresh++
+        }
+    }
+    LaunchedEffect(roomId, refresh) {
+        val latest = withContext(Dispatchers.IO) {
+            runCatching {
+                val encodedRoom = java.net.URLEncoder.encode(roomId, "UTF-8")
+                val connection = URL("https://zyora-server.onrender.com/api/rooms/$encodedRoom/contributions?period=daily").openConnection() as HttpURLConnection
+                connection.connectTimeout = 8_000
+                connection.readTimeout = 10_000
+                try {
+                    if (connection.responseCode !in 200..299) 0L
+                    else {
+                        val json = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
+                        val leaderboard = json.optJSONArray("leaderboard")
+                        (0 until (leaderboard?.length() ?: 0)).sumOf { index ->
+                            leaderboard?.optJSONObject(index)?.optLong("coins", 0L)?.coerceAtLeast(0L) ?: 0L
+                        }
+                    }
+                } finally {
+                    connection.disconnect()
+                }
+            }.getOrDefault(0L)
+        }
+        total = latest
+    }
+    Text(
+        text = formatCupCoins(total),
+        color = Color(0xFFEEF3A3),
+        fontSize = 12.sp,
+        fontWeight = FontWeight.Bold,
+        letterSpacing = 0.1.sp
+    )
+}
+
 @Composable
 fun RoomCupSheet(roomId:String,userId:String,userName:String,userImage:String,onClose:()->Unit,initialOnline:Boolean=false,roomUsers:List<ActiveUserNative> = emptyList(),roomOwnerId:String="",roomAdminIds:List<String> = emptyList(),onOpenProfile:(ActiveUserNative)->Unit={},onCopyUserId:(String)->Unit={}) {
     val pagerState = rememberPagerState(initialPage = if (initialOnline) 2 else 0, pageCount = { 3 })
