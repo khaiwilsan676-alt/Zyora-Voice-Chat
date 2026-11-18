@@ -563,16 +563,16 @@ private fun FamilyTop(onBack: () -> Unit, onRules: () -> Unit, activeRank: Int, 
             RewardCard(
                 title = "TOP 1 Reward",
                 row1 = listOf(
-                    RewardItemData("Frames 7 days", "IMG_20261117_222458.png", "green", videoUrl = "1000235551-background.mp4", isWinnerReward = true),
-                    RewardItemData("Medal 7 days", "IMG_20261117_210225.png", "medal"),
-                    RewardItemData("Top1 Tag 7 days", "IMG_20261117_193617.png", "tag")
+                    RewardItemData("Frames 7 Days", "IMG_20261117_222458.png", "green", videoUrl = "1000235551-background.mp4", isWinnerReward = true),
+                    RewardItemData("Medal 7 Days", "IMG_20261117_210225.png", "medal"),
+                    RewardItemData("Top1 Tag 7 Days", "IMG_20261117_193617.png", "tag")
                 ),
                 row2 = listOf(
-                    RewardItemData("Entry 7 days", "IMG_20260918_141104.jpg", "vehicle", videoUrl = "gemini_generated_video_e407ad86~2.mp4"),
+                    RewardItemData("Entry 7 Days", "IMG_20260918_141104.jpg", "vehicle", videoUrl = "gemini_generated_video_e407ad86~2.mp4"),
                     RewardItemData("5 Lakh coins", "file_00000000b2d481fd8cd233482dbeb9ef.png", "coins")
                 ),
                 row3 = listOf(
-                    RewardItemData("Room Theme 7 d", "IMG-20260914-WA0043.jpg", "tall")
+                    RewardItemData("Room Theme 7 Days", "IMG-20260914-WA0043.jpg", "tall")
                 ),
                 onClick = onOpenModal,
                 label = "TOP1 Family"
@@ -583,12 +583,12 @@ private fun FamilyTop(onBack: () -> Unit, onRules: () -> Unit, activeRank: Int, 
             RewardCard(
                 title = "TOP 2 Reward",
                 row1 = listOf(
-                    RewardItemData("Frames 7 days", "IMG_20261117_222526.png", "green", videoUrl = "1000235550-background.mp4", isWinnerReward = true),
-                    RewardItemData("Medal 7 days", "IMG_20261117_210250.png", "medal"),
-                    RewardItemData("Top2 Tag 7 days", "IMG_20261117_193700.png", "tag")
+                    RewardItemData("Frames 7 Days", "IMG_20261117_222526.png", "green", videoUrl = "1000235550-background.mp4", isWinnerReward = true),
+                    RewardItemData("Medal 7 Days", "IMG_20261117_210250.png", "medal"),
+                    RewardItemData("Top2 Tag 7 Days", "IMG_20261117_193700.png", "tag")
                 ),
                 row2 = listOf(
-                    RewardItemData("Room Theme 7 d", "IMG-20260914-WA0045.jpg", "tall")
+                    RewardItemData("Room Theme 7 Days", "IMG-20260914-WA0045.jpg", "tall")
                 ),
                 onClick = onOpenModal,
                 label = "TOP2 Family"
@@ -599,12 +599,12 @@ private fun FamilyTop(onBack: () -> Unit, onRules: () -> Unit, activeRank: Int, 
             RewardCard(
                 title = "TOP 3 Reward",
                 row1 = listOf(
-                    RewardItemData("Frames 7 days", "IMG_20261117_222701.png", "green", videoUrl = "1000235549-background.mp4", isWinnerReward = true),
-                    RewardItemData("Medal 7 days", "IMG_20261117_210313.png", "medal"),
-                    RewardItemData("Top3 Tag 7 days", "IMG_20261117_193640.png", "tag")
+                    RewardItemData("Frames 7 Days", "IMG_20261117_222701.png", "green", videoUrl = "1000235549-background.mp4", isWinnerReward = true),
+                    RewardItemData("Medal 7 Days", "IMG_20261117_210313.png", "medal"),
+                    RewardItemData("Top3 Tag 7 Days", "IMG_20261117_193640.png", "tag")
                 ),
                 row2 = listOf(
-                    RewardItemData("Room Theme 7 d", "IMG-20260914-WA0046.jpg", "tall")
+                    RewardItemData("Room Theme 7 Days", "IMG-20260914-WA0046.jpg", "tall")
                 ),
                 onClick = onOpenModal,
                 label = "TOP3 Family"
@@ -613,10 +613,10 @@ private fun FamilyTop(onBack: () -> Unit, onRules: () -> Unit, activeRank: Int, 
             
             // TOP 4 to 10
             RewardCard(
-                title = "TOP 4 TO 10\nReward",
+                title = "TOP 4-10 Reward",
                 row1 = listOf(
-                    RewardItemData("Frames 3 days", "IMG_20261117_222718.png", "green", videoUrl = "1000235548-background.mp4", isWinnerReward = true),
-                    RewardItemData("Medal 3 days", "IMG_20261117_210200.png", "medal")
+                    RewardItemData("Frames 3 Days", "IMG_20261117_222718.png", "green", videoUrl = "1000235548-background.mp4", isWinnerReward = true),
+                    RewardItemData("Medal 3 Days", "IMG_20261117_210200.png", "medal")
                 ),
                 onClick = onOpenModal,
                 label = "TOP4-10 Family"
