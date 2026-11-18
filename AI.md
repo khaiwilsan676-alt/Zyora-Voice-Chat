@@ -1221,3 +1221,9 @@ Current documentation does not certify that all historical features are build-, 
 - Backend device-registration responses ignore legacy lock records belonging to official IDs, and device-google-lock explicitly exempts official IDs/Uids.
 - Normal accounts retain two independent device slots: one permanent Google identity and one permanent Email/Password identity. Each provider can reuse only its own existing UID/ID; the other provider remains a separate second account.
 - Login/Register UI styling and layout were not changed.
+
+## 2026-11-18 — Room display name refresh from canonical profile
+- Root cause: `RoomPage.kt` selected the first nonblank name from the local `index.db` snapshot. A stale placeholder value (`User`) therefore masked the official account's updated MongoDB profile name. Room join sent that stale value to the room presence snapshot.
+- Fix: `RoomPage.kt` now renders the local cached profile immediately, then asynchronously reconciles it with the canonical `/api/users` profile via `ProfilePersistence.load`. A valid remote name/avatar is merged into the local profile cache and Compose state. Placeholder `User` values are ignored when selecting a real profile name.
+- The existing room socket identity/effect keys are unchanged: profile refresh does not reconnect the room socket or interrupt seats/voice/chat. No UI/layout/color changes.
+- Performance: local cached data remains the instant first render; one background profile refresh updates stale data without blocking room entry. APK build, Render availability, and 2-account live room verification remain pending.
