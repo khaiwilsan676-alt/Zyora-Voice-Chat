@@ -1227,3 +1227,8 @@ Current documentation does not certify that all historical features are build-, 
 - Fix: `RoomPage.kt` now renders the local cached profile immediately, then asynchronously reconciles it with the canonical `/api/users` profile via `ProfilePersistence.load`. A valid remote name/avatar is merged into the local profile cache and Compose state. Placeholder `User` values are ignored when selecting a real profile name.
 - The existing room socket identity/effect keys are unchanged: profile refresh does not reconnect the room socket or interrupt seats/voice/chat. No UI/layout/color changes.
 - Performance: local cached data remains the instant first render; one background profile refresh updates stale data without blocking room entry. APK build, Render availability, and 2-account live room verification remain pending.
+
+## 2026-11-18 — Homepage room-card scrolling performance
+- Cached each room card's normalized image model by room image URL to avoid repeating URL normalization during scroll-driven recompositions.
+- Changed long room-name marquee from an infinite animation to one pass, removing continuous per-card animation work while preserving the existing card layout and text treatment.
+- Kept the existing two-column room grid, card dimensions, images, frames, header, banner, category cards, country pills, and bottom navigation unchanged.
