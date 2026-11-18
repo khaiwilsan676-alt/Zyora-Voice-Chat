@@ -394,8 +394,8 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                         
                         Spacer(Modifier.height(5.dp)) 
                         
-                        // Rank 2 and 3 Section
-                        Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically) {
+                        // Rank 2 and 3 Section (Yahan Arrangement.Center kar diya, gap ekdam khatam!)
+                        Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp),horizontalArrangement=Arrangement.Center,verticalAlignment=Alignment.CenterVertically) {
                             // Rank 2 Box
                             Box(modifier = Modifier.width(podiumSideWidth).height(175.dp), contentAlignment = Alignment.Center) {
                                 AsyncImage(
@@ -488,7 +488,7 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                             .fillMaxWidth()
                             .padding(horizontal = 8.dp)
                             .padding(top = 35.dp) 
-                            .defaultMinSize(minHeight = 450.dp) // <-- Card ko thoda bada stretch kiya scrolling acchi lage
+                            .defaultMinSize(minHeight = 450.dp) 
                             .background(Color(0xE60A0505), RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)) 
                             .border(1.dp, Color(0xFFD4AF37), RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
                     ) {
@@ -521,21 +521,21 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
 
                         val remainingUsers = leaderboardRows.drop(3).take(47)
                         
-                        // EMPTY STATE CHECK (Agar 4 se leke 50 tak koi na ho)
+                        // EMPTY STATE CHECK 
                         if (remainingUsers.isEmpty()) {
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(250.dp), // Card ke center mein fit karne ke liye
+                                    .height(250.dp), 
                                 contentAlignment = Alignment.Center
                             ) {
                                 AsyncImage(
                                     model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_00000000777481f588df50d28908ce63.png",
                                     contentDescription = "No Users",
-                                    modifier = Modifier.size(100.dp), // Size chota rakha
-                                    alpha = 0.5f, // Dim kar diya
+                                    modifier = Modifier.size(100.dp),
+                                    alpha = 0.5f,
                                     colorFilter = androidx.compose.ui.graphics.ColorFilter.colorMatrix(
-                                        androidx.compose.ui.graphics.ColorMatrix().apply { setToSaturation(0f) } // Colorless banaya
+                                        androidx.compose.ui.graphics.ColorMatrix().apply { setToSaturation(0f) } 
                                     ),
                                     contentScale = ContentScale.Fit
                                 )
@@ -639,7 +639,6 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                             }
                         }
 
-                        // Scroll ko comfortable banane ke liye spacer height 130 se 180 kar diya hai
                         Spacer(Modifier.height(180.dp)) 
                     }
                 }
