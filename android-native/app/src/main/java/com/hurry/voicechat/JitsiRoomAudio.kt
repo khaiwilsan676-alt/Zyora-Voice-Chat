@@ -145,6 +145,11 @@ fun JitsiRoomAudio(
 
         fun stopCapture() {
             recording.set(false)
+            // Return to the normal media route when the microphone is not publishing.
+            // Communication mode is enabled only while capture is active so Android's
+            // hardware AEC can use the active room playback reference and suppress
+            // speaker-to-microphone feedback without changing the muted music path.
+            runCatching { audioManager.mode = previousAudioMode }
             runCatching { recorder?.stop() }
             captureThread?.join(350)
             captureThread = null
@@ -167,6 +172,10 @@ fun JitsiRoomAudio(
 
         fun startCapture() {
             if (!alive.get() || !hasMicPermission || !latestCanSpeak || recording.get()) return
+            // Android's AcousticEchoCanceler is effective only when capture runs in
+            // communication mode. Keep this scoped to active mic publishing; muted
+            // playback remains on the existing normal media route.
+            runCatching { audioManager.mode = AudioManager.MODE_IN_COMMUNICATION }
             val minBuffer = AudioRecord.getMinBufferSize(
                 ROOM_VOICE_SAMPLE_RATE,
                 AudioFormat.CHANNEL_IN_MONO,
