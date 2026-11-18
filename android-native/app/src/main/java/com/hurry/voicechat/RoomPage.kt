@@ -3496,7 +3496,7 @@ private fun RoomSeatInviteDialog(
             initialValue = 0f,
             targetValue = 1f,
             animationSpec = infiniteRepeatable(
-                animation = tween(1700, easing = LinearEasing),
+                animation = tween(1900, easing = LinearEasing),
                 repeatMode = RepeatMode.Restart
             ),
             label = "voice-wave-progress"
@@ -3531,9 +3531,9 @@ private fun RoomSeatInviteDialog(
                 drawPath(bottomHighlight,shine,style=Stroke(width=size.minDimension*7f/512f,cap=StrokeCap.Round))
             }
             if (isSpeaking) {
-                // Three solid white 20% circles expand concentrically behind the avatar.
-                // Each starts tiny, grows beyond the avatar, fades, and repeats in sequence.
-                Canvas(Modifier.fillMaxSize().graphicsLayer { scaleX = 1.45f; scaleY = 1.45f }.align(Alignment.Center)) {
+                // Three staggered solid white 30% circles expand behind the avatar.
+                // The next circle starts before the previous circle finishes fading.
+                Canvas(Modifier.fillMaxSize().graphicsLayer { scaleX = 1.5f; scaleY = 1.5f }.align(Alignment.Center)) {
                     val center = Offset(size.width / 2f, size.height / 2f)
                     val maxRadius = size.minDimension * 0.42f
                     val phases = listOf(
