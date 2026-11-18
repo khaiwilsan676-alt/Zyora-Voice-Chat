@@ -36,6 +36,7 @@ import io.socket.client.Socket
 import io.socket.emitter.Emitter
 import org.json.JSONObject
 import java.util.concurrent.ArrayBlockingQueue
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.concurrent.thread
@@ -55,7 +56,8 @@ fun JitsiRoomAudio(
     roomSocket: Socket?,
     musicUri: String? = null,
     musicPlaying: Boolean = false,
-    onSpeakingChanged: (Boolean) -> Unit = {}
+    onSpeakingChanged: (Boolean) -> Unit = {},
+    onMusicActivityChanged: (String, Boolean) -> Unit = { _, _ -> }
 ) {
     val context = LocalContext.current
     val latestMusicUri by rememberUpdatedState(musicUri)
@@ -63,6 +65,7 @@ fun JitsiRoomAudio(
     val latestCanShareMusic by rememberUpdatedState(canShareMusic)
     val latestPlaybackVoiceEnabled by rememberUpdatedState(playbackVoiceEnabled)
     val latestMusicPlaying by rememberUpdatedState(musicPlaying)
+    val latestOnMusicActivityChanged by rememberUpdatedState(onMusicActivityChanged)
     var hasMicPermission by remember {
         mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED)
     }
@@ -111,6 +114,16 @@ fun JitsiRoomAudio(
         var musicPlaybackThread: Thread? = null
         val voicePlaybackQueue = ArrayBlockingQueue<ByteArray>(6)
         val musicPlaybackQueue = ArrayBlockingQueue<ByteArray>(6)
+        val musicActivityHandler = Handler(Looper.getMainLooper())
+        val musicActivityTimeouts = ConcurrentHashMap<String, Runnable>()
+        val activeMusicPublishers = ConcurrentHashMap.newKeySet<String>()
+        fun clearMusicPublisherActivity() {
+            musicActivityTimeouts.values.forEach { musicActivityHandler.removeCallbacks(it) }
+            musicActivityTimeouts.clear()
+            val publishers = activeMusicPublishers.toList()
+            activeMusicPublishers.clear()
+            publishers.forEach { latestOnMusicActivityChanged(it, false) }
+        }
         var captureThread: Thread? = null
         var musicRelayThread: Thread? = null
         var musicWatcherThread: Thread? = null
@@ -423,11 +436,34 @@ fun JitsiRoomAudio(
 
         val voiceChunkListener = createChunkListener(true)
         val musicChunkListener = createChunkListener(false)
+        // Music packets carry the publishing accountId. Keep that user's avatar wave
+        // active while packets arrive, then clear it shortly after the stream stops.
+        val musicActivityListener = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
+            if (payload.optString("roomId") != roomId || !alive.get()) return@Listener
+            val publisherId = sequenceOf("userId", "accountId", "senderId", "senderAccountId", "publisherId")
+                .map { payload.optString(it).trim() }
+                .firstOrNull { it.isNotBlank() } ?: return@Listener
+            if (publisherId == localAccountId) return@Listener
+            if (activeMusicPublishers.add(publisherId)) {
+                latestOnMusicActivityChanged(publisherId, true)
+            }
+            val timeout = Runnable {
+                musicActivityTimeouts.remove(publisherId)
+                if (activeMusicPublishers.remove(publisherId) && alive.get()) {
+                    latestOnMusicActivityChanged(publisherId, false)
+                }
+            }
+            musicActivityTimeouts.put(publisherId, timeout)?.let(musicActivityHandler::removeCallbacks)
+            musicActivityHandler.postDelayed(timeout, 600L)
+        }
         roomSocket.on("room_moderation_mute", moderationMuteListener)
         roomSocket.on("room_voice_permission", permissionListener)
         roomSocket.on("room_voice_chunk", voiceChunkListener)
         roomSocket.on("room_music_chunk", musicChunkListener)
+        roomSocket.on("room_music_chunk", musicActivityListener)
         val disconnectListener = Emitter.Listener {
+            clearMusicPublisherActivity()
             voiceAllowed.set(false)
             stopMusicRelay()
             stopCapture()
@@ -517,6 +553,8 @@ fun JitsiRoomAudio(
             roomSocket.off("room_voice_permission", permissionListener)
             roomSocket.off("room_voice_chunk", voiceChunkListener)
             roomSocket.off("room_music_chunk", musicChunkListener)
+            roomSocket.off("room_music_chunk", musicActivityListener)
+            clearMusicPublisherActivity()
             roomSocket.off(Socket.EVENT_DISCONNECT, disconnectListener)
             roomSocket.off(Socket.EVENT_CONNECT, connectListener)
             onSpeakingChanged(false)
