@@ -1214,3 +1214,10 @@ Current documentation does not certify that all historical features are build-, 
 - The Online User tab renders the room's live active-user list, with owner/admin tags, country flag, level badge, avatar, and profile-open behavior.
 - Removed the separate normal Active Users sheet entry point and overlay. The separate Invite User sheet remains unchanged.
 - No other room UI styling or layout was intentionally changed. Native APK build and device verification remain pending.
+
+
+## 2026-11-18 — Official IDs excluded from normal registration slots
+- Native login now bypasses device-registration locks for provisioned official/support Firebase UIDs; those identities no longer consume Google or Email/Password registration slots or get saved as a normal registered Google account.
+- Backend device-registration responses ignore legacy lock records belonging to official IDs, and device-google-lock explicitly exempts official IDs/Uids.
+- Normal accounts retain two independent device slots: one permanent Google identity and one permanent Email/Password identity. Each provider can reuse only its own existing UID/ID; the other provider remains a separate second account.
+- Login/Register UI styling and layout were not changed.
