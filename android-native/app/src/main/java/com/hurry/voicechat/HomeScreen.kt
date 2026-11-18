@@ -901,6 +901,18 @@ fun RoomListCard(
     onRoom: (HurryRoom) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // Resolve the image URL once per room identity instead of rebuilding it on
+    // every scroll-driven recomposition.
+    val roomImageModel = remember(room.image) {
+        if (room.image.startsWith("http")) room.image
+        else if (room.image.isBlank() ||
+            room.image.equals("undefined", ignoreCase = true) ||
+            room.image.equals("null", ignoreCase = true) ||
+            room.image.endsWith("/default-avatar.png") ||
+            room.image.equals("default-avatar.png", ignoreCase = true)) ""
+        else RAW + room.image.trimStart('/')
+    }
+
     Column(modifier.fillMaxWidth().clickable { onRoom(room) }) {
         Box(
             Modifier
@@ -910,13 +922,7 @@ fun RoomListCard(
                 .background(Color(0xFFE5E7EB))
         ) {
             FallbackAsyncImage(
-                model = if (room.image.startsWith("http")) room.image
-                    else if (room.image.isBlank() ||
-                        room.image.equals("undefined", ignoreCase = true) ||
-                        room.image.equals("null", ignoreCase = true) ||
-                        room.image.endsWith("/default-avatar.png") ||
-                        room.image.equals("default-avatar.png", ignoreCase = true)) ""
-                    else RAW + room.image.trimStart('/'),
+                model = roomImageModel,
                 contentDescription = null,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
@@ -974,7 +980,7 @@ fun RoomListCard(
                 maxLines = 1,
                 modifier = Modifier.weight(1f).then(
                     if (roomName.length > 16) {
-                        Modifier.basicMarquee(iterations = Int.MAX_VALUE, velocity = 25.dp)
+                        Modifier.basicMarquee(iterations = 1, velocity = 25.dp)
                     } else {
                         Modifier
                     }
