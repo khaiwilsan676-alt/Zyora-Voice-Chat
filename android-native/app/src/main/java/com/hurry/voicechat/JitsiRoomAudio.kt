@@ -162,6 +162,7 @@ fun JitsiRoomAudio(
 
         fun failCaptureStart() {
             recording.set(false)
+            runCatching { audioManager.mode = previousAudioMode }
             onSpeakingChanged(false)
             if (roomSocket.connected()) {
                 roomSocket.emit("room_voice_stop", JSONObject().put("roomId", roomId))
