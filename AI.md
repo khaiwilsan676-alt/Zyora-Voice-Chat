@@ -1343,3 +1343,10 @@ Current documentation does not certify that all historical features are build-, 
 - Increased only the existing voice/music wave circle opacity from white/30 to white/50 in native `RoomPage.kt`.
 - Kept the 1.5x scale, 1,900 ms cycle, staggered overlap, circle radius, avatar, seats, and all other UI/behavior unchanged.
 - Source committed; APK build and device verification remain pending.
+
+
+## 23 Purchased chat bubble in native room chat (2026-11-19)
+- Store/Bag Chat Bubble items continue to use the existing purchase and server-backed Use/equip flow.
+- Added native equipped-bubble lookup for each room-chat sender using that sender's server inventory, with the existing local inventory cache as the immediate/offline fallback.
+- Replaced the normal black message-card fill with the sender's active purchased Chat Bubble image; message text and mention handling remain overlaid on top of the image. Image messages and all other room UI remain unchanged.
+- Verification: source committed; native APK build and multi-account runtime checks remain pending.
