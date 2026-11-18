@@ -3498,41 +3498,21 @@ private fun RoomSeatInviteDialog(
                 val avatarRadius = size.minDimension * 225f / 512f
                 val phase = waveProgress * (2f * Math.PI.toFloat())
                 val pulse = if (isSpeaking) 0.5f + 0.5f * kotlin.math.sin(phase) else 0f
-                val ringRadius = avatarRadius + size.minDimension * (if (isSpeaking) 13f + pulse * 3f else 10f) / 512f
+                val ringRadius = avatarRadius + size.minDimension *
+                    (if (isSpeaking) 11.5f + pulse * 2.5f else 10f) / 512f
 
-                // One continuous WHITE circular voice-wave ring. Its whole
-                // circumference ripples outward while the seat is speaking.
-                if (isSpeaking) {
-                    val wavePath = Path()
-                    val points = 720
-                    for (i in 0 until points) {
-                        val angle = (i.toFloat() / points) * (2f * Math.PI.toFloat())
-                        // Smooth, evenly spaced circular ripples — no sharp spikes
-                        // or straight cross-lines.
-                        val primaryWave = kotlin.math.sin(angle * 10f + phase)
-                        val softWave = kotlin.math.sin(angle * 20f + phase * 0.65f) * 0.12f
-                        val displacement = size.minDimension * (5.5f * primaryWave + 5.5f * softWave) / 512f
-                        val waveRadius = ringRadius + displacement
-                        val point = Offset(
-                            center.x + kotlin.math.cos(angle) * waveRadius,
-                            center.y + kotlin.math.sin(angle) * waveRadius
-                        )
-                        if (i == 0) wavePath.moveTo(point.x, point.y) else wavePath.lineTo(point.x, point.y)
-                    }
-                    wavePath.close()
-                    drawPath(
-                        path = wavePath,
-                        color = Color.White,
-                        style = Stroke(width = size.minDimension * 13f / 512f, cap = StrokeCap.Round)
+                // Keep one perfectly round, unbroken WHITE ring.
+                // Voice activity gently expands and contracts the whole circle;
+                // it never creates lobes, bars, spikes, or extra rings.
+                drawCircle(
+                    color = Color.White.copy(alpha = if (isSpeaking) 1f else 0.9f),
+                    radius = ringRadius,
+                    center = center,
+                    style = Stroke(
+                        width = size.minDimension * (if (isSpeaking) 11f else 9f) / 512f,
+                        cap = StrokeCap.Round
                     )
-                } else {
-                    drawCircle(
-                        color = Color.White.copy(alpha = 0.9f),
-                        radius = ringRadius,
-                        center = center,
-                        style = Stroke(width = size.minDimension * 9f / 512f)
-                    )
-                }
+                )
             }
             Box(Modifier.fillMaxSize(.91f),contentAlignment=Alignment.Center){
                 if(seat.locked) AsyncImage(model=raw+"file_0000000015a48211b000ee447a786f7c.png",contentDescription="Locked seat",modifier=Modifier.fillMaxSize(.62f),contentScale=ContentScale.Fit)
