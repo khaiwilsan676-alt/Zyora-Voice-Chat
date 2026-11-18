@@ -2,6 +2,7 @@ package com.hurry.voicechat
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -14,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -88,7 +90,6 @@ fun RoomDailyCupTotal(roomId: String) {
 
 @Composable
 fun RoomCupSheet(roomId:String,userId:String,userName:String,userImage:String,onClose:()->Unit,initialOnline:Boolean=false,roomUsers:List<ActiveUserNative> = emptyList(),roomOwnerId:String="",roomAdminIds:List<String> = emptyList(),onOpenProfile:(ActiveUserNative)->Unit={},onCopyUserId:(String)->Unit={}) {
-    // Pager hata diya hai, ab galti se poora page slide nahi hoga
     var selectedOnline by remember(initialOnline) { mutableStateOf(initialOnline) }
     
     var period by remember { mutableStateOf("daily") }
@@ -96,6 +97,9 @@ fun RoomCupSheet(roomId:String,userId:String,userName:String,userImage:String,on
     var mine by remember { mutableStateOf<CupEntry?>(null) }
     var loading by remember { mutableStateOf(true) }
     var refreshTick by remember { mutableIntStateOf(0) }
+    
+    // Swipe state handle karne ke liye
+    var swipeOffset by remember { mutableFloatStateOf(0f) }
     
     LaunchedEffect(roomId,period) { while (true) { kotlinx.coroutines.delay(10000); refreshTick++ } }
     
@@ -123,7 +127,43 @@ fun RoomCupSheet(roomId:String,userId:String,userName:String,userImage:String,on
     LaunchedEffect(Unit){while(true){now=clock.format(Date());kotlinx.coroutines.delay(30000)}}
     
     Box(Modifier.fillMaxSize().background(Color.Black.copy(.38f)).clickable{onClose()},contentAlignment=Alignment.BottomCenter) {
-        Column(Modifier.fillMaxWidth().fillMaxHeight(.62f).clip(RoundedCornerShape(topStart=15.dp,topEnd=15.dp)).background(Color(0xFF050505)).clickable(enabled=false){},horizontalAlignment=Alignment.CenterHorizontally) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(.62f)
+                .clip(RoundedCornerShape(topStart=15.dp,topEnd=15.dp))
+                .background(Color(0xFF050505))
+                .clickable(enabled=false){}
+                // Swipe gesture yaha lagaya hai
+                .pointerInput(Unit) {
+                    detectHorizontalDragGestures(
+                        onDragEnd = {
+                            if (swipeOffset < -40) { // Right to Left Drag
+                                if (!selectedOnline) {
+                                    if (period == "daily") {
+                                        period = "weekly"
+                                    } else if (period == "weekly") {
+                                        selectedOnline = true
+                                    }
+                                }
+                            } else if (swipeOffset > 40) { // Left to Right Drag (Wapas aane ke liye)
+                                if (selectedOnline) {
+                                    selectedOnline = false
+                                    period = "weekly"
+                                } else if (period == "weekly") {
+                                    period = "daily"
+                                }
+                            }
+                            swipeOffset = 0f
+                        },
+                        onHorizontalDrag = { change, dragAmount ->
+                            change.consume()
+                            swipeOffset += dragAmount
+                        }
+                    )
+                },
+            horizontalAlignment=Alignment.CenterHorizontally
+        ) {
             Spacer(Modifier.height(13.dp))
             Row(horizontalArrangement=Arrangement.spacedBy(34.dp),verticalAlignment=Alignment.CenterVertically) {
                 CupTab("Contribution", !selectedOnline) { selectedOnline = false }
@@ -147,7 +187,8 @@ fun RoomCupSheet(roomId:String,userId:String,userName:String,userImage:String,on
                                     if(u.country.isNotBlank()) CountryFlagImage(u.country,Modifier.size(18.dp,12.dp)) else Spacer(Modifier.width(18.dp))
                                     Box(Modifier.height(16.dp).width(36.dp),contentAlignment=Alignment.CenterEnd) {
                                         AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261028_004355.png",contentDescription="Level",modifier=Modifier.fillMaxSize(),contentScale=ContentScale.FillBounds)
-                                        Text("Lv.1",color=Color.White,fontSize=8.sp,fontWeight=FontWeight.Bold,modifier=Modifier.offset(x=7.dp,y=(-3).dp).padding(end=5.dp))
+                                        // 3dp Left (x=7.dp se x=4.dp)
+                                        Text("Lv.1",color=Color.White,fontSize=8.sp,fontWeight=FontWeight.Bold,modifier=Modifier.offset(x=4.dp,y=(-3).dp).padding(end=5.dp))
                                     }
                                 }
                             }
@@ -187,7 +228,8 @@ fun RoomCupSheet(roomId:String,userId:String,userName:String,userImage:String,on
                                 Text(e.name,color=Color.White,fontSize=12.sp,fontWeight=FontWeight.SemiBold,maxLines=1,overflow=TextOverflow.Ellipsis)
                                 Row(verticalAlignment=Alignment.CenterVertically) {
                                     AsyncImage(model="https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261028_004355.png",contentDescription="Level",modifier=Modifier.width(36.dp).height(16.dp),contentScale=ContentScale.FillBounds)
-                                    Text("Lv.1",color=Color.White,fontSize=8.sp,fontWeight=FontWeight.Bold,modifier=Modifier.offset(x=(-26).dp))
+                                    // 3dp Right (x=-26.dp se x=-23.dp)
+                                    Text("Lv.1",color=Color.White,fontSize=8.sp,fontWeight=FontWeight.Bold,modifier=Modifier.offset(x=(-23).dp))
                                 }
                             }
                             Text(formatCupCoins(e.coins),color=Color.White,fontSize=12.sp,fontWeight=FontWeight.SemiBold)
@@ -196,9 +238,20 @@ fun RoomCupSheet(roomId:String,userId:String,userName:String,userImage:String,on
                     }
                 }
                 
-                // 15% Blue then smooth mix to Black
-                Row(Modifier.fillMaxWidth().background(Brush.verticalGradient(0.0f to Color(0xFF1E88E5), 0.15f to Color.Black, 1.0f to Color.Black)).padding(horizontal=16.dp,vertical=10.dp),verticalAlignment=Alignment.CenterVertically) {
-                    Text(if((mine?.rank?:0)>0) "${mine?.rank}" else "-",color=Color.White,fontSize=16.sp,fontWeight=FontWeight.Bold,modifier=Modifier.width(28.dp).padding(end=12.dp))
+                // Ye dekh 50% (0.50f) Blue karke uske baad Black mix kar diya
+                Row(Modifier.fillMaxWidth().background(Brush.verticalGradient(0.0f to Color(0xFF1E88E5), 0.50f to Color.Black, 1.0f to Color.Black)).padding(horizontal=16.dp,vertical=10.dp),verticalAlignment=Alignment.CenterVertically) {
+                    
+                    // BOTTOM RANK LOGIC - Image for 1, 2, 3
+                    val myRank = mine?.rank ?: 0
+                    if (myRank in 1..3) {
+                        when (myRank) {
+                            1 -> AsyncImage(model="https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261117_190736.jpg",contentDescription="Rank 1",modifier=Modifier.width(28.dp).padding(end=3.dp).height(25.dp),contentScale=ContentScale.Fit)
+                            2 -> AsyncImage(model="https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261117_190720.jpg",contentDescription="Rank 2",modifier=Modifier.width(28.dp).padding(end=3.dp).height(25.dp),contentScale=ContentScale.Fit)
+                            3 -> AsyncImage(model="https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261117_190658.jpg",contentDescription="Rank 3",modifier=Modifier.width(28.dp).padding(end=3.dp).height(25.dp),contentScale=ContentScale.Fit)
+                        }
+                    } else {
+                        Text(if(myRank>0) "$myRank" else "-",color=Color.White,fontSize=16.sp,fontWeight=FontWeight.Bold,modifier=Modifier.width(28.dp).padding(end=12.dp))
+                    }
                     
                     AsyncImage(model=userImage.ifBlank{"https://zyora-server.onrender.com/default-avatar.png"},contentDescription=userName,modifier=Modifier.size(42.dp).clip(CircleShape),contentScale=ContentScale.Crop)
                     
@@ -206,7 +259,8 @@ fun RoomCupSheet(roomId:String,userId:String,userName:String,userImage:String,on
                         Text(userName.ifBlank{"User"},color=Color.White,fontSize=14.sp,fontWeight=FontWeight.SemiBold,maxLines=1)
                         Row(verticalAlignment=Alignment.CenterVertically) {
                             AsyncImage(model="https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261028_004355.png",contentDescription="Level",modifier=Modifier.width(36.dp).height(16.dp),contentScale=ContentScale.FillBounds)
-                            Text("Lv.1",color=Color.White,fontSize=8.sp,fontWeight=FontWeight.Bold,modifier=Modifier.offset(x=(-26).dp))
+                            // 3dp Right (x=-26.dp se x=-23.dp)
+                            Text("Lv.1",color=Color.White,fontSize=8.sp,fontWeight=FontWeight.Bold,modifier=Modifier.offset(x=(-23).dp))
                         }
                     }
                     
