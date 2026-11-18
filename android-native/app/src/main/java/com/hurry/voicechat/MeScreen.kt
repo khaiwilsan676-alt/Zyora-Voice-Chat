@@ -79,7 +79,15 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
     val account = savedAccount.ifBlank { nativeMeAccountNumber(uid) }
     val visitorUserId = prefs.getString("accountId", "").orEmpty().ifBlank { uid }
     val initialFollowSnapshot = remember(visitorUserId) { SocialFollowApi.cachedSnapshot(context, visitorUserId) }
-    var visitorCount by remember(uid) { mutableIntStateOf(0) }
+    var visitorCount by remember(visitorUserId, uid) {
+        mutableIntStateOf(runCatching {
+            val db = NativeIndexDatabase(context)
+            listOf("received", "sent").sumOf { type ->
+                val rows = db.loadProfile("visitor_history:" + visitorUserId + ":" + type)?.optJSONArray("visitors") ?: org.json.JSONArray()
+                (0 until rows.length()).sumOf { index -> rows.optJSONObject(index)?.optInt("viewCount", 1)?.coerceAtLeast(1) ?: 0 }
+            }
+        }.getOrDefault(0))
+    }
     var fansCount by remember(uid) { mutableIntStateOf(initialFollowSnapshot?.followers ?: 0) }
     var friendsCount by remember(uid) { mutableIntStateOf(initialFollowSnapshot?.friends ?: 0) }
     var followingCount by remember(uid) { mutableIntStateOf(initialFollowSnapshot?.followingCount ?: 0) }
@@ -170,6 +178,14 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
             visitorCount = 0
         } else {
             val historyKey = "visitor_history:" + visitorUserId + ":received"
+            val cachedTotal = withContext(Dispatchers.IO) {
+                val db = NativeIndexDatabase(context)
+                listOf("received", "sent").sumOf { type ->
+                    val entries = db.loadProfile("visitor_history:" + visitorUserId + ":" + type)?.optJSONArray("visitors") ?: org.json.JSONArray()
+                    (0 until entries.length()).sumOf { index -> entries.optJSONObject(index)?.optInt("viewCount", 1)?.coerceAtLeast(1) ?: 0 }
+                }
+            }
+            if (cachedTotal > visitorCount) visitorCount = cachedTotal
             val rows = withContext(Dispatchers.IO) {
                 val localDb = NativeIndexDatabase(context)
                 var total = 0
@@ -187,10 +203,12 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
                             root.optJSONArray("visitors")
                         } finally { connection.disconnect() }
                     }.getOrNull()
-                    val entries = remoteRows ?: localDb.loadProfile("visitor_history:" + visitorUserId + ":" + type)?.optJSONArray("visitors") ?: org.json.JSONArray()
-                    if (remoteRows != null) {
+                    val cachedRows = localDb.loadProfile("visitor_history:" + visitorUserId + ":" + type)?.optJSONArray("visitors")
+                    val acceptedRemoteRows = remoteRows?.takeIf { it.length() > 0 || cachedRows == null || cachedRows.length() == 0 }
+                    val entries = acceptedRemoteRows ?: cachedRows ?: org.json.JSONArray()
+                    if (acceptedRemoteRows != null) {
                         localDb.saveProfile("visitor_history:" + visitorUserId + ":" + type,
-                            JSONObject().put("visitors", remoteRows).put("updatedAt", System.currentTimeMillis()))
+                            JSONObject().put("visitors", acceptedRemoteRows).put("updatedAt", System.currentTimeMillis()))
                     }
                     total += (0 until entries.length()).sumOf { index ->
                         entries.optJSONObject(index)?.optInt("viewCount", 1)?.coerceAtLeast(1) ?: 0
@@ -198,7 +216,8 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
                 }
                 total
             }
-            visitorCount = rows
+            if (rows > 0 || cachedTotal == 0) visitorCount = rows
+            else visitorCount = maxOf(visitorCount, cachedTotal)
         }
     }
     val phone = prefs.getString("phone", "") ?: ""
