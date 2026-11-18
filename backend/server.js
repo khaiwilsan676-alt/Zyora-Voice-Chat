@@ -2972,8 +2972,13 @@ io.on("connection", (socket) => {
 
       socket.leave(`room:${room}`);
 
-      // Explicit room exit removes presence, but does not silently release a seat.
-      // Seat release is handled only by the authorized room_seat_action leave flow.
+      // Leaving the room ends the complete room session, whether the user was
+      // seated or listening. Release every seat for this account immediately;
+      // do not depend on a separate seat-button event being sent by the client.
+      if (clearUserSeat(room, id)) {
+        emitRoomSeats(room);
+      }
+      cancelPendingSeatDisconnect(room, id);
       removeUserFromRoom(room, id);
 
       socket
