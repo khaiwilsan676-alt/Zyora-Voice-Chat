@@ -744,11 +744,11 @@ fun RoomPage(
     var miniMusicTrack by remember(accountId) { mutableStateOf(savedRoomTrack) }
     // Restore the previous selection into shared controller state without auto-playing it.
     LaunchedEffect(accountId, savedRoomTrack) {
-        if (savedRoomTrack != null && MusicPlaybackState.currentTrack == null) {
-            MusicPlaybackState.currentTrack = savedRoomTrack
-            MusicPlaybackState.currentPlayingUri = null
-            MusicPlaybackState.isPlaying = false
-        }
+        // Room music selection is account-scoped. Never let a previous room/account's
+        // process-global track override this user's saved selection on re-entry.
+        MusicPlaybackState.currentTrack = savedRoomTrack
+        MusicPlaybackState.currentPlayingUri = null
+        MusicPlaybackState.isPlaying = false
     }
     // Controller UI is opt-in for each room visit. Restoring a saved track must not show it.
     var musicControllerVisible by remember { mutableStateOf(false) }
