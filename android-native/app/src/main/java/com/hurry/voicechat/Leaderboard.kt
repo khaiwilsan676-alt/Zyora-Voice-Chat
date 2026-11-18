@@ -374,14 +374,15 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 modifier = Modifier.offset(y = (-35).dp)
                             ) {
-                                Text(
-                                    text = rank1.name, 
-                                    color = Color.White, 
-                                    fontSize = 15.sp, 
-                                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, 
-                                    maxLines = 1, 
-                                    overflow = TextOverflow.Ellipsis
-                                )
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                                    Text(rank1.name, color = Color.White, fontSize = 15.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    if (tab == "room") Text(leaderboardFlag(rank1.country), fontSize = 14.sp)
+                                    else if (rank1.gender.isNotBlank()) Box(Modifier.size(20.dp).clip(RoundedCornerShape(50)).background(if (rank1.gender.equals("female", true)) Color(0xFFFF5874) else Color(0xFF3B82F6)), contentAlignment = Alignment.Center) { CustomGenderIcon(rank1.gender.equals("female", true), Modifier.size(10.dp)) }
+                                }
+                                if (tab != "room") Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 2.dp)) {
+                                    AsyncImage(model = raw + "IMG_20261028_004355.png", contentDescription = "Level", modifier = Modifier.height(20.dp).width(40.dp), contentScale = ContentScale.Fit)
+                                    Text("Lv." + rank1.level, color = Color.White, fontSize = 9.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                                }
                                 Spacer(Modifier.height(2.dp))
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     AsyncImage(model = raw + "file_00000000e56882119c217d508b6733dc.png", contentDescription = null, modifier = Modifier.size(14.dp))
@@ -419,16 +420,16 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                                         horizontalAlignment = Alignment.CenterHorizontally,
                                         modifier = Modifier.align(Alignment.TopCenter).offset(y = 123.dp)
                                     ) {
-                                        Text(
-                                            text = rank2.name,
-                                            color = Color.White,
-                                            fontSize = 12.sp,
-                                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                            modifier = Modifier.widthIn(max = 90.dp)
-                                        )
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                                            Text(rank2.name, color = Color.White, fontSize = 12.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 82.dp))
+                                            if (tab == "room") Text(leaderboardFlag(rank2.country), fontSize = 12.sp)
+                                            else if (rank2.gender.isNotBlank()) Box(Modifier.size(16.dp).clip(RoundedCornerShape(50)).background(if (rank2.gender.equals("female", true)) Color(0xFFFF5874) else Color(0xFF3B82F6)), contentAlignment = Alignment.Center) { CustomGenderIcon(rank2.gender.equals("female", true), Modifier.size(9.dp)) }
+                                        }
+                                        if (tab != "room") Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 1.dp)) {
+                                            AsyncImage(model = raw + "IMG_20261028_004355.png", contentDescription = "Level", modifier = Modifier.height(16.dp).width(32.dp), contentScale = ContentScale.Fit)
+                                            Text("Lv." + rank2.level, color = Color.White, fontSize = 8.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                                        }
+                                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 1.dp)) {
                                             AsyncImage(model = raw + "file_00000000e56882119c217d508b6733dc.png", contentDescription = null, modifier = Modifier.size(12.dp))
                                             Spacer(Modifier.width(2.dp))
                                             Text(text = leaderboardCoinText(rank2.coins), color = Color(0xFFE7B865), fontSize = 11.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
@@ -456,18 +457,18 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                                 if (rank3 != null) {
                                     Column(
                                         horizontalAlignment = Alignment.CenterHorizontally,
-                                        modifier = Modifier.align(Alignment.TopCenter).offset(y = 113.dp) // Pushed down by 8.dp (105 -> 113)
+                                        modifier = Modifier.align(Alignment.TopCenter).offset(y = 123.dp)
                                     ) {
-                                        Text(
-                                            text = rank3.name,
-                                            color = Color.White,
-                                            fontSize = 12.sp,
-                                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                            modifier = Modifier.widthIn(max = 90.dp)
-                                        )
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                                            Text(rank3.name, color = Color.White, fontSize = 12.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 82.dp))
+                                            if (tab == "room") Text(leaderboardFlag(rank3.country), fontSize = 12.sp)
+                                            else if (rank3.gender.isNotBlank()) Box(Modifier.size(16.dp).clip(RoundedCornerShape(50)).background(if (rank3.gender.equals("female", true)) Color(0xFFFF5874) else Color(0xFF3B82F6)), contentAlignment = Alignment.Center) { CustomGenderIcon(rank3.gender.equals("female", true), Modifier.size(9.dp)) }
+                                        }
+                                        if (tab != "room") Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 1.dp)) {
+                                            AsyncImage(model = raw + "IMG_20261028_004355.png", contentDescription = "Level", modifier = Modifier.height(16.dp).width(32.dp), contentScale = ContentScale.Fit)
+                                            Text("Lv." + rank3.level, color = Color.White, fontSize = 8.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                                        }
+                                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 1.dp)) {
                                             AsyncImage(model = raw + "file_00000000e56882119c217d508b6733dc.png", contentDescription = null, modifier = Modifier.size(12.dp))
                                             Spacer(Modifier.width(2.dp))
                                             Text(text = leaderboardCoinText(rank3.coins), color = Color(0xFFE7B865), fontSize = 11.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
