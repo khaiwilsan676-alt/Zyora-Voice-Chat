@@ -1265,3 +1265,11 @@ Current documentation does not certify that all historical features are build-, 
 - Native `JitsiRoomAudio.kt`: Speaker OFF filters only incoming `room_voice_chunk` packets for that device. Pending voice frames are discarded and an in-flight voice frame stops at its next packet boundary. Incoming `room_music_chunk` playback remains enabled; mic publishing, room socket, seat state, and other users are unaffected.
 - Four Grid layout and controls are unchanged. No server broadcast or shared room preference was added.
 - Verification: source-level changes committed; APK build and two-device runtime verification remain pending.
+
+
+## 2026-11-18 — Centralized seat emoji media sizing
+- `Emojipicker.kt`: selected stickers carry picker-defined seat scale. Added one shared `SeatEmojiOverlay` renderer that owns MP4-vs-image selection and sizing for every seat.
+- `RoomPage.kt`: all seat reactions render through the shared picker renderer. The selected sticker scale is included in the existing room-seat emoji event and retained in seat state.
+- `backend/server.js`: seat emoji state stores a bounded scale and broadcasts it with the existing seat snapshot, so every participant sees the same picker-defined sizing. Other seat gift/image overlays keep the default scale.
+- No seat layout, picker layout, voice, or other room controls changed.
+- Verification: source updates committed; native APK build and multi-device runtime verification remain pending.
