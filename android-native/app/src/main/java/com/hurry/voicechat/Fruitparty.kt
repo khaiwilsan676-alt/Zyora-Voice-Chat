@@ -148,7 +148,7 @@ fun Fruitparty(onClose:()->Unit,onMinimize:(()->Unit)?=null,isMinimized:Boolean=
  var handPointer by remember{mutableIntStateOf(0)}
  var countdown by remember{mutableIntStateOf(30)}
  var chipIndex by remember{mutableIntStateOf(0)}
- var bets by remember{mutableStateOf>(emptyMap())}
+  var bets by remember{mutableStateOf<Map<Int,Long>>(emptyMap())}
  var history by remember{mutableStateOf<List<FruitHistory>>(emptyList())}
  var winners by remember{mutableStateOf<List<Int>>(emptyList())}
  var showHistory by remember{mutableStateOf(false)}
