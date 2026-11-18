@@ -2500,9 +2500,9 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                             }
                             Icon(Icons.Default.QueueMusic, "Open Music page", tint = Color.White,
                                 modifier = Modifier.size(25.dp).clickable {
-                                    // Reopen the saved/current song in the controller, not the music library.
+                                    // Open the song list from the controller queue icon.
                                     musicControllerMinimized = true
-                                    openMusicPageFromController = false
+                                    openMusicPageFromController = true
                                     showMenu = true
                                 })
                         }
