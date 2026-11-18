@@ -1338,3 +1338,8 @@ Current documentation does not certify that all historical features are build-, 
 - Kept the existing 30% white circle opacity, radius, three-circle phase offsets, and voice/music activation logic unchanged. The stagger means each next circle begins before the preceding circle completes its fade.
 - Avatar dimensions, seat layout, colors outside the wave, voice routing, and music behavior were not changed.
 - Source committed; APK build and on-device animation verification remain pending.
+
+## 2026-11-18 — Room avatar wave opacity
+- Increased only the existing voice/music wave circle opacity from white/30 to white/50 in native `RoomPage.kt`.
+- Kept the 1.5x scale, 1,900 ms cycle, staggered overlap, circle radius, avatar, seats, and all other UI/behavior unchanged.
+- Source committed; APK build and device verification remain pending.
