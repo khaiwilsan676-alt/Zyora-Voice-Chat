@@ -136,6 +136,82 @@ private fun updateNativeStoreCachedEquip(context: android.content.Context, userI
     writeNativeStoreInventoryCache(context, userId, updated)
 }
 
+private data class NativeEquippedChatBubble(val image: String, val expiresAt: Long)
+private val nativeChatBubbleByUser = mutableStateMapOf<String, NativeEquippedChatBubble>()
+private val nativeChatBubbleLoads = mutableSetOf<String>()
+
+@Composable
+internal fun NativeChatBubbleMessage(
+    userId: String,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
+) {
+    val context = LocalContext.current.applicationContext
+    val cached = remember(userId) {
+        readNativeStoreInventoryCache(context, userId).let { items ->
+            (0 until items.length()).mapNotNull { items.optJSONObject(it) }
+                .firstOrNull { it.optString("tab") == "Chat Bubble" && it.optBoolean("equipped") && it.optLong("expiresAt") > System.currentTimeMillis() }
+                ?.let { item ->
+                    val catalogue = nativeStoreItems.firstOrNull { it.id == item.optString("itemId") }
+                    NativeEquippedChatBubble(item.optString("image").ifBlank { catalogue?.image.orEmpty() }, item.optLong("expiresAt"))
+                }
+        }
+    }
+    val bubble = nativeChatBubbleByUser[userId] ?: cached
+    LaunchedEffect(userId) {
+        if (userId.isBlank()) return@LaunchedEffect
+        val shouldLoad = synchronized(nativeChatBubbleLoads) { nativeChatBubbleLoads.add(userId) }
+        if (shouldLoad) {
+            try {
+                val latest = withContext(Dispatchers.IO) {
+                    runCatching {
+                        val encoded = URLEncoder.encode(userId, "UTF-8")
+                        val connection = (URL("https://zyora-server.onrender.com/api/store/inventory/$encoded").openConnection() as HttpURLConnection).apply {
+                            connectTimeout = 8000
+                            readTimeout = 8000
+                            useCaches = false
+                            setRequestProperty("Cache-Control", "no-cache, no-store")
+                            setRequestProperty("Pragma", "no-cache")
+                        }
+                        val code = connection.responseCode
+                        if (code !in 200..299) {
+                            connection.disconnect()
+                            error("Chat bubble inventory unavailable")
+                        }
+                        val json = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
+                        connection.disconnect()
+                        val items = json.optJSONArray("items") ?: JSONArray()
+                        writeNativeStoreInventoryCache(context, userId, items)
+                        (0 until items.length()).mapNotNull { items.optJSONObject(it) }
+                            .firstOrNull { it.optString("tab") == "Chat Bubble" && it.optBoolean("equipped") && it.optLong("expiresAt") > System.currentTimeMillis() }
+                            ?.let { item ->
+                                val catalogue = nativeStoreItems.firstOrNull { it.id == item.optString("itemId") }
+                                NativeEquippedChatBubble(item.optString("image").ifBlank { catalogue?.image.orEmpty() }, item.optLong("expiresAt"))
+                            }
+                    }
+                }
+                latest.onSuccess { nativeChatBubbleByUser[userId] = it ?: NativeEquippedChatBubble("", 0L) }
+            } finally {
+                synchronized(nativeChatBubbleLoads) { nativeChatBubbleLoads.remove(userId) }
+            }
+        }
+    }
+    val activeBubble = bubble?.takeIf { it.image.isNotBlank() && it.expiresAt > System.currentTimeMillis() }
+    Box(modifier) {
+        if (activeBubble != null) {
+            AsyncImage(
+                model = StoreAssetBase + activeBubble.image,
+                contentDescription = "Equipped chat bubble",
+                modifier = Modifier.matchParentSize(),
+                contentScale = ContentScale.FillBounds
+            )
+        } else {
+            Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = .40f)))
+        }
+        content()
+    }
+}
+
 private data class NativeStoreTab(val id: String, val label: String, val icon: String)
 private data class NativeStoreItem(
     val id: String, val name: String, val image: String, val tab: String,
