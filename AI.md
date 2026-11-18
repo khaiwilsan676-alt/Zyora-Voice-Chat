@@ -1273,3 +1273,10 @@ Current documentation does not certify that all historical features are build-, 
 - `backend/server.js`: seat emoji state stores a bounded scale and broadcasts it with the existing seat snapshot, so every participant sees the same picker-defined sizing. Other seat gift/image overlays keep the default scale.
 - No seat layout, picker layout, voice, or other room controls changed.
 - Verification: source updates committed; native APK build and multi-device runtime verification remain pending.
+
+
+## 2026-11-18 — Room music exit cleanup and explicit controller visibility
+- Native `RoomPage.kt`: the saved previous track is restored as metadata only; the music pill and controller card remain hidden on every room visit until the user opens Four-grid and taps Music.
+- Tapping Four-grid → Music restores the previous track into the controller without autoplay. The pill and card remain available together after that deliberate action.
+- Real room disposal/exit sends `RoomMusicService.ACTION_STOP`, clears active playback state, and preserves the last selected track metadata. Intentionally keeping the room miniaturized does not trigger this room-exit cleanup; swiping Zyora away from Recents is handled by `RoomMusicService.onTaskRemoved`.
+- No room layout, colors, card dimensions, or unrelated controls were changed.
