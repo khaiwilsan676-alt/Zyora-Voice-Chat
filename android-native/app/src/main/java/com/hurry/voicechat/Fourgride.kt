@@ -132,6 +132,10 @@ fun Fourgride(
     onTogglePublicMsg: () -> Unit,
     speaker: Boolean,
     onToggleSpeaker: () -> Unit,
+    entryEffect: Boolean,
+    giftEffect: Boolean,
+    onToggleEntryEffect: () -> Unit,
+    onToggleGiftEffect: () -> Unit,
     onMusicPlay: ((NativeMusicTrack) -> Unit)? = null,
     onMusicPlaybackChanged: ((NativeMusicTrack, Boolean) -> Unit)? = null,
     onMusicMinimize: ((NativeMusicTrack?) -> Unit)? = null,
@@ -148,17 +152,11 @@ fun Fourgride(
     roomId: String = ""
 ) {
     val context = LocalContext.current
-    val prefs = remember(roomId) { context.getSharedPreferences("hurry_room_tools", android.content.Context.MODE_PRIVATE) }
-    val entryEffectKey = "entry_effect_$roomId"
-    val giftEffectKey = "gift_effect_$roomId"
-    var entryEffect by remember(roomId) { mutableStateOf(prefs.getBoolean(entryEffectKey, true)) }
-    var giftEffect by remember(roomId) { mutableStateOf(prefs.getBoolean(giftEffectKey, true)) }
+    val musicPrefs = remember { context.getSharedPreferences("zyora_phone_music", android.content.Context.MODE_PRIVATE) }
     val musicPrefs = remember { context.getSharedPreferences("zyora_phone_music", android.content.Context.MODE_PRIVATE) }
     var musicTracks by remember { mutableStateOf(emptyList<NativeMusicTrack>()) }
 
-    LaunchedEffect(roomId) {
-        if (!prefs.contains(entryEffectKey)) prefs.edit().putBoolean(entryEffectKey, true).apply()
-        if (!prefs.contains(giftEffectKey)) prefs.edit().putBoolean(giftEffectKey, true).apply()
+    LaunchedEffect(Unit) {
         musicTracks = musicPrefs.getStringSet("uris", emptySet()).orEmpty().mapNotNull { raw ->
             runCatching {
                 val uri = Uri.parse(raw)
@@ -283,14 +281,8 @@ fun Fourgride(
                                 TopToolType.CLEAR_CHAT -> ToolCell(cellModifier, "Clear-Chat", base + "IMG_20261028_182124.png", onClick = onClearChat)
                                 // ✅ Yahan publicMsgOff logic bilkul waisa hi hai, toggle = !publicMsgOff (By default ON rhega)
                                 TopToolType.PUBLIC_MSG -> ToolCell(cellModifier, "Public msg", base + "IMG_20261028_182153.png", toggle = !publicMsgOff, onClick = onTogglePublicMsg)
-                                TopToolType.ENTRY_EFFECT -> ToolCell(cellModifier, "Entry Effect", base + "IMG_20261028_182218.png", toggle = entryEffect, onClick = {
-                                    entryEffect = !entryEffect
-                                    prefs.edit().putBoolean(entryEffectKey, entryEffect).apply()
-                                })
-                                TopToolType.GIFT_EFFECT -> ToolCell(cellModifier, "Gift Effect", base + "IMG_20261028_182239.png", toggle = giftEffect, onClick = {
-                                    giftEffect = !giftEffect
-                                    prefs.edit().putBoolean(giftEffectKey, giftEffect).apply()
-                                })
+                                TopToolType.ENTRY_EFFECT -> ToolCell(cellModifier, "Entry Effect", base + "IMG_20261028_182218.png", toggle = entryEffect, onClick = onToggleEntryEffect)
+                                TopToolType.GIFT_EFFECT -> ToolCell(cellModifier, "Gift Effect", base + "IMG_20261028_182239.png", toggle = giftEffect, onClick = onToggleGiftEffect)
                                 TopToolType.MUSIC -> ToolCell(cellModifier, "Music", base + "IMG_20261028_182305.png", onClick = {
                                     // Reopen the last selected song directly in the room mini-controller.
                                     // Only show the full picker when there is no previous song to restore.
