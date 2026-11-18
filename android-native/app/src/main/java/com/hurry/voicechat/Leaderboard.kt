@@ -380,8 +380,10 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                                     else if (rank1.gender.isNotBlank()) Box(Modifier.size(20.dp).clip(RoundedCornerShape(50)).background(if (rank1.gender.equals("female", true)) Color(0xFFFF5874) else Color(0xFF3B82F6)), contentAlignment = Alignment.Center) { CustomGenderIcon(rank1.gender.equals("female", true), Modifier.size(10.dp)) }
                                 }
                                 if (tab != "room") Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 2.dp)) {
-                                    AsyncImage(model = raw + "IMG_20261028_004355.png", contentDescription = "Level", modifier = Modifier.height(20.dp).width(40.dp), contentScale = ContentScale.Fit)
-                                    Text("Lv." + rank1.level, color = Color.White, fontSize = 9.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                                    Box(contentAlignment = Alignment.CenterEnd, modifier = Modifier.height(24.dp).width(48.dp)) {
+                                        AsyncImage(model = raw + "IMG_20261028_004355.png", contentDescription = "Level", contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
+                                        Text("Lv.1", color = Color.White, fontSize = 9.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Normal, modifier = Modifier.padding(end = 6.dp))
+                                    }
                                 }
                                 Spacer(Modifier.height(2.dp))
                                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -423,11 +425,13 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                                             Text(rank2.name, color = Color.White, fontSize = 12.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 82.dp))
                                             if (tab == "room") Text(leaderboardFlag(rank2.country), fontSize = 12.sp)
-                                            else if (rank2.gender.isNotBlank()) Box(Modifier.size(16.dp).clip(RoundedCornerShape(50)).background(if (rank2.gender.equals("female", true)) Color(0xFFFF5874) else Color(0xFF3B82F6)), contentAlignment = Alignment.Center) { CustomGenderIcon(rank2.gender.equals("female", true), Modifier.size(9.dp)) }
+                                            else if (rank2.gender.isNotBlank()) Box(Modifier.size(20.dp).clip(RoundedCornerShape(50)).background(if (rank2.gender.equals("female", true)) Color(0xFFFF5874) else Color(0xFF3B82F6)), contentAlignment = Alignment.Center) { CustomGenderIcon(rank2.gender.equals("female", true), Modifier.size(10.dp)) }
                                         }
                                         if (tab != "room") Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 1.dp)) {
-                                            AsyncImage(model = raw + "IMG_20261028_004355.png", contentDescription = "Level", modifier = Modifier.height(16.dp).width(32.dp), contentScale = ContentScale.Fit)
-                                            Text("Lv." + rank2.level, color = Color.White, fontSize = 8.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                                            Box(contentAlignment = Alignment.CenterEnd, modifier = Modifier.height(24.dp).width(48.dp)) {
+                                                AsyncImage(model = raw + "IMG_20261028_004355.png", contentDescription = "Level", contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
+                                                Text("Lv.1", color = Color.White, fontSize = 9.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Normal, modifier = Modifier.padding(end = 6.dp))
+                                            }
                                         }
                                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 1.dp)) {
                                             AsyncImage(model = raw + "file_00000000e56882119c217d508b6733dc.png", contentDescription = null, modifier = Modifier.size(12.dp))
@@ -462,11 +466,13 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                                             Text(rank3.name, color = Color.White, fontSize = 12.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 82.dp))
                                             if (tab == "room") Text(leaderboardFlag(rank3.country), fontSize = 12.sp)
-                                            else if (rank3.gender.isNotBlank()) Box(Modifier.size(16.dp).clip(RoundedCornerShape(50)).background(if (rank3.gender.equals("female", true)) Color(0xFFFF5874) else Color(0xFF3B82F6)), contentAlignment = Alignment.Center) { CustomGenderIcon(rank3.gender.equals("female", true), Modifier.size(9.dp)) }
+                                            else if (rank3.gender.isNotBlank()) Box(Modifier.size(20.dp).clip(RoundedCornerShape(50)).background(if (rank3.gender.equals("female", true)) Color(0xFFFF5874) else Color(0xFF3B82F6)), contentAlignment = Alignment.Center) { CustomGenderIcon(rank3.gender.equals("female", true), Modifier.size(10.dp)) }
                                         }
                                         if (tab != "room") Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 1.dp)) {
-                                            AsyncImage(model = raw + "IMG_20261028_004355.png", contentDescription = "Level", modifier = Modifier.height(16.dp).width(32.dp), contentScale = ContentScale.Fit)
-                                            Text("Lv." + rank3.level, color = Color.White, fontSize = 8.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                                            Box(contentAlignment = Alignment.CenterEnd, modifier = Modifier.height(24.dp).width(48.dp)) {
+                                                AsyncImage(model = raw + "IMG_20261028_004355.png", contentDescription = "Level", contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
+                                                Text("Lv.1", color = Color.White, fontSize = 9.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Normal, modifier = Modifier.padding(end = 6.dp))
+                                            }
                                         }
                                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 1.dp)) {
                                             AsyncImage(model = raw + "file_00000000e56882119c217d508b6733dc.png", contentDescription = null, modifier = Modifier.size(12.dp))
@@ -600,8 +606,10 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                                             }
                                         } else {
                                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                                AsyncImage(model = raw + "IMG_20261028_004355.png", contentDescription = "Level Image", modifier = Modifier.height(20.dp).width(40.dp), contentScale = ContentScale.Fit)
-                                                Text("Lv." + user.level, color = Color.White, fontSize = 9.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                                                Box(contentAlignment = Alignment.CenterEnd, modifier = Modifier.height(24.dp).width(48.dp)) {
+                                                    AsyncImage(model = raw + "IMG_20261028_004355.png", contentDescription = "Level Image", modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
+                                                    Text("Lv.1", color = Color.White, fontSize = 9.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Normal, modifier = Modifier.padding(end = 6.dp))
+                                                }
                                             }
                                         }
                                     }
