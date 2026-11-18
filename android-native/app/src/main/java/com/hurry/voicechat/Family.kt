@@ -53,7 +53,6 @@ import coil3.compose.AsyncImage
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.ui.PlayerView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -564,12 +563,12 @@ private fun FamilyTop(onBack: () -> Unit, onRules: () -> Unit, activeRank: Int, 
             RewardCard(
                 title = "TOP 1 Reward",
                 row1 = listOf(
+                    RewardItemData("Frames 7 days", "IMG_20261117_222458.png", "green", videoUrl = "1000235551-background.mp4", isWinnerReward = true),
                     RewardItemData("Medal 7 days", "IMG_20261117_210225.png", "medal"),
-                    RewardItemData("Top1 Tag 7 days", "IMG_20261117_193617.png", "tag"),
-                    RewardItemData("Vehicle 7 days", "IMG_20260918_141104.jpg", "vehicle", videoUrl = "gemini_generated_video_e407ad86~2.mp4")
+                    RewardItemData("Top1 Tag 7 days", "IMG_20261117_193617.png", "tag")
                 ),
                 row2 = listOf(
-                    RewardItemData("Frames 7 days", "IMG_20261117_222458.png", "green", videoUrl = "1000235551-background.mp4", isWinnerReward = true),
+                    RewardItemData("Entry 7 days", "IMG_20260918_141104.jpg", "vehicle", videoUrl = "gemini_generated_video_e407ad86~2.mp4"),
                     RewardItemData("5 Lakh coins", "file_00000000b2d481fd8cd233482dbeb9ef.png", "coins")
                 ),
                 row3 = listOf(
@@ -676,6 +675,9 @@ private fun RewardItemBox(item: RewardItemData, onClick: (String, String, Boolea
     val isFrame = item.type == "green"
     val boxWidth = if (isTall) 140.dp else 90.dp
     
+    // ADDED PADDING FOR FRAME TO MAKE IT SMALLER (12.dp)
+    val imagePadding = if (isMedal) 10.dp else if (isFrame) 12.dp else 0.dp
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally, 
         modifier = Modifier.width(boxWidth).clickable(enabled = isVehicle || isFrame) { 
@@ -713,7 +715,7 @@ private fun RewardItemBox(item: RewardItemData, onClick: (String, String, Boolea
                         AsyncImage(
                             model = familyAsset(item.thumbnail), 
                             contentDescription = null, 
-                            modifier = Modifier.fillMaxSize().padding(if (isMedal) 10.dp else 0.dp).then(
+                            modifier = Modifier.fillMaxSize().padding(imagePadding).then(
                                 if (isVehicle) {
                                     Modifier.graphicsLayer { alpha = 0.99f }.drawWithContent {
                                         drawContent()
@@ -753,6 +755,7 @@ private fun RewardItemBox(item: RewardItemData, onClick: (String, String, Boolea
     }
 }
 
+// VIDEO SYSTEM UPDATED TO FIX TEXTUREVIEW TRANSPARENCY & AUDIO
 @Composable
 private fun FamilyRewardVideo(url: String, modifier: Modifier = Modifier, rounded: Boolean = true, autoplay: Boolean = false, hasSound: Boolean = false) {
     val context = LocalContext.current
@@ -760,7 +763,15 @@ private fun FamilyRewardVideo(url: String, modifier: Modifier = Modifier, rounde
         ExoPlayer.Builder(context).build().apply { 
             setMediaItem(MediaItem.fromUri(url))
             repeatMode = Player.REPEAT_MODE_ONE
-            volume = if (hasSound) 1f else 0f // SOUND LOGIC
+            volume = if (hasSound) 1f else 0f 
+            
+            // Audio Attributes added ensure Exoplayer properly requests focus and plays sound!
+            val audioAttributes = androidx.media3.common.AudioAttributes.Builder()
+                .setUsage(androidx.media3.common.C.USAGE_MEDIA)
+                .setContentType(androidx.media3.common.C.AUDIO_CONTENT_TYPE_MOVIE)
+                .build()
+            setAudioAttributes(audioAttributes, false)
+
             playWhenReady = autoplay
             prepare()
             if (autoplay) play() 
@@ -776,7 +787,20 @@ private fun FamilyRewardVideo(url: String, modifier: Modifier = Modifier, rounde
         onDispose { player.removeListener(listener); player.release() }
     }
     Box(modifier.clip(if (rounded) RoundedCornerShape(8.dp) else RoundedCornerShape(0.dp)).background(Color.Transparent)) {
-        AndroidView(modifier = Modifier.fillMaxSize(), factory = { ctx -> PlayerView(ctx).apply { useController = false; resizeMode = androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM; setShutterBackgroundColor(android.graphics.Color.TRANSPARENT); layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT); this.player = player } }, update = { it.player = player; if (autoplay && !player.isPlaying) player.play() })
+        AndroidView(
+            modifier = Modifier.fillMaxSize(), 
+            factory = { ctx -> 
+                android.view.TextureView(ctx).apply {
+                    layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+                    // BSS YE LINE MISSING THI FADE/TRANSPARENCY KE LIYE!
+                    isOpaque = false 
+                } 
+            }, 
+            update = { textureView -> 
+                player.setVideoTextureView(textureView)
+                if (autoplay && !player.isPlaying) player.play() 
+            }
+        )
         androidx.compose.animation.AnimatedVisibility(visible = !videoVisible, enter = androidx.compose.animation.fadeIn(), exit = androidx.compose.animation.fadeOut()) { Box(Modifier.fillMaxSize().background(Color(0xFF210D08))) }
     }
 }
@@ -788,7 +812,13 @@ private fun FamilyRewardModal(url: String, title: String, isWinnerReward: Boolea
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 val isFrameVideo = type == "green"
                 val isVideo = url.substringBefore("?").substringAfterLast(".").lowercase() in setOf("mp4", "webm", "m4v")
-                val contentModifier = if (isWinnerReward) Modifier.size(320.dp).zIndex(1f) else Modifier.fillMaxWidth().fillMaxHeight(0.75f).zIndex(1f)
+                
+                // ADJUSTED CONTENT MODIFIER FOR BETTER FRAME RATIO
+                val contentModifier = if (isWinnerReward) {
+                    if (isFrameVideo) Modifier.fillMaxWidth(0.9f).aspectRatio(9f/16f).zIndex(1f)
+                    else Modifier.size(320.dp).zIndex(1f)
+                } else Modifier.fillMaxWidth().fillMaxHeight(0.75f).zIndex(1f)
+                
                 Box(contentModifier) {
                     if (isVideo) { 
                         FamilyRewardVideo(
@@ -800,7 +830,9 @@ private fun FamilyRewardModal(url: String, title: String, isWinnerReward: Boolea
                                 } else Modifier
                             ), 
                             rounded = false, 
-                            autoplay = true
+                            autoplay = true,
+                            // MODAL KE ANDAR BHI SOUND FIX KAR DIYA!
+                            hasSound = type == "vehicle"
                         ) 
                     } else { 
                         AsyncImage(model = familyAsset(url), contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit) 
