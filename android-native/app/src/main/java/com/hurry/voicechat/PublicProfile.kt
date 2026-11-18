@@ -616,16 +616,32 @@ fun PublicProfileScreen(
                                 CustomGenderIcon(isFemale = isFemale, modifier = Modifier.size(10.dp))
                             }
 
-                            if (showOfficialHead) AsyncImage(model = profileAsset("/file_000000005c388246a5d95dba880d7eb9.png"), contentDescription = "Official Head", contentScale = ContentScale.Fit, modifier = Modifier.height(31.dp).widthIn(max = 80.dp))
-                            if (showOfficial) AsyncImage(model = profileAsset("/IMG_20261027_102250.png"), contentDescription = "Official", contentScale = ContentScale.Fit, modifier = Modifier.height(22.dp).widthIn(max = 60.dp))
                         }
 
-                        if (showAdmin || showService || showHost || showCoinSeller) {
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                if (showAdmin) AsyncImage(model = profileAsset("/IMG_20261027_114117.png"), contentDescription = "Admin", contentScale = ContentScale.Fit, modifier = Modifier.height(22.dp).widthIn(max = 60.dp))
-                                if (showService) AsyncImage(model = profileAsset("/IMG_20261027_102207.png"), contentDescription = "Service", contentScale = ContentScale.Fit, modifier = Modifier.height(22.dp).widthIn(max = 60.dp))
-                                if (showHost) AsyncImage(model = profileAsset("/IMG_20261028_154914.png"), contentDescription = "Host", contentScale = ContentScale.Fit, modifier = Modifier.height(19.dp).widthIn(max = 60.dp))
-                                if (showCoinSeller) AsyncImage(model = profileAsset("/IMG_20261028_110222.png"), contentDescription = "Coin Seller", contentScale = ContentScale.Fit, modifier = Modifier.height(22.dp).widthIn(max = 60.dp))
+                        // Public-profile tags flow dynamically: maximum 3 tags per row.
+                        // Keep each existing tag's original image size and asset.
+                        val publicProfileTags = listOfNotNull(
+                            if (showOfficialHead) Triple("/file_000000005c388246a5d95dba880d7eb9.png", "Official Head", 31) else null,
+                            if (showOfficial) Triple("/IMG_20261027_102250.png", "Official", 22) else null,
+                            if (showAdmin) Triple("/IMG_20261027_114117.png", "Admin", 22) else null,
+                            if (showService) Triple("/IMG_20261027_102207.png", "Service", 22) else null,
+                            if (showHost) Triple("/IMG_20261028_154914.png", "Host", 19) else null,
+                            if (showCoinSeller) Triple("/IMG_20261028_110222.png", "Coin Seller", 22) else null
+                        )
+                        publicProfileTags.chunked(3).forEach { tagRow ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                tagRow.forEach { (asset, description, height) ->
+                                    AsyncImage(
+                                        model = profileAsset(asset),
+                                        contentDescription = description,
+                                        contentScale = ContentScale.Fit,
+                                        modifier = Modifier.height(height.dp).widthIn(max = 80.dp)
+                                    )
+                                }
                             }
                         }
                     }
