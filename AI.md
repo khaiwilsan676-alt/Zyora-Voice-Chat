@@ -1234,3 +1234,9 @@ Current documentation does not certify that all historical features are build-, 
 - Kept the existing two-column room grid, card dimensions, images, frames, header, banner, category cards, country pills, and bottom navigation unchanged.
 
 - Correction (2026-11-18): restored the original infinite room-name marquee animation; continuous marquee is intentional and must not be removed as part of scrolling optimization.
+
+## 2026-11-18 — Room music exit and controller restore fix
+- Explicit room Exit now sends STOP to the room music service immediately, so music cannot continue after leaving the room.
+- Exit preserves the last selected track in local preferences and shared music state; it does not auto-resume playback. On the next room entry, the top Music pill and mini-controller can restore that track.
+- Reopening Music from the four-grid/controller path restores the previous track directly into the mini-controller instead of forcing the music library open. The library remains available when no previous track exists.
+- The Music pill continues to be driven by the selected track and tapping it reveals the controller; stopping with the controller Power action still clears the saved track.
