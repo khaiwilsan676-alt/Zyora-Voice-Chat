@@ -3469,7 +3469,7 @@ private fun RoomSeatInviteDialog(
     val waveProgress = if (isSpeaking) {
         val voicePulse = rememberInfiniteTransition(label = "voice-wave")
         voicePulse.animateFloat(
-            initialValue = 0.15f,
+            initialValue = 0f,
             targetValue = 1f,
             animationSpec = infiniteRepeatable(
                 animation = tween(850, easing = LinearEasing),
@@ -3477,7 +3477,7 @@ private fun RoomSeatInviteDialog(
             ),
             label = "voice-wave-progress"
         ).value
-    } else 0.15f
+    } else 0f
     val raw="https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/"
     
     var showGif by remember(seat.gifTimestamp) { mutableStateOf(seat.gifSrc.isNotBlank()) }
