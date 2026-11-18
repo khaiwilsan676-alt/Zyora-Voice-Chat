@@ -13,12 +13,14 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.outlined.Image
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import android.net.Uri
 import kotlinx.coroutines.launch
+import androidx.compose.material3.Dialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -134,6 +136,7 @@ fun HurrySupport(onBack: () -> Unit) {
     val keyboard = LocalSoftwareKeyboardController.current
     val supportScope = rememberCoroutineScope()
     var uploadingMedia by remember { mutableStateOf(false) }
+    var fullSizeImage by remember { mutableStateOf<String?>(null) }
     val supportMediaPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
         if (uri != null && !uploadingMedia) {
             uploadingMedia = true
@@ -283,10 +286,10 @@ fun HurrySupport(onBack: () -> Unit) {
                     Column(
                         Modifier.widthIn(max = 310.dp)
                             .clip(RoundedCornerShape(topStart = if (item.isBot) 0.dp else 16.dp, topEnd = if (item.isBot) 16.dp else 0.dp, bottomStart = 16.dp, bottomEnd = 16.dp))
-                            .then(if (item.isBot) Modifier.background(Color.White).border(1.dp, Color(0xFFF1F5F9), RoundedCornerShape(topStart = 0.dp, topEnd = 16.dp, bottomStart = 16.dp, bottomEnd = 16.dp)) else Modifier.background(SupportBlue))
+                            .then(when { item.isBot -> Modifier.background(Color.White).border(1.dp, Color(0xFFF1F5F9), RoundedCornerShape(topStart = 0.dp, topEnd = 16.dp, bottomStart = 16.dp, bottomEnd = 16.dp)); item.image != null && item.mediaType == "image" -> Modifier.background(Color(0xFFE5E7EB)); else -> Modifier.background(SupportBlue) })
                             .padding(12.dp)
                     ) {
-                        Text(item.text, color = if (item.isBot) Color(0xFF334155) else Color.White, fontSize = 14.sp, lineHeight = 20.sp)
+                        if (item.text.isNotBlank()) Text(item.text, color = if (item.isBot || (item.image != null && item.mediaType == "image")) Color(0xFF334155) else Color.White, fontSize = 14.sp, lineHeight = 20.sp)
                         if (item.image != null) {
                             Spacer(Modifier.height(8.dp))
                             if (item.mediaType == "video") {
@@ -295,7 +298,7 @@ fun HurrySupport(onBack: () -> Unit) {
                                     modifier = Modifier.fillMaxWidth().heightIn(min = 180.dp, max = 280.dp).clip(RoundedCornerShape(8.dp))
                                 )
                             } else {
-                                AsyncImage(model = item.image, contentDescription = "Attachment", modifier = Modifier.fillMaxWidth().heightIn(max = 320.dp).clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.Fit)
+                                AsyncImage(model = item.image, contentDescription = "Attachment — tap to view full size", modifier = Modifier.size(190.dp).clip(RoundedCornerShape(8.dp)).clickable { fullSizeImage = item.image }, contentScale = ContentScale.Crop)
                             }
                         }
                     }
@@ -320,7 +323,7 @@ fun HurrySupport(onBack: () -> Unit) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(onClick = { if (!uploadingMedia) supportMediaPicker.launch(arrayOf("image/*", "video/*")) }, enabled = !uploadingMedia, modifier = Modifier.size(34.dp)) {
-                        Icon(Icons.Outlined.Image, contentDescription = "Attach image or video", tint = SupportBlue)
+                        Icon(Icons.Outlined.Image, contentDescription = "Attach image or video", tint = Color(0xFF808080))
                     }
                     BasicTextField(
                         value = draft,
@@ -343,6 +346,17 @@ fun HurrySupport(onBack: () -> Unit) {
             }
         }
     }
+    fullSizeImage?.let { imageUrl ->
+        Dialog(onDismissRequest = { fullSizeImage = null }) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                AsyncImage(model = imageUrl, contentDescription = "Full-size attachment", modifier = Modifier.fillMaxWidth().fillMaxHeight(0.88f), contentScale = ContentScale.Fit)
+                IconButton(onClick = { fullSizeImage = null }, modifier = Modifier.align(Alignment.TopStart).padding(top = 8.dp, start = 4.dp).size(42.dp).clip(CircleShape).background(Color(0x99000000))) {
+                    Icon(Icons.Default.Close, contentDescription = "Close image", tint = Color.White)
+                }
+            }
+        }
+    }
+
 }
 
 
