@@ -17,6 +17,8 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -1968,6 +1970,10 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                                 value=TextFieldValue(text=input, selection=TextRange(inputSelection.coerceIn(0, input.length))),
                                 onValueChange={ input=it.text; inputSelection=it.selection.start },
                                 singleLine=true,
+                                keyboardOptions=KeyboardOptions(
+                                    capitalization=KeyboardCapitalization.None,
+                                    autoCorrect=false
+                                ),
                                 textStyle=androidx.compose.ui.text.TextStyle(color=Color.Black,fontSize=15.sp),
                                 cursorBrush=SolidColor(Color(0xFF3B82F6)),
                                 modifier=Modifier.weight(1f).fillMaxHeight().focusRequester(chatFocusRequester),
@@ -2107,6 +2113,10 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                             value=TextFieldValue(text=input, selection=TextRange(inputSelection.coerceIn(0, input.length))),
                             onValueChange={ input=it.text; inputSelection=it.selection.start },
                             singleLine=true,
+                            keyboardOptions=KeyboardOptions(
+                                capitalization=KeyboardCapitalization.None,
+                                autoCorrect=false
+                            ),
                             textStyle=androidx.compose.ui.text.TextStyle(color=Color.Black,fontSize=15.sp),
                             cursorBrush=SolidColor(Color(0xFF3B82F6)),
                             modifier=Modifier.weight(1f).fillMaxHeight().focusRequester(chatFocusRequester),
