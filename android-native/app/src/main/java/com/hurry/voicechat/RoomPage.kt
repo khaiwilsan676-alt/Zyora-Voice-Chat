@@ -334,14 +334,49 @@ fun RoomPage(
                 runCatching { profileDb.loadProfile(key) }.getOrNull()
             }
         }
+        // Render the local snapshot immediately, then reconcile it with the canonical
+        // MongoDB profile. Never let a placeholder "User" cache mask a real profile name.
         cachedCurrentProfile = cached
+        val remote = runCatching {
+            ProfilePersistence.load(
+                TargetUser(
+                    id = currentUser.id.ifBlank { accountId },
+                    uid = currentUser.uid.ifBlank { currentUser.id.ifBlank { accountId } },
+                    accountId = accountId,
+                    displayAccountNumber = accountId
+                )
+            )
+        }.getOrNull()
+        if (remote != null) {
+            val remoteName = sequenceOf("name", "displayName", "userName", "nickname")
+                .map { remote.optString(it, "").trim() }
+                .firstOrNull { it.isNotBlank() && it != "null" && !it.equals("User", ignoreCase = true) }
+            val remoteImage = sequenceOf("image", "avatar", "profileImageUrl", "dp", "photoURL")
+                .map { remote.optString(it, "").trim() }
+                .firstOrNull { it.isNotBlank() && it != "null" && it != "undefined" }
+            val merged = JSONObject(cached?.toString() ?: "{}")
+            if (remoteName != null) merged.put("name", remoteName)
+            if (remoteImage != null) merged.put("image", remoteImage)
+            if (remoteName != null || remoteImage != null) {
+                withContext(Dispatchers.IO) {
+                    val profileDb = NativeIndexDatabase(appContext)
+                    currentProfileKeys.forEach { key -> profileDb.saveProfile(key, merged) }
+                }
+                cachedCurrentProfile = merged
+            }
+        }
     }
     val roomDisplayName = cachedCurrentProfile?.let { profile ->
-        sequenceOf("name", "displayName", "userName").map { profile.optString(it, "") }.firstOrNull { it.isNotBlank() && it != "null" }
-    } ?: currentUser.name.ifBlank { "User" }
+        sequenceOf("name", "displayName", "userName", "nickname")
+            .map { profile.optString(it, "").trim() }
+            .firstOrNull { it.isNotBlank() && it != "null" && !it.equals("User", ignoreCase = true) }
+    } ?: currentUser.name.trim().takeIf { it.isNotBlank() && !it.equals("User", ignoreCase = true) } ?: "User"
     val roomDisplayImage = cachedCurrentProfile?.let { profile ->
-        sequenceOf("image", "avatar", "profileImageUrl").map { profile.optString(it, "") }.firstOrNull { it.isNotBlank() && it != "null" }
-    } ?: "https://zyora-server.onrender.com/default-avatar.png"
+        sequenceOf("image", "avatar", "profileImageUrl", "dp", "photoURL")
+            .map { profile.optString(it, "").trim() }
+            .firstOrNull { it.isNotBlank() && it != "null" && it != "undefined" }
+    } ?: currentUser.image.takeIf { it.isNotBlank() && it != "null" }
+        ?: "https://zyora-server.onrender.com/default-avatar.png"
     var copiedId by remember { mutableStateOf("") }
     var roomName by remember{mutableStateOf(roomOwner.name.ifBlank{"Room"})}
     var roomImage by remember{mutableStateOf(roomOwner.image)}
