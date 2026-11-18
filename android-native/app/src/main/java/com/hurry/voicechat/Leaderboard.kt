@@ -163,7 +163,7 @@ private suspend fun loadZyoraLeaderboard(tab: String, period: String): ZyoraLead
                     image = item.optString("image"),
                     coins = item.optLong("coins"),
                     country = item.optString("country"),
-                    gender = item.optString("gender"),
+                    gender = item.optString("gender").ifBlank { "Male" },
                     level = item.optInt("level", 1)
                 )
             }
