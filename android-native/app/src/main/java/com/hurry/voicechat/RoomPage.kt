@@ -666,7 +666,13 @@ fun RoomPage(
             }.getOrDefault(false)
         }
     }
-    var speaker by remember{mutableStateOf(true)}
+    val roomEffectsPrefs = remember { appContext.getSharedPreferences("hurry_room_tools", android.content.Context.MODE_PRIVATE) }
+    val entryEffectPrefKey = "entry_effect_local"
+    val giftEffectPrefKey = "gift_effect_local"
+    val speakerPrefKey = "speaker_enabled_$accountId"
+    var entryEffectEnabled by remember(accountId) { mutableStateOf(roomEffectsPrefs.getBoolean(entryEffectPrefKey, true)) }
+    var giftEffectEnabled by remember(accountId) { mutableStateOf(roomEffectsPrefs.getBoolean(giftEffectPrefKey, true)) }
+    var speaker by remember(accountId) { mutableStateOf(roomEffectsPrefs.getBoolean(speakerPrefKey, true)) }
     var localVoiceSpeaking by remember { mutableStateOf(false) }
     // Public room messages stay ON unless the owner explicitly disables them.
     var showPublicMessageClosedToast by remember { mutableStateOf(false) }
@@ -1065,6 +1071,8 @@ fun RoomPage(
     val latestRoomName by rememberUpdatedState(roomName)
     val latestRoomImage by rememberUpdatedState(roomImage)
     val latestKeepingRoomForMini by rememberUpdatedState(keepingRoomForMini)
+    val latestEntryEffectEnabled by rememberUpdatedState(entryEffectEnabled)
+    val latestGiftEffectEnabled by rememberUpdatedState(giftEffectEnabled)
 
     DisposableEffect(roomId,accountId,roomOwner.id,roomOwner.accountId) {
         val roomSocketOptions = IO.Options().apply {
@@ -1139,7 +1147,7 @@ fun RoomPage(
         }
         val giftVideoListener = Emitter.Listener { args ->
             val payload = args.firstOrNull() as? JSONObject ?: return@Listener
-            if (payload.optString("roomId") != roomId || payload.optString("senderId") == accountId) return@Listener
+            if (payload.optString("roomId") != roomId || payload.optString("senderId") == accountId || !latestGiftEffectEnabled) return@Listener
             val video = payload.optString("video").trim()
             if (video.isBlank()) return@Listener
             val videoUrl = if (video.startsWith("http://", true) || video.startsWith("https://", true)) video
@@ -1148,7 +1156,7 @@ fun RoomPage(
         }
         val vehicleEntryListener = Emitter.Listener { args ->
             val payload = args.firstOrNull() as? JSONObject ?: return@Listener
-            if (payload.optString("roomId") != roomId) return@Listener
+            if (payload.optString("roomId") != roomId || !latestEntryEffectEnabled) return@Listener
             val user = payload.optString("userId").trim()
             val vehicle = payload.optJSONObject("vehicle") ?: return@Listener
             val video = vehicle.optString("video").trim()
@@ -1567,7 +1575,7 @@ fun RoomPage(
                         }
                     }.getOrNull()
                 }
-                if (equipped != null) {
+                if (equipped != null && latestEntryEffectEnabled) {
                     val video = equipped.optString("video").trim()
                     val videoUrl = if (video.startsWith("http://", true) || video.startsWith("https://", true)) video
                         else "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/" + video
@@ -1591,7 +1599,7 @@ fun RoomPage(
             roomSocket.emit("room_join",joinPayload)
             // A kept-room reconnect restores the existing room session. Do not replay
             // the entry vehicle animation when silently restoring that session.
-            if (!joinMessageSent) loadEquippedRoomVehicle()
+            if (!joinMessageSent && latestEntryEffectEnabled) loadEquippedRoomVehicle()
             if (latestShowChat) roomSocket.emit("room_chat_view", JSONObject().put("roomId", roomId).put("userId", accountId).put("active", true))
             if (!joinMessageSent && accountId != "guest") {
                 joinMessageSent = true
@@ -1730,7 +1738,7 @@ fun RoomPage(
                     .padding(horizontal = 14.dp, vertical = 9.dp)
             )
         }
-        JitsiRoomAudio(roomId=roomId,userName=roomDisplayName,localAccountId=accountId,canSpeak=seats.any { it.number <= roomMicMode && it.occupied && it.accountId == accountId && !it.muted && !it.selfMuted },canShareMusic=seats.any { it.occupied && it.accountId == accountId },roomSocket=roomSocketRef.value,musicUri=miniMusicTrack?.url ?: MusicPlaybackState.currentPlayingUri,musicPlaying=isMusicPlaying,onSpeakingChanged={localVoiceSpeaking=it})
+        JitsiRoomAudio(roomId=roomId,userName=roomDisplayName,localAccountId=accountId,canSpeak=seats.any { it.number <= roomMicMode && it.occupied && it.accountId == accountId && !it.muted && !it.selfMuted },canShareMusic=seats.any { it.occupied && it.accountId == accountId },playbackVoiceEnabled=speaker,roomSocket=roomSocketRef.value,musicUri=miniMusicTrack?.url ?: MusicPlaybackState.currentPlayingUri,musicPlaying=isMusicPlaying,onSpeakingChanged={localVoiceSpeaking=it})
         AsyncImage(model=when(roomTheme) {
             "forest-night" -> "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/1784875884052~2.jpg"
             "mood-light" -> "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/1784533036732~2.jpg"
@@ -2500,7 +2508,20 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                 }
             },
             speaker=speaker,
-            onToggleSpeaker={speaker=!speaker},
+            onToggleSpeaker={
+                speaker = !speaker
+                roomEffectsPrefs.edit().putBoolean(speakerPrefKey, speaker).apply()
+            },
+            entryEffect=entryEffectEnabled,
+            giftEffect=giftEffectEnabled,
+            onToggleEntryEffect={
+                entryEffectEnabled = !entryEffectEnabled
+                roomEffectsPrefs.edit().putBoolean(entryEffectPrefKey, entryEffectEnabled).apply()
+            },
+            onToggleGiftEffect={
+                giftEffectEnabled = !giftEffectEnabled
+                roomEffectsPrefs.edit().putBoolean(giftEffectPrefKey, giftEffectEnabled).apply()
+            },
             onMusicPlaylistChanged={ tracks ->
                 musicPlaylist = tracks
                 MusicPlaybackState.playlist = tracks
