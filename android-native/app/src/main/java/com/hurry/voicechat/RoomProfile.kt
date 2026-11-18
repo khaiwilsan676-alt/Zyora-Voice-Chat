@@ -379,12 +379,12 @@ fun RoomProfile(
                         // Tags flow in their current availability order: 3 per row.
                         // Lv.1 artwork and its sizing remain unchanged.
                         val roomProfileTags = listOfNotNull(
-                            if (officialHeadTag) Triple("file_00000000ef2c82118b2266596d0e992d.png", "Official Head", 27) else null,
+                            if (officialHeadTag) Triple("file_000000005c388246a5d95dba880d7eb9.png", "Official Head", 27) else null,
                             if (officialTag) Triple("IMG_20261027_102250.png", "Official", 19) else null,
                             if (adminTag) Triple("IMG_20261027_114117.png", "Admin", 19) else null,
                             if (serviceTag) Triple("IMG_20261027_102207.png", "Service / CS", 19) else null,
                             if (hostTag) Triple("IMG_20261028_154914.png", "Host", 17) else null,
-                            if (coinSellerTag) Triple("IMG_20261027_105359.png", "Coin Seller", 19) else null,
+                            if (coinSellerTag) Triple("IMG_20261028_110222.png", "Coin Seller", 19) else null,
                             if (vipTag) Triple("IMG_20261027_102250.png", "VIP", 19) else null,
                             if (premiumTag) Triple("IMG_20261027_102250.png", "Premium", 19) else null
                         )
