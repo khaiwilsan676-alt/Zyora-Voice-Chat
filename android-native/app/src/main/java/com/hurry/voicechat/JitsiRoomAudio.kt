@@ -122,7 +122,7 @@ fun JitsiRoomAudio(
             musicActivityTimeouts.clear()
             val publishers = activeMusicPublishers.toList()
             activeMusicPublishers.clear()
-            publishers.forEach { latestOnMusicActivityChanged(it, false) }
+            publishers.forEach { publisherId -> musicActivityHandler.post { latestOnMusicActivityChanged(publisherId, false) } }
         }
         var captureThread: Thread? = null
         var musicRelayThread: Thread? = null
@@ -446,7 +446,7 @@ fun JitsiRoomAudio(
                 .firstOrNull { it.isNotBlank() } ?: return@Listener
             if (publisherId == localAccountId) return@Listener
             if (activeMusicPublishers.add(publisherId)) {
-                latestOnMusicActivityChanged(publisherId, true)
+                musicActivityHandler.post { if (alive.get()) latestOnMusicActivityChanged(publisherId, true) }
             }
             val timeout = Runnable {
                 musicActivityTimeouts.remove(publisherId)
