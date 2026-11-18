@@ -753,7 +753,7 @@ fun RoomProfile(
                         modifier = Modifier
                             .align(Alignment.TopCenter)
                             .size(88.dp)
-                            .clickable { onOpenPublicProfile(user.copy(name = displayName, image = displayProfileImage, country = displayCountry)) }
+                            .clickable { onOpenPublicProfile(user.copy(name = displayName, image = displayProfileImage, country = displayCountry, coinSellerTag = coinSellerTag || user.coinSellerTag == true || loadedProfile?.optBoolean("coinSellerTag", false) == true || loadedProfile?.optBoolean("coinSeller", false) == true || loadedProfile?.optBoolean("sellerTag", false) == true)) }
                     ) {
                         AsyncImage(
                             model = displayProfileImage.ifBlank { "default-avatar.png".fullUrl() },
