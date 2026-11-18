@@ -2436,19 +2436,18 @@ io.on("connection", (socket) => {
       if (db) {
         try {
           const users = db.collection("users");
-          const profileQueries = [
+          const profileIdentity = String(userId || "");
+          const profileConditions = [
             { accountId: accId },
             { accountNumber: accId },
             { displayUserNumber: accId },
-            { uid: String(userId || "") },
-            { id: String(userId || "") },
-            { appLongId: String(userId || "") },
-          ].filter((query) => Object.values(query).some(Boolean));
-          let profile = null;
-          for (const query of profileQueries) {
-            profile = await users.findOne(query);
-            if (profile) break;
-          }
+            ...(profileIdentity ? [
+              { uid: profileIdentity },
+              { id: profileIdentity },
+              { appLongId: profileIdentity },
+            ] : []),
+          ];
+          const profile = await users.findOne({ $or: profileConditions });
           if (profile) {
             const savedName = [
               profile.name, profile.displayName, profile.userName, profile.nickname,
