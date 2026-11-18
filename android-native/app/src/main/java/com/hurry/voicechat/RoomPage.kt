@@ -734,6 +734,14 @@ fun RoomPage(
     var selectedChatProfile by remember { mutableStateOf<NativeRoomMessage?>(null) }
 
     var miniMusicTrack by remember(accountId) { mutableStateOf(savedRoomTrack) }
+    // Restore the previous selection into shared controller state without auto-playing it.
+    LaunchedEffect(accountId, savedRoomTrack) {
+        if (savedRoomTrack != null && MusicPlaybackState.currentTrack == null) {
+            MusicPlaybackState.currentTrack = savedRoomTrack
+            MusicPlaybackState.currentPlayingUri = null
+            MusicPlaybackState.isPlaying = false
+        }
+    }
     var musicControllerMinimized by remember { mutableStateOf(false) }
     val musicCardDragOffset = remember { Animatable(0f) }
     val musicDragScope = rememberCoroutineScope()
@@ -920,7 +928,23 @@ fun RoomPage(
         MusicPlaybackState.isPlaying = false
         musicPlaylist = emptyList()
         musicCurrentTime = 0f
-        musicDuration = 0f    }
+        musicDuration = 0f
+    }
+
+    // Leaving a room must stop the audio immediately, but keep the last song
+    // selected so the next room can restore its controller without reopening the picker.
+    fun stopMusicForRoomExit() {
+        runCatching {
+            appContext.startService(Intent(appContext, RoomMusicService::class.java).setAction(RoomMusicService.ACTION_STOP))
+        }
+        isMusicPlaying = false
+        MusicPlaybackState.isPlaying = false
+        MusicPlaybackState.currentPlayingUri = null
+        miniMusicTrack?.let {
+            MusicPlaybackState.currentTrack = it
+            persistLastRoomTrack(it)
+        }
+    }
 
     BackHandler(enabled = true) {
         when {
@@ -2433,8 +2457,9 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                             }
                             Icon(Icons.Default.QueueMusic, "Open Music page", tint = Color.White,
                                 modifier = Modifier.size(25.dp).clickable {
+                                    // Reopen the saved/current song in the controller, not the music library.
                                     musicControllerMinimized = true
-                                    openMusicPageFromController = true
+                                    openMusicPageFromController = false
                                     showMenu = true
                                 })
                         }
@@ -2445,7 +2470,7 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
         }
         if(showExitMenu) RoomExitMenu(
             onKeep={keepingRoomForMini=true;showExitMenu=false;onKeepRoom(roomName,roomImage,roomId)},
-            onExit={showExitMenu=false;onClose()},
+            onExit={showExitMenu=false;stopMusicForRoomExit();onClose()},
             onDismiss={showExitMenu=false}
         )
         if(showMenu) Fourgride(
