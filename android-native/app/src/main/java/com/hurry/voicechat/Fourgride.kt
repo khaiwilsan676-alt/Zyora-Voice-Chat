@@ -153,7 +153,6 @@ fun Fourgride(
 ) {
     val context = LocalContext.current
     val musicPrefs = remember { context.getSharedPreferences("zyora_phone_music", android.content.Context.MODE_PRIVATE) }
-    val musicPrefs = remember { context.getSharedPreferences("zyora_phone_music", android.content.Context.MODE_PRIVATE) }
     var musicTracks by remember { mutableStateOf(emptyList<NativeMusicTrack>()) }
 
     LaunchedEffect(Unit) {
