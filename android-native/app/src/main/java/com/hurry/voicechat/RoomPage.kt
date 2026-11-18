@@ -1082,6 +1082,7 @@ fun RoomPage(
     val ownerAutoSeatAttempted = remember(roomId, accountId) { java.util.concurrent.atomic.AtomicBoolean(false) }
     // Preserve live speaker state across room_seats snapshots.
     val activeVoiceSpeakerIds=remember(roomId){mutableStateSetOf<String>()}
+    val activeMusicSpeakerIds=remember(roomId){mutableStateSetOf<String>()}
     val backendRoomUsers=remember{mutableStateListOf<ActiveUserNative>()}
     val activeRoomUsers = backendRoomUsers.toList()
     // Keep the room socket stable while asynchronously loaded profile/settings state updates.
@@ -1773,7 +1774,7 @@ fun RoomPage(
                     .padding(horizontal = 14.dp, vertical = 9.dp)
             )
         }
-        JitsiRoomAudio(roomId=roomId,userName=roomDisplayName,localAccountId=accountId,canSpeak=seats.any { it.number <= roomMicMode && it.occupied && it.accountId == accountId && !it.muted && !it.selfMuted },canShareMusic=seats.any { it.occupied && it.accountId == accountId },playbackVoiceEnabled=speaker,roomSocket=roomSocketRef.value,musicUri=miniMusicTrack?.url ?: MusicPlaybackState.currentPlayingUri,musicPlaying=isMusicPlaying,onSpeakingChanged={localVoiceSpeaking=it})
+        JitsiRoomAudio(roomId=roomId,userName=roomDisplayName,localAccountId=accountId,canSpeak=seats.any { it.number <= roomMicMode && it.occupied && it.accountId == accountId && !it.muted && !it.selfMuted },canShareMusic=seats.any { it.occupied && it.accountId == accountId },playbackVoiceEnabled=speaker,roomSocket=roomSocketRef.value,musicUri=miniMusicTrack?.url ?: MusicPlaybackState.currentPlayingUri,musicPlaying=isMusicPlaying,onSpeakingChanged={localVoiceSpeaking=it},onMusicActivityChanged={publisherId,active -> if(active) activeMusicSpeakerIds.add(publisherId) else activeMusicSpeakerIds.remove(publisherId)})
         AsyncImage(model=when(roomTheme) {
             "forest-night" -> "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/1784875884052~2.jpg"
             "mood-light" -> "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/1784533036732~2.jpg"
@@ -1944,10 +1945,10 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                         
                         if (roomMicMode == 5) {
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-                                seats.take(1).forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, roomAdminIds = seatAdminIds, isSpeaking = seat.speaking || (seat.accountId == accountId && (localVoiceSpeaking || isMusicPlaying)), seatSize = micSize) { handleSeatTap(seat) } }
+                                seats.take(1).forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, roomAdminIds = seatAdminIds, isSpeaking = seat.speaking || seat.accountId in activeMusicSpeakerIds || (seat.accountId == accountId && (localVoiceSpeaking || isMusicPlaying)), seatSize = micSize) { handleSeatTap(seat) } }
                             }
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                seats.drop(1).take(4).forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, roomAdminIds = seatAdminIds, isSpeaking = seat.speaking || (seat.accountId == accountId && (localVoiceSpeaking || isMusicPlaying)), seatSize = micSize) { handleSeatTap(seat) } }
+                                seats.drop(1).take(4).forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, roomAdminIds = seatAdminIds, isSpeaking = seat.speaking || seat.accountId in activeMusicSpeakerIds || (seat.accountId == accountId && (localVoiceSpeaking || isMusicPlaying)), seatSize = micSize) { handleSeatTap(seat) } }
                             }
                         } else {
                             val rowSizes = when (roomMicMode) {
@@ -1963,10 +1964,10 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = arrangement) {
                                     if (roomMicMode == 10 && rowSize == 2) {
                                         Spacer(modifier = Modifier.width(micSize)) 
-                                        rowSeats.forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, roomAdminIds = seatAdminIds, isSpeaking = seat.speaking || (seat.accountId == accountId && (localVoiceSpeaking || isMusicPlaying)), seatSize = micSize) { handleSeatTap(seat) } }
+                                        rowSeats.forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, roomAdminIds = seatAdminIds, isSpeaking = seat.speaking || seat.accountId in activeMusicSpeakerIds || (seat.accountId == accountId && (localVoiceSpeaking || isMusicPlaying)), seatSize = micSize) { handleSeatTap(seat) } }
                                         Spacer(modifier = Modifier.width(micSize))
                                     } else {
-                                        rowSeats.forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, roomAdminIds = seatAdminIds, isSpeaking = seat.speaking || (seat.accountId == accountId && (localVoiceSpeaking || isMusicPlaying)), seatSize = micSize) { handleSeatTap(seat) } }
+                                        rowSeats.forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, roomAdminIds = seatAdminIds, isSpeaking = seat.speaking || seat.accountId in activeMusicSpeakerIds || (seat.accountId == accountId && (localVoiceSpeaking || isMusicPlaying)), seatSize = micSize) { handleSeatTap(seat) } }
                                     }
                                 }
                             }
@@ -3495,7 +3496,7 @@ private fun RoomSeatInviteDialog(
             initialValue = 0f,
             targetValue = 1f,
             animationSpec = infiniteRepeatable(
-                animation = tween(850, easing = LinearEasing),
+                animation = tween(1500, easing = LinearEasing),
                 repeatMode = RepeatMode.Restart
             ),
             label = "voice-wave-progress"
@@ -3522,32 +3523,33 @@ private fun RoomSeatInviteDialog(
                 val radius=size.minDimension*225f/512f
                 val center=Offset(size.width/2f,size.height/2f)
                 drawCircle(color=if(blue) Color(0xFF55C6F3).copy(alpha=.25f) else Color(0xFF9CA3AF).copy(alpha=.25f),radius=radius+size.minDimension*7.5f/512f,center=center,style=Stroke(width=size.minDimension*15f/512f))
-                if (isSpeaking) {
-                    val center = Offset(size.width / 2f, size.height / 2f)
-                    val avatarRadius = size.minDimension * 225f / 512f
-                    val phase = waveProgress * (2f * Math.PI.toFloat())
-                    val pulse = 0.5f + 0.5f * kotlin.math.sin(phase)
-                    val ringRadius = avatarRadius + size.minDimension *
-                        (11.5f + pulse * 2.5f) / 512f
-
-                    // Speaking ON ring remains exactly unchanged.
-                    drawCircle(
-                        color = Color.White,
-                        radius = ringRadius,
-                        center = center,
-                        style = Stroke(
-                            width = size.minDimension * 11f / 512f,
-                            cap = StrokeCap.Round
-                        )
-                    )
-                }
-
                 drawCircle(brush=ringBrush,radius=radius,center=center,style=Stroke(width=size.minDimension*10f/512f))
                 val shine = Brush.horizontalGradient(colors=listOf(Color.White.copy(alpha=0f),Color.White.copy(alpha=.75f),Color.White.copy(alpha=.95f),Color.White.copy(alpha=0f)),startX=0f,endX=size.width)
                 val topHighlight=Path().apply { moveTo(size.width*98f/512f,size.height*134f/512f); cubicTo(size.width*113f/512f,size.height*108f/512f,size.width*132f/512f,size.height*92f/512f,size.width*153f/512f,size.height*79f/512f); cubicTo(size.width*174f/512f,size.height*67f/512f,size.width*196f/512f,size.height*59f/512f,size.width*218f/512f,size.height*56f/512f) }
                 drawPath(topHighlight,shine,style=Stroke(width=size.minDimension*7.5f/512f,cap=StrokeCap.Round))
                 val bottomHighlight=Path().apply { moveTo(size.width*207f/512f,size.height*452f/512f); cubicTo(size.width*258f/512f,size.height*466f/512f,size.width*316f/512f,size.height*456f/512f,size.width*361f/512f,size.height*428f/512f); cubicTo(size.width*378f/512f,size.height*417f/512f,size.width*392f/512f,size.height*404f/512f,size.width*404f/512f,size.height*388f/512f) }
                 drawPath(bottomHighlight,shine,style=Stroke(width=size.minDimension*7f/512f,cap=StrokeCap.Round))
+            }
+            if (isSpeaking) {
+                // Three solid white 20% circles expand concentrically behind the avatar.
+                // Each starts tiny, grows beyond the avatar, fades, and repeats in sequence.
+                Canvas(Modifier.size(seatSize * 1.6f).align(Alignment.Center)) {
+                    val center = Offset(size.width / 2f, size.height / 2f)
+                    val maxRadius = size.minDimension * 0.46f
+                    val phases = listOf(
+                        waveProgress,
+                        (waveProgress + 1f / 3f) % 1f,
+                        (waveProgress + 2f / 3f) % 1f
+                    )
+                    phases.forEach { phase ->
+                        val fade = if (phase < 0.82f) 1f else ((1f - phase) / 0.18f).coerceIn(0f, 1f)
+                        drawCircle(
+                            color = Color.White.copy(alpha = 0.20f * fade),
+                            radius = maxRadius * phase,
+                            center = center
+                        )
+                    }
+                }
             }
             Box(Modifier.fillMaxSize(.91f),contentAlignment=Alignment.Center){
                 if(seat.locked) AsyncImage(model=raw+"file_0000000015a48211b000ee447a786f7c.png",contentDescription="Locked seat",modifier=Modifier.fillMaxSize(.62f),contentScale=ContentScale.Fit)
