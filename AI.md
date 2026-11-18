@@ -1296,3 +1296,11 @@ Current documentation does not certify that all historical features are build-, 
 - Replaced the hardcoded zero in the room's top-left Cup pill with the sum of all users' daily contribution values from the same room contributions endpoint used by the Cup leaderboard.
 - The pill refreshes every 10 seconds and uses the existing K/M/B formatter. When the server daily period resets and the daily leaderboard is empty, the displayed total becomes 0.
 - No room layout, seat, or other UI styling was changed.
+
+## 2026-11-18 — Official room name still showing User (server root cause)
+- Confirmed root cause in backend/server.js: /api/users normalization used user.name || user.displayName ... . A truthy legacy name value of User therefore shadowed the newly saved displayName / nickname values. The native client received the placeholder again, so a client-only cache refresh could not fix it.
+- Server fix: /api/users now chooses the first meaningful non-placeholder name across name, displayName, userName, nickname, and supported nested profile fields.
+- Room fix: Socket.IO room_join resolves the canonical MongoDB profile by app account ID / UID and uses the saved name/avatar for room presence, online broadcasts, and entry messages instead of trusting stale client payloads.
+- Native RoomPage.kt retains instant local rendering, then reconciles the canonical profile in the background. Existing room UI, seats, voice, chat, and layout are untouched.
+- Commits: 8859415 (API normalization + Mongo lookup), eeeb66b (room presence/entry name), ffe2c49 (canonical avatar use), 5bc83ef (native background profile refresh).
+- Deployment and build verification are still required; test account 500005 after Render deploy and native APK rebuild.
