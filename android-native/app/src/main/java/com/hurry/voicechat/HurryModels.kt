@@ -1,5 +1,8 @@
 package com.hurry.voicechat
 
+import androidx.compose.runtime.Immutable
+
+@Immutable
 data class HurryRoom(
     val id: String,
     val name: String,
