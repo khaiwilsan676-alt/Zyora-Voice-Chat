@@ -37,6 +37,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -619,8 +620,10 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                 NativeChatScreen(name = chat.second, image = chat.third, receiverId = chat.first, currentUserId = userId, currentAccountIdOverride = authPrefs.getString("accountId", userId).orEmpty().ifBlank { userId }, onBack = { openedChat = null }, onJoinRoom = { targetRoomId -> openedChat=null; tryOpenRoomById(targetRoomId) })
             } else {
                 Column(Modifier.fillMaxSize()) {
+                    val tabStateHolder = rememberSaveableStateHolder()
                     Box(Modifier.weight(1f)) {
-                        when (tab) {
+                        tabStateHolder.SaveableStateProvider(tab.name) {
+                            when (tab) {
                             HurryTab.HOME -> HomeScreen(
                                 languageCode = languageCode,
                                 selectedTab = tab,
@@ -750,6 +753,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                                 else -> FollowPage(openedMePage!!, onBack = { openedMePage = null })
                             }
                         }
+                    }
                     }
                 }
                 if (tab != HurryTab.HOME && openedMePage == null) {
