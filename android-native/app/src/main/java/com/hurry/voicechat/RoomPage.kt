@@ -1939,7 +1939,7 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                         }
                     }
                     // SEAT LAYOUT WITH REDUCED TOP PADDING TO SHIFT UP (5% ouper shift kiya gaya hai)
-                    val topPadding = when (roomMicMode) { 5 -> 12.dp; 15 -> 25.dp; else -> 20.dp }
+                    val topPadding = when (roomMicMode) { 5 -> 20.dp; 10 -> 25.dp; 15 -> 27.dp; else -> 25.dp }
                     Column(Modifier.fillMaxWidth().padding(horizontal=10.dp).padding(top=topPadding, bottom=8.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
                         val micSize = when (roomMicMode) { 15 -> 57.dp; 5 -> 68.dp; else -> 66.dp } // 5-mic seats 68dp; 15-mic seats 57dp
                         
