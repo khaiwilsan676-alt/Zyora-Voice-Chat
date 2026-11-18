@@ -3494,28 +3494,46 @@ private fun RoomSeatInviteDialog(
     Column(horizontalAlignment=Alignment.CenterHorizontally,modifier=Modifier.width(seatSize).clickable(onClick=onClick)){
         Box(Modifier.size(seatSize),contentAlignment=Alignment.Center){ 
             Canvas(Modifier.fillMaxSize()) {
-                val blue = !seat.locked
-                val ringBrush = Brush.linearGradient(colors = if(blue) listOf(Color(0xFFD9F7FF),Color(0xFF91E1FF),Color(0xFF4DBFEF),Color(0xFF299DD6),Color(0xFF167DB9)) else listOf(Color(0xFFF3F4F6),Color(0xFFD1D5DB),Color(0xFF9CA3AF),Color(0xFF6B7280),Color(0xFF4B5563)),start=Offset(size.width*100f/512f,size.height*55f/512f),end=Offset(size.width*420f/512f,size.height*460f/512f))
-                val radius=size.minDimension*225f/512f
-                val center=Offset(size.width/2f,size.height/2f)
-                drawCircle(color=if(blue) Color(0xFF55C6F3).copy(alpha=.25f) else Color(0xFF9CA3AF).copy(alpha=.25f),radius=radius+size.minDimension*7.5f/512f,center=center,style=Stroke(width=size.minDimension*15f/512f))
+                val center = Offset(size.width / 2f, size.height / 2f)
+                val radius = size.minDimension * 225f / 512f
+                val borderWidth = size.minDimension * 38f / 512f
+
+                // Thick, smooth avatar border matching the supplied reference.
+                drawCircle(
+                    color = Color(0xFF87949A),
+                    radius = radius + borderWidth * 0.18f,
+                    center = center,
+                    style = Stroke(width = borderWidth)
+                )
+                drawCircle(
+                    color = Color.White.copy(alpha = 0.96f),
+                    radius = radius - borderWidth * 0.48f,
+                    center = center,
+                    style = Stroke(width = size.minDimension * 8f / 512f)
+                )
+
                 if (isSpeaking) {
-                    // One unbroken 360-degree white voice ring around the avatar.
-                    // Only its radius and opacity pulse; the circle itself is never segmented.
-                    val pulse = 0.5f + 0.5f * kotlin.math.sin(waveProgress * 6.28318f)
-                    drawCircle(
-                        color = Color.White.copy(alpha = 0.72f + pulse * 0.25f),
-                        radius = radius + size.minDimension * (13f + pulse * 5f) / 512f,
-                        center = center,
-                        style = Stroke(width = size.minDimension * 9f / 512f)
+                    // Continuous 360-degree voice wave travels around the thick border.
+                    val waveBrush = Brush.sweepGradient(
+                        colors = listOf(
+                            Color(0xFF64747B), Color(0xFFF8FFFF),
+                            Color(0xFFB9D0D7), Color(0xFFFFFFFF),
+                            Color(0xFF64747B)
+                        ),
+                        center = center
                     )
+                    androidx.compose.ui.graphics.drawscope.rotate(
+                        degrees = waveProgress * 360f,
+                        pivot = center
+                    ) {
+                        drawCircle(
+                            brush = waveBrush,
+                            radius = radius + borderWidth * 0.18f,
+                            center = center,
+                            style = Stroke(width = borderWidth)
+                        )
+                    }
                 }
-                drawCircle(brush=ringBrush,radius=radius,center=center,style=Stroke(width=size.minDimension*10f/512f))
-                val shine = Brush.horizontalGradient(colors=listOf(Color.White.copy(alpha=0f),Color.White.copy(alpha=.75f),Color.White.copy(alpha=.95f),Color.White.copy(alpha=0f)),startX=0f,endX=size.width)
-                val topHighlight=Path().apply { moveTo(size.width*98f/512f,size.height*134f/512f); cubicTo(size.width*113f/512f,size.height*108f/512f,size.width*132f/512f,size.height*92f/512f,size.width*153f/512f,size.height*79f/512f); cubicTo(size.width*174f/512f,size.height*67f/512f,size.width*196f/512f,size.height*59f/512f,size.width*218f/512f,size.height*56f/512f) }
-                drawPath(topHighlight,shine,style=Stroke(width=size.minDimension*7.5f/512f,cap=StrokeCap.Round))
-                val bottomHighlight=Path().apply { moveTo(size.width*207f/512f,size.height*452f/512f); cubicTo(size.width*258f/512f,size.height*466f/512f,size.width*316f/512f,size.height*456f/512f,size.width*361f/512f,size.height*428f/512f); cubicTo(size.width*378f/512f,size.height*417f/512f,size.width*392f/512f,size.height*404f/512f,size.width*404f/512f,size.height*388f/512f) }
-                drawPath(bottomHighlight,shine,style=Stroke(width=size.minDimension*7f/512f,cap=StrokeCap.Round))
             }
             Box(Modifier.fillMaxSize(.91f),contentAlignment=Alignment.Center){
                 if(seat.locked) AsyncImage(model=raw+"file_0000000015a48211b000ee447a786f7c.png",contentDescription="Locked seat",modifier=Modifier.fillMaxSize(.62f),contentScale=ContentScale.Fit)
