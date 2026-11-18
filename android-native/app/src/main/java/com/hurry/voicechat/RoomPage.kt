@@ -249,7 +249,7 @@ object ZyoraKeptRoomSocketSession {
 
 data class RoomPageOwner(val id:String="",val uid:String="",val accountId:String="",val name:String="Room",val image:String="",val country:String="")
 data class RoomPageCurrentUser(val id:String="",val uid:String="",val accountId:String="",val name:String="User",val image:String="")
-data class NativeRoomSeat(val number:Int,val occupied:Boolean=false,val locked:Boolean=false,val muted:Boolean=false,val selfMuted:Boolean=false,val speaking:Boolean=false,val userName:String="",val userImage:String="",val accountId:String="",val gifSrc:String="",val gifTimestamp:Long=0L,val gifDurationMs:Long=5000L)
+data class NativeRoomSeat(val number:Int,val occupied:Boolean=false,val locked:Boolean=false,val muted:Boolean=false,val selfMuted:Boolean=false,val speaking:Boolean=false,val userName:String="",val userImage:String="",val accountId:String="",val gifSrc:String="",val gifTimestamp:Long=0L,val gifDurationMs:Long=5000L,val gifScale:Float=0.8f)
 data class NativeMention(val accountId: String, val name: String)
 data class NativeRoomMessage(val id:String,val text:String,val sender:String,val senderImage:String,val senderAccountId:String="",val timestamp:Long=System.currentTimeMillis(),val type:String="message",val mentions: List<NativeMention> = emptyList(),val imageUrl:String="")
 data class NativeEntryToast(val id:String,val name:String,val image:String,val vehicleVideo:String="",val accountId:String="",val vehicleItemId:String="")
@@ -1400,7 +1400,7 @@ fun RoomPage(
                     val seat = seatsJson.optJSONObject(index) ?: continue
                     val user = seat.optJSONObject("user")
                     val gif = seat.optJSONObject("gif")
-                    parsed.add(NativeRoomSeat(number=seat.optInt("number",index+1),occupied=seat.optBoolean("isOccupied",user != null),locked=seat.optBoolean("isLocked",false),muted=seat.optBoolean("isMuted",false),selfMuted=seat.optBoolean("isSelfMuted",false),speaking=seat.optBoolean("isSpeaking",false),userName=if (user == null) "" else user.optString("name","User"),userImage=if (user == null) "" else if (user.optString("accountId",user.optString("userId","")) in setOf("100002", "100003")) "https://zyora-voice-chat.vercel.app/logo.png" else user.optString("image","").takeIf { it.isNotBlank() && it != "null" } ?: user.optString("dp","").takeIf { it.isNotBlank() && it != "null" } ?: user.optString("avatarUrl","").takeIf { it.isNotBlank() && it != "null" } ?: user.optString("profileImage","").takeIf { it.isNotBlank() && it != "null" } ?: "",accountId=if (user == null) "" else user.optString("accountId",user.optString("userId","")),gifSrc=gif?.optString("src","") ?: "",gifTimestamp=gif?.optLong("timestamp",0L) ?: 0L,gifDurationMs=gif?.optLong("duration",5000L) ?: 5000L))
+                    parsed.add(NativeRoomSeat(number=seat.optInt("number",index+1),occupied=seat.optBoolean("isOccupied",user != null),locked=seat.optBoolean("isLocked",false),muted=seat.optBoolean("isMuted",false),selfMuted=seat.optBoolean("isSelfMuted",false),speaking=seat.optBoolean("isSpeaking",false),userName=if (user == null) "" else user.optString("name","User"),userImage=if (user == null) "" else if (user.optString("accountId",user.optString("userId","")) in setOf("100002", "100003")) "https://zyora-voice-chat.vercel.app/logo.png" else user.optString("image","").takeIf { it.isNotBlank() && it != "null" } ?: user.optString("dp","").takeIf { it.isNotBlank() && it != "null" } ?: user.optString("avatarUrl","").takeIf { it.isNotBlank() && it != "null" } ?: user.optString("profileImage","").takeIf { it.isNotBlank() && it != "null" } ?: "",accountId=if (user == null) "" else user.optString("accountId",user.optString("userId","")),gifSrc=gif?.optString("src","") ?: "",gifTimestamp=gif?.optLong("timestamp",0L) ?: 0L,gifDurationMs=gif?.optLong("duration",5000L) ?: 5000L,gifScale=((gif?.optDouble("scale",0.8) ?: 0.8).toFloat())))
                 }
                 mainHandler.post {
                     val byNumber = parsed.associateBy { it.number }
@@ -2789,9 +2789,10 @@ if (miniMusicTrack != null && !musicControllerMinimized && !MusicPlaybackState.i
                 val seatMediaUrl = videoUrl ?: sticker.src
                 seats[seatIndex]=selected.copy(
                     gifSrc=if (videoUrl != null) videoUrl else sticker.src,
-                    gifTimestamp=timestamp
+                    gifTimestamp=timestamp,
+                    gifScale=sticker.seatScale
                 )
-                roomSocketRef.value?.emit("room_seat_action",JSONObject().put("roomId",roomId).put("userId",accountId).put("action","emoji").put("seatNumber",selected.number).put("user",JSONObject().put("name",roomDisplayName.ifBlank{"User"}).put("image",roomDisplayImage.ifBlank{"https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/default-avatar.png"}).put("accountId",accountId)).put("src",seatMediaUrl).put("timestamp",timestamp))
+                roomSocketRef.value?.emit("room_seat_action",JSONObject().put("roomId",roomId).put("userId",accountId).put("action","emoji").put("seatNumber",selected.number).put("user",JSONObject().put("name",roomDisplayName.ifBlank{"User"}).put("image",roomDisplayImage.ifBlank{"https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/default-avatar.png"}).put("accountId",accountId)).put("src",seatMediaUrl).put("scale",sticker.seatScale).put("timestamp",timestamp))
                 
                 Handler(Looper.getMainLooper()).postDelayed({ if(seats.getOrNull(seatIndex)?.gifTimestamp==timestamp) seats[seatIndex]=seats[seatIndex].copy(gifSrc="",gifTimestamp=0L) },5000)
             }
@@ -3525,15 +3526,12 @@ private fun RoomSeatInviteDialog(
             }
             
             if(showGif && seat.gifSrc.isNotBlank()) {
-                if (seat.gifSrc.substringBefore("?").lowercase().endsWith(".mp4")) {
-                    TransparentSeatVideoPlayer(
-                        videoUrl = seat.gifSrc,
-                        modifier = Modifier.fillMaxSize(),
-                        onVideoFinished = { showGif = false }
-                    )
-                } else {
-                    AsyncImage(model=seat.gifSrc,contentDescription="Emoji reaction",modifier=Modifier.fillMaxSize(),contentScale=ContentScale.Fit)
-                }
+                SeatEmojiOverlay(
+                    src = seat.gifSrc,
+                    seatSize = seatSize,
+                    scale = seat.gifScale,
+                    onVideoFinished = { showGif = false }
+                )
             }
             
             if(seat.muted) Box(Modifier.align(Alignment.BottomEnd).clip(CircleShape).background(Color.White).padding(2.dp)) { Icon(Icons.Default.MicOff,null,tint=Color.Black,modifier=Modifier.size(12.dp)) }
