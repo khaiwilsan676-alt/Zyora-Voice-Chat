@@ -195,7 +195,6 @@ fun RoomCupSheet(roomId:String,userId:String,userName:String,userImage:String,on
                                     else if(u.accountId in roomAdminIds) AsyncImage(model=ROOM_ADMIN_TAG,contentDescription="Room Admin",modifier=Modifier.width(36.dp).height(16.dp),contentScale=ContentScale.Fit)
                                 }
                                 Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(6.dp)) {
-                                    if(u.country.isNotBlank()) CountryFlagImage(u.country,Modifier.size(18.dp,12.dp)) else Spacer(Modifier.width(18.dp))
                                     val gender = genderByUser[u.accountId].orEmpty()
                                     if(gender.isNotBlank()) {
                                         val isFemale = gender.equals("female", true) || gender.equals("f", true) || gender == "♀"
