@@ -197,15 +197,15 @@ fun RoomSettingPage(
     var pendingPicker by remember { mutableStateOf("photo") }
     var saving by remember { mutableStateOf(false) }
     var saveError by remember { mutableStateOf("") }
-    val members = remember { mutableStateListOf<NativeSettingMember>() }
+    var members by remember { mutableStateOf<List<NativeSettingMember>>(emptyList()) }
 
     LaunchedEffect(roomMembers, roomOwnerId, currentUserId) {
-        val sharedRoomMembers = roomMembers
+        members = roomMembers
+            .asSequence()
             .filter { it.accountId.isNotBlank() && it.accountId != roomOwnerId && it.accountId != currentUserId }
             .distinctBy { it.accountId }
             .map { NativeSettingMember(it.accountId, it.name, it.image) }
-        members.clear()
-        members.addAll(sharedRoomMembers)
+            .toList()
     }
 
     LaunchedEffect(sheet, roomOwnerId) {
@@ -238,11 +238,11 @@ fun RoomSettingPage(
                 }
             }.getOrDefault(emptyList())
         }
-        if (sheet == "admin-members") {
-            refreshed.forEach { fresh ->
-                val index = members.indexOfFirst { it.accountId == fresh.accountId }
-                if (index >= 0) members[index] = fresh else members.add(fresh)
-            }
+        if (sheet == "admin-members" && refreshed.isNotEmpty()) {
+            val merged = LinkedHashMap<String, NativeSettingMember>()
+            members.forEach { merged[it.accountId] = it }
+            refreshed.forEach { merged[it.accountId] = it }
+            members = merged.values.toList()
         }
     }
 
@@ -324,11 +324,11 @@ fun RoomSettingPage(
                 } finally { conn.disconnect() }
             }.getOrDefault(emptyList())
         }.let { found ->
-            if (sheet == "admin-members" && adminSearch.trim() == q) {
-                found.forEach { result ->
-                    val index = members.indexOfFirst { it.accountId == result.accountId }
-                    if (index >= 0) members[index] = result else members.add(0, result)
-                }
+            if (sheet == "admin-members" && adminSearch.trim() == q && found.isNotEmpty()) {
+                val merged = LinkedHashMap<String, NativeSettingMember>()
+                found.forEach { merged[it.accountId] = it }
+                members.forEach { if (it.accountId !in merged) merged[it.accountId] = it }
+                members = merged.values.toList()
             }
         }
     }
@@ -803,7 +803,7 @@ fun RoomSettingPage(
         "admin-members" -> BottomSheetModal(scrimAlpha = 0.45f, heightFraction = 0.65f, dark = true, cornerRadius = 12.dp, onDismiss = { sheet = "admin" }) {
             Column(Modifier.fillMaxSize().navigationBarsPadding().background(Color.Black).padding(horizontal = 14.dp)) {
                 Text("Room members", Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 12.dp), color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
-                val visibleMembers = (roomMembers.map { NativeSettingMember(it.accountId, it.name, it.image) } + members.toList())
+                val visibleMembers = (roomMembers.map { NativeSettingMember(it.accountId, it.name, it.image) } + members)
                     .filter { it.accountId.isNotBlank() && it.accountId != roomOwnerId && it.accountId != currentUserId }
                     .distinctBy { it.accountId }
                 LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
