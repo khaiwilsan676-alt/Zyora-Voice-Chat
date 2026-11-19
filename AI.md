@@ -1427,3 +1427,9 @@ Current documentation does not certify that all historical features are build-, 
 - `RoomPage.kt`: `RoomInviteSheet` now remembers its de-duplicated, owner-first sorted invite list until room users/current user/owner actually change, avoiding repeated full-list filtering and sorting during unrelated room recompositions.
 - No UI, voice, music, chat delivery, room-seat, or navigation behavior was intentionally changed.
 - Verification: native Gradle build, CI, and Redmi 14C runtime profiling/regression tests are still required; smoothness improvement is based on removing the identified repeated socket lifecycle and list work, not yet device-measured.
+
+## Room Info member loading performance fix (2026-11-19)
+- `android-native/app/src/main/java/com/hurry/voicechat/RoomInfo.kt`: Room Info Members now renders the incoming room/socket member rows immediately, merging persistent cached names, avatars, country, and gender without waiting for profile requests.
+- Profile refresh runs in the background with up to six concurrent requests and publishes each member as soon as its refresh completes, instead of waiting for every member before updating the list.
+- Room-profile country lookup is skipped when the row/cache already has a country. Existing row-first name/avatar precedence, cache persistence, member roles, profile navigation, and Room Info UI are preserved.
+- Build/device performance verification is still required.
