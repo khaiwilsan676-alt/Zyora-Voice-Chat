@@ -551,16 +551,9 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
 
     HurryTheme {
         Box(Modifier.fillMaxSize().navigationBarsPadding()) {
-            if (openedFamilyId != null) {
-                FamilyProfile(familyId = openedFamilyId!!, onBack = { openedFamilyId = null }, onOpenChat = { uid, name, image -> openedFamilyId = null; openedChat = Triple(uid, name, image) })
-            } else if (openedPublicProfile != null) {
-                PublicProfile(user=openedPublicProfile!!,onBack={openedPublicProfile=null},onMessage={ val profile = openedPublicProfile!!; val receiverId = profile.accountId?.takeIf { it.isNotBlank() } ?: profile.id?.takeIf { it.isNotBlank() } ?: profile.uid.orEmpty(); if (receiverId.isNotBlank() && receiverId != userId) { openedChat = Triple(receiverId, profile.name, profile.image); openedPublicProfile = null } },currentUserId=userId,onJoinRoom={ targetRoomId -> openedPublicProfile=null; tryOpenRoomById(targetRoomId) },onOpenFamily={ id -> openedFamilyId=id; openedPublicProfile=null })
-            } else if (openedRoomSupport) {
-                RoomSupport(onBack = { openedRoomSupport = false })
-            } else if (openedSearch) {
-                SearchPage(onBack={openedSearch=false},onOpenProfile={openedPublicProfile=it;openedSearch=false},onOpenRoom={openedSearch=false;tryOpenRoom(it)})
-            } else if (openedRoom != null) {
+            if (openedRoom != null) {
                 RoomPage(
+                    isCovered = (openedFamilyId != null || openedPublicProfile != null || openedRoomSupport || openedSearch || openedLeaderboard != null || openedInvite || openedChat != null || openedMePage != null),
                     roomOwner = RoomPageOwner(
                         id = openedRoom!!.id,
                         accountId = openedRoom!!.accountId.ifBlank { openedRoom!!.id },
@@ -611,6 +604,17 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                         openedRoom = null
                     }
                 )
+            }
+            if (openedFamilyId != null) {
+                FamilyProfile(familyId = openedFamilyId!!, onBack = { openedFamilyId = null }, onOpenChat = { uid, name, image -> openedFamilyId = null; openedChat = Triple(uid, name, image) })
+            } else if (openedPublicProfile != null) {
+                PublicProfile(user=openedPublicProfile!!,onBack={openedPublicProfile=null},onMessage={ val profile = openedPublicProfile!!; val receiverId = profile.accountId?.takeIf { it.isNotBlank() } ?: profile.id?.takeIf { it.isNotBlank() } ?: profile.uid.orEmpty(); if (receiverId.isNotBlank() && receiverId != userId) { openedChat = Triple(receiverId, profile.name, profile.image); openedPublicProfile = null } },currentUserId=userId,onJoinRoom={ targetRoomId -> openedPublicProfile=null; tryOpenRoomById(targetRoomId) },onOpenFamily={ id -> openedFamilyId=id; openedPublicProfile=null })
+            } else if (openedRoomSupport) {
+                RoomSupport(onBack = { openedRoomSupport = false })
+            } else if (openedSearch) {
+                SearchPage(onBack={openedSearch=false},onOpenProfile={openedPublicProfile=it;openedSearch=false},onOpenRoom={openedSearch=false;tryOpenRoom(it)})
+            } else if (openedRoom != null) {
+                Spacer(Modifier.fillMaxSize())
             } else if (openedLeaderboard != null) {
                 Leaderboard(onBack = { openedLeaderboard = null }, initialTab = openedLeaderboard!!)
             } else if (openedInvite) {
