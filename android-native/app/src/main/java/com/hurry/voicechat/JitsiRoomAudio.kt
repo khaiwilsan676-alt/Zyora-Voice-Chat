@@ -115,7 +115,8 @@ fun JitsiRoomAudio(
         var voicePlaybackThread: Thread? = null
         var musicPlaybackThread: Thread? = null
         // Short jitter buffers absorb brief Socket.IO/device scheduling delays.
-        val voicePlaybackQueue = ArrayBlockingQueue<ByteArray>(20)
+        // Independent per-speaker queues prevent concurrent voices being concatenated.
+        val voiceSpeakerQueues = ConcurrentHashMap<String, ArrayBlockingQueue<ByteArray>>()
         val musicPlaybackQueue = ArrayBlockingQueue<ByteArray>(20)
         val musicActivityHandler = Handler(Looper.getMainLooper())
         val musicActivityTimeouts = ConcurrentHashMap<String, Runnable>()
@@ -373,10 +374,41 @@ fun JitsiRoomAudio(
                 val current = if (isVoicePacket) voicePlaybackThread else musicPlaybackThread
                 if (current?.isAlive == true) return
                 val worker = thread(name = if (isVoicePacket) "ZyoraRoomVoicePlayback" else "ZyoraRoomMusicPlayback", isDaemon = true) {
-                    val queue = if (isVoicePacket) voicePlaybackQueue else musicPlaybackQueue
                     while (alive.get()) {
-                        val packet = try { queue.poll(100, TimeUnit.MILLISECONDS) }
-                        catch (_: InterruptedException) { if (!alive.get()) break else null } ?: continue
+                        val packet = if (isVoicePacket) {
+                            if (!latestPlaybackVoiceEnabled) {
+                                voiceSpeakerQueues.values.forEach { it.clear() }
+                                try { Thread.sleep(20) } catch (_: InterruptedException) { if (!alive.get()) break }
+                                continue
+                            }
+                            // Mix one aligned 20 ms frame per remote speaker.
+                            val mixed = ShortArray(ROOM_VOICE_FRAME_BYTES / 2)
+                            var hasAudio = false
+                            voiceSpeakerQueues.values.forEach { speakerQueue ->
+                                val frame = speakerQueue.poll() ?: return@forEach
+                                hasAudio = true
+                                var i = 0
+                                while (i + 1 < minOf(frame.size, ROOM_VOICE_FRAME_BYTES)) {
+                                    val sample = ((frame[i + 1].toInt() shl 8) or (frame[i].toInt() and 0xFF)).toShort().toInt()
+                                    val index = i / 2
+                                    mixed[index] = (mixed[index].toInt() + sample).coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
+                                    i += 2
+                                }
+                            }
+                            if (!hasAudio) {
+                                try { Thread.sleep(10) } catch (_: InterruptedException) { if (!alive.get()) break }
+                                continue
+                            }
+                            ByteArray(ROOM_VOICE_FRAME_BYTES).also { output ->
+                                mixed.forEachIndexed { index, sample ->
+                                    output[index * 2] = (sample.toInt() and 0xFF).toByte()
+                                    output[index * 2 + 1] = ((sample.toInt() shr 8) and 0xFF).toByte()
+                                }
+                            }
+                        } else {
+                            try { musicPlaybackQueue.poll(100, TimeUnit.MILLISECONDS) }
+                            catch (_: InterruptedException) { if (!alive.get()) break else null } ?: continue
+                        }
                         if (isVoicePacket && !latestPlaybackVoiceEnabled) continue
                         val track = synchronized(playerLock) { if (isVoicePacket) voicePlayer else musicPlayer } ?: continue
                         var offset = 0
@@ -436,8 +468,14 @@ fun JitsiRoomAudio(
             }
             if (!ready) return@Listener
             ensurePlaybackWorker(isVoicePacket)
-            val queue = if (isVoicePacket) voicePlaybackQueue else musicPlaybackQueue
-            if (!queue.offer(bytes.copyOf())) { queue.poll(); queue.offer(bytes.copyOf()) }
+            if (isVoicePacket) {
+                val speakerId = data.optString("userId").trim()
+                if (speakerId.isBlank() || speakerId == localAccountId) return@Listener
+                val queue = voiceSpeakerQueues.computeIfAbsent(speakerId) { ArrayBlockingQueue(8) }
+                if (!queue.offer(bytes.copyOf())) { queue.poll(); queue.offer(bytes.copyOf()) }
+            } else {
+                if (!musicPlaybackQueue.offer(bytes.copyOf())) { musicPlaybackQueue.poll(); musicPlaybackQueue.offer(bytes.copyOf()) }
+            }
         }
 
         val voiceChunkListener = createChunkListener(true)
@@ -473,7 +511,7 @@ fun JitsiRoomAudio(
             voiceAllowed.set(false)
             stopMusicRelay()
             stopCapture()
-            voicePlaybackQueue.clear()
+            voiceSpeakerQueues.values.forEach { it.clear() }
             runCatching { voicePlayer?.pause(); voicePlayer?.flush() }
             runCatching { musicPlayer?.pause(); musicPlayer?.flush() }
         }
@@ -561,6 +599,7 @@ fun JitsiRoomAudio(
             playbackVoiceMuteWatcherThread.interrupt()
             musicWatcherThread?.interrupt()
             voicePlaybackQueue.clear()
+            voiceSpeakerQueues.clear()
             musicPlaybackQueue.clear()
             voicePlaybackThread?.interrupt()
             musicPlaybackThread?.interrupt()
