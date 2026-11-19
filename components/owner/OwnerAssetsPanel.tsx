@@ -43,11 +43,10 @@ const ASSETS: Asset[] = [
   { id: 'v9', name: 'Galaxy Surfer', tab: 'Vehicle', type: 'Vehicle', image: 'IMG_20261023_125416.png', video: 'alioss_17_2025041211424496804~2.mp4' },
 ];
 
-const OWNER_KEY = '18 July 2026';
 const inputClass = 'w-full rounded-xl border border-slate-200 bg-slate-100 px-4 py-3 text-sm font-semibold text-slate-800 outline-none focus:border-slate-400';
 const tableHead = 'px-4 py-3 text-left text-[10px] font-extrabold uppercase tracking-wider text-slate-500';
 
-export default function OwnerAssetsPanel() {
+export default function OwnerAssetsPanel({ ownerKey }: { ownerKey: string }) {
   const [userQuery, setUserQuery] = useState('');
   const [user, setUser] = useState<any>(null);
   const [userMatches, setUserMatches] = useState<any[]>([]);
@@ -62,7 +61,7 @@ export default function OwnerAssetsPanel() {
 
   const loadHistory = async () => {
     try {
-      const response = await fetch(apiUrl('/api/owner/assets/sent'), { headers: { 'x-owner-key': OWNER_KEY }, cache: 'no-store' });
+      const response = await fetch(apiUrl('/api/owner/assets/sent'), { headers: { 'x-owner-key': ownerKey }, cache: 'no-store' });
       if (response.ok) {
         const data = await response.json();
         setHistory(Array.isArray(data.items) ? data.items : []);
@@ -96,7 +95,7 @@ export default function OwnerAssetsPanel() {
     try {
       const response = await fetch(apiUrl('/api/owner/assets/grant'), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-owner-key': OWNER_KEY },
+        headers: { 'Content-Type': 'application/json', 'x-owner-key': ownerKey },
         body: JSON.stringify({ recipientAccountId: user.accountId, itemId: selected.id, name: selected.name, tab: selected.tab, image: selected.image, video: selected.video || '', days: Number(days) })
       });
       const data = await response.json();
