@@ -1387,3 +1387,11 @@ Current documentation does not certify that all historical features are build-, 
 - No Message page UI, layout, navigation, chat delivery, unread-count, or room-presence behavior was intentionally changed.
 - GitHub commits: `789bc65e` (initial inbox avatar refresh), `56753eed` (corrected preview initialization order).
 - Native Gradle build and device verification are still required; this change has not been represented as build-tested.
+
+## 2026-11-19 — Room Cup totals and weekly contribution aggregation
+- `Zyora-Server/server.js`: room contribution endpoint no longer truncates its date-window records at 10,000 rows; weekly and daily per-user totals aggregate all matching sent records.
+- Endpoint now returns `totalRoomCoins`, calculated from every sent contribution record in the requested room and period, independently of the Top 20 leaderboard.
+- `Roomcup.kt`: the room's top cup counter reads `totalRoomCoins` rather than summing only the returned Top 20 leaderboard entries.
+- No UI layout, colors, room gifting, wallet debit, or ranking presentation was intentionally changed.
+- Commits: server `49ee99f`; native `4957bf9`.
+- Native build and live MongoDB data verification remain pending.
