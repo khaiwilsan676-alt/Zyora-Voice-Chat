@@ -1406,3 +1406,14 @@ Current documentation does not certify that all historical features are build-, 
 - Normal room entry (`suppressEntry` false) continues clearing stale seats, preventing a genuinely new session from inheriting an old seat.
 - No UI, voice relay, music playback, or normal room-entry behavior was intentionally changed.
 - Verification: backend syntax/runtime and a real two-device Keep → temporary disconnect → restore test are still required.
+
+
+## 2026-11-19 — Room voice reliability fixes
+- `JitsiRoomAudio.kt`: removed stale references to the retired shared voice queue from playback failure, speaker-mute, and disposal paths; these references could prevent native compilation.
+- Voice playback now resolves each remote publisher by the available sender/account identity, requires the protocol's exact 640-byte 20 ms PCM frame, and uses bounded per-speaker queues.
+- Concurrent speaker samples are accumulated before one final soft limiter; this avoids order-dependent clipping from saturating after every speaker.
+- Voice permission-denied retries are capped at three instead of repeatedly requesting permission every 500 ms when a user is not seated or is muted.
+- `backend/server.js`: microphone relay rejects malformed frame sizes and room leave revokes the socket's active voice publisher state and sends a final non-speaking update.
+- Music relay, music decoder, music controls, and room UI were not intentionally changed.
+- Commits: native playback/mix `c3552e5`; server frame validation `87bf52a`; bounded permission retries `18b3c9f`; server room-leave cleanup `e121ce1`.
+- Native Gradle build and multi-device voice testing remain required; these changes are code-reviewed but not yet device-verified.
