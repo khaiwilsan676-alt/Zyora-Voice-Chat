@@ -2530,11 +2530,13 @@ io.on("connection", (socket) => {
           }
         }
 
-        // A fresh room session must never inherit an occupied seat from an
-        // older socket/session (for example, after the app was force-closed
-        // before the server observed the disconnect). Minimize/Keep does not
-        // reach this branch because it retains the same connected socket.
-        if (clearUserSeat(room, accId)) {
+        // A normal room entry must not inherit a stale seat from an older
+        // session. A silent Keep restore is different: it is the same logical
+        // room session reconnecting after a temporary transport drop, so retain
+        // that account's seat and let the authoritative room_seats snapshot
+        // restore it. suppressEntry is only sent by the native retained-session
+        // recovery path; explicit room entry continues to clear stale seats.
+        if (!suppressEntry && clearUserSeat(room, accId)) {
           emitRoomSeats(room);
         }
 
