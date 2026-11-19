@@ -1399,3 +1399,10 @@ Current documentation does not certify that all historical features are build-, 
 ### Seat menu Invite excludes seated users
 - The seat-menu Invite User sheet now excludes every account currently occupying a room seat, using the live `seats` snapshot as the source of truth.
 - The filter is recomputed when seat occupancy changes, so users become inviteable again after leaving a seat. Existing Active Users and Room Profile invitation behavior is unchanged.
+
+
+## 2026-11-19 — Keep room silent reconnect preserves occupied seat
+- `backend/server.js`: the `room_join` path no longer clears the account's occupied seat when the native client marks a reconnect as `suppressEntry` (the retained Keep-session recovery path). The server still sends authoritative room presence and seat snapshots after the reconnect.
+- Normal room entry (`suppressEntry` false) continues clearing stale seats, preventing a genuinely new session from inheriting an old seat.
+- No UI, voice relay, music playback, or normal room-entry behavior was intentionally changed.
+- Verification: backend syntax/runtime and a real two-device Keep → temporary disconnect → restore test are still required.
