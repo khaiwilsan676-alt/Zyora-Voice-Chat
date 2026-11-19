@@ -3344,9 +3344,16 @@ private fun RoomInviteSheet(
             }.toMap()
         }
     }
-    val visibleUsers = roomUsers.filter { it.accountId.isNotBlank() && it.accountId != currentUserId }
-        .distinctBy { it.accountId }
-        .sortedWith(compareBy<ActiveUserNative> { if (it.accountId == roomOwnerId) 0 else 1 }.thenBy { it.name.lowercase() })
+    // Reuse the invite list until live room users or the owner actually change.
+    // This avoids filtering, de-duplicating and sorting the full list on unrelated
+    // room recompositions (voice waves, music progress, chat overlays, etc.).
+    val visibleUsers = remember(roomUsers, currentUserId, roomOwnerId) {
+        roomUsers.asSequence()
+            .filter { it.accountId.isNotBlank() && it.accountId != currentUserId }
+            .distinctBy { it.accountId }
+            .sortedWith(compareBy<ActiveUserNative> { if (it.accountId == roomOwnerId) 0 else 1 }.thenBy { it.name.lowercase() })
+            .toList()
+    }
     Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .30f)).clickable { onClose() }, contentAlignment = Alignment.BottomCenter) {
         Column(
             Modifier.fillMaxWidth().fillMaxHeight(.5f)
