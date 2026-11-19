@@ -1374,3 +1374,9 @@ Current documentation does not certify that all historical features are build-, 
 - Removed the join-time logic that rebound an old occupied seat to the new socket, which caused the room owner/avatar to reappear seated after force-closing and reopening the app.
 - The existing Keep/minimize flow is unchanged because it retains the same connected socket; duplicate joins on that same socket also preserve the active seat.
 - No UI changes.
+
+
+## 2026-11-19 — Simultaneous user-to-user room voice mixing
+- Native `JitsiRoomAudio.kt`: replaced the shared voice FIFO playback path with independent bounded 20 ms PCM queues keyed by the authenticated sender ID; each playback tick sums samples from concurrent speakers into one mono frame with clipping protection. This prevents concurrent users' frames from being played sequentially as overlapping/chopped audio. Speaker OFF, disconnect, and room cleanup clear the per-speaker queues. Music playback remains on its separate queue.
+- Server relay already stamps each `room_voice_chunk` with the authenticated `userId` and excludes the publishing socket; no server fanout change was needed.
+- Verification: source committed; native APK build and two-device simultaneous-unmute test still required.
