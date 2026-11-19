@@ -1433,3 +1433,10 @@ Current documentation does not certify that all historical features are build-, 
 - Profile refresh runs in the background with up to six concurrent requests and publishes each member as soon as its refresh completes, instead of waiting for every member before updating the list.
 - Room-profile country lookup is skipped when the row/cache already has a country. Existing row-first name/avatar precedence, cache persistence, member roles, profile navigation, and Room Info UI are preserved.
 - Build/device performance verification is still required.
+
+### Simultaneous two-speaker voice distortion follow-up
+- `JitsiRoomAudio.kt`: changed the concurrent-speaker mixer from nonlinear peak limiting to averaging the PCM samples of speakers present in each output frame. The previous limiter could audibly crunch/flatten peaks when two users spoke together.
+- Added a short 8 ms packet collection window before each voice mix to reduce alternating/missing contributions when Socket.IO delivers two publishers' 20 ms frames a few milliseconds apart; per-speaker queues are bounded to four frames to limit stale backlog.
+- Music path and UI remain unchanged.
+- Commit: `c0ba781`.
+- Requires native APK build and a real two-device simultaneous-speech test; not yet verified on hardware.
