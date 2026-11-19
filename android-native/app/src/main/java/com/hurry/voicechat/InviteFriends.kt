@@ -8,6 +8,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.widget.Toast
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -16,33 +17,42 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.HelpOutline
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.MoreHoriz
-import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.net.URL
 
@@ -140,6 +150,7 @@ fun InviteFriends(onBack: (() -> Unit)? = null, onClose: (() -> Unit)? = null) {
     val inviteLink = "https://khaiwilsan676-alt.github.io/Zyora-Voice-Chat/download/"
     
     var isSheetOpen by remember { mutableStateOf(false) }
+    var showDetailsPage by remember { mutableStateOf(false) }
     var copied by remember { mutableStateOf(false) }
     var inviteCount by remember { mutableIntStateOf(0) }
     var inviteTotalRewards by remember { mutableLongStateOf(0L) }
@@ -219,16 +230,30 @@ fun InviteFriends(onBack: (() -> Unit)? = null, onClose: (() -> Unit)? = null) {
                     Modifier
                         .fillMaxWidth()
                         .statusBarsPadding()
-                        .padding(start = 8.dp, end = 8.dp, top = 8.dp)
+                        .padding(start = 8.dp, top = 8.dp)
                         .align(Alignment.TopCenter),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    IconButton(onClick = { onBack?.invoke() ?: onClose?.invoke() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White, modifier = Modifier.size(28.dp))
+                    IconButton(onClick = {
+                        if (showDetailsPage) showDetailsPage = false
+                        else onBack?.invoke() ?: onClose?.invoke()
+                    }) {
+                        InviteArt(
+                            "IMG_20261119_225146.png",
+                            Modifier.size(32.dp),
+                            key = InviteKey.NONE
+                        )
                     }
-                    IconButton(onClick = { helpRules = true }) {
-                        Icon(Icons.Default.HelpOutline, contentDescription = "Help", tint = Color.White, modifier = Modifier.size(28.dp))
-                    }
+                    InviteArt(
+                        "IMG_20261119_225214.png",
+                        Modifier
+                            .height(32.dp)
+                            .wrapContentWidth()
+                            .clickable { helpRules = true },
+                        key = InviteKey.NONE,
+                        alignment = Alignment.CenterEnd
+                    )
                 }
             }
 
@@ -238,117 +263,139 @@ fun InviteFriends(onBack: (() -> Unit)? = null, onClose: (() -> Unit)? = null) {
             ) {
                 Box(Modifier.fillMaxWidth()) {
                     InviteArt("1788074201753~2.jpg", Modifier.fillMaxWidth().wrapContentHeight(), key = InviteKey.GREEN)
-                    Text(
-                        "Friends Invite 0",
-                        modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 15.dp),
-                        color = inviteYellow,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                Box(Modifier.fillMaxWidth()) {
-                    InviteArt("1788100666322~2.jpg", Modifier.fillMaxWidth().wrapContentHeight(), key = InviteKey.GREEN)
-                    Column(Modifier.fillMaxWidth().padding(horizontal = 35.dp)) {
-                        Row(
-                            Modifier.fillMaxWidth().padding(top = 100.dp).height(24.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text("Invite Friends", color = inviteYellow, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                            InviteReward("250000") { inviteRules = true }
-                        }
-                        Row(
-                            Modifier.fillMaxWidth().padding(top = 51.dp).height(32.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column {
-                                Text("Friends Recharge", color = inviteYellow, fontSize = 14.sp, fontWeight = FontWeight.Bold, lineHeight = 16.sp)
-                                Text(">500000 Coins", color = invitePaleYellow, fontSize = 10.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp)
-                            }
-                            InviteReward("250000") { rechargeRules = true }
-                        }
-                        Row(
-                            Modifier.fillMaxWidth().padding(top = 48.dp).height(38.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column {
-                                Text("Friends Send", color = inviteYellow, fontSize = 14.sp, fontWeight = FontWeight.Bold, lineHeight = 16.sp)
-                                Text("Gift", color = inviteYellow, fontSize = 14.sp, fontWeight = FontWeight.Bold, lineHeight = 16.sp)
-                            }
-                            InviteReward("6%") { giftRules = true }
-                        }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .align(Alignment.BottomCenter)
+                            .padding(horizontal = 35.dp, bottom = 15.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "Friends Invite",
+                            color = inviteYellow,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            "$inviteCount >",
+                            modifier = Modifier.clickable { showDetailsPage = true },
+                            color = inviteYellow,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
 
-                Box(Modifier.fillMaxWidth().wrapContentHeight()) {
-                    InviteArt("1788102034828~2.jpg", Modifier.fillMaxWidth().wrapContentHeight(), key = InviteKey.GREEN)
-
-                    // Number of Invitation — previous horizontal position; bottom: 10vh
-                    Column(
-                        Modifier.align(Alignment.BottomStart).padding(start = 86.dp, bottom = vh * 10f),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(inviteCount.toString(), color = inviteYellow, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                        Text("Number\nInvitation", color = inviteYellow, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, lineHeight = 12.sp, textAlign = TextAlign.Center)
+                if (showDetailsPage) {
+                    InviteDetailsCard()
+                    Spacer(Modifier.height(32.dp))
+                } else {
+                    Box(Modifier.fillMaxWidth()) {
+                        InviteArt("1788100666322~2.jpg", Modifier.fillMaxWidth().wrapContentHeight(), key = InviteKey.GREEN)
+                        Column(Modifier.fillMaxWidth().padding(horizontal = 35.dp)) {
+                            Row(
+                                Modifier.fillMaxWidth().padding(top = 100.dp).height(24.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("Invite Friends", color = inviteYellow, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                InviteReward("250000") { inviteRules = true }
+                            }
+                            Row(
+                                Modifier.fillMaxWidth().padding(top = 51.dp).height(32.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column {
+                                    Text("Friends Recharge", color = inviteYellow, fontSize = 14.sp, fontWeight = FontWeight.Bold, lineHeight = 16.sp)
+                                    Text(">500000 Coins", color = invitePaleYellow, fontSize = 10.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp)
+                                }
+                                InviteReward("250000") { rechargeRules = true }
+                            }
+                            Row(
+                                Modifier.fillMaxWidth().padding(top = 48.dp).height(38.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column {
+                                    Text("Friends Send", color = inviteYellow, fontSize = 14.sp, fontWeight = FontWeight.Bold, lineHeight = 16.sp)
+                                    Text("Gift", color = inviteYellow, fontSize = 14.sp, fontWeight = FontWeight.Bold, lineHeight = 16.sp)
+                                }
+                                InviteReward("6%") { giftRules = true }
+                            }
+                        }
                     }
 
-                    // Total Coins Rewards — previous horizontal position; bottom: 10vh
-                    Column(
-                        Modifier.align(Alignment.BottomEnd).padding(end = 81.dp, bottom = vh * 10f),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        InviteArt("file_00000000e56882119c217d508b6733dc.png", Modifier.size(40.dp), key = InviteKey.WHITE)
-                        Text(inviteTotalRewards.toString(), color = inviteYellow, fontSize = 24.sp, fontWeight = FontWeight.Bold, lineHeight = 25.sp)
-                        Text("Total Coins\nRewards", color = inviteYellow, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, lineHeight = 12.sp, textAlign = TextAlign.Center)
-                    }
+                    Box(Modifier.fillMaxWidth().wrapContentHeight()) {
+                        InviteArt("1788102034828~2.jpg", Modifier.fillMaxWidth().wrapContentHeight(), key = InviteKey.GREEN)
 
-                    // Claim block — bottom: 28vh (center)
-                    Column(
-                        Modifier.align(Alignment.BottomCenter).padding(bottom = vh * 28f),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        InviteArt("file_00000000e56882119c217d508b6733dc.png", Modifier.size(50.dp), key = InviteKey.WHITE)
-                        Text(invitePendingCoins.toString(), color = inviteYellow, fontSize = 30.sp, fontWeight = FontWeight.Bold, lineHeight = 32.sp)
-                        Box(
-                            Modifier.padding(top = 12.dp).clip(CircleShape)
-                                .background(Brush.verticalGradient(listOf(Color(0xFFE62E2E), Color(0xFFB80D0D), Color(0xFF7A0000))))
-                                .border(1.5.dp, inviteYellow, CircleShape)
-                                .clickable(enabled = invitePendingCoins >= 250000L) {
-                                    inviteScope.launch {
-                                        val result = HurryApi.claimInvite(code, inviteIdToken)
-                                        if (result?.optBoolean("success") == true) {
-                                            invitePendingCoins = result.optLong("pendingCoins", (invitePendingCoins - 250000L).coerceAtLeast(0L))
-                                            Toast.makeText(context, "250,000 coins added to your wallet", Toast.LENGTH_LONG).show()
-                                        } else {
-                                            Toast.makeText(context, result?.optString("error") ?: "Claim failed. Please retry.", Toast.LENGTH_LONG).show()
+                        // Number of Invitation — previous horizontal position; bottom: 10vh
+                        Column(
+                            Modifier.align(Alignment.BottomStart).padding(start = 86.dp, bottom = vh * 10f),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(inviteCount.toString(), color = inviteYellow, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                            Text("Number\nInvitation", color = inviteYellow, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, lineHeight = 12.sp, textAlign = TextAlign.Center)
+                        }
+
+                        // Total Coins Rewards — previous horizontal position; bottom: 10vh
+                        Column(
+                            Modifier.align(Alignment.BottomEnd).padding(end = 81.dp, bottom = vh * 10f),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            InviteArt("file_00000000e56882119c217d508b6733dc.png", Modifier.size(40.dp), key = InviteKey.WHITE)
+                            Text(inviteTotalRewards.toString(), color = inviteYellow, fontSize = 24.sp, fontWeight = FontWeight.Bold, lineHeight = 25.sp)
+                            Text("Total Coins\nRewards", color = inviteYellow, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, lineHeight = 12.sp, textAlign = TextAlign.Center)
+                        }
+
+                        // Claim block — bottom: 28vh (center)
+                        Column(
+                            Modifier.align(Alignment.BottomCenter).padding(bottom = vh * 28f),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            InviteArt("file_00000000e56882119c217d508b6733dc.png", Modifier.size(50.dp), key = InviteKey.WHITE)
+                            Text(invitePendingCoins.toString(), color = inviteYellow, fontSize = 30.sp, fontWeight = FontWeight.Bold, lineHeight = 32.sp)
+                            Box(
+                                Modifier.padding(top = 12.dp).clip(CircleShape)
+                                    .background(Brush.verticalGradient(listOf(Color(0xFFE62E2E), Color(0xFFB80D0D), Color(0xFF7A0000))))
+                                    .border(1.5.dp, inviteYellow, CircleShape)
+                                    .clickable(enabled = invitePendingCoins >= 250000L) {
+                                        inviteScope.launch {
+                                            val result = HurryApi.claimInvite(code, inviteIdToken)
+                                            if (result?.optBoolean("success") == true) {
+                                                invitePendingCoins = result.optLong("pendingCoins", (invitePendingCoins - 250000L).coerceAtLeast(0L))
+                                                Toast.makeText(context, "250,000 coins added to your wallet", Toast.LENGTH_LONG).show()
+                                            } else {
+                                                Toast.makeText(context, result?.optString("error") ?: "Claim failed. Please retry.", Toast.LENGTH_LONG).show()
+                                            }
                                         }
                                     }
-                                }
-                                .padding(horizontal = 40.dp, vertical = 6.dp)
-                        ) {
-                            Text("Claim", color = inviteYellow, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
+                                    .padding(horizontal = 40.dp, vertical = 6.dp)
+                            ) {
+                                Text("Claim", color = inviteYellow, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
+                            }
                         }
                     }
+                    
+                    Spacer(Modifier.height(100.dp))
                 }
-                
-                Spacer(Modifier.height(100.dp))
             }
         }
 
-        InviteArt(
-            "1788074191602~2.jpg",
-            Modifier
-                .align(Alignment.BottomEnd)
-                .padding(end = 8.dp, bottom = 20.dp) 
-                .widthIn(max = 360.dp)
-                .fillMaxWidth(.88f)
-                .wrapContentHeight()
-                .clickable { isSheetOpen = true },
-            key = InviteKey.GREEN
-        )
+        if (!showDetailsPage) {
+            InviteArt(
+                "1788074191602~2.jpg",
+                Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 8.dp, bottom = 20.dp) 
+                    .widthIn(max = 360.dp)
+                    .fillMaxWidth(.88f)
+                    .wrapContentHeight()
+                    .clickable { isSheetOpen = true },
+                key = InviteKey.GREEN
+            )
+        }
 
         if (isSheetOpen) {
             Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f)).clickable { isSheetOpen = false }) {
@@ -392,6 +439,274 @@ fun InviteFriends(onBack: (() -> Unit)? = null, onClose: (() -> Unit)? = null) {
         centered = true,
         smallText = true
     ) { helpRules = false }
+}
+
+@Composable
+private fun InviteDetailsCard() {
+    var selectedTab by remember { mutableIntStateOf(0) }
+    var searchUserId by remember { mutableStateOf("") }
+
+    val cardBg = Color.Black.copy(alpha = 0.8f)
+    val goldBorder = Color(0xFFE5C97B)
+    val goldSoft = Color(0xFFF6E28B)
+    val mutedText = Color.White.copy(alpha = 0.55f)
+    val inputBg = Color.White.copy(alpha = 0.08f)
+    val inputBorder = Color.White.copy(alpha = 0.2f)
+    val dividerColor = Color.White.copy(alpha = 0.14f)
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 14.dp, vertical = 6.dp)
+            .drawBehind {
+                val w = size.width
+                val h = size.height
+                val notch = 18.dp.toPx()
+                val topInset = 8.dp.toPx()
+
+                val cardPath = Path().apply {
+                    moveTo(notch, topInset)
+                    lineTo(w - notch, topInset)
+                    quadraticTo(w - notch * 0.4f, topInset + notch * 0.6f, w, topInset + notch)
+                    lineTo(w, h - notch)
+                    quadraticTo(w - notch * 0.6f, h - notch * 0.4f, w - notch, h)
+                    lineTo(notch, h)
+                    quadraticTo(notch * 0.4f, h - notch * 0.6f, 0f, h - notch)
+                    lineTo(0f, topInset + notch)
+                    quadraticTo(notch * 0.6f, topInset + notch * 0.4f, notch, topInset)
+                    close()
+                }
+
+                drawPath(
+                    path = cardPath,
+                    color = cardBg
+                )
+                drawPath(
+                    path = cardPath,
+                    color = goldBorder,
+                    style = Stroke(width = 1.8.dp.toPx())
+                )
+
+                val innerMargin = 4.dp.toPx()
+                drawRect(
+                    color = goldBorder.copy(alpha = 0.35f),
+                    topLeft = Offset(innerMargin, topInset + innerMargin),
+                    size = androidx.compose.ui.geometry.Size(
+                        w - innerMargin * 2,
+                        h - topInset - innerMargin * 2
+                    ),
+                    style = Stroke(width = 0.8.dp.toPx())
+                )
+
+                val cx = w / 2f
+                val cy = topInset
+                val gemSize = 8.dp.toPx()
+                val outerGem = Path().apply {
+                    moveTo(cx, cy - gemSize)
+                    lineTo(cx + gemSize, cy)
+                    lineTo(cx, cy + gemSize)
+                    lineTo(cx - gemSize, cy)
+                    close()
+                }
+                drawPath(outerGem, color = goldSoft)
+
+                val innerGemSize = 5.5.dp.toPx()
+                val innerGem = Path().apply {
+                    moveTo(cx, cy - innerGemSize)
+                    lineTo(cx + innerGemSize, cy)
+                    lineTo(cx, cy + innerGemSize)
+                    lineTo(cx - innerGemSize, cy)
+                    close()
+                }
+                drawPath(innerGem, color = Color(0xFF22C55E))
+            }
+            .padding(top = 26.dp, bottom = 36.dp, start = 16.dp, end = 16.dp)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Canvas(Modifier.size(width = 22.dp, height = 10.dp)) {
+                    for (i in 0..2) {
+                        val x = i * 6.dp.toPx()
+                        drawLine(
+                            color = Color.White.copy(alpha = 0.25f),
+                            start = Offset(x, 0f),
+                            end = Offset(x + 4.dp.toPx(), size.height),
+                            strokeWidth = 2.dp.toPx(),
+                            cap = StrokeCap.Round
+                        )
+                    }
+                }
+                Text(
+                    text = "Details",
+                    color = goldSoft,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Canvas(Modifier.size(width = 22.dp, height = 10.dp)) {
+                    for (i in 0..2) {
+                        val x = i * 6.dp.toPx()
+                        drawLine(
+                            color = Color.White.copy(alpha = 0.25f),
+                            start = Offset(x + 4.dp.toPx(), 0f),
+                            end = Offset(x, size.height),
+                            strokeWidth = 2.dp.toPx(),
+                            cap = StrokeCap.Round
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(18.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceAround,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { selectedTab = 0 }
+                ) {
+                    Text(
+                        text = "My Invitation",
+                        color = if (selectedTab == 0) goldSoft else mutedText,
+                        fontSize = 16.sp,
+                        fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Medium
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Box(
+                        modifier = Modifier
+                            .width(24.dp)
+                            .height(3.dp)
+                            .clip(CircleShape)
+                            .background(if (selectedTab == 0) goldSoft else Color.Transparent)
+                    )
+                }
+
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { selectedTab = 1 }
+                ) {
+                    Text(
+                        text = "Details",
+                        color = if (selectedTab == 1) goldSoft else mutedText,
+                        fontSize = 16.sp,
+                        fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Medium
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Box(
+                        modifier = Modifier
+                            .width(24.dp)
+                            .height(3.dp)
+                            .clip(CircleShape)
+                            .background(if (selectedTab == 1) goldSoft else Color.Transparent)
+                    )
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(dividerColor)
+            )
+
+            Spacer(Modifier.height(16.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(inputBg)
+                        .border(1.dp, inputBorder, RoundedCornerShape(10.dp))
+                        .padding(horizontal = 12.dp, vertical = 9.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        Icons.Default.DateRange,
+                        contentDescription = "Date",
+                        tint = Color.White,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = "11/13-11/19",
+                        color = Color.White,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Icon(
+                        Icons.Default.KeyboardArrowDown,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+
+                Spacer(Modifier.width(12.dp))
+
+                Row(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(inputBg)
+                        .border(1.dp, inputBorder, RoundedCornerShape(10.dp))
+                        .padding(horizontal = 10.dp, vertical = 9.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Search,
+                        contentDescription = "Search",
+                        tint = mutedText,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Box(Modifier.weight(1f)) {
+                        if (searchUserId.isEmpty()) {
+                            Text(
+                                text = "Search User ID",
+                                color = mutedText,
+                                fontSize = 13.sp,
+                                maxLines = 1
+                            )
+                        }
+                        BasicTextField(
+                            value = searchUserId,
+                            onValueChange = { searchUserId = it },
+                            singleLine = true,
+                            textStyle = TextStyle(color = Color.White, fontSize = 13.sp),
+                            cursorBrush = SolidColor(goldSoft),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(34.dp))
+
+            InviteArt(
+                file = "file_00000000777481f588df50d28908ce63.png",
+                modifier = Modifier.size(130.dp),
+                key = InviteKey.NONE
+            )
+
+            Spacer(Modifier.height(24.dp))
+        }
+    }
 }
 
 @Composable
