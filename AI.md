@@ -1491,3 +1491,9 @@ Current documentation does not certify that all historical features are build-, 
 - `ThemeFullScreen` no longer runs a permanent one-second clock/recomposition loop when the displayed themes have no expiry. The countdown ticker runs only while expiring themes are present and is bounded by the next expiry.
 - Existing network refresh-on-theme-open, expiry filtering/countdowns, member/admin behavior, settings save flow, and UI are retained.
 - Commits: `54fb18a`, `0a14efc`. APK compilation and on-device smoothness/regression checks remain required; not yet hardware-verified.
+
+### Store owned-state and responsiveness fix (2026-11-20)
+- `android-native/app/src/main/java/com/hurry/voicechat/StorePage.kt`: key owned, equipped, and expiry Compose state to the inventory account ID (the same ID used for the inventory cache/API), not the separate wallet UID. This prevents stale ownership state when the wallet UID remains stable but the inventory account ID changes.
+- Items explicitly marked `ownedByDefault` render as `Owned` immediately from the first frame.
+- Removed the transient `...` purchase label; unowned cards continue to show `Buy`, while owned cards show `Owned` without waiting for a network request.
+- Existing cached-first inventory rendering, purchase endpoint, wallet synchronization, equip/remove actions, and expiry handling are preserved.
