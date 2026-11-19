@@ -113,7 +113,7 @@ private data class NativeRoomTaskRow(val title:String,val reward:String,val icon
                     AsyncImage(
                         model=raw+"file_00000000680881faa3dfdb17cce60858.png",
                         contentDescription="Room Task frame",
-                        modifier=Modifier.fillMaxWidth(1.12f),
+                        modifier=Modifier.fillMaxWidth().graphicsLayer { scaleX = 1.12f },
                         contentScale=ContentScale.FillWidth 
                     )
                     Text("ROOM TASK",color=Color.White,fontSize=16.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Black,letterSpacing=1.2.sp, modifier=Modifier.offset(y=(-4).dp).shadow(4.dp, spotColor=Color.Black.copy(alpha=0.9f)))
@@ -197,7 +197,7 @@ private data class NativeRoomTaskRow(val title:String,val reward:String,val icon
                     AsyncImage(
                         model=raw+"file_0000000066c88211aa777b1f6da8683f.png",
                         contentDescription="Frame Bottom Border",
-                        modifier=Modifier.fillMaxWidth(1.12f),
+                        modifier=Modifier.fillMaxWidth().graphicsLayer { scaleX = 1.12f },
                         contentScale=ContentScale.FillWidth
                     )
                 }
