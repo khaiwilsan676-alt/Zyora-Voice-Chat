@@ -248,6 +248,33 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
     val languagePrefs = remember { context.getSharedPreferences("zyora_settings", android.content.Context.MODE_PRIVATE) }
     var languageCode by remember { mutableStateOf(languagePrefs.getString("appLanguage", "en") ?: "en") }
     val userId = remember { authPrefs.getString("uid", "").orEmpty() }
+    LaunchedEffect(userId) {
+        val accountId = authPrefs.getString("accountId", "").orEmpty().ifBlank { userId }
+        val deviceId = authPrefs.getString("deviceId", "").orEmpty()
+        if (accountId.isBlank()) return@LaunchedEffect
+        while (true) {
+            val ban = withContext(Dispatchers.IO) {
+                runCatching {
+                    val connection = (URL("https://zyora-server.onrender.com/api/check-ban").openConnection() as HttpURLConnection).apply {
+                        requestMethod = "POST"; connectTimeout = 7000; readTimeout = 7000; doOutput = true
+                        setRequestProperty("Content-Type", "application/json")
+                    }
+                    try {
+                        connection.outputStream.use { it.write(JSONObject().put("accountId", accountId).put("deviceId", deviceId).toString().toByteArray(Charsets.UTF_8)) }
+                        if (connection.responseCode !in 200..299) JSONObject() else JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
+                    } finally { connection.disconnect() }
+                }.getOrNull()
+            }
+            if (ban?.optBoolean("banned") == true) {
+                val reason = ban.optString("reason").ifBlank { ban.optJSONObject("banData")?.optString("description").orEmpty() }
+                authPrefs.edit().putString("banReason", "Your account has been banned" + if (reason.isNotBlank()) ": " + reason else ".").remove("uid").remove("idToken").apply()
+                FirebaseAuth.getInstance().signOut()
+                onLogout()
+                break
+            }
+            kotlinx.coroutines.delay(8000)
+        }
+    }
     // Isolate the local Mine-room cache by Firebase UID when multiple Google accounts use one device.
     val mineRoomKey = "mine_room_${userId}"
     var mineCreatedRoom by remember {
