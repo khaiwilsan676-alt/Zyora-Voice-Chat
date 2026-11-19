@@ -1356,3 +1356,10 @@ Current documentation does not certify that all historical features are build-, 
 - Added native equipped-bubble lookup for each room-chat sender using that sender's server inventory, with the existing local inventory cache as the immediate/offline fallback.
 - Replaced the normal black message-card fill with the sender's active purchased Chat Bubble image; message text and mention handling remain overlaid on top of the image. Image messages and all other room UI remain unchanged.
 - Verification: source committed; native APK build and multi-account runtime checks remain pending.
+
+
+## 2026-11-19 — Registration false-positive follow-up
+- Root cause: Email/Password sign-up queried the device registration slot before authenticating the submitted Firebase identity. This could show the prior account's "Register this ID" restriction before the app knew whether the incoming identity was official.
+- Removed that premature device-slot precheck. Firebase authentication now resolves the identity first, then the provider-specific device lock runs.
+- Official identity detection now checks the server-resolved Zyora accountId as well as known legacy Firebase UIDs, rather than relying on Firebase UID alone.
+- No login/register UI changes.
