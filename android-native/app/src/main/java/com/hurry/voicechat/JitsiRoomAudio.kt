@@ -382,27 +382,34 @@ fun JitsiRoomAudio(
                                 continue
                             }
                             // Mix one aligned 20 ms frame per remote speaker.
-                            val mixed = ShortArray(ROOM_VOICE_FRAME_BYTES / 2)
-                            var hasAudio = false
+                            val mixed = LongArray(ROOM_VOICE_FRAME_BYTES / 2)
+                            var activeSpeakers = 0
                             voiceSpeakerQueues.values.forEach { speakerQueue ->
                                 val frame = speakerQueue.poll() ?: return@forEach
-                                hasAudio = true
+                                activeSpeakers++
                                 var i = 0
-                                while (i + 1 < minOf(frame.size, ROOM_VOICE_FRAME_BYTES)) {
+                                while (i + 1 < ROOM_VOICE_FRAME_BYTES) {
                                     val sample = ((frame[i + 1].toInt() shl 8) or (frame[i].toInt() and 0xFF)).toShort().toInt()
-                                    val index = i / 2
-                                    mixed[index] = (mixed[index].toInt() + sample).coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
+                                    mixed[i / 2] += sample.toLong()
                                     i += 2
                                 }
                             }
-                            if (!hasAudio) {
+                            if (activeSpeakers == 0) {
                                 try { Thread.sleep(10) } catch (_: InterruptedException) { if (!alive.get()) break }
                                 continue
                             }
+                            // Soft-limit the final sum once, after all speakers are mixed.
+                            // Per-speaker clipping caused order-dependent distortion when 3+ users spoke.
                             ByteArray(ROOM_VOICE_FRAME_BYTES).also { output ->
-                                mixed.forEachIndexed { index, sample ->
-                                    output[index * 2] = (sample.toInt() and 0xFF).toByte()
-                                    output[index * 2 + 1] = ((sample.toInt() shr 8) and 0xFF).toByte()
+                                mixed.forEachIndexed { index, sum ->
+                                    val magnitude = kotlin.math.abs(sum)
+                                    val limited = if (magnitude <= 24576L) sum else {
+                                        val excess = magnitude - 24576L
+                                        (if (sum < 0) -1L else 1L) * (24576L + (excess * 8192L / (excess + 8192L)))
+                                    }
+                                    val sample = limited.coerceIn(Short.MIN_VALUE.toLong(), Short.MAX_VALUE.toLong()).toInt()
+                                    output[index * 2] = (sample and 0xFF).toByte()
+                                    output[index * 2 + 1] = ((sample shr 8) and 0xFF).toByte()
                                 }
                             }
                         } else {
@@ -429,7 +436,7 @@ fun JitsiRoomAudio(
                                 musicPlayer = null
                                 runCatching { track.pause(); track.flush(); track.stop(); track.release() }
                             }
-                            queue.clear()
+                            if (isVoicePacket) voiceSpeakerQueues.values.forEach { it.clear() } else musicPlaybackQueue.clear()
                         }
                     }
                 }
@@ -469,9 +476,13 @@ fun JitsiRoomAudio(
             if (!ready) return@Listener
             ensurePlaybackWorker(isVoicePacket)
             if (isVoicePacket) {
-                val speakerId = data.optString("userId").trim()
-                if (speakerId.isBlank() || speakerId == localAccountId) return@Listener
-                val queue = voiceSpeakerQueues.computeIfAbsent(speakerId) { ArrayBlockingQueue(8) }
+                val speakerId = sequenceOf("userId", "accountId", "senderId", "senderAccountId", "publisherId")
+                    .map { data.optString(it).trim() }
+                    .firstOrNull { it.isNotBlank() } ?: return@Listener
+                if (speakerId == localAccountId) return@Listener
+                // Server voice frames are fixed 20 ms / 640-byte PCM packets.
+                if (bytes.size != ROOM_VOICE_FRAME_BYTES) return@Listener
+                val queue = voiceSpeakerQueues.computeIfAbsent(speakerId) { ArrayBlockingQueue(6) }
                 if (!queue.offer(bytes.copyOf())) { queue.poll(); queue.offer(bytes.copyOf()) }
             } else {
                 if (!musicPlaybackQueue.offer(bytes.copyOf())) { musicPlaybackQueue.poll(); musicPlaybackQueue.offer(bytes.copyOf()) }
@@ -522,7 +533,7 @@ fun JitsiRoomAudio(
             while (alive.get()) {
                 val voicePlaybackEnabled = latestPlaybackVoiceEnabled
                 if (!voicePlaybackEnabled) {
-                    voicePlaybackQueue.clear()
+                    voiceSpeakerQueues.values.forEach { it.clear() }
                     // Flush the partially buffered pre-mute frame once. Without this,
                     // stale AudioTrack data can overlap the first packets after unmute.
                     if (lastPlaybackVoiceEnabled) {
@@ -598,7 +609,7 @@ fun JitsiRoomAudio(
             micMuteWatcherThread.interrupt()
             playbackVoiceMuteWatcherThread.interrupt()
             musicWatcherThread?.interrupt()
-            voicePlaybackQueue.clear()
+            voiceSpeakerQueues.values.forEach { it.clear() }
             voiceSpeakerQueues.clear()
             musicPlaybackQueue.clear()
             voicePlaybackThread?.interrupt()
