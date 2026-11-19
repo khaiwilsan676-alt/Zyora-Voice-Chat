@@ -23,6 +23,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -88,6 +89,7 @@ fun RoomDailyCupTotal(roomId: String) {
 
 @Composable
 fun RoomCupSheet(roomId:String,userId:String,userName:String,userImage:String,onClose:()->Unit,initialOnline:Boolean=false,roomUsers:List<ActiveUserNative> = emptyList(),roomOwnerId:String="",roomAdminIds:List<String> = emptyList(),onOpenProfile:(ActiveUserNative)->Unit={},onCopyUserId:(String)->Unit={}) {
+    val context = LocalContext.current
     var selectedOnline by remember(initialOnline) { mutableStateOf(initialOnline) }
     
     var period by remember { mutableStateOf("daily") }
@@ -171,6 +173,17 @@ fun RoomCupSheet(roomId:String,userId:String,userName:String,userImage:String,on
             
             if (selectedOnline) {
                 val visibleUsers = remember(roomUsers,roomOwnerId) { roomUsers.filter { it.accountId.isNotBlank() }.distinctBy { it.accountId }.sortedWith(compareBy<ActiveUserNative> { if(it.accountId==roomOwnerId) 0 else 1 }.thenBy { it.name.lowercase() }) }
+                var genderByUser by remember(roomId) { mutableStateOf<Map<String,String>>(emptyMap()) }
+                LaunchedEffect(roomId, visibleUsers) {
+                    genderByUser = withContext(Dispatchers.IO) {
+                        val db = NativeIndexDatabase(context)
+                        visibleUsers.mapNotNull { user ->
+                            runCatching { db.loadProfile(user.accountId)?.optString("gender", "").orEmpty()
+                                .takeIf { it.isNotBlank() && it != "null" }?.let { user.accountId to it }
+                            }.getOrNull()
+                        }.toMap()
+                    }
+                }
                 LazyColumn(Modifier.weight(1f).fillMaxWidth(),contentPadding=PaddingValues(horizontal=12.dp,vertical=8.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
                     itemsIndexed(visibleUsers,key={_,u->u.accountId}) { _,u ->
                         Row(Modifier.fillMaxWidth().clickable { onOpenProfile(u) }.padding(horizontal=4.dp),verticalAlignment=Alignment.CenterVertically) {
@@ -183,13 +196,10 @@ fun RoomCupSheet(roomId:String,userId:String,userName:String,userImage:String,on
                                 }
                                 Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(6.dp)) {
                                     if(u.country.isNotBlank()) CountryFlagImage(u.country,Modifier.size(18.dp,12.dp)) else Spacer(Modifier.width(18.dp))
-                                    if(u.gender.isNotBlank()) {
-                                        val isFemale = u.gender.equals("female", true) || u.gender.equals("f", true) || u.gender == "♀"
-                                        Box(
-                                            Modifier.size(18.dp).clip(CircleShape)
-                                                .background(if(isFemale) Color(0xFFEC4899) else Color(0xFF3B82F6)),
-                                            contentAlignment=Alignment.Center
-                                        ) {
+                                    val gender = genderByUser[u.accountId].orEmpty()
+                                    if(gender.isNotBlank()) {
+                                        val isFemale = gender.equals("female", true) || gender.equals("f", true) || gender == "♀"
+                                        Box(Modifier.size(18.dp).clip(CircleShape).background(if(isFemale) Color(0xFFEC4899) else Color(0xFF3B82F6)),contentAlignment=Alignment.Center) {
                                             CustomGenderIcon(isFemale=isFemale,modifier=Modifier.size(8.dp))
                                         }
                                     }
