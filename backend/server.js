@@ -1401,7 +1401,7 @@ app.put("/api/users", async (req, res) => {
       accountNumber: accountId,
       displayUserNumber: accountId,
       updatedAt: Date.now(),
-      lastIp: req.headers['x-forwarded-for'] || req.socket.remoteAddress || '',
+      lastIp: String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim(),
     };
     if (data.deviceId) {
       userData.lastDeviceId = data.deviceId;
