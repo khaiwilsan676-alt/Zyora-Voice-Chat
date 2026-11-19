@@ -362,14 +362,40 @@ private fun LeaderboardChromaImage(url: String, contentDescription: String?, mod
             bitmap = withContext(Dispatchers.IO) {
                 runCatching {
                     LeaderboardChromaCache.images.get(url) ?: run {
-                        val connection = URL(url).openConnection().apply {
+                        // Decode large PNG frames at a bounded resolution. Full-size decoding
+                        // can allocate tens of MB and crash low-memory phones when the screen opens.
+                        val boundsConnection = URL(url).openConnection().apply {
                             connectTimeout = 7_000
                             readTimeout = 9_000
                             useCaches = true
                         }
-                        val source = connection.getInputStream().use { BitmapFactory.decodeStream(it) }
-                        if (source == null) null else {
-                            source.asImageBitmap().also { LeaderboardChromaCache.images.put(url, it) }
+                        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                        try {
+                            boundsConnection.getInputStream().use { BitmapFactory.decodeStream(it, null, bounds) }
+                        } finally {
+                            (boundsConnection as? HttpURLConnection)?.disconnect()
+                        }
+                        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) {
+                            null
+                        } else {
+                            var sampleSize = 1
+                            while (bounds.outWidth / sampleSize > 1024 || bounds.outHeight / sampleSize > 1024) {
+                                sampleSize *= 2
+                            }
+                            val decodeConnection = URL(url).openConnection().apply {
+                                connectTimeout = 7_000
+                                readTimeout = 9_000
+                                useCaches = true
+                            }
+                            try {
+                                val options = BitmapFactory.Options().apply { inSampleSize = sampleSize }
+                                val decoded = decodeConnection.getInputStream().use {
+                                    BitmapFactory.decodeStream(it, null, options)
+                                }
+                                decoded?.asImageBitmap()?.also { LeaderboardChromaCache.images.put(url, it) }
+                            } finally {
+                                (decodeConnection as? HttpURLConnection)?.disconnect()
+                            }
                         }
                     }
                 }.getOrNull()
