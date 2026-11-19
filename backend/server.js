@@ -3192,6 +3192,23 @@ io.on("connection", (socket) => {
     }
 
     if (action === "lucky_image") io.to(`room:${roomId}`).emit("room_seat_action", data);
+
+    // Revoke an active mic publisher immediately when their seat is left, muted,
+    // or locked. Do not wait for another audio frame to discover lost permission.
+    if (socket.roomVoiceRoomId === roomId && socket.roomVoiceActive) {
+      const stillAllowedToSpeak = getRoomSeats(roomId).some((seat) =>
+        seat?.isOccupied && !seat?.isMuted && roomSeatBelongsToSocket(seat, socket)
+      );
+      if (!stillAllowedToSpeak) {
+        const publisherId = String(socket.roomAccountId || socket.accountId || actorId);
+        socket.roomVoiceActive = false;
+        socket.roomVoiceRoomId = null;
+        socket.emit("room_voice_permission", { roomId, allowed: false });
+        socket.to(`room:${roomId}`).emit("room_voice_speaker", {
+          roomId, userId: publisherId, speaking: false
+        });
+      }
+    }
     emitRoomSeats(roomId);
   });
 
