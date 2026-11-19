@@ -261,7 +261,7 @@ fun GiftPicker(
                     "roomId" to roomId,
                     "senderId" to currentUserAccountId,
                     "recipientIds" to recipientIds,
-                    "amount" to totalCost,
+                    "amount" to totalSendCost, // Exact coins debited across all selected recipients.
                     "giftName" to selectedGiftObj.name,
                     "giftImage" to selectedGiftObj.image,
                     "giftType" to activeTab,
