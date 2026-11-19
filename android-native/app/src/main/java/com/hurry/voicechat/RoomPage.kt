@@ -728,7 +728,7 @@ fun RoomPage(
     var showStore by remember { mutableStateOf(false) }
     var storeInitialView by remember { mutableStateOf("store") }
     var showExitMenu by remember{mutableStateOf(false)}
-    var keepingRoomForMini by remember { mutableStateOf(false) }
+    // The room remains composed while minimized; no socket-only keep/dispose handoff is used.
     var showInfo by remember{mutableStateOf(false)}
     var showRoomCup by remember { mutableStateOf(false) }
     var showRoomCupOnline by remember { mutableStateOf(false) }
@@ -1092,7 +1092,6 @@ fun RoomPage(
     val latestRoomDisplayImage by rememberUpdatedState(roomDisplayImage)
     val latestRoomName by rememberUpdatedState(roomName)
     val latestRoomImage by rememberUpdatedState(roomImage)
-    val latestKeepingRoomForMini by rememberUpdatedState(keepingRoomForMini)
     val latestEntryEffectEnabled by rememberUpdatedState(entryEffectEnabled)
     val latestGiftEffectEnabled by rememberUpdatedState(giftEffectEnabled)
 
@@ -1683,31 +1682,24 @@ fun RoomPage(
         onDispose {
             // A real room exit must stop the foreground music service even when navigation
             // bypasses the Exit-menu button. Keep the saved track metadata for the next visit.
-            if (!latestKeepingRoomForMini) {
-                runCatching {
-                    appContext.startService(Intent(appContext, RoomMusicService::class.java)
-                        .setAction(RoomMusicService.ACTION_STOP))
-                }
-                miniMusicTrack?.let { track ->
-                    persistLastRoomTrack(track)
-                    MusicPlaybackState.currentTrack = track
-                }
-                isMusicPlaying = false
-                MusicPlaybackState.isPlaying = false
-                MusicPlaybackState.currentPlayingUri = null
+            runCatching {
+                appContext.startService(Intent(appContext, RoomMusicService::class.java)
+                    .setAction(RoomMusicService.ACTION_STOP))
             }
-            // Stop pending room-only fetches and queued UI callbacks before releasing listeners.
+            miniMusicTrack?.let { track ->
+                persistLastRoomTrack(track)
+                MusicPlaybackState.currentTrack = track
+            }
+            isMusicPlaying = false
+            MusicPlaybackState.isPlaying = false
+            MusicPlaybackState.currentPlayingUri = null
+            // This effect is disposed only on a real room switch/exit. A minimized room
+            // stays composed, so its Socket.IO listeners and voice state remain alive.
             roomIoScope.cancel()
             mainHandler.removeCallbacksAndMessages(null)
-            if (latestKeepingRoomForMini) {
-                // Keep the actual socket connected in the background. Disconnecting it
-                // would trigger server cleanup and release the user's occupied seat.
-                ZyoraKeptRoomSocketSession.retain(roomSocket, roomId, accountId)
-            } else {
-                ZyoraKeptRoomSocketSession.clear(roomSocket)
-                roomSocket.emit("room_chat_view", JSONObject().put("roomId", roomId).put("userId", accountId).put("active", false))
-                roomSocket.emit("room_leave",JSONObject().put("roomId",roomId).put("userId",accountId).put("accountId",accountId))
-            }
+            ZyoraKeptRoomSocketSession.clear(roomSocket)
+            roomSocket.emit("room_chat_view", JSONObject().put("roomId", roomId).put("userId", accountId).put("active", false))
+            roomSocket.emit("room_leave",JSONObject().put("roomId",roomId).put("userId",accountId).put("accountId",accountId))
             roomSocket.off("room_presence",presenceListener)
             roomSocket.off("room_vehicle_entry", vehicleEntryListener)
             roomSocket.off("gift_video_play", giftVideoListener)
@@ -1732,10 +1724,8 @@ fun RoomPage(
             roomSocket.off("lucky_bag_transaction",luckyBagTransactionListener)
             roomSocket.off("wallet_balance_updated",walletBalanceListener)
             roomSocket.off(Socket.EVENT_CONNECT,connectListener)
-            if (!latestKeepingRoomForMini) {
-                roomSocket.disconnect()
-                roomSocket.close()
-            }
+            roomSocket.disconnect()
+            roomSocket.close()
             roomSocketRef.value=null
             mainHandler.post { backendRoomUsers.clear() }
         }
@@ -2514,7 +2504,7 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
         }
         }
         if(showExitMenu) RoomExitMenu(
-            onKeep={keepingRoomForMini=true;showExitMenu=false;onKeepRoom(roomName,roomImage,roomId)},
+            onKeep={showExitMenu=false;onKeepRoom(roomName,roomImage,roomId)},
             onExit={showExitMenu=false;stopMusicForRoomExit();onClose()},
             onDismiss={showExitMenu=false}
         )
