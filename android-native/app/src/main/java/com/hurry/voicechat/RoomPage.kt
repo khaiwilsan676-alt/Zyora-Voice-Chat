@@ -266,7 +266,8 @@ fun RoomPage(
     onFollowToggle:(String,Boolean)->Unit={_,_->},
     onRoomSupport:()->Unit={},
     onJoinRoom:(String)->Unit={},
-    onKickNotice:(JSONObject)->Unit={}
+    onKickNotice:(JSONObject)->Unit={},
+    isCovered: Boolean = false
 ) {
     val roomId=roomOwner.id.ifBlank{roomOwner.accountId.ifBlank{roomOwner.uid.ifBlank{"default-room"}}}
     val roomOwnerAccountId = roomOwner.accountId.ifBlank { roomOwner.id }
@@ -960,7 +961,7 @@ fun RoomPage(
         }
     }
 
-    BackHandler(enabled = true) {
+    BackHandler(enabled = !isCovered) {
         when {
             showLuckyBagClaimedCard -> showLuckyBagClaimedCard = false
             showLuckyBagCenterReveal -> showLuckyBagCenterReveal = false
