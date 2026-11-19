@@ -1791,11 +1791,9 @@ fun RoomPage(
 
         // CUP AND MUSIC PILLS REVERTED TO ORIGINAL TOP LEFT OVERLAY POSITION
         Row(modifier = Modifier.align(Alignment.TopStart).padding(top = 88.dp, start = 4.dp),verticalAlignment = Alignment.CenterVertically,horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Row(modifier = Modifier.height(22.dp).background(Brush.horizontalGradient(listOf(Color(0xE6242B35),Color(0x99242B35),Color.Transparent))).clickable { showRoomCupOnline = false; showRoomCup = true }.padding(start = 12.dp, end = 12.dp),verticalAlignment = Alignment.CenterVertically) {
-                TransparentGreenImage(url = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/1788258883971~2.jpg",modifier = Modifier.size(16.dp))
-                Spacer(Modifier.width(6.dp))
+            Row(modifier = Modifier.height(22.dp).clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha = 0.20f)).clickable { showRoomCupOnline = false; showRoomCup = true }.padding(horizontal = 8.dp),verticalAlignment = Alignment.CenterVertically,horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Icon(Icons.Default.EmojiEvents, contentDescription = "Top Cup", tint = Color(0xFFFFD54F), modifier = Modifier.size(13.dp))
                 RoomDailyCupTotal(roomId)
-                Icon(Icons.Default.ChevronRight, null, tint = Color(0xFFEEF3A3), modifier = Modifier.padding(start = 4.dp).size(10.dp))
             }
             if (musicControllerVisible && miniMusicTrack != null) {
                 Row(modifier = Modifier.height(26.dp).clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha = 0.30f)).clickable { musicControllerMinimized = false }.padding(start = 2.dp, end = 10.dp),verticalAlignment = Alignment.CenterVertically,horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -2366,7 +2364,7 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                     .zIndex(10f)
                     .padding(horizontal = 12.dp)
                     .padding(bottom = 60.dp)
-                    .fillMaxWidth()
+                    .fillMaxWidth(0.88f)
                     .height(160.dp)
                     // Transform the entire card layer, including its black surface and rounded clip.
                     .graphicsLayer { translationY = musicCardDragOffset.value }
