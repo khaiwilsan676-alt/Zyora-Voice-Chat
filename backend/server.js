@@ -3167,15 +3167,18 @@ io.on("connection", (socket) => {
     }
 
     if (action === "emoji") {
+      const emojiSource = typeof data.src === "string" ? data.src.trim() : "";
+      const emojiPath = emojiSource.split("?")[0].split("#")[0];
+      // Never accept MP4/video URLs as seat reactions; seats render image/GIF only.
       if (current.isOccupied &&
           String(current.user?.accountId || current.user?.userId || "") === actorId &&
-          typeof data.src === "string" && data.src.trim()) {
+          emojiSource && !/\.mp4$/i.test(emojiPath)) {
         const emojiTimestamp = Number(data.timestamp || Date.now());
         const emojiScale = Number(data.scale);
         seats.set(seatNumber, {
           ...current,
           gif: {
-            src: data.src,
+            src: emojiSource,
             timestamp: emojiTimestamp,
             scale: Number.isFinite(emojiScale) ? Math.max(0.45, Math.min(1.15, emojiScale)) : 0.8,
           },
