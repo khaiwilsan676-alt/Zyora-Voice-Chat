@@ -1402,7 +1402,7 @@ Current documentation does not certify that all historical features are build-, 
 
 
 ## 2026-11-19 — Keep room silent reconnect preserves occupied seat
-- `backend/server.js`: the `room_join` path no longer clears the account's occupied seat when the native client marks a reconnect as `suppressEntry` (the retained Keep-session recovery path). The server still sends authoritative room presence and seat snapshots after the reconnect.
+- `backend/server.js`: the `room_join` path no longer clears the account's occupied seat when the native client marks a reconnect as `suppressEntry` (the retained Keep-session recovery path). The server still sends authoritative room presence and seat snapshots after the reconnect, but suppresses the duplicate `room_user_online` broadcast so other room members do not see a second entry event.
 - Normal room entry (`suppressEntry` false) continues clearing stale seats, preventing a genuinely new session from inheriting an old seat.
 - No UI, voice relay, music playback, or normal room-entry behavior was intentionally changed.
 - Verification: backend syntax/runtime and a real two-device Keep → temporary disconnect → restore test are still required.
