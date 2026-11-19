@@ -1380,3 +1380,10 @@ Current documentation does not certify that all historical features are build-, 
 - Native `JitsiRoomAudio.kt`: replaced the shared voice FIFO playback path with independent bounded 20 ms PCM queues keyed by the authenticated sender ID; each playback tick sums samples from concurrent speakers into one mono frame with clipping protection. This prevents concurrent users' frames from being played sequentially as overlapping/chopped audio. Speaker OFF, disconnect, and room cleanup clear the per-speaker queues. Music playback remains on its separate queue.
 - Server relay already stamps each `room_voice_chunk` with the authenticated `userId` and excludes the publishing socket; no server fanout change was needed.
 - Verification: source committed; native APK build and two-device simultaneous-unmute test still required.
+
+## 2026-11-19 — Message inbox profile avatar refresh
+- `MessageScreen.kt`: existing conversation previews no longer overwrite a valid cached peer avatar when an incoming message omits `senderPhoto` or sends the default placeholder.
+- The Message inbox asynchronously refreshes cached peer name/photo metadata from the existing `/api/users` endpoint on a background dispatcher, then updates the visible row and IndexDB cache without blocking first render.
+- No Message page UI, layout, navigation, chat delivery, unread-count, or room-presence behavior was intentionally changed.
+- GitHub commits: `789bc65e` (initial inbox avatar refresh), `56753eed` (corrected preview initialization order).
+- Native Gradle build and device verification are still required; this change has not been represented as build-tested.
