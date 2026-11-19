@@ -48,6 +48,7 @@ import java.util.TimeZone
 
 // GitHub Raw URLs for your images
 private const val ROOM_SUPPORT_HEADER = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261018_165235.png"
+private const val ROOM_SUPPORT_BACK_ICON = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_000000006ad88211b52616418e319e94.png"
 
 @Composable
 fun RoomSupport(onBack: () -> Unit) {
@@ -137,17 +138,18 @@ fun RoomSupportContent(bgColor: Color, onShowPopup: (String) -> Unit, onBack: ()
             )
 
             // Back Icon ab float nahi hoga, page scroll ke sath upar jayega
-            Icon(
-                imageVector = Icons.Default.ArrowBack,
+            AsyncImage(
+                model = ROOM_SUPPORT_BACK_ICON,
                 contentDescription = "Back",
-                tint = Color.White,
                 modifier = Modifier
                     .statusBarsPadding()
                     .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .size(24.dp)
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
-                        indication = null // Grey effect hta diya
-                    ) { onBack() }
+                        indication = null
+                    ) { onBack() },
+                contentScale = ContentScale.Fit
             )
         }
 
