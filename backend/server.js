@@ -3168,11 +3168,9 @@ io.on("connection", (socket) => {
 
     if (action === "emoji") {
       const emojiSource = typeof data.src === "string" ? data.src.trim() : "";
-      const emojiPath = emojiSource.split("?")[0].split("#")[0];
-      // Never accept MP4/video URLs as seat reactions; seats render image/GIF only.
       if (current.isOccupied &&
           String(current.user?.accountId || current.user?.userId || "") === actorId &&
-          emojiSource && !/\.mp4$/i.test(emojiPath)) {
+          emojiSource) {
         const emojiTimestamp = Number(data.timestamp || Date.now());
         const emojiScale = Number(data.scale);
         seats.set(seatNumber, {
