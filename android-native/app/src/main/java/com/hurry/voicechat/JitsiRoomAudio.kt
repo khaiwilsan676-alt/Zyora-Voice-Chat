@@ -396,11 +396,17 @@ fun JitsiRoomAudio(
                                 try { Thread.sleep(20) } catch (_: InterruptedException) { if (!alive.get()) break }
                                 continue
                             }
-                            // Mix one aligned 20 ms frame per remote speaker.
+                            // Socket.IO delivers each publisher independently. Give packets a
+                            // short collection window so two speakers' frames arriving a few ms
+                            // apart are mixed in the same output frame instead of alternating.
+                            if (voiceSpeakerQueues.values.any { it.isNotEmpty() }) {
+                                try { Thread.sleep(8) } catch (_: InterruptedException) { if (!alive.get()) break }
+                            }
                             val mixed = LongArray(ROOM_VOICE_FRAME_BYTES / 2)
                             var activeSpeakers = 0
                             voiceSpeakerQueues.values.forEach { speakerQueue ->
                                 val frame = speakerQueue.poll() ?: return@forEach
+                                if (frame.size != ROOM_VOICE_FRAME_BYTES) return@forEach
                                 activeSpeakers++
                                 var i = 0
                                 while (i + 1 < ROOM_VOICE_FRAME_BYTES) {
@@ -410,19 +416,15 @@ fun JitsiRoomAudio(
                                 }
                             }
                             if (activeSpeakers == 0) {
-                                try { Thread.sleep(10) } catch (_: InterruptedException) { if (!alive.get()) break }
+                                try { Thread.sleep(5) } catch (_: InterruptedException) { if (!alive.get()) break }
                                 continue
                             }
-                            // Soft-limit the final sum once, after all speakers are mixed.
-                            // Per-speaker clipping caused order-dependent distortion when 3+ users spoke.
+                            // Average simultaneous speakers instead of hard limiting their sum.
+                            // The old nonlinear limiter distorted peaks as soon as two people spoke.
                             ByteArray(ROOM_VOICE_FRAME_BYTES).also { output ->
                                 mixed.forEachIndexed { index, sum ->
-                                    val magnitude = kotlin.math.abs(sum)
-                                    val limited = if (magnitude <= 24576L) sum else {
-                                        val excess = magnitude - 24576L
-                                        (if (sum < 0) -1L else 1L) * (24576L + (excess * 8192L / (excess + 8192L)))
-                                    }
-                                    val sample = limited.coerceIn(Short.MIN_VALUE.toLong(), Short.MAX_VALUE.toLong()).toInt()
+                                    val sample = (sum / activeSpeakers).toInt()
+                                        .coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt())
                                     output[index * 2] = (sample and 0xFF).toByte()
                                     output[index * 2 + 1] = ((sample shr 8) and 0xFF).toByte()
                                 }
@@ -497,7 +499,7 @@ fun JitsiRoomAudio(
                 if (speakerId == localAccountId) return@Listener
                 // Server voice frames are fixed 20 ms / 640-byte PCM packets.
                 if (bytes.size != ROOM_VOICE_FRAME_BYTES) return@Listener
-                val queue = voiceSpeakerQueues.computeIfAbsent(speakerId) { ArrayBlockingQueue(6) }
+                val queue = voiceSpeakerQueues.computeIfAbsent(speakerId) { ArrayBlockingQueue(4) }
                 if (!queue.offer(bytes.copyOf())) { queue.poll(); queue.offer(bytes.copyOf()) }
             } else {
                 if (!musicPlaybackQueue.offer(bytes.copyOf())) { musicPlaybackQueue.poll(); musicPlaybackQueue.offer(bytes.copyOf()) }
