@@ -1108,7 +1108,7 @@ private fun NavItem(
         Modifier
             .width(72.dp)
             .clickable(
-                interactionSource = remember { MutableInteractionSource() },
+                interactionSource = null,
                 indication = null
             ) { onTab(which) }
             .padding(vertical = 4.dp),
