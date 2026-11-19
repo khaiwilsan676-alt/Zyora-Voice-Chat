@@ -1455,3 +1455,12 @@ Current documentation does not certify that all historical features are build-, 
 - Opening a public profile or room support no longer marks the room as explicitly kept/minimized; only the actual Keep action does that, so later room exit still performs normal cleanup.
 - Existing room UI is unchanged. Native APK compilation and device navigation/overlay regression tests are still required; this commit is not yet hardware-verified.
 - Commits: `4780519`, `d047b99`.
+
+
+## 2026-11-20 — Complete retained room session and overlay navigation
+- Native `MainActivity.kt`: separated the active `roomSession` from the currently visible `openedRoom`. Keep now hides the RoomPage visual host while leaving the same RoomPage composition alive, preserving its in-memory seats, voice publishers/subscribers, Socket.IO listeners, room chat, and music state. Reopening the kept-room bubble restores visibility of the same session instead of mounting a fresh room.
+- Native `RoomPage.kt`: removed the old socket-only Keep disposal path. The room socket/listeners and voice state are now released only when the room is genuinely exited or switched; the normal dispose path emits `room_leave`, disconnects, and closes the socket. Opening a public profile or room support no longer sets the Keep flag.
+- Navigation: room content stays composed underneath profile/support/search/leaderboard/invite/chat overlays; overlays are rendered above the room and take Back priority. The room BackHandler is disabled while covered. The room image-preview Dialog is dismissed and blocked while another page is active.
+- Kept-room Exit now clears the retained `roomSession`, triggering the real room cleanup path rather than only removing the bubble.
+- Commits: `8043a36`, `adecf33`, `3a5a97f`, `e36cac5`.
+- Native APK build and device regression testing are pending; do not treat this as hardware-verified until the workflow and Keep/profile/overlay tests pass.
