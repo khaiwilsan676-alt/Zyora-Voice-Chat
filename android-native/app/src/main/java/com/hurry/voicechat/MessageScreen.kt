@@ -545,9 +545,6 @@ fun MessageScreen(onChat: (String, String, String) -> Unit, embeddedSheet: Boole
     fun updateConversationPreview(peerId: String, peerName: String, peerPhoto: String, lastMessage: String, timestamp: Long) {
         if (peerId.isBlank() || peerId == currentUserId) return
         val time = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(timestamp))
-        val saved = JSONObject().put("peerId", peerId).put("peerName", resolvedName).put("peerPhoto", resolvedPhoto).put("lastMessage", lastMessage).put("timestamp", timestamp).put("time", time)
-        indexDb.saveConversation("conversation_${currentUserId}_$peerId", peerId, saved)
-        
         val unread = unreadPrefs.getInt("unread_${currentUserId}_${peerId}", 0)
         // A message event may omit senderPhoto. Never erase a known, working DP
         // with an empty/default value while refreshing the conversation preview.
@@ -556,6 +553,8 @@ fun MessageScreen(onChat: (String, String, String) -> Unit, embeddedSheet: Boole
             it.isNotBlank() && it != "null" && it != "/default-avatar.png"
         } ?: previous?.image.orEmpty()
         val resolvedName = peerName.takeIf { it.isNotBlank() && it != "User" } ?: previous?.name ?: "User"
+        val saved = JSONObject().put("peerId", peerId).put("peerName", resolvedName).put("peerPhoto", resolvedPhoto).put("lastMessage", lastMessage).put("timestamp", timestamp).put("time", time)
+        indexDb.saveConversation("conversation_${currentUserId}_$peerId", peerId, saved)
         val existing = chats.indexOfFirst { it.uid == peerId }
         if (existing >= 0) chats.removeAt(existing)
         val insertAt = when (peerId) {
