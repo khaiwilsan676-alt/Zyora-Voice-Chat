@@ -1407,7 +1407,7 @@ fun RoomPage(
                     val seat = seatsJson.optJSONObject(index) ?: continue
                     val user = seat.optJSONObject("user")
                     val gif = seat.optJSONObject("gif")
-                    parsed.add(NativeRoomSeat(number=seat.optInt("number",index+1),occupied=seat.optBoolean("isOccupied",user != null),locked=seat.optBoolean("isLocked",false),muted=seat.optBoolean("isMuted",false),selfMuted=seat.optBoolean("isSelfMuted",false),speaking=seat.optBoolean("isSpeaking",false),userName=if (user == null) "" else user.optString("name","User"),userImage=if (user == null) "" else if (user.optString("accountId",user.optString("userId","")) in setOf("100002", "100003")) "https://zyora-voice-chat.vercel.app/logo.png" else user.optString("image","").takeIf { it.isNotBlank() && it != "null" } ?: user.optString("dp","").takeIf { it.isNotBlank() && it != "null" } ?: user.optString("avatarUrl","").takeIf { it.isNotBlank() && it != "null" } ?: user.optString("profileImage","").takeIf { it.isNotBlank() && it != "null" } ?: "",accountId=if (user == null) "" else user.optString("accountId",user.optString("userId","")),gifSrc=(gif?.optString("src","") ?: "").takeUnless { it.substringBefore("?").substringBefore("#").endsWith(".mp4", ignoreCase = true) } ?: "",gifTimestamp=gif?.optLong("timestamp",0L) ?: 0L,gifDurationMs=gif?.optLong("duration",5000L) ?: 5000L,gifScale=((gif?.optDouble("scale",0.8) ?: 0.8).toFloat())))
+                    parsed.add(NativeRoomSeat(number=seat.optInt("number",index+1),occupied=seat.optBoolean("isOccupied",user != null),locked=seat.optBoolean("isLocked",false),muted=seat.optBoolean("isMuted",false),selfMuted=seat.optBoolean("isSelfMuted",false),speaking=seat.optBoolean("isSpeaking",false),userName=if (user == null) "" else user.optString("name","User"),userImage=if (user == null) "" else if (user.optString("accountId",user.optString("userId","")) in setOf("100002", "100003")) "https://zyora-voice-chat.vercel.app/logo.png" else user.optString("image","").takeIf { it.isNotBlank() && it != "null" } ?: user.optString("dp","").takeIf { it.isNotBlank() && it != "null" } ?: user.optString("avatarUrl","").takeIf { it.isNotBlank() && it != "null" } ?: user.optString("profileImage","").takeIf { it.isNotBlank() && it != "null" } ?: "",accountId=if (user == null) "" else user.optString("accountId",user.optString("userId","")),gifSrc=gif?.optString("src","") ?: "",gifTimestamp=gif?.optLong("timestamp",0L) ?: 0L,gifDurationMs=gif?.optLong("duration",5000L) ?: 5000L,gifScale=((gif?.optDouble("scale",0.8) ?: 0.8).toFloat())))
                 }
                 mainHandler.post {
                     val byNumber = parsed.associateBy { it.number }
@@ -2812,10 +2812,10 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
             if(seatIndex>=0){
                 val timestamp=System.currentTimeMillis()
                 val selected=seats[seatIndex]
-                // Render the original square sticker image on the seat; do not use MP4.
-                val seatMediaUrl = sticker.src
+                // Restore the original seat media selection: MP4 when supplied, otherwise the original image/GIF.
+                val seatMediaUrl = sticker.videoUrl?.takeIf { it.isNotBlank() } ?: sticker.src
                 seats[seatIndex]=selected.copy(
-                    gifSrc=sticker.src,
+                    gifSrc=seatMediaUrl,
                     gifTimestamp=timestamp,
                     gifScale=sticker.seatScale
                 )
