@@ -96,13 +96,15 @@ fun SearchPage(onBack:()->Unit={},onOpenProfile:(RoomProfileUser)->Unit={},onOpe
     // History state - Dummy IDs hata diye, ab ye list khali se start hogi
     val searchHistory = remember { mutableStateListOf<String>() }
 
+    fun addToHistory(id: String) {
+        val clean = id.trim()
+        if (clean.isBlank()) return
+        searchHistory.remove(clean)
+        searchHistory.add(0, clean)
+    }
+
     suspend fun performSearch(qInput:String, requestToken:Int) {
         val q=qInput.trim(); if(q.isBlank()) { results=emptyList(); hasSearched=false; searching=false; return }
-        
-        // Add to history logic
-        if (!searchHistory.contains(q)) {
-            searchHistory.add(0, q)
-        }
 
         val cacheKey = "$tab:$q"
         searchCache[cacheKey]?.let { cached ->
@@ -263,7 +265,10 @@ fun SearchPage(onBack:()->Unit={},onOpenProfile:(RoomProfileUser)->Unit={},onOpe
                                 modifier = Modifier
                                     .size(18.dp)
                                     .background(Color(0xFFD1D5DB), CircleShape)
-                                    .clickable { query = "" },
+                                    .clickable {
+                                        if (results.isNotEmpty()) addToHistory(query)
+                                        query = ""
+                                    },
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(Icons.Default.Close, contentDescription = "Clear", tint = Color.White, modifier = Modifier.size(12.dp))
@@ -336,9 +341,8 @@ fun SearchPage(onBack:()->Unit={},onOpenProfile:(RoomProfileUser)->Unit={},onOpe
         // Maine yaha background Color(0xFFF0F2F5) ko hata kar Color.White kar diya hai
         Box(Modifier.fillMaxSize().background(Color.White).padding(horizontal=16.dp)) {
             when {
-                searching -> Column(Modifier.fillMaxWidth().padding(top=76.dp),horizontalAlignment=Alignment.CenterHorizontally){Icon(Icons.Default.Search,contentDescription="Searching",tint=Color(0xFF6B7280),modifier=Modifier.size(30.dp));Spacer(Modifier.height(12.dp));Text("Searching...",fontSize=12.sp,fontWeight=FontWeight.SemiBold,color=Color(0xFF9CA3AF))}
-                hasSearched && results.isEmpty() -> Column(Modifier.fillMaxWidth().padding(top=76.dp),horizontalAlignment=Alignment.CenterHorizontally){Icon(Icons.Default.Search,null,tint=Color(0x669CA3AF),modifier=Modifier.size(48.dp));Spacer(Modifier.height(8.dp));Text("No result found",fontSize=14.sp,fontWeight=FontWeight.SemiBold,color=Color(0xFF6B7280));Text("Try a different ID",fontSize=12.sp,color=Color(0xFF9CA3AF),modifier=Modifier.padding(top=4.dp))}
-                
+                searching -> { /* Completely blank, no text/icon */ }
+                hasSearched && results.isEmpty() -> { /* Completely blank, no text/icon */ }
                 !hasSearched -> { /* Completely blank, no text/icon */ }
                 
                 else -> if (tab == "Room") {
@@ -351,6 +355,7 @@ fun SearchPage(onBack:()->Unit={},onOpenProfile:(RoomProfileUser)->Unit={},onOpe
                         items(results,key={it.accountId}) { u ->
                             Column(
                                 Modifier.fillMaxWidth().clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
+                                    addToHistory(u.accountId)
                                     onOpenRoom(HurryRoom(id=u.id,name=u.name,image=u.image,country=u.country,accountId=u.accountId,locked=u.locked))
                                 }
                             ) {
@@ -382,11 +387,12 @@ fun SearchPage(onBack:()->Unit={},onOpenProfile:(RoomProfileUser)->Unit={},onOpe
                     LazyColumn(verticalArrangement=Arrangement.spacedBy(8.dp),contentPadding = PaddingValues(top = 16.dp, bottom = 20.dp)) {
                         items(results,key={it.accountId}) { u ->
                             Row(Modifier.fillMaxWidth().clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
+                                addToHistory(u.accountId)
                                 onOpenProfile(RoomProfileUser(id=u.id,uid=u.id,accountId=u.accountId,name=u.name,image=u.image,country=u.country,flag="",bio=u.bio))
                             }.padding(vertical = 8.dp),verticalAlignment=Alignment.CenterVertically) {
                                 AsyncImage(model=u.image.ifBlank{"https://zyora-voice-chat.vercel.app/default-avatar.png"},contentDescription=u.name,modifier=Modifier.size(48.dp).clip(CircleShape).background(Color(0xFFE5E7EB)),contentScale=ContentScale.Crop)
                                 Spacer(Modifier.width(12.dp))
-                                Column(Modifier.weight(1f),verticalArrangement=Arrangement.Center) {
+                                Column(Modifier.weight(1f),verticalArrangement=Alignment.CenterVertically) {
                                     Text(text=u.name,fontSize=15.sp,fontWeight=FontWeight.SemiBold,color=Color(0xFF111827),maxLines=1,overflow=TextOverflow.Ellipsis)
                                     Spacer(Modifier.height(3.dp))
                                     Row(verticalAlignment=Alignment.CenterVertically) {
