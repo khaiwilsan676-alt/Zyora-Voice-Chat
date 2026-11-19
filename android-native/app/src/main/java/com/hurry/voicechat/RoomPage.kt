@@ -3553,11 +3553,11 @@ private fun RoomSeatInviteDialog(
                     }
                 }
             }
-            Box(Modifier.fillMaxSize(.91f),contentAlignment=Alignment.Center){
+            Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center){
                 if(seat.locked) AsyncImage(model=raw+"file_0000000015a48211b000ee447a786f7c.png",contentDescription="Locked seat",modifier=Modifier.fillMaxSize(.62f),contentScale=ContentScale.Fit)
                 else if(seat.occupied) {
-                    FallbackAsyncImage(model=seat.userImage,contentDescription=seat.userName,modifier=Modifier.fillMaxSize().clip(CircleShape),contentScale=ContentScale.Crop)
-                    NativeAvatarFrameOverlay(userId=seat.accountId,modifier=Modifier.fillMaxSize())
+                    FallbackAsyncImage(model=seat.userImage,contentDescription=seat.userName,modifier=Modifier.fillMaxSize().graphicsLayer { scaleX = 1.12f; scaleY = 1.12f }.clip(CircleShape),contentScale=ContentScale.Crop)
+                    NativeAvatarFrameOverlay(userId=seat.accountId,modifier=Modifier.fillMaxSize().graphicsLayer { scaleX = 1.12f; scaleY = 1.12f })
                 } else AsyncImage(model=raw+"file_000000003e7482309b7f6e7f2a922160.png",contentDescription="Empty seat",modifier=Modifier.fillMaxSize(.65f),contentScale=ContentScale.Fit)
             }
             
