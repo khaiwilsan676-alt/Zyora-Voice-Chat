@@ -2911,8 +2911,10 @@ io.on("connection", (socket) => {
       return;
     }
     const audio = (Buffer.isBuffer(binaryAudio) || Array.isArray(binaryAudio)) ? binaryAudio : data.audio;
-    const validAudio = Buffer.isBuffer(audio) ? audio.length > 0 && audio.length <= 4096
-      : Array.isArray(audio) && audio.length > 0 && audio.length <= 4096;
+    // Mic protocol is fixed at 20 ms, 16 kHz, mono, signed 16-bit PCM.
+    // Reject malformed/oversized packets before they reach every room listener.
+    const validAudio = Buffer.isBuffer(audio) ? audio.length === 640
+      : Array.isArray(audio) && audio.length === 640;
     if (!validAudio) return;
     // Preserve Socket.IO room fanout so every other joined client receives
     // the microphone frame; the sender socket is excluded automatically.
