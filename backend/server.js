@@ -2530,6 +2530,14 @@ io.on("connection", (socket) => {
           }
         }
 
+        // A fresh room session must never inherit an occupied seat from an
+        // older socket/session (for example, after the app was force-closed
+        // before the server observed the disconnect). Minimize/Keep does not
+        // reach this branch because it retains the same connected socket.
+        if (clearUserSeat(room, accId)) {
+          emitRoomSeats(room);
+        }
+
         socket.join(`room:${room}`);
         isNewRoomJoin = true;
 
@@ -2630,15 +2638,6 @@ io.on("connection", (socket) => {
 
       if (socketIsInRoom(socket, room)) {
         roomPasswordGrants.delete(`${room}:${accId}`);
-        const occupiedSeats = roomSeats.get(room);
-        if (occupiedSeats) {
-          for (const [number, seat] of occupiedSeats.entries()) {
-            const seatedId = String(seat?.user?.accountId || seat?.user?.userId || "");
-            if (seat?.isOccupied && seatedId === accId) {
-              occupiedSeats.set(number, { ...seat, socketId: String(socket.id) });
-            }
-          }
-        }
       }
 
       // Broadcast canonical room status only after membership and lock checks succeed.
