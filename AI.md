@@ -1345,6 +1345,12 @@ Current documentation does not certify that all historical features are build-, 
 - Source committed; APK build and device verification remain pending.
 
 
+## 2026-11-19 — Room music fidelity and avatar-wave gating
+- Native `JitsiRoomAudio.kt`: kept microphone capture, voice packet format, voice output track, voice permissions, mute behavior, and room voice events unchanged. The dedicated `room_music_chunk` path now carries 48 kHz stereo 16-bit PCM (20 ms packets) instead of collapsing music into 16 kHz mono speech-quality PCM. Receivers use a separate 48 kHz stereo media AudioTrack; mono source tracks are duplicated to stereo and stereo sources retain left/right separation.
+- Native `RoomPage.kt`: avatar waves now require an occupied, unmuted, non-self-muted seat. Remote microphone waves use the live speaking event state; remote music waves use the music-packet activity timeout; local mic/music indicators remain tied to the local activity states. Empty seats and muted seats cannot animate.
+- No microphone/voice routing, capture, voice chunk protocol, seat layout, avatar dimensions, or visual styling was intentionally changed.
+- Verification: source changes committed; Android APK build, server relay compatibility, and two-device audio quality/wave behavior must still be verified before calling this device-tested.
+ 
 ## 23 Purchased chat bubble in native room chat (2026-11-19)
 - Store/Bag Chat Bubble items continue to use the existing purchase and server-backed Use/equip flow.
 - Added native equipped-bubble lookup for each room-chat sender using that sender's server inventory, with the existing local inventory cache as the immediate/offline fallback.
