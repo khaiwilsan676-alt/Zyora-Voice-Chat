@@ -1,7 +1,5 @@
 package com.hurry.voicechat
 
-import android.graphics.BitmapFactory
-import android.util.LruCache
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -31,8 +29,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -44,14 +40,6 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
 import java.util.Locale
-
-private object LeaderboardChromaCache {
-    val images = object : LruCache<String, ImageBitmap>(16 * 1024) {
-        override fun sizeOf(key: String, value: ImageBitmap): Int =
-            ((value.width.toLong() * value.height.toLong() * 4L) / 1024L)
-                .coerceAtLeast(1L).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
-    }
-}
 
 // BLACK CARD ORNATE GOLDEN CORNER BORDER (Same as Image)
 @Composable
@@ -355,54 +343,20 @@ fun ChromaVideoPlayer(url: String, modifier: Modifier = Modifier) {
 
 // IMAGE LOADER 
 @Composable
-private fun LeaderboardChromaImage(url: String, contentDescription: String?, modifier: Modifier, contentScale: ContentScale = ContentScale.Fit) {
-    var bitmap by remember(url) { mutableStateOf(LeaderboardChromaCache.images[url]) }
-    LaunchedEffect(url) {
-        if (bitmap == null) {
-            bitmap = withContext(Dispatchers.IO) {
-                runCatching {
-                    LeaderboardChromaCache.images.get(url) ?: run {
-                        // Decode large PNG frames at a bounded resolution. Full-size decoding
-                        // can allocate tens of MB and crash low-memory phones when the screen opens.
-                        val boundsConnection = URL(url).openConnection().apply {
-                            connectTimeout = 7_000
-                            readTimeout = 9_000
-                            useCaches = true
-                        }
-                        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-                        try {
-                            boundsConnection.getInputStream().use { BitmapFactory.decodeStream(it, null, bounds) }
-                        } finally {
-                            (boundsConnection as? HttpURLConnection)?.disconnect()
-                        }
-                        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) {
-                            null
-                        } else {
-                            var sampleSize = 1
-                            while (bounds.outWidth / sampleSize > 1024 || bounds.outHeight / sampleSize > 1024) {
-                                sampleSize *= 2
-                            }
-                            val decodeConnection = URL(url).openConnection().apply {
-                                connectTimeout = 7_000
-                                readTimeout = 9_000
-                                useCaches = true
-                            }
-                            try {
-                                val options = BitmapFactory.Options().apply { inSampleSize = sampleSize }
-                                val decoded = decodeConnection.getInputStream().use {
-                                    BitmapFactory.decodeStream(it, null, options)
-                                }
-                                decoded?.asImageBitmap()?.also { LeaderboardChromaCache.images.put(url, it) }
-                            } finally {
-                                (decodeConnection as? HttpURLConnection)?.disconnect()
-                            }
-                        }
-                    }
-                }.getOrNull()
-            }
-        }
-    }
-    bitmap?.let { Image(bitmap=it, contentDescription=contentDescription, modifier=modifier, contentScale=contentScale) }
+private fun LeaderboardChromaImage(
+    url: String,
+    contentDescription: String?,
+    modifier: Modifier,
+    contentScale: ContentScale = ContentScale.Fit
+) {
+    // Coil sizes and downsamples the source to the measured Compose bounds.
+    // Avoid decoding and retaining full-resolution PNGs on the main screen.
+    AsyncImage(
+        model = url,
+        contentDescription = contentDescription,
+        modifier = modifier,
+        contentScale = contentScale
+    )
 }
 
 private data class ZyoraRank(
