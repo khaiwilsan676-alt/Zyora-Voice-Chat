@@ -43,6 +43,8 @@ import kotlin.concurrent.thread
 
 private const val ROOM_VOICE_SAMPLE_RATE = 16000
 private const val ROOM_VOICE_FRAME_BYTES = 640 // 20 ms, mono, 16-bit PCM
+private const val ROOM_MUSIC_SAMPLE_RATE = 48000
+private const val ROOM_MUSIC_FRAME_BYTES = 3840 // 20 ms, stereo, 16-bit PCM
 
 /** Room-only live audio relay over Zyora's existing authenticated room Socket.IO connection. */
 @Composable
@@ -349,14 +351,17 @@ fun JitsiRoomAudio(
                 scheduleVoiceRetry(500L)
             }
         }
-        fun createOutputTrack(): AudioTrack? {
-            val minOut = AudioTrack.getMinBufferSize(ROOM_VOICE_SAMPLE_RATE, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT)
+        fun createOutputTrack(isVoicePacket: Boolean): AudioTrack? {
+            val sampleRate = if (isVoicePacket) ROOM_VOICE_SAMPLE_RATE else ROOM_MUSIC_SAMPLE_RATE
+            val channelMask = if (isVoicePacket) AudioFormat.CHANNEL_OUT_MONO else AudioFormat.CHANNEL_OUT_STEREO
+            val frameBytes = if (isVoicePacket) ROOM_VOICE_FRAME_BYTES else ROOM_MUSIC_FRAME_BYTES
+            val minOut = AudioTrack.getMinBufferSize(sampleRate, channelMask, AudioFormat.ENCODING_PCM_16BIT)
             if (minOut <= 0) return null
             return runCatching {
                 AudioTrack.Builder()
                     .setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).build())
-                    .setAudioFormat(AudioFormat.Builder().setSampleRate(ROOM_VOICE_SAMPLE_RATE).setEncoding(AudioFormat.ENCODING_PCM_16BIT).setChannelMask(AudioFormat.CHANNEL_OUT_MONO).build())
-                    .setBufferSizeInBytes(maxOf(minOut * 2, ROOM_VOICE_FRAME_BYTES * 8))
+                    .setAudioFormat(AudioFormat.Builder().setSampleRate(sampleRate).setEncoding(AudioFormat.ENCODING_PCM_16BIT).setChannelMask(channelMask).build())
+                    .setBufferSizeInBytes(maxOf(minOut * 2, frameBytes * 8))
                     .setTransferMode(AudioTrack.MODE_STREAM).build()
                     .takeIf { it.state == AudioTrack.STATE_INITIALIZED }
             }.getOrNull()
@@ -412,18 +417,18 @@ fun JitsiRoomAudio(
                 is org.json.JSONArray -> ByteArray(rawAudio.length()) { index -> rawAudio.optInt(index, 0).coerceIn(0, 255).toByte() }
                 else -> return@Listener
             }
-            if (bytes.isEmpty() || bytes.size > 4096 || bytes.size % 2 != 0) return@Listener
+            if (bytes.isEmpty() || bytes.size > 4096 || bytes.size % 2 != 0 || (!isVoicePacket && bytes.size % 4 != 0)) return@Listener
             val ready = synchronized(playerLock) {
                 if (isVoicePacket) {
                     if (voicePlayer?.state != AudioTrack.STATE_INITIALIZED) {
                         runCatching { voicePlayer?.release() }
-                        voicePlayer = createOutputTrack()
+                        voicePlayer = createOutputTrack(true)
                     }
                     voicePlayer != null
                 } else {
                     if (musicPlayer?.state != AudioTrack.STATE_INITIALIZED) {
                         runCatching { musicPlayer?.release() }
-                        musicPlayer = createOutputTrack()
+                        musicPlayer = createOutputTrack(false)
                     }
                     musicPlayer != null
                 }
@@ -595,8 +600,8 @@ fun JitsiRoomAudio(
 
 }
 
-/** Decode the selected local track to real-time 16 kHz mono PCM and send it through
- * the same room_voice_chunk relay. Local MediaPlayer playback remains independent.
+/** Decode selected music to 48 kHz stereo PCM and relay it on the dedicated music event.
+ * Voice capture, voice packets and their 16 kHz mono format are deliberately unchanged.
  */
 private fun relayDecodedMusic(
     context: Context,
@@ -666,32 +671,36 @@ private fun relayDecodedMusic(
                     output.limit(info.offset + info.size)
                     output.order(ByteOrder.LITTLE_ENDIAN)
                     val sourceFrames = info.size / (channels * 2)
-                    val step = sampleRate.coerceAtLeast(1).toDouble() / 16000.0
+                    val step = sampleRate.coerceAtLeast(1).toDouble() / ROOM_MUSIC_SAMPLE_RATE.toDouble()
                     while (resamplePosition < sourceFrames && running.get()) {
-                        // Area-average the source interval for each 16 kHz output sample.
-                        // This acts as a simple anti-alias low-pass filter when reducing
-                        // 44.1/48 kHz music, avoiding the harsh, crackly sound caused by
-                        // selecting a single source frame (nearest-neighbour resampling).
+                        // Preserve left/right separation and resample to music-grade 48 kHz.
+                        // Mono sources are duplicated to both channels; multichannel sources
+                        // retain their first stereo pair instead of collapsing to mono speech.
                         val intervalEnd = minOf(resamplePosition + step, sourceFrames.toDouble())
                         var cursor = resamplePosition
-                        var weightedSum = 0.0
+                        var leftSum = 0.0
+                        var rightSum = 0.0
                         var totalWeight = 0.0
                         while (cursor < intervalEnd) {
                             val sourceFrame = cursor.toInt().coerceIn(0, sourceFrames - 1)
                             val nextBoundary = minOf(sourceFrame + 1.0, intervalEnd)
                             val weight = nextBoundary - cursor
-                            var mixed = 0
-                            for (channel in 0 until channels) {
-                                mixed += output.getShort(info.offset + sourceFrame * channels * 2 + channel * 2).toInt() / channels
-                            }
-                            weightedSum += mixed * weight
+                            val base = info.offset + sourceFrame * channels * 2
+                            val left = output.getShort(base).toInt()
+                            val right = if (channels == 1) left else output.getShort(base + 2).toInt()
+                            leftSum += left * weight
+                            rightSum += right * weight
                             totalWeight += weight
                             cursor = nextBoundary
                         }
-                        val sample = (if (totalWeight > 0.0) weightedSum / totalWeight else 0.0)
+                        val left = (if (totalWeight > 0.0) leftSum / totalWeight else 0.0)
                             .toInt().coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt())
-                        packet[packetSize++] = (sample and 0xFF).toByte()
-                        packet[packetSize++] = ((sample shr 8) and 0xFF).toByte()
+                        val right = (if (totalWeight > 0.0) rightSum / totalWeight else 0.0)
+                            .toInt().coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt())
+                        packet[packetSize++] = (left and 0xFF).toByte()
+                        packet[packetSize++] = ((left shr 8) and 0xFF).toByte()
+                        packet[packetSize++] = (right and 0xFF).toByte()
+                        packet[packetSize++] = ((right shr 8) and 0xFF).toByte()
                         resamplePosition += step
                         if (packetSize == packet.size) {
                             if (socket.connected() && running.get()) {
