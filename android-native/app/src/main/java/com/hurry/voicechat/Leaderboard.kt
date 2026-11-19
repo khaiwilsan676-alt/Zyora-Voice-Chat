@@ -616,7 +616,7 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                                     model = rank1Img,
                                     contentDescription = "Rank 1 Avatar",
                                     modifier = Modifier
-                                        .offset(y = (-11).dp)
+                                        .offset(y = (-9).dp)
                                         .size(100.dp)
                                         .clip(RoundedCornerShape(50)),
                                     contentScale = ContentScale.Crop
@@ -624,7 +624,7 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                             } else {
                                 DefaultUserAvatarIcon(
                                     modifier = Modifier
-                                        .offset(y = (-11).dp)
+                                        .offset(y = (-9).dp)
                                         .size(100.dp)
                                 )
                             }
@@ -812,7 +812,7 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 8.dp)
-                            .padding(top = 9.dp)
+                            .padding(top = -15.dp)
                             .defaultMinSize(minHeight = 450.dp)
                             .background(Color(0xE60A0505), RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
                             .border(1.dp, Color(0xFFD4AF37), RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
