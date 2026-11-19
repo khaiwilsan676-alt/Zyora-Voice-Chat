@@ -929,6 +929,13 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                                             if (owned) {
                                                 if (!purchaseBusy && storeInventoryUserId.isNotBlank()) {
                                                     val nextEquipped = !equipped
+                                                    val previousTabEquipped = equippedIds.filter { nativeStoreItems.find { entry -> entry.id == it }?.tab == item.tab }
+                                                    // Optimistic UI: update Use/Remove immediately; restore only if server rejects it.
+                                                    if (nextEquipped) {
+                                                        equippedIds.removeAll { id -> nativeStoreItems.find { it.id == id }?.tab == item.tab }
+                                                        equippedIds.add(item.id)
+                                                    } else equippedIds.remove(item.id)
+                                                    updateNativeStoreCachedEquip(appContext, storeInventoryUserId, item.id, nextEquipped)
                                                     purchaseBusy = true
                                                     storeScope.launch {
                                                         val result = withContext(Dispatchers.IO) { runCatching {
@@ -944,18 +951,24 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                                                             if (code !in 200..299 || !json.optBoolean("success")) throw IllegalStateException(json.optString("error", "Could not use item"))
                                                         } }
                                                         result.onSuccess {
-                                                            if (nextEquipped) {
-                                                                equippedIds.removeAll { id -> nativeStoreItems.find { it.id == id }?.tab == item.tab }
-                                                                equippedIds.add(item.id)
-                                                            } else equippedIds.remove(item.id)
-                                                            updateNativeStoreCachedEquip(appContext, storeInventoryUserId, item.id, nextEquipped)
                                                             if (item.tab == "Avatar Frame") nativeAvatarFrameRefreshVersions[storeInventoryUserId] = (nativeAvatarFrameRefreshVersions[storeInventoryUserId] ?: 0L) + 1L
-                                                        }.onFailure { purchaseMessage = if (nextEquipped) "Using" else "Removed" }
+                                                        }.onFailure {
+                                                            equippedIds.removeAll { id -> nativeStoreItems.find { it.id == id }?.tab == item.tab }
+                                                            equippedIds.addAll(previousTabEquipped)
+                                                            previousTabEquipped.forEach { previousId ->
+                                                                updateNativeStoreCachedEquip(appContext, storeInventoryUserId, previousId, true)
+                                                            }
+                                                            updateNativeStoreCachedEquip(appContext, storeInventoryUserId, item.id, false)
+                                                            purchaseMessage = if (nextEquipped) "Could not use item" else "Could not remove item"
+                                                        }
                                                         purchaseBusy = false
                                                     }
                                                 } else if (storeUserId.isBlank()) purchaseMessage = "Please sign in to use items"
                                             } else if (!purchaseBusy && storeInventoryUserId.isNotBlank()) {
                                                 // Buy exactly this card immediately; no purchase sheet.
+                                                // Show Owned immediately; roll back the optimistic state if payment fails.
+                                                val wasAlreadyOwned = ownedIds.contains(item.id)
+                                                ownedIds.add(item.id)
                                                 purchaseBusy = true
                                                 purchaseItemId = item.id
                                                 storeScope.launch {
@@ -993,6 +1006,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                                                         purchaseMessage = "Purchase successful"
                                                         if (item.tab == "Avatar Frame") nativeAvatarFrameRefreshVersions[storeUserId] = (nativeAvatarFrameRefreshVersions[storeUserId] ?: 0L) + 1L
                                                     }.onFailure {
+                                                        if (!wasAlreadyOwned) ownedIds.remove(item.id)
                                                         purchaseMessage = if (it.message?.contains("insufficient", ignoreCase = true) == true) "Insufficient balance" else it.message ?: "Purchase failed"
                                                     }
                                                     purchaseBusy = false
