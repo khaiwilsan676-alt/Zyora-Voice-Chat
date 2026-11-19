@@ -1945,10 +1945,10 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                         
                         if (roomMicMode == 5) {
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-                                seats.take(1).forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, roomAdminIds = seatAdminIds, isSpeaking = seat.occupied && !seat.muted && !seat.selfMuted && (seat.accountId in activeVoiceSpeakerIds || seat.accountId in activeMusicSpeakerIds || (seat.accountId == accountId && (localVoiceSpeaking || isMusicPlaying))), seatSize = micSize) { handleSeatTap(seat) } }
+                                seats.take(1).forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, roomAdminIds = seatAdminIds, isSpeaking = seat.occupied && (seat.accountId in activeMusicSpeakerIds || (!seat.muted && !seat.selfMuted && (seat.accountId in activeVoiceSpeakerIds || (seat.accountId == accountId && localVoiceSpeaking))) || (seat.accountId == accountId && isMusicPlaying)), seatSize = micSize) { handleSeatTap(seat) } }
                             }
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                seats.drop(1).take(4).forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, roomAdminIds = seatAdminIds, isSpeaking = seat.occupied && !seat.muted && !seat.selfMuted && (seat.accountId in activeVoiceSpeakerIds || seat.accountId in activeMusicSpeakerIds || (seat.accountId == accountId && (localVoiceSpeaking || isMusicPlaying))), seatSize = micSize) { handleSeatTap(seat) } }
+                                seats.drop(1).take(4).forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, roomAdminIds = seatAdminIds, isSpeaking = seat.occupied && (seat.accountId in activeMusicSpeakerIds || (!seat.muted && !seat.selfMuted && (seat.accountId in activeVoiceSpeakerIds || (seat.accountId == accountId && localVoiceSpeaking))) || (seat.accountId == accountId && isMusicPlaying)), seatSize = micSize) { handleSeatTap(seat) } }
                             }
                         } else {
                             val rowSizes = when (roomMicMode) {
@@ -1964,10 +1964,10 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = arrangement) {
                                     if (roomMicMode == 10 && rowSize == 2) {
                                         Spacer(modifier = Modifier.width(micSize)) 
-                                        rowSeats.forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, roomAdminIds = seatAdminIds, isSpeaking = seat.occupied && !seat.muted && !seat.selfMuted && (seat.accountId in activeVoiceSpeakerIds || seat.accountId in activeMusicSpeakerIds || (seat.accountId == accountId && (localVoiceSpeaking || isMusicPlaying))), seatSize = micSize) { handleSeatTap(seat) } }
+                                        rowSeats.forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, roomAdminIds = seatAdminIds, isSpeaking = seat.occupied && (seat.accountId in activeMusicSpeakerIds || (!seat.muted && !seat.selfMuted && (seat.accountId in activeVoiceSpeakerIds || (seat.accountId == accountId && localVoiceSpeaking))) || (seat.accountId == accountId && isMusicPlaying)), seatSize = micSize) { handleSeatTap(seat) } }
                                         Spacer(modifier = Modifier.width(micSize))
                                     } else {
-                                        rowSeats.forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, roomAdminIds = seatAdminIds, isSpeaking = seat.occupied && !seat.muted && !seat.selfMuted && (seat.accountId in activeVoiceSpeakerIds || seat.accountId in activeMusicSpeakerIds || (seat.accountId == accountId && (localVoiceSpeaking || isMusicPlaying))), seatSize = micSize) { handleSeatTap(seat) } }
+                                        rowSeats.forEach { seat -> NativeSeat(seat, roomOwner.accountId.ifBlank{roomOwner.id}, roomAdminIds = seatAdminIds, isSpeaking = seat.occupied && (seat.accountId in activeMusicSpeakerIds || (!seat.muted && !seat.selfMuted && (seat.accountId in activeVoiceSpeakerIds || (seat.accountId == accountId && localVoiceSpeaking))) || (seat.accountId == accountId && isMusicPlaying)), seatSize = micSize) { handleSeatTap(seat) } }
                                     }
                                 }
                             }
