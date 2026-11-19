@@ -79,7 +79,7 @@ private data class NativeRoomTaskRow(val title:String,val reward:String,val icon
         Box(Modifier.fillMaxSize().verticalScroll(scrollState)) {
             
             Box(modifier = Modifier.fillMaxWidth().height(480.dp)){
-                AsyncImage(model=raw+"file_00000000cb748211bf0120855b80f449.png",contentDescription=null,modifier=Modifier.fillMaxSize().drawWithContent {
+                AsyncImage(model=raw+"file_00000000cb748211bf0120855b80f449.png",contentDescription=null,modifier=Modifier.fillMaxWidth(0.90f).height(480.dp).align(Alignment.TopCenter).drawWithContent {
                     drawContent()
                     drawRect(
                         brush = Brush.verticalGradient(
@@ -191,16 +191,6 @@ private data class NativeRoomTaskRow(val title:String,val reward:String,val icon
                             }
                         }
                     }
-                }
-                
-                // Bottom border ko bhi wide karke left/right ke upar overlap kiya hai (1.18f)
-                Box(Modifier.fillMaxWidth().offset(y=(-65).dp), contentAlignment = Alignment.Center){
-                    AsyncImage(
-                        model=raw+"file_0000000066c88211aa777b1f6da8683f.png",
-                        contentDescription="Frame Bottom Border",
-                        modifier=Modifier.fillMaxWidth(1.18f), 
-                        contentScale=ContentScale.FillWidth
-                    )
                 }
                 
                 Spacer(Modifier.height(10.dp))
