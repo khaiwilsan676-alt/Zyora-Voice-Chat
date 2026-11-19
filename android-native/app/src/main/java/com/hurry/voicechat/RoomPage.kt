@@ -2097,6 +2097,7 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                             showRoomSettingsAnnouncementInChat = showRoomSettingsAnnouncementInChat,
                             roomOwnerId = roomOwner.accountId.ifBlank { roomOwner.id },
                             roomAdminIds = roomAdminIds,
+                            isCovered = isCovered,
                             onSelectMessage = { selectedChatProfile = it },
                             onSelectMention = { mention -> selectedChatProfile = NativeRoomMessage("mention-profile-${mention.accountId}", "", mention.name, "", mention.accountId) },
                             onCopyMessage = { text ->
