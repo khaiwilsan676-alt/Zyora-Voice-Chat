@@ -1,6 +1,7 @@
 package com.hurry.voicechat
 
 import android.content.Context
+import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.view.ViewGroup
 import android.widget.FrameLayout
@@ -563,7 +564,7 @@ private fun FamilyTop(onBack: () -> Unit, onRules: () -> Unit, activeRank: Int, 
             RewardCard(
                 title = "TOP 1 Reward",
                 row1 = listOf(
-                    RewardItemData("Frames 7 Days", "IMG_20261117_222458.png", "green", videoUrl = "1000235551-background.mp4", isWinnerReward = true),
+                    RewardItemData("Frames 7 Days", "IMG_20261117_222458.png", "green", videoUrl = "VID_20261119_100449_690_bsl.mp4", isWinnerReward = true),
                     RewardItemData("Medal 7 Days", "IMG_20261117_210225.png", "medal"),
                     RewardItemData("Top1 Tag 7 Days", "IMG_20261117_193617.png", "tag")
                 ),
@@ -583,7 +584,7 @@ private fun FamilyTop(onBack: () -> Unit, onRules: () -> Unit, activeRank: Int, 
             RewardCard(
                 title = "TOP 2 Reward",
                 row1 = listOf(
-                    RewardItemData("Frames 7 Days", "IMG_20261117_222526.png", "green", videoUrl = "1000235550-background.mp4", isWinnerReward = true),
+                    RewardItemData("Frames 7 Days", "IMG_20261117_222526.png", "green", videoUrl = "VID_20261119_100523_352_bsl.mp4", isWinnerReward = true),
                     RewardItemData("Medal 7 Days", "IMG_20261117_210250.png", "medal"),
                     RewardItemData("Top2 Tag 7 Days", "IMG_20261117_193700.png", "tag")
                 ),
@@ -599,7 +600,7 @@ private fun FamilyTop(onBack: () -> Unit, onRules: () -> Unit, activeRank: Int, 
             RewardCard(
                 title = "TOP 3 Reward",
                 row1 = listOf(
-                    RewardItemData("Frames 7 Days", "IMG_20261117_222701.png", "green", videoUrl = "1000235549-background.mp4", isWinnerReward = true),
+                    RewardItemData("Frames 7 Days", "IMG_20261117_222701.png", "green", videoUrl = "VID_20261119_100548_604_bsl.mp4", isWinnerReward = true),
                     RewardItemData("Medal 7 Days", "IMG_20261117_210313.png", "medal"),
                     RewardItemData("Top3 Tag 7 Days", "IMG_20261117_193640.png", "tag")
                 ),
@@ -615,7 +616,7 @@ private fun FamilyTop(onBack: () -> Unit, onRules: () -> Unit, activeRank: Int, 
             RewardCard(
                 title = "TOP 4-10 Reward",
                 row1 = listOf(
-                    RewardItemData("Frames 3 Days", "IMG_20261117_222718.png", "green", videoUrl = "1000235548-background.mp4", isWinnerReward = true),
+                    RewardItemData("Frames 3 Days", "IMG_20261117_222718.png", "green", videoUrl = "VID_20261119_100632_615_bsl.mp4", isWinnerReward = true),
                     RewardItemData("Medal 3 Days", "IMG_20261117_210200.png", "medal")
                 ),
                 onClick = onOpenModal,
@@ -811,22 +812,44 @@ private fun FamilyRewardVideo(url: String, modifier: Modifier = Modifier, rounde
 
 @Composable
 private fun FamilyRewardModal(url: String, title: String, isWinnerReward: Boolean, type: String, onClose: () -> Unit) {
+    val isFrameVideo = type == "green"
+    val isVideo = url.substringBefore("?").substringAfterLast(".").lowercase() in setOf("mp4", "webm", "m4v")
+    var frameAspectRatio by remember(url) { mutableFloatStateOf(1f) }
+
+    LaunchedEffect(url, isFrameVideo) {
+        if (isFrameVideo && isVideo) {
+            withContext(Dispatchers.IO) {
+                val retriever = MediaMetadataRetriever()
+                runCatching {
+                    retriever.setDataSource(familyAsset(url), emptyMap())
+                    val w = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)?.toFloatOrNull() ?: 0f
+                    val h = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toFloatOrNull() ?: 0f
+                    val rot = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)?.toIntOrNull() ?: 0
+                    if (w > 0f && h > 0f) {
+                        frameAspectRatio = if (rot == 90 || rot == 270) h / w else w / h
+                    }
+                }
+                runCatching { retriever.release() }
+            }
+        }
+    }
+
     Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Box(Modifier.fillMaxSize().background(if (isWinnerReward) Color.Black.copy(alpha = 0.8f) else Color.Black.copy(alpha = 0.35f)).clickable(onClick = onClose), contentAlignment = Alignment.Center) {
+        Box(
+            Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.55f))
+                .clickable(onClick = onClose),
+            contentAlignment = Alignment.Center
+        ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                val isFrameVideo = type == "green"
-                val isVideo = url.substringBefore("?").substringAfterLast(".").lowercase() in setOf("mp4", "webm", "m4v")
-                
-                // ADJUSTED CONTENT MODIFIER FOR BETTER FRAME RATIO
                 val contentModifier = if (isWinnerReward) {
-                    if (isFrameVideo) Modifier.fillMaxWidth(0.9f).aspectRatio(9f/16f).zIndex(1f)
+                    if (isFrameVideo) Modifier.fillMaxWidth().aspectRatio(frameAspectRatio).zIndex(1f)
                     else Modifier.size(320.dp).zIndex(1f)
                 } else Modifier.fillMaxWidth().fillMaxHeight(0.75f).zIndex(1f)
-                
+
                 Box(contentModifier) {
                     if (isVideo) {
-                        // Use the exact Store video renderer in the Family preview modal.
-                        // This fixes frame-video playback and keeps vehicle audio enabled.
                         StoreVideoPreview(
                             url = familyAsset(url),
                             modifier = Modifier.fillMaxSize(),
@@ -838,10 +861,9 @@ private fun FamilyRewardModal(url: String, title: String, isWinnerReward: Boolea
                             loop = true,
                             cacheVideo = false
                         )
-                    } else { 
-                        AsyncImage(model = familyAsset(url), contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit) 
+                    } else {
+                        AsyncImage(model = familyAsset(url), contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
                     }
-                    if (!isWinnerReward) { Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0f to Color.Black.copy(alpha = 0.65f), 0.15f to Color.Transparent, 0.70f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.65f)))) }
                 }
             }
         }
