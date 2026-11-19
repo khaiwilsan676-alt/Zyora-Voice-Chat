@@ -13,7 +13,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -48,6 +50,216 @@ private object LeaderboardChromaCache {
         override fun sizeOf(key: String, value: ImageBitmap): Int =
             ((value.width.toLong() * value.height.toLong() * 4L) / 1024L)
                 .coerceAtLeast(1L).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+    }
+}
+
+// BLACK CARD ORNATE GOLDEN CORNER BORDER (Same as Image)
+@Composable
+private fun OrnateCardCornerDecoration(modifier: Modifier = Modifier) {
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val goldLight = Color(0xFFF3DFA2)
+        val goldMain = Color(0xFFD4AF37)
+        val goldDark = Color(0xFF8C6B23)
+        val strokeThin = Stroke(width = 2.6f, cap = StrokeCap.Round, join = StrokeJoin.Round)
+        val strokeMed = Stroke(width = 3.6f, cap = StrokeCap.Round, join = StrokeJoin.Round)
+
+        // Inner top horizontal subtle golden line
+        drawLine(
+            brush = Brush.horizontalGradient(
+                0f to Color.Transparent,
+                0.15f to goldMain.copy(alpha = 0.7f),
+                0.5f to goldLight.copy(alpha = 0.85f),
+                0.85f to goldMain.copy(alpha = 0.7f),
+                1f to Color.Transparent
+            ),
+            start = Offset(w * 0.14f, 12f),
+            end = Offset(w * 0.86f, 12f),
+            strokeWidth = 1.8f
+        )
+
+        // Helper to draw symmetrical corner flourish (dir = 1f for left, -1f for right)
+        fun drawCorner(isRight: Boolean) {
+            fun px(x: Float) = if (isRight) w - x else x
+
+            // Outer sweeping top-to-side curl
+            val mainCurl = Path().apply {
+                moveTo(px(14f), 20f)
+                cubicTo(px(34f), 10f, px(64f), 8f, px(108f), 14f)
+            }
+            drawPath(mainCurl, color = goldLight, style = strokeMed)
+
+            // Secondary top leaf curve
+            val topLeaf = Path().apply {
+                moveTo(px(18f), 16f)
+                cubicTo(px(42f), 28f, px(66f), 22f, px(84f), 12f)
+            }
+            drawPath(topLeaf, color = goldMain, style = strokeThin)
+
+            // Inner small top scroll
+            val innerTopScroll = Path().apply {
+                moveTo(px(48f), 16f)
+                cubicTo(px(58f), 6f, px(72f), 6f, px(70f), 16f)
+            }
+            drawPath(innerTopScroll, color = goldLight, style = strokeThin)
+
+            // Outer vertical sweeping curve going down the side
+            val sideSweep = Path().apply {
+                moveTo(px(14f), 20f)
+                cubicTo(px(10f), 60f, px(16f), 110f, px(12f), 175f)
+            }
+            drawPath(
+                sideSweep,
+                brush = Brush.verticalGradient(
+                    0f to goldLight,
+                    0.7f to goldMain,
+                    1f to Color.Transparent
+                ),
+                style = strokeMed
+            )
+
+            // Inner side leaf 1 (upper)
+            val sideLeaf1 = Path().apply {
+                moveTo(px(15f), 24f)
+                cubicTo(px(36f), 36f, px(44f), 62f, px(26f), 86f)
+                cubicTo(px(20f), 70f, px(24f), 46f, px(15f), 24f)
+            }
+            drawPath(sideLeaf1, color = goldLight, style = strokeThin)
+
+            // Inner side leaf 2 (middle)
+            val sideLeaf2 = Path().apply {
+                moveTo(px(14f), 78f)
+                cubicTo(px(32f), 92f, px(34f), 122f, px(16f), 148f)
+            }
+            drawPath(sideLeaf2, color = goldMain, style = strokeThin)
+
+            // Inner side leaf 3 (lower taper)
+            val sideLeaf3 = Path().apply {
+                moveTo(px(14f), 118f)
+                cubicTo(px(26f), 134f, px(24f), 156f, px(13f), 178f)
+            }
+            drawPath(
+                sideLeaf3,
+                brush = Brush.verticalGradient(
+                    0f to goldMain,
+                    1f to Color.Transparent
+                ),
+                style = strokeThin
+            )
+
+            // Corner accent dot
+            drawCircle(
+                color = goldDark,
+                radius = 3.2f,
+                center = Offset(px(20f), 20f)
+            )
+            drawCircle(
+                color = goldLight,
+                radius = 1.8f,
+                center = Offset(px(20f), 20f)
+            )
+        }
+
+        drawCorner(isRight = false)
+        drawCorner(isRight = true)
+    }
+}
+
+// COUNTDOWN KE UPAR WALA ORNATE GOLDEN DESIGN (Same as Image)
+@Composable
+private fun CountdownTopOrnament(modifier: Modifier = Modifier) {
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+        val cx = w / 2f
+        val cy = h / 2f
+        val goldLight = Color(0xFFF3DFA2)
+        val goldMain = Color(0xFFD4AF37)
+
+        val ornamentHalfWidth = 54f
+        val dotsOffset1 = ornamentHalfWidth + 10f
+        val dotsOffset2 = ornamentHalfWidth + 20f
+        val lineStartOffset = ornamentHalfWidth + 30f
+
+        // Left fading golden line
+        drawLine(
+            brush = Brush.horizontalGradient(
+                0f to Color.Transparent,
+                0.45f to goldMain.copy(alpha = 0.65f),
+                1f to goldLight
+            ),
+            start = Offset(w * 0.08f, cy),
+            end = Offset(cx - lineStartOffset, cy),
+            strokeWidth = 2.2f,
+            cap = StrokeCap.Round
+        )
+
+        // Right fading golden line
+        drawLine(
+            brush = Brush.horizontalGradient(
+                0f to goldLight,
+                0.55f to goldMain.copy(alpha = 0.65f),
+                1f to Color.Transparent
+            ),
+            start = Offset(cx + lineStartOffset, cy),
+            end = Offset(w * 0.92f, cy),
+            strokeWidth = 2.2f,
+            cap = StrokeCap.Round
+        )
+
+        // Dots on left & right
+        drawCircle(color = goldLight, radius = 3.2f, center = Offset(cx - dotsOffset1, cy))
+        drawCircle(color = goldMain, radius = 2.2f, center = Offset(cx - dotsOffset2, cy))
+        drawCircle(color = goldLight, radius = 3.2f, center = Offset(cx + dotsOffset1, cy))
+        drawCircle(color = goldMain, radius = 2.2f, center = Offset(cx + dotsOffset2, cy))
+
+        // Center symmetrical filigree swirl
+        val swirlStroke = Stroke(width = 3.0f, cap = StrokeCap.Round, join = StrokeJoin.Round)
+        val swirlThin = Stroke(width = 2.0f, cap = StrokeCap.Round, join = StrokeJoin.Round)
+
+        // Left swirl
+        val leftSwirl = Path().apply {
+            moveTo(cx - 2f, cy)
+            cubicTo(cx - 10f, cy - 14f, cx - 28f, cy - 14f, cx - 28f, cy)
+            cubicTo(cx - 28f, cy + 12f, cx - 12f, cy + 12f, cx - 14f, cy - 1f)
+            cubicTo(cx - 16f, cy - 7f, cx - 22f, cy - 5f, cx - 21f, cy + 2f)
+        }
+        drawPath(leftSwirl, color = goldLight, style = swirlStroke)
+
+        // Left outer wing loop
+        val leftWing = Path().apply {
+            moveTo(cx - 28f, cy)
+            cubicTo(cx - 34f, cy - 9f, cx - 46f, cy - 7f, cx - 50f, cy)
+            cubicTo(cx - 46f, cy + 7f, cx - 34f, cy + 9f, cx - 28f, cy)
+        }
+        drawPath(leftWing, color = goldMain, style = swirlThin)
+
+        // Right swirl (mirror)
+        val rightSwirl = Path().apply {
+            moveTo(cx + 2f, cy)
+            cubicTo(cx + 10f, cy - 14f, cx + 28f, cy - 14f, cx + 28f, cy)
+            cubicTo(cx + 28f, cy + 12f, cx + 12f, cy + 12f, cx + 14f, cy - 1f)
+            cubicTo(cx + 16f, cy - 7f, cx + 22f, cy - 5f, cx + 21f, cy + 2f)
+        }
+        drawPath(rightSwirl, color = goldLight, style = swirlStroke)
+
+        // Right outer wing loop (mirror)
+        val rightWing = Path().apply {
+            moveTo(cx + 28f, cy)
+            cubicTo(cx + 34f, cy - 9f, cx + 46f, cy - 7f, cx + 50f, cy)
+            cubicTo(cx + 46f, cy + 7f, cx + 34f, cy + 9f, cx + 28f, cy)
+        }
+        drawPath(rightWing, color = goldMain, style = swirlThin)
+
+        // Center diamond / jewel accent
+        val centerGem = Path().apply {
+            moveTo(cx, cy - 5.5f)
+            lineTo(cx + 4.5f, cy)
+            lineTo(cx, cy + 5.5f)
+            lineTo(cx - 4.5f, cy)
+            close()
+        }
+        drawPath(centerGem, color = goldLight)
     }
 }
 
@@ -419,7 +631,7 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                             LeaderboardChromaImage(
                                 url = raw + "file_000000006bc882118206787e86f026f0.png",
                                 contentDescription = "Rank 1 Frame",
-                                modifier = Modifier.requiredSize(300.dp)
+                                modifier = Modifier.offset(y = 2.dp).requiredSize(300.dp)
                             )
                         }
                         
@@ -458,7 +670,7 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                         
                         // Rank 2 and 3 Section (Edge-to-Edge, zero left/right gap)
                         Row(
-                            Modifier.fillMaxWidth().offset(y = (-28).dp),
+                            Modifier.fillMaxWidth().offset(y = (-42).dp),
                             verticalAlignment = Alignment.Top
                         ) {
                             // Rank 2 Column (Avatar + Frame overlapping, Info below frame same as Top 1)
@@ -593,148 +805,162 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                         }
                     }
                 }
-                
-                item {
-                    Spacer(Modifier.height(10.dp))
-                }
 
                 // Card and Timer Block (4 to 50 rank list)
                 item {
-                    Column(
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 8.dp)
-                            .padding(top = 35.dp) 
-                            .defaultMinSize(minHeight = 450.dp) 
-                            .background(Color(0xE60A0505), RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)) 
+                            .padding(top = 9.dp)
+                            .defaultMinSize(minHeight = 450.dp)
+                            .background(Color(0xE60A0505), RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
                             .border(1.dp, Color(0xFFD4AF37), RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
                     ) {
-                        
-                        Row(
+                        // Ornate Golden Corner Border Overlay
+                        OrnateCardCornerDecoration(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 12.dp)
-                                .background(
-                                    Brush.horizontalGradient(
-                                        0.0f to Color.Transparent,
-                                        0.2f to Color(0xFF4A2511), 
-                                        0.8f to Color(0xFF4A2511), 
-                                        1.0f to Color.Transparent
-                                    )
-                                )
-                                .padding(vertical = 4.dp), 
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "⏳$leaderboardCountdown (GMT 5:30+)",
-                                color = Color(0xFFD4AF37),
-                                fontSize = 12.sp,
-                                fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
-                            )
-                        }
+                                .height(100.dp)
+                                .align(Alignment.TopCenter)
+                        )
 
-                        val remainingUsers = leaderboardRows.drop(3).take(47)
-                        
-                        // EMPTY STATE CHECK (Agar 4 se leke 50 tak koi na ho)
-                        if (remainingUsers.isEmpty()) {
-                            Box(
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            // Countdown se pehle wala Ornate Design
+                            Spacer(Modifier.height(14.dp))
+                            CountdownTopOrnament(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(250.dp), 
-                                contentAlignment = Alignment.Center
+                                    .height(18.dp)
+                                    .padding(horizontal = 24.dp)
+                            )
+
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 6.dp, bottom = 12.dp)
+                                    .background(
+                                        Brush.horizontalGradient(
+                                            0.0f to Color.Transparent,
+                                            0.2f to Color(0xFF4A2511), 
+                                            0.8f to Color(0xFF4A2511), 
+                                            1.0f to Color.Transparent
+                                        )
+                                    )
+                                    .padding(vertical = 4.dp), 
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                AsyncImage(
-                                    model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_00000000777481f588df50d28908ce63.png",
-                                    contentDescription = "No Users",
-                                    modifier = Modifier.size(100.dp), 
-                                    alpha = 0.5f, 
-                                    colorFilter = androidx.compose.ui.graphics.ColorFilter.colorMatrix(
-                                        androidx.compose.ui.graphics.ColorMatrix().apply { setToSaturation(0f) } 
-                                    ),
-                                    contentScale = ContentScale.Fit
+                                Text(
+                                    text = "⏳$leaderboardCountdown (GMT 5:30+)",
+                                    color = Color(0xFFD4AF37),
+                                    fontSize = 12.sp,
+                                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
                                 )
                             }
-                        } else {
-                            // DATA STATE (Normal List)
-                            remainingUsers.forEachIndexed { index, user ->
-                                val i = index
-                                val resolvedAvatarUrl = user.image.takeIf { it.startsWith("http", ignoreCase = true) }
-                                    ?: (raw + user.image.removePrefix("/").ifBlank { "default_avatar.png" })
 
-                                Row(
-                                    Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 14.dp),
-                                    verticalAlignment = Alignment.CenterVertically
+                            val remainingUsers = leaderboardRows.drop(3).take(47)
+                            
+                            // EMPTY STATE CHECK (Agar 4 se leke 50 tak koi na ho)
+                            if (remainingUsers.isEmpty()) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(250.dp), 
+                                    contentAlignment = Alignment.Center
                                 ) {
-                                    Text(
-                                        text = "${i + 4}",
-                                        color = Color(0xFFE7B865),
-                                        fontSize = 18.sp,
-                                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                                        modifier = Modifier.width(32.dp),
-                                        textAlign = TextAlign.Center
-                                    )
-                                    Spacer(Modifier.width(6.dp))
                                     AsyncImage(
-                                        model = resolvedAvatarUrl,
-                                        contentDescription = "Avatar",
-                                        modifier = Modifier
-                                            .size(44.dp)
-                                            .clip(RoundedCornerShape(50))
-                                            .border(1.5.dp, Color(0x33FFFFFF), RoundedCornerShape(50)),
-                                        contentScale = ContentScale.Crop
+                                        model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_00000000777481f588df50d28908ce63.png",
+                                        contentDescription = "No Users",
+                                        modifier = Modifier.size(100.dp), 
+                                        alpha = 0.5f, 
+                                        colorFilter = androidx.compose.ui.graphics.ColorFilter.colorMatrix(
+                                            androidx.compose.ui.graphics.ColorMatrix().apply { setToSaturation(0f) } 
+                                        ),
+                                        contentScale = ContentScale.Fit
                                     )
-                                    Spacer(Modifier.width(12.dp))
-                                    Column(Modifier.weight(1f)) {
+                                }
+                            } else {
+                                // DATA STATE (Normal List)
+                                remainingUsers.forEachIndexed { index, user ->
+                                    val i = index
+                                    val resolvedAvatarUrl = user.image.takeIf { it.startsWith("http", ignoreCase = true) }
+                                        ?: (raw + user.image.removePrefix("/").ifBlank { "default_avatar.png" })
+
+                                    Row(
+                                        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 14.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "${i + 4}",
+                                            color = Color(0xFFE7B865),
+                                            fontSize = 18.sp,
+                                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                            modifier = Modifier.width(32.dp),
+                                            textAlign = TextAlign.Center
+                                        )
+                                        Spacer(Modifier.width(6.dp))
+                                        AsyncImage(
+                                            model = resolvedAvatarUrl,
+                                            contentDescription = "Avatar",
+                                            modifier = Modifier
+                                                .size(44.dp)
+                                                .clip(RoundedCornerShape(50))
+                                                .border(1.5.dp, Color(0x33FFFFFF), RoundedCornerShape(50)),
+                                            contentScale = ContentScale.Crop
+                                        )
+                                        Spacer(Modifier.width(12.dp))
+                                        Column(Modifier.weight(1f)) {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Text(
+                                                    text = leaderboardShortName(user.name),
+                                                    color = Color.White,
+                                                    fontSize = 14.sp,
+                                                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                                Spacer(Modifier.width(6.dp))
+                                                if (tab == "room") {
+                                                    Text(leaderboardFlag(user.country), fontSize = 14.sp)
+                                                } else if (user.gender.isNotBlank()) {
+                                                    Box(Modifier.size(20.dp).clip(RoundedCornerShape(50)).background(if (user.gender.equals("female", true)) Color(0xFFFF5874) else Color(0xFF3B82F6)), contentAlignment = Alignment.Center) {
+                                                        CustomGenderIcon(user.gender.equals("female", true), Modifier.size(10.dp))
+                                                    }
+                                                }
+                                            }
+                                            if (tab != "room") {
+                                                Spacer(Modifier.height(4.dp))
+                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                                    Box(contentAlignment = Alignment.CenterEnd, modifier = Modifier.height(16.dp).width(34.dp)) {
+                                                        AsyncImage(model = raw + "IMG_20261028_004355.png", contentDescription = "Level Image", modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
+                                                        Text("Lv.1", color = Color.White, fontSize = 7.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Normal, modifier = Modifier.padding(end = 4.dp).offset(x = 1.dp, y = (-2).dp))
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        Spacer(Modifier.width(8.dp))
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             Text(
-                                                text = leaderboardShortName(user.name),
-                                                color = Color.White,
+                                                text = leaderboardCoinText(user.coins),
+                                                color = Color(0xFFE7B865),
                                                 fontSize = 14.sp,
-                                                fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
+                                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
                                             )
-                                            Spacer(Modifier.width(6.dp))
-                                            if (tab == "room") {
-                                                Text(leaderboardFlag(user.country), fontSize = 14.sp)
-                                            } else if (user.gender.isNotBlank()) {
-                                                Box(Modifier.size(20.dp).clip(RoundedCornerShape(50)).background(if (user.gender.equals("female", true)) Color(0xFFFF5874) else Color(0xFF3B82F6)), contentAlignment = Alignment.Center) {
-                                                    CustomGenderIcon(user.gender.equals("female", true), Modifier.size(10.dp))
-                                                }
-                                            }
+                                            Spacer(Modifier.width(4.dp))
+                                            AsyncImage(
+                                                model = raw + "file_00000000e56882119c217d508b6733dc.png",
+                                                contentDescription = "Coins Icon",
+                                                modifier = Modifier.size(16.dp),
+                                                contentScale = ContentScale.Fit
+                                            )
                                         }
-                                        if (tab != "room") {
-                                            Spacer(Modifier.height(4.dp))
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Box(contentAlignment = Alignment.CenterEnd, modifier = Modifier.height(16.dp).width(34.dp)) {
-                                                    AsyncImage(model = raw + "IMG_20261028_004355.png", contentDescription = "Level Image", modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
-                                                    Text("Lv.1", color = Color.White, fontSize = 7.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Normal, modifier = Modifier.padding(end = 4.dp).offset(x = 1.dp, y = (-2).dp))
-                                                }
-                                            }
-                                        }
-                                    }
-                                    Spacer(Modifier.width(8.dp))
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text(
-                                            text = leaderboardCoinText(user.coins),
-                                            color = Color(0xFFE7B865),
-                                            fontSize = 14.sp,
-                                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
-                                        )
-                                        Spacer(Modifier.width(4.dp))
-                                        AsyncImage(
-                                            model = raw + "file_00000000e56882119c217d508b6733dc.png",
-                                            contentDescription = "Coins Icon",
-                                            modifier = Modifier.size(16.dp),
-                                            contentScale = ContentScale.Fit
-                                        )
                                     }
                                 }
                             }
+                            
+                            Spacer(Modifier.height(180.dp)) 
                         }
-                        
-                        Spacer(Modifier.height(180.dp)) 
                     }
                 }
             }
@@ -745,7 +971,7 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
             modifier = Modifier
                 .fillMaxWidth()
                 .align(Alignment.BottomCenter)
-                .offset(y = 10.dp) 
+                .offset(y = 24.dp) 
                 .height(150.dp) 
         ) {
             AsyncImage(
