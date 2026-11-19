@@ -30,7 +30,7 @@ class ChromaKeyVideoView(
         setEGLContextClientVersion(2)
         setEGLConfigChooser(8, 8, 8, 8, 16, 0)
         holder.setFormat(PixelFormat.TRANSLUCENT)
-        setZOrderOnTop(true)
+        setZOrderMediaOverlay(true)
         setPreserveEGLContextOnPause(true)
         setRenderer(videoRenderer)
         renderMode = RENDERMODE_WHEN_DIRTY
