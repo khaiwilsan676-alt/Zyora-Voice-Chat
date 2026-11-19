@@ -162,16 +162,8 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
                 if (password.length < 6) {
                     throw IllegalArgumentException("Password must be at least 6 characters long.")
                 }
-                if (create) {
-                    val existingDeviceAccount = withContext(Dispatchers.IO) { getDeviceRegistration(context, "Email/Password") }
-                    if (existingDeviceAccount.optBoolean("registered", false)) {
-                        registeredDeviceAccountId = existingDeviceAccount.optString("registeredAccountId")
-                        registeredDeviceEmail = existingDeviceAccount.optString("registeredEmail")
-                        registeredDeviceMethod = existingDeviceAccount.optString("registeredMethod", "Google")
-                        showDeviceRegisteredDialog = true
-                        return@launch
-                    }
-                }
+                // Authenticate first. A device-slot lookup before Firebase auth
+                // incorrectly blocks official identities before their real ID is known.
                 val user = withContext(Dispatchers.IO) {
                     backendEmailAuth(context, email.trim(), password, create)
                 }
@@ -782,6 +774,10 @@ private fun getDeviceRegistration(
 // Official/support IDs are provisioned identities, not user registrations.
 // Keep them completely outside the one-Google + one-Email/Password device slots.
 private fun isOfficialAuthUser(user: JSONObject): Boolean {
+    // Server-resolved Zyora accountId is authoritative; Firebase UID can differ
+    // after provider migration or legacy profile rebinding.
+    val accountId = user.optString("accountId").trim()
+    if (accountId in setOf("100002", "100003", "500001", "500002", "500003", "500004", "500005", "700001", "700002", "700003")) return true
     val uid = user.optString("localId").trim()
     return uid in setOf(
         "mhg5MzmPcAMbH7InQwZClPfF42M2",
