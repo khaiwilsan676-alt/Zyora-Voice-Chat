@@ -1,5 +1,7 @@
 package com.hurry.voicechat
 
+import android.graphics.BitmapFactory
+import android.util.LruCache
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -29,6 +31,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -40,6 +44,14 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
 import java.util.Locale
+
+private object LeaderboardChromaCache {
+    val images = object : LruCache<String, ImageBitmap>(16 * 1024) {
+        override fun sizeOf(key: String, value: ImageBitmap): Int =
+            ((value.width.toLong() * value.height.toLong() * 4L) / 1024L)
+                .coerceAtLeast(1L).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+    }
+}
 
 // BLACK CARD ORNATE GOLDEN CORNER BORDER (Same as Image)
 @Composable
@@ -343,20 +355,28 @@ fun ChromaVideoPlayer(url: String, modifier: Modifier = Modifier) {
 
 // IMAGE LOADER 
 @Composable
-private fun LeaderboardChromaImage(
-    url: String,
-    contentDescription: String?,
-    modifier: Modifier,
-    contentScale: ContentScale = ContentScale.Fit
-) {
-    // Coil sizes and downsamples the source to the measured Compose bounds.
-    // Avoid decoding and retaining full-resolution PNGs on the main screen.
-    AsyncImage(
-        model = url,
-        contentDescription = contentDescription,
-        modifier = modifier,
-        contentScale = contentScale
-    )
+private fun LeaderboardChromaImage(url: String, contentDescription: String?, modifier: Modifier, contentScale: ContentScale = ContentScale.Fit) {
+    var bitmap by remember(url) { mutableStateOf(LeaderboardChromaCache.images[url]) }
+    LaunchedEffect(url) {
+        if (bitmap == null) {
+            bitmap = withContext(Dispatchers.IO) {
+                runCatching {
+                    LeaderboardChromaCache.images.get(url) ?: run {
+                        val connection = URL(url).openConnection().apply {
+                            connectTimeout = 7_000
+                            readTimeout = 9_000
+                            useCaches = true
+                        }
+                        val source = connection.getInputStream().use { BitmapFactory.decodeStream(it) }
+                        if (source == null) null else {
+                            source.asImageBitmap().also { LeaderboardChromaCache.images.put(url, it) }
+                        }
+                    }
+                }.getOrNull()
+            }
+        }
+    }
+    bitmap?.let { Image(bitmap=it, contentDescription=contentDescription, modifier=modifier, contentScale=contentScale) }
 }
 
 private data class ZyoraRank(
@@ -792,7 +812,7 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 8.dp)
-                            .padding(top = -15.dp)
+                            .offset(y = (-16).dp)
                             .defaultMinSize(minHeight = 450.dp)
                             .background(Color(0xE60A0505), RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
                             .border(1.dp, Color(0xFFD4AF37), RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
