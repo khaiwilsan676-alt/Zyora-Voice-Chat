@@ -2811,10 +2811,10 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
             if(seatIndex>=0){
                 val timestamp=System.currentTimeMillis()
                 val selected=seats[seatIndex]
-                val videoUrl = sticker.videoUrl?.takeIf { it.isNotBlank() }
-                val seatMediaUrl = videoUrl ?: sticker.src
+                // Render the original square sticker image on the seat; do not use MP4.
+                val seatMediaUrl = sticker.src
                 seats[seatIndex]=selected.copy(
-                    gifSrc=if (videoUrl != null) videoUrl else sticker.src,
+                    gifSrc=sticker.src,
                     gifTimestamp=timestamp,
                     gifScale=sticker.seatScale
                 )
