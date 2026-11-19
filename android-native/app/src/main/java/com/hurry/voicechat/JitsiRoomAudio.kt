@@ -332,7 +332,12 @@ fun JitsiRoomAudio(
                         }
                         break
                     } else {
-                        Thread.yield()
+                        // AudioRecord can briefly return 0 while the input route settles.
+                        // Yielding alone can spin this dedicated thread at full CPU; a tiny
+                        // backoff avoids idle CPU churn without changing the 20 ms frame format.
+                        try { Thread.sleep(2) } catch (_: InterruptedException) {
+                            if (!alive.get() || !recording.get()) break
+                        }
                     }
                 }
             }
