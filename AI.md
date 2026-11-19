@@ -1447,3 +1447,11 @@ Current documentation does not certify that all historical features are build-, 
 - This avoids the overlay-specific fresh access/join flow that could remount the room as a new entry instead of resuming the retained Socket.IO session. Existing room UI and normal room-entry checks are unchanged.
 - Commit: `9a84c62b5e117af1601e428b95fee41cdd971d94`.
 - Native build and two-device Keep → reopen voice/chat/seat regression testing remain pending.
+
+
+## 2026-11-20 — Preserve room while opening profile and overlay pages
+- Native `MainActivity.kt`: keep the active `RoomPage` composed as the base layer while public profiles, room support, search, chat, and other root pages are shown above it. Returning from a profile therefore reveals the same in-memory room state instead of disposing and re-entering the room.
+- Native `RoomPage.kt`: disable the room BackHandler while another root page covers it, and prevent the room image-preview Dialog from appearing above a covering page.
+- Opening a public profile or room support no longer marks the room as explicitly kept/minimized; only the actual Keep action does that, so later room exit still performs normal cleanup.
+- Existing room UI is unchanged. Native APK compilation and device navigation/overlay regression tests are still required; this commit is not yet hardware-verified.
+- Commits: `4780519`, `d047b99`.
