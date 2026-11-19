@@ -67,10 +67,8 @@ fun RoomDailyCupTotal(roomId: String) {
                     if (connection.responseCode !in 200..299) 0L
                     else {
                         val json = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
-                        val leaderboard = json.optJSONArray("leaderboard")
-                        (0 until (leaderboard?.length() ?: 0)).sumOf { index ->
-                            leaderboard?.optJSONObject(index)?.optLong("coins", 0L)?.coerceAtLeast(0L) ?: 0L
-                        }
+                        // Server total includes every sender, not just the Top 20 leaderboard.
+                        json.optLong("totalRoomCoins", 0L).coerceAtLeast(0L)
                     }
                 } finally {
                     connection.disconnect()
