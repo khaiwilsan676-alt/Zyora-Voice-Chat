@@ -2703,6 +2703,7 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
             isOpen=true,
             onClose={showSeatInviteUsers=false},
             roomUsers=activeRoomUsers.filter { it.accountId != accountId },
+            excludedAccountIds=seats.asSequence().filter { it.occupied }.map { it.accountId }.filter { it.isNotBlank() }.toSet(),
             roomOwnerId=roomOwner.accountId.ifBlank{roomOwner.id},
             roomAdminIds=roomAdminIds,
             onOpenProfile={},
