@@ -80,9 +80,9 @@ fun RoomDailyCupTotal(roomId: String) {
     }
     Text(
         text = formatCupCoins(total),
-        color = Color(0xFFEEF3A3),
-        fontSize = 12.sp,
-        fontWeight = FontWeight.Bold,
+        color = Color(0xFFFFD54F),
+        fontSize = 11.sp,
+        fontWeight = FontWeight.Normal,
         letterSpacing = 0.1.sp
     )
 }
