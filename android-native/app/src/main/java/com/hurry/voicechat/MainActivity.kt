@@ -64,6 +64,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.Image
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.alpha
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.shape.CircleShape
 import coil3.compose.AsyncImage
@@ -374,6 +375,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
         )
     ) { mutableStateOf<HurryRoom?>(null) }
     var openedRoom by remember { mutableStateOf<HurryRoom?>(null) }
+    var roomSession by remember { mutableStateOf<HurryRoom?>(null) }
     var roomKickNotice by remember { mutableStateOf<JSONObject?>(null) }
     var roomBlockedPopup by remember { mutableStateOf<JSONObject?>(null) }
     var kickNoticeNow by remember { mutableLongStateOf(System.currentTimeMillis()) }
@@ -468,6 +470,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
             roomAccessError = false
             // Record only after the server confirms that this account may enter.
             RecentRoomHistory.record(context, joiningAccountId, room)
+            if (roomSession?.id != room.id) roomSession = room
             openedRoom = room
         }
     }
@@ -551,19 +554,20 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
 
     HurryTheme {
         Box(Modifier.fillMaxSize().navigationBarsPadding()) {
-            if (openedRoom != null) {
+            if (roomSession != null) {
+                Box(if (openedRoom != null) Modifier.fillMaxSize() else Modifier.size(1.dp).alpha(0f)) {
                 RoomPage(
-                    isCovered = (openedFamilyId != null || openedPublicProfile != null || openedRoomSupport || openedSearch || openedLeaderboard != null || openedInvite || openedChat != null || openedMePage != null),
+                    isCovered = (openedRoom == null || openedFamilyId != null || openedPublicProfile != null || openedRoomSupport || openedSearch || openedLeaderboard != null || openedInvite || openedChat != null || openedMePage != null),
                     roomOwner = RoomPageOwner(
-                        id = openedRoom!!.id,
-                        accountId = openedRoom!!.accountId.ifBlank { openedRoom!!.id },
-                        name = openedRoom!!.name,
-                        image = openedRoom!!.image,
-                        country = openedRoom!!.country
+                        id = roomSession!!.id,
+                        accountId = roomSession!!.accountId.ifBlank { roomSession!!.id },
+                        name = roomSession!!.name,
+                        image = roomSession!!.image,
+                        country = roomSession!!.country
                     ),
                     currentUser = RoomPageCurrentUser(id = userId, uid = userId, accountId = authPrefs.getString("accountId", userId).orEmpty(), name = authPrefs.getString("name", "User").orEmpty(), image = authPrefs.getString("image", "").orEmpty()),
                     onOpenPublicProfile = { profile -> openedPublicProfile = profile },
-                    onBack = { openedRoom = null },
+                    onBack = { openedRoom = null; roomSession = null },
                     onRoomSupport = { openedRoomSupport = true },
                     onJoinRoom = { targetRoomId -> tryOpenRoomById(targetRoomId) },
                     onKickNotice = { notice ->
@@ -579,6 +583,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                             tab = HurryTab.HOME
                             homeMine = false
                             openedRoom = null
+                            roomSession = null
                             roomKickNotice = JSONObject(notice.toString())
                         }
                     },
@@ -588,6 +593,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                             authPrefs.edit().remove("kept_room_data").apply()
                         }
                         openedRoom = null
+                        roomSession = null
                     },
                     onKeepRoom = { roomName, roomImage, roomId ->
                         val active = openedRoom
@@ -601,9 +607,11 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                         keptRoom = miniRoom
                         // Keep is session-only: the mini-room bubble must not survive app close.
                         authPrefs.edit().remove("kept_room_data").apply()
+                        // Keep RoomPage composed and connected; only hide its visual host.
                         openedRoom = null
                     }
                 )
+                }
             }
             if (openedFamilyId != null) {
                 FamilyProfile(familyId = openedFamilyId!!, onBack = { openedFamilyId = null }, onOpenChat = { uid, name, image -> openedFamilyId = null; openedChat = Triple(uid, name, image) })
@@ -698,6 +706,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                                     // A newly created room is entered immediately; include this entry in Recent too.
                                     val recentOwnerAccountId = authPrefs.getString("accountId", userId).orEmpty().ifBlank { userId }
                                     RecentRoomHistory.record(context, recentOwnerAccountId, room)
+                                    if (roomSession?.id != room.id) roomSession = room
                                     openedRoom = room
                                 },
                                 mineCreatedRoom = mineCreatedRoom,
@@ -708,11 +717,14 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                                     // Re-running tryOpenRoom starts a fresh access/join flow
                                     // instead of simply resuming the retained room socket.
                                     keptRoom?.let { room ->
+                                        if (roomSession?.id != room.id) roomSession = room
                                         openedRoom = room
                                         keptRoom = null
                                     }
                                 },
                                 onExitKeptRoom = {
+                                    openedRoom = null
+                                    roomSession = null
                                     keptRoom = null
                                     authPrefs.edit().remove("kept_room_data").apply()
                                 }
@@ -783,12 +795,15 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                         // Resume the retained live room session directly. Calling tryOpenRoom
                         // here performs a fresh access/join flow and can create a second entry.
                         keptRoom?.let { room ->
+                            if (roomSession?.id != room.id) roomSession = room
                             openedRoom = room
                             keptRoom = null
                             authPrefs.edit().remove("kept_room_data").apply()
                         }
                     },
                     onExit = {
+                        openedRoom = null
+                        roomSession = null
                         keptRoom = null
                         authPrefs.edit().remove("kept_room_data").apply()
                     }
