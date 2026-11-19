@@ -392,7 +392,7 @@ fun SearchPage(onBack:()->Unit={},onOpenProfile:(RoomProfileUser)->Unit={},onOpe
                             }.padding(vertical = 8.dp),verticalAlignment=Alignment.CenterVertically) {
                                 AsyncImage(model=u.image.ifBlank{"https://zyora-voice-chat.vercel.app/default-avatar.png"},contentDescription=u.name,modifier=Modifier.size(48.dp).clip(CircleShape).background(Color(0xFFE5E7EB)),contentScale=ContentScale.Crop)
                                 Spacer(Modifier.width(12.dp))
-                                Column(Modifier.weight(1f),verticalArrangement=Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f),verticalArrangement=Arrangement.Center) {
                                     Text(text=u.name,fontSize=15.sp,fontWeight=FontWeight.SemiBold,color=Color(0xFF111827),maxLines=1,overflow=TextOverflow.Ellipsis)
                                     Spacer(Modifier.height(3.dp))
                                     Row(verticalAlignment=Alignment.CenterVertically) {
