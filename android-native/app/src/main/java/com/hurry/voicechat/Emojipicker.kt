@@ -47,7 +47,7 @@ data class EmojiSticker(
     val src: String,
     val videoUrl: String? = null,
     // Picker-owned scale for the animation rendered over a room seat.
-    val seatScale: Float = 0.8f
+    val seatScale: Float = 1.5f
 )
 
 // Thread-safe, memory-bounded cache: emoji bitmaps must not grow without limit
@@ -103,29 +103,29 @@ fun EmojiPicker(onClose: () -> Unit = {}, onSelectEmoji: (EmojiSticker) -> Unit 
     var activeTab by remember { mutableStateOf("emojis") }
 
     val stickers = listOf(
-        // SIZE BADHA DIYA HAI (seatScale update kiya hai idhar bss)
-        EmojiSticker("welcome","Welcome","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261028_183916.png", "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/VID_20261028_105159_978_bsl.mp4", 1.8f),
-        EmojiSticker("thanks","Thanks","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261028_184100.png", "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/VID_20261028_105329_293_bsl.mp4", 1.8f),
-        EmojiSticker("gift_me","Gift me","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261028_184037.png", "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/VID_20261028_105304_745_bsl.mp4", 1.8f),
+        // SABKA EK HI SQUARE SIZE (1.5f)
+        EmojiSticker("welcome","Welcome","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261028_183916.png", "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/VID_20261028_105159_978_bsl.mp4", 1.5f),
+        EmojiSticker("thanks","Thanks","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261028_184100.png", "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/VID_20261028_105329_293_bsl.mp4", 1.5f),
+        EmojiSticker("gift_me","Gift me","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261028_184037.png", "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/VID_20261028_105304_745_bsl.mp4", 1.5f),
         EmojiSticker("kiss_r","Kiss-R","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261028_184130.png", "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/VID_20261028_104846_084_bsl.mp4", 1.5f),
         EmojiSticker("kiss_l","Kiss-L","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261028_184200.png", "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/VID_20261028_104823_659_bsl.mp4", 1.5f),
-        EmojiSticker("punch_r","Punch-R","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261028_184240.png", "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/VID_20261028_105414_962_bsl.mp4", 1.6f),
-        EmojiSticker("punch_l","Punch-L","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261028_184300.png", "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/VID_20261028_105348_731_bsl.mp4", 1.6f),
+        EmojiSticker("punch_r","Punch-R","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261028_184240.png", "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/VID_20261028_105414_962_bsl.mp4", 1.5f),
+        EmojiSticker("punch_l","Punch-L","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261028_184300.png", "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/VID_20261028_105348_731_bsl.mp4", 1.5f),
         
-        // GIF WALE EMOJI BHI BADE KAR DIYE HAIN (unme bhi seatScale daal diya)
-        EmojiSticker("laugh","Laugh","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/512.gif", null, 1.4f),
-        EmojiSticker("sad","Sad","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/512%20(6).gif", null, 1.4f),
-        EmojiSticker("love","Sleep","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/512%20(3).gif", null, 1.4f),
-        EmojiSticker("thinking","Thinking","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/512%20(2).gif", null, 1.4f),
-        EmojiSticker("party","Party","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/512%20(16).gif", null, 1.4f),
-        EmojiSticker("loving","Loving","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/512%20(15).gif", null, 1.4f),
-        EmojiSticker("smart","Smart","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/512%20(13).gif", null, 1.4f),
-        EmojiSticker("irritating","Irritating","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/512%20(12).gif", null, 1.4f),
-        EmojiSticker("rolling","Rolling","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/512%20(10).gif", null, 1.4f),
-        EmojiSticker("unamused","Unamused","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/512%20(11).gif", null, 1.4f),
-        EmojiSticker("pleading","Pleading","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/512%20(4).gif", null, 1.4f),
-        EmojiSticker("hug","Hug","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/512%20(8).gif", null, 1.4f),
-        EmojiSticker("Angery"," Angery","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/512%20(1).gif", null, 1.4f)
+        // GIF WALE EMOJI BHI SAME SQUARE SIZE (1.5f)
+        EmojiSticker("laugh","Laugh","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/512.gif", null, 1.5f),
+        EmojiSticker("sad","Sad","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/512%20(6).gif", null, 1.5f),
+        EmojiSticker("love","Sleep","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/512%20(3).gif", null, 1.5f),
+        EmojiSticker("thinking","Thinking","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/512%20(2).gif", null, 1.5f),
+        EmojiSticker("party","Party","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/512%20(16).gif", null, 1.5f),
+        EmojiSticker("loving","Loving","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/512%20(15).gif", null, 1.5f),
+        EmojiSticker("smart","Smart","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/512%20(13).gif", null, 1.5f),
+        EmojiSticker("irritating","Irritating","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/512%20(12).gif", null, 1.5f),
+        EmojiSticker("rolling","Rolling","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/512%20(10).gif", null, 1.5f),
+        EmojiSticker("unamused","Unamused","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/512%20(11).gif", null, 1.5f),
+        EmojiSticker("pleading","Pleading","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/512%20(4).gif", null, 1.5f),
+        EmojiSticker("hug","Hug","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/512%20(8).gif", null, 1.5f),
+        EmojiSticker("Angery"," Angery","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/512%20(1).gif", null, 1.5f)
     )
 
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
@@ -231,7 +231,7 @@ private fun Tab(label: String, selected: Boolean, onClick: () -> Unit) {
 }
 
 // =========================================================================================
-// TUMHARI SEAT VIDEO LOGIC EKDAM WAHI HAI, KOI CHANGE NAHI KIYA (Green remove logic is safe)
+// TUMHARI SEAT VIDEO LOGIC EKDAM WAHI HAI (Green remove logic safe hai)
 // =========================================================================================
 
 // Shared bounded disk cache for seat emoji MP4s. Reuses downloaded bytes
@@ -250,28 +250,31 @@ private object SeatEmojiVideoCache {
 }
 
 // The picker owns seat emoji media selection and sizing. Every seat uses
-// this shared renderer so MP4 and image/GIF stickers keep consistent bounds.
+// this shared renderer so MP4 and image/GIF stickers keep consistent square bounds.
 @Composable
 fun SeatEmojiOverlay(
     src: String,
     seatSize: Dp,
-    scale: Float = 0.8f,
+    scale: Float = 1.5f,
     onVideoFinished: () -> Unit = {}
 ) {
-    // Upper limit ko 1.15f se 3.5f kar diya taaki GIFs/Videos full size me show ho!
     val overlaySize = (seatSize * scale.coerceIn(0.45f, 3.5f)).coerceAtLeast(24.dp)
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         if (src.substringBefore("?").lowercase().endsWith(".mp4")) {
             TransparentSeatVideoPlayer(
                 videoUrl = src,
-                modifier = Modifier.size(overlaySize),
+                modifier = Modifier
+                    .requiredSize(overlaySize)
+                    .aspectRatio(1f),
                 onVideoFinished = onVideoFinished
             )
         } else {
             AsyncImage(
                 model = src,
                 contentDescription = "Seat emoji",
-                modifier = Modifier.size(overlaySize),
+                modifier = Modifier
+                    .requiredSize(overlaySize)
+                    .aspectRatio(1f),
                 contentScale = ContentScale.Fit
             )
         }
@@ -326,13 +329,17 @@ fun TransparentSeatVideoPlayer(
             context,
             onVideoSurfaceReady = { surface -> player.setVideoSurface(surface) },
             onFirstFrameAvailable = { firstFrameReady = true }
-        )
+        ).apply {
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+        }
     }
 
     AndroidView(
         modifier = modifier
-            .fillMaxSize()
-            // BLACK SCREEN HACK: Jab tak first frame ready nahi hota, video view ko screen ke bahar fek do (10000.dp dur), taaki black area na dikhe bss!
+            // BLACK SCREEN HACK: Jab tak first frame ready nahi hota, video view ko screen ke bahar rakho
             .offset(y = if (firstFrameReady) 0.dp else 10000.dp)
             .alpha(if (firstFrameReady) 1f else 0f),
         factory = { chromaView }
