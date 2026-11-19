@@ -39,6 +39,7 @@ import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 
 private const val ROOM_VOICE_SAMPLE_RATE = 16000
@@ -94,6 +95,7 @@ fun JitsiRoomAudio(
         val recording = AtomicBoolean(false)
         val voiceAllowed = AtomicBoolean(false)
         val retryPending = AtomicBoolean(false)
+        val voicePermissionRetries = AtomicInteger(0)
         val retryHandler = Handler(Looper.getMainLooper())
         fun requestVoicePermission() {
             if (alive.get() && latestCanSpeak && roomSocket.connected()) {
@@ -101,10 +103,17 @@ fun JitsiRoomAudio(
             }
         }
         fun scheduleVoiceRetry(delayMs: Long = 700L) {
-            if (!alive.get() || !latestCanSpeak || !retryPending.compareAndSet(false, true)) return
+            // A denied seat/mute permission is not a transient error. Limit retries
+            // so a stale canSpeak flag cannot spam the server every 500 ms forever.
+            if (!alive.get() || !latestCanSpeak || voicePermissionRetries.get() >= 3 ||
+                !retryPending.compareAndSet(false, true)
+            ) return
             retryHandler.postDelayed({
                 retryPending.set(false)
-                if (alive.get() && latestCanSpeak && !voiceAllowed.get()) requestVoicePermission()
+                if (alive.get() && latestCanSpeak && !voiceAllowed.get()) {
+                    voicePermissionRetries.incrementAndGet()
+                    requestVoicePermission()
+                }
             }, delayMs)
         }
         var recorder: AudioRecord? = null
@@ -346,6 +355,7 @@ fun JitsiRoomAudio(
             voiceAllowed.set(allowed)
             if (allowed) {
                 retryPending.set(false)
+                voicePermissionRetries.set(0)
                 startCapture()
             } else {
                 stopCapture()
@@ -566,12 +576,16 @@ fun JitsiRoomAudio(
                 if (micEnabled != lastMicEnabled) {
                     lastMicEnabled = micEnabled
                     if (!micEnabled) {
+                        voicePermissionRetries.set(0)
+                        retryPending.set(false)
+                        retryHandler.removeCallbacksAndMessages(null)
                         voiceAllowed.set(false)
                         stopCapture()
                         if (roomSocket.connected()) {
                             roomSocket.emit("room_voice_stop", JSONObject().put("roomId", roomId))
                         }
                     } else if (roomSocket.connected()) {
+                        voicePermissionRetries.set(0)
                         requestVoicePermission()
                     }
                 }
@@ -606,6 +620,7 @@ fun JitsiRoomAudio(
             musicRelayRunning.set(false)
             retryHandler.removeCallbacksAndMessages(null)
             retryPending.set(false)
+            voicePermissionRetries.set(0)
             micMuteWatcherThread.interrupt()
             playbackVoiceMuteWatcherThread.interrupt()
             musicWatcherThread?.interrupt()
