@@ -556,21 +556,21 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
     var giftBusy by remember { mutableStateOf(false) }
     var balance by remember(storeUserId) { mutableIntStateOf(walletCachePrefs.getLong("balance_$storeUserId", 0L).coerceAtLeast(0L).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()) }
     val cachedInventory = remember(storeInventoryUserId) { readNativeStoreInventoryCache(appContext, storeInventoryUserId) }
-    val ownedIds = remember(storeUserId) {
+    val ownedIds = remember(storeInventoryUserId) {
         mutableStateListOf<String>().apply {
             for (i in 0 until cachedInventory.length()) cachedInventory.optJSONObject(i)?.let { item ->
                 if (item.optLong("expiresAt") > System.currentTimeMillis()) add(item.optString("itemId"))
             }
         }
     }
-    val equippedIds = remember(storeUserId) {
+    val equippedIds = remember(storeInventoryUserId) {
         mutableStateListOf<String>().apply {
             for (i in 0 until cachedInventory.length()) cachedInventory.optJSONObject(i)?.let { item ->
                 if (item.optBoolean("equipped") && item.optLong("expiresAt") > System.currentTimeMillis()) add(item.optString("itemId"))
             }
         }
     }
-    val expiryById = remember(storeUserId) {
+    val expiryById = remember(storeInventoryUserId) {
         mutableStateMapOf<String, Long>().apply {
             for (i in 0 until cachedInventory.length()) cachedInventory.optJSONObject(i)?.let { item ->
                 val id = item.optString("itemId"); val expiry = item.optLong("expiresAt")
@@ -820,7 +820,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                     val isVehicle = item.tab == "Vehicle"
                     val isFrame = item.tab == "Avatar Frame"
                     val isBubble = item.tab == "Chat Bubble" // Check added for Chat Bubble
-                    val owned = ownedIds.contains(item.id)
+                    val owned = ownedIds.contains(item.id) || item.ownedByDefault
                     val equipped = equippedIds.contains(item.id)
                     
                     Box(
@@ -1006,7 +1006,7 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                                         if (owned) {
                                             if (isBag) if (equipped) "Remove" else "Use"
                                             else "Owned"
-                                        } else if (purchaseBusy && purchaseItemId == item.id) "..." else "Buy",
+                                        } else "Buy",
                                         color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold
                                     )
                                 }
