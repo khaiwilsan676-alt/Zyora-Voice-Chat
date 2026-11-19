@@ -33,6 +33,7 @@ import androidx.compose.ui.platform.LocalContext
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 
@@ -157,19 +158,7 @@ fun RoomInfo(
                         ).map { it.trim() }.firstOrNull {
                             it.isNotBlank() && it != "null" && !it.equals("undefined", true)
                         }.orEmpty()
-                        val remoteName = remoteProfile?.let { p ->
-                            sequenceOf("name", "displayName", "userName", "nickname")
-                                .map { p.optString(it, "").trim() }
-                                .firstOrNull { it.isNotBlank() && it != "null" && !it.equals("User", true) }
-                        }.orEmpty()
-                        val remoteImage = remoteProfile?.let { p ->
-                            sequenceOf("image", "avatar", "profileImageUrl")
-                                .map { p.optString(it, "").trim() }
-                                .firstOrNull { it.isNotBlank() && it != "null" }
-                        }.orEmpty()
                         val resolved = base.copy(
-                            name = remoteName.ifBlank { base.name },
-                            image = remoteImage.ifBlank { base.image },
                             country = roomProfileCountry.ifBlank { base.country },
                             gender = roomProfileGender
                         )
