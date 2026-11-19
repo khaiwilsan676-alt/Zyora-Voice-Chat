@@ -1482,3 +1482,12 @@ Current documentation does not certify that all historical features are build-, 
 - Sent asset history is rendered as one table with user avatar/name, Zyora ID, asset type, and days.
 - `Zyora-Server/server.js`: added owner-key-protected grant/history endpoints. Grants write to the existing `storeInventory` collection with the selected expiry and do not debit the recipient's wallet; history is stored separately in `ownerAssetGrants`.
 - Source committed. Next verification required: web production build, Render deployment, owner grant to a test account, and confirmation that the item appears in native Bag and expires on schedule.
+
+
+## 2026-11-20 — Room Settings performance pass
+- Native `RoomSettingPage.kt`: replaced multi-step mutable member-list mutations with immutable list state and single batched assignments to reduce avoidable Compose recompositions during room-member refresh and admin search.
+- Admin-sheet visible-member merging is memoized against its actual inputs instead of rebuilding/deduplicating the full list on every unrelated recomposition.
+- Store-theme inventory refresh now replaces the list in one state update; theme item composition no longer creates repeated list snapshots.
+- `ThemeFullScreen` no longer runs a permanent one-second clock/recomposition loop when the displayed themes have no expiry. The countdown ticker runs only while expiring themes are present and is bounded by the next expiry.
+- Existing network refresh-on-theme-open, expiry filtering/countdowns, member/admin behavior, settings save flow, and UI are retained.
+- Commits: `54fb18a`, `0a14efc`. APK compilation and on-device smoothness/regression checks remain required; not yet hardware-verified.
