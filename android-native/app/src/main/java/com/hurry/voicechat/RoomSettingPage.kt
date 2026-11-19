@@ -396,7 +396,7 @@ fun RoomSettingPage(
             if (waitMs > 0L) delay(waitMs)
             val now = System.currentTimeMillis()
             val expiredThemes = storeRoomThemes.filter { it.expiresAt > 0L && it.expiresAt <= now }
-            if (expiredThemes.isNotEmpty()) storeRoomThemes.removeAll(expiredThemes)
+            if (expiredThemes.isNotEmpty()) storeRoomThemes = storeRoomThemes.filterNot { it in expiredThemes }
         }
     }
 
