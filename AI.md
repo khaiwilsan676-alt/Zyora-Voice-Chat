@@ -1502,3 +1502,6 @@ Current documentation does not certify that all historical features are build-, 
 - Store purchase now optimistically adds the item to the visible Owned state immediately after tapping Buy; the item is removed from that state if the server/payment request fails. The server remains authoritative for ownership and wallet debit.
 - Bag Use/Remove updates the equipped state and local inventory cache immediately, while the equip request runs in the background. If the server rejects the change, the previous equipped item state is restored.
 - Existing server purchase validation, wallet debit, inventory persistence, and avatar-frame realtime refresh remain in place.
+
+## 2026-11-20 — Leaderboard low-memory crash fix
+- `android-native/app/src/main/java/com/hurry/voicechat/Leaderboard.kt`: chroma frame PNGs are bounds-checked and decoded with power-of-two sampling capped at 1024px per dimension before entering the existing 16 MiB LRU cache. This prevents full-resolution frame bitmaps from causing memory spikes and app termination on low-memory Android devices; leaderboard UI and ranking logic are unchanged.
