@@ -1129,10 +1129,7 @@ fun RoomPage(
                             accountId=userId,
                             name=user.optString("name","User").ifBlank{"User"},
                             image=user.optString("image",""),
-                            country=roomCountry,
-                            gender=sequenceOf("gender", "sex", "userGender")
-                                .map { user.optString(it, "").trim() }
-                                .firstOrNull { it.isNotBlank() && it != "null" }.orEmpty()
+                            country=roomCountry
                         ))
                     }
                 }
