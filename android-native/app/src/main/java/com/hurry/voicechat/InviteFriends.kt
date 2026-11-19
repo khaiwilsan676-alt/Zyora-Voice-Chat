@@ -446,13 +446,19 @@ private fun InviteDetailsCard() {
     var selectedTab by remember { mutableIntStateOf(0) }
     var searchUserId by remember { mutableStateOf("") }
 
-    val cardBg = Color.Black.copy(alpha = 0.8f)
+    val cardGradient = Brush.verticalGradient(
+        colors = listOf(
+            Color(0xFF6B0A1F),
+            Color(0xFF8C1029),
+            Color(0xFF5A0618)
+        )
+    )
     val goldBorder = Color(0xFFE5C97B)
-    val goldSoft = Color(0xFFF6E28B)
-    val mutedText = Color.White.copy(alpha = 0.55f)
-    val inputBg = Color.White.copy(alpha = 0.08f)
-    val inputBorder = Color.White.copy(alpha = 0.2f)
-    val dividerColor = Color.White.copy(alpha = 0.14f)
+    val goldSoft = Color(0xFFFFD52A)
+    val mutedText = Color(0xFFFFE76A).copy(alpha = 0.6f)
+    val inputBg = Color(0xFF3E0412).copy(alpha = 0.75f)
+    val inputBorder = goldBorder.copy(alpha = 0.35f)
+    val dividerColor = goldBorder.copy(alpha = 0.25f)
 
     Box(
         modifier = Modifier
@@ -479,7 +485,7 @@ private fun InviteDetailsCard() {
 
                 drawPath(
                     path = cardPath,
-                    color = cardBg
+                    brush = cardGradient
                 )
                 drawPath(
                     path = cardPath,
@@ -518,7 +524,7 @@ private fun InviteDetailsCard() {
                     lineTo(cx - innerGemSize, cy)
                     close()
                 }
-                drawPath(innerGem, color = Color(0xFF22C55E))
+                drawPath(innerGem, color = Color(0xFFD91E36))
             }
             .padding(top = 26.dp, bottom = 36.dp, start = 16.dp, end = 16.dp)
     ) {
@@ -534,7 +540,7 @@ private fun InviteDetailsCard() {
                     for (i in 0..2) {
                         val x = i * 6.dp.toPx()
                         drawLine(
-                            color = Color.White.copy(alpha = 0.25f),
+                            color = goldSoft.copy(alpha = 0.45f),
                             start = Offset(x, 0f),
                             end = Offset(x + 4.dp.toPx(), size.height),
                             strokeWidth = 2.dp.toPx(),
@@ -552,7 +558,7 @@ private fun InviteDetailsCard() {
                     for (i in 0..2) {
                         val x = i * 6.dp.toPx()
                         drawLine(
-                            color = Color.White.copy(alpha = 0.25f),
+                            color = goldSoft.copy(alpha = 0.45f),
                             start = Offset(x + 4.dp.toPx(), 0f),
                             end = Offset(x, size.height),
                             strokeWidth = 2.dp.toPx(),
@@ -640,7 +646,7 @@ private fun InviteDetailsCard() {
                     Icon(
                         Icons.Default.DateRange,
                         contentDescription = "Date",
-                        tint = Color.White,
+                        tint = goldSoft,
                         modifier = Modifier.size(16.dp)
                     )
                     Text(
@@ -652,7 +658,7 @@ private fun InviteDetailsCard() {
                     Icon(
                         Icons.Default.KeyboardArrowDown,
                         contentDescription = null,
-                        tint = Color.White,
+                        tint = goldSoft,
                         modifier = Modifier.size(16.dp)
                     )
                 }
