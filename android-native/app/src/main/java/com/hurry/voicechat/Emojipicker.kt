@@ -259,14 +259,24 @@ fun SeatEmojiOverlay(
 ) {
     val overlaySize = (seatSize * scale.coerceIn(0.45f, 3.5f)).coerceAtLeast(24.dp)
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        AsyncImage(
-            model = src,
-            contentDescription = "Seat emoji",
-            modifier = Modifier
-                .requiredSize(overlaySize)
-                .aspectRatio(1f),
-            contentScale = ContentScale.Fit
-        )
+        if (src.substringBefore("?").substringBefore("#").lowercase().endsWith(".mp4")) {
+            TransparentSeatVideoPlayer(
+                videoUrl = src,
+                modifier = Modifier
+                    .requiredSize(overlaySize)
+                    .aspectRatio(1f),
+                onVideoFinished = onVideoFinished
+            )
+        } else {
+            AsyncImage(
+                model = src,
+                contentDescription = "Seat emoji",
+                modifier = Modifier
+                    .requiredSize(overlaySize)
+                    .aspectRatio(1f),
+                contentScale = ContentScale.Fit
+            )
+        }
     }
 }
 
