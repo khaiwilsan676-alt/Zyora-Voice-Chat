@@ -775,7 +775,15 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
             if (keptRoom != null && tab != HurryTab.HOME && openedRoom == null && openedChat == null && openedPublicProfile == null && !openedRoomSupport && !openedSearch) {
                 KeptRoomTabOverlay(
                     room = keptRoom!!,
-                    onOpen = { keptRoom?.let { tryOpenRoom(it) } },
+                    onOpen = {
+                        // Resume the retained live room session directly. Calling tryOpenRoom
+                        // here performs a fresh access/join flow and can create a second entry.
+                        keptRoom?.let { room ->
+                            openedRoom = room
+                            keptRoom = null
+                            authPrefs.edit().remove("kept_room_data").apply()
+                        }
+                    },
                     onExit = {
                         keptRoom = null
                         authPrefs.edit().remove("kept_room_data").apply()
