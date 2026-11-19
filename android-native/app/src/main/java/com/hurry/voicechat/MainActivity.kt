@@ -541,11 +541,11 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
             openedPublicProfile != null -> openedPublicProfile = null
             openedRoomSupport -> openedRoomSupport = false
             openedSearch -> openedSearch = false
-            openedRoom != null -> { openedRoom = null; roomSession = null }
             openedLeaderboard != null -> openedLeaderboard = null
             openedInvite -> openedInvite = false
             openedChat != null -> openedChat = null
             openedMePage != null -> openedMePage = null
+            openedRoom != null -> { openedRoom = null; roomSession = null }
             tab != HurryTab.HOME -> tab = HurryTab.HOME
             homeMine -> homeMine = false
             // Stay on the current root screen rather than closing the app.
