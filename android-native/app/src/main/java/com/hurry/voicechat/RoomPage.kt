@@ -1168,7 +1168,7 @@ fun RoomPage(
         }
         val giftVideoListener = Emitter.Listener { args ->
             val payload = args.firstOrNull() as? JSONObject ?: return@Listener
-            if (payload.optString("roomId") != roomId || payload.optString("senderId") == accountId || !latestGiftEffectEnabled) return@Listener
+            if (payload.optString("roomId") != roomId || !latestGiftEffectEnabled) return@Listener
             val video = payload.optString("video").trim()
             if (video.isBlank()) return@Listener
             val videoUrl = if (video.startsWith("http://", true) || video.startsWith("https://", true)) video
@@ -2351,6 +2351,8 @@ Column(Modifier.align(Alignment.BottomStart).padding(bottom=LocalConfiguration.c
                     onComplete = {
                         roomVehiclePreview = ""
                         roomVehiclePreviewItemId = ""
+                        // Release the guard after playback so every later room entry can display.
+                        roomVehiclePlaybackClaimed.set(false)
                     }
                 )
             }
