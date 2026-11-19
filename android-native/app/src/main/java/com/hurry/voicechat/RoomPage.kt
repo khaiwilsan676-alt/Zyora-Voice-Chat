@@ -3670,6 +3670,9 @@ private fun RoomSeatInviteDialog(
                     modifier = Modifier.widthIn(max = 140.dp).heightIn(max = 140.dp)
                         .clip(RoundedCornerShape(12.dp)).clickable { showRoomImagePreview = true },
                     contentScale = ContentScale.Crop)
+                LaunchedEffect(isCovered) {
+                    if (isCovered) showRoomImagePreview = false
+                }
                 if (!isCovered && showRoomImagePreview) {
                     Dialog(onDismissRequest = { showRoomImagePreview = false },
                         properties = DialogProperties(usePlatformDefaultWidth = false)) {
