@@ -505,7 +505,10 @@ fun MessageScreen(onChat: (String, String, String) -> Unit, embeddedSheet: Boole
             }
         }
     }
-    DisposableEffect(currentUserId, chats.map { it.uid }) {
+    // Keep the presence socket stable for the lifetime of this inbox session.
+    // Keying it by the whole chat list caused room-status updates (isInRoom/roomId)
+    // to tear down and reconnect the socket, then re-request every peer's status.
+    DisposableEffect(currentUserId) {
         if (currentUserId.isBlank()) return@DisposableEffect onDispose { }
         val presenceSocket = IO.socket("https://zyora-server.onrender.com", IO.Options().apply {
             transports = arrayOf("websocket")
