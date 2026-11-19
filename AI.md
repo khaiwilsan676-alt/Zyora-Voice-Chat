@@ -1363,3 +1363,8 @@ Current documentation does not certify that all historical features are build-, 
 - Removed that premature device-slot precheck. Firebase authentication now resolves the identity first, then the provider-specific device lock runs.
 - Official identity detection now checks the server-resolved Zyora accountId as well as known legacy Firebase UIDs, rather than relying on Firebase UID alone.
 - No login/register UI changes.
+
+## Room speaker mute/unmute and music-wave fix
+- Native `RoomPage.kt`: music activity keeps the seat wave visible independently of the seat's voice mute flags; microphone voice waves remain gated by mute state.
+- Native `JitsiRoomAudio.kt`: speaker mute clears queued incoming voice and flushes the partially buffered voice AudioTrack once on the mute transition, preventing stale pre-mute samples from overlapping playback after unmute.
+- Increased incoming voice/music jitter queues from 6 to 20 packets to absorb short network/device scheduling delays. Mic capture, voice publishing, server authorization, music encoding, and UI layout are unchanged.
