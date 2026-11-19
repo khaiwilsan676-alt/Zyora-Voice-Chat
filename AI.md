@@ -1474,3 +1474,11 @@ Current documentation does not certify that all historical features are build-, 
 - Build blockers discovered in the first CI attempt were fixed: thread `isCovered` through `RoomChatMessages` into `NativeMessage`, correct the invalid `InviteFriends.kt` padding overload, and use `Arrangement.Center` rather than `Alignment.CenterVertically` in `SearchPage.kt`.
 - Commits: `8043a36`, `adecf33`, `3a5a97f`, `e36cac5`, `71ae7fe`, `e749e17`, `46472c3`, `5f6fc73`, `22d4639`, `119e948`, `840b364`, `5e07e57`, `cdc747b`.
 - APK build and real-device Keep → reopen, profile → Back, overlay layering, voice/chat continuity, and Exit regression tests must pass before calling this hardware-verified.
+
+
+## 2026-11-20 — Owner Assets Panel
+- Added a separate `components/owner/OwnerAssetsPanel.tsx` and mounted it inside the existing Gift Catalog section without replacing the existing gift catalogue.
+- The panel supports Chat bubble, Theme, Frame, and Vehicle asset types; the selected type's image-only picker appears immediately below the type selector, followed by asset name, days, preview, and Send.
+- Sent asset history is rendered as one table with user avatar/name, Zyora ID, asset type, and days.
+- `Zyora-Server/server.js`: added owner-key-protected grant/history endpoints. Grants write to the existing `storeInventory` collection with the selected expiry and do not debit the recipient's wallet; history is stored separately in `ownerAssetGrants`.
+- Source committed. Next verification required: web production build, Render deployment, owner grant to a test account, and confirmation that the item appears in native Bag and expires on schedule.
