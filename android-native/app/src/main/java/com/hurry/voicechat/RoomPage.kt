@@ -2281,7 +2281,7 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
 
             Column(horizontalAlignment=Alignment.CenterHorizontally, modifier = Modifier.offset(y = 6.dp)) {
                 androidx.compose.foundation.pager.HorizontalPager(state = sideBannerPager,modifier = Modifier.size(58.dp, 80.dp).clip(RoundedCornerShape(8.dp))) { page ->
-                    AsyncImage(model = sideBannerImages[page],contentDescription = "Room side banner",modifier = Modifier.fillMaxSize().clickable(indication = null, interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }) { if (page == 0) { keepingRoomForMini = true; onRoomSupport() } },contentScale = ContentScale.Crop)
+                    AsyncImage(model = sideBannerImages[page],contentDescription = "Room side banner",modifier = Modifier.fillMaxSize().clickable(indication = null, interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }) { if (page == 0) onRoomSupport() },contentScale = ContentScale.Crop)
                 }
                 Row(horizontalArrangement=Arrangement.spacedBy(2.dp), verticalAlignment=Alignment.CenterVertically, modifier=Modifier.padding(top=4.dp)) {
                     repeat(sideBannerImages.size) { i ->
@@ -2837,7 +2837,7 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                 isRoomOwner = profileId == roomOwner.accountId.ifBlank { roomOwner.id },
                 canModerate = currentUserSeatIds.any { it == roomId || it == roomOwnerAccountId || it in roomAdminIds },
                 onClose = { selectedChatProfile = null },
-                onOpenPublicProfile = { profile -> selectedChatProfile = null; selectedSeat = 0; showSeatSheet = false; keepingRoomForMini = true; onOpenPublicProfile(profile) },
+                onOpenPublicProfile = { profile -> selectedChatProfile = null; selectedSeat = 0; showSeatSheet = false; onOpenPublicProfile(profile) },
                 onCopyId = { if (profileId.isNotBlank()) clipboard.setText(AnnotatedString(profileId)) },
                 onMention = { name, targetId ->
                     val cleanName = name.trim().ifBlank { "User" }
@@ -2993,7 +2993,7 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                 isRoomOwner = profileSeat.accountId == roomOwner.accountId.ifBlank { roomOwner.id },
                 canModerate = currentUserSeatIds.any { it == roomId || it == roomOwnerAccountId || it in roomAdminIds },
                 onClose = { selectedSeat = 0 },
-                onOpenPublicProfile = { profile -> selectedSeat = 0; showSeatSheet = false; keepingRoomForMini = true; onOpenPublicProfile(profile) },
+                onOpenPublicProfile = { profile -> selectedSeat = 0; showSeatSheet = false; onOpenPublicProfile(profile) },
                 onMention = { name, targetId ->
                     val cleanName = name.trim().ifBlank { "User" }
                     run {
@@ -3680,7 +3680,7 @@ private fun RoomSeatInviteDialog(
                     modifier = Modifier.widthIn(max = 140.dp).heightIn(max = 140.dp)
                         .clip(RoundedCornerShape(12.dp)).clickable { showRoomImagePreview = true },
                     contentScale = ContentScale.Crop)
-                if (showRoomImagePreview) {
+                if (!isCovered && showRoomImagePreview) {
                     Dialog(onDismissRequest = { showRoomImagePreview = false },
                         properties = DialogProperties(usePlatformDefaultWidth = false)) {
                         Box(Modifier.fillMaxSize().background(Color.Black)) {
