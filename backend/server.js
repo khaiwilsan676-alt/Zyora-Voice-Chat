@@ -2573,20 +2573,24 @@ io.on("connection", (socket) => {
           seats: getRoomSeats(room),
         });
 
-        socket
-          .to(`room:${room}`)
-          .emit("room_user_online", {
-            roomId: room,
-            userId: accId,
-            user: {
-              accountId: accId,
-              userId: userId ? String(userId) : accId,
-              name: roomProfileName,
-              image:
-                roomProfileImage,
-              email: email || "",
-            },
-          });
+        // A silent Keep recovery restores an existing participant; do not
+        // broadcast a second online/entry event to everyone already in the room.
+        if (!suppressEntry) {
+          socket
+            .to(`room:${room}`)
+            .emit("room_user_online", {
+              roomId: room,
+              userId: accId,
+              user: {
+                accountId: accId,
+                userId: userId ? String(userId) : accId,
+                name: roomProfileName,
+                image:
+                  roomProfileImage,
+                email: email || "",
+              },
+            });
+        }
 
         emitRoomPresence(room);
         emitGlobalRoomPresence();
