@@ -3802,31 +3802,35 @@ app.get("/api/bans", async (req, res) => {
 app.post("/api/bans", async (req, res) => {
   try {
     if (!db) return res.status(503).json({ error: "DB not connected" });
-
-    // Check if requester is actually an official/admin (Using a simple check matching the owner panel login logic)
-    const requesterId = req.headers['x-requester-id'];
-    const OFFICIAL_IDS = ['500001', '500002', '500003', '500004', '500005', '700001', '700002', '700003'];
-    // In this app, special accounts and owner login use specific IDs.
-    // Ideally we'd verify a Firebase token here, but given the existing codebase's reliance on client-side ID checks (like in LoginPage),
-    // we'll enforce that the requester is in the OFFICIAL_IDS list or is the Hurry Owner.
-    if (!requesterId || (!OFFICIAL_IDS.includes(requesterId) && requesterId !== '100002' && requesterId !== '100003')) {
-       return res.status(403).json({ error: "Forbidden: Not an admin" });
+    const requesterId = String(req.headers["x-requester-id"] || "");
+    const OFFICIAL_IDS = ["500001", "500002", "500003", "500004", "500005", "700001", "700002", "700003", "100002", "100003"];
+    if (!OFFICIAL_IDS.includes(requesterId)) return res.status(403).json({ error: "Forbidden: Not an admin" });
+    const data = req.body || {};
+    const accountId = String(data.accountId || "").trim();
+    if (!accountId) return res.status(400).json({ error: "Missing accountId" });
+    const ban = { ...data, accountId, userId: String(data.userId || ""), description: String(data.description || "").trim(),
+      deviceId: String(data.deviceId || ""), ipAddress: String(data.ipAddress || ""),
+      banTime: Number(data.banTime || Date.now()), unbanTime: Number(data.unbanTime ?? -1) };
+    if (ban.timeOption === "Device Ban" && !ban.deviceId && !ban.ipAddress) {
+      return res.status(400).json({ error: "No registered device or IP is available for this user." });
     }
-
-    const data = req.body;
-    if (!data.accountId) return res.status(400).json({ error: "Missing accountId" });
-
     await db.collection("bans").updateOne(
-      { accountId: data.accountId },
-      { $set: data },
-      { upsert: true }
+      ban.timeOption === "Device Ban" ? { accountId, timeOption: "Device Ban" } : { accountId },
+      { $set: ban }, { upsert: true }
     );
-    io.emit('banned_logout', {
-      accountId: data.accountId,
-      userId: data.userId,
-      type: data.type,
-      unbanTime: data.unbanTime
-    });
+    // Disconnect account sessions immediately; native clients also enforce the ban on their live session poll.
+    if (ban.timeOption !== "Device Ban") {
+      const sockets = await io.fetchSockets();
+      for (const client of sockets) {
+        const identities = [client.userId, client.accountId, client.roomUserId, client.roomAccountId, client.presenceAccountId]
+          .map(value => String(value || ""));
+        if (identities.includes(accountId) || (ban.userId && identities.includes(ban.userId))) {
+          client.emit("banned_logout", { accountId, userId: ban.userId, reason: ban.description });
+          client.disconnect(true);
+        }
+      }
+    }
+    io.emit("banned_logout", { accountId, userId: ban.userId, type: ban.type, timeOption: ban.timeOption, reason: ban.description });
     res.json({ success: true });
   } catch (err) {
     console.error("POST /api/bans error:", err);
@@ -3837,21 +3841,13 @@ app.post("/api/bans", async (req, res) => {
 app.post("/api/bans/unban", async (req, res) => {
   try {
     if (!db) return res.status(503).json({ error: "DB not connected" });
-
-    // Check if requester is actually an official/admin (Using a simple check matching the owner panel login logic)
-    const requesterId = req.headers['x-requester-id'];
-    const OFFICIAL_IDS = ['500001', '500002', '500003', '500004', '500005', '700001', '700002', '700003'];
-    // In this app, special accounts and owner login use specific IDs.
-    // Ideally we'd verify a Firebase token here, but given the existing codebase's reliance on client-side ID checks (like in LoginPage),
-    // we'll enforce that the requester is in the OFFICIAL_IDS list or is the Hurry Owner.
-    if (!requesterId || (!OFFICIAL_IDS.includes(requesterId) && requesterId !== '100002' && requesterId !== '100003')) {
-       return res.status(403).json({ error: "Forbidden: Not an admin" });
-    }
-
-    const { accountId, reason } = req.body;
+    const requesterId = String(req.headers["x-requester-id"] || "");
+    const OFFICIAL_IDS = ["500001", "500002", "500003", "500004", "500005", "700001", "700002", "700003", "100002", "100003"];
+    if (!OFFICIAL_IDS.includes(requesterId)) return res.status(403).json({ error: "Forbidden: Not an admin" });
+    const accountId = String(req.body?.accountId || "").trim();
     if (!accountId) return res.status(400).json({ error: "Missing accountId" });
-
-    await db.collection("bans").deleteOne({ accountId: String(accountId) });
+    await db.collection("bans").deleteMany({ accountId });
+    io.emit("ban_lifted", { accountId });
     res.json({ success: true });
   } catch (err) {
     console.error("POST /api/bans/unban error:", err);
@@ -3862,30 +3858,21 @@ app.post("/api/bans/unban", async (req, res) => {
 app.post("/api/check-ban", async (req, res) => {
   try {
     if (!db) return res.status(503).json({ error: "DB not connected" });
-    const { accountId, deviceId, ipAddress } = req.body;
-
-    const query = { $or: [] };
-    if (accountId) query.$or.push({ accountId: String(accountId) });
-    if (deviceId && deviceId !== '') query.$or.push({ deviceId: String(deviceId), timeOption: 'Device Ban' });
-
-    if (query.$or.length === 0) {
-      return res.json({ banned: false });
-    }
-
-    const activeBans = await db.collection("bans").find(query).toArray();
-    if (activeBans.length === 0) return res.json({ banned: false });
-
+    const accountId = String(req.body?.accountId || "").trim();
+    const deviceId = String(req.body?.deviceId || "").trim();
+    const forwarded = String(req.headers["x-forwarded-for"] || "").split(",")[0].trim();
+    const ipAddress = forwarded || String(req.socket?.remoteAddress || "").replace(/^::ffff:/, "");
+    const candidates = await db.collection("bans").find({
+      $or: [
+        ...(accountId ? [{ accountId, timeOption: { $ne: "Device Ban" } }] : []),
+        ...(deviceId ? [{ deviceId, timeOption: "Device Ban" }] : []),
+        ...(ipAddress ? [{ ipAddress, timeOption: "Device Ban" }] : [])
+      ]
+    }).toArray();
     const now = Date.now();
-    for (const ban of activeBans) {
-      if (ban.unbanTime === -1 || ban.unbanTime > now) {
-        return res.json({
-          banned: true,
-          banData: ban
-        });
-      }
-    }
-
-    res.json({ banned: false });
+    const active = candidates.find(ban => Number(ban.unbanTime) === -1 || Number(ban.unbanTime) > now);
+    if (!active) return res.json({ banned: false });
+    return res.json({ banned: true, banData: active, reason: String(active.description || "") });
   } catch (err) {
     console.error("POST /api/check-ban error:", err);
     res.status(500).json({ error: "Internal error" });
