@@ -1420,3 +1420,10 @@ Current documentation does not certify that all historical features are build-, 
 
 - `backend/server.js`: seat leave, self-mute, owner/admin mute, and seat lock now immediately revoke an active mic publisher and broadcast a non-speaking state; the server no longer waits for another PCM packet to notice the seat permission changed.
 - Commit: server seat-permission revocation `f18fd1e`.
+
+
+## 2026-11-19 — Native performance: stable inbox presence socket and memoized invite list
+- `MessageScreen.kt`: the room-presence Socket.IO `DisposableEffect` is now keyed only by the signed-in account ID, not the mutable chat preview list. Previously, updates to `isInRoom`/`roomId` changed the effect key, disposed the socket, reconnected it, and requested every peer's room status again. The socket now stays connected while presence updates and chat row ordering change.
+- `RoomPage.kt`: `RoomInviteSheet` now remembers its de-duplicated, owner-first sorted invite list until room users/current user/owner actually change, avoiding repeated full-list filtering and sorting during unrelated room recompositions.
+- No UI, voice, music, chat delivery, room-seat, or navigation behavior was intentionally changed.
+- Verification: native Gradle build, CI, and Redmi 14C runtime profiling/regression tests are still required; smoothness improvement is based on removing the identified repeated socket lifecycle and list work, not yet device-measured.
