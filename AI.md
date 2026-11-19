@@ -1497,3 +1497,8 @@ Current documentation does not certify that all historical features are build-, 
 - Items explicitly marked `ownedByDefault` render as `Owned` immediately from the first frame.
 - Removed the transient `...` purchase label; unowned cards continue to show `Buy`, while owned cards show `Owned` without waiting for a network request.
 - Existing cached-first inventory rendering, purchase endpoint, wallet synchronization, equip/remove actions, and expiry handling are preserved.
+
+### Store instant-action follow-up (2026-11-20)
+- Store purchase now optimistically adds the item to the visible Owned state immediately after tapping Buy; the item is removed from that state if the server/payment request fails. The server remains authoritative for ownership and wallet debit.
+- Bag Use/Remove updates the equipped state and local inventory cache immediately, while the equip request runs in the background. If the server rejects the change, the previous equipped item state is restored.
+- Existing server purchase validation, wallet debit, inventory persistence, and avatar-frame realtime refresh remain in place.
