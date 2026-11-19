@@ -755,20 +755,20 @@ fun RoomSettingPage(
             }
         }
 
-        // Admin sheet height = 0.65f (same size as admin-members) + '?' icon inside white circle border
+        // Admin sheet height = 0.65f (same size as admin-members) + smaller '?' icon inside white circle border + pill Add button
         "admin" -> BottomSheetModal(scrimAlpha = 0.45f, heightFraction = 0.65f, dark = true, cornerRadius = 12.dp, onDismiss = { sheet = "" }) {
             Column(Modifier.fillMaxSize().navigationBarsPadding().background(Color.Black).padding(horizontal = 16.dp)) {
                 Row(Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Spacer(Modifier.width(32.dp))
+                    Spacer(Modifier.width(22.dp))
                     Text("Room Admins", Modifier.weight(1f), color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
                     Box(
-                        Modifier.size(30.dp)
+                        Modifier.size(22.dp)
                             .clip(CircleShape)
-                            .border(1.5.dp, Color.White, CircleShape)
+                            .border(1.dp, Color.White, CircleShape)
                             .clickable { sheet = "admin-help" },
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("?", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                        Text("?", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
                 }
                 Text("Room Admins: ${admins.size}/5", color = Color(0xFF9CA3AF), fontSize = 12.sp, modifier = Modifier.padding(top = 5.dp, bottom = 10.dp))
@@ -791,7 +791,7 @@ fun RoomSettingPage(
                     if (admins.isEmpty()) item { Text("No room admins", color = Color(0xFF9CA3AF), fontSize = 12.sp, modifier = Modifier.fillMaxWidth().padding(vertical = 18.dp), textAlign = TextAlign.Center) }
                 }
                 Box(Modifier.fillMaxWidth().padding(vertical = 12.dp), contentAlignment = Alignment.Center) {
-                    Box(Modifier.fillMaxWidth().height(44.dp).clip(RoundedCornerShape(9.dp)).background(blue500)
+                    Box(Modifier.fillMaxWidth().height(44.dp).clip(CircleShape).background(blue500)
                         .clickable { adminSearch = ""; sheet = "admin-members" }.padding(vertical = 11.dp), contentAlignment = Alignment.Center) {
                         Text("Add", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                     }
@@ -799,7 +799,7 @@ fun RoomSettingPage(
             }
         }
 
-        // Room admin members sheet height = 0.65f (same size as admin) + 3D blue Add button -> Added on click
+        // Room admin members sheet height = 0.65f (same size as admin) + pill 3D blue Add / Added same size button
         "admin-members" -> BottomSheetModal(scrimAlpha = 0.45f, heightFraction = 0.65f, dark = true, cornerRadius = 12.dp, onDismiss = { sheet = "admin" }) {
             Column(Modifier.fillMaxSize().navigationBarsPadding().background(Color.Black).padding(horizontal = 14.dp)) {
                 Text("Room members", Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 12.dp), color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
@@ -822,8 +822,10 @@ fun RoomSettingPage(
                             }
                             Box(
                                 Modifier
-                                    .shadow(elevation = if (added) 0.dp else 4.dp, shape = RoundedCornerShape(10.dp))
-                                    .clip(RoundedCornerShape(10.dp))
+                                    .width(72.dp)
+                                    .height(30.dp)
+                                    .shadow(elevation = if (added) 0.dp else 4.dp, shape = CircleShape)
+                                    .clip(CircleShape)
                                     .background(
                                         if (added) Brush.verticalGradient(listOf(Color(0xFF1D4ED8), Color(0xFF1E3A8A)))
                                         else Brush.verticalGradient(listOf(Color(0xFF60A5FA), Color(0xFF2563EB), Color(0xFF1D4ED8)))
@@ -833,14 +835,13 @@ fun RoomSettingPage(
                                         brush = Brush.verticalGradient(
                                             listOf(Color.White.copy(alpha = if (added) 0.25f else 0.65f), Color(0xFF1E40AF))
                                         ),
-                                        shape = RoundedCornerShape(10.dp)
+                                        shape = CircleShape
                                     )
                                     .clickable(enabled = canAdd) {
                                         admins = (admins + member.accountId).distinct()
                                         performSave(state.copy(admin = admins))
                                         sheet = "admin"
-                                    }
-                                    .padding(horizontal = 14.dp, vertical = 7.dp),
+                                    },
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
