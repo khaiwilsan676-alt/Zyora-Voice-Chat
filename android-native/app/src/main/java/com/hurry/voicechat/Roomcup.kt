@@ -183,6 +183,16 @@ fun RoomCupSheet(roomId:String,userId:String,userName:String,userImage:String,on
                                 }
                                 Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(6.dp)) {
                                     if(u.country.isNotBlank()) CountryFlagImage(u.country,Modifier.size(18.dp,12.dp)) else Spacer(Modifier.width(18.dp))
+                                    if(u.gender.isNotBlank()) {
+                                        val isFemale = u.gender.equals("female", true) || u.gender.equals("f", true) || u.gender == "♀"
+                                        Box(
+                                            Modifier.size(18.dp).clip(CircleShape)
+                                                .background(if(isFemale) Color(0xFFEC4899) else Color(0xFF3B82F6)),
+                                            contentAlignment=Alignment.Center
+                                        ) {
+                                            CustomGenderIcon(isFemale=isFemale,modifier=Modifier.size(8.dp))
+                                        }
+                                    }
                                     Box(Modifier.height(16.dp).width(36.dp),contentAlignment=Alignment.CenterEnd) {
                                         AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261028_004355.png",contentDescription="Level",modifier=Modifier.fillMaxSize(),contentScale=ContentScale.FillBounds)
                                         // 1dp Left (x=4.dp se x=3.dp)
