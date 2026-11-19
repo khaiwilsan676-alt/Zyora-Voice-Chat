@@ -177,23 +177,55 @@ internal suspend fun uploadChatImage(
         ?.takeIf { it in setOf("image/jpeg", "image/png", "image/webp", "image/gif") }
         ?: "image/jpeg"
     val bytes = runCatching {
-        context.contentResolver.openInputStream(uri)?.use { input ->
-            val output = ByteArrayOutputStream()
-            val buffer = ByteArray(16 * 1024)
-            var total = 0
-            while (true) {
-                val count = input.read(buffer)
-                if (count < 0) break
-                total += count
-                if (total > 5 * 1024 * 1024) throw IllegalArgumentException("Image exceeds 5 MB")
-                output.write(buffer, 0, count)
+        // Keep animated GIFs intact; normalize large still images before upload.
+        if (mimeType == "image/gif") {
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                val output = ByteArrayOutputStream()
+                val buffer = ByteArray(16 * 1024)
+                var total = 0
+                while (true) {
+                    val count = input.read(buffer)
+                    if (count < 0) break
+                    total += count
+                    if (total > 5 * 1024 * 1024) throw IllegalArgumentException("Image exceeds 5 MB")
+                    output.write(buffer, 0, count)
+                }
+                output.toByteArray()
             }
-            output.toByteArray()
+        } else {
+            val source = context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it) }
+                ?: return@runCatching null
+            try {
+                val maxEdge = 1280
+                val scale = minOf(1f, maxEdge.toFloat() / maxOf(source.width, source.height))
+                val resized = if (scale < 1f) Bitmap.createScaledBitmap(
+                    source, (source.width * scale).toInt().coerceAtLeast(1),
+                    (source.height * scale).toInt().coerceAtLeast(1), true
+                ) else source
+                try {
+                    var quality = 78
+                    var compressed = ByteArray(0)
+                    do {
+                        compressed = ByteArrayOutputStream().use { output ->
+                            resized.compress(Bitmap.CompressFormat.JPEG, quality, output)
+                            output.toByteArray()
+                        }
+                        if (compressed.size <= 900 * 1024 || quality <= 54) break
+                        quality -= 8
+                    } while (quality >= 54)
+                    compressed
+                } finally {
+                    if (resized !== source) resized.recycle()
+                }
+            } finally {
+                source.recycle()
+            }
         }
     }.getOrNull() ?: return@withContext null
     if (bytes.isEmpty() || bytes.size > 5 * 1024 * 1024) return@withContext null
+    val uploadMime = if (mimeType == "image/gif") mimeType else "image/jpeg"
     val encoded = android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
-    ProfilePersistence.uploadImageToMongoDB("data:$mimeType;base64,$encoded", messageId, folder)
+    ProfilePersistence.uploadImageToMongoDB("data:$uploadMime;base64,$encoded", messageId, folder)
 }
 
 
