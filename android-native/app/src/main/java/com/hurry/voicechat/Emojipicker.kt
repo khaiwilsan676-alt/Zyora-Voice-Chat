@@ -104,13 +104,13 @@ fun EmojiPicker(onClose: () -> Unit = {}, onSelectEmoji: (EmojiSticker) -> Unit 
 
     val stickers = listOf(
         // SABKA EK HI SQUARE SIZE (1.3f)
-        EmojiSticker("welcome","Welcome","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261028_183916.png", "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/VID_20261028_105159_978_bsl.mp4", 1.2f),
-        EmojiSticker("thanks","Thanks","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261028_184100.png", "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/VID_20261028_105329_293_bsl.mp4", 1.2f),
-        EmojiSticker("gift_me","Gift me","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261028_184037.png", "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/VID_20261028_105304_745_bsl.mp4", 1.2f),
-        EmojiSticker("kiss_r","Kiss-R","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261028_184130.png", "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/VID_20261028_104846_084_bsl.mp4", 1.2f),
-        EmojiSticker("kiss_l","Kiss-L","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261028_184200.png", "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/VID_20261028_104823_659_bsl.mp4", 1.2f),
-        EmojiSticker("punch_r","Punch-R","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261028_184240.png", "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/VID_20261028_105414_962_bsl.mp4", 1.2f),
-        EmojiSticker("punch_l","Punch-L","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261028_184300.png", "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/VID_20261028_105348_731_bsl.mp4", 1.2f),
+        EmojiSticker("welcome","Welcome","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261028_183916.png", null, 1.3f),
+        EmojiSticker("thanks","Thanks","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261028_184100.png", null, 1.3f),
+        EmojiSticker("gift_me","Gift me","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261028_184037.png", null, 1.3f),
+        EmojiSticker("kiss_r","Kiss-R","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261028_184130.png", null, 1.3f),
+        EmojiSticker("kiss_l","Kiss-L","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261028_184200.png", null, 1.3f),
+        EmojiSticker("punch_r","Punch-R","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261028_184240.png", null, 1.3f),
+        EmojiSticker("punch_l","Punch-L","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261028_184300.png", null, 1.3f),
         
         // GIF WALE EMOJI BHI SAME SQUARE SIZE (1.3f)
         EmojiSticker("laugh","Laugh","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/512.gif", null, 1.3f),
@@ -249,8 +249,7 @@ private object SeatEmojiVideoCache {
         }
 }
 
-// The picker owns seat emoji media selection and sizing. Every seat uses
-// this shared renderer so MP4 and image/GIF stickers keep consistent square bounds.
+// The picker owns seat emoji sizing. Seat reactions render the original image/GIF source.
 @Composable
 fun SeatEmojiOverlay(
     src: String,
@@ -260,24 +259,14 @@ fun SeatEmojiOverlay(
 ) {
     val overlaySize = (seatSize * scale.coerceIn(0.45f, 3.5f)).coerceAtLeast(24.dp)
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        if (src.substringBefore("?").lowercase().endsWith(".mp4")) {
-            TransparentSeatVideoPlayer(
-                videoUrl = src,
-                modifier = Modifier
-                    .requiredSize(overlaySize)
-                    .aspectRatio(1f),
-                onVideoFinished = onVideoFinished
-            )
-        } else {
-            AsyncImage(
-                model = src,
-                contentDescription = "Seat emoji",
-                modifier = Modifier
-                    .requiredSize(overlaySize)
-                    .aspectRatio(1f),
-                contentScale = ContentScale.Fit
-            )
-        }
+        AsyncImage(
+            model = src,
+            contentDescription = "Seat emoji",
+            modifier = Modifier
+                .requiredSize(overlaySize)
+                .aspectRatio(1f),
+            contentScale = ContentScale.Fit
+        )
     }
 }
 
