@@ -10,6 +10,7 @@ import Reports from '@/components/Reports';
 import OwnerBan from '@/components/ownerban';
 import ManageRooms from '@/components/owner/ManageRooms';
 import SellerCenterUsers from '@/components/owner/SellerCenterUsers';
+import OwnerAssetsPanel from '@/components/owner/OwnerAssetsPanel';
 import { apiUrl } from "@/src/lib/api";
 
 // ==============================================================
@@ -1959,6 +1960,7 @@ export default function StaffPanel() {
                 </div>
               )}
             </div>
+            <OwnerAssetsPanel />
           </div>
         )}
 
