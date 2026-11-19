@@ -1505,3 +1505,6 @@ Current documentation does not certify that all historical features are build-, 
 
 ## 2026-11-20 — Leaderboard low-memory crash fix
 - `android-native/app/src/main/java/com/hurry/voicechat/Leaderboard.kt`: chroma frame PNGs are bounds-checked and decoded with power-of-two sampling capped at 1024px per dimension before entering the existing 16 MiB LRU cache. This prevents full-resolution frame bitmaps from causing memory spikes and app termination on low-memory Android devices; leaderboard UI and ranking logic are unchanged.
+
+## 2026-11-20 — Leaderboard image-loading crash follow-up
+- Replaced the custom `BitmapFactory`/`ImageBitmap` frame loader and manual bitmap LRU cache in `android-native/.../Leaderboard.kt` with Coil `AsyncImage`. Coil now sizes and downsamples podium frame images to their measured Compose bounds and manages decoding/caching, avoiding full-resolution bitmap allocation and manual cache retention. Leaderboard UI and ranking behavior remain unchanged.
