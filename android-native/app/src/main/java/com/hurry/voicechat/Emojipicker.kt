@@ -257,7 +257,7 @@ fun SeatEmojiOverlay(
     scale: Float = 1.1f,
     onVideoFinished: () -> Unit = {}
 ) {
-    val overlaySize = (seatSize * scale.coerceIn(0.45f, 3.5f)).coerceAtLeast(24.dp)
+    val overlaySize = (seatSize * scale.coerceIn(1.1f, 3.5f)).coerceAtLeast(24.dp)
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         if (src.substringBefore("?").substringBefore("#").lowercase().endsWith(".mp4")) {
             TransparentSeatVideoPlayer(
