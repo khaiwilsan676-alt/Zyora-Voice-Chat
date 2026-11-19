@@ -637,7 +637,7 @@ private fun relayDecodedMusic(
         var outputDone = false
         var sampleRate = format.getInteger(MediaFormat.KEY_SAMPLE_RATE)
         var channels = format.getInteger(MediaFormat.KEY_CHANNEL_COUNT).coerceAtLeast(1)
-        val packet = ByteArray(ROOM_VOICE_FRAME_BYTES)
+        val packet = ByteArray(ROOM_MUSIC_FRAME_BYTES)
         var packetSize = 0
         var resamplePosition = 0.0
         var nextFrameAt = System.nanoTime()
