@@ -349,7 +349,7 @@ fun RoomSettingPage(
         }
     }
 
-    val storeRoomThemes = remember { mutableStateListOf<RoomThemeChoice>() }
+    var storeRoomThemes by remember { mutableStateOf<List<RoomThemeChoice>>(emptyList()) }
     LaunchedEffect(currentUserId, sheet == "theme") {
         if (currentUserId.isBlank()) return@LaunchedEffect
         withContext(Dispatchers.IO) {
@@ -380,17 +380,16 @@ fun RoomSettingPage(
                 } finally { conn.disconnect() }
             }.getOrDefault(emptyList())
         }.let { found ->
-            storeRoomThemes.clear()
-            storeRoomThemes.addAll(found)
+            storeRoomThemes = found
         }
     }
 
-    val themeItems = remember(customTheme, storeRoomThemes.toList()) {
+    val themeItems = remember(customTheme, storeRoomThemes) {
         (if (customTheme.isNotBlank()) listOf(RoomThemeChoice("custom", "Custom", customTheme)) else emptyList()) +
-            roomThemeChoices + storeRoomThemes.toList()
+            roomThemeChoices + storeRoomThemes
     }
 
-    LaunchedEffect(storeRoomThemes.toList()) {
+    LaunchedEffect(storeRoomThemes) {
         while (storeRoomThemes.isNotEmpty()) {
             val nextExpiry = storeRoomThemes.minOfOrNull { it.expiresAt } ?: break
             val waitMs = (nextExpiry - System.currentTimeMillis()).coerceAtLeast(0L)
@@ -803,9 +802,13 @@ fun RoomSettingPage(
         "admin-members" -> BottomSheetModal(scrimAlpha = 0.45f, heightFraction = 0.65f, dark = true, cornerRadius = 12.dp, onDismiss = { sheet = "admin" }) {
             Column(Modifier.fillMaxSize().navigationBarsPadding().background(Color.Black).padding(horizontal = 14.dp)) {
                 Text("Room members", Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 12.dp), color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
-                val visibleMembers = (roomMembers.map { NativeSettingMember(it.accountId, it.name, it.image) } + members)
-                    .filter { it.accountId.isNotBlank() && it.accountId != roomOwnerId && it.accountId != currentUserId }
-                    .distinctBy { it.accountId }
+                val visibleMembers = remember(roomMembers, members, roomOwnerId, currentUserId) {
+                    (roomMembers.asSequence()
+                        .map { NativeSettingMember(it.accountId, it.name, it.image) } + members.asSequence())
+                        .filter { it.accountId.isNotBlank() && it.accountId != roomOwnerId && it.accountId != currentUserId }
+                        .distinctBy { it.accountId }
+                        .toList()
+                }
                 LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     items(visibleMembers, key = { it.accountId }) { member ->
                         val added = member.accountId in admins
@@ -1182,14 +1185,21 @@ private fun ThemeFullScreen(
     onUploadCustom: () -> Unit
 ) {
     var selectedTheme by remember(current) { mutableStateOf(current) }
+    val expiringThemes = remember(items) { items.filter { it.expiresAt > 0L } }
     var clockNow by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    LaunchedEffect(items) {
+    LaunchedEffect(expiringThemes) {
+        if (expiringThemes.isEmpty()) return@LaunchedEffect
         while (true) {
-            clockNow = System.currentTimeMillis()
-            delay(1000L)
+            val now = System.currentTimeMillis()
+            clockNow = now
+            val nextExpiry = expiringThemes.minOfOrNull { it.expiresAt } ?: break
+            if (nextExpiry <= now) break
+            delay(minOf(1000L, nextExpiry - now).coerceAtLeast(1L))
         }
     }
-    val visibleThemes = items.filter { it.expiresAt <= 0L || it.expiresAt > clockNow }
+    val visibleThemes = remember(items, clockNow) {
+        items.filter { it.expiresAt <= 0L || it.expiresAt > clockNow }
+    }
 
     Dialog(
         onDismissRequest = onBack,
