@@ -1368,3 +1368,9 @@ Current documentation does not certify that all historical features are build-, 
 - Native `RoomPage.kt`: music activity keeps the seat wave visible independently of the seat's voice mute flags; microphone voice waves remain gated by mute state.
 - Native `JitsiRoomAudio.kt`: speaker mute clears queued incoming voice and flushes the partially buffered voice AudioTrack once on the mute transition, preventing stale pre-mute samples from overlapping playback after unmute.
 - Increased incoming voice/music jitter queues from 6 to 20 packets to absorb short network/device scheduling delays. Mic capture, voice publishing, server authorization, music encoding, and UI layout are unchanged.
+
+## 2026-11-19 — Prevent stale seat restoration after app restart
+- `backend/server.js`: a genuinely new room socket session now clears any leftover occupied seat for that account before joining and broadcasting the room snapshot.
+- Removed the join-time logic that rebound an old occupied seat to the new socket, which caused the room owner/avatar to reappear seated after force-closing and reopening the app.
+- The existing Keep/minimize flow is unchanged because it retains the same connected socket; duplicate joins on that same socket also preserve the active seat.
+- No UI changes.
