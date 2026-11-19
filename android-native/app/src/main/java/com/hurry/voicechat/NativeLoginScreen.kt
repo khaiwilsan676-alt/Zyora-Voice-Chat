@@ -108,7 +108,7 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
     var registeredDeviceAccountId by remember { mutableStateOf("") }
     var registeredDeviceEmail by remember { mutableStateOf("") }
     var registeredDeviceMethod by remember { mutableStateOf("Google") }
-    var error by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf(context.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE).getString("banReason", "").orEmpty()) }
     var showPrivacyPolicy by remember { mutableStateOf(false) }
     val legacyGoogleLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
@@ -1063,11 +1063,16 @@ private fun syncHurryUser(user: JSONObject, context: android.content.Context) {
             val banJson = runCatching {
                 JSONObject(banStream?.bufferedReader()?.use { it.readText() }.orEmpty())
             }.getOrDefault(JSONObject())
-            banJson.optBoolean("banned")
+            if (banJson.optBoolean("banned")) {
+                val reason = banJson.optString("reason").ifBlank { banJson.optJSONObject("banData")?.optString("description").orEmpty() }
+                throw IllegalStateException("Your account has been banned" + if (reason.isNotBlank()) ": $reason" else ".")
+            }
+            false
         } finally {
             banConnection.disconnect()
         }
     }.onFailure {
+        if (it.message?.startsWith("Your account has been banned") == true) throw it
         android.util.Log.w("ZyoraAuth", "Ban check unavailable; allowing Firebase login and continuing profile sync", it)
     }.getOrDefault(false)
     if (isBanned) throw IllegalStateException("This account or device is blocked from signing in.")
