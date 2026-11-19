@@ -1960,7 +1960,7 @@ export default function StaffPanel() {
                 </div>
               )}
             </div>
-            <OwnerAssetsPanel />
+            <OwnerAssetsPanel ownerKey={VALID_CREDENTIALS.secretKey} />
           </div>
         )}
 
