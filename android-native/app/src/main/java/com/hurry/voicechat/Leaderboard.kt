@@ -359,8 +359,8 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                 )
             }
             
-            // SECOND ROW (Middle)
-            Row(Modifier.fillMaxWidth().offset(y = (-2).dp).padding(horizontal = 12.dp, vertical = 2.dp), horizontalArrangement = Arrangement.Center) {
+            // SECOND ROW (Left Corner)
+            Row(Modifier.fillMaxWidth().offset(y = (-2).dp).padding(horizontal = 12.dp, vertical = 2.dp), horizontalArrangement = Arrangement.Start) {
                 Row(
                     Modifier.width(220.dp).height(30.dp)
                         .border(1.dp, Color(0xFFD4AF37), RoundedCornerShape(24.dp))
@@ -404,7 +404,7 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                                     model = rank1Img,
                                     contentDescription = "Rank 1 Avatar",
                                     modifier = Modifier
-                                        .offset(y = (-13).dp)
+                                        .offset(y = (-11).dp)
                                         .size(100.dp)
                                         .clip(RoundedCornerShape(50)),
                                     contentScale = ContentScale.Crop
@@ -412,7 +412,7 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                             } else {
                                 DefaultUserAvatarIcon(
                                     modifier = Modifier
-                                        .offset(y = (-13).dp)
+                                        .offset(y = (-11).dp)
                                         .size(100.dp)
                                 )
                             }
@@ -458,7 +458,7 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                         
                         // Rank 2 and 3 Section (Edge-to-Edge, zero left/right gap)
                         Row(
-                            Modifier.fillMaxWidth(),
+                            Modifier.fillMaxWidth().offset(y = (-28).dp),
                             verticalAlignment = Alignment.Top
                         ) {
                             // Rank 2 Column (Avatar + Frame overlapping, Info below frame same as Top 1)
@@ -474,7 +474,7 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                                             model = rank2Img,
                                             contentDescription = "Rank 2 Avatar",
                                             modifier = Modifier
-                                                .offset(y = (-8).dp)
+                                                .offset(y = (-6).dp)
                                                 .size(65.dp)
                                                 .clip(RoundedCornerShape(50)),
                                             contentScale = ContentScale.Crop
@@ -482,7 +482,7 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                                     } else {
                                         DefaultUserAvatarIcon(
                                             modifier = Modifier
-                                                .offset(y = (-8).dp)
+                                                .offset(y = (-6).dp)
                                                 .size(65.dp)
                                         )
                                     }
@@ -498,7 +498,7 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                                 if (rank2 != null) {
                                     Column(
                                         horizontalAlignment = Alignment.CenterHorizontally,
-                                        modifier = Modifier.padding(top = 4.dp)
+                                        modifier = Modifier.offset(y = (-14).dp)
                                     ) {
                                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                                             Text(leaderboardShortName(rank2.name), color = Color.White, fontSize = 12.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -539,7 +539,7 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                                             model = rank3Img,
                                             contentDescription = "Rank 3 Avatar",
                                             modifier = Modifier
-                                                .offset(y = (-8).dp)
+                                                .offset(y = (-6).dp)
                                                 .size(65.dp) 
                                                 .clip(RoundedCornerShape(50)),
                                             contentScale = ContentScale.Crop
@@ -547,7 +547,7 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                                     } else {
                                         DefaultUserAvatarIcon(
                                             modifier = Modifier
-                                                .offset(y = (-8).dp)
+                                                .offset(y = (-6).dp)
                                                 .size(65.dp)
                                         )
                                     }
@@ -563,7 +563,7 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                                 if (rank3 != null) {
                                     Column(
                                         horizontalAlignment = Alignment.CenterHorizontally,
-                                        modifier = Modifier.padding(top = 4.dp)
+                                        modifier = Modifier.offset(y = (-14).dp)
                                     ) {
                                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                                             Text(leaderboardShortName(rank3.name), color = Color.White, fontSize = 12.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
