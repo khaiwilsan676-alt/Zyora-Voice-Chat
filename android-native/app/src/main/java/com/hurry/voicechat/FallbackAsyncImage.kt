@@ -24,7 +24,8 @@ fun FallbackAsyncImage(
         !source.equals("null", ignoreCase = true) &&
         !source.equals("undefined", ignoreCase = true) &&
         !source.equals("/default-avatar.png", ignoreCase = true) &&
-        !source.equals("default-avatar.png", ignoreCase = true)
+        !source.equals("default-avatar.png", ignoreCase = true) &&
+        !source.substringBefore("?").endsWith("/default-avatar.png", ignoreCase = true)
 
     // Never cover an assigned DP with the fallback while its image is loading.
     val painter = rememberAsyncImagePainter(
