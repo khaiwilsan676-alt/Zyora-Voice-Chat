@@ -64,6 +64,7 @@ fun ActiveUsers(
  onOpenProfile:(ActiveUserNative)->Unit,
  onCopyUserId:(String)->Unit,
  inviteMode:Boolean=false,
+ excludedAccountIds:Set<String> = emptySet(),
  onInvite:(ActiveUserNative)->Unit={}
 ){
  if(!isOpen)return
@@ -96,9 +97,9 @@ fun ActiveUsers(
   ){
    Text(if(inviteMode) "Invite User" else "Active Users",modifier=Modifier.fillMaxWidth().padding(start=16.dp,end=16.dp,top=16.dp,bottom=8.dp),textAlign=TextAlign.Center,fontSize=16.sp,fontWeight=FontWeight.Bold,color=Color.White)
    // Keep sorting/filtering out of recompositions caused by country lookup updates.
-   val visibleUsers = remember(roomUsers, roomOwnerId) {
+   val visibleUsers = remember(roomUsers, roomOwnerId, excludedAccountIds) {
     roomUsers.asSequence()
-     .filter { it.accountId.isNotBlank() }
+     .filter { it.accountId.isNotBlank() && it.accountId !in excludedAccountIds }
      .distinctBy { it.accountId }
      .sortedWith(compareBy<ActiveUserNative> { if (it.accountId == roomOwnerId) 0 else 1 }.thenBy { it.name.lowercase() })
      .toList()
