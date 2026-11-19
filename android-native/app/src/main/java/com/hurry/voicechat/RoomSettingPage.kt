@@ -33,11 +33,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
@@ -171,7 +173,6 @@ private suspend fun saveRoomSettingsRemote(roomId: String, userId: String, data:
             error("Save failed: HTTP $code ${error.take(180)}")
         }
     } finally { connection.disconnect() }
-
 }
 
 @Composable
@@ -190,13 +191,14 @@ fun RoomSettingPage(
     var draft by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var tempMicMode by remember { mutableIntStateOf(initial.micMode) }
-    var adminSearch by remember { mutableStateOf("") }    
+    var adminSearch by remember { mutableStateOf("") }
     var admins by remember(initial.admin) { mutableStateOf(initial.admin) }
     var customTheme by remember(roomOwnerId) { mutableStateOf(context.getSharedPreferences("room_settings", Context.MODE_PRIVATE).getString("customTheme_$roomOwnerId", "").orEmpty()) }
     var pendingPicker by remember { mutableStateOf("photo") }
     var saving by remember { mutableStateOf(false) }
     var saveError by remember { mutableStateOf("") }
     val members = remember { mutableStateListOf<NativeSettingMember>() }
+
     LaunchedEffect(roomMembers, roomOwnerId, currentUserId) {
         val sharedRoomMembers = roomMembers
             .filter { it.accountId.isNotBlank() && it.accountId != roomOwnerId && it.accountId != currentUserId }
@@ -205,6 +207,7 @@ fun RoomSettingPage(
         members.clear()
         members.addAll(sharedRoomMembers)
     }
+
     LaunchedEffect(sheet, roomOwnerId) {
         if (sheet != "admin-members" || roomOwnerId.isBlank()) return@LaunchedEffect
         val refreshed = withContext(Dispatchers.IO) {
@@ -243,7 +246,7 @@ fun RoomSettingPage(
         }
     }
 
-    // 🔥 COMMON SAVE FUNCTION 🔥 
+    // 🔥 COMMON SAVE FUNCTION 🔥
     val performSave = { newState: RoomSettingsDataNative ->
         scope.launch {
             saving = true
@@ -347,9 +350,6 @@ fun RoomSettingPage(
     }
 
     val storeRoomThemes = remember { mutableStateListOf<RoomThemeChoice>() }
-    // Refresh from the server whenever the Theme picker is opened. A one-time
-    // screen-entry snapshot could miss a purchase made moments earlier or retain
-    // an outdated inventory response while Room Settings stays alive.
     LaunchedEffect(currentUserId, sheet == "theme") {
         if (currentUserId.isBlank()) return@LaunchedEffect
         withContext(Dispatchers.IO) {
@@ -390,8 +390,6 @@ fun RoomSettingPage(
             roomThemeChoices + storeRoomThemes.toList()
     }
 
-    // Keep the purchased-theme list live while Room Settings remains open.
-    // Remove expired entries at their exact expiry without requiring a screen reload.
     LaunchedEffect(storeRoomThemes.toList()) {
         while (storeRoomThemes.isNotEmpty()) {
             val nextExpiry = storeRoomThemes.minOfOrNull { it.expiresAt } ?: break
@@ -401,7 +399,6 @@ fun RoomSettingPage(
             storeRoomThemes.removeAll { it.expiresAt > 0L && it.expiresAt <= now }
         }
     }
-
 
     Box(Modifier.fillMaxSize().background(Color.White)) {
         Column(Modifier.fillMaxSize()) {
@@ -415,13 +412,13 @@ fun RoomSettingPage(
                     Modifier.size(40.dp).clip(CircleShape).clickable(onClick = onBack),
                     contentAlignment = Alignment.Center
                 ) { Icon(Icons.Default.ArrowBack, "Back", tint = gray800, modifier = Modifier.size(24.dp)) }
-                
+
                 Text(
                     "Room Setting",
                     Modifier.weight(1f),
                     fontSize = 18.sp, fontWeight = FontWeight.Bold, color = gray800, textAlign = TextAlign.Center
                 )
-                
+
                 Spacer(Modifier.size(40.dp))
             }
 
@@ -459,40 +456,38 @@ fun RoomSettingPage(
                     }
                 }
 
-                    SettingRow("Room Name", state.roomName) { draft = state.roomName; sheet = "name" }
-                    SettingRow("Room Announcement", state.announcement) { draft = state.announcement; sheet = "announcement" }
-                    SettingRow("Theme", themeItems.firstOrNull { it.id == state.theme }?.name ?: "") { sheet = "theme" }
-                    SettingRow("Admin", "${admins.size}/5") { adminSearch = ""; sheet = "admin" }
-                    SettingRow("Lock Room", if (state.isLocked) "Locked" else "", red = state.isLocked) {
-                        password = if (state.isLocked) state.roomPassword else ""; sheet = "lock"
-                    }
-                    
-                    Box(Modifier.fillMaxWidth().padding(bottom = 20.dp)) {
+                SettingRow("Room Name", state.roomName) { draft = state.roomName; sheet = "name" }
+                SettingRow("Room Announcement", state.announcement) { draft = state.announcement; sheet = "announcement" }
+                SettingRow("Theme", themeItems.firstOrNull { it.id == state.theme }?.name ?: "") { sheet = "theme" }
+                SettingRow("Admin", "${admins.size}/5") { adminSearch = ""; sheet = "admin" }
+                SettingRow("Lock Room", if (state.isLocked) "Locked" else "", red = state.isLocked) {
+                    password = if (state.isLocked) state.roomPassword else ""; sheet = "lock"
+                }
+
+                Box(Modifier.fillMaxWidth().padding(bottom = 20.dp)) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "Mic Mode", Modifier.weight(1f),
+                            fontSize = 14.sp, fontWeight = FontWeight.Medium, color = gray600
+                        )
                         Row(
-                            Modifier.fillMaxWidth().padding(horizontal = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                            Modifier.clip(RoundedCornerShape(8.dp))
+                                .clickable { tempMicMode = state.micMode; sheet = "mic" }
+                                .padding(horizontal = 8.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Text(
-                                "Mic Mode", Modifier.weight(1f),
-                                fontSize = 14.sp, fontWeight = FontWeight.Medium, color = gray600
+                                "Mic ${state.micMode}",
+                                fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = gray800
                             )
-                            Row(
-                                Modifier.clip(RoundedCornerShape(8.dp))
-                                    .clickable { tempMicMode = state.micMode; sheet = "mic" }
-                                    .padding(horizontal = 8.dp, vertical = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Text(
-                                    "Mic ${state.micMode}",
-                                    fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = gray800
-                                )
-                                Icon(Icons.Default.ChevronRight, null, tint = gray400, modifier = Modifier.size(16.dp))
-                            }
+                            Icon(Icons.Default.ChevronRight, null, tint = gray400, modifier = Modifier.size(16.dp))
                         }
                     }
-    
-
+                }
 
                 if (saveError.isNotBlank()) {
                     Text(saveError, color = red500, fontSize = 12.sp, modifier = Modifier.padding(vertical = 8.dp), textAlign = TextAlign.Center)
@@ -561,7 +556,7 @@ fun RoomSettingPage(
         }
         "lock" -> CenteredModal(scrimAlpha = 0.3f, onDismiss = { sheet = "" }) {
             Box(
-                Modifier.fillMaxWidth().padding(horizontal = 24.dp) 
+                Modifier.fillMaxWidth().padding(horizontal = 24.dp)
                     .clip(RoundedCornerShape(16.dp)).background(Color.White).padding(24.dp)
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -685,7 +680,8 @@ fun RoomSettingPage(
             }
         }
 
-        "mic" -> BottomSheetModal(scrimAlpha = 0.3f, heightFraction = 0.50f, onDismiss = { sheet = "" }) { // Height increased to 0.50f
+        // Mic Mode Sheet height increased
+        "mic" -> BottomSheetModal(scrimAlpha = 0.3f, heightFraction = 0.62f, onDismiss = { sheet = "" }) {
             Column(Modifier.fillMaxSize()) {
                 Row(
                     Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
@@ -711,7 +707,6 @@ fun RoomSettingPage(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         listOf(5, 10, 15).forEach { mode ->
-                            // Sirf yaha changes hue hain aapki nayi images ke hisaab se
                             val asset = when (mode) {
                                 5 -> RAW_SETTINGS + "IMG_20261102_124233.jpg"
                                 10 -> RAW_SETTINGS + "IMG_20261102_124251.jpg"
@@ -730,7 +725,7 @@ fun RoomSettingPage(
                             ) {
                                 AsyncImage(
                                     model = asset, contentDescription = "Mic $mode",
-                                    modifier = Modifier.fillMaxWidth().wrapContentHeight().clip(RoundedCornerShape(8.dp)), // Corners curved
+                                    modifier = Modifier.fillMaxWidth().wrapContentHeight().clip(RoundedCornerShape(8.dp)),
                                     contentScale = ContentScale.Fit
                                 )
                                 Text(
@@ -759,13 +754,21 @@ fun RoomSettingPage(
                 }
             }
         }
-        "admin" -> BottomSheetModal(scrimAlpha = 0.45f, heightFraction = 0.45f, dark = true, cornerRadius = 12.dp, onDismiss = { sheet = "" }) {
+
+        // Admin sheet height = 0.65f (same size as admin-members) + '?' icon inside white circle border
+        "admin" -> BottomSheetModal(scrimAlpha = 0.45f, heightFraction = 0.65f, dark = true, cornerRadius = 12.dp, onDismiss = { sheet = "" }) {
             Column(Modifier.fillMaxSize().navigationBarsPadding().background(Color.Black).padding(horizontal = 16.dp)) {
                 Row(Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     Spacer(Modifier.width(32.dp))
                     Text("Room Admins", Modifier.weight(1f), color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
-                    Box(Modifier.size(32.dp).clip(CircleShape).clickable { sheet = "admin-help" }, contentAlignment = Alignment.Center) {
-                        Text("?", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Box(
+                        Modifier.size(30.dp)
+                            .clip(CircleShape)
+                            .border(1.5.dp, Color.White, CircleShape)
+                            .clickable { sheet = "admin-help" },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("?", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                     }
                 }
                 Text("Room Admins: ${admins.size}/5", color = Color(0xFF9CA3AF), fontSize = 12.sp, modifier = Modifier.padding(top = 5.dp, bottom = 10.dp))
@@ -795,7 +798,9 @@ fun RoomSettingPage(
                 }
             }
         }
-        "admin-members" -> BottomSheetModal(scrimAlpha = 0.45f, heightFraction = 0.5f, dark = true, cornerRadius = 12.dp, onDismiss = { sheet = "admin" }) {
+
+        // Room admin members sheet height = 0.65f (same size as admin) + 3D blue Add button -> Added on click
+        "admin-members" -> BottomSheetModal(scrimAlpha = 0.45f, heightFraction = 0.65f, dark = true, cornerRadius = 12.dp, onDismiss = { sheet = "admin" }) {
             Column(Modifier.fillMaxSize().navigationBarsPadding().background(Color.Black).padding(horizontal = 14.dp)) {
                 Text("Room members", Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 12.dp), color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
                 val visibleMembers = (roomMembers.map { NativeSettingMember(it.accountId, it.name, it.image) } + members.toList())
@@ -804,24 +809,50 @@ fun RoomSettingPage(
                 LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     items(visibleMembers, key = { it.accountId }) { member ->
                         val added = member.accountId in admins
+                        val canAdd = !added && admins.size < 5
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                             AsyncImage(model = member.image.ifBlank { RAW_SETTINGS + "default-avatar.png" }, contentDescription = member.name, modifier = Modifier.size(38.dp).clip(CircleShape), contentScale = ContentScale.Crop)
                             Column(Modifier.weight(1f).padding(start = 9.dp)) {
                                 Text(member.name, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 Text("ID: ${member.accountId}", color = Color(0xFF9CA3AF), fontSize = 10.sp)
                             }
-                            AsyncImage(model = RAW_SETTINGS + "IMG_20261107_153929.png", contentDescription = if (added) "Already added" else "Add admin",
-                                modifier = Modifier.size(36.dp).clickable(enabled = !added && admins.size < 5) {
-                                    admins = (admins + member.accountId).distinct()
-                                    performSave(state.copy(admin = admins))
-                                    sheet = "admin"
-                                }, contentScale = ContentScale.Fit, alpha = if (added || admins.size >= 5) 0.35f else 1f)
+                            Box(
+                                Modifier
+                                    .shadow(elevation = if (added) 0.dp else 4.dp, shape = RoundedCornerShape(10.dp))
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(
+                                        if (added) Brush.verticalGradient(listOf(Color(0xFF1D4ED8), Color(0xFF1E3A8A)))
+                                        else Brush.verticalGradient(listOf(Color(0xFF60A5FA), Color(0xFF2563EB), Color(0xFF1D4ED8)))
+                                    )
+                                    .border(
+                                        width = 1.dp,
+                                        brush = Brush.verticalGradient(
+                                            listOf(Color.White.copy(alpha = if (added) 0.25f else 0.65f), Color(0xFF1E40AF))
+                                        ),
+                                        shape = RoundedCornerShape(10.dp)
+                                    )
+                                    .clickable(enabled = canAdd) {
+                                        admins = (admins + member.accountId).distinct()
+                                        performSave(state.copy(admin = admins))
+                                        sheet = "admin"
+                                    }
+                                    .padding(horizontal = 14.dp, vertical = 7.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = if (added) "Added" else "Add",
+                                    color = if (added) Color.White.copy(alpha = 0.85f) else Color.White,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
                     }
                     if (visibleMembers.isEmpty()) item { Text("No room members available", color = Color(0xFF9CA3AF), modifier = Modifier.fillMaxWidth().padding(20.dp), textAlign = TextAlign.Center) }
                 }
             }
         }
+
         "admin-help" -> CenteredModal(scrimAlpha = 0.6f, onDismiss = { sheet = "admin" }) {
             Box(
                 Modifier.fillMaxWidth().padding(horizontal = 12.dp).widthIn(max = 320.dp)
@@ -1159,7 +1190,7 @@ private fun ThemeFullScreen(
         }
     }
     val visibleThemes = items.filter { it.expiresAt <= 0L || it.expiresAt > clockNow }
-    
+
     Dialog(
         onDismissRequest = onBack,
         properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
@@ -1174,12 +1205,12 @@ private fun ThemeFullScreen(
                     Modifier.size(40.dp).clip(CircleShape).clickable(onClick = onBack),
                     contentAlignment = Alignment.Center
                 ) { Icon(Icons.Default.ArrowBack, null, tint = gray800, modifier = Modifier.size(24.dp)) }
-                
+
                 Text(
                     "Room Theme", Modifier.weight(1f),
                     fontSize = 18.sp, fontWeight = FontWeight.Bold, color = gray800, textAlign = TextAlign.Center
                 )
-                
+
                 Box(
                     Modifier.defaultMinSize(minWidth = 40.dp)
                         .clip(RoundedCornerShape(8.dp))
@@ -1195,14 +1226,13 @@ private fun ThemeFullScreen(
                     )
                 }
             }
-            
-            // Yahan se wrapping column hataya aur grid ko direct space de di
+
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
                 modifier = Modifier.weight(1f).fillMaxWidth().padding(start = 12.dp, top = 16.dp, end = 12.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
-                contentPadding = PaddingValues(bottom = 24.dp) // Bottom scroll padding
+                contentPadding = PaddingValues(bottom = 24.dp)
             ) {
                 if (!hasCustom) {
                     item {
@@ -1295,7 +1325,6 @@ private fun Modifier.dashedBorder(color: Color, width: Dp, cornerRadius: Dp): Mo
         )
     )
 }
-
 
 @Composable
 fun RoomPasswordPrompt(
