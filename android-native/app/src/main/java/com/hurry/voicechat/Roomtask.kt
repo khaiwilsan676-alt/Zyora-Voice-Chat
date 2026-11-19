@@ -19,8 +19,10 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.border
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.delay
 import java.util.Calendar
@@ -78,8 +80,9 @@ private data class NativeRoomTaskRow(val title:String,val reward:String,val icon
         
         Box(Modifier.fillMaxSize().verticalScroll(scrollState)) {
             
+            // Top image ab full wide hai
             Box(modifier = Modifier.fillMaxWidth().height(480.dp)){
-                AsyncImage(model=raw+"file_00000000cb748211bf0120855b80f449.png",contentDescription=null,modifier=Modifier.fillMaxWidth(0.90f).height(480.dp).align(Alignment.TopCenter).drawWithContent {
+                AsyncImage(model=raw+"file_00000000cb748211bf0120855b80f449.png",contentDescription=null,modifier=Modifier.fillMaxWidth().height(480.dp).align(Alignment.TopCenter).drawWithContent {
                     drawContent()
                     drawRect(
                         brush = Brush.verticalGradient(
@@ -106,10 +109,27 @@ private data class NativeRoomTaskRow(val title:String,val reward:String,val icon
                 
                 Spacer(modifier = Modifier.height(305.dp))
 
-                AsyncImage(model=raw+"file_00000000f2908208a7b6a2b73c3bbf36.png",contentDescription="Room task rewards",modifier=Modifier.padding(horizontal = 8.dp).fillMaxWidth().height(138.dp),contentScale=ContentScale.Fit)
+                // Middle image ke ekdam center mein Yellow 0 add kar diya hai
+                Box(
+                    modifier = Modifier.padding(horizontal = 8.dp).fillMaxWidth().height(138.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    AsyncImage(
+                        model = raw + "file_00000000f2908208a7b6a2b73c3bbf36.png",
+                        contentDescription = "Room task rewards",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Fit
+                    )
+                    Text(
+                        text = "0",
+                        color = Color(0xFFFFD700),
+                        fontSize = 24.sp,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold
+                    )
+                }
                 
-                // Top border wide karke left/right borders pe overlap karwaya hai (1.18f)
-                Box(Modifier.fillMaxWidth().offset(y=(2).dp), contentAlignment=Alignment.Center){
+                // Room task image ka zIndex increase kar diya hai taaki left/right borders ke upar rahe
+                Box(Modifier.fillMaxWidth().offset(y=(2).dp).zIndex(10f), contentAlignment=Alignment.Center){
                     AsyncImage(
                         model=raw+"file_00000000680881faa3dfdb17cce60858.png",
                         contentDescription="Room Task frame",
@@ -119,7 +139,7 @@ private data class NativeRoomTaskRow(val title:String,val reward:String,val icon
                     Text("ROOM TASK",color=Color.White,fontSize=16.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Black,letterSpacing=1.2.sp, modifier=Modifier.offset(y=(-4).dp).shadow(4.dp, spotColor=Color.Black.copy(alpha=0.9f)))
                 }
                 
-                Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(3.dp),modifier=Modifier.offset(y=(-15).dp).padding(vertical=0.dp)){
+                Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(3.dp),modifier=Modifier.offset(y=(-15).dp).padding(vertical=0.dp).zIndex(5f)){
                     Text("Countdown",color=Color(0xFFF5B8B8),fontSize=10.sp)
                     listOf(hour to "Hour",minute to "Minute",second to "Second").forEach{pair->
                         Box(Modifier.background(Brush.verticalGradient(listOf(Color(0xFF8F1A1A),Color(0xFF470A0A))),RoundedCornerShape(4.dp)).padding(horizontal=5.dp,vertical=3.dp)){Text(pair.first.toString(),color=Color(0xFFFFE0E0),fontSize=11.sp)}
@@ -128,7 +148,7 @@ private data class NativeRoomTaskRow(val title:String,val reward:String,val icon
                 }
                 
                 Column(
-                    modifier = Modifier.fillMaxWidth().offset(y=(-25).dp), 
+                    modifier = Modifier.fillMaxWidth().offset(y=(-25).dp).zIndex(1f), 
                     verticalArrangement = Arrangement.spacedBy((-60).dp) 
                 ) {
                     tasks.forEach { task ->
@@ -180,7 +200,6 @@ private data class NativeRoomTaskRow(val title:String,val reward:String,val icon
                                             val rewardClean = task.reward.replace(Regex("coins", RegexOption.IGNORE_CASE), "").trim()
                                             Text(rewardClean,color=Color(0xFFFFD700),fontSize=14.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.ExtraBold)
                                         }
-                                        // Button thora niche kiya (top padding) aur iska shadow hata diya gaya hai
                                         Button(onClick={},modifier=Modifier.padding(top=6.dp).width(85.dp).height(28.dp),contentPadding=PaddingValues(0.dp),shape=RoundedCornerShape(18.dp),border=androidx.compose.foundation.BorderStroke(2.dp,Color(0xFFF5E6A8)),colors=ButtonDefaults.buttonColors(containerColor=Color.Transparent)){
                                             Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFFF7DFA0),Color(0xFFE0A92A))),RoundedCornerShape(18.dp)),contentAlignment=Alignment.Center){
                                                 Text("CLAIM",color=Color(0xFF4A1F00),fontSize=11.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Black, letterSpacing=1.sp)
@@ -193,7 +212,20 @@ private data class NativeRoomTaskRow(val title:String,val reward:String,val icon
                     }
                 }
                 
-                Box(Modifier.fillMaxWidth().offset(y=(-65).dp), contentAlignment = Alignment.Center){
+                // Bottom image thori upar kar di aur bottom scroll space bhi kam kar diya
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .zIndex(10f)
+                        .layout { measurable, constraints ->
+                            val placeable = measurable.measure(constraints)
+                            val shiftUp = 80.dp.roundToPx()
+                            layout(placeable.width, (placeable.height - shiftUp).coerceAtLeast(0)) {
+                                placeable.placeRelative(0, -shiftUp)
+                            }
+                        },
+                    contentAlignment = Alignment.Center
+                ){
                     AsyncImage(
                         model=raw+"file_0000000066c88211aa777b1f6da8683f.png",
                         contentDescription="Frame Bottom Border",
@@ -201,8 +233,6 @@ private data class NativeRoomTaskRow(val title:String,val reward:String,val icon
                         contentScale=ContentScale.FillWidth
                     )
                 }
-
-                Spacer(Modifier.height(10.dp))
             }
         }
         
@@ -225,7 +255,6 @@ private data class NativeRoomTaskRow(val title:String,val reward:String,val icon
                     }
                 }
                 Text("Regards, Zyora Team",color=Color(0xFFFFD700),fontSize=13.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Bold,modifier=Modifier.align(Alignment.End).padding(top=8.dp))
-                // Yahan se Close wala TextButton nikal diya hai
             }
         }
     }
