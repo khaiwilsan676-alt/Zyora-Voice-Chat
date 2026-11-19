@@ -1395,3 +1395,9 @@ Current documentation does not certify that all historical features are build-, 
 - No UI layout, colors, room gifting, wallet debit, or ranking presentation was intentionally changed.
 - Commits: server `49ee99f`; native `4957bf9`.
 - Native build and live MongoDB data verification remain pending.
+
+## 2026-11-19 — Cup Online Users gender field
+- `ActiveUserNative` now carries a gender value; the RoomPage Socket.IO presence parser reads `gender` / `sex` / `userGender` when supplied.
+- `Roomcup.kt` Online Users rows render the existing male/female gender icon between the country flag and `Lv.1`; the rest of the row layout is unchanged.
+- Root cause: gender was absent from the active-user model and presence mapping, and the Cup row rendered only flag + level.
+- Native build and runtime verification remain pending.
