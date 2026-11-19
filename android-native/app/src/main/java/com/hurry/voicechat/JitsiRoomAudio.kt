@@ -114,8 +114,9 @@ fun JitsiRoomAudio(
         val playerLock = Any()
         var voicePlaybackThread: Thread? = null
         var musicPlaybackThread: Thread? = null
-        val voicePlaybackQueue = ArrayBlockingQueue<ByteArray>(6)
-        val musicPlaybackQueue = ArrayBlockingQueue<ByteArray>(6)
+        // Short jitter buffers absorb brief Socket.IO/device scheduling delays.
+        val voicePlaybackQueue = ArrayBlockingQueue<ByteArray>(20)
+        val musicPlaybackQueue = ArrayBlockingQueue<ByteArray>(20)
         val musicActivityHandler = Handler(Looper.getMainLooper())
         val musicActivityTimeouts = ConcurrentHashMap<String, Runnable>()
         val activeMusicPublishers = ConcurrentHashMap.newKeySet<String>()
@@ -478,9 +479,21 @@ fun JitsiRoomAudio(
         }
         roomSocket.on(Socket.EVENT_DISCONNECT, disconnectListener)
 
+        var lastPlaybackVoiceEnabled = latestPlaybackVoiceEnabled
         val playbackVoiceMuteWatcherThread = thread(name = "ZyoraRoomSpeakerWatch", isDaemon = true) {
             while (alive.get()) {
-                if (!latestPlaybackVoiceEnabled) voicePlaybackQueue.clear()
+                val voicePlaybackEnabled = latestPlaybackVoiceEnabled
+                if (!voicePlaybackEnabled) {
+                    voicePlaybackQueue.clear()
+                    // Flush the partially buffered pre-mute frame once. Without this,
+                    // stale AudioTrack data can overlap the first packets after unmute.
+                    if (lastPlaybackVoiceEnabled) {
+                        synchronized(playerLock) {
+                            runCatching { voicePlayer?.pause(); voicePlayer?.flush() }
+                        }
+                    }
+                }
+                lastPlaybackVoiceEnabled = voicePlaybackEnabled
                 try { Thread.sleep(50) } catch (_: InterruptedException) { }
             }
         }
