@@ -2973,6 +2973,15 @@ io.on("connection", (socket) => {
         ""
       );
 
+      // Revoke the microphone publisher before leaving so a stale room voice
+      // session cannot survive a room switch/re-entry on the same Socket.IO socket.
+      if (socket.roomVoiceRoomId === room) {
+        socket.roomVoiceActive = false;
+        socket.roomVoiceRoomId = null;
+        socket.to(`room:${room}`).emit("room_voice_speaker", {
+          roomId: room, userId: String(socket.roomAccountId || socket.accountId || id), speaking: false
+        });
+      }
       socket.leave(`room:${room}`);
 
       // Leaving the room ends the complete room session, whether the user was
