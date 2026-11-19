@@ -1464,3 +1464,13 @@ Current documentation does not certify that all historical features are build-, 
 - Kept-room Exit now clears the retained `roomSession`, triggering the real room cleanup path rather than only removing the bubble.
 - Commits: `8043a36`, `adecf33`, `3a5a97f`, `e36cac5`.
 - Native APK build and device regression testing are pending; do not treat this as hardware-verified until the workflow and Keep/profile/overlay tests pass.
+
+
+## 2026-11-20 — Retained room lifecycle and page overlay completion
+- Root cause: the previous Keep callback set `openedRoom = null`, which removed `RoomPage` from the Compose tree. The retained-socket helper only kept the raw Socket.IO connection; `onDispose` still cancelled room work and removed every room event listener, so voice/chat/seat updates were not truly kept alive.
+- `MainActivity.kt`: introduced a separate `roomSession` state. `openedRoom` now controls visibility/navigation only; `roomSession` owns the active RoomPage composition. Keep hides the host at 1dp/alpha 0 while retaining the exact RoomPage instance, and opening the kept bubble restores its full-size host. Room switching uses a stable room-ID key; actual Exit, kick, or room switch clears the session.
+- `RoomPage.kt`: removed the obsolete socket-only retained-session helper. The same Socket.IO socket, voice state, room listeners, seat state, and chat state remain alive while the RoomPage is hidden. The normal dispose path now runs only on actual exit/switch and performs the full leave/listener/socket/music cleanup.
+- Overlay layering: all root pages (profile, family, support, search, leaderboard, invite, chat) render above the active room; Back priority returns to the underlying room. Room BackHandler is disabled while covered. The room chat image-preview Dialog receives the covered state through both chat layouts and closes while another page is open.
+- Build blockers discovered in the first CI attempt were fixed: thread `isCovered` through `RoomChatMessages` into `NativeMessage`, correct the invalid `InviteFriends.kt` padding overload, and use `Arrangement.Center` rather than `Alignment.CenterVertically` in `SearchPage.kt`.
+- Commits: `8043a36`, `adecf33`, `3a5a97f`, `e36cac5`, `71ae7fe`, `e749e17`, `46472c3`, `5f6fc73`, `22d4639`, `119e948`, `840b364`, `5e07e57`, `cdc747b`.
+- APK build and real-device Keep → reopen, profile → Back, overlay layering, voice/chat continuity, and Exit regression tests must pass before calling this hardware-verified.
