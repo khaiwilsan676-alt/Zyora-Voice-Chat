@@ -141,6 +141,7 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
                         .apply()
                     onLoginSuccess()
                 } catch (t: Throwable) {
+                    if (t.message?.startsWith("Your account has been banned") == true) FirebaseAuth.getInstance().signOut()
                     error = authErrorText(t.message ?: "Google sign-in failed. Please try again.")
                 } finally {
                     googleLoading = false
@@ -193,6 +194,7 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
                 }
                 onLoginSuccess()
             } catch (t: Throwable) {
+                if (t.message?.startsWith("Your account has been banned") == true) FirebaseAuth.getInstance().signOut()
                 val authMessage = (t.message ?: "").lowercase()
                 if (create && (authMessage.contains("already in use") ||
                         authMessage.contains("email-already-in-use") ||
