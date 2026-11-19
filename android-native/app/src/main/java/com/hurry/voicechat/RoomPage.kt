@@ -3300,7 +3300,7 @@ private fun RoomChatMessages(
                                         }
                                         Text("Enter the room",color=Color.White,fontSize=12.sp,fontWeight=FontWeight.Bold, modifier=Modifier.padding(start=2.dp).clickable { onSelectMessage(message) })
                                     }
-                                } else NativeMessage(message, roomOwnerId = roomOwnerId, roomAdminIds = roomAdminIds, onAvatarClick = { onSelectMessage(message) }, onMentionClick = onSelectMention, onCopyMessage = onCopyMessage)
+                                } else NativeMessage(message, roomOwnerId = roomOwnerId, roomAdminIds = roomAdminIds, isCovered = isCovered, onAvatarClick = { onSelectMessage(message) }, onMentionClick = onSelectMention, onCopyMessage = onCopyMessage)
                             }
                         }
 }
@@ -3587,7 +3587,7 @@ private fun RoomSeatInviteDialog(
     }
 }
 
-@Composable private fun NativeMessage(m:NativeRoomMessage, roomOwnerId: String, roomAdminIds: List<String> = emptyList(), onAvatarClick: () -> Unit = {}, onMentionClick: (NativeMention) -> Unit = {}, onCopyMessage: (String) -> Unit = {}){
+@Composable private fun NativeMessage(m:NativeRoomMessage, roomOwnerId: String, roomAdminIds: List<String> = emptyList(), isCovered: Boolean = false, onAvatarClick: () -> Unit = {}, onMentionClick: (NativeMention) -> Unit = {}, onCopyMessage: (String) -> Unit = {}){
     val context = LocalContext.current
     var showRoomImagePreview by remember(m.id) { mutableStateOf(false) }
     val profileDb = remember(context) { NativeIndexDatabase(context) }
