@@ -448,6 +448,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                 tab = HurryTab.HOME
                 homeMine = false
                 openedRoom = null
+                roomSession = null
                 roomBlockedPopup = JSONObject(access.toString())
                 return@launch
             }
@@ -540,7 +541,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
             openedPublicProfile != null -> openedPublicProfile = null
             openedRoomSupport -> openedRoomSupport = false
             openedSearch -> openedSearch = false
-            openedRoom != null -> openedRoom = null
+            openedRoom != null -> { openedRoom = null; roomSession = null }
             openedLeaderboard != null -> openedLeaderboard = null
             openedInvite -> openedInvite = false
             openedChat != null -> openedChat = null
@@ -621,8 +622,6 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                 RoomSupport(onBack = { openedRoomSupport = false })
             } else if (openedSearch) {
                 SearchPage(onBack={openedSearch=false},onOpenProfile={openedPublicProfile=it;openedSearch=false},onOpenRoom={openedSearch=false;tryOpenRoom(it)})
-            } else if (openedRoom != null) {
-                Spacer(Modifier.fillMaxSize())
             } else if (openedLeaderboard != null) {
                 Leaderboard(onBack = { openedLeaderboard = null }, initialTab = openedLeaderboard!!)
             } else if (openedInvite) {
@@ -630,6 +629,8 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
             } else if (openedChat != null) {
                 val chat = openedChat!!
                 NativeChatScreen(name = chat.second, image = chat.third, receiverId = chat.first, currentUserId = userId, currentAccountIdOverride = authPrefs.getString("accountId", userId).orEmpty().ifBlank { userId }, onBack = { openedChat = null }, onJoinRoom = { targetRoomId -> openedChat=null; tryOpenRoomById(targetRoomId) })
+            } else if (openedRoom != null) {
+                Spacer(Modifier.fillMaxSize())
             } else {
                 Column(Modifier.fillMaxSize()) {
                     val tabStateHolder = rememberSaveableStateHolder()
@@ -854,7 +855,6 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                         androidx.compose.material3.Button(
                             onClick = {
                                 val message = banner
-                                openedRoom = null
                                 openedRoomSupport = false
                                 openedSearch = false
                                 openedMePage = null
