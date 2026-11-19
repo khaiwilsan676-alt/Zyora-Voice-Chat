@@ -557,6 +557,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
         Box(Modifier.fillMaxSize().navigationBarsPadding()) {
             if (roomSession != null) {
                 Box(if (openedRoom != null) Modifier.fillMaxSize() else Modifier.size(1.dp).alpha(0f)) {
+                    key(roomSession!!.id) {
                 RoomPage(
                     isCovered = (openedRoom == null || openedFamilyId != null || openedPublicProfile != null || openedRoomSupport || openedSearch || openedLeaderboard != null || openedInvite || openedChat != null || openedMePage != null),
                     roomOwner = RoomPageOwner(
@@ -612,6 +613,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                         openedRoom = null
                     }
                 )
+                    }
                 }
             }
             if (openedFamilyId != null) {
