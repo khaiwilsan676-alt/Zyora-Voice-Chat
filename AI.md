@@ -1440,3 +1440,10 @@ Current documentation does not certify that all historical features are build-, 
 - Music path and UI remain unchanged.
 - Commit: `c0ba781`.
 - Requires native APK build and a real two-device simultaneous-speech test; not yet verified on hardware.
+
+
+## 2026-11-20 — Kept-room overlay resumes the retained session
+- Native `MainActivity.kt`: fixed the kept-room overlay's reopen action to match the Home kept-room action. It now restores `openedRoom` directly, clears the mini-room state and stale saved mini-room metadata, and does not call `tryOpenRoom` for an already-authorized retained session.
+- This avoids the overlay-specific fresh access/join flow that could remount the room as a new entry instead of resuming the retained Socket.IO session. Existing room UI and normal room-entry checks are unchanged.
+- Commit: `9a84c62b5e117af1601e428b95fee41cdd971d94`.
+- Native build and two-device Keep → reopen voice/chat/seat regression testing remain pending.
