@@ -195,6 +195,30 @@ private fun resolveChatAvatar(value: String): String {
     return "https://zyora-server.onrender.com/" + image.trimStart('/')
 }
 
+/** Fetch the canonical, latest profile independently of the cached conversation preview. */
+private suspend fun fetchLatestChatProfile(peerId: String): JSONObject? = withContext(Dispatchers.IO) {
+    if (peerId.isBlank() || peerId.startsWith("hurry_")) return@withContext null
+    val encoded = java.net.URLEncoder.encode(peerId, "UTF-8")
+    val connection = (java.net.URL("https://zyora-server.onrender.com/api/users?uid=$encoded&accountId=$encoded")
+        .openConnection() as java.net.HttpURLConnection).apply {
+        requestMethod = "GET"
+        connectTimeout = 3500
+        readTimeout = 3500
+        setRequestProperty("Accept", "application/json")
+    }
+    try {
+        if (connection.responseCode !in 200..299) return@withContext null
+        val body = connection.inputStream.bufferedReader().use { it.readText() }
+        val response = JSONObject(body)
+        response.optJSONObject("user")
+            ?: response.optJSONArray("users")?.optJSONObject(0)
+    } catch (_: Exception) {
+        null
+    } finally {
+        connection.disconnect()
+    }
+}
+
 @OptIn(ExperimentalGraphicsApi::class)
 @Composable
 fun rememberVerifiedChatIcon(): ImageVector {
@@ -521,11 +545,17 @@ fun MessageScreen(onChat: (String, String, String) -> Unit, embeddedSheet: Boole
     fun updateConversationPreview(peerId: String, peerName: String, peerPhoto: String, lastMessage: String, timestamp: Long) {
         if (peerId.isBlank() || peerId == currentUserId) return
         val time = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(timestamp))
-        val saved = JSONObject().put("peerId", peerId).put("peerName", peerName).put("peerPhoto", peerPhoto).put("lastMessage", lastMessage).put("timestamp", timestamp).put("time", time)
+        val saved = JSONObject().put("peerId", peerId).put("peerName", resolvedName).put("peerPhoto", resolvedPhoto).put("lastMessage", lastMessage).put("timestamp", timestamp).put("time", time)
         indexDb.saveConversation("conversation_${currentUserId}_$peerId", peerId, saved)
         
         val unread = unreadPrefs.getInt("unread_${currentUserId}_${peerId}", 0)
-        
+        // A message event may omit senderPhoto. Never erase a known, working DP
+        // with an empty/default value while refreshing the conversation preview.
+        val previous = chats.firstOrNull { it.uid == peerId }
+        val resolvedPhoto = peerPhoto.takeIf {
+            it.isNotBlank() && it != "null" && it != "/default-avatar.png"
+        } ?: previous?.image.orEmpty()
+        val resolvedName = peerName.takeIf { it.isNotBlank() && it != "User" } ?: previous?.name ?: "User"
         val existing = chats.indexOfFirst { it.uid == peerId }
         if (existing >= 0) chats.removeAt(existing)
         val insertAt = when (peerId) {
@@ -533,7 +563,36 @@ fun MessageScreen(onChat: (String, String, String) -> Unit, embeddedSheet: Boole
             "hurry_system_official" -> 1
             else -> 2.coerceAtMost(chats.size)
         }
-        chats.add(insertAt.coerceAtMost(chats.size), MessagePreview(peerId, peerName.ifBlank { "User" }, peerPhoto, lastMessage, time, unread))
+        chats.add(insertAt.coerceAtMost(chats.size), MessagePreview(peerId, resolvedName, resolvedPhoto, lastMessage, time, unread))
+    }
+
+    // Refresh cached conversation identities off the main thread. This repairs
+    // older rows whose peerPhoto was saved blank before the user uploaded a DP.
+    LaunchedEffect(currentUserId, savedConversations.size) {
+        if (currentUserId.isNotBlank()) {
+            val peerIds = savedConversations.map { it.optString("peerId") }
+                .filter { it.isNotBlank() && !it.startsWith("hurry_") }.distinct()
+            peerIds.forEach { peerId ->
+                val profile = fetchLatestChatProfile(peerId) ?: return@forEach
+                val latestName = sequenceOf(
+                    profile.optString("name"), profile.optString("displayName"), profile.optString("userName")
+                ).firstOrNull { it.isNotBlank() && it != "null" && it != "User" }.orEmpty()
+                val latestPhoto = sequenceOf(
+                    profile.optString("image"), profile.optString("dp"), profile.optString("photo"),
+                    profile.optString("photoURL"), profile.optString("avatar"), profile.optString("profileImage")
+                ).firstOrNull { it.isNotBlank() && it != "null" && it != "undefined" && it != "/default-avatar.png" }.orEmpty()
+                val index = chats.indexOfFirst { it.uid == peerId }
+                if (index >= 0 && latestPhoto.isNotBlank()) {
+                    val old = chats[index]
+                    val updatedName = latestName.ifBlank { old.name }
+                    chats[index] = old.copy(name = updatedName, image = latestPhoto)
+                    val saved = indexDb.loadConversations("conversation_${currentUserId}_")
+                        .firstOrNull { it.optString("peerId") == peerId } ?: JSONObject()
+                    saved.put("peerId", peerId).put("peerName", updatedName).put("peerPhoto", latestPhoto)
+                    indexDb.saveConversation("conversation_${currentUserId}_$peerId", peerId, saved)
+                }
+            }
+        }
     }
 
     DisposableEffect(currentUserId) {
