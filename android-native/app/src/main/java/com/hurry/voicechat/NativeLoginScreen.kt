@@ -138,6 +138,7 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
                         .putString("uid", user.optString("localId"))
                         .putString("email", user.optString("email"))
                         .putString("idToken", user.optString("idToken"))
+                        .remove("banReason")
                         .apply()
                     onLoginSuccess()
                 } catch (t: Throwable) {
@@ -185,6 +186,7 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
                     .putString("uid", user.optString("localId"))
                     .putString("email", user.optString("email", email.trim()))
                     .putString("idToken", user.optString("idToken"))
+                    .remove("banReason")
                     .apply()
                 if (create) {
                     authPrefs.edit()
