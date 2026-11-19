@@ -204,49 +204,6 @@ private fun ThickBar(
     }
 }
 
-object ZyoraKeptRoomSocketSession {
-    @Volatile var socket: Socket? = null
-    @Volatile var roomId: String = ""
-    @Volatile var accountId: String = ""
-    @Volatile private var silentRejoinPending: Boolean = false
-
-    fun retain(value: Socket, room: String, account: String) {
-        socket = value
-        roomId = room
-        accountId = account
-        silentRejoinPending = false
-    }
-
-    fun take(room: String, account: String): Socket? {
-        if (roomId != room || accountId != account) return null
-        val active = socket
-        if (active?.connected() == true) return active
-        // The mini-room was restored after its socket dropped. Rejoin silently,
-        // preserving the existing room-entry event rather than announcing a new entry.
-        silentRejoinPending = true
-        socket = null
-        return null
-    }
-
-    fun consumeSilentRejoin(room: String, account: String): Boolean {
-        if (roomId != room || accountId != account || !silentRejoinPending) return false
-        silentRejoinPending = false
-        roomId = ""
-        accountId = ""
-        socket = null
-        return true
-    }
-
-    fun clear(value: Socket) {
-        if (socket === value || roomId.isNotBlank()) {
-            socket = null
-            roomId = ""
-            accountId = ""
-            silentRejoinPending = false
-        }
-    }
-}
-
 data class RoomPageOwner(val id:String="",val uid:String="",val accountId:String="",val name:String="Room",val image:String="",val country:String="")
 data class RoomPageCurrentUser(val id:String="",val uid:String="",val accountId:String="",val name:String="User",val image:String="")
 data class NativeRoomSeat(val number:Int,val occupied:Boolean=false,val locked:Boolean=false,val muted:Boolean=false,val selfMuted:Boolean=false,val speaking:Boolean=false,val userName:String="",val userImage:String="",val accountId:String="",val gifSrc:String="",val gifTimestamp:Long=0L,val gifDurationMs:Long=5000L,val gifScale:Float=0.8f)
@@ -1104,11 +1061,9 @@ fun RoomPage(
             reconnectionDelayMax = 30000
             timeout = 20000
         }
-        // Keep the same live Socket.IO connection while the room is minimized.
-        // Reusing it preserves server presence and occupied seats without a second room_join.
-        val retainedRoomSocket = ZyoraKeptRoomSocketSession.take(roomId, accountId)
-        val roomSocket = retainedRoomSocket ?: IO.socket("https://zyora-server.onrender.com", roomSocketOptions)
-        val reusedKeptRoomSocket = retainedRoomSocket != null
+        // RoomPage stays composed while minimized, so its original socket is never
+        // torn down or re-created merely because another page is shown.
+        val roomSocket = IO.socket("https://zyora-server.onrender.com", roomSocketOptions)
         roomSocketRef.value=roomSocket
         val mainHandler = Handler(Looper.getMainLooper())
         // Own room-scoped background work so requests cannot outlive this room instance.
@@ -1555,7 +1510,7 @@ fun RoomPage(
                 }
             }
         }
-        var joinMessageSent = reusedKeptRoomSocket || ZyoraKeptRoomSocketSession.consumeSilentRejoin(roomId, accountId)
+        var joinMessageSent = false
         // Room pages can reuse an already-connected room socket. In that path the
         // server does not emit a new room_vehicle_entry event, so resolve the current
         // user's equipped Bag vehicle directly as a reliable playback fallback.
@@ -1697,7 +1652,6 @@ fun RoomPage(
             // stays composed, so its Socket.IO listeners and voice state remain alive.
             roomIoScope.cancel()
             mainHandler.removeCallbacksAndMessages(null)
-            ZyoraKeptRoomSocketSession.clear(roomSocket)
             roomSocket.emit("room_chat_view", JSONObject().put("roomId", roomId).put("userId", accountId).put("active", false))
             roomSocket.emit("room_leave",JSONObject().put("roomId",roomId).put("userId",accountId).put("accountId",accountId))
             roomSocket.off("room_presence",presenceListener)
