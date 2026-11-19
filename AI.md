@@ -1401,3 +1401,7 @@ Current documentation does not certify that all historical features are build-, 
 - `Roomcup.kt` Online Users rows render the existing male/female gender icon between the country flag and `Lv.1`; the rest of the row layout is unchanged.
 - Root cause: gender was absent from the active-user model and presence mapping, and the Cup row rendered only flag + level.
 - Native build and runtime verification remain pending.
+
+### Seat menu Invite excludes seated users
+- The seat-menu Invite User sheet now excludes every account currently occupying a room seat, using the live `seats` snapshot as the source of truth.
+- The filter is recomputed when seat occupancy changes, so users become inviteable again after leaving a seat. Existing Active Users and Room Profile invitation behavior is unchanged.
