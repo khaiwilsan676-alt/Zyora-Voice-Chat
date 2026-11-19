@@ -1417,3 +1417,6 @@ Current documentation does not certify that all historical features are build-, 
 - Music relay, music decoder, music controls, and room UI were not intentionally changed.
 - Commits: native playback/mix `c3552e5`; server frame validation `87bf52a`; bounded permission retries `18b3c9f`; server room-leave cleanup `e121ce1`.
 - Native Gradle build and multi-device voice testing remain required; these changes are code-reviewed but not yet device-verified.
+
+- `backend/server.js`: seat leave, self-mute, owner/admin mute, and seat lock now immediately revoke an active mic publisher and broadcast a non-speaking state; the server no longer waits for another PCM packet to notice the seat permission changed.
+- Commit: server seat-permission revocation `f18fd1e`.
