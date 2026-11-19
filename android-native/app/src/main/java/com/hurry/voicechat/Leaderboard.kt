@@ -9,6 +9,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.StrokeCap
@@ -46,6 +48,35 @@ private object LeaderboardChromaCache {
         override fun sizeOf(key: String, value: ImageBitmap): Int =
             ((value.width.toLong() * value.height.toLong() * 4L) / 1024L)
                 .coerceAtLeast(1L).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+    }
+}
+
+// DEFAULT USER ICON AVATAR (Jab Top 1, 2, 3 me koi user na ho)
+@Composable
+private fun DefaultUserAvatarIcon(modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(50))
+            .background(Color(0xFF2B1316)),
+        contentAlignment = Alignment.Center
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize(0.62f)) {
+            val iconColor = Color(0xFFB89B72)
+            val headRadius = size.minDimension * 0.22f
+            drawCircle(
+                color = iconColor,
+                radius = headRadius,
+                center = Offset(size.width / 2f, size.height * 0.34f)
+            )
+            drawArc(
+                color = iconColor,
+                startAngle = 180f,
+                sweepAngle = 180f,
+                useCenter = true,
+                topLeft = Offset(size.width * 0.14f, size.height * 0.58f),
+                size = Size(size.width * 0.72f, size.height * 0.60f)
+            )
+        }
     }
 }
 
@@ -173,6 +204,9 @@ private suspend fun loadZyoraLeaderboard(tab: String, period: String): ZyoraLead
         }
     }
 
+private fun leaderboardShortName(name: String): String =
+    if (name.length > 9) name.take(9) + "..." else name
+
 private fun leaderboardCoinText(value: Long): String = when {
     value >= 1_000_000_000 -> String.format(Locale.US, "%.1fB", value / 1_000_000_000.0)
     value >= 1_000_000 -> String.format(Locale.US, "%.1fM", value / 1_000_000.0)
@@ -218,8 +252,14 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
     
     val context = LocalContext.current
     val authPrefs = remember { context.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE) }
+    val ownUserId = authPrefs.getString("userId", authPrefs.getString("id", "")).orEmpty()
     val ownName = authPrefs.getString("name", authPrefs.getString("displayName", "You")).orEmpty().ifBlank { "You" }
+    val ownGender = authPrefs.getString("gender", "Male").orEmpty().ifBlank { "Male" }
     val ownAvatar = authPrefs.getString("avatar", authPrefs.getString("image", "/default-avatar.png")).orEmpty().let { if (it.startsWith("http", ignoreCase = true)) it else raw + it.removePrefix("/") }
+
+    val ownIndex = leaderboardRows.indexOfFirst { (ownUserId.isNotBlank() && it.id == ownUserId) || it.name.equals(ownName, ignoreCase = true) }
+    val ownRankText = if (ownIndex >= 0) "${ownIndex + 1}" else "-"
+    val ownCoins = if (ownIndex >= 0) leaderboardRows[ownIndex].coins else 0L
 
     LaunchedEffect(tab, period) {
         while (true) {
@@ -241,11 +281,6 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
         String.format(Locale.US, "%dd %02d:%02d:%02d",
             remainingDays, (remainingSeconds % 86400L) / 3600L,
             (remainingSeconds % 3600L) / 60L, remainingSeconds % 60L)
-    }
-    val leaderboardResetLabel = when (period) {
-        "weekly" -> "Weekly reset in"
-        "monthly" -> "Monthly reset in"
-        else -> "Daily reset in"
     }
     
     val screenHeight = LocalConfiguration.current.screenHeightDp.dp
@@ -300,8 +335,7 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                                 fontWeight = if (tab == id) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.SemiBold
                             )
                             if (tab == id) {
-                                Spacer(Modifier.height(4.dp))
-                                Canvas(modifier = Modifier.size(width = 24.dp, height = 6.dp)) {
+                                Canvas(modifier = Modifier.offset(y = (-2).dp).size(width = 24.dp, height = 6.dp)) {
                                     drawArc(
                                         color = Color(0xFFE7B865),
                                         startAngle = 0f,
@@ -311,7 +345,7 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                                     )
                                 }
                             } else {
-                                Spacer(Modifier.height(10.dp))
+                                Spacer(Modifier.height(6.dp))
                             }
                         }
                     }
@@ -326,7 +360,7 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
             }
             
             // SECOND ROW (Middle)
-            Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp), horizontalArrangement = Arrangement.Center) {
+            Row(Modifier.fillMaxWidth().offset(y = (-2).dp).padding(horizontal = 12.dp, vertical = 2.dp), horizontalArrangement = Arrangement.Center) {
                 Row(
                     Modifier.width(220.dp).height(30.dp)
                         .border(1.dp, Color(0xFFD4AF37), RoundedCornerShape(24.dp))
@@ -359,19 +393,29 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                     Column(Modifier.fillMaxWidth().padding(top=18.dp, bottom=0.dp),horizontalAlignment=Alignment.CenterHorizontally) {
                         
                         // TOP 1 BOX 
+                        val rank1 = leaderboardRows.getOrNull(0)
                         Box(
                             modifier = Modifier.width(podiumTopWidth).height(260.dp).offset(y = (-35).dp), 
                             contentAlignment = Alignment.Center
                         ) {
-                            AsyncImage(
-                                model = leaderboardRows.getOrNull(0)?.image?.takeIf { it.isNotBlank() } ?: (raw + "default_avatar.png"),
-                                contentDescription = "Rank 1 Avatar",
-                                modifier = Modifier
-                                    .offset(y = (-13).dp)
-                                    .size(100.dp)
-                                    .clip(RoundedCornerShape(50)),
-                                contentScale = ContentScale.Crop
-                            )
+                            val rank1Img = rank1?.image?.takeIf { it.isNotBlank() }
+                            if (rank1 != null && rank1Img != null) {
+                                AsyncImage(
+                                    model = rank1Img,
+                                    contentDescription = "Rank 1 Avatar",
+                                    modifier = Modifier
+                                        .offset(y = (-13).dp)
+                                        .size(100.dp)
+                                        .clip(RoundedCornerShape(50)),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                DefaultUserAvatarIcon(
+                                    modifier = Modifier
+                                        .offset(y = (-13).dp)
+                                        .size(100.dp)
+                                )
+                            }
                             LeaderboardChromaImage(
                                 url = raw + "file_000000006bc882118206787e86f026f0.png",
                                 contentDescription = "Rank 1 Frame",
@@ -380,14 +424,13 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                         }
                         
                         // TOP 1 INFO
-                        val rank1 = leaderboardRows.getOrNull(0)
                         if (rank1 != null) {
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
-                                modifier = Modifier.offset(y = (-35).dp)
+                                modifier = Modifier.offset(y = (-43).dp)
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    Text(rank1.name, color = Color.White, fontSize = 15.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(leaderboardShortName(rank1.name), color = Color.White, fontSize = 15.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                     if (tab == "room") {
                                         Text(leaderboardFlag(rank1.country), fontSize = 14.sp)
                                     } else {
@@ -398,7 +441,7 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                                         }
                                         Box(contentAlignment = Alignment.CenterEnd, modifier = Modifier.height(16.dp).width(34.dp)) {
                                             AsyncImage(model = raw + "IMG_20261028_004355.png", contentDescription = "Level", contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
-                                            Text("Lv.1", color = Color.White, fontSize = 7.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Normal, modifier = Modifier.padding(end = 4.dp))
+                                            Text("Lv.1", color = Color.White, fontSize = 7.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Normal, modifier = Modifier.padding(end = 4.dp).offset(x = 1.dp, y = (-2).dp))
                                         }
                                     }
                                 }
@@ -416,36 +459,49 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                         // Rank 2 and 3 Section (Edge-to-Edge, zero left/right gap)
                         Row(
                             Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
+                            verticalAlignment = Alignment.Top
                         ) {
-                            // Rank 2 Box
-                            Box(modifier = Modifier.weight(1f).height(175.dp), contentAlignment = Alignment.Center) {
-                                AsyncImage(
-                                    model = leaderboardRows.getOrNull(1)?.image?.takeIf { it.isNotBlank() } ?: (raw + "default_avatar.png"),
-                                    contentDescription = "Rank 2 Avatar",
-                                    modifier = Modifier
-                                        .align(Alignment.TopCenter)
-                                        .offset(y = 20.dp)
-                                        .size(65.dp)
-                                        .clip(RoundedCornerShape(50)),
-                                    contentScale = ContentScale.Crop
-                                )
-                                LeaderboardChromaImage(
-                                    url = raw + "IMG_20261119_021124.png",
-                                    contentDescription = "Rank 2 frame",
-                                    modifier = Modifier.fillMaxWidth().requiredHeight(225.dp),
-                                    contentScale = ContentScale.FillWidth
-                                )
+                            // Rank 2 Column (Avatar + Frame overlapping, Info below frame same as Top 1)
+                            val rank2 = leaderboardRows.getOrNull(1)
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Box(modifier = Modifier.fillMaxWidth().height(175.dp), contentAlignment = Alignment.Center) {
+                                    val rank2Img = rank2?.image?.takeIf { it.isNotBlank() }
+                                    if (rank2 != null && rank2Img != null) {
+                                        AsyncImage(
+                                            model = rank2Img,
+                                            contentDescription = "Rank 2 Avatar",
+                                            modifier = Modifier
+                                                .offset(y = (-8).dp)
+                                                .size(65.dp)
+                                                .clip(RoundedCornerShape(50)),
+                                            contentScale = ContentScale.Crop
+                                        )
+                                    } else {
+                                        DefaultUserAvatarIcon(
+                                            modifier = Modifier
+                                                .offset(y = (-8).dp)
+                                                .size(65.dp)
+                                        )
+                                    }
+                                    LeaderboardChromaImage(
+                                        url = raw + "IMG_20261119_021124.png",
+                                        contentDescription = "Rank 2 frame",
+                                        modifier = Modifier.fillMaxWidth().requiredHeight(225.dp),
+                                        contentScale = ContentScale.FillWidth
+                                    )
+                                }
                                 
-                                // TOP 2 INFO
-                                val rank2 = leaderboardRows.getOrNull(1)
+                                // TOP 2 INFO (Frame ke niche)
                                 if (rank2 != null) {
                                     Column(
                                         horizontalAlignment = Alignment.CenterHorizontally,
-                                        modifier = Modifier.align(Alignment.TopCenter).offset(y = 123.dp)
+                                        modifier = Modifier.padding(top = 4.dp)
                                     ) {
                                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                                            Text(rank2.name, color = Color.White, fontSize = 12.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 82.dp))
+                                            Text(leaderboardShortName(rank2.name), color = Color.White, fontSize = 12.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                             if (tab == "room") {
                                                 Text(leaderboardFlag(rank2.country), fontSize = 12.sp)
                                             } else {
@@ -456,11 +512,12 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                                                 }
                                                 Box(contentAlignment = Alignment.CenterEnd, modifier = Modifier.height(16.dp).width(34.dp)) {
                                                     AsyncImage(model = raw + "IMG_20261028_004355.png", contentDescription = "Level", contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
-                                                    Text("Lv.1", color = Color.White, fontSize = 7.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Normal, modifier = Modifier.padding(end = 4.dp))
+                                                    Text("Lv.1", color = Color.White, fontSize = 7.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Normal, modifier = Modifier.padding(end = 4.dp).offset(x = 1.dp, y = (-2).dp))
                                                 }
                                             }
                                         }
-                                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 1.dp)) {
+                                        Spacer(Modifier.height(2.dp))
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
                                             AsyncImage(model = raw + "file_00000000e56882119c217d508b6733dc.png", contentDescription = null, modifier = Modifier.size(12.dp))
                                             Spacer(Modifier.width(2.dp))
                                             Text(text = leaderboardCoinText(rank2.coins), color = Color(0xFFE7B865), fontSize = 11.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
@@ -469,34 +526,47 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                                 }
                             }
                             
-                            // Rank 3 Box
-                            Box(modifier = Modifier.weight(1f).height(175.dp), contentAlignment = Alignment.Center) {
-                                AsyncImage(
-                                    model = leaderboardRows.getOrNull(2)?.image?.takeIf { it.isNotBlank() } ?: (raw + "default_avatar.png"),
-                                    contentDescription = "Rank 3 Avatar",
-                                    modifier = Modifier
-                                        .align(Alignment.TopCenter)
-                                        .offset(y = 20.dp) 
-                                        .size(65.dp) 
-                                        .clip(RoundedCornerShape(50)),
-                                    contentScale = ContentScale.Crop
-                                )
-                                LeaderboardChromaImage(
-                                    url = raw + "file_000000006f108211a4a5d64cb1ecf702.png",
-                                    contentDescription = "Rank 3 frame",
-                                    modifier = Modifier.fillMaxWidth().requiredHeight(215.dp),
-                                    contentScale = ContentScale.FillWidth
-                                )
+                            // Rank 3 Column (Avatar + Frame overlapping, Info below frame same as Top 1)
+                            val rank3 = leaderboardRows.getOrNull(2)
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Box(modifier = Modifier.fillMaxWidth().height(175.dp), contentAlignment = Alignment.Center) {
+                                    val rank3Img = rank3?.image?.takeIf { it.isNotBlank() }
+                                    if (rank3 != null && rank3Img != null) {
+                                        AsyncImage(
+                                            model = rank3Img,
+                                            contentDescription = "Rank 3 Avatar",
+                                            modifier = Modifier
+                                                .offset(y = (-8).dp)
+                                                .size(65.dp) 
+                                                .clip(RoundedCornerShape(50)),
+                                            contentScale = ContentScale.Crop
+                                        )
+                                    } else {
+                                        DefaultUserAvatarIcon(
+                                            modifier = Modifier
+                                                .offset(y = (-8).dp)
+                                                .size(65.dp)
+                                        )
+                                    }
+                                    LeaderboardChromaImage(
+                                        url = raw + "file_000000006f108211a4a5d64cb1ecf702.png",
+                                        contentDescription = "Rank 3 frame",
+                                        modifier = Modifier.fillMaxWidth().requiredHeight(215.dp),
+                                        contentScale = ContentScale.FillWidth
+                                    )
+                                }
                                 
-                                // TOP 3 INFO
-                                val rank3 = leaderboardRows.getOrNull(2)
+                                // TOP 3 INFO (Frame ke niche)
                                 if (rank3 != null) {
                                     Column(
                                         horizontalAlignment = Alignment.CenterHorizontally,
-                                        modifier = Modifier.align(Alignment.TopCenter).offset(y = 123.dp)
+                                        modifier = Modifier.padding(top = 4.dp)
                                     ) {
                                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                                            Text(rank3.name, color = Color.White, fontSize = 12.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 82.dp))
+                                            Text(leaderboardShortName(rank3.name), color = Color.White, fontSize = 12.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                             if (tab == "room") {
                                                 Text(leaderboardFlag(rank3.country), fontSize = 12.sp)
                                             } else {
@@ -507,11 +577,12 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                                                 }
                                                 Box(contentAlignment = Alignment.CenterEnd, modifier = Modifier.height(16.dp).width(34.dp)) {
                                                     AsyncImage(model = raw + "IMG_20261028_004355.png", contentDescription = "Level", contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
-                                                    Text("Lv.1", color = Color.White, fontSize = 7.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Normal, modifier = Modifier.padding(end = 4.dp))
+                                                    Text("Lv.1", color = Color.White, fontSize = 7.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Normal, modifier = Modifier.padding(end = 4.dp).offset(x = 1.dp, y = (-2).dp))
                                                 }
                                             }
                                         }
-                                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 1.dp)) {
+                                        Spacer(Modifier.height(2.dp))
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
                                             AsyncImage(model = raw + "file_00000000e56882119c217d508b6733dc.png", contentDescription = null, modifier = Modifier.size(12.dp))
                                             Spacer(Modifier.width(2.dp))
                                             Text(text = leaderboardCoinText(rank3.coins), color = Color(0xFFE7B865), fontSize = 11.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
@@ -555,14 +626,12 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                             horizontalArrangement = Arrangement.Center,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text("— ∞ ", color = Color(0xFFD4AF37), fontSize = 14.sp)
                             Text(
-                                text = "⏳ $leaderboardResetLabel $leaderboardCountdown (IST)",
+                                text = "⏳$leaderboardCountdown (GMT 5:30+)",
                                 color = Color(0xFFD4AF37),
-                                fontSize = 14.sp,
+                                fontSize = 12.sp,
                                 fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
                             )
-                            Text(" ∞ —", color = Color(0xFFD4AF37), fontSize = 14.sp)
                         }
 
                         val remainingUsers = leaderboardRows.drop(3).take(47)
@@ -619,7 +688,7 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                                     Column(Modifier.weight(1f)) {
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             Text(
-                                                text = user.name,
+                                                text = leaderboardShortName(user.name),
                                                 color = Color.White,
                                                 fontSize = 14.sp,
                                                 fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
@@ -640,7 +709,7 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                                             Row(verticalAlignment = Alignment.CenterVertically) {
                                                 Box(contentAlignment = Alignment.CenterEnd, modifier = Modifier.height(16.dp).width(34.dp)) {
                                                     AsyncImage(model = raw + "IMG_20261028_004355.png", contentDescription = "Level Image", modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
-                                                    Text("Lv.1", color = Color.White, fontSize = 7.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Normal, modifier = Modifier.padding(end = 4.dp))
+                                                    Text("Lv.1", color = Color.White, fontSize = 7.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Normal, modifier = Modifier.padding(end = 4.dp).offset(x = 1.dp, y = (-2).dp))
                                                 }
                                             }
                                         }
@@ -692,6 +761,15 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                     .padding(top = 30.dp), 
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                Text(
+                    text = ownRankText,
+                    color = Color(0xFFE7B865),
+                    fontSize = 16.sp,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                    modifier = Modifier.width(28.dp),
+                    textAlign = TextAlign.Center
+                )
+                Spacer(Modifier.width(6.dp))
                 AsyncImage(
                     model = ownAvatar,
                     contentDescription = "Your avatar",
@@ -701,20 +779,50 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                     contentScale = ContentScale.Crop
                 )
                 Spacer(Modifier.width(12.dp))
-                Text(
-                    text = ownName, 
-                    color = Color.White, 
-                    fontSize = 15.sp, 
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, 
-                    modifier = Modifier.weight(1f), 
-                    maxLines = 1
-                )
-                Text(
-                    text = "+100", 
-                    color = Color(0xFFE7B865), 
-                    fontSize = 18.sp, 
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
-                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = leaderboardShortName(ownName), 
+                            color = Color.White, 
+                            fontSize = 15.sp, 
+                            fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, 
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        if (tab != "room") {
+                            Spacer(Modifier.width(6.dp))
+                            Box(
+                                Modifier.size(20.dp).clip(RoundedCornerShape(50)).background(if (ownGender.equals("female", true)) Color(0xFFFF5874) else Color(0xFF3B82F6)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CustomGenderIcon(ownGender.equals("female", true), Modifier.size(10.dp))
+                            }
+                        }
+                    }
+                    if (tab != "room") {
+                        Spacer(Modifier.height(4.dp))
+                        Box(contentAlignment = Alignment.CenterEnd, modifier = Modifier.height(16.dp).width(34.dp)) {
+                            AsyncImage(model = raw + "IMG_20261028_004355.png", contentDescription = "Level Image", modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
+                            Text("Lv.1", color = Color.White, fontSize = 7.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Normal, modifier = Modifier.padding(end = 4.dp).offset(x = 1.dp, y = (-2).dp))
+                        }
+                    }
+                }
+                Spacer(Modifier.width(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    AsyncImage(
+                        model = raw + "file_00000000e56882119c217d508b6733dc.png",
+                        contentDescription = "Coins Icon",
+                        modifier = Modifier.size(16.dp),
+                        contentScale = ContentScale.Fit
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        text = leaderboardCoinText(ownCoins), 
+                        color = Color(0xFFE7B865), 
+                        fontSize = 15.sp, 
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                    )
+                }
             }
         }
 
