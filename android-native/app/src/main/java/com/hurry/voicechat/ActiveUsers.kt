@@ -33,7 +33,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.sync.withPermit
 
-data class ActiveUserNative(val accountId:String,val name:String,val image:String,val country:String="",val gender:String="")
+data class ActiveUserNative(val accountId:String,val name:String,val image:String,val country:String="")
 
 // Persist resolved countries locally with no expiry so reopening the sheet or
 // restarting the app does not trigger the same profile lookup again.
