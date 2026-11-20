@@ -284,7 +284,7 @@ fun PublicProfileScreen(
     val showHost = !is500002Official && (isCoreOfficial || liveProfileTags?.optBoolean("hostTag", false) == true || liveProfileTags?.optBoolean("isHost", false) == true)
     val showCoinSeller = isCoreOfficial || targetUser?.coinSellerTag == true || liveProfileTags?.optBoolean("coinSellerTag", false) == true || liveProfileTags?.optBoolean("coinSeller", false) == true || liveProfileTags?.optBoolean("sellerTag", false) == true
     
-    val defaultAvatar = "/file_000000009aac81faa8564416680aba4e.png"
+    val defaultAvatar = "/default-avatar.png"
     val userPhotoRaw = selectedAvatarUri ?: defaultAvatar
     val userPhoto = profileAsset(userPhotoRaw)
 
