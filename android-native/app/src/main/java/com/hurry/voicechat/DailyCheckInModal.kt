@@ -219,6 +219,34 @@ fun DailyCheckInModal(
                 }
             } else {
                 // --- SUCCESS POPUP OVERLAY (Sirf ye dikhega) ---
+                val rewardsList = when (currentDay) {
+                    1, 2 -> listOf(
+                        "file_00000000b2d481fd8cd233482dbeb9ef.png" to "+5,000"
+                    )
+                    3 -> listOf(
+                        "file_00000000882882088d745d793bd43e06.png" to "×2 Days"
+                    )
+                    4 -> listOf(
+                        "file_00000000b2d481fd8cd233482dbeb9ef.png" to "+10,000"
+                    )
+                    5 -> listOf(
+                        "file_00000000b2d481fd8cd233482dbeb9ef.png" to "+10,000",
+                        "IMG_20260903_141944.png" to "×1 Day"
+                    )
+                    6 -> listOf(
+                        "file_00000000b2d481fd8cd233482dbeb9ef.png" to "+10,000",
+                        "IMG-20260903-WA0076.jpg" to "×2 Days"
+                    )
+                    7 -> listOf(
+                        "file_00000000b2d481fd8cd233482dbeb9ef.png" to "+15,000",
+                        "file_0000000044388211996656afc9ce9c03.png" to "×3 days",
+                        "IMG-20260903-WA0077.jpg" to "×3 days"
+                    )
+                    else -> listOf(
+                        "file_00000000b2d481fd8cd233482dbeb9ef.png" to "+5,000"
+                    )
+                }
+
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -233,7 +261,20 @@ fun DailyCheckInModal(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        // Edge-to-Edge Blue Glossy Card
+                        // Get Rewards text ab Blue Card ke bahar aur top par hai
+                        Text(
+                            text = "Get Rewards",
+                            style = TextStyle(
+                                brush = Brush.verticalGradient(
+                                    colors = listOf(Color(0xFFFFF59D), Color(0xFFFFB300))
+                                ),
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.ExtraBold
+                            ),
+                            modifier = Modifier.padding(bottom = 14.dp)
+                        )
+
+                        // Edge-to-Edge Blue Glossy Card (Height kam kar di hai)
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -248,61 +289,43 @@ fun DailyCheckInModal(
                                         )
                                     )
                                 )
-                                .padding(vertical = 35.dp),
+                                .padding(vertical = 20.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                
-                                // Get Rewards text now at the TOP of the Blue Card
-                                Text(
-                                    text = "Get Rewards",
-                                    style = TextStyle(
-                                        brush = Brush.verticalGradient(
-                                            colors = listOf(Color(0xFFFFF59D), Color(0xFFFFB300))
-                                        ),
-                                        fontSize = 24.sp,
-                                        fontWeight = FontWeight.ExtraBold
-                                    ),
-                                    modifier = Modifier.padding(bottom = 20.dp)
-                                )
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                rewardsList.forEach { (img, txt) ->
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        // Overlapping Black/10 card with corner curve 12dp
+                                        Box(
+                                            modifier = Modifier
+                                                .background(Color(0x1A000000), RoundedCornerShape(12.dp)) // 10% opacity black
+                                                .padding(14.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            AsyncImage(
+                                                model = img.fullUrl,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(56.dp),
+                                                contentScale = ContentScale.Fit
+                                            )
+                                        }
 
-                                // Overlapping Black/10 card with corner curve 12dp (Thora chota kiya)
-                                Box(
-                                    modifier = Modifier
-                                        .background(Color(0x1A000000), RoundedCornerShape(12.dp)) // 10% opacity black
-                                        .padding(16.dp), // Padding reduced to make it smaller
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    val rewardImg = when(currentDay) {
-                                        3 -> "file_00000000882882088d745d793bd43e06.png"
-                                        7 -> "file_0000000044388211996656afc9ce9c03.png"
-                                        else -> "file_00000000b2d481fd8cd233482dbeb9ef.png"
+                                        Spacer(modifier = Modifier.height(10.dp))
+
+                                        // Text exactly below the black card
+                                        Text(
+                                            text = txt,
+                                            color = Color.White,
+                                            fontSize = 16.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
                                     }
-                                    AsyncImage(
-                                        model = rewardImg.fullUrl,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(60.dp), // Image size reduced
-                                        contentScale = ContentScale.Fit
-                                    )
                                 }
-                                
-                                Spacer(modifier = Modifier.height(14.dp))
-                                
-                                // Text exactly below the black card
-                                val rewardTxt = when(currentDay) {
-                                    1, 2 -> "+5,000"
-                                    3 -> "×2 Days"
-                                    4 -> "+10,000"
-                                    5, 6 -> "Special Reward"
-                                    7 -> "Big Reward"
-                                    else -> "+5,000"
-                                }
-                                Text(
-                                    text = rewardTxt,
-                                    color = Color.White,
-                                    fontSize = 20.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
                             }
                         }
                         
