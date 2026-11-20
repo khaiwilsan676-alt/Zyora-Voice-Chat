@@ -205,7 +205,7 @@ fun JitsiRoomAudio(
             }
             val created = runCatching {
                 AudioRecord(
-                    MediaRecorder.AudioSource.MIC,
+                    MediaRecorder.AudioSource.VOICE_COMMUNICATION,
                     ROOM_VOICE_SAMPLE_RATE,
                     AudioFormat.CHANNEL_IN_MONO,
                     AudioFormat.ENCODING_PCM_16BIT,
@@ -389,6 +389,11 @@ fun JitsiRoomAudio(
                 val current = if (isVoicePacket) voicePlaybackThread else musicPlaybackThread
                 if (current?.isAlive == true) return
                 val worker = thread(name = if (isVoicePacket) "ZyoraRoomVoicePlayback" else "ZyoraRoomMusicPlayback", isDaemon = true) {
+                    // Prime the voice jitter buffers before first playback. This absorbs
+                    // small per-sender Socket.IO arrival differences when 2+ people speak.
+                    if (isVoicePacket) {
+                        try { Thread.sleep(40) } catch (_: InterruptedException) { }
+                    }
                     while (alive.get()) {
                         val packet = if (isVoicePacket) {
                             if (!latestPlaybackVoiceEnabled) {
@@ -396,11 +401,11 @@ fun JitsiRoomAudio(
                                 try { Thread.sleep(20) } catch (_: InterruptedException) { if (!alive.get()) break }
                                 continue
                             }
-                            // Socket.IO delivers each publisher independently. Give packets a
-                            // short collection window so two speakers' frames arriving a few ms
-                            // apart are mixed in the same output frame instead of alternating.
+                            // Collect a full packet window before mixing independent publishers.
+                            // A 40 ms prebuffer above plus this short window prevents late-arriving
+                            // speakers from being played as a second, offset copy of the same moment.
                             if (voiceSpeakerQueues.values.any { it.isNotEmpty() }) {
-                                try { Thread.sleep(8) } catch (_: InterruptedException) { if (!alive.get()) break }
+                                try { Thread.sleep(10) } catch (_: InterruptedException) { if (!alive.get()) break }
                             }
                             val mixed = LongArray(ROOM_VOICE_FRAME_BYTES / 2)
                             var activeSpeakers = 0
@@ -419,11 +424,13 @@ fun JitsiRoomAudio(
                                 try { Thread.sleep(5) } catch (_: InterruptedException) { if (!alive.get()) break }
                                 continue
                             }
-                            // Average simultaneous speakers instead of hard limiting their sum.
-                            // The old nonlinear limiter distorted peaks as soon as two people spoke.
+                            // Power-normalize concurrent speakers (1/sqrt(N)): unlike averaging,
+                            // this keeps each voice intelligible with 2-5 active speakers. Clamp only
+                            // the final PCM sample to avoid overflow distortion.
+                            val gain = 1.0 / kotlin.math.sqrt(activeSpeakers.toDouble())
                             ByteArray(ROOM_VOICE_FRAME_BYTES).also { output ->
                                 mixed.forEachIndexed { index, sum ->
-                                    val sample = (sum / activeSpeakers).toInt()
+                                    val sample = (sum * gain).toInt()
                                         .coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt())
                                     output[index * 2] = (sample and 0xFF).toByte()
                                     output[index * 2 + 1] = ((sample shr 8) and 0xFF).toByte()
@@ -499,7 +506,7 @@ fun JitsiRoomAudio(
                 if (speakerId == localAccountId) return@Listener
                 // Server voice frames are fixed 20 ms / 640-byte PCM packets.
                 if (bytes.size != ROOM_VOICE_FRAME_BYTES) return@Listener
-                val queue = voiceSpeakerQueues.computeIfAbsent(speakerId) { ArrayBlockingQueue(4) }
+                val queue = voiceSpeakerQueues.computeIfAbsent(speakerId) { ArrayBlockingQueue(8) }
                 if (!queue.offer(bytes.copyOf())) { queue.poll(); queue.offer(bytes.copyOf()) }
             } else {
                 if (!musicPlaybackQueue.offer(bytes.copyOf())) { musicPlaybackQueue.poll(); musicPlaybackQueue.offer(bytes.copyOf()) }
