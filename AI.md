@@ -1579,3 +1579,9 @@ Current documentation does not certify that all historical features are build-, 
 - Verification still required: web production build, owner grant to a test account, and confirmation that each special reward category is represented correctly in native Bag/equipment. This catalog change alone does not prove native equip support for Medal, Family Tag or Daily Check-in inventory categories.
 
 - Follow-up server compatibility: `Zyora-Server/server.js` now accepts the new owner grant ID families (`le`, `lf`, `lm`, `fr`, `dc`) with a strict tab allowlist while retaining owner-key authentication, account validation, and expiry validation.
+
+
+## Private chat gift sending
+- Native private chat input adds the gift entry point and opens the shared Room GiftPicker.
+- Chat GiftPicker is fixed to the active chat partner: only that avatar is shown; MIC and HOUSE recipient controls are hidden.
+- Chat gift payments use the canonical wallet debit endpoint and existing private-message Socket.IO delivery. Room GiftPicker behavior is unchanged.
