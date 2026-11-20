@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import coil3.compose.AsyncImage
@@ -303,7 +304,7 @@ fun ChromaVideoPlayer(url: String, modifier: Modifier = Modifier) {
                 setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null)
                 settings.javaScriptEnabled = true
                 settings.mediaPlaybackRequiresUserGesture = false
-                
+
                 val htmlData = """
                     <!DOCTYPE html>
                     <html>
@@ -451,17 +452,17 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
     var leaderboardRows by remember { mutableStateOf<List<ZyoraRank>>(emptyList()) }
     var leaderboardEndsAt by remember { mutableLongStateOf(0L) }
     var leaderboardNow by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    
+
     val tabs=listOf("honour" to "Honour","charm" to "Charm","room" to "Room")
     val periods=listOf("daily" to "Daily","weekly" to "Weekly","monthly" to "Monthly")
     val raw = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/"
-    
+
     val topImage = when (tab) {
         "charm" -> "IMG_20261105_230141.png"
         "room" -> "IMG_20261105_230309.png"
         else -> "IMG_20261105_230210.png"
     }
-    
+
     val context = LocalContext.current
     val authPrefs = remember { context.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE) }
     val ownUserId = authPrefs.getString("userId", authPrefs.getString("id", "")).orEmpty()
@@ -494,10 +495,10 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
             remainingDays, (remainingSeconds % 86400L) / 3600L,
             (remainingSeconds % 3600L) / 60L, remainingSeconds % 60L)
     }
-    
+
     val screenHeight = LocalConfiguration.current.screenHeightDp.dp
     val screenWidthDp = LocalConfiguration.current.screenWidthDp
-    
+
     val podiumTopWidth = (screenWidthDp * 0.55f).coerceAtMost(240f).dp
 
     Box(Modifier.fillMaxSize().background(Color(0xFF1A0204))) {
@@ -518,9 +519,9 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                 )
             )
         }
-        
+
         Column(Modifier.fillMaxSize().statusBarsPadding()) {
-            
+
             // TOP ROW
             Row(Modifier.fillMaxWidth().height(48.dp).padding(horizontal = 12.dp), verticalAlignment=Alignment.CenterVertically) {
                 AsyncImage(
@@ -529,7 +530,7 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                     modifier = Modifier.size(32.dp).clickable(onClick=onBack),
                     contentScale = ContentScale.Fit
                 )
-                
+
                 Row(
                     Modifier.weight(1f),
                     horizontalArrangement = Arrangement.SpaceEvenly,
@@ -562,7 +563,7 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                         }
                     }
                 }
-                
+
                 AsyncImage(
                     model = raw + "file_0000000073ec820b832b6dafb168dabe.png",
                     contentDescription = "Leaderboard rules",
@@ -570,7 +571,7 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                     contentScale = ContentScale.Fit
                 )
             }
-            
+
             // SECOND ROW (Left Corner)
             Row(Modifier.fillMaxWidth().offset(y = (-2).dp).padding(horizontal = 12.dp, vertical = 2.dp), horizontalArrangement = Arrangement.Start) {
                 Row(
@@ -598,12 +599,12 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                     }
                 }
             }
-            
+
             LazyColumn(Modifier.weight(1f).fillMaxWidth(),contentPadding=PaddingValues(bottom=0.dp),verticalArrangement=Arrangement.spacedBy(0.dp)) {
                 // Podium Section
                 item {
                     Column(Modifier.fillMaxWidth().padding(top=18.dp, bottom=0.dp),horizontalAlignment=Alignment.CenterHorizontally) {
-                        
+
                         // TOP 1 BOX 
                         val rank1 = leaderboardRows.getOrNull(0)
                         Box(
@@ -634,7 +635,7 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                                 modifier = Modifier.offset(y = 2.dp).requiredSize(300.dp)
                             )
                         }
-                        
+
                         // TOP 1 INFO
                         if (rank1 != null) {
                             Column(
@@ -665,9 +666,9 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                                 }
                             }
                         }
-                        
+
                         Spacer(Modifier.height(5.dp)) 
-                        
+
                         // Rank 2 and 3 Section (Edge-to-Edge, zero left/right gap)
                         Row(
                             Modifier.fillMaxWidth().offset(y = (-42).dp),
@@ -705,7 +706,7 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                                         contentScale = ContentScale.FillWidth
                                     )
                                 }
-                                
+
                                 // TOP 2 INFO (Frame ke niche)
                                 if (rank2 != null) {
                                     Column(
@@ -737,7 +738,7 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                                     }
                                 }
                             }
-                            
+
                             // Rank 3 Column (Avatar + Frame overlapping, Info below frame same as Top 1)
                             val rank3 = leaderboardRows.getOrNull(2)
                             Column(
@@ -770,7 +771,7 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                                         contentScale = ContentScale.FillWidth
                                     )
                                 }
-                                
+
                                 // TOP 3 INFO (Frame ke niche)
                                 if (rank3 != null) {
                                     Column(
@@ -860,7 +861,7 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                             }
 
                             val remainingUsers = leaderboardRows.drop(3).take(47)
-                            
+
                             // EMPTY STATE CHECK (Agar 4 se leke 50 tak koi na ho)
                             if (remainingUsers.isEmpty()) {
                                 Box(
@@ -958,7 +959,7 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                                     }
                                 }
                             }
-                            
+
                             Spacer(Modifier.height(180.dp)) 
                         }
                     }
@@ -1055,35 +1056,99 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
         if (showRules) {
             androidx.compose.ui.window.Dialog(
                 onDismissRequest = { showRules = false },
-                properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
+                properties = androidx.compose.ui.window.DialogProperties(
+                    usePlatformDefaultWidth = false,
+                    decorFitsSystemWindows = false
+                )
             ) {
-                Box(Modifier.fillMaxSize().background(Color(0x99000000)).clickable { showRules = false },contentAlignment=Alignment.BottomCenter) {
-                    Column(
-                        Modifier.fillMaxWidth()
-                            .fillMaxHeight(0.60f)
-                            .clip(RoundedCornerShape(topStart=16.dp,topEnd=16.dp))
-                            .background(Color(0xFF1A0204))
-                            .clickable { }
-                            .padding(20.dp)
+                val cardShape = RoundedCornerShape(14.dp)
+                val buttonShape = RoundedCornerShape(12.dp)
+                val goldenBorderBrush = Brush.verticalGradient(
+                    listOf(Color(0xFFF3D578), Color(0xFFC59B38), Color(0xFFE5C158))
+                )
+
+                val ruleTitle = when (tab) {
+                    "charm" -> "Charm"
+                    "room" -> "Room"
+                    else -> "Rich"
+                }
+                val ruleBody = when (tab) {
+                    "charm" -> "Charm Raking is determined by the number of diamonds You receive Lucky gift Only count 10% of diamond value"
+                    "room" -> "Room Raking is determined by the number of Coins You Received in the room Lucky gift Only count 10% of Coins value"
+                    else -> "Rich Raking is determined by the number of Coins You Send Lucky gift Only count 10% of Coins value"
+                }
+                val cardBgColors = when (tab) {
+                    "charm" -> listOf(Color(0xFF5A1882), Color(0xFF3A0C59), Color(0xFF220538))
+                    "room" -> listOf(Color(0xFF0B4182), Color(0xFF072957), Color(0xFF041A3B))
+                    else -> listOf(Color(0xFF6B3A18), Color(0xFF4A250E), Color(0xFF2E1506))
+                }
+                val buttonBgColors = when (tab) {
+                    "charm" -> listOf(Color(0xFF7A24AD), Color(0xFF4F1375))
+                    "room" -> listOf(Color(0xFF1055A3), Color(0xFF0A3973))
+                    else -> listOf(Color(0xFF8C4E22), Color(0xFF5E3111))
+                }
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.65f))
+                        .clickable { showRules = false },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(0.86f)
+                            .clip(cardShape)
+                            .background(Brush.verticalGradient(colors = cardBgColors))
+                            .border(1.5.dp, goldenBorderBrush, cardShape)
+                            .clickable(enabled = false) {}
+                            .padding(horizontal = 22.dp, vertical = 26.dp)
                     ) {
-                        Text("Rules",color=Color(0xFFE7B865),fontSize=18.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Bold,modifier=Modifier.align(Alignment.CenterHorizontally))
-                        Spacer(Modifier.height(16.dp))
-                        
-                        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(10.dp)) {
-                            Text("Contribution Leaderboard: Your ranking on this leaderboard is determined by the total number of Coins you have spent in the room. The higher the amount spent, the higher your position on the leaderboard.",color=Color.White, fontSize = 12.sp)
-                            Text("Charm Leaderboard: Your ranking on this leaderboard is determined by the total number of Coins you Receive. The higher the amount spent, the higher your position on the leaderboard.",color=Color.White, fontSize = 12.sp)
-                            Text("Room Leaderboard: Your ranking on this leaderboard is determined by the total number of Coins you have spent in the room. The higher the amount spent, the higher your position on the leaderboard.",color=Color.White, fontSize = 12.sp)
-                            
-                            Spacer(Modifier.height(4.dp))
-                            Text("Data Periods",color=Color(0xFFE7B865),fontSize = 14.sp, fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold)
-                            Text("1. Daily counts only today and resets every day at 12:00 AM IST.\n2. Weekly counts Monday through Sunday and resets every Monday at 12:00 AM IST.\n3. Monthly counts the current calendar month and resets at 12:00 AM IST on the first day of the next month (after the month's last day).",color=Color.White, fontSize = 12.sp)
-                            
-                            Spacer(Modifier.height(4.dp))
-                            Text("Note: Users who violate platform rules are ineligible to participate in the rankings.",color=Color.White, fontSize = 12.sp)
-                            Text("The platform reserves the right to make the final decision.",color=Color.White, fontSize = 12.sp)
-                            
-                            Spacer(Modifier.height(12.dp))
-                            Text("Regard Zyora team",color=Color(0xFFE7B865), fontSize = 12.sp, modifier=Modifier.fillMaxWidth(), textAlign = TextAlign.End)
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = ruleTitle,
+                                style = TextStyle(
+                                    brush = Brush.horizontalGradient(
+                                        colors = listOf(Color.White, Color(0xFFFCE28B), Color(0xFFE5B83B))
+                                    ),
+                                    fontSize = 21.sp,
+                                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                                ),
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.padding(bottom = 22.dp)
+                            )
+
+                            Text(
+                                text = ruleBody,
+                                color = Color.White.copy(alpha = 0.95f),
+                                fontSize = 14.sp,
+                                lineHeight = 22.sp,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            Spacer(modifier = Modifier.height(28.dp))
+
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(48.dp)
+                                    .clip(buttonShape)
+                                    .background(Brush.verticalGradient(colors = buttonBgColors))
+                                    .border(1.5.dp, Color(0xFFE5C158), buttonShape)
+                                    .clickable { showRules = false },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "Got it",
+                                    color = Color.White,
+                                    fontSize = 16.sp,
+                                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
+                                )
+                            }
                         }
                     }
                 }
