@@ -47,7 +47,11 @@ export default function SpecialIdsPanel({ users = [], ownerKey }: { users?: User
       });
       const result = await response.json();
       if (!response.ok || !result?.success) throw new Error(result?.error || 'Could not assign ID');
-      setStatus(`ID ${specialId.trim()} assigned to ${selectedUser.name || 'user'} for ${days} days.`);
+      setStatus(result.notification === 'delivered'
+        ? `ID ${specialId.trim()} assigned and Zyora System message delivered to ${selectedUser.name || 'user'}.`
+        : result.notification === 'queued'
+          ? `ID ${specialId.trim()} assigned; Zyora System message queued for ${selectedUser.name || 'user'}.`
+          : `ID ${specialId.trim()} saved, but System message could not be queued. Check Render Redis connection.`);
       setSpecialId('');
       setDays('');
     } catch (error) {
