@@ -165,7 +165,7 @@ export default function OwnerAssetsPanel({ ownerKey }: { ownerKey: string }) {
   return (
     <section className="w-full max-w-xl pt-2">
       <div className="space-y-4">
-        <input value={userQuery} onChange={(event) => setUserQuery(event.target.value)} placeholder="Search User ID" className="w-full max-w-xs rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-800 outline-none focus:border-slate-400" inputMode="numeric" />
+        <input value={userQuery} onChange={(event) => setUserQuery(event.target.value)} placeholder="Search User ID" className="h-12 w-full max-w-xs rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-slate-800 outline-none focus:border-slate-400" inputMode="numeric" />
         {user && <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3">
           <img src={user.avatar || '/default-avatar.png'} alt="" className="h-10 w-10 rounded-full object-cover" />
           <div className="min-w-0"><div className="truncate text-sm font-bold text-slate-800">{user.name}</div><div className="text-xs text-slate-500">ID: {user.accountId}</div></div>
@@ -192,21 +192,21 @@ export default function OwnerAssetsPanel({ ownerKey }: { ownerKey: string }) {
         </div>
         <div className="flex items-center gap-3">
           <label className="w-20 shrink-0 text-xs font-bold text-slate-600" htmlFor="owner-asset-days">Days</label>
-          <input id="owner-asset-days" value={days} onChange={(event) => setDays(event.target.value)} inputMode="numeric" className="w-20 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 outline-none focus:border-slate-400" />
+          <input id="owner-asset-days" value={days} onChange={(event) => setDays(event.target.value)} inputMode="numeric" className="h-12 w-24 rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-slate-800 outline-none focus:border-slate-400" />
         </div>
         <button type="button" onClick={sendAsset} disabled={busy || !user || !(matchedAsset || selected)} className="w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-extrabold text-white disabled:cursor-not-allowed disabled:opacity-40">{busy ? 'Sending…' : 'Send'}</button>
         {notice && <p className="text-xs font-semibold text-slate-600">{notice}</p>}
       </div>
 
       <div className="mt-8 overflow-x-auto rounded-xl border border-slate-200 bg-white">
-        <table className="w-full min-w-[650px] border-collapse text-left">
+        <table className="w-full min-w-[720px] border-collapse text-left">
           <thead><tr className="border-b border-slate-100 bg-slate-50"><th className={tableHead}>User</th><th className={tableHead}>ID</th><th className={tableHead}>Assets Type</th><th className={tableHead}>Assets</th><th className={tableHead}>Days</th></tr></thead>
           <tbody className="divide-y divide-slate-100">
             {history.map((item) => <tr key={item.id} className="hover:bg-slate-50">
               <td className="px-4 py-3"><div className="flex items-center gap-2"><img src={item.avatar || '/default-avatar.png'} alt="" className="h-8 w-8 rounded-full object-cover" /><span className="max-w-36 truncate text-xs font-bold text-slate-800">{item.name}</span></div></td>
               <td className="px-4 py-3 text-xs font-semibold text-slate-600">{item.accountId}</td>
               <td className="px-4 py-3 text-xs font-semibold text-slate-700">{item.tab}</td>
-              <td className="px-4 py-3"><img src={item.image ? ((item.source === 'zyora' ? 'https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/' : ASSET_BASE) + item.image) : '/default-avatar.png'} alt={item.assetName || item.name || 'Sent asset'} className="h-11 w-11 rounded-lg border border-slate-100 bg-white object-contain p-1" /></td>
+              <td className="px-4 py-3"><img src={item.image ? (ASSETS.find((asset) => asset.image === item.image) ? assetUrl(ASSETS.find((asset) => asset.image === item.image)!) : (String(item.image).startsWith('http') ? item.image : ASSET_BASE + item.image)) : '/default-avatar.png'} alt={item.assetName || item.name || 'Sent asset'} className="h-11 w-11 rounded-lg border border-slate-100 bg-white object-contain p-1" /></td>
               <td className="px-4 py-3 text-xs font-semibold text-slate-600">{item.days}</td>
             </tr>)}
             {history.length === 0 && <tr><td colSpan={5} className="px-4 py-8 text-center text-xs text-slate-400">No sent assets</td></tr>}
