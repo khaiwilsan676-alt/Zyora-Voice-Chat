@@ -60,7 +60,14 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
     val prefs = remember { context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE) }
     val uid = prefs.getString("uid", "") ?: ""
     val email = prefs.getString("email", "") ?: ""
-    val cachedProfile = remember(uid) { NativeIndexDatabase(context).loadProfile(uid) }
+    // Never read the on-device profile database during composition: disk I/O here
+    // blocks the main thread on every first Me-tab composition.
+    var cachedProfile by remember(uid) { mutableStateOf<JSONObject?>(null) }
+    LaunchedEffect(uid) {
+        cachedProfile = withContext(Dispatchers.IO) {
+            runCatching { NativeIndexDatabase(context).loadProfile(uid) }.getOrNull()
+        }
+    }
     var name by remember(uid, email, cachedProfile) {
         mutableStateOf(
             cachedProfile?.optString("name")?.takeIf { it.isNotBlank() && it != "null" && it.lowercase() !in listOf("guest","user","null","undefined") }
@@ -79,15 +86,8 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
     val account = savedAccount.ifBlank { nativeMeAccountNumber(uid) }
     val visitorUserId = prefs.getString("accountId", "").orEmpty().ifBlank { uid }
     val initialFollowSnapshot = remember(visitorUserId) { SocialFollowApi.cachedSnapshot(context, visitorUserId) }
-    var visitorCount by remember(visitorUserId, uid) {
-        mutableIntStateOf(runCatching {
-            val db = NativeIndexDatabase(context)
-            listOf("received", "sent").sumOf { type ->
-                val rows = db.loadProfile("visitor_history:" + visitorUserId + ":" + type)?.optJSONArray("visitors") ?: org.json.JSONArray()
-                (0 until rows.length()).sumOf { index -> rows.optJSONObject(index)?.optInt("viewCount", 1)?.coerceAtLeast(1) ?: 0 }
-            }
-        }.getOrDefault(0))
-    }
+    // Visitor totals are hydrated from the local cache asynchronously below.
+    var visitorCount by remember(visitorUserId, uid) { mutableIntStateOf(0) }
     var fansCount by remember(uid) { mutableIntStateOf(initialFollowSnapshot?.followers ?: 0) }
     var friendsCount by remember(uid) { mutableIntStateOf(initialFollowSnapshot?.friends ?: 0) }
     var followingCount by remember(uid) { mutableIntStateOf(initialFollowSnapshot?.followingCount ?: 0) }
