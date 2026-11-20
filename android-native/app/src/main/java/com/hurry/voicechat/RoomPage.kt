@@ -1365,7 +1365,14 @@ fun RoomPage(
                     parsed.add(NativeRoomSeat(number=seat.optInt("number",index+1),occupied=seat.optBoolean("isOccupied",user != null),locked=seat.optBoolean("isLocked",false),muted=seat.optBoolean("isMuted",false),selfMuted=seat.optBoolean("isSelfMuted",false),speaking=seat.optBoolean("isSpeaking",false),userName=if (user == null) "" else user.optString("name","User"),userImage=if (user == null) "" else if (user.optString("accountId",user.optString("userId","")) in setOf("100002", "100003")) "https://zyora-voice-chat.vercel.app/logo.png" else user.optString("image","").takeIf { it.isNotBlank() && it != "null" } ?: user.optString("dp","").takeIf { it.isNotBlank() && it != "null" } ?: user.optString("avatarUrl","").takeIf { it.isNotBlank() && it != "null" } ?: user.optString("profileImage","").takeIf { it.isNotBlank() && it != "null" } ?: "",accountId=if (user == null) "" else user.optString("accountId",user.optString("userId","")),gifSrc=gif?.optString("src","") ?: "",gifTimestamp=gif?.optLong("timestamp",0L) ?: 0L,gifDurationMs=gif?.optLong("duration",5000L) ?: 5000L,gifScale=((gif?.optDouble("scale",0.8) ?: 0.8).toFloat())))
                 }
                 mainHandler.post {
-                    val byNumber = parsed.associateBy { it.number }
+                    // A fast seat transfer can briefly produce a snapshot containing
+                    // the same account in both its old and new seats. Keep only the
+                    // newest occurrence in the payload so Compose never draws two avatars.
+                    val seenOccupiedAccounts = mutableSetOf<String>()
+                    val normalizedParsed = parsed.asReversed().filter { seat ->
+                        !seat.occupied || seat.accountId.isBlank() || seenOccupiedAccounts.add(seat.accountId)
+                    }.asReversed()
+                    val byNumber = normalizedParsed.associateBy { it.number }
                     for (index in seats.indices) {
                         val number = seats[index].number
                         val incoming = byNumber[number]
@@ -1373,15 +1380,15 @@ fun RoomPage(
                             speaking = !incoming.muted && !incoming.selfMuted && (incoming.speaking || incoming.accountId in activeVoiceSpeakerIds)
                         ) ?: NativeRoomSeat(number=number)
                     }
-                    parsed.filter { it.number !in seats.map(NativeRoomSeat::number) }.forEach { incoming ->
+                    normalizedParsed.filter { it.number !in seats.map(NativeRoomSeat::number) }.forEach { incoming ->
                         seats.add(incoming.copy(
                             speaking = !incoming.muted && (incoming.speaking || incoming.accountId in activeVoiceSpeakerIds)
                         ))
                     }
                     val ownerIds = setOf(roomOwner.accountId, roomOwner.id, roomOwner.uid, roomId).filter { it.isNotBlank() }.toSet()
-                    val firstSeat = parsed.firstOrNull { it.number == 1 }
+                    val firstSeat = normalizedParsed.firstOrNull { it.number == 1 }
                     if (accountId in ownerIds && firstSeat != null && ownerAutoSeatAttempted.compareAndSet(false, true)) {
-                        val ownerAlreadySeated = parsed.any { it.occupied && it.accountId in ownerIds }
+                        val ownerAlreadySeated = normalizedParsed.any { it.occupied && it.accountId in ownerIds }
                         if (!firstSeat.occupied && !firstSeat.locked && !ownerAlreadySeated) {
                             val ownerUser = JSONObject()
                                 .put("name", latestRoomDisplayName.ifBlank { "User" })
