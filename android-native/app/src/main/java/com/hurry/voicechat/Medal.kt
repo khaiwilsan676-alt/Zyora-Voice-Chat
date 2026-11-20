@@ -333,15 +333,94 @@ fun MedalScreen(onBack: () -> Unit) {
     }
 
     if (showUnequipped) {
-        val list = listOf(
-            "CP Spokesperson" to "IMG_20260924_132022.png", "Level Medal" to "IMG_20260924_132038.png", "Weird Star" to "IMG_20260924_132051.png",
-            "SVIP Badge" to "IMG_20260924_132022.png", "Money Gun Talent" to "IMG_20260924_132038.png", "First Recharge" to "IMG_20260924_132051.png"
-        )
-        MedalGridBottomSheet("Unequipped Medals", list, onDismiss = { showUnequipped = false })
+        WearBadgeBottomSheet(onDismiss = { showUnequipped = false })
     }
 
     if (showRules) {
         RulesBottomSheet(onDismiss = { showRules = false })
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun WearBadgeBottomSheet(onDismiss: () -> Unit) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val buttonShape = RoundedCornerShape(12.dp)
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = Color(0xFF04142B),
+        scrimColor = Color.Black.copy(alpha = 0.45f),
+        dragHandle = null,
+        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(0.75f)
+                .windowInsetsPadding(WindowInsets.navigationBars)
+                .padding(horizontal = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Spacer(modifier = Modifier.height(22.dp))
+
+            Text(
+                text = "Wear Badge",
+                color = Color.White,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center
+            )
+
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                AsyncImage(
+                    model = "file_0000000047308211a02722299d1fda2e.png".fullUrl,
+                    contentDescription = "No Badge",
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.size(135.dp)
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = "No Badge",
+                    color = Color(0xFF7D92B0),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Normal
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 22.dp)
+                    .height(48.dp)
+                    .clip(buttonShape)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color(0xFF0E5BB5),
+                                Color(0xFF072F6B)
+                            )
+                        )
+                    )
+                    .border(1.5.dp, Color(0xFFE5C158), buttonShape)
+                    .clickable(onClick = onDismiss),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "Save",
+                    color = Color.White,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        }
     }
 }
 
@@ -518,21 +597,21 @@ fun GoldenSunburstEffect(modifier: Modifier = Modifier) {
 
     Canvas(modifier = modifier) {
         val center = Offset(size.width / 2f, size.height / 2f)
-        val radius = size.minDimension * 0.58f
+        val radius = size.minDimension * 0.80f
         val rayCount = 18
 
         // Soft Golden Radial Glow
         drawCircle(
             brush = Brush.radialGradient(
                 colors = listOf(
-                    Color(0xFFF3C969).copy(alpha = 0.28f),
-                    Color(0xFFC79532).copy(alpha = 0.10f),
+                    Color(0xFFFFDF7A).copy(alpha = 0.45f),
+                    Color(0xFFD9A12B).copy(alpha = 0.20f),
                     Color.Transparent
                 ),
                 center = center,
-                radius = radius
+                radius = radius * 0.85f
             ),
-            radius = radius,
+            radius = radius * 0.85f,
             center = center
         )
 
@@ -541,7 +620,7 @@ fun GoldenSunburstEffect(modifier: Modifier = Modifier) {
             val stepAngle = 360f / rayCount
             for (i in 0 until rayCount) {
                 val startDeg = i * stepAngle
-                val halfSpread = stepAngle * 0.24f
+                val halfSpread = stepAngle * 0.28f
                 val rad1 = Math.toRadians((startDeg - halfSpread).toDouble())
                 val rad2 = Math.toRadians((startDeg + halfSpread).toDouble())
 
@@ -561,8 +640,8 @@ fun GoldenSunburstEffect(modifier: Modifier = Modifier) {
                     path = path,
                     brush = Brush.radialGradient(
                         colors = listOf(
-                            Color(0xFFF7D57E).copy(alpha = 0.22f),
-                            Color(0xFFC89B3C).copy(alpha = 0.08f),
+                            Color(0xFFFFE694).copy(alpha = 0.58f),
+                            Color(0xFFE0A82E).copy(alpha = 0.28f),
                             Color.Transparent
                         ),
                         center = center,
@@ -743,13 +822,6 @@ fun RulesBottomSheet(onDismiss: () -> Unit) {
                 .clickable(onClick = onDismiss),
             contentAlignment = Alignment.Center
         ) {
-            FloatingEmbersAnimation(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .fillMaxHeight(0.45f)
-                    .align(Alignment.TopCenter)
-            )
-
             Box(
                 modifier = Modifier
                     .fillMaxWidth(0.86f)
