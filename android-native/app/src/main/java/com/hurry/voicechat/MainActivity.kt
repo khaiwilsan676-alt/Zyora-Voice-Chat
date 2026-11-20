@@ -662,11 +662,14 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                 Spacer(Modifier.fillMaxSize())
             } else {
                 Column(Modifier.fillMaxSize()) {
+                    // Keep each root tab composed while switching. The previous host
+                    // disposed inactive screens, forcing database hydration, image requests,
+                    // and Socket.IO listeners to restart on every tap.
                     val tabStateHolder = rememberSaveableStateHolder()
                     Box(Modifier.weight(1f)) {
-                        tabStateHolder.SaveableStateProvider(tab.name) {
-                            when (tab) {
-                            HurryTab.HOME -> HomeScreen(
+                        Box(if (tab == HurryTab.HOME) Modifier.fillMaxSize() else Modifier.size(1.dp).alpha(0f)) {
+                            tabStateHolder.SaveableStateProvider(HurryTab.HOME.name) {
+                                HomeScreen(
                                 languageCode = languageCode,
                                 selectedTab = tab,
                                 unreadMessageCount = unreadMessageCount,
@@ -759,10 +762,18 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                                     authPrefs.edit().remove("kept_room_data").apply()
                                 }
                             )
-                            HurryTab.MESSAGE -> MessageScreen(onChat = { uid, name, image ->
+                            }
+                        }
+                        Box(if (tab == HurryTab.MESSAGE) Modifier.fillMaxSize() else Modifier.size(1.dp).alpha(0f)) {
+                            tabStateHolder.SaveableStateProvider(HurryTab.MESSAGE.name) {
+                                MessageScreen(onChat = { uid, name, image ->
                                 openedChat = Triple(uid, name, image)
                             }, onJoinRoom = { targetRoomId -> tryOpenRoomById(targetRoomId) })
-                            HurryTab.ME -> when (openedMePage) {
+                            }
+                        }
+                        Box(if (tab == HurryTab.ME) Modifier.fillMaxSize() else Modifier.size(1.dp).alpha(0f)) {
+                            tabStateHolder.SaveableStateProvider(HurryTab.ME.name) {
+                                when (openedMePage) {
                                 null -> MeScreen(languageCode = languageCode,onOpen = { openedMePage = it }, onPublicProfile = { openedPublicProfile = it })
                                 "Coins" -> CoinsNativePage(onBack = { openedMePage = null }, onChat = { uid, name, image -> openedMePage = null; openedChat = Triple(uid, name, image) })
                                 "Diamonds" -> DiamondsNativePage(onBack = { openedMePage = null })
