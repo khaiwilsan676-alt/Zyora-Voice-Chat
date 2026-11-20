@@ -1585,3 +1585,5 @@ Current documentation does not certify that all historical features are build-, 
 - Native private chat input adds the gift entry point and opens the shared Room GiftPicker.
 - Chat GiftPicker is fixed to the active chat partner: only that avatar is shown; MIC and HOUSE recipient controls are hidden.
 - Chat gift payments use the canonical wallet debit endpoint and existing private-message Socket.IO delivery. Room GiftPicker behavior is unchanged.
+
+- Native `JitsiRoomAudio.kt`: stabilized concurrent 2+ speaker playback by adding a short voice jitter-buffer prefill, increasing bounded per-speaker frame queues, and using power-normalized mixing instead of averaging every active speaker down. Switched mic capture to Android's `VOICE_COMMUNICATION` source so supported devices can apply communication echo/noise processing. Self-packet filtering and server-side sender-socket exclusion remain in place. **Needs native APK build plus real 2-, 3-, and 5-speaker device testing; this source change alone does not prove echo/crackle is fully resolved.**
