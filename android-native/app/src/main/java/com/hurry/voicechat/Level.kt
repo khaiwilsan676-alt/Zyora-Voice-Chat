@@ -437,16 +437,19 @@ fun Level(onBack: () -> Unit = {}) {
     val context = LocalContext.current
     val configuration = LocalConfiguration.current
 
-    val userPrefs = remember { context.getSharedPreferences("hurry_user", Context.MODE_PRIVATE) }
-    val storedName = userPrefs.getString("name", "")?.trim().orEmpty()
+    // Login and canonical own-profile fields are stored in hurry_auth.
+    // Reading hurry_user returned blank identity and caused the Guest fallback.
+    val authPrefs = remember { context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE) }
+    val storedName = authPrefs.getString("name", "")?.trim().orEmpty()
     val userName = storedName.takeIf { it.isNotBlank() && it.lowercase() !in listOf("guest", "user", "null", "undefined") }
-    val userUid = userPrefs.getString("uid", "")?.trim().orEmpty().ifBlank {
-        userPrefs.getString("phone", "")?.trim().orEmpty()
+    val userUid = authPrefs.getString("uid", "")?.trim().orEmpty()
+    val userAccountId = authPrefs.getString("accountId", "")?.trim().orEmpty()
+    val userPhoto = sequenceOf("image", "photo", "avatar")
+        .map { authPrefs.getString(it, "")?.trim().orEmpty() }
+        .firstOrNull { it.isNotBlank() && it != "null" && it != "undefined" }.orEmpty()
+    val profileLookupId = userAccountId.ifBlank {
+        authPrefs.getString("id", "")?.trim().orEmpty().ifBlank { userUid }
     }
-    val userPhoto = userPrefs.getString("photo", "")?.trim().orEmpty()
-    val profileLookupId = sequenceOf("accountId", "id", "uid", "phone")
-        .map { userPrefs.getString(it, "")?.trim().orEmpty() }
-        .firstOrNull { it.isNotBlank() && it != "null" }.orEmpty().ifBlank { userUid }
     var profileName by remember { mutableStateOf(userName.orEmpty()) }
     var profilePhoto by remember { mutableStateOf(userPhoto) }
 
@@ -456,10 +459,13 @@ fun Level(onBack: () -> Unit = {}) {
                 runCatching {
                     ProfilePersistence.load(
                         TargetUser(
-                            id = profileLookupId,
+                            id = authPrefs.getString("id", "")?.trim().orEmpty().ifBlank { userUid },
                             uid = userUid.ifBlank { profileLookupId },
-                            accountId = profileLookupId,
-                            displayAccountNumber = profileLookupId
+                            name = userName,
+                            accountId = userAccountId.ifBlank { profileLookupId },
+                            displayAccountNumber = userAccountId.ifBlank { profileLookupId },
+                            photo = userPhoto,
+                            image = userPhoto
                         )
                     )
                 }.getOrNull()
