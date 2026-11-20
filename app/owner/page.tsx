@@ -1922,7 +1922,7 @@ export default function StaffPanel() {
         {activeTab === 'special_ids' && (
           <div className="p-6 md:p-8 max-w-6xl mx-auto w-full h-full overflow-y-auto">
             <h2 className="mb-5 text-xl font-bold text-slate-800">Special IDs</h2>
-            <SpecialIdsPanel users={users} />
+            <SpecialIdsPanel users={users} ownerKey={VALID_CREDENTIALS.secretKey} />
           </div>
         )}
 
