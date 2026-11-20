@@ -696,6 +696,7 @@ fun RoomPage(
     var showRoomTask by remember{mutableStateOf(false)}
     var showWildParty by remember{mutableStateOf(false)}
     var showFruitParty by remember{mutableStateOf(false)}
+    var showDragonBattle by remember{mutableStateOf(false)}
     var showSeatSheet by remember{mutableStateOf(false)}
     var selectedChatProfile by remember { mutableStateOf<NativeRoomMessage?>(null) }
 
@@ -2858,10 +2859,12 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
         if (roomGiftVideoPreview.isNotBlank()) {
             RoomGiftVideoOverlay(src = roomGiftVideoPreview) { roomGiftVideoPreview = "" }
         }
-        if(showGames) GamesSheet(onClose={showGames=false},onWildParty={showGames=false;showWildParty=true},onFruitParty={showGames=false;showFruitParty=true},onDragonBattle={showGames=false})
+        if(showGames) GamesSheet(onClose={showGames=false},onWildParty={showGames=false;showWildParty=true},onFruitParty={showGames=false;showFruitParty=true},onDragonBattle={showGames=false;showDragonBattle=true})
         if(showRoomTask) Roomtask(onBack={showRoomTask=false})
         if(showWildParty) Wildparty(onClose={showWildParty=false},onMinimize={showWildParty=false})
         if(showFruitParty) Fruitparty(onClose={showFruitParty=false},onMinimize={showFruitParty=false})
+        BackHandler(enabled=showDragonBattle) { showDragonBattle=false }
+        if(showDragonBattle) DragonBattleMainScreen(onClose={showDragonBattle=false},onMinimize={showDragonBattle=false})
         if(showEmoji) EmojiPicker(onClose={showEmoji=false},onSelectEmoji={ sticker ->
             val seatIndex=seats.indexOfFirst{it.occupied && it.accountId==accountId}
             if(seatIndex>=0){
@@ -3859,6 +3862,8 @@ private val Int.percentHeight: androidx.compose.ui.unit.Dp
                     Box(Modifier.weight(1f),contentAlignment=Alignment.TopCenter){
                         DragonBattleGameItem(onClick=onDragonBattle)
                     }
+                    // Fourth grid column intentionally stays empty until another game is added.
+                    Spacer(Modifier.weight(1f))
                 }
             }
         }
