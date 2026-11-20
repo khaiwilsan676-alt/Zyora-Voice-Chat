@@ -1878,6 +1878,19 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                             val user = JSONObject().put("name", displayName).put("image", displayImage).put("accountId", accountId)
                             val targetIndex = seats.indexOfFirst { it.number == tappedSeat.number }
                             if (targetIndex >= 0 && !seats[targetIndex].occupied && !seats[targetIndex].locked) {
+                                // Move this account off its previous seat immediately.
+                                // Previously only the destination was painted optimistically,
+                                // leaving the old avatar visible until the server snapshot.
+                                seats.indices.filter { index ->
+                                    index != targetIndex && seats[index].occupied &&
+                                        seats[index].accountId == accountId
+                                }.forEach { index ->
+                                    seats[index] = seats[index].copy(
+                                        occupied = false, userName = "", userImage = "",
+                                        accountId = "", muted = false, selfMuted = false,
+                                        speaking = false, gifSrc = "", gifTimestamp = 0L
+                                    )
+                                }
                                 seats[targetIndex] = seats[targetIndex].copy(
                                     occupied = true, userName = displayName, userImage = displayImage,
                                     accountId = accountId, muted = false
