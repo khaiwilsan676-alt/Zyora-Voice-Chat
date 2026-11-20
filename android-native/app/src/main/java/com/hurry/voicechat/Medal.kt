@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.platform.LocalContext
 import coil3.compose.AsyncImage
 import kotlin.math.cos
 import kotlin.math.sin
@@ -59,6 +60,11 @@ val TIER_TAB_IMAGES = listOf(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MedalScreen(onBack: () -> Unit) {
+    val context = LocalContext.current
+    val medalUserId = remember {
+        val prefs = context.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE)
+        prefs.getString("accountId", null)?.takeIf { it.isNotBlank() } ?: prefs.getString("uid", "").orEmpty()
+    }
     var activeTab by remember { mutableStateOf("event") }
     var selectedMedal by remember { mutableStateOf<MedalItem?>(null) }
     var activeTier by remember { mutableIntStateOf(0) }
@@ -266,13 +272,19 @@ fun MedalScreen(onBack: () -> Unit) {
                         .background(Color(0xFF030E21).copy(alpha = 0.5f))
                 )
 
-                LazyVerticalGrid(
+                Column(Modifier.fillMaxSize().padding(horizontal = 14.dp, vertical = 10.dp)) {
+                    if (activeTab == "event") {
+                        NativeOwnedMedalShowcase(userId = medalUserId)
+                        Spacer(Modifier.height(8.dp))
+                    }
+                    LazyVerticalGrid(
                     columns = GridCells.Fixed(3),
                     contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 16.dp, bottom = 24.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalArrangement = Arrangement.spacedBy(20.dp),
                     modifier = Modifier
-                        .fillMaxSize()
+                        .weight(1f)
+                        .fillMaxWidth()
                         .clipToBounds()
                 ) {
                     items(filteredMedals.size) { index ->
@@ -307,6 +319,7 @@ fun MedalScreen(onBack: () -> Unit) {
                             )
                         }
                     }
+                    }
                 }
             }
         }
@@ -333,7 +346,7 @@ fun MedalScreen(onBack: () -> Unit) {
     }
 
     if (showUnequipped) {
-        WearBadgeBottomSheet(onDismiss = { showUnequipped = false })
+        WearBadgeBottomSheet(userId = medalUserId, onDismiss = { showUnequipped = false })
     }
 
     if (showRules) {
@@ -343,7 +356,7 @@ fun MedalScreen(onBack: () -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun WearBadgeBottomSheet(onDismiss: () -> Unit) {
+fun WearBadgeBottomSheet(userId: String, onDismiss: () -> Unit) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val buttonShape = RoundedCornerShape(12.dp)
 
@@ -373,26 +386,8 @@ fun WearBadgeBottomSheet(onDismiss: () -> Unit) {
                 textAlign = TextAlign.Center
             )
 
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                AsyncImage(
-                    model = "file_0000000047308211a02722299d1fda2e.png".fullUrl,
-                    contentDescription = "No Badge",
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier.size(135.dp)
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    text = "No Badge",
-                    color = Color(0xFF7D92B0),
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Normal
-                )
+            Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                NativeOwnedMedalShowcase(userId = userId, showEmpty = true)
             }
 
             Box(
