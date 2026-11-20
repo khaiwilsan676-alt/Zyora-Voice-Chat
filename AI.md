@@ -1599,3 +1599,10 @@ Current documentation does not certify that all historical features are build-, 
 - Asset choices are compact square image tiles; the selected asset name and thumbnail are shown in a left-aligned row, followed by the Title Assets preview and Days field.
 - Kept asset grant requests, asset catalog data, history, and backend endpoints unchanged.
 - Owner Gift Catalog asset grants now send the recipient a private Zyora System inbox message after the inventory grant is saved: `You receive: [asset type]`, `Day's: [days]`, `From. Zyora Official Team`. Online delivery uses Socket.IO; offline delivery is queued in Redis for up to 7 days. Backend commit: `0f9e752be32073197c486708c57a7b2af320b740`.
+
+
+## Temporary Special ID profile sync fix (2026-11-20)
+- PublicProfile.kt now copies `vipId`, `vipIdDays`, `vipIdAssignedAt`, `vipIdExpiresAt`, `vipIdBadge`, and `vipIdBadgeType` from the latest remote profile response into the local profile cache, even when a cached profile already exists.
+- RoomProfile.kt now refreshes the same temporary-ID fields from the remote profile instead of leaving an existing cache without the assigned ID.
+- The original App ID remains the fallback when the temporary ID is expired; no original account identifier is overwritten.
+- Native APK build and live server assignment were not verified as part of this source change.
