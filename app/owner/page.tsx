@@ -11,6 +11,7 @@ import OwnerBan from '@/components/ownerban';
 import ManageRooms from '@/components/owner/ManageRooms';
 import SellerCenterUsers from '@/components/owner/SellerCenterUsers';
 import OwnerAssetsPanel from '@/components/owner/OwnerAssetsPanel';
+import SpecialIdsPanel from '@/components/owner/SpecialIdsPanel';
 import { apiUrl } from "@/src/lib/api";
 
 // ==============================================================
@@ -1918,6 +1919,13 @@ export default function StaffPanel() {
           </div>
         )}
 
+        {activeTab === 'special_ids' && (
+          <div className="p-6 md:p-8 max-w-6xl mx-auto w-full h-full overflow-y-auto">
+            <h2 className="mb-5 text-xl font-bold text-slate-800">Special IDs</h2>
+            <SpecialIdsPanel users={users} />
+          </div>
+        )}
+
         {activeTab === 'gift_catalog' && (
           <div className="p-6 md:p-8 max-w-6xl mx-auto w-full h-full overflow-y-auto">
             <h2 className="mb-5 text-xl font-bold text-slate-800">Assets</h2>
@@ -2958,7 +2966,7 @@ export default function StaffPanel() {
           </div>
         )}
 
-        {activeTab !== 'wallet' && activeTab !== 'manage_users' && activeTab !== 'game_fruit_party' && activeTab !== 'game_wild_party' && activeTab !== 'themes' && activeTab !== 'gift_catalog' && activeTab !== 'ai_chats' && activeTab !== 'feedback' && activeTab !== 'official_msg' && activeTab !== 'reports' && activeTab !== 'bans' && activeTab !== 'tickets' && (
+        {activeTab !== 'wallet' && activeTab !== 'manage_users' && activeTab !== 'game_fruit_party' && activeTab !== 'game_wild_party' && activeTab !== 'themes' && activeTab !== 'gift_catalog' && activeTab !== 'special_ids' && activeTab !== 'ai_chats' && activeTab !== 'feedback' && activeTab !== 'official_msg' && activeTab !== 'reports' && activeTab !== 'bans' && activeTab !== 'tickets' && (
           <div className="p-8 max-w-5xl mx-auto w-full">
             <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
               <h2 className="text-xl font-bold text-slate-800 capitalize">
