@@ -2858,7 +2858,7 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
         if (roomGiftVideoPreview.isNotBlank()) {
             RoomGiftVideoOverlay(src = roomGiftVideoPreview) { roomGiftVideoPreview = "" }
         }
-        if(showGames) GamesSheet(onClose={showGames=false},onWildParty={showGames=false;showWildParty=true},onFruitParty={showGames=false;showFruitParty=true})
+        if(showGames) GamesSheet(onClose={showGames=false},onWildParty={showGames=false;showWildParty=true},onFruitParty={showGames=false;showFruitParty=true},onDragonBattle={showGames=false})
         if(showRoomTask) Roomtask(onBack={showRoomTask=false})
         if(showWildParty) Wildparty(onClose={showWildParty=false},onMinimize={showWildParty=false})
         if(showFruitParty) Fruitparty(onClose={showFruitParty=false},onMinimize={showFruitParty=false})
@@ -3832,25 +3832,32 @@ private val Int.percentHeight: androidx.compose.ui.unit.Dp
     Text(seat.userName,color=Color.White,fontSize=17.sp);if (seat.accountId in setOf("500002", "500003", "500004", "500005", "500005")) { Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(3.dp)) { AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261101_125212.png",contentDescription="Purple ID Badge",contentScale=ContentScale.Fit,modifier=Modifier.height(18.dp).widthIn(max=28.dp)); Text(seat.accountId,color=Color.White.copy(.65f),fontSize=12.sp) } } else Text("ID: "+seat.accountId,color=Color.White.copy(.65f),fontSize=12.sp)
 }
 
-@Composable private fun GamesSheet(onClose:()->Unit,onWildParty:()->Unit,onFruitParty:()->Unit){
+@Composable private fun GamesSheet(onClose:()->Unit,onWildParty:()->Unit,onFruitParty:()->Unit,onDragonBattle:()->Unit){
     val context=LocalContext.current
     val wildIcon=context.resources.getIdentifier("fp_file_000000009d808211b8ffb7c2183b4ef5","drawable",context.packageName)
     val fruitIcon=context.resources.getIdentifier("fp_file_00000000c9e08211ab3e8c4d511b7965","drawable",context.packageName)
     Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=.30f)).clickable{onClose()},contentAlignment=Alignment.BottomCenter){
         Surface(Modifier.fillMaxWidth().clickable(enabled=false){},color=Color.Black.copy(alpha=0.92f),shape=RoundedCornerShape(topStart=15.dp,topEnd=15.dp)){
             Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(start=16.dp,end=16.dp,top=12.dp,bottom=24.dp)){
-                Text("Games",color=Color.White,fontSize=16.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Bold)
+                Text("Games",color=Color.White,fontSize=16.sp,fontWeight=FontWeight.Bold)
                 Spacer(Modifier.height(16.dp))
-                Row(horizontalArrangement=Arrangement.spacedBy(20.dp),verticalAlignment=Alignment.Top){
-                    Column(Modifier.clickable{onWildParty()}, horizontalAlignment=Alignment.CenterHorizontally){
+                Row(
+                    modifier=Modifier.fillMaxWidth(),
+                    horizontalArrangement=Arrangement.spacedBy(10.dp),
+                    verticalAlignment=Alignment.Top
+                ){
+                    Column(Modifier.weight(1f).clickable{onWildParty()}, horizontalAlignment=Alignment.CenterHorizontally){
                         if(wildIcon!=0) Image(painterResource(wildIcon),contentDescription="Wild party",modifier=Modifier.size(56.dp),contentScale=ContentScale.Fit)
                         Spacer(Modifier.height(2.dp))
                         Text("Wild party",color=Color.White,fontSize=10.sp,maxLines=1,softWrap=false)
                     }
-                    Column(Modifier.clickable{onFruitParty()}, horizontalAlignment=Alignment.CenterHorizontally){
-                        if(fruitIcon!=0) Image(painterResource(fruitIcon),contentDescription="Fruit party",modifier=Modifier.size(54.dp).clip(RoundedCornerShape(6.dp)),contentScale=ContentScale.Fit)
+                    Column(Modifier.weight(1f).clickable{onFruitParty()}, horizontalAlignment=Alignment.CenterHorizontally){
+                        if(fruitIcon!=0) Image(painterResource(fruitIcon),contentDescription="Fruit party",modifier=Modifier.size(56.dp).clip(RoundedCornerShape(6.dp)),contentScale=ContentScale.Fit)
                         Spacer(Modifier.height(2.dp))
                         Text("Fruit party",color=Color.White,fontSize=10.sp,maxLines=1,softWrap=false)
+                    }
+                    Box(Modifier.weight(1f),contentAlignment=Alignment.TopCenter){
+                        DragonBattleGameItem(onClick=onDragonBattle)
                     }
                 }
             }
