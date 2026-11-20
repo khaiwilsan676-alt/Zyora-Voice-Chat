@@ -1546,3 +1546,11 @@ Current documentation does not certify that all historical features are build-, 
 - `RoomPage.kt`: regular-user seat moves now clear every local seat occupied by any verified current-user identity (`accountId`, UID, and current-user ID), not only one account-ID string, before setting the destination seat. The owner/admin `onTake` path applies the same immediate one-seat transition while preserving seat locks.
 - `Zyora-Server/server.js`: `room_seat_action: take` now validates the destination before clearing the previous seat, then clears any old seat matching the authenticated socket's verified identity set and sets the destination before emitting one authoritative `room_seats` snapshot. A failed/locked destination no longer removes the user's current seat.
 - Existing room UI, seat layout, voice/mute state handling, and Socket.IO/Redis adapter are unchanged. Native build and multi-device live seat-transfer tests are still required; no device verification is claimed.
+
+
+## 2026-11-20 — Native Home / Message / Me responsiveness
+- MeScreen profile and visitor-history cache reads no longer run synchronously during Compose composition; the local database hydration runs on Dispatchers.IO.
+- MessageScreen conversation-cache hydration now runs on Dispatchers.IO while the built-in Zyora Team/System rows render immediately.
+- Inbox preview persistence and profile-refresh conversation reads/writes are moved off the UI thread to avoid blocking scrolling and tab interactions.
+- No visual/layout changes; existing chat, visitor, follow, and profile behavior is retained.
+- Native APK workflow/build verification is pending.
