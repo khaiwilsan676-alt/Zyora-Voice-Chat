@@ -1,11 +1,10 @@
 package com.hurry.voicechat
 
-import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -16,23 +15,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.media3.common.MediaItem
-import androidx.media3.common.Player
-import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.ui.PlayerView
 import coil3.compose.AsyncImage
+import kotlin.math.cos
+import kotlin.math.sin
 
 private const val RAW_URL = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/"
 private val String.fullUrl: String get() = if (this.startsWith("http")) this else RAW_URL + this.removePrefix("/")
@@ -40,15 +37,15 @@ private val String.fullUrl: String get() = if (this.startsWith("http")) this els
 data class MedalItem(
     val id: String,
     val name: String,
-    val video: String, // Thumbnail image for Grid
-    val previewVideo: String, // MP4 Video for Dialog Preview
+    val video: String, // Medal Image
+    val previewVideo: String,
     val stars: Int,
     val category: String, // 'achievement' | 'gift' | 'activity' | 'dummy'
-    val variant: String = "black", // 'black' | 'green'
+    val variant: String = "black",
     val cardVideoSize: Int,
-    val cardVideoTop: Float, // percentage as float 0.0 to 1.0
+    val cardVideoTop: Float,
     val sheetVideoSize: Int,
-    val sheetVideoTop: Float, // percentage as float
+    val sheetVideoTop: Float,
     val tierGroup: String? = null,
     val giftText: String
 )
@@ -62,7 +59,7 @@ val TIER_TAB_IMAGES = listOf(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MedalScreen(onBack: () -> Unit) {
-    var activeTab by remember { mutableStateOf("achievement") }
+    var activeTab by remember { mutableStateOf("event") }
     var selectedMedal by remember { mutableStateOf<MedalItem?>(null) }
     var activeTier by remember { mutableIntStateOf(0) }
 
@@ -71,7 +68,13 @@ fun MedalScreen(onBack: () -> Unit) {
     var showRules by remember { mutableStateOf(false) }
 
     val medals = remember { getMedalsData() }
-    val filteredMedals = medals.filter { it.category == activeTab }
+    val filteredMedals = remember(activeTab, medals) {
+        if (activeTab == "honor") {
+            medals.filter { it.category == "achievement" }
+        } else {
+            medals.filter { it.category == "activity" || it.category == "gift" }
+        }
+    }
 
     fun getTierMedals(medal: MedalItem?): List<MedalItem> {
         if (medal == null) return emptyList()
@@ -85,26 +88,46 @@ fun MedalScreen(onBack: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF051329)) // Deep Blue fallback background
+            .background(Color(0xFF030B17))
     ) {
         // 1. Fixed Top Background Image
-        AsyncImage(
-            model = "file_000000008f6c82109aa9c53c85841c5b.png".fullUrl,
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .fillMaxHeight(0.45f)
                 .align(Alignment.TopCenter)
-        )
+        ) {
+            AsyncImage(
+                model = "file_000000008f6c82109aa9c53c85841c5b.png".fullUrl,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer { alpha = 0.55f }
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color(0xFF030B17).copy(alpha = 0.55f),
+                                Color(0xFF030B17).copy(alpha = 0.35f),
+                                Color(0xFF030B17).copy(alpha = 0.75f)
+                            )
+                        )
+                    )
+            )
+            FloatingEmbersAnimation(modifier = Modifier.fillMaxSize())
+        }
 
-        // 2. Main Fixed Layout (No page scroll)
+        // 2. Main Fixed Layout
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .windowInsetsPadding(WindowInsets.statusBars)
         ) {
-            // Fixed Header
+            // Header
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -126,11 +149,11 @@ fun MedalScreen(onBack: () -> Unit) {
                 }
             }
 
-            // Fixed 10 Slots Grid (Row 1: 5, Row 2: 5)
+            // 10 Slots Grid
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 18.dp, vertical = 10.dp),
+                    .padding(horizontal = 24.dp, vertical = 10.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Row(
@@ -141,7 +164,7 @@ fun MedalScreen(onBack: () -> Unit) {
                         MedalSlot { showUnequipped = true }
                     }
                 }
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(14.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
@@ -154,24 +177,23 @@ fun MedalScreen(onBack: () -> Unit) {
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // Fixed Tabs (Blue Theme + Golden Border)
+            // 2 Tabs
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    .padding(horizontal = 18.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 listOf(
-                    "achievement" to "Achievements",
-                    "activity" to "Activities",
-                    "gift" to "Gift"
+                    "honor" to "Honor Badge·0",
+                    "event" to "Event Badge·0"
                 ).forEach { (key, label) ->
                     val isSelected = activeTab == key
                     val tabShape = RoundedCornerShape(topStart = 10.dp, topEnd = 10.dp)
                     Box(
                         modifier = Modifier
                             .weight(1f)
-                            .height(40.dp)
+                            .height(42.dp)
                             .clip(tabShape)
                             .background(
                                 if (isSelected) {
@@ -180,13 +202,16 @@ fun MedalScreen(onBack: () -> Unit) {
                                     )
                                 } else {
                                     Brush.verticalGradient(
-                                        listOf(Color(0xFF08224A).copy(alpha = 0.88f), Color(0xFF04132C).copy(alpha = 0.92f))
+                                        listOf(
+                                            Color(0xFF071E42).copy(alpha = 0.85f),
+                                            Color(0xFF041229).copy(alpha = 0.92f)
+                                        )
                                     )
                                 }
                             )
                             .border(
                                 width = if (isSelected) 1.5.dp else 1.dp,
-                                color = if (isSelected) Color(0xFFE5C158) else Color(0xFF28558F).copy(alpha = 0.65f),
+                                color = if (isSelected) Color(0xFFE5C158) else Color(0xFF28558F).copy(alpha = 0.55f),
                                 shape = tabShape
                             )
                             .clickable { activeTab = key },
@@ -194,8 +219,8 @@ fun MedalScreen(onBack: () -> Unit) {
                     ) {
                         Text(
                             text = label,
-                            color = if (isSelected) Color.White else Color(0xFFB5CBE8),
-                            fontSize = 13.sp,
+                            color = if (isSelected) Color.White else Color(0xFFAEC5E3),
+                            fontSize = 14.sp,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
@@ -204,7 +229,7 @@ fun MedalScreen(onBack: () -> Unit) {
                 }
             }
 
-            // Fixed Bottom Curved Container with Golden Top Border Only
+            // Bottom Curved Container
             val bottomShape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
             Box(
                 modifier = Modifier
@@ -222,19 +247,25 @@ fun MedalScreen(onBack: () -> Unit) {
                         ),
                         shape = bottomShape
                     )
-                    .padding(top = 2.dp) // Sirf top curved golden border
+                    .padding(top = 2.dp)
                     .clip(bottomShape)
+                    .background(Color(0xFF041126))
                     .clipToBounds()
             ) {
-                // Fixed Bottom Background Image
                 AsyncImage(
                     model = "file_00000000a8e08210a8a24219461e3ce6.png".fullUrl,
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer { alpha = 0.45f }
+                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color(0xFF030E21).copy(alpha = 0.5f))
                 )
 
-                // ONLY Medals Scroll Here (Strictly Clipped Inside Bottom Border)
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(3),
                     contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 16.dp, bottom = 24.dp),
@@ -257,7 +288,6 @@ fun MedalScreen(onBack: () -> Unit) {
                                 },
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            // Colorless Image display in Grid
                             AsyncImage(
                                 model = medal.video.fullUrl,
                                 contentDescription = medal.name,
@@ -281,130 +311,15 @@ fun MedalScreen(onBack: () -> Unit) {
             }
         }
 
-        // Full Screen Overlay (Medal Detail) with Video Player
+        // FULL SCREEN MEDAL DETAIL DIALOG (IMAGE ONLY - SAME AS SCREENSHOT)
         if (selectedMedal != null && displayMedal != null) {
-            Dialog(
-                onDismissRequest = { selectedMedal = null },
-                properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.Black)
-                ) {
-                    // Top Header Area
-                    Box(modifier = Modifier.fillMaxWidth().fillMaxHeight(0.3f)) {
-                        AsyncImage(
-                            model = "IMG_20260924_132006.png".fullUrl,
-                            contentDescription = null,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .windowInsetsPadding(WindowInsets.statusBars)
-                                .padding(8.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            IconButton(onClick = { selectedMedal = null }) {
-                                Icon(Icons.Default.ArrowBack, null, tint = Color.White)
-                            }
-                            IconButton(onClick = { showRules = true }) {
-                                Icon(Icons.Default.HelpOutline, null, tint = Color.White.copy(alpha = 0.8f))
-                            }
-                        }
-
-                        // VIDEO PLAYER FOR PREVIEW
-                        MedalVideoPlayer(
-                            videoUrl = displayMedal.previewVideo.fullUrl,
-                            modifier = Modifier
-                                .size(displayMedal.sheetVideoSize.dp)
-                                .align(Alignment.Center)
-                                .offset(y = 20.dp)
-                        )
-                    }
-
-                    // Bottom Content Area
-                    Column(
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .fillMaxWidth()
-                            .fillMaxHeight(0.7f)
-                            .padding(horizontal = 24.dp, vertical = 32.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        AsyncImage(
-                            model = "IMG_20260924_132112.png".fullUrl,
-                            contentDescription = "frame",
-                            modifier = Modifier.size(256.dp)
-                        )
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        // Stars
-                        Row(horizontalArrangement = Arrangement.Center) {
-                            repeat(displayMedal.stars) {
-                                Text("★", color = Color(0xFFEAB308), fontSize = 16.sp)
-                            }
-                        }
-
-                        Text(
-                            text = displayMedal.name,
-                            color = Color.White,
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(top = 4.dp)
-                        )
-
-                        Text(
-                            text = displayMedal.giftText,
-                            color = Color(0xFF6B7280),
-                            fontSize = 16.sp,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.padding(top = 4.dp)
-                        )
-
-                        if (tierMedals.size > 1) {
-                            Spacer(modifier = Modifier.height(24.dp))
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
-                                tierMedals.indices.forEach { i ->
-                                    if (i > 0) Text(" > ", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp, modifier = Modifier.padding(horizontal = 8.dp))
-                                    // 3 Tabs loop
-                                    AsyncImage(
-                                        model = TIER_TAB_IMAGES.getOrNull(i)?.fullUrl ?: TIER_TAB_IMAGES.last().fullUrl,
-                                        contentDescription = null,
-                                        modifier = Modifier
-                                            .size(48.dp)
-                                            .clip(RoundedCornerShape(8.dp))
-                                            .border(
-                                                width = if (activeTier == i) 2.dp else 0.dp,
-                                                color = if (activeTier == i) Color(0xFFFACC15) else Color.Transparent,
-                                                shape = RoundedCornerShape(8.dp)
-                                            )
-                                            .clickable { activeTier = i }
-                                            .graphicsLayer { alpha = if (activeTier == i) 1f else 0.7f }
-                                    )
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(32.dp))
-                            Box(
-                                modifier = Modifier
-                                    .width(320.dp)
-                                    .height(48.dp)
-                                    .clip(CircleShape)
-                                    .background(Brush.verticalGradient(listOf(Color(0xFFFDE08B), Color(0xFFE2B344))))
-                                    .clickable { /* action */ },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text("Not Obtained", color = Color(0xFF4A2B0C), fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
-                            }
-                        }
-                    }
-                }
-            }
+            MedalDetailDialog(
+                displayMedal = displayMedal,
+                tierMedals = tierMedals,
+                activeTier = activeTier,
+                onSelectTier = { activeTier = it },
+                onDismiss = { selectedMedal = null }
+            )
         }
     }
 
@@ -430,43 +345,315 @@ fun MedalScreen(onBack: () -> Unit) {
     }
 }
 
-// VIDEO PLAYER COMPONENT
 @Composable
-fun MedalVideoPlayer(videoUrl: String, modifier: Modifier = Modifier) {
-    val context = LocalContext.current
-    val exoPlayer = remember {
-        ExoPlayer.Builder(context).build().apply {
-            setMediaItem(MediaItem.fromUri(videoUrl))
-            repeatMode = Player.REPEAT_MODE_ONE // Loop
-            playWhenReady = true
-            prepare()
-        }
-    }
+fun MedalDetailDialog(
+    displayMedal: MedalItem,
+    tierMedals: List<MedalItem>,
+    activeTier: Int,
+    onSelectTier: (Int) -> Unit,
+    onDismiss: () -> Unit
+) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            decorFitsSystemWindows = false
+        )
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.94f))
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onDismiss
+                )
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .windowInsetsPadding(WindowInsets.systemBars)
+                    .padding(horizontal = 24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Spacer(modifier = Modifier.height(64.dp))
 
-    DisposableEffect(Unit) {
-        onDispose {
-            exoPlayer.release()
-        }
-    }
+                // Medal Image with Rotating Golden Sunburst Rays & Confetti
+                Box(
+                    modifier = Modifier
+                        .size(310.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    GoldenSunburstEffect(modifier = Modifier.fillMaxSize())
 
-    AndroidView(
-        factory = {
-            PlayerView(context).apply {
-                player = exoPlayer
-                useController = false
-                setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                    AsyncImage(
+                        model = displayMedal.video.fullUrl,
+                        contentDescription = displayMedal.name,
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.size(215.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(18.dp))
+
+                // Medal Name
+                Text(
+                    text = displayMedal.name,
+                    color = Color.White,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Subtitle / Gift Text
+                Text(
+                    text = displayMedal.giftText,
+                    color = Color(0xFFB8BCC4),
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Normal,
+                    textAlign = TextAlign.Center
+                )
+
+                // 1 > 2 > 3 Tier Images Row (Same TIER_TAB_IMAGES)
+                if (tierMedals.size > 1) {
+                    Spacer(modifier = Modifier.height(22.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center,
+                        modifier = Modifier.clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = {}
+                        )
+                    ) {
+                        tierMedals.indices.forEach { i ->
+                            if (i > 0) {
+                                Text(
+                                    text = ">",
+                                    color = Color(0xFF9CA3AF),
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    modifier = Modifier.padding(horizontal = 14.dp)
+                                )
+                            }
+                            val isSelected = activeTier == i
+                            val boxShape = RoundedCornerShape(10.dp)
+                            Box(
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clip(boxShape)
+                                    .background(
+                                        if (isSelected) Color(0xFF1A1610) else Color.Transparent
+                                    )
+                                    .border(
+                                        width = if (isSelected) 1.3.dp else 0.dp,
+                                        color = if (isSelected) Color(0xFFE5C158) else Color.Transparent,
+                                        shape = boxShape
+                                    )
+                                    .clickable { onSelectTier(i) }
+                                    .padding(4.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                AsyncImage(
+                                    model = TIER_TAB_IMAGES.getOrNull(i)?.fullUrl ?: TIER_TAB_IMAGES.last().fullUrl,
+                                    contentDescription = "Tier ${i + 1}",
+                                    contentScale = ContentScale.Fit,
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .graphicsLayer { alpha = if (isSelected) 1f else 0.85f }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                // "Not Obtained" Grey Pill Button (Same as Screenshot)
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color(0xFF3E3E40))
+                        .padding(horizontal = 18.dp, vertical = 7.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Not Obtained",
+                        color = Color(0xFFD4D4D8),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                // Bottom Text
+                Text(
+                    text = "The event has ended",
+                    color = Color(0xFF8E8E93),
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Normal,
+                    modifier = Modifier.padding(bottom = 26.dp)
+                )
             }
-        },
-        modifier = modifier
-    )
+        }
+    }
 }
 
-// HELPER UI COMPONENTS - Slot Card with Image ONLY (No + Icon)
+@Composable
+fun GoldenSunburstEffect(modifier: Modifier = Modifier) {
+    val infiniteTransition = rememberInfiniteTransition(label = "sunburst")
+    val rotation by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 28000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "sunburstRotation"
+    )
+
+    Canvas(modifier = modifier) {
+        val center = Offset(size.width / 2f, size.height / 2f)
+        val radius = size.minDimension * 0.58f
+        val rayCount = 18
+
+        // Soft Golden Radial Glow
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(
+                    Color(0xFFF3C969).copy(alpha = 0.28f),
+                    Color(0xFFC79532).copy(alpha = 0.10f),
+                    Color.Transparent
+                ),
+                center = center,
+                radius = radius
+            ),
+            radius = radius,
+            center = center
+        )
+
+        // Rotating Golden Rays
+        rotate(degrees = rotation, pivot = center) {
+            val stepAngle = 360f / rayCount
+            for (i in 0 until rayCount) {
+                val startDeg = i * stepAngle
+                val halfSpread = stepAngle * 0.24f
+                val rad1 = Math.toRadians((startDeg - halfSpread).toDouble())
+                val rad2 = Math.toRadians((startDeg + halfSpread).toDouble())
+
+                val path = Path().apply {
+                    moveTo(center.x, center.y)
+                    lineTo(
+                        center.x + (radius * cos(rad1)).toFloat(),
+                        center.y + (radius * sin(rad1)).toFloat()
+                    )
+                    lineTo(
+                        center.x + (radius * cos(rad2)).toFloat(),
+                        center.y + (radius * sin(rad2)).toFloat()
+                    )
+                    close()
+                }
+                drawPath(
+                    path = path,
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            Color(0xFFF7D57E).copy(alpha = 0.22f),
+                            Color(0xFFC89B3C).copy(alpha = 0.08f),
+                            Color.Transparent
+                        ),
+                        center = center,
+                        radius = radius
+                    )
+                )
+            }
+        }
+    }
+}
+
+// FLOATING FIRE SPARKS / EMBERS ANIMATION
+private data class EmberParticle(
+    val startXFraction: Float,
+    val phaseOffset: Float,
+    val speedMultiplier: Float,
+    val radiusDp: Float,
+    val driftXFraction: Float,
+    val color: Color
+)
+
+@Composable
+fun FloatingEmbersAnimation(modifier: Modifier = Modifier) {
+    val particles = remember {
+        listOf(
+            EmberParticle(0.08f, 0.00f, 1.0f, 2.2f, 0.14f, Color(0xFFFFE082)),
+            EmberParticle(0.15f, 0.25f, 1.2f, 1.8f, 0.18f, Color(0xFFFFCA28)),
+            EmberParticle(0.22f, 0.55f, 0.9f, 2.6f, 0.12f, Color(0xFFFFF59D)),
+            EmberParticle(0.30f, 0.15f, 1.1f, 1.6f, 0.20f, Color(0xFFFFB74D)),
+            EmberParticle(0.38f, 0.70f, 1.3f, 2.0f, 0.15f, Color(0xFFFFE082)),
+            EmberParticle(0.45f, 0.40f, 0.85f, 2.5f, 0.16f, Color(0xFFFFD54F)),
+            EmberParticle(0.55f, 0.85f, 1.05f, 1.7f, 0.14f, Color(0xFFFFF176)),
+            EmberParticle(0.62f, 0.10f, 1.25f, 2.1f, 0.18f, Color(0xFFFFB300)),
+            EmberParticle(0.72f, 0.60f, 0.95f, 1.9f, 0.12f, Color(0xFFFFE082)),
+            EmberParticle(0.80f, 0.30f, 1.15f, 2.3f, 0.15f, Color(0xFFFFCA28)),
+            EmberParticle(0.12f, 0.80f, 1.0f, 1.5f, 0.22f, Color(0xFFFFF8E1)),
+            EmberParticle(0.27f, 0.45f, 1.35f, 2.4f, 0.16f, Color(0xFFFFD54F)),
+            EmberParticle(0.48f, 0.05f, 0.9f, 1.8f, 0.19f, Color(0xFFFFAB40)),
+            EmberParticle(0.67f, 0.50f, 1.1f, 2.2f, 0.13f, Color(0xFFFFE082)),
+            EmberParticle(0.85f, 0.90f, 1.0f, 1.6f, 0.10f, Color(0xFFFFF59D))
+        )
+    }
+
+    val infiniteTransition = rememberInfiniteTransition(label = "embers")
+    val progress by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 5500, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "emberProgress"
+    )
+
+    Canvas(modifier = modifier.clipToBounds()) {
+        val w = size.width
+        val h = size.height
+
+        particles.forEach { p ->
+            val t = (progress * p.speedMultiplier + p.phaseOffset) % 1f
+            val y = h * (1f - t)
+            val sway = sin(t * 6.283f + p.phaseOffset * 10f) * 8.dp.toPx()
+            val x = (w * p.startXFraction) + (w * p.driftXFraction * t) + sway
+
+            val alpha = when {
+                t < 0.15f -> t / 0.15f
+                t > 0.75f -> (1f - t) / 0.25f
+                else -> 1f
+            }.coerceIn(0f, 1f)
+
+            val r = p.radiusDp.dp.toPx()
+            drawCircle(
+                color = p.color.copy(alpha = alpha * 0.35f),
+                radius = r * 2.4f,
+                center = Offset(x, y)
+            )
+            drawCircle(
+                color = p.color.copy(alpha = alpha * 0.95f),
+                radius = r,
+                center = Offset(x, y)
+            )
+        }
+    }
+}
+
+// HELPER UI COMPONENTS
 @Composable
 fun MedalSlot(onClick: () -> Unit) {
     Box(
         modifier = Modifier
-            .size(56.dp)
+            .size(48.dp)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
@@ -508,12 +695,28 @@ fun MedalGridBottomSheet(title: String, items: List<Pair<String, String>>, onDis
                 items(items.size) { index ->
                     val (name, img) = items[index]
                     Column(
-                        modifier = Modifier.aspectRatio(1f).clip(RoundedCornerShape(12.dp)).background(Color(0xFF1E1245)).padding(8.dp),
+                        modifier = Modifier
+                            .aspectRatio(1f)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color(0xFF1E1245))
+                            .padding(8.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
-                        AsyncImage(model = img.fullUrl, contentDescription = null, modifier = Modifier.weight(1f).fillMaxWidth(), contentScale = ContentScale.Fit)
-                        Text(text = name, color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Medium, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 4.dp))
+                        AsyncImage(
+                            model = img.fullUrl,
+                            contentDescription = null,
+                            modifier = Modifier.weight(1f).fillMaxWidth(),
+                            contentScale = ContentScale.Fit
+                        )
+                        Text(
+                            text = name,
+                            color = Color.White,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Medium,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
                     }
                 }
             }
@@ -521,12 +724,11 @@ fun MedalGridBottomSheet(title: String, items: List<Pair<String, String>>, onDis
     }
 }
 
-// RULES / INTRODUCTION CARD (Same as screenshot, Blue Theme + Golden Borders)
 @Composable
 fun RulesBottomSheet(onDismiss: () -> Unit) {
     Dialog(
         onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
+        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
     ) {
         val cardShape = RoundedCornerShape(14.dp)
         val buttonShape = RoundedCornerShape(12.dp)
@@ -536,77 +738,90 @@ fun RulesBottomSheet(onDismiss: () -> Unit) {
 
         Box(
             modifier = Modifier
-                .fillMaxWidth(0.86f)
-                .clip(cardShape)
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            Color(0xFF0B4182), // Rich Royal Blue top
-                            Color(0xFF072957), // Deep Blue middle
-                            Color(0xFF041A3B)  // Dark Navy Blue bottom
-                        )
-                    )
-                )
-                .border(1.5.dp, goldenBorderBrush, cardShape)
-                .padding(horizontal = 22.dp, vertical = 26.dp)
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.65f))
+                .clickable(onClick = onDismiss),
+            contentAlignment = Alignment.Center
         ) {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                // Title: Introduction (White-to-Gold gradient like screenshot)
-                Text(
-                    text = "Introduction",
-                    style = TextStyle(
-                        brush = Brush.horizontalGradient(
-                            colors = listOf(Color.White, Color(0xFFFCE28B), Color(0xFFE5B83B))
-                        ),
-                        fontSize = 21.sp,
-                        fontWeight = FontWeight.Bold
-                    ),
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(bottom = 22.dp)
-                )
+            FloatingEmbersAnimation(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight(0.45f)
+                    .align(Alignment.TopCenter)
+            )
 
-                // Numbered Rules List
-                RuleItemRow(
-                    number = "1.",
-                    text = "Badges are divided into Event Badges and Honor Badges. You can tap the badges on the Medal Wall to know how to get them."
-                )
-                Spacer(modifier = Modifier.height(14.dp))
-                RuleItemRow(
-                    number = "2.",
-                    text = "You can wear up to 10 badges at the same time. They will be displayed in your Info Card and Room Chat Area."
-                )
-                Spacer(modifier = Modifier.height(14.dp))
-                RuleItemRow(
-                    number = "3.",
-                    text = "Some badges are time-limited and expired ones cannot be worn."
-                )
-
-                Spacer(modifier = Modifier.height(28.dp))
-
-                // Got it Button (Blue fill + Golden border)
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp)
-                        .clip(buttonShape)
-                        .background(
-                            Brush.verticalGradient(
-                                listOf(Color(0xFF1055A3), Color(0xFF0A3973))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(0.86f)
+                    .clip(cardShape)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color(0xFF0B4182),
+                                Color(0xFF072957),
+                                Color(0xFF041A3B)
                             )
                         )
-                        .border(1.5.dp, Color(0xFFE5C158), buttonShape)
-                        .clickable(onClick = onDismiss),
-                    contentAlignment = Alignment.Center
+                    )
+                    .border(1.5.dp, goldenBorderBrush, cardShape)
+                    .clickable(enabled = false) {}
+                    .padding(horizontal = 22.dp, vertical = 26.dp)
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = "Got it",
-                        color = Color.White,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold
+                        text = "Introduction",
+                        style = TextStyle(
+                            brush = Brush.horizontalGradient(
+                                colors = listOf(Color.White, Color(0xFFFCE28B), Color(0xFFE5B83B))
+                            ),
+                            fontSize = 21.sp,
+                            fontWeight = FontWeight.Bold
+                        ),
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(bottom = 22.dp)
                     )
+
+                    RuleItemRow(
+                        number = "1.",
+                        text = "Badges are divided into Event Badges and Honor Badges. You can tap the badges on the Medal Wall to know how to get them."
+                    )
+                    Spacer(modifier = Modifier.height(14.dp))
+                    RuleItemRow(
+                        number = "2.",
+                        text = "You can wear up to 10 badges at the same time. They will be displayed in your Info Card and Room Chat Area."
+                    )
+                    Spacer(modifier = Modifier.height(14.dp))
+                    RuleItemRow(
+                        number = "3.",
+                        text = "Some badges are time-limited and expired ones cannot be worn."
+                    )
+
+                    Spacer(modifier = Modifier.height(28.dp))
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                            .clip(buttonShape)
+                            .background(
+                                Brush.verticalGradient(
+                                    listOf(Color(0xFF1055A3), Color(0xFF0A3973))
+                                )
+                            )
+                            .border(1.5.dp, Color(0xFFE5C158), buttonShape)
+                            .clickable(onClick = onDismiss),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Got it",
+                            color = Color.White,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
                 }
             }
         }
@@ -637,7 +852,6 @@ fun RuleItemRow(number: String, text: String) {
     }
 }
 
-// REAL DATA MAPPED WITH NEW PREVIEW VIDEO MP4s
 fun getMedalsData(): List<MedalItem> = listOf(
     // Rich
     MedalItem("rich_1", "Rich I", "/IMG_20261023_110513.png", "/VID_20260924_124439.mp4", 1, "achievement", "black", 120, 0.5f, 200, 0.5f, "rich", "Send gifts to earn"),
