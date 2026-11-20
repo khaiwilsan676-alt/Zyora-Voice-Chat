@@ -457,6 +457,10 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
     val periods=listOf("daily" to "Daily","weekly" to "Weekly","monthly" to "Monthly")
     val raw = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/"
 
+    val topTitleGradient = Brush.horizontalGradient(
+        colors = listOf(Color.White, Color(0xFFFCE28B), Color(0xFFE5B83B))
+    )
+
     val topImage = when (tab) {
         "charm" -> "IMG_20261105_230141.png"
         "room" -> "IMG_20261105_230309.png"
@@ -541,16 +545,27 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                             horizontalAlignment = Alignment.CenterHorizontally,
                             modifier = Modifier.clickable { tab = id }.padding(horizontal = 8.dp)
                         ) {
-                            Text(
-                                text = label,
-                                color = if (tab == id) Color(0xFFE7B865) else Color(0xFFAAAAAA),
-                                fontSize = 16.sp,
-                                fontWeight = if (tab == id) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.SemiBold
-                            )
+                            if (tab == id) {
+                                Text(
+                                    text = label,
+                                    style = TextStyle(
+                                        brush = topTitleGradient,
+                                        fontSize = 16.sp,
+                                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                                    )
+                                )
+                            } else {
+                                Text(
+                                    text = label,
+                                    color = Color(0xFFAAAAAA),
+                                    fontSize = 16.sp,
+                                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
+                                )
+                            }
                             if (tab == id) {
                                 Canvas(modifier = Modifier.offset(y = (-2).dp).size(width = 24.dp, height = 6.dp)) {
                                     drawArc(
-                                        color = Color(0xFFE7B865),
+                                        brush = topTitleGradient,
                                         startAngle = 0f,
                                         sweepAngle = 180f,
                                         useCenter = false,
@@ -1078,12 +1093,12 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                     else -> "Rich Raking is determined by the number of Coins You Send Lucky gift Only count 10% of Coins value"
                 }
                 val cardBgColors = when (tab) {
-                    "charm" -> listOf(Color(0xFF5A1882), Color(0xFF3A0C59), Color(0xFF220538))
+                    "charm" -> listOf(Color(0xFF9E1B5E), Color(0xFF6E0D3E), Color(0xFF450625))
                     "room" -> listOf(Color(0xFF0B4182), Color(0xFF072957), Color(0xFF041A3B))
                     else -> listOf(Color(0xFF6B3A18), Color(0xFF4A250E), Color(0xFF2E1506))
                 }
                 val buttonBgColors = when (tab) {
-                    "charm" -> listOf(Color(0xFF7A24AD), Color(0xFF4F1375))
+                    "charm" -> listOf(Color(0xFFC42577), Color(0xFF8A1450))
                     "room" -> listOf(Color(0xFF1055A3), Color(0xFF0A3973))
                     else -> listOf(Color(0xFF8C4E22), Color(0xFF5E3111))
                 }
