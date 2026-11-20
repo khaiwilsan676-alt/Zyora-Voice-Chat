@@ -169,6 +169,8 @@ fun GiftPicker(
     onRecordGiftTransaction: suspend (String, Long) -> Unit = { _, _ -> },
     onRecordDiamondTransaction: suspend (String, Int) -> Unit = { _, _ -> },
     walletContent: @Composable () -> Unit = {},
+    directMode: Boolean = false,
+    directRecipient: GiftPickerRoomUser? = null,
 ) {
     var activeTab by remember { mutableStateOf("Hot") }
     var selectedMultiplier by remember { mutableStateOf("1") }
@@ -203,12 +205,13 @@ fun GiftPicker(
     val roomUsersById = roomUsers.associateBy { it.accountId }
     val seatsById = seats.associateBy { it.accountId }
     val recipientIds = when {
+        directMode && directRecipient != null -> listOf(directRecipient.accountId)
         selectedTargets.isNotEmpty() -> selectedTargets
         roomUsers.isNotEmpty() -> roomUsers.map { it.accountId }
         else -> seats.filter { it.occupied && it.accountId.isNotBlank() }.map { it.accountId }
     }.asSequence().filter { it.isNotBlank() }.distinct().toList()
     val recipientCount = recipientIds.size
-    val firstRecipient = recipientIds.firstNotNullOfOrNull { id ->
+    val firstRecipient = if (directMode) directRecipient else recipientIds.firstNotNullOfOrNull { id ->
         roomUsersById[id]?.let {
             GiftPickerRoomUser(it.accountId, it.name, it.image)
         } ?: seatsById[id]?.let {
@@ -407,70 +410,54 @@ fun GiftPicker(
                 ) {
                     Column(Modifier.fillMaxSize()) {
 
-                        // ── AVATARS aur MIC/HOUSE ek sath ──
                         Row(
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(bottom = 6.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically 
+                            Modifier.fillMaxWidth().padding(bottom = 6.dp),
+                            horizontalArrangement = Arrangement.Start,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            // ── Seat avatar row ──
-                            LazyRow(
-                                Modifier
-                                    .weight(1f)
-                                    .padding(end = 4.dp),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            ) {
-                                items(seats.filter { it.occupied && it.accountId.isNotBlank() },
-                                    key = { it.accountId }) { seat ->
-                                    val uid = seat.accountId
-                                    val selected = selectedTargets.contains(uid)
-                                    AsyncImage(
-                                        model = seat.userImage,
-                                        contentDescription = seat.userName,
-                                        contentScale = ContentScale.Crop,
-                                        modifier = Modifier
-                                            .size(44.dp)
-                                            .clip(CircleShape)
-                                            .border(
-                                                width = 2.5.dp,
-                                                color = if (selected) Blue500 else Color.Transparent,
-                                                shape = CircleShape,
-                                            )
-                                            .clickable {
-                                                selectedTargets = if (selected)
-                                                    selectedTargets.filter { it != uid }
-                                                else selectedTargets + uid
-                                                recipientMode = RecipientMode.SINGLE
-                                            },
-                                    )
-                                }
-                            }
-
-                            // ── MIC / HOUSE buttons ──
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(2.dp), 
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(start = 2.dp) 
-                            ) {
-                                RecipientButton(
-                                    isActive = recipientMode == RecipientMode.MIC,
-                                    onClick = {
-                                        selectedTargets = seats.filter { it.occupied && it.accountId.isNotBlank() }
-                                            .map { it.accountId }
-                                        recipientMode = RecipientMode.MIC
-                                    },
-                                    iconType = RecipientIconType.MIC,
+                            if (directMode && directRecipient != null) {
+                                AsyncImage(
+                                    model = directRecipient.image,
+                                    contentDescription = directRecipient.name,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.size(44.dp).clip(CircleShape)
+                                        .border(2.5.dp, Blue500, CircleShape)
                                 )
-                                RecipientButton(
-                                    isActive = recipientMode == RecipientMode.ROOM,
-                                    onClick = {
+                            } else {
+                                LazyRow(
+                                    Modifier.weight(1f).padding(end = 4.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                ) {
+                                    items(seats.filter { it.occupied && it.accountId.isNotBlank() }, key = { it.accountId }) { seat ->
+                                        val uid = seat.accountId
+                                        val selected = selectedTargets.contains(uid)
+                                        AsyncImage(
+                                            model = seat.userImage,
+                                            contentDescription = seat.userName,
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier.size(44.dp).clip(CircleShape)
+                                                .border(2.5.dp, if (selected) Blue500 else Color.Transparent, CircleShape)
+                                                .clickable {
+                                                    selectedTargets = if (selected) selectedTargets.filter { it != uid } else selectedTargets + uid
+                                                    recipientMode = RecipientMode.SINGLE
+                                                },
+                                        )
+                                    }
+                                }
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(start = 2.dp)
+                                ) {
+                                    RecipientButton(isActive = recipientMode == RecipientMode.MIC, onClick = {
+                                        selectedTargets = seats.filter { it.occupied && it.accountId.isNotBlank() }.map { it.accountId }
+                                        recipientMode = RecipientMode.MIC
+                                    }, iconType = RecipientIconType.MIC)
+                                    RecipientButton(isActive = recipientMode == RecipientMode.ROOM, onClick = {
                                         selectedTargets = emptyList()
                                         recipientMode = RecipientMode.ROOM
-                                    },
-                                    iconType = RecipientIconType.HOUSE,
-                                )
+                                    }, iconType = RecipientIconType.HOUSE)
+                                }
                             }
                         }
 
