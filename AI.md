@@ -1577,3 +1577,5 @@ Current documentation does not certify that all historical features are build-, 
 - New reward thumbnails and videos resolve from the Zyora repository's `public/` assets; existing Chat bubble, Theme, Frame and Vehicle catalog entries keep their original asset source and behavior.
 - The existing owner-key-protected grant endpoint and expiry-days input are reused; no new wallet debit or purchase behavior was added.
 - Verification still required: web production build, owner grant to a test account, and confirmation that each special reward category is represented correctly in native Bag/equipment. This catalog change alone does not prove native equip support for Medal, Family Tag or Daily Check-in inventory categories.
+
+- Follow-up server compatibility: `Zyora-Server/server.js` now accepts the new owner grant ID families (`le`, `lf`, `lm`, `fr`, `dc`) with a strict tab allowlist while retaining owner-key authentication, account validation, and expiry validation.
