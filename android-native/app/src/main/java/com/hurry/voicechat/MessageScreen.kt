@@ -811,6 +811,7 @@ fun NativeChatScreen(
         authPrefs.getString("name", "").orEmpty()
     ).firstOrNull { it.isNotBlank() && it != "null" } ?: "Zyora User"
     val currentAccountId = currentAccountIdOverride.ifBlank { authPrefs.getString("accountId", prefs.getString("accountId", currentUserId)).orEmpty() }.ifBlank { currentUserId }
+    val canonicalChatWalletUserId = authPrefs.getString("uid", null)?.takeIf { it.isNotBlank() } ?: currentAccountId
     val isOfficial = name == "Zyora Team" || name == "Zyora System"
     var directSocket by remember(receiverId, currentUserId) { mutableStateOf<Socket?>(null) }
     var chatRegistered by remember(receiverId, currentUserId) { mutableStateOf(false) }
@@ -819,11 +820,11 @@ fun NativeChatScreen(
 
     var showChatGiftPicker by remember(receiverId) { mutableStateOf(false) }
     var chatGiftWalletBalance by remember(currentAccountId) { mutableLongStateOf(0L) }
-    LaunchedEffect(currentAccountId) {
-        if (currentAccountId.isBlank()) return@LaunchedEffect
+    LaunchedEffect(canonicalChatWalletUserId) {
+        if (canonicalChatWalletUserId.isBlank()) return@LaunchedEffect
         val balance = withContext(Dispatchers.IO) {
             runCatching {
-                val encoded = java.net.URLEncoder.encode(currentAccountId, "UTF-8")
+                val encoded = java.net.URLEncoder.encode(canonicalChatWalletUserId, "UTF-8")
                 val conn = (java.net.URL("https://zyora-server.onrender.com/api/lucky-bag/wallet/$encoded").openConnection() as java.net.HttpURLConnection).apply {
                     connectTimeout = 10000; readTimeout = 10000; useCaches = false
                 }
@@ -1917,19 +1918,6 @@ fun NativeChatScreen(
                         Spacer(Modifier.width(10.dp))
                         
                         IconButton(
-                            onClick = { if (!isOfficial && receiverId.isNotBlank()) showChatGiftPicker = true },
-                            enabled = !isOfficial && receiverId.isNotBlank(),
-                            modifier = Modifier.size(30.dp)
-                        ) {
-                            AsyncImage(
-                                model = RAW_MSG + "gift.png",
-                                contentDescription = "Send gift",
-                                contentScale = ContentScale.Fit,
-                                modifier = Modifier.size(26.dp)
-                            )
-                        }
-                        Spacer(Modifier.width(8.dp))
-                        IconButton(
                             onClick = { imagePickerLauncher.launch("image/*") },
                             enabled = !isOfficial,
                             modifier = Modifier.size(28.dp)
@@ -2090,6 +2078,19 @@ fun NativeChatScreen(
                                             modifier = Modifier.size(18.dp).padding(start = 2.dp)
                                         )
                                     }
+                                    Spacer(Modifier.width(6.dp))
+                                    IconButton(
+                                        onClick = { if (!isOfficial && receiverId.isNotBlank()) showChatGiftPicker = true },
+                                        enabled = !isOfficial && receiverId.isNotBlank(),
+                                        modifier = Modifier.size(34.dp)
+                                    ) {
+                                        AsyncImage(
+                                            model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/file_0000000019c4821180028eebae10dbfc.png",
+                                            contentDescription = "Send gift",
+                                            contentScale = ContentScale.Fit,
+                                            modifier = Modifier.size(30.dp)
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -2116,7 +2117,7 @@ fun NativeChatScreen(
                             setRequestProperty("Content-Type", "application/json")
                         }
                         try {
-                            val body = JSONObject().put("userId", currentAccountId).put("amount", requested).toString()
+                            val body = JSONObject().put("userId", canonicalChatWalletUserId).put("amount", requested).toString()
                             conn.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
                             val code = conn.responseCode
                             val stream = if (code in 200..299) conn.inputStream else conn.errorStream
