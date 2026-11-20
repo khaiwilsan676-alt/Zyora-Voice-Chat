@@ -467,7 +467,7 @@ fun PrivateMessageInboxSync() {
         }
         socket.on("private_message", incoming)
         socket.on("private_message_sent", sent)
-        socket.on(Socket.EVENT_CONNECT) { socket.emit("register", JSONObject().put("userId", authUid).put("accountId", accountId)) }
+        socket.on(Socket.EVENT_CONNECT) { socket.emit("register", JSONObject().put("userId", authUid).put("accountId", accountId).put("deviceName", "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}")) }
         socket.connect()
         onDispose {
             socket.off("private_message", incoming); socket.off("private_message_sent", sent)
@@ -642,7 +642,7 @@ fun MessageScreen(onChat: (String, String, String) -> Unit, embeddedSheet: Boole
         }
         inboxSocket.on("private_message", incomingPreview)
         inboxSocket.on(Socket.EVENT_CONNECT) {
-            inboxSocket.emit("register", JSONObject().put("userId", currentAuthUid).put("accountId", currentUserId))
+            inboxSocket.emit("register", JSONObject().put("userId", currentAuthUid).put("accountId", currentUserId).put("deviceName", "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}"))
         }
         inboxSocket.connect()
         onDispose {
@@ -1146,7 +1146,7 @@ fun NativeChatScreen(
         chatSocket.on("user_room_status", roomStatusListener)
         chatSocket.on("user_room_status_updated", roomStatusListener)
         chatSocket.emit("check_presence", receiverId)
-        chatSocket.emit("user_room_status_request", JSONObject().put("userId", receiverId).put("accountId", receiverId))
+        chatSocket.emit("user_room_status_request", JSONObject().put("userId", receiverId).put("accountId", receiverId).put("deviceName", "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}"))
         val incoming = Emitter.Listener { args ->
             val payload = args.firstOrNull() as? JSONObject ?: return@Listener
             val sender = payload.optString("senderId")
@@ -1225,7 +1225,7 @@ fun NativeChatScreen(
             mainHandler.post { chatRegistered = true }
             chatSocket.emit("private_message_history_request", JSONObject()
                 .put("userId", currentUserId)
-                .put("accountId", currentAccountId)
+                .put("accountId", currentAccountId).put("deviceName", "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}")
                 .put("otherUserId", receiverId)
                 .put("otherAccountId", receiverId)
                 .put("chatId", listOf(currentAccountId, receiverId).sorted().joinToString("_")))
@@ -1235,9 +1235,9 @@ fun NativeChatScreen(
         chatSocket.on("registration_ready", registrationReady)
         chatSocket.on(Socket.EVENT_CONNECT) {
             mainHandler.post { chatRegistered = false }
-            chatSocket.emit("register", JSONObject().put("userId", currentUserId).put("accountId", currentAccountId))
+            chatSocket.emit("register", JSONObject().put("userId", currentUserId).put("accountId", currentAccountId).put("deviceName", "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}"))
             chatSocket.emit("check_presence", receiverId)
-            chatSocket.emit("user_room_status_request", JSONObject().put("userId", receiverId).put("accountId", receiverId))
+            chatSocket.emit("user_room_status_request", JSONObject().put("userId", receiverId).put("accountId", receiverId).put("deviceName", "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}"))
         }
         chatSocket.connect()
         onDispose {
@@ -1442,7 +1442,7 @@ fun NativeChatScreen(
                 "register",
                 JSONObject()
                     .put("userId", currentUserId)
-                    .put("accountId", currentAccountId)
+                    .put("accountId", currentAccountId).put("deviceName", "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}")
             )
             val lastTimestamp = prefs.getLong("${cacheKey}_last_timestamp", 0L)
             officialSocket.emit(
