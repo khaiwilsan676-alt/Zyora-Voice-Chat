@@ -644,6 +644,9 @@ export default function StaffPanel() {
 
   const [isTagModalOpen, setIsTagModalOpen] = useState(false);
   const [selectedTagUserData, setSelectedTagUserData] = useState<UserRecord | null>(null);
+  const [isUserProfileEditOpen, setIsUserProfileEditOpen] = useState(false);
+  const [editedUserName, setEditedUserName] = useState('');
+  const [editedUserImage, setEditedUserImage] = useState('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [tagSuccess, setTagSuccess] = useState('');
 
@@ -2974,12 +2977,15 @@ export default function StaffPanel() {
               <div className="h-14 w-14 shrink-0 overflow-hidden rounded-full bg-slate-100">
                 {selectedTagUserData.image ? <img src={selectedTagUserData.image} alt={selectedTagUserData.name} className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center text-xl font-bold text-slate-500">{selectedTagUserData.name.charAt(0).toUpperCase()}</div>}
               </div>
-              <span className="min-w-0 truncate text-lg font-bold text-slate-900">{selectedTagUserData.name}</span>
+              <span className="min-w-0 flex-1 truncate text-lg font-bold text-slate-900">{selectedTagUserData.name}</span>
+              <button type="button" onClick={() => { setEditedUserName(selectedTagUserData.name || ''); setEditedUserImage(selectedTagUserData.image || ''); setIsUserProfileEditOpen(true); }} className="shrink-0 rounded-lg px-3 py-1.5 text-sm font-bold text-blue-600 hover:bg-blue-50">Edit</button>
             </div>
             <div className="grid grid-cols-1 gap-x-10 px-6 py-3 text-sm sm:grid-cols-2">
-              <div className="flex min-w-0 items-center gap-2 border-b border-slate-100 py-4 sm:col-span-2">
+              <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 border-b border-slate-100 py-4 sm:col-span-2">
                 <span className="shrink-0 font-semibold text-slate-500">App ID:</span>
                 <b className="min-w-0 break-all text-slate-900">{selectedTagUserData.longId || '—'}</b>
+                <span className="ml-auto shrink-0 font-semibold text-slate-500">App. Long ID:</span>
+                <b className="min-w-0 break-all text-slate-900">{selectedTagUserData.appLongId || '—'}</b>
               </div>
               <div className="flex min-w-0 items-center gap-2 border-b border-slate-100 py-4">
                 <span className="shrink-0 font-semibold text-slate-500">VIP ID:</span>
@@ -3001,6 +3007,27 @@ export default function StaffPanel() {
                 <span className="shrink-0 font-semibold text-slate-500">IP Address:</span>
                 <b className="min-w-0 break-all text-slate-900">{selectedTagUserData.ipAddress || '—'}</b>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isUserProfileEditOpen && selectedTagUserData && (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/50 p-4" onClick={() => setIsUserProfileEditOpen(false)}>
+          <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <h3 className="mb-4 text-lg font-extrabold text-slate-900">Edit User Profile</h3>
+            <label className="mb-1 block text-xs font-bold text-slate-600">User Name</label>
+            <input value={editedUserName} onChange={(e) => setEditedUserName(e.target.value)} maxLength={40} className="mb-4 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-blue-500" />
+            <label className="mb-1 block text-xs font-bold text-slate-600">Avatar Image URL</label>
+            <input value={editedUserImage} onChange={(e) => setEditedUserImage(e.target.value)} placeholder="https://..." className="mb-5 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-blue-500" />
+            <div className="flex justify-end gap-2">
+              <button type="button" onClick={() => setIsUserProfileEditOpen(false)} className="rounded-lg px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100">Cancel</button>
+              <button type="button" disabled={!editedUserName.trim()} onClick={() => {
+                const updated = { ...selectedTagUserData, name: editedUserName.trim(), image: editedUserImage.trim() };
+                setSelectedTagUserData(updated);
+                setUsers(previous => previous.map(user => String(user.id) === String(updated.id) ? { ...user, name: updated.name, image: updated.image } : user));
+                setIsUserProfileEditOpen(false);
+              }} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-50">Save</button>
             </div>
           </div>
         </div>
