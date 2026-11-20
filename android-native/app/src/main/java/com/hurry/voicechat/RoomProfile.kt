@@ -251,7 +251,10 @@ fun RoomProfile(
     }
 
     val hasAnyTag = officialHeadTag || officialTag || adminTag || serviceTag || hostTag || coinSellerTag || vipTag || premiumTag
-    val accountId = generateStableId(user.accountId ?: user.id ?: user.uid ?: "User")
+    val originalAccountId = generateStableId(user.accountId ?: user.id ?: user.uid ?: "User")
+    val activeSpecialId = loadedProfile?.optString("vipId", "").orEmpty().takeIf { it.matches(Regex("\\d{4,20}")) && loadedProfile?.optLong("vipIdExpiresAt", 0L)?.let { expiry -> expiry > System.currentTimeMillis() } == true }
+    val accountId = activeSpecialId ?: originalAccountId
+    val hasSpecialIdBadge = activeSpecialId != null && loadedProfile?.optBoolean("vipIdBadge", false) == true
     
     val genderColor = if (displayGender.equals("female", true) || displayGender.equals("f", true) || displayGender == "♀") {
         Color(0xFFEC4899)
@@ -362,7 +365,7 @@ fun RoomProfile(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.Center
                         ) {
-                            if (isCoreOfficialAccount || is500002OfficialAccount || isRedOfficialAccount) {
+                            if (hasSpecialIdBadge || isCoreOfficialAccount || is500002OfficialAccount || isRedOfficialAccount) {
                                 AsyncImage(model = "IMG_20261101_125212.png".fullUrl(), contentDescription = "Purple ID Badge", contentScale = ContentScale.Fit, modifier = Modifier.height(24.dp).widthIn(min = 18.dp, max = 30.dp).padding(end = 4.dp))
                                 Text(accountId, color = Color.DarkGray, fontSize = 14.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(start = 4.dp))
                             } else {
