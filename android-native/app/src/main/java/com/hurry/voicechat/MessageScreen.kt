@@ -904,54 +904,62 @@ fun NativeChatScreen(
         if (peerId.isBlank() || currentAccountId.isBlank() || peerId == currentAccountId) return
         val time = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(timestamp))
         val preview = JSONObject().put("peerId", peerId).put("peerName", peerName.ifBlank { "User" }).put("peerPhoto", peerPhoto).put("lastMessage", lastMessage).put("timestamp", timestamp).put("time", time)
-        indexDb.saveConversation("conversation_${currentAccountId}_$peerId", peerId, preview)
-    }
-    
-    val messageTimestamps = remember(name, receiverId, currentUserId) {
-        mutableStateListOf<Long>().apply {
-            val saved = runCatching { org.json.JSONArray(indexDb.loadChat(localConversationKey) ?: "[]") }.getOrDefault(org.json.JSONArray())
-            for (index in 0 until saved.length()) add(saved.optJSONObject(index)?.optLong("timestamp", System.currentTimeMillis()) ?: System.currentTimeMillis())
-            if (isEmpty() && officialIdForCache != null) {
-                val cached = runCatching { org.json.JSONArray(prefs.getString(cacheKey, "[]") ?: "[]") }.getOrDefault(org.json.JSONArray())
-                for (index in 0 until cached.length()) add(cached.optJSONObject(index)?.optLong("timestamp", System.currentTimeMillis()) ?: System.currentTimeMillis())
-            }
+        chatScope.launch(Dispatchers.IO) {
+            runCatching { indexDb.saveConversation("conversation_${currentAccountId}_$peerId", peerId, preview) }
+                .onFailure { android.util.Log.e("ZyoraChat", "Could not persist conversation preview", it) }
         }
     }
-    val messages = remember(name, receiverId, currentUserId) {
-        mutableStateListOf<Pair<Boolean, String>>().apply {
-            val dbCache = indexDb.loadChat(localConversationKey)
-            val restored = runCatching {
-                val array = org.json.JSONArray(dbCache ?: "[]")
+    
+    val chatScope = rememberCoroutineScope()
+    val messageTimestamps = remember(name, receiverId, currentUserId) { mutableStateListOf<Long>() }
+    val messages = remember(name, receiverId, currentUserId) { mutableStateListOf<Pair<Boolean, String>>() }
+    val messageIds = remember(name, receiverId, currentUserId) { mutableStateListOf<String>() }
+    var chatHistoryLoaded by remember(localConversationKey) { mutableStateOf(false) }
+
+    // One background read replaces three synchronous IndexDB reads during composition.
+    LaunchedEffect(localConversationKey, cacheKey) {
+        val restored = withContext(Dispatchers.IO) {
+            val raw = runCatching { indexDb.loadChat(localConversationKey) }.getOrNull()
+            val parsed = runCatching {
+                val array = org.json.JSONArray(raw ?: "[]")
                 (0 until array.length()).mapNotNull { index ->
                     val entry = array.optJSONObject(index) ?: return@mapNotNull null
                     val value = entry.optString("text")
-                    if (value.isNotBlank()) entry.optBoolean("mine") to value else null
+                    if (value.isBlank()) null else Triple(
+                        entry.optBoolean("mine"), value,
+                        Pair(entry.optString("id"), entry.optLong("timestamp", System.currentTimeMillis()))
+                    )
                 }
             }.getOrDefault(emptyList())
-            if (restored.isNotEmpty()) addAll(restored)
-            else if (officialIdForCache != null) {
-                val cached = prefs.getString(cacheKey, "[]") ?: "[]"
-                runCatching {
-                    val array = org.json.JSONArray(cached)
-                    for (index in 0 until array.length()) {
-                        val entry = array.optJSONObject(index) ?: continue
-                        val value = entry.optString("text")
-                        if (value.isNotBlank()) add(false to value)
-                    }
+            if (parsed.isNotEmpty() || officialIdForCache == null) parsed
+            else runCatching {
+                val array = org.json.JSONArray(prefs.getString(cacheKey, "[]") ?: "[]")
+                (0 until array.length()).mapNotNull { index ->
+                    val entry = array.optJSONObject(index) ?: return@mapNotNull null
+                    val value = entry.optString("text")
+                    if (value.isBlank()) null else Triple(
+                        false, value,
+                        Pair(entry.optString("id"), entry.optLong("timestamp", System.currentTimeMillis()))
+                    )
                 }
-            }
+            }.getOrDefault(emptyList())
         }
-    }
-    val messageIds = remember(name, receiverId, currentUserId) {
-        mutableStateListOf<String>().apply {
-            val saved = runCatching { org.json.JSONArray(indexDb.loadChat(localConversationKey) ?: "[]") }.getOrDefault(org.json.JSONArray())
-            for (index in 0 until saved.length()) add(saved.optJSONObject(index)?.optString("id").orEmpty())
-            while (size < messages.size) add("")
+
+        // Preserve messages sent while disk history was loading and keep parallel
+        // message/timestamp/ID lists aligned.
+        restored.forEachIndexed { index, item ->
+            val id = item.third.first
+            if (id.isNotBlank() && messageIds.contains(id)) return@forEachIndexed
+            val insertAt = index.coerceAtMost(messages.size)
+            messages.add(insertAt, item.first to item.second)
+            messageTimestamps.add(insertAt.coerceAtMost(messageTimestamps.size), item.third.second)
+            messageIds.add(insertAt.coerceAtMost(messageIds.size), id)
         }
+        chatHistoryLoaded = true
     }
-    LaunchedEffect(messages.size, messageIds.size, localConversationKey) {
-        // Snapshot Compose state on Main, then persist off the UI thread so typing,
-        // sending and scrolling never wait for the local IndexDB write.
+
+    LaunchedEffect(messages.size, messageIds.size, localConversationKey, chatHistoryLoaded) {
+        if (!chatHistoryLoaded) return@LaunchedEffect
         val snapshot = org.json.JSONArray()
         messages.forEachIndexed { index, (mine, value) ->
             snapshot.put(JSONObject().put("id", messageIds.getOrNull(index).orEmpty()).put("mine", mine).put("text", value)
@@ -963,7 +971,6 @@ fun NativeChatScreen(
                 .onFailure { android.util.Log.e("ZyoraChat", "Could not persist chat snapshot", it) }
         }
     }
-    val chatScope = rememberCoroutineScope()
     val imagePickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) {
             val messageId = currentUserId + "_" + System.currentTimeMillis()
