@@ -196,7 +196,7 @@ private fun JSONObject.firstAgentValue(vararg keys: String): String =
         }
     }.orEmpty()
 
-private suspend fun fetchWalletAgentSellers(): List<WalletAgentSeller> = withContext(Dispatchers.IO) {
+private suspend fun fetchWalletAgentSellers(): List<WalletAgentSeller>? = withContext(Dispatchers.IO) {
     runCatching {
         val connection = (URL("https://zyora-server.onrender.com/api/users?sellers=true").openConnection() as HttpURLConnection).apply {
             connectTimeout = 12000
