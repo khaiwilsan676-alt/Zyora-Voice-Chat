@@ -2079,6 +2079,7 @@ fun NativeChatScreen(
                         val index = messageIds.indexOf(messageId)
                         if (index >= 0) {
                             if (index < messages.size) messages.removeAt(index)
+                            if (index < messageTimestamps.size) messageTimestamps.removeAt(index)
                             messageIds.removeAt(index)
                         }
                     }
