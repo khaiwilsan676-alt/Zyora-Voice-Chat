@@ -950,12 +950,18 @@ fun NativeChatScreen(
         }
     }
     LaunchedEffect(messages.size, messageIds.size, localConversationKey) {
-        val array = org.json.JSONArray()
+        // Snapshot Compose state on Main, then persist off the UI thread so typing,
+        // sending and scrolling never wait for the local IndexDB write.
+        val snapshot = org.json.JSONArray()
         messages.forEachIndexed { index, (mine, value) ->
-            array.put(JSONObject().put("id", messageIds.getOrNull(index).orEmpty()).put("mine", mine).put("text", value)
+            snapshot.put(JSONObject().put("id", messageIds.getOrNull(index).orEmpty()).put("mine", mine).put("text", value)
                 .put("timestamp", messageTimestamps.getOrNull(index) ?: System.currentTimeMillis()))
         }
-        indexDb.saveChat(localConversationKey, array.toString())
+        val serialized = snapshot.toString()
+        withContext(Dispatchers.IO) {
+            runCatching { indexDb.saveChat(localConversationKey, serialized) }
+                .onFailure { android.util.Log.e("ZyoraChat", "Could not persist chat snapshot", it) }
+        }
     }
     val chatScope = rememberCoroutineScope()
     val imagePickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
@@ -1996,7 +2002,8 @@ fun NativeChatScreen(
                                                     blockPopupText = "Can't send text-prohibited"
                                                     return@clickable
                                                 }
-                                                val outgoingId = "${currentUserId}_${System.currentTimeMillis()}"
+                                                val sentAt = System.currentTimeMillis()
+                                                val outgoingId = "${currentUserId}_${java.util.UUID.randomUUID()}"
                                                 val outgoing = JSONObject()
                                                     .put("id", outgoingId)
                                                     .put("senderId", currentUserId)
@@ -2009,12 +2016,18 @@ fun NativeChatScreen(
                                                     .put("receiverPhoto", image)
                                                     .put("text", outgoingText)
                                                     .put("type", "message")
-                                                    .put("timestamp", System.currentTimeMillis())
+                                                    .put("timestamp", sentAt)
+                                                // Optimistic local echo: render and persist immediately instead
+                                                // of waiting for the server's private_message_sent round trip.
+                                                messages.add(true to outgoingText)
+                                                messageTimestamps.add(sentAt)
+                                                messageIds.add(outgoingId)
+                                                saveConversationPreview(receiverId, name, image, outgoingText, sentAt)
+                                                text = ""
+                                                replyText = null
                                                 if (!isOfficial && receiverId.isNotBlank() && currentUserId.isNotBlank()) {
                                                     directSocket?.emit("private_message", outgoing)
                                                 }
-                                                text = ""
-                                                replyText = null
                                             },
                                         contentAlignment = Alignment.Center
                                     ) {
