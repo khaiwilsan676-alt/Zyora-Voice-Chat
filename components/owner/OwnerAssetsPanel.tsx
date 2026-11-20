@@ -156,7 +156,11 @@ export default function OwnerAssetsPanel({ ownerKey }: { ownerKey: string }) {
       });
       const data = await response.json();
       if (!response.ok || !data.success) throw new Error(data.error || 'Could not send asset');
-      setNotice('Asset sent successfully.');
+      setNotice(data.notification === 'delivered'
+        ? 'Asset sent successfully. Zyora System message delivered.'
+        : data.notification === 'queued'
+          ? 'Asset sent successfully. Zyora System message queued.'
+          : 'Asset granted, but System message could not be queued. Check Render Redis connection.');
       await loadHistory();
     } catch (error: any) { setNotice(error?.message || 'Could not send asset.'); }
     finally { setBusy(false); }
