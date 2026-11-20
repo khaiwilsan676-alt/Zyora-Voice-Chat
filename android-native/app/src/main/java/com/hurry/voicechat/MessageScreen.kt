@@ -1877,6 +1877,26 @@ fun NativeChatScreen(
             }
 
             if (!isOfficial) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(end = 16.dp, bottom = 6.dp),
+                    contentAlignment = Alignment.CenterEnd
+                ) {
+                    IconButton(
+                        onClick = { if (!isOfficial && receiverId.isNotBlank()) showChatGiftPicker = true },
+                        enabled = !isOfficial && receiverId.isNotBlank(),
+                        modifier = Modifier.size(34.dp)
+                    ) {
+                        AsyncImage(
+                            model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/file_0000000019c4821180028eebae10dbfc.png",
+                            contentDescription = "Send gift",
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier.size(30.dp)
+                        )
+                    }
+                }
+
                 Column(
                     Modifier.fillMaxWidth()
                         .background(Color.White)
@@ -2076,19 +2096,6 @@ fun NativeChatScreen(
                                             contentDescription = "Send",
                                             tint = Color.White,
                                             modifier = Modifier.size(18.dp).padding(start = 2.dp)
-                                        )
-                                    }
-                                    Spacer(Modifier.width(6.dp))
-                                    IconButton(
-                                        onClick = { if (!isOfficial && receiverId.isNotBlank()) showChatGiftPicker = true },
-                                        enabled = !isOfficial && receiverId.isNotBlank(),
-                                        modifier = Modifier.size(34.dp)
-                                    ) {
-                                        AsyncImage(
-                                            model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/file_0000000019c4821180028eebae10dbfc.png",
-                                            contentDescription = "Send gift",
-                                            contentScale = ContentScale.Fit,
-                                            modifier = Modifier.size(30.dp)
                                         )
                                     }
                                 }
