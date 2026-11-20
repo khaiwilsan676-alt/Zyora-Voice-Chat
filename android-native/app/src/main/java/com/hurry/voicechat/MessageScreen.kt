@@ -900,6 +900,8 @@ fun NativeChatScreen(
         }
     }
 
+    val chatScope = rememberCoroutineScope()
+
     fun saveConversationPreview(peerId: String, peerName: String, peerPhoto: String, lastMessage: String, timestamp: Long) {
         if (peerId.isBlank() || currentAccountId.isBlank() || peerId == currentAccountId) return
         val time = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(timestamp))
@@ -910,7 +912,6 @@ fun NativeChatScreen(
         }
     }
     
-    val chatScope = rememberCoroutineScope()
     val messageTimestamps = remember(name, receiverId, currentUserId) { mutableStateListOf<Long>() }
     val messages = remember(name, receiverId, currentUserId) { mutableStateListOf<Pair<Boolean, String>>() }
     val messageIds = remember(name, receiverId, currentUserId) { mutableStateListOf<String>() }
