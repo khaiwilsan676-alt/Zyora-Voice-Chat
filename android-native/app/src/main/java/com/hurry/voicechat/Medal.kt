@@ -124,7 +124,6 @@ fun MedalScreen(onBack: () -> Unit) {
                         )
                     )
             )
-            FloatingEmbersAnimation(modifier = Modifier.fillMaxSize())
         }
 
         // 2. Main Fixed Layout
@@ -648,80 +647,6 @@ fun GoldenSunburstEffect(modifier: Modifier = Modifier) {
                     )
                 )
             }
-        }
-    }
-}
-
-// FLOATING FIRE SPARKS / EMBERS ANIMATION
-private data class EmberParticle(
-    val startXFraction: Float,
-    val phaseOffset: Float,
-    val speedMultiplier: Float,
-    val radiusDp: Float,
-    val driftXFraction: Float,
-    val color: Color
-)
-
-@Composable
-fun FloatingEmbersAnimation(modifier: Modifier = Modifier) {
-    val particles = remember {
-        listOf(
-            EmberParticle(0.08f, 0.00f, 1.0f, 2.2f, 0.14f, Color(0xFFFFE082)),
-            EmberParticle(0.15f, 0.25f, 1.2f, 1.8f, 0.18f, Color(0xFFFFCA28)),
-            EmberParticle(0.22f, 0.55f, 0.9f, 2.6f, 0.12f, Color(0xFFFFF59D)),
-            EmberParticle(0.30f, 0.15f, 1.1f, 1.6f, 0.20f, Color(0xFFFFB74D)),
-            EmberParticle(0.38f, 0.70f, 1.3f, 2.0f, 0.15f, Color(0xFFFFE082)),
-            EmberParticle(0.45f, 0.40f, 0.85f, 2.5f, 0.16f, Color(0xFFFFD54F)),
-            EmberParticle(0.55f, 0.85f, 1.05f, 1.7f, 0.14f, Color(0xFFFFF176)),
-            EmberParticle(0.62f, 0.10f, 1.25f, 2.1f, 0.18f, Color(0xFFFFB300)),
-            EmberParticle(0.72f, 0.60f, 0.95f, 1.9f, 0.12f, Color(0xFFFFE082)),
-            EmberParticle(0.80f, 0.30f, 1.15f, 2.3f, 0.15f, Color(0xFFFFCA28)),
-            EmberParticle(0.12f, 0.80f, 1.0f, 1.5f, 0.22f, Color(0xFFFFF8E1)),
-            EmberParticle(0.27f, 0.45f, 1.35f, 2.4f, 0.16f, Color(0xFFFFD54F)),
-            EmberParticle(0.48f, 0.05f, 0.9f, 1.8f, 0.19f, Color(0xFFFFAB40)),
-            EmberParticle(0.67f, 0.50f, 1.1f, 2.2f, 0.13f, Color(0xFFFFE082)),
-            EmberParticle(0.85f, 0.90f, 1.0f, 1.6f, 0.10f, Color(0xFFFFF59D))
-        )
-    }
-
-    val infiniteTransition = rememberInfiniteTransition(label = "embers")
-    val progress by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 5500, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "emberProgress"
-    )
-
-    Canvas(modifier = modifier.clipToBounds()) {
-        val w = size.width
-        val h = size.height
-
-        particles.forEach { p ->
-            val t = (progress * p.speedMultiplier + p.phaseOffset) % 1f
-            val y = h * (1f - t)
-            val sway = sin(t * 6.283f + p.phaseOffset * 10f) * 8.dp.toPx()
-            val x = (w * p.startXFraction) + (w * p.driftXFraction * t) + sway
-
-            val alpha = when {
-                t < 0.15f -> t / 0.15f
-                t > 0.75f -> (1f - t) / 0.25f
-                else -> 1f
-            }.coerceIn(0f, 1f)
-
-            val r = p.radiusDp.dp.toPx()
-            drawCircle(
-                color = p.color.copy(alpha = alpha * 0.35f),
-                radius = r * 2.4f,
-                center = Offset(x, y)
-            )
-            drawCircle(
-                color = p.color.copy(alpha = alpha * 0.95f),
-                radius = r,
-                center = Offset(x, y)
-            )
         }
     }
 }
