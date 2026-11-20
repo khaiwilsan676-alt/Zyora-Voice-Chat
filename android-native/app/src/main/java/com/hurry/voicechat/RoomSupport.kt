@@ -144,7 +144,7 @@ fun RoomSupportContent(bgColor: Color, onShowPopup: (String) -> Unit, onBack: ()
                 modifier = Modifier
                     .statusBarsPadding()
                     .padding(horizontal = 16.dp, vertical = 12.dp)
-                    .size(24.dp)
+                    .size(30.dp)
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null
