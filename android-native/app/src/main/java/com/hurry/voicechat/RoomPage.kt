@@ -1883,12 +1883,13 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                                 // leaving the old avatar visible until the server snapshot.
                                 seats.indices.filter { index ->
                                     index != targetIndex && seats[index].occupied &&
-                                        seats[index].accountId == accountId
+                                        (seats[index].accountId.trim() in seatActorIds ||
+                                            seats[index].accountId.trim() == accountId.trim())
                                 }.forEach { index ->
-                                    seats[index] = seats[index].copy(
-                                        occupied = false, userName = "", userImage = "",
-                                        accountId = "", muted = false, selfMuted = false,
-                                        speaking = false, gifSrc = "", gifTimestamp = 0L
+                                    val previousSeat = seats[index]
+                                    seats[index] = NativeRoomSeat(
+                                        number = previousSeat.number,
+                                        locked = previousSeat.locked
                                     )
                                 }
                                 seats[targetIndex] = seats[targetIndex].copy(
