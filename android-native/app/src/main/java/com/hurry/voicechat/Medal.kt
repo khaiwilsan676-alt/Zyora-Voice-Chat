@@ -273,10 +273,6 @@ fun MedalScreen(onBack: () -> Unit) {
                 )
 
                 Column(Modifier.fillMaxSize().padding(horizontal = 14.dp, vertical = 10.dp)) {
-                    if (activeTab == "event") {
-                        NativeOwnedMedalShowcase(userId = medalUserId)
-                        Spacer(Modifier.height(8.dp))
-                    }
                     LazyVerticalGrid(
                     columns = GridCells.Fixed(3),
                     contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 16.dp, bottom = 24.dp),
@@ -287,6 +283,14 @@ fun MedalScreen(onBack: () -> Unit) {
                         .fillMaxWidth()
                         .clipToBounds()
                 ) {
+                    if (activeTab == "event") {
+                        item(span = { GridItemSpan(maxLineSpan) }) {
+                            Column {
+                                NativeOwnedMedalShowcase(userId = medalUserId)
+                                Spacer(Modifier.height(8.dp))
+                            }
+                        }
+                    }
                     items(filteredMedals.size) { index ->
                         val medal = filteredMedals[index]
                         Column(
