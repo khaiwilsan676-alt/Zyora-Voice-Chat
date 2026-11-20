@@ -101,8 +101,17 @@ export default function OwnerAssetsPanel({ ownerKey }: { ownerKey: string }) {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
   const [typeMenuOpen, setTypeMenuOpen] = useState(false);
+  const [assetNameQuery, setAssetNameQuery] = useState('');
+  const [title, setTitle] = useState('Chat bubble');
 
   const visibleAssets = useMemo(() => ASSETS.filter((asset) => asset.type === type), [type]);
+  const matchedAsset = useMemo(() => {
+    const query = assetNameQuery.trim().toLowerCase();
+    if (!query) return null;
+    return visibleAssets.find((asset) => asset.name.toLowerCase() === query)
+      || visibleAssets.find((asset) => asset.name.toLowerCase().includes(query))
+      || null;
+  }, [assetNameQuery, visibleAssets]);
   const assetUrl = (asset: Asset) => (asset.source === 'zyora' ? 'https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/' : ASSET_BASE) + asset.image;
 
   const loadHistory = async () => {
@@ -134,7 +143,8 @@ export default function OwnerAssetsPanel({ ownerKey }: { ownerKey: string }) {
   }, [userQuery]);
 
   const sendAsset = async () => {
-    if (!user?.accountId || !selected || !/^\d{1,4}$/.test(days) || Number(days) < 1 || Number(days) > 3650) {
+    const assetToSend = matchedAsset || selected;
+    if (!user?.accountId || !assetToSend || !/^\d{1,4}$/.test(days) || Number(days) < 1 || Number(days) > 3650) {
       setNotice('Select a user, asset and valid days (1–3650).'); return;
     }
     setBusy(true); setNotice('');
@@ -142,7 +152,7 @@ export default function OwnerAssetsPanel({ ownerKey }: { ownerKey: string }) {
       const response = await fetch(apiUrl('/api/owner/assets/grant'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-owner-key': ownerKey },
-        body: JSON.stringify({ recipientAccountId: user.accountId, itemId: selected.id, name: selected.name, tab: selected.tab, image: selected.image, video: selected.video || '', days: Number(days) })
+        body: JSON.stringify({ recipientAccountId: user.accountId, itemId: assetToSend.id, name: assetToSend.name, tab: assetToSend.tab, image: assetToSend.image, video: assetToSend.video || '', days: Number(days) })
       });
       const data = await response.json();
       if (!response.ok || !data.success) throw new Error(data.error || 'Could not send asset');
@@ -161,15 +171,24 @@ export default function OwnerAssetsPanel({ ownerKey }: { ownerKey: string }) {
           <div className="min-w-0"><div className="truncate text-sm font-bold text-slate-800">{user.name}</div><div className="text-xs text-slate-500">ID: {user.accountId}</div></div>
         </div>}
         <div className="relative flex items-center gap-3">
-          <span className="w-20 shrink-0 text-xs font-bold text-slate-600">Assets Type</span>
-          <button type="button" aria-label="Choose asset type" aria-expanded={typeMenuOpen} onClick={() => setTypeMenuOpen((open) => !open)} className="flex h-[72px] w-[72px] shrink-0 flex-col items-center justify-center gap-1 rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm">
-            <span className="text-[9px] font-extrabold">{type === 'Chat bubble' ? 'Chat' : type === 'Daily Check-in' ? 'Daily' : type.replace('Level ', 'Lv ')}</span><span className="text-[10px]">⌄</span>
-          </button>
-          {typeMenuOpen && <div className="absolute left-20 top-[76px] z-30 w-48 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
-            {(['Chat bubble', 'Theme', 'Frame', 'Vehicle', 'Level Entry', 'Level Frame', 'Level Medal', 'Family Reward', 'Daily Check-in'] as AssetType[]).map((value) => (
-              <button key={value} type="button" onClick={() => { setType(value); setSelected(null); setTypeMenuOpen(false); }} className={`block w-full rounded-lg px-3 py-2 text-left text-xs font-semibold ${type === value ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100'}`}>{value}</button>
-            ))}
-          </div>}
+          <label className="w-20 shrink-0 text-xs font-bold text-slate-600" htmlFor="owner-asset-title">Title</label>
+          <div className="relative w-full max-w-sm">
+            <input id="owner-asset-title" value={title} readOnly placeholder="Select title" className="h-12 w-full rounded-lg border border-slate-200 bg-white px-3 pr-12 text-sm font-semibold text-slate-800 outline-none focus:border-slate-400" />
+            <button type="button" aria-label="Choose title" aria-expanded={typeMenuOpen} onClick={() => setTypeMenuOpen((open) => !open)} className="absolute inset-y-0 right-0 flex w-11 items-center justify-center border-l border-slate-200 text-lg text-slate-600">⌄</button>
+            {typeMenuOpen && <div className="absolute right-0 top-[52px] z-30 max-h-64 w-full overflow-y-auto rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
+              {(['Chat bubble', 'Theme', 'Frame', 'Vehicle', 'Level Entry', 'Level Frame', 'Level Medal', 'Family Reward', 'Daily Check-in'] as AssetType[]).map((value) => (
+                <button key={value} type="button" onClick={() => { setType(value); setTitle(value); setSelected(null); setAssetNameQuery(''); setTypeMenuOpen(false); }} className={`block w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold ${type === value ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100'}`}>{value}</button>
+              ))}
+            </div>}
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <label className="w-20 shrink-0 text-xs font-bold text-slate-600" htmlFor="owner-asset-name">Assets Name</label>
+          <input id="owner-asset-name" value={assetNameQuery} onChange={(event) => { setAssetNameQuery(event.target.value); setSelected(null); }} placeholder="Type asset name" list="owner-asset-name-options" className="h-12 w-full max-w-sm rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-800 outline-none focus:border-slate-400" />
+          <datalist id="owner-asset-name-options">
+            {visibleAssets.map((asset) => <option key={asset.id} value={asset.name} />)}
+          </datalist>
+          {matchedAsset && <span className="shrink-0 text-xs font-semibold text-emerald-600">Selected</span>}
         </div>
         <div className="flex items-center gap-3">
           <span className="w-20 shrink-0 text-xs font-bold text-slate-600">Assets Name</span>
@@ -189,21 +208,22 @@ export default function OwnerAssetsPanel({ ownerKey }: { ownerKey: string }) {
           <label className="w-20 shrink-0 text-xs font-bold text-slate-600" htmlFor="owner-asset-days">Days</label>
           <input id="owner-asset-days" value={days} onChange={(event) => setDays(event.target.value)} inputMode="numeric" className="w-20 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 outline-none focus:border-slate-400" />
         </div>
-        <button type="button" onClick={sendAsset} disabled={busy || !user || !selected} className="w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-extrabold text-white disabled:cursor-not-allowed disabled:opacity-40">{busy ? 'Sending…' : 'Send'}</button>
+        <button type="button" onClick={sendAsset} disabled={busy || !user || !(matchedAsset || selected)} className="w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-extrabold text-white disabled:cursor-not-allowed disabled:opacity-40">{busy ? 'Sending…' : 'Send'}</button>
         {notice && <p className="text-xs font-semibold text-slate-600">{notice}</p>}
       </div>
 
       <div className="mt-8 overflow-x-auto rounded-xl border border-slate-200 bg-white">
         <table className="w-full min-w-[650px] border-collapse text-left">
-          <thead><tr className="border-b border-slate-100 bg-slate-50"><th className={tableHead}>User</th><th className={tableHead}>ID</th><th className={tableHead}>Assets Type</th><th className={tableHead}>Days</th></tr></thead>
+          <thead><tr className="border-b border-slate-100 bg-slate-50"><th className={tableHead}>User</th><th className={tableHead}>ID</th><th className={tableHead}>Assets Type</th><th className={tableHead}>Assets</th><th className={tableHead}>Days</th></tr></thead>
           <tbody className="divide-y divide-slate-100">
             {history.map((item) => <tr key={item.id} className="hover:bg-slate-50">
               <td className="px-4 py-3"><div className="flex items-center gap-2"><img src={item.avatar || '/default-avatar.png'} alt="" className="h-8 w-8 rounded-full object-cover" /><span className="max-w-36 truncate text-xs font-bold text-slate-800">{item.name}</span></div></td>
               <td className="px-4 py-3 text-xs font-semibold text-slate-600">{item.accountId}</td>
               <td className="px-4 py-3 text-xs font-semibold text-slate-700">{item.tab}</td>
+              <td className="px-4 py-3"><img src={item.image ? ((item.source === 'zyora' ? 'https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/' : ASSET_BASE) + item.image) : '/default-avatar.png'} alt={item.assetName || item.name || 'Sent asset'} className="h-11 w-11 rounded-lg border border-slate-100 bg-white object-contain p-1" /></td>
               <td className="px-4 py-3 text-xs font-semibold text-slate-600">{item.days}</td>
             </tr>)}
-            {history.length === 0 && <tr><td colSpan={4} className="px-4 py-8 text-center text-xs text-slate-400">No sent assets</td></tr>}
+            {history.length === 0 && <tr><td colSpan={5} className="px-4 py-8 text-center text-xs text-slate-400">No sent assets</td></tr>}
           </tbody>
         </table>
       </div>
