@@ -2830,7 +2830,7 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                                         gifDurationMs = 1800L
                                     )
                                     val seatNumber = seat.number
-                                    mainHandler.postDelayed({
+                                    Handler(Looper.getMainLooper()).postDelayed({
                                         val currentIndex = seats.indexOfFirst { it.number == seatNumber }
                                         if (currentIndex >= 0 && seats[currentIndex].gifTimestamp == localTimestamp) {
                                             seats[currentIndex] = seats[currentIndex].copy(
@@ -2841,10 +2841,10 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                                 }
                             }
                         }
-                        mainHandler.postDelayed({
+                        Handler(Looper.getMainLooper()).postDelayed({
                             if (luckyGiftNotice?.id == localTransferId) {
                                 luckyGiftNotice = luckyGiftNotice?.copy(isExiting = true)
-                                mainHandler.postDelayed({
+                                Handler(Looper.getMainLooper()).postDelayed({
                                     if (luckyGiftNotice?.id == localTransferId) luckyGiftNotice = null
                                 }, 450L)
                             }
