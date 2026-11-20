@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -82,7 +83,6 @@ private const val DRAGON_B_IMAGE =
 private const val DRAGON_C_IMAGE =
     "${BASE_URL}public/IMG_20261121_020609.png"
 
-// Bottom Chips
 private data class BetChip(
     val label: String,
     val value: Long,
@@ -120,27 +120,55 @@ internal fun DragonBattleGameItem(onClick: () -> Unit) {
     }
 }
 
+/**
+ * Full screen NAHI lega.
+ * Bottom pe open hoga aur sirf Background Image ki exact height mein hi sab aayega.
+ * Pehle Loading Page -> fir Main Game UI.
+ */
 @Composable
 fun DragonBattleGameHost(
+    modifier: Modifier = Modifier,
     onClose: () -> Unit = {},
     onMinimize: () -> Unit = {}
 ) {
     var isLoaded by remember { mutableStateOf(false) }
 
-    if (!isLoaded) {
-        DragonBattleLoadingScreen(
-            onLoadingFinished = { isLoaded = true }
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .wrapContentHeight()
+            .clip(RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp)),
+        contentAlignment = Alignment.BottomCenter
+    ) {
+        // Background Image determines the exact height of the entire game container
+        AsyncImage(
+            model = DRAGON_BATTLE_BG,
+            contentDescription = "Dragon Battle Background",
+            modifier = Modifier
+                .fillMaxWidth()
+                .wrapContentHeight(),
+            contentScale = ContentScale.FillWidth
         )
-    } else {
-        DragonBattleMainScreen(
-            onClose = onClose,
-            onMinimize = onMinimize
-        )
+
+        // All UI stays strictly inside the background image bounds (matchParentSize)
+        if (!isLoaded) {
+            DragonBattleLoadingOverlay(
+                modifier = Modifier.matchParentSize(),
+                onLoadingFinished = { isLoaded = true }
+            )
+        } else {
+            DragonBattleMainOverlay(
+                modifier = Modifier.matchParentSize(),
+                onClose = onClose,
+                onMinimize = onMinimize
+            )
+        }
     }
 }
 
 @Composable
-fun DragonBattleLoadingScreen(
+private fun DragonBattleLoadingOverlay(
+    modifier: Modifier = Modifier,
     onLoadingFinished: () -> Unit
 ) {
     var progress by remember { mutableFloatStateOf(0f) }
@@ -154,47 +182,43 @@ fun DragonBattleLoadingScreen(
         onLoadingFinished()
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        AsyncImage(
-            model = DRAGON_BATTLE_BG,
-            contentDescription = "Dragon Battle Background",
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop
-        )
-
+    Box(modifier = modifier) {
+        // Top Title: Dragon Battle
         Text(
             text = "Dragon Battle",
             modifier = Modifier
                 .align(Alignment.TopCenter)
-                .padding(top = 28.dp),
+                .padding(top = 12.dp),
             style = TextStyle(
                 color = Color.White,
-                fontSize = 32.sp,
+                fontSize = 26.sp,
                 fontWeight = FontWeight.ExtraBold,
                 fontFamily = FontFamily.Serif,
                 shadow = Shadow(
                     color = Color(0xCC2B1200),
-                    offset = Offset(2f, 4f),
-                    blurRadius = 6f
+                    offset = Offset(2f, 3f),
+                    blurRadius = 5f
                 )
             )
         )
 
+        // Center Logo
         AsyncImage(
             model = DRAGON_BATTLE_LOGO,
             contentDescription = "Dragon Battle Logo",
             modifier = Modifier
                 .align(Alignment.Center)
-                .padding(bottom = 60.dp)
-                .size(190.dp),
+                .padding(bottom = 26.dp)
+                .size(145.dp),
             contentScale = ContentScale.Fit
         )
 
+        // Bottom Blue Striped Loading Bar
         BlueGlossyLoadingBar(
             progress = progress,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(horizontal = 24.dp, vertical = 48.dp)
+                .padding(horizontal = 20.dp, vertical = 22.dp)
         )
     }
 }
@@ -220,11 +244,11 @@ private fun BlueGlossyLoadingBar(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(34.dp)
+            .height(28.dp)
             .clip(outerShape)
             .background(Color(0xFF4E2605))
-            .border(width = 3.dp, brush = goldBorderBrush, shape = outerShape)
-            .padding(3.dp),
+            .border(width = 2.5.dp, brush = goldBorderBrush, shape = outerShape)
+            .padding(2.5.dp),
         contentAlignment = Alignment.CenterStart
     ) {
         if (clampedProgress > 0f) {
@@ -277,7 +301,7 @@ private fun BlueGlossyLoadingBar(
             modifier = Modifier.align(Alignment.Center),
             style = TextStyle(
                 color = Color.White,
-                fontSize = 14.sp,
+                fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
                 shadow = Shadow(
                     color = Color(0xCC001A4D),
@@ -290,7 +314,8 @@ private fun BlueGlossyLoadingBar(
 }
 
 @Composable
-fun DragonBattleMainScreen(
+private fun DragonBattleMainOverlay(
+    modifier: Modifier = Modifier,
     onClose: () -> Unit = {},
     onMinimize: () -> Unit = {}
 ) {
@@ -336,264 +361,245 @@ fun DragonBattleMainScreen(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        // Main Game Background
-        AsyncImage(
-            model = DRAGON_BATTLE_BG,
-            contentDescription = "Main Game Background",
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop
-        )
-
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 8.dp, vertical = 6.dp),
-            verticalArrangement = Arrangement.SpaceBetween
+    Column(
+        modifier = modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+        verticalArrangement = Arrangement.SpaceBetween
+    ) {
+        // 1. TOP HEADER BAR
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            // 1. TOP HEADER BAR
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                HeaderCircleIcon(Icons.Default.OpenWith) {}
+                HeaderCircleIcon(Icons.AutoMirrored.Filled.VolumeUp) {}
+                HeaderCircleIcon(Icons.Default.HelpOutline) {}
+                HeaderCircleIcon(Icons.Default.EmojiEvents) {}
+            }
+
+            Text(
+                text = "Dragon Battle",
+                style = TextStyle(
+                    color = Color.White,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontFamily = FontFamily.Serif,
+                    shadow = Shadow(
+                        color = Color(0xCC2B1200),
+                        offset = Offset(1f, 3f),
+                        blurRadius = 4f
+                    )
+                )
+            )
+
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                HeaderCircleIcon(Icons.Default.Menu) {}
+                HeaderCircleIcon(Icons.Default.KeyboardArrowDown, onMinimize)
+                HeaderCircleIcon(Icons.Default.Close, onClose)
+            }
+        }
+
+        // 2. TOP 3 CARD TABLES + CENTER 20s TIMER
+        Box(
+            modifier = Modifier.fillMaxWidth(),
+            contentAlignment = Alignment.Center
+        ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                    HeaderCircleIcon(Icons.Default.OpenWith) {}
-                    HeaderCircleIcon(Icons.AutoMirrored.Filled.VolumeUp) {}
-                    HeaderCircleIcon(Icons.Default.HelpOutline) {}
-                    HeaderCircleIcon(Icons.Default.EmojiEvents) {}
-                }
-
-                Text(
-                    text = "Dragon Battle",
-                    style = TextStyle(
-                        color = Color.White,
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        fontFamily = FontFamily.Serif,
-                        shadow = Shadow(
-                            color = Color(0xCC2B1200),
-                            offset = Offset(1f, 3f),
-                            blurRadius = 4f
-                        )
-                    )
-                )
-
-                Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                    HeaderCircleIcon(Icons.Default.Menu) {}
-                    HeaderCircleIcon(Icons.Default.KeyboardArrowDown, onMinimize)
-                    HeaderCircleIcon(Icons.Default.Close, onClose)
-                }
-            }
-
-            // 2. TOP 3 CARD TABLES + CENTER 20s TIMER
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 6.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    OverlappingThreeCardsTable(multiplier = "2.92")
-                    OverlappingThreeCardsTable(multiplier = "2.92")
-                    OverlappingThreeCardsTable(multiplier = "2.92")
-                }
-
-                // Center Countdown Timer (on top of middle table cards)
-                Box(
-                    modifier = Modifier
-                        .offset(y = (-8).dp)
-                        .size(44.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    AsyncImage(
-                        model = TIMER_BG_IMAGE,
-                        contentDescription = "Countdown Timer Background",
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Fit
-                    )
-                    Text(
-                        text = timeLeft.toString(),
-                        style = TextStyle(
-                            color = Color.White,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            shadow = Shadow(
-                                color = Color(0xCC000000),
-                                offset = Offset(1f, 2f),
-                                blurRadius = 3f
-                            )
-                        )
-                    )
-                }
-            }
-
-            // 3. DRAGONS (A, B, C) + BETTING BOXES
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-                    .padding(top = 2.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                DragonBetColumn(
-                    label = "A",
-                    dragonImage = DRAGON_A_IMAGE,
-                    pot = potA,
-                    you = youA,
-                    modifier = Modifier.weight(1f),
-                    onClick = { placeBet("A") }
-                )
-                DragonBetColumn(
-                    label = "B",
-                    dragonImage = DRAGON_B_IMAGE,
-                    pot = potB,
-                    you = youB,
-                    modifier = Modifier.weight(1f),
-                    onClick = { placeBet("B") }
-                )
-                DragonBetColumn(
-                    label = "C",
-                    dragonImage = DRAGON_C_IMAGE,
-                    pot = potC,
-                    you = youC,
-                    modifier = Modifier.weight(1f),
-                    onClick = { placeBet("C") }
-                )
+                OverlappingThreeCardsTable(multiplier = "2.92")
+                OverlappingThreeCardsTable(multiplier = "2.92")
+                OverlappingThreeCardsTable(multiplier = "2.92")
             }
 
-            // 4. PLAYERS ICON (Left side above bottom bar)
+            // Center 20s Countdown Timer
+            Box(
+                modifier = Modifier
+                    .offset(y = (-7).dp)
+                    .size(40.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                AsyncImage(
+                    model = TIMER_BG_IMAGE,
+                    contentDescription = "Countdown Timer Background",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Fit
+                )
+                Text(
+                    text = timeLeft.toString(),
+                    style = TextStyle(
+                        color = Color.White,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        shadow = Shadow(
+                            color = Color(0xCC000000),
+                            offset = Offset(1f, 2f),
+                            blurRadius = 3f
+                        )
+                    )
+                )
+            }
+        }
+
+        // 3. DRAGONS (A, B, C) + BETTING BOXES
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            DragonBetColumn(
+                label = "A",
+                dragonImage = DRAGON_A_IMAGE,
+                pot = potA,
+                you = youA,
+                modifier = Modifier.weight(1f),
+                onClick = { placeBet("A") }
+            )
+            DragonBetColumn(
+                label = "B",
+                dragonImage = DRAGON_B_IMAGE,
+                pot = potB,
+                you = youB,
+                modifier = Modifier.weight(1f),
+                onClick = { placeBet("B") }
+            )
+            DragonBetColumn(
+                label = "C",
+                dragonImage = DRAGON_C_IMAGE,
+                pot = potC,
+                you = youC,
+                modifier = Modifier.weight(1f),
+                onClick = { placeBet("C") }
+            )
+        }
+
+        // 4. PLAYERS ICON (Left side above bottom bar)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 2.dp),
+            horizontalArrangement = Arrangement.Start
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(30.dp)
+                    .clip(RoundedCornerShape(7.dp))
+                    .background(Color(0xAA4A2508))
+                    .border(1.2.dp, Color(0xFFE5B34A), RoundedCornerShape(7.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Groups,
+                    contentDescription = "Players",
+                    tint = Color(0xFFFFE082),
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        }
+
+        // 5. BOTTOM BAR: BALANCE + REPEAT + 5 CHIPS
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            // Balance Pill
             Row(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 4.dp),
-                horizontalArrangement = Arrangement.Start
+                    .clip(RoundedCornerShape(50))
+                    .background(Color(0x993B1D05))
+                    .border(1.dp, Color(0xFFE5B34A), RoundedCornerShape(50))
+                    .padding(horizontal = 7.dp, vertical = 3.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(
                     modifier = Modifier
-                        .size(34.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color(0xAA4A2508))
-                        .border(1.5.dp, Color(0xFFE5B34A), RoundedCornerShape(8.dp)),
+                        .size(15.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFFFC107)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Groups,
-                        contentDescription = "Players",
-                        tint = Color(0xFFFFE082),
-                        modifier = Modifier.size(20.dp)
+                    Text(
+                        text = "S",
+                        color = Color(0xFF6B3900),
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.ExtraBold
                     )
                 }
+                Spacer(modifier = Modifier.width(3.dp))
+                Text(
+                    text = formatShortAmount(balance),
+                    color = Color(0xFFFFE57F),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = " >",
+                    color = Color(0xFFFFE57F),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold
+                )
             }
 
-            // 5. BOTTOM BAR: BALANCE + REPEAT + 5 CHIPS
-            Row(
+            // Repeat Button
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 2.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                    .clip(RoundedCornerShape(7.dp))
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(Color(0xFF9E7B4F), Color(0xFF5D4021))
+                        )
+                    )
+                    .border(1.dp, Color(0xFFE5C17B), RoundedCornerShape(7.dp))
+                    .clickable { lastBetTable?.let { placeBet(it) } }
+                    .padding(horizontal = 8.dp, vertical = 5.dp),
+                contentAlignment = Alignment.Center
             ) {
-                // Balance Pill
-                Row(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(50))
-                        .background(Color(0x993B1D05))
-                        .border(1.dp, Color(0xFFE5B34A), RoundedCornerShape(50))
-                        .padding(horizontal = 8.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                Text(
+                    text = "Repeat",
+                    color = Color.White,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            // 5 Bottom Chips (5K, 50K, 500K, 5M, 10M)
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(3.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                BET_CHIPS.forEachIndexed { index, chip ->
+                    val isSelected = selectedChipIndex == index
                     Box(
                         modifier = Modifier
-                            .size(16.dp)
+                            .size(if (isSelected) 40.dp else 34.dp)
+                            .scale(if (isSelected) 1.05f else 1f)
                             .clip(CircleShape)
-                            .background(Color(0xFFFFC107)),
+                            .then(
+                                if (isSelected) {
+                                    Modifier.border(
+                                        width = 2.dp,
+                                        color = Color(0xFFFFE047),
+                                        shape = CircleShape
+                                    )
+                                } else {
+                                    Modifier
+                                }
+                            )
+                            .clickable { selectedChipIndex = index },
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = "S",
-                            color = Color(0xFF6B3900),
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.ExtraBold
+                        AsyncImage(
+                            model = chip.imageUrl,
+                            contentDescription = chip.label,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Fit
                         )
-                    }
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = formatShortAmount(balance),
-                        color = Color(0xFFFFE57F),
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = " >",
-                        color = Color(0xFFFFE57F),
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                // Repeat Button
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(
-                            Brush.verticalGradient(
-                                listOf(Color(0xFF9E7B4F), Color(0xFF5D4021))
-                            )
-                        )
-                        .border(1.dp, Color(0xFFE5C17B), RoundedCornerShape(8.dp))
-                        .clickable {
-                            lastBetTable?.let { placeBet(it) }
-                        }
-                        .padding(horizontal = 10.dp, vertical = 6.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "Repeat",
-                        color = Color.White,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                // 5 Bottom Chips (5K, 50K, 500K, 5M, 10M)
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    BET_CHIPS.forEachIndexed { index, chip ->
-                        val isSelected = selectedChipIndex == index
-                        Box(
-                            modifier = Modifier
-                                .size(if (isSelected) 44.dp else 38.dp)
-                                .scale(if (isSelected) 1.05f else 1f)
-                                .clip(CircleShape)
-                                .then(
-                                    if (isSelected) {
-                                        Modifier.border(
-                                            width = 2.dp,
-                                            color = Color(0xFFFFE047),
-                                            shape = CircleShape
-                                        )
-                                    } else {
-                                        Modifier
-                                    }
-                                )
-                                .clickable { selectedChipIndex = index },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            AsyncImage(
-                                model = chip.imageUrl,
-                                contentDescription = chip.label,
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Fit
-                            )
-                        }
                     }
                 }
             }
@@ -608,7 +614,7 @@ private fun HeaderCircleIcon(
 ) {
     Box(
         modifier = Modifier
-            .size(26.dp)
+            .size(24.dp)
             .clip(CircleShape)
             .background(Color(0x993D2314))
             .border(1.dp, Color(0x88FFE0A3), CircleShape)
@@ -619,63 +625,58 @@ private fun HeaderCircleIcon(
             imageVector = icon,
             contentDescription = null,
             tint = Color.White,
-            modifier = Modifier.size(16.dp)
+            modifier = Modifier.size(14.dp)
         )
     }
 }
 
 /**
- * 1 Table = 3 cards in 1 Row with half-overlap (ek ke upar ek) + multiplier below
+ * 1 Table = 3 cards in 1 Row with half-overlap + multiplier below
  */
 @Composable
 private fun OverlappingThreeCardsTable(multiplier: String) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
             modifier = Modifier
-                .width(96.dp)
-                .height(64.dp),
+                .width(88.dp)
+                .height(58.dp),
             contentAlignment = Alignment.CenterStart
         ) {
-            // Card 1 (Left)
             AsyncImage(
                 model = CARD_IMAGE,
                 contentDescription = "Card 1",
                 modifier = Modifier
                     .offset(x = 0.dp)
-                    .size(width = 48.dp, height = 64.dp)
+                    .size(width = 44.dp, height = 58.dp)
                     .clip(RoundedCornerShape(4.dp)),
                 contentScale = ContentScale.Crop
             )
-            // Card 2 (Half overlapping Card 1)
             AsyncImage(
                 model = CARD_IMAGE,
                 contentDescription = "Card 2",
                 modifier = Modifier
-                    .offset(x = 24.dp)
-                    .size(width = 48.dp, height = 64.dp)
+                    .offset(x = 22.dp)
+                    .size(width = 44.dp, height = 58.dp)
                     .clip(RoundedCornerShape(4.dp)),
                 contentScale = ContentScale.Crop
             )
-            // Card 3 (Half overlapping Card 2)
             AsyncImage(
                 model = CARD_IMAGE,
                 contentDescription = "Card 3",
                 modifier = Modifier
-                    .offset(x = 48.dp)
-                    .size(width = 48.dp, height = 64.dp)
+                    .offset(x = 44.dp)
+                    .size(width = 44.dp, height = 58.dp)
                     .clip(RoundedCornerShape(4.dp)),
                 contentScale = ContentScale.Crop
             )
         }
 
-        Spacer(modifier = Modifier.height(3.dp))
+        Spacer(modifier = Modifier.height(2.dp))
 
         Text(
             text = multiplier,
             color = Color(0xFFFFD699),
-            fontSize = 11.sp,
+            fontSize = 10.sp,
             fontWeight = FontWeight.Bold
         )
     }
@@ -694,11 +695,10 @@ private fun DragonBetColumn(
         modifier = modifier.clickable(onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Dragon + Letter (A / B / C)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(100.dp),
+                .height(82.dp),
             contentAlignment = Alignment.Center
         ) {
             Text(
@@ -708,7 +708,7 @@ private fun DragonBetColumn(
                     .padding(start = 2.dp, top = 2.dp),
                 style = TextStyle(
                     color = Color(0xFFFFF3C4),
-                    fontSize = 26.sp,
+                    fontSize = 22.sp,
                     fontWeight = FontWeight.ExtraBold,
                     fontFamily = FontFamily.Serif,
                     shadow = Shadow(
@@ -722,34 +722,33 @@ private fun DragonBetColumn(
             AsyncImage(
                 model = dragonImage,
                 contentDescription = "Dragon $label",
-                modifier = Modifier.size(96.dp),
+                modifier = Modifier.size(78.dp),
                 contentScale = ContentScale.Fit
             )
         }
 
-        // Dark Maroon Pot / You Box
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(74.dp)
-                .clip(RoundedCornerShape(10.dp))
+                .height(62.dp)
+                .clip(RoundedCornerShape(9.dp))
                 .background(Color(0xD94B1A19))
-                .border(1.dp, Color(0x55E5B34A), RoundedCornerShape(10.dp))
-                .padding(bottom = 6.dp),
+                .border(1.dp, Color(0x55E5B34A), RoundedCornerShape(9.dp))
+                .padding(bottom = 5.dp),
             contentAlignment = Alignment.BottomCenter
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
                     text = "Pot: ${formatShortAmount(pot)}",
                     color = Color.White,
-                    fontSize = 11.sp,
+                    fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center
                 )
                 Text(
                     text = "You: ${formatShortAmount(you)}",
                     color = Color(0xFFFFE082),
-                    fontSize = 11.sp,
+                    fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center
                 )
