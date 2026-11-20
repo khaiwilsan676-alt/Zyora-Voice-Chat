@@ -1521,3 +1521,11 @@ Current documentation does not certify that all historical features are build-, 
 - Root cause: synchronous `NativeIndexDatabase` profile cache work ran inside the connect callback ahead of `room_join`, delaying the server's room membership, presence, and seat snapshot flow on slower devices/storage.
 - Profile cache enrichment is now dispatched to the existing room-scoped IO coroutine scope; it remains account/profile-key scoped and is cancelled on real room exit. Room authorization, server-side join validation, seat/voice/chat behavior, and UI are unchanged.
 - Commit created for this optimization; native APK CI and real-device cold/warm room-entry timing plus voice/seat regression tests are still required. No measured speedup or bug-free claim is made until those checks pass.
+
+
+## 2026-11-20 — Bottom navigation and private chat responsiveness
+- Native `HomeScreen.kt`: bottom navigation ignores taps on the already-selected tab, avoiding redundant tab-state and unread-state work. Existing Home/Message/Me layout and destinations are unchanged.
+- Native `MessageScreen.kt`: plain-text messages now appear immediately via optimistic local echo with a unique message ID, local timestamp, and conversation preview; the existing Socket.IO `private_message` event remains the delivery path. The server echo/ack is deduplicated by that message ID.
+- Chat history snapshots are serialized from Compose state and written to the local IndexDB store on `Dispatchers.IO`, keeping disk writes off the UI thread.
+- If the server rejects a message because of block state, rollback now removes the message, ID, and timestamp at the same index so subsequent message metadata stays aligned.
+- Native APK CI and real-device tab-switch/message-delivery regression tests remain required; performance is not certified until those pass.
