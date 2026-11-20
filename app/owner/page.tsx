@@ -323,6 +323,14 @@ interface UserRecord {
   image?: string;
   registerTime?: string | number;
   lastLoginAt?: string | number;
+  longId?: string;
+  appLongId?: string;
+  vipId?: string;
+  appShortId?: string;
+  country?: string;
+  accountStatus?: string;
+  deviceName?: string;
+  ipAddress?: string;
 }
 
 const fallbackUsers: UserRecord[] = [];
@@ -1129,7 +1137,15 @@ export default function StaffPanel() {
             hurryId: String(u.accountId || u.accountNumber || u.displayAccountNumber || u.displayUserNumber || u["Account ID"] || u["Account Number"] || u.hurryId || u.zyoraId || u.publicUserId || u.id || u.uid || u.appLongId || u._id || '—'),
             email: String(u.email || u.gmail || u.emailPhone || u.emailAddress || '—'),
             role: String(u.role || 'NORMAL'),
-            image: [u.image, u.dp, u.photo, u.photoURL, u.photoUrl, u.avatar, u.avatarUrl, u.profileImage, u.profileImageUrl, u.profile_image, u.imageUrl, u.picture, u.profile?.image, u.profile?.avatar, u.profile?.photo, u.userData?.image, u.userData?.avatar].find((value: any) => typeof value === 'string' && value.trim() && value.trim() !== 'null' && value.trim() !== 'undefined')?.trim() || ''
+            image: [u.image, u.dp, u.photo, u.photoURL, u.photoUrl, u.avatar, u.avatarUrl, u.profileImage, u.profileImageUrl, u.profile_image, u.imageUrl, u.picture, u.profile?.image, u.profile?.avatar, u.profile?.photo, u.userData?.image, u.userData?.avatar].find((value: any) => typeof value === 'string' && value.trim() && value.trim() !== 'null' && value.trim() !== 'undefined')?.trim() || '',
+            longId: String(u.longId || u.longID || u.userLongId || u.accountId || u.accountNumber || u.displayAccountNumber || u.publicUserId || u.hurryId || '—'),
+            appLongId: String(u.appLongId || u.appLongID || u.uid || u.userId || u._id || '—'),
+            vipId: String(u.vipId || u.vipID || u.vipUserId || u.vipAccountId || '—'),
+            appShortId: String(u.appShortId || u.appShortID || u.shortId || u.shortID || u.id || '—'),
+            country: String(u.country || u.countryName || u.profile?.country || u.userData?.country || '—'),
+            accountStatus: String(u.accountStatus || u.status || (u.isDeleted ? 'Delete' : u.isActive === false ? 'Delete' : 'Using')),
+            deviceName: String(u.deviceName || u.deviceModel || u.lastDeviceName || u.device?.name || u.lastDevice?.name || '—'),
+            ipAddress: String(u.ipAddress || u.lastIpAddress || u.lastIP || u.ip || u.lastLoginIp || '—')
           }));
         } catch (err) {
           console.warn('Socket.IO owner users load failed; trying HTTP users API:', err);
@@ -1155,7 +1171,15 @@ export default function StaffPanel() {
             hurryId: String(u.accountId || u.accountNumber || u.displayAccountNumber || u.displayUserNumber || u["Account ID"] || u["Account Number"] || u.hurryId || u.zyoraId || u.publicUserId || u.id || u.uid || u.appLongId || u._id || '—'),
             email: String(u.email || u.gmail || u.emailPhone || u.emailAddress || '—'),
             role: String(u.role || 'NORMAL'),
-            image: [u.image, u.dp, u.photo, u.photoURL, u.photoUrl, u.avatar, u.avatarUrl, u.profileImage, u.profileImageUrl, u.profile_image, u.imageUrl, u.picture, u.profile?.image, u.profile?.avatar, u.profile?.photo, u.userData?.image, u.userData?.avatar].find((value: any) => typeof value === 'string' && value.trim() && value.trim() !== 'null' && value.trim() !== 'undefined')?.trim() || ''
+            image: [u.image, u.dp, u.photo, u.photoURL, u.photoUrl, u.avatar, u.avatarUrl, u.profileImage, u.profileImageUrl, u.profile_image, u.imageUrl, u.picture, u.profile?.image, u.profile?.avatar, u.profile?.photo, u.userData?.image, u.userData?.avatar].find((value: any) => typeof value === 'string' && value.trim() && value.trim() !== 'null' && value.trim() !== 'undefined')?.trim() || '',
+            longId: String(u.longId || u.longID || u.userLongId || u.accountId || u.accountNumber || u.displayAccountNumber || u.publicUserId || u.hurryId || '—'),
+            appLongId: String(u.appLongId || u.appLongID || u.uid || u.userId || u._id || '—'),
+            vipId: String(u.vipId || u.vipID || u.vipUserId || u.vipAccountId || '—'),
+            appShortId: String(u.appShortId || u.appShortID || u.shortId || u.shortID || u.id || '—'),
+            country: String(u.country || u.countryName || u.profile?.country || u.userData?.country || '—'),
+            accountStatus: String(u.accountStatus || u.status || (u.isDeleted ? 'Delete' : u.isActive === false ? 'Delete' : 'Using')),
+            deviceName: String(u.deviceName || u.deviceModel || u.lastDeviceName || u.device?.name || u.lastDevice?.name || '—'),
+            ipAddress: String(u.ipAddress || u.lastIpAddress || u.lastIP || u.ip || u.lastLoginIp || '—')
           }));
         }
 
@@ -1655,7 +1679,7 @@ export default function StaffPanel() {
                               )}
                               <div className="flex flex-col">
                                 <span className="text-sm font-bold text-slate-800">{u.name}</span>
-                                <span className="text-[11px] text-slate-400 font-medium">{u.username}</span>
+
                               </div>
                             </div>
                           </td>
@@ -1683,7 +1707,7 @@ export default function StaffPanel() {
                             </span>
                           </td>
                           <td className="py-3 pr-4 text-right">
-                            <button onClick={() => openTagModal(u)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors">
+                            <button onClick={() => { setSelectedTagUserData(u); setIsTagModalOpen(true); }} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors" aria-label="View user details">
                               <MoreVertical className="w-4 h-4" />
                             </button>
                           </td>
@@ -2944,42 +2968,21 @@ export default function StaffPanel() {
       </main>
 
       {isTagModalOpen && selectedTagUserData && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl p-6 w-full max-w-lg shadow-2xl relative">
-            <button onClick={() => setIsTagModalOpen(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600">
-              <X className="w-5 h-5" />
-            </button>
-            <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-              <span>🏷️</span> Manage Tags for <span className="text-blue-600">{selectedTagUserData.name}</span>
-            </h3>
-
-            <div className="grid grid-cols-2 gap-3 mb-6">
-              {AVAILABLE_TAGS.map((tag) => {
-                const isSelected = selectedTags.includes(tag.id);
-                return (
-                  <div
-                    key={tag.id}
-                    onClick={() => toggleTag(tag.id)}
-                    className={`p-3 rounded-2xl border-2 transition cursor-pointer flex items-center gap-3 ${
-                      isSelected ? 'bg-blue-50 border-blue-500' : 'bg-white border-slate-200'
-                    }`}
-                  >
-                    <span className="text-2xl">{tag.emoji}</span>
-                    <span className="font-bold text-xs text-slate-800">{tag.name}</span>
-                  </div>
-                );
-              })}
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4" onClick={() => setIsTagModalOpen(false)}>
+          <div className="relative w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <button type="button" onClick={() => setIsTagModalOpen(false)} className="absolute right-3 top-3 z-10 rounded-full p-2 text-slate-500 hover:bg-slate-100" aria-label="Close user details"><X className="h-5 w-5" /></button>
+            <div className="flex items-center gap-3 border-b border-slate-100 px-5 py-4 pr-14">
+              <div className="h-12 w-12 shrink-0 overflow-hidden rounded-full bg-slate-100">
+                {selectedTagUserData.image ? <img src={selectedTagUserData.image} alt={selectedTagUserData.name} className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center text-lg font-bold text-slate-500">{selectedTagUserData.name.charAt(0).toUpperCase()}</div>}
+              </div>
+              <span className="min-w-0 truncate text-base font-bold text-slate-900">{selectedTagUserData.name}</span>
             </div>
-
-            <div className="flex justify-end gap-3">
-              <button onClick={() => setIsTagModalOpen(false)} className="px-5 py-2.5 text-sm font-bold text-slate-500 hover:bg-slate-100 rounded-xl transition-colors">
-                Cancel
-              </button>
-              <button onClick={handleAssignTags} className="px-5 py-2.5 text-sm font-bold bg-blue-600 text-white rounded-xl shadow-md hover:bg-blue-700 transition-colors">
-                Save Tags
-              </button>
+            <div className="space-y-0 px-5 py-2 text-sm">
+              <div className="flex items-center justify-between gap-4 border-b border-slate-100 py-3"><span className="font-semibold text-slate-500">Long ID:</span><span className="break-all text-right font-bold text-slate-900">{selectedTagUserData.longId || '—'}</span><span className="shrink-0 text-slate-500">App Long ID: <b className="text-slate-900">{selectedTagUserData.appLongId || '—'}</b></span></div>
+              <div className="flex items-center justify-between gap-4 border-b border-slate-100 py-3"><span className="font-semibold text-slate-500">Vip ID:</span><span className="break-all text-right font-bold text-slate-900">{selectedTagUserData.vipId || '—'}</span><span className="shrink-0 text-slate-500">App Short ID: <b className="text-slate-900">{selectedTagUserData.appShortId || '—'}</b></span></div>
+              <div className="flex items-center justify-between gap-4 border-b border-slate-100 py-3"><span className="font-semibold text-slate-500">Country:</span><b className="text-right text-slate-900">{selectedTagUserData.country || '—'}</b><span className="shrink-0 text-slate-500">Current Status: <b className="text-slate-900">{selectedTagUserData.accountStatus || 'Using'}</b></span></div>
+              <div className="flex items-center justify-between gap-4 py-3"><span className="min-w-0 break-words font-semibold text-slate-500">Device name: <b className="text-slate-900">{selectedTagUserData.deviceName || '—'}</b></span><span className="shrink-0 text-right text-slate-500">User IP address: <b className="break-all text-slate-900">{selectedTagUserData.ipAddress || '—'}</b></span></div>
             </div>
-            {tagSuccess && <p className="mt-4 text-center text-sm font-bold text-green-600">{tagSuccess}</p>}
           </div>
         </div>
       )}
