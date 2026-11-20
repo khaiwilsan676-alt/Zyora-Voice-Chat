@@ -515,7 +515,7 @@ fun NativeOwnedMedalShowcase(userId: String, onDataLoaded: ((Boolean) -> Unit)? 
                             AsyncImage(model = imageUrl, contentDescription = owned.optString("name"), modifier = Modifier.fillMaxWidth().height(92.dp), contentScale = ContentScale.Fit)
                             Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                                 repeat(owned.optInt("stars", 1).coerceIn(1, 5)) {
-                                    AsyncImage(model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_0000000004e881fa84e61b8616f8eaf8.png", contentDescription = "Star", modifier = Modifier.size(12.dp))
+                                    AsyncImage(model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/file_0000000004e881fa84e61b8616f8eaf8.png", contentDescription = "Star", modifier = Modifier.size(12.dp))
                                 }
                             }
                             val remaining = ((owned.optLong("expiresAt") - clock).coerceAtLeast(0L) / 1000L)
