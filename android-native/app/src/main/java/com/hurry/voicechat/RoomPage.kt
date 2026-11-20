@@ -2909,7 +2909,16 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                 onTake={
                     if(!seat.occupied && !seat.locked) {
                         val user = JSONObject().put("name",roomDisplayName.ifBlank{"User"}).put("image",roomDisplayImage.ifBlank{"https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/default-avatar.png"}).put("accountId",accountId)
-                        if(seatIndex>=0) seats[seatIndex]=seat.copy(occupied=true,userName=roomDisplayName.ifBlank{"User"},userImage=roomDisplayImage.ifBlank { "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/default-avatar.png" },accountId=accountId,muted=false,locked=false)
+                        // A seat move is one local state transition: clear every previous
+                        // seat for this account BEFORE painting the destination. Otherwise
+                        // the old avatar remains visible until the server's next snapshot.
+                        seats.indices.filter { index ->
+                            seats[index].occupied && seats[index].accountId == accountId && seats[index].number != seat.number
+                        }.forEach { index ->
+                            val previous = seats[index]
+                            seats[index] = NativeRoomSeat(number = previous.number, locked = previous.locked)
+                        }
+                        if(seatIndex>=0) seats[seatIndex]=seat.copy(occupied=true,userName=roomDisplayName.ifBlank{"User"},userImage=roomDisplayImage.ifBlank { "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/default-avatar.png" },accountId=accountId,muted=false,selfMuted=false,speaking=false,locked=false)
                         roomSocketRef.value?.emit("room_seat_action",JSONObject().put("roomId",roomId).put("userId",accountId).put("action","take").put("seatNumber",seat.number).put("user",user))
                         showSeatSheet=false;selectedSeat=0
                     }
