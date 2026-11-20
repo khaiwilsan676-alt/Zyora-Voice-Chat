@@ -1606,3 +1606,10 @@ Current documentation does not certify that all historical features are build-, 
 - RoomProfile.kt now refreshes the same temporary-ID fields from the remote profile instead of leaving an existing cache without the assigned ID.
 - The original App ID remains the fallback when the temporary ID is expired; no original account identifier is overwritten.
 - Native APK build and live server assignment were not verified as part of this source change.
+
+
+## Owner Special ID + Asset notification root-cause correction (2026-11-21)
+- `Zyora-Server/server.js`: Special ID recipient lookup now checks both string and numeric MongoDB account-ID values, including legacy display/account-number fields, matching the numeric compatibility already used by asset grants. It also resolves Firebase UID aliases and sends the official DM through the shared `sendFamilySystemMessage` delivery path (live UID/App-ID rooms or Redis offline queue).
+- Owner asset grants now use the same shared official DM delivery helper, numeric account lookup includes all supported account-number fields, and message text uses actual line breaks. Both endpoints return `notification: delivered|queued|unavailable` rather than silently implying that a message was sent.
+- Owner Special IDs and Gift Catalog panels now show whether the system message was delivered, queued, or unavailable.
+- Original App ID is not overwritten. Native APK and deployed Render behavior still require build/live verification.
