@@ -319,13 +319,6 @@ private fun LevelUpgradeDialog(onDismiss: () -> Unit) {
                 .clickable(onClick = onDismiss),
             contentAlignment = Alignment.Center
         ) {
-            FloatingEmbersAnimation(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .fillMaxHeight(0.45f)
-                    .align(Alignment.TopCenter)
-            )
-
             Box(
                 modifier = Modifier
                     .fillMaxWidth(0.86f)
