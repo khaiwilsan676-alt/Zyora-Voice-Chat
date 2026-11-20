@@ -1554,3 +1554,10 @@ Current documentation does not certify that all historical features are build-, 
 - Inbox preview persistence and profile-refresh conversation reads/writes are moved off the UI thread to avoid blocking scrolling and tab interactions.
 - No visual/layout changes; existing chat, visitor, follow, and profile behavior is retained.
 - Native APK workflow/build verification is pending.
+
+
+## 2026-11-20 — Persistent native root tabs for faster switching
+- `MainActivity.kt`: Home, Message, and Me are now hosted in separate stable `SaveableStateProvider` slots and remain composed while another root tab is selected. Previously, the single `when(tab)` branch disposed the outgoing screen, causing tab-local state and screen effects to be recreated on return.
+- Inactive root tabs are constrained to a transparent 1dp host; the selected tab retains the full content area. Existing bottom navigation, screen content, and visual styling are unchanged.
+- This keeps screen state and existing socket/listener lifetimes warm across tab switches. It also means inactive screens remain composed, so background work and memory usage must be checked on-device.
+- APK compilation and Redmi 14C responsiveness testing are pending; no measured smoothness claim is made.
