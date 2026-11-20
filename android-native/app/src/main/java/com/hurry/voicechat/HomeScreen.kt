@@ -1110,7 +1110,7 @@ private fun NavItem(
             .clickable(
                 interactionSource = null,
                 indication = null
-            ) { onTab(which) }
+            ) { if (which != selected) onTab(which) }
             .padding(vertical = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(1.dp)
