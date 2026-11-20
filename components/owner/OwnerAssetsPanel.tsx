@@ -3,8 +3,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { apiUrl } from '@/src/lib/api';
 
-type AssetType = 'Chat bubble' | 'Theme' | 'Frame' | 'Vehicle';
-type Asset = { id: string; name: string; tab: string; image: string; video?: string; type: AssetType };
+type AssetType = 'Chat bubble' | 'Theme' | 'Frame' | 'Vehicle' | 'Level Entry' | 'Level Frame' | 'Level Medal' | 'Family Reward' | 'Daily Check-in';
+type Asset = { id: string; name: string; tab: string; image: string; video?: string; type: AssetType; source?: 'zyora' };
 
 const ASSET_BASE = 'https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/';
 const ASSETS: Asset[] = [
@@ -41,7 +41,52 @@ const ASSETS: Asset[] = [
   { id: 'v7', name: 'Royal Cruiser', tab: 'Vehicle', type: 'Vehicle', image: 'IMG_20261023_125152.png', video: 'alioss_16_2025080802251364763~2.mp4' },
   { id: 'v8', name: 'Shadow Wing', tab: 'Vehicle', type: 'Vehicle', image: 'IMG_20261023_125210.png', video: 'alioss_16_2025092202291646319~2.mp4' },
   { id: 'v9', name: 'Galaxy Surfer', tab: 'Vehicle', type: 'Vehicle', image: 'IMG_20261023_125416.png', video: 'alioss_17_2025041211424496804~2.mp4' },
-];
+
+  // Level page rewards (same images and previews used by native Level.kt).
+  { id: 'le25', name: 'Lv.25 Entry', tab: 'Vehicle', type: 'Level Entry', image: 'IMG_20261025_124343.png', video: 'alioss_16_2025080802181154988~2.mp4', source: 'zyora' },
+  { id: 'le45', name: 'Lv.45 Entry', tab: 'Vehicle', type: 'Level Entry', image: 'IMG_20261025_124403.png', video: 'alioss_17_2025110614082840769~2.mp4', source: 'zyora' },
+  { id: 'le60', name: 'Lv.60 Entry', tab: 'Vehicle', type: 'Level Entry', image: 'IMG_20261025_124423.png', video: 'alioss_17_2025111717234047534~2.mp4', source: 'zyora' },
+  { id: 'le75', name: 'Lv.75 Entry', tab: 'Vehicle', type: 'Level Entry', image: 'IMG_20261025_124548.png', video: 'alioss_17_2025110916541444937~2.mp4', source: 'zyora' },
+  { id: 'le90', name: 'Lv.90 Entry', tab: 'Vehicle', type: 'Level Entry', image: 'IMG_20261025_124608.png', video: 'alioss_17_2025103016391722282~2.mp4', source: 'zyora' },
+  { id: 'lf5', name: 'Lv.5 Frame', tab: 'Avatar Frame', type: 'Level Frame', image: 'IMG_20261025_135250.png', source: 'zyora' },
+  { id: 'lf10', name: 'Lv.10 Frame', tab: 'Avatar Frame', type: 'Level Frame', image: 'IMG_20261025_135305.png', source: 'zyora' },
+  { id: 'lf25', name: 'Lv.25 Frame', tab: 'Avatar Frame', type: 'Level Frame', image: 'IMG_20261025_135331.png', source: 'zyora' },
+  { id: 'lf40', name: 'Lv.40 Frame', tab: 'Avatar Frame', type: 'Level Frame', image: 'IMG_20261025_135358.png', source: 'zyora' },
+  { id: 'lf55', name: 'Lv.55 Frame', tab: 'Avatar Frame', type: 'Level Frame', image: 'IMG_20261025_135714.png', source: 'zyora' },
+  { id: 'lf80', name: 'Lv.80 Frame', tab: 'Avatar Frame', type: 'Level Frame', image: 'IMG_20261025_135736.png', source: 'zyora' },
+  { id: 'lf100', name: 'Lv.100 Frame', tab: 'Avatar Frame', type: 'Level Frame', image: 'IMG_20261025_140657.png', source: 'zyora' },
+  { id: 'lm5', name: 'Lv.5 Medal', tab: 'Medal', type: 'Level Medal', image: 'IMG_20261024_153426.png', video: '1000220021-background.mp4', source: 'zyora' },
+  { id: 'lm15', name: 'Lv.15 Medal', tab: 'Medal', type: 'Level Medal', image: 'file_00000000bd988211840a0dcbe09101ee.png', video: '1000220022-background.mp4', source: 'zyora' },
+  { id: 'lm30', name: 'Lv.30 Medal', tab: 'Medal', type: 'Level Medal', image: 'IMG_20261024_153407.png', video: '1000220023-background.mp4', source: 'zyora' },
+  { id: 'lm50', name: 'Lv.50 Medal', tab: 'Medal', type: 'Level Medal', image: 'IMG_20261024_153322.png', video: '1000220024-background.mp4', source: 'zyora' },
+  { id: 'lm65', name: 'Lv.65 Medal', tab: 'Medal', type: 'Level Medal', image: 'IMG_20261024_153346.png', video: '1000220025-background.mp4', source: 'zyora' },
+  { id: 'lm75', name: 'Lv.75 Medal', tab: 'Medal', type: 'Level Medal', image: 'IMG_20261024_153248.png', video: '1000220026-background.mp4', source: 'zyora' },
+  { id: 'lm90', name: 'Lv.90 Medal', tab: 'Medal', type: 'Level Medal', image: 'IMG_20261024_153322.png', video: '1000220027-background.mp4', source: 'zyora' },
+  // Family leaderboard rewards.
+  { id: 'fr1f', name: 'Family TOP1 Frame 7 Days', tab: 'Avatar Frame', type: 'Family Reward', image: 'IMG_20261117_222458.png', video: 'VID_20261119_100449_690_bsl.mp4', source: 'zyora' },
+  { id: 'fr1m', name: 'Family TOP1 Medal 7 Days', tab: 'Medal', type: 'Family Reward', image: 'IMG_20261117_210225.png', source: 'zyora' },
+  { id: 'fr1t', name: 'Family TOP1 Tag 7 Days', tab: 'Family Tag', type: 'Family Reward', image: 'IMG_20261117_193617.png', source: 'zyora' },
+  { id: 'fr1e', name: 'Family TOP1 Entry 7 Days', tab: 'Vehicle', type: 'Family Reward', image: 'IMG_20260918_141104.jpg', video: 'gemini_generated_video_e407ad86~2.mp4', source: 'zyora' },
+  { id: 'fr1c', name: 'Family TOP1 5 Lakh Coins', tab: 'Family Reward', type: 'Family Reward', image: 'file_00000000b2d481fd8cd233482dbeb9ef.png', source: 'zyora' },
+  { id: 'fr1th', name: 'Family TOP1 Room Theme 7 Days', tab: 'Theme', type: 'Family Reward', image: 'IMG-20260914-WA0043.jpg', source: 'zyora' },
+  { id: 'fr2f', name: 'Family TOP2 Frame 7 Days', tab: 'Avatar Frame', type: 'Family Reward', image: 'IMG_20261117_222526.png', video: 'VID_20261119_100523_352_bsl.mp4', source: 'zyora' },
+  { id: 'fr2m', name: 'Family TOP2 Medal 7 Days', tab: 'Medal', type: 'Family Reward', image: 'IMG_20261117_210250.png', source: 'zyora' },
+  { id: 'fr2t', name: 'Family TOP2 Tag 7 Days', tab: 'Family Tag', type: 'Family Reward', image: 'IMG_20261117_193700.png', source: 'zyora' },
+  { id: 'fr2th', name: 'Family TOP2 Room Theme 7 Days', tab: 'Theme', type: 'Family Reward', image: 'IMG-20260914-WA0045.jpg', source: 'zyora' },
+  { id: 'fr3f', name: 'Family TOP3 Frame 7 Days', tab: 'Avatar Frame', type: 'Family Reward', image: 'IMG_20261117_222701.png', video: 'VID_20261119_100548_604_bsl.mp4', source: 'zyora' },
+  { id: 'fr3m', name: 'Family TOP3 Medal 7 Days', tab: 'Medal', type: 'Family Reward', image: 'IMG_20261117_210313.png', source: 'zyora' },
+  { id: 'fr3t', name: 'Family TOP3 Tag 7 Days', tab: 'Family Tag', type: 'Family Reward', image: 'IMG_20261117_193640.png', source: 'zyora' },
+  { id: 'fr3th', name: 'Family TOP3 Room Theme 7 Days', tab: 'Theme', type: 'Family Reward', image: 'IMG-20260914-WA0046.jpg', source: 'zyora' },
+  { id: 'fr410f', name: 'Family TOP4-10 Frame 3 Days', tab: 'Avatar Frame', type: 'Family Reward', image: 'IMG_20261117_222718.png', video: 'VID_20261119_100632_615_bsl.mp4', source: 'zyora' },
+  { id: 'fr410m', name: 'Family TOP4-10 Medal 3 Days', tab: 'Medal', type: 'Family Reward', image: 'IMG_20261117_210200.png', source: 'zyora' },
+  // Daily check-in rewards, including the Day 3 x2 reward and Days 5-7 bonus items.
+  { id: 'dc1coin', name: 'Daily Check-in Coins', tab: 'Daily Check-in', type: 'Daily Check-in', image: 'file_00000000b2d481fd8cd233482dbeb9ef.png', source: 'zyora' },
+  { id: 'dc3x2', name: 'Daily Check-in Day 3 ×2 Days', tab: 'Daily Check-in', type: 'Daily Check-in', image: 'file_00000000882882088d745d793bd43e06.png', source: 'zyora' },
+  { id: 'dc5', name: 'Daily Check-in Day 5 ×1 Day', tab: 'Daily Check-in', type: 'Daily Check-in', image: 'IMG_20260903_141944.png', source: 'zyora' },
+  { id: 'dc6', name: 'Daily Check-in Day 6 ×2 Days', tab: 'Daily Check-in', type: 'Daily Check-in', image: 'IMG-20260903-WA0076.jpg', source: 'zyora' },
+  { id: 'dc7a', name: 'Daily Check-in Day 7 ×3 Days', tab: 'Daily Check-in', type: 'Daily Check-in', image: 'file_0000000044388211996656afc9ce9c03.png', source: 'zyora' },
+  { id: 'dc7b', name: 'Daily Check-in Day 7 Bonus ×3 Days', tab: 'Daily Check-in', type: 'Daily Check-in', image: 'IMG-20260903-WA0077.jpg', source: 'zyora' },
+]
 
 const inputClass = 'w-full rounded-xl border border-slate-200 bg-slate-100 px-4 py-3 text-sm font-semibold text-slate-800 outline-none focus:border-slate-400';
 const tableHead = 'px-4 py-3 text-left text-[10px] font-extrabold uppercase tracking-wider text-slate-500';
@@ -58,6 +103,7 @@ export default function OwnerAssetsPanel({ ownerKey }: { ownerKey: string }) {
   const [notice, setNotice] = useState('');
 
   const visibleAssets = useMemo(() => ASSETS.filter((asset) => asset.type === type), [type]);
+  const assetUrl = (asset: Asset) => (asset.source === 'zyora' ? 'https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/' : ASSET_BASE) + asset.image;
 
   const loadHistory = async () => {
     try {
@@ -116,8 +162,8 @@ export default function OwnerAssetsPanel({ ownerKey }: { ownerKey: string }) {
         </div>}
         <div className="rounded-xl bg-slate-100 p-3">
           <div className="mb-2 text-xs font-bold text-slate-600">Assets Type</div>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {(['Chat bubble', 'Theme', 'Frame', 'Vehicle'] as AssetType[]).map((value) => (
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {(['Chat bubble', 'Theme', 'Frame', 'Vehicle', 'Level Entry', 'Level Frame', 'Level Medal', 'Family Reward', 'Daily Check-in'] as AssetType[]).map((value) => (
               <button key={value} type="button" onClick={() => { setType(value); setSelected(null); }} className={`rounded-lg px-3 py-3 text-xs font-bold transition-colors ${type === value ? 'bg-slate-800 text-white' : 'bg-white text-slate-600 hover:bg-slate-200'}`}>{value}</button>
             ))}
           </div>
@@ -125,7 +171,7 @@ export default function OwnerAssetsPanel({ ownerKey }: { ownerKey: string }) {
         <div className="grid grid-cols-4 gap-2 sm:grid-cols-6 lg:grid-cols-8">
           {visibleAssets.map((asset) => (
             <button key={asset.id} type="button" onClick={() => setSelected(asset)} aria-label={asset.name} className={`aspect-square overflow-hidden rounded-lg border bg-slate-100 p-1 ${selected?.id === asset.id ? 'border-indigo-500 ring-2 ring-indigo-200' : 'border-slate-200'}`}>
-              <img src={ASSET_BASE + asset.image} alt="" className="h-full w-full object-contain" loading="lazy" />
+              <img src={assetUrl(asset)} alt="" className="h-full w-full object-contain" loading="lazy" />
             </button>
           ))}
         </div>
@@ -141,7 +187,7 @@ export default function OwnerAssetsPanel({ ownerKey }: { ownerKey: string }) {
           <input value={days} onChange={(event) => setDays(event.target.value)} inputMode="numeric" className={inputClass} />
         </div>
         <div className="flex min-h-28 items-center justify-center rounded-xl bg-slate-100 p-3">
-          {selected && <img src={ASSET_BASE + selected.image} alt="" className="h-28 w-28 object-contain" />}
+          {selected && <img src={assetUrl(selected)} alt="" className="h-28 w-28 object-contain" />}
         </div>
         <button type="button" onClick={sendAsset} disabled={busy || !user || !selected} className="w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-extrabold text-white disabled:cursor-not-allowed disabled:opacity-40">{busy ? 'Sending…' : 'Send'}</button>
         {notice && <p className="text-xs font-semibold text-slate-600">{notice}</p>}
