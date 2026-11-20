@@ -69,7 +69,7 @@ fun HurrySupport(onBack: () -> Unit) {
         runCatching {
             socket = IO.socket(DAISY_SUPPORT_SOCKET_URL)
             socket?.on(Socket.EVENT_CONNECT) {
-                socket?.emit("register", JSONObject().put("userId", supportUserId).put("accountId", supportUserAccountId))
+                socket?.emit("register", JSONObject().put("userId", supportUserId).put("accountId", supportUserAccountId).put("deviceName", "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}"))
             }
             supportSocket = socket
         }
