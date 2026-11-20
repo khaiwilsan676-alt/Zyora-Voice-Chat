@@ -1508,3 +1508,9 @@ Current documentation does not certify that all historical features are build-, 
 
 ## 2026-11-20 — Leaderboard image-loading crash follow-up
 - Replaced the custom `BitmapFactory`/`ImageBitmap` frame loader and manual bitmap LRU cache in `android-native/.../Leaderboard.kt` with Coil `AsyncImage`. Coil now sizes and downsamples podium frame images to their measured Compose bounds and manages decoding/caching, avoiding full-resolution bitmap allocation and manual cache retention. Leaderboard UI and ranking behavior remain unchanged.
+
+
+## 2026-11-20 — Level profile identity and duplicate seat snapshot guard
+- Native `Level.kt`: load the canonical signed-in profile through the existing ProfilePersistence source and render its public-profile name/avatar in the Level header; keep valid local profile values as immediate fallback and avoid displaying a Guest placeholder for a signed-in account.
+- Native `RoomPage.kt`: normalize each authoritative seat snapshot so one account can occupy/render only one seat during a rapid seat transfer; preserve the last seat occurrence from the server payload and keep existing voice/speaking state reconciliation.
+- No visual redesign or unrelated room behavior changes. Native APK build and live multi-user seat-transfer verification remain pending.
