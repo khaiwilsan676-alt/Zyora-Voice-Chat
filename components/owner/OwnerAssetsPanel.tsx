@@ -88,7 +88,6 @@ const ASSETS: Asset[] = [
   { id: 'dc7b', name: 'Daily Check-in Day 7 Bonus ×3 Days', tab: 'Daily Check-in', type: 'Daily Check-in', image: 'IMG-20260903-WA0077.jpg', source: 'zyora' },
 ]
 
-const inputClass = 'w-full rounded-xl border border-slate-200 bg-slate-100 px-4 py-3 text-sm font-semibold text-slate-800 outline-none focus:border-slate-400';
 const tableHead = 'px-4 py-3 text-left text-[10px] font-extrabold uppercase tracking-wider text-slate-500';
 
 export default function OwnerAssetsPanel({ ownerKey }: { ownerKey: string }) {
