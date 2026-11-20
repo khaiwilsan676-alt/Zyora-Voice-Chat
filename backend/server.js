@@ -1912,6 +1912,24 @@ app.get("/api/seller/transfers", async (req, res) => {
   }
 });
 
+app.post("/api/wallet/gift-debit", async (req, res) => {
+  try {
+    if (!db) return res.status(503).json({ error: "Wallet unavailable" });
+    const userId = String(req.body?.userId || "").trim();
+    const amount = Number(req.body?.amount);
+    if (!userId || !Number.isSafeInteger(amount) || amount <= 0 || amount > 1000000000) {
+      return res.status(400).json({ error: "Invalid gift debit" });
+    }
+    const debited = await debitWallet(userId, amount);
+    if (!debited) return res.status(409).json({ success: false, error: "Insufficient coins", balance: await walletBalance(userId) });
+    await db.collection("walletTransactions").insertOne({ userId, type: "chat_gift_send", amount: -amount, createdAt: Date.now() });
+    return res.json({ success: true, balance: await walletBalance(userId) });
+  } catch (error) {
+    console.error("POST /api/wallet/gift-debit error:", error.message);
+    return res.status(503).json({ error: "Gift payment failed" });
+  }
+});
+
 app.post("/api/wallet/exchange", async (req, res) => {
   try {
     if (!db) return res.status(503).json({ error: "GitHub storage is not connected" });
@@ -3312,7 +3330,7 @@ io.on("connection", (socket) => {
     const receiverAccountId = String(message.receiverAccountId || receiverId);
     const type = String(message.type || "message");
     const text = String(message.text || "");
-    if (!text && type !== "image" && type !== "voice") return;
+    if (!text && type !== "image" && type !== "voice" && type !== "gift") return;
 
     if (db) {
       const blockRecord = await db.collection("blocks").findOne({
@@ -3331,6 +3349,10 @@ io.on("connection", (socket) => {
       receiverPhoto: String(message.receiverPhoto || "/default-avatar.png"),
       text, type,
       imageUrl: message.imageUrl || undefined,
+      giftName: message.giftName || undefined,
+      giftImage: message.giftImage || undefined,
+      giftType: message.giftType || undefined,
+      amount: Number(message.amount || 0),
       audioMimeType: message.audioMimeType || undefined,
       audioBase64: message.audioBase64 || undefined,
       durationSec: Number(message.durationSec || 0),
