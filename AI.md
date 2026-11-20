@@ -1529,3 +1529,8 @@ Current documentation does not certify that all historical features are build-, 
 - Chat history snapshots are serialized from Compose state and written to the local IndexDB store on `Dispatchers.IO`, keeping disk writes off the UI thread.
 - If the server rejects a message because of block state, rollback now removes the message, ID, and timestamp at the same index so subsequent message metadata stays aligned.
 - Native APK CI and real-device tab-switch/message-delivery regression tests remain required; performance is not certified until those pass.
+
+## 24 Level own-profile identity and instant seat transfer UI (2026-11-20)
+- Root cause: `Level.kt` read name, UID, and photo from `hurry_user`, while login stores the signed-in identity and canonical profile fields in `hurry_auth`. The Level header therefore fell back to Guest/blank avatar. It now reads `hurry_auth`, passes the signed-in account ID/UID to `ProfilePersistence.load`, and uses the saved profile name/image.
+- Root cause: when taking another seat, `RoomPage.kt` optimistically occupied the destination but left the previous seat occupied until the server snapshot arrived. It now clears the same account's previous local seat immediately before painting the destination. Existing seat locks and authoritative server updates are preserved.
+- Native APK CI and live multi-account seat-transfer verification remain required.
