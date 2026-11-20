@@ -1598,3 +1598,4 @@ Current documentation does not certify that all historical features are build-, 
 - Reworked Assets Type into a compact square dropdown that opens a small selection menu.
 - Asset choices are compact square image tiles; the selected asset name and thumbnail are shown in a left-aligned row, followed by the Title Assets preview and Days field.
 - Kept asset grant requests, asset catalog data, history, and backend endpoints unchanged.
+- Owner Gift Catalog asset grants now send the recipient a private Zyora System inbox message after the inventory grant is saved: `You receive: [asset type]`, `Day's: [days]`, `From. Zyora Official Team`. Online delivery uses Socket.IO; offline delivery is queued in Redis for up to 7 days. Backend commit: `0f9e752be32073197c486708c57a7b2af320b740`.
