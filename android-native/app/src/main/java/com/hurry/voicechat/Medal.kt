@@ -9,18 +9,20 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -83,38 +85,26 @@ fun MedalScreen(onBack: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF02050E))
+            .background(Color(0xFF051329)) // Deep Blue fallback background
     ) {
-        // 1. Top Gradient Mask Image
-        Box(
+        // 1. Fixed Top Background Image
+        AsyncImage(
+            model = "file_000000008f6c82109aa9c53c85841c5b.png".fullUrl,
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
             modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxHeight(0.48f)
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(Color.Transparent, Color(0xFF02050E).copy(alpha = 0.3f), Color(0xFF02050E)),
-                        startY = 0f,
-                        endY = Float.POSITIVE_INFINITY
-                    )
-                )
-        ) {
-            AsyncImage(
-                model = "file_00000000f1dc821196bf96f688c3b2f6.png".fullUrl,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .graphicsLayer { alpha = 0.6f }
-            )
-        }
+                .fillMaxHeight(0.45f)
+                .align(Alignment.TopCenter)
+        )
 
-        // 2. Main Content
+        // 2. Main Fixed Layout (No page scroll)
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .windowInsetsPadding(WindowInsets.statusBars)
         ) {
-            // Header
+            // Fixed Header
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -126,36 +116,23 @@ fun MedalScreen(onBack: () -> Unit) {
                     Icon(Icons.Default.ArrowBack, "Back", tint = Color.White)
                 }
                 Text(
-                    text = "Medal",
+                    text = "My Badges",
                     color = Color.White,
-                    fontSize = 20.sp,
+                    fontSize = 19.sp,
                     fontWeight = FontWeight.Bold
                 )
                 IconButton(onClick = { showRules = true }) {
-                    Icon(Icons.Default.HelpOutline, "Rules", tint = Color.White.copy(alpha = 0.8f))
+                    Icon(Icons.Default.HelpOutline, "Rules", tint = Color.White.copy(alpha = 0.9f))
                 }
             }
 
-            // The Medal I Wear Section
+            // Fixed 10 Slots Grid (Row 1: 5, Row 2: 5)
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
+                    .padding(horizontal = 18.dp, vertical = 10.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 12.dp)) {
-                    Box(modifier = Modifier.width(40.dp).height(1.dp).background(Color(0xFFA89BBF).copy(alpha = 0.6f)))
-                    Text(
-                        text = "The Medal I Wear",
-                        color = Color(0xFFF3F4F6),
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Medium,
-                        modifier = Modifier.padding(horizontal = 8.dp)
-                    )
-                    Box(modifier = Modifier.width(40.dp).height(1.dp).background(Color(0xFFA89BBF).copy(alpha = 0.6f)))
-                }
-
-                // 10 Slots Grid
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
@@ -164,7 +141,7 @@ fun MedalScreen(onBack: () -> Unit) {
                         MedalSlot { showUnequipped = true }
                     }
                 }
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(12.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
@@ -172,88 +149,133 @@ fun MedalScreen(onBack: () -> Unit) {
                     repeat(5) {
                         MedalSlot { showUnequipped = true }
                     }
-                }
-
-                Row(
-                    modifier = Modifier.padding(top = 24.dp, bottom = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("Obtained Medal(s): ", color = Color(0xFFE5E7EB), fontSize = 15.sp)
-                    Text("3", color = Color(0xFFFACC15), fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = "Check>",
-                        color = Color(0xFFFACC15),
-                        fontSize = 15.sp,
-                        modifier = Modifier.clickable { showObtained = true }
-                    )
                 }
             }
 
-            // Tabs
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Fixed Tabs (Blue Theme + Golden Border)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween
+                    .padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                listOf("achievement" to "Achievements", "activity" to "Activities", "gift" to "Gift").forEach { (key, label) ->
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
+                listOf(
+                    "achievement" to "Achievements",
+                    "activity" to "Activities",
+                    "gift" to "Gift"
+                ).forEach { (key, label) ->
+                    val isSelected = activeTab == key
+                    val tabShape = RoundedCornerShape(topStart = 10.dp, topEnd = 10.dp)
+                    Box(
                         modifier = Modifier
                             .weight(1f)
-                            .clickable { activeTab = key }
+                            .height(40.dp)
+                            .clip(tabShape)
+                            .background(
+                                if (isSelected) {
+                                    Brush.verticalGradient(
+                                        listOf(Color(0xFF0E5BB5), Color(0xFF072F6B))
+                                    )
+                                } else {
+                                    Brush.verticalGradient(
+                                        listOf(Color(0xFF08224A).copy(alpha = 0.88f), Color(0xFF04132C).copy(alpha = 0.92f))
+                                    )
+                                }
+                            )
+                            .border(
+                                width = if (isSelected) 1.5.dp else 1.dp,
+                                color = if (isSelected) Color(0xFFE5C158) else Color(0xFF28558F).copy(alpha = 0.65f),
+                                shape = tabShape
+                            )
+                            .clickable { activeTab = key },
+                        contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = label,
-                            color = if (activeTab == key) Color.White else Color(0xFF8B79B5),
-                            fontSize = 15.sp,
-                            fontWeight = if (activeTab == key) FontWeight.Bold else FontWeight.SemiBold
+                            color = if (isSelected) Color.White else Color(0xFFB5CBE8),
+                            fontSize = 13.sp,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
-                        if (activeTab == key) {
-                            Box(modifier = Modifier.padding(top = 4.dp).width(8.dp).height(2.dp).clip(CircleShape).background(Color(0xFFFACC15)))
-                        }
                     }
                 }
             }
 
-            // Medal Grid
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                contentPadding = PaddingValues(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                modifier = Modifier.fillMaxSize()
+            // Fixed Bottom Curved Container with Golden Top Border Only
+            val bottomShape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .background(
+                        brush = Brush.horizontalGradient(
+                            colors = listOf(
+                                Color(0xFF9C7A2F),
+                                Color(0xFFF3D578),
+                                Color(0xFFE5C158),
+                                Color(0xFFF3D578),
+                                Color(0xFF9C7A2F)
+                            )
+                        ),
+                        shape = bottomShape
+                    )
+                    .padding(top = 2.dp) // Sirf top curved golden border
+                    .clip(bottomShape)
+                    .clipToBounds()
             ) {
-                items(filteredMedals.size) { index ->
-                    val medal = filteredMedals[index]
-                    Box(
-                        modifier = Modifier
-                            .height(190.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(Brush.verticalGradient(listOf(Color(0xFF1A1230), Color(0xFF0D0820))))
-                            .clickable {
-                                val group = getTierMedals(medal)
-                                val idx = group.indexOfFirst { it.id == medal.id }
-                                activeTier = if (idx >= 0) idx else 0
-                                selectedMedal = medal
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        // Colorless Image display in Grid
-                        AsyncImage(
-                            model = medal.video.fullUrl,
-                            contentDescription = null,
-                            colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) }),
-                            modifier = Modifier.size(medal.cardVideoSize.dp).align(Alignment.Center)
-                        )
-                        Text(
-                            text = medal.name,
-                            color = Color(0xFFE5E7EB),
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Medium,
-                            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 12.dp)
-                        )
+                // Fixed Bottom Background Image
+                AsyncImage(
+                    model = "file_00000000a8e08210a8a24219461e3ce6.png".fullUrl,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+
+                // ONLY Medals Scroll Here (Strictly Clipped Inside Bottom Border)
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(3),
+                    contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 16.dp, bottom = 24.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(20.dp),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clipToBounds()
+                ) {
+                    items(filteredMedals.size) { index ->
+                        val medal = filteredMedals[index]
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    val group = getTierMedals(medal)
+                                    val idx = group.indexOfFirst { it.id == medal.id }
+                                    activeTier = if (idx >= 0) idx else 0
+                                    selectedMedal = medal
+                                },
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            // Colorless Image display in Grid
+                            AsyncImage(
+                                model = medal.video.fullUrl,
+                                contentDescription = medal.name,
+                                contentScale = ContentScale.Fit,
+                                colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) }),
+                                modifier = Modifier.size(92.dp)
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = medal.name,
+                                color = Color(0xFFE5EEFA),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium,
+                                textAlign = TextAlign.Center,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                     }
                 }
             }
@@ -327,7 +349,7 @@ fun MedalScreen(onBack: () -> Unit) {
                                 Text("★", color = Color(0xFFEAB308), fontSize = 16.sp)
                             }
                         }
-                        
+
                         Text(
                             text = displayMedal.name,
                             color = Color.White,
@@ -386,7 +408,7 @@ fun MedalScreen(onBack: () -> Unit) {
         }
     }
 
-    // BOTTOM SHEETS
+    // BOTTOM SHEETS & DIALOGS
     if (showObtained) {
         val list = listOf(
             "CP Level Badge" to "IMG_20260924_132022.png", "Millionaire I" to "IMG_20260924_132038.png", "Charm Star I" to "IMG_20260924_132051.png",
@@ -439,19 +461,21 @@ fun MedalVideoPlayer(videoUrl: String, modifier: Modifier = Modifier) {
     )
 }
 
-// HELPER UI COMPONENTS
+// HELPER UI COMPONENTS - Slot Card with Image ONLY (No + Icon)
 @Composable
 fun MedalSlot(onClick: () -> Unit) {
     Box(
         modifier = Modifier
             .size(56.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(Color(0xFF281B54).copy(alpha = 0.6f))
-            .border(1.dp, Color.White.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        Icon(Icons.Default.Add, contentDescription = "Add", tint = Color(0xFFE2D5FF), modifier = Modifier.size(24.dp))
+        AsyncImage(
+            model = "IMG_20261120_123855.png".fullUrl,
+            contentDescription = "Badge Slot",
+            contentScale = ContentScale.Fit,
+            modifier = Modifier.fillMaxSize()
+        )
     }
 }
 
@@ -497,54 +521,119 @@ fun MedalGridBottomSheet(title: String, items: List<Pair<String, String>>, onDis
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+// RULES / INTRODUCTION CARD (Same as screenshot, Blue Theme + Golden Borders)
 @Composable
 fun RulesBottomSheet(onDismiss: () -> Unit) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    ModalBottomSheet(
+    Dialog(
         onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        containerColor = Color(0xFF2A1B5E),
-        dragHandle = null,
-        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+        properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
-        Column(modifier = Modifier.fillMaxWidth().fillMaxHeight(0.5f)) {
-            Box(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(text = "Rules", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Medium)
-            }
-            
-            Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp)) {
-                Text("*Rules*", color = Color(0xFFFACC15), fontSize = 16.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 12.dp))
-                
-                RuleSection("1. Important Information:", "(a) Before participating, please carefully review the event rules...\n(b) Your participation confirms that you have read...")
-                RuleSection("2. What are Medals?", "(a) Medals are special rewards...\n(b) Medals are divided by achievement...")
-                RuleSection("3. How to earn medals?", "=>. Each medal type has its own unique earning criteria...")
-                RuleSection("4. Medal Role:", "=>. Medals showcase your achievements in various areas...")
-                RuleSection("5. Medal Benefits Expiration:", "(a) Medals generally have no expiration date...\n(b) Some medals are time-limited...\n(c) You can display a maximum of 10 medals at a time.\n(d) These will appear in your info card...\n(e) To check your medal status...")
-                RuleSection("6. Improving Medal Levels", "(=>) Your medal level is determined by your current task...")
-                RuleSection("7. Additional Notes:", "(a) We strictly prohibit any form of abuse...\n(b) We are constantly working to improve...\n(c) Medal rewards cannot be exchanged...")
+        val cardShape = RoundedCornerShape(14.dp)
+        val buttonShape = RoundedCornerShape(12.dp)
+        val goldenBorderBrush = Brush.verticalGradient(
+            listOf(Color(0xFFF3D578), Color(0xFFC59B38), Color(0xFFE5C158))
+        )
 
-                Text(
-                    text = "Regards, Zyora team",
-                    color = Color.White,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 24.dp),
-                    textAlign = TextAlign.End
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(0.86f)
+                .clip(cardShape)
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color(0xFF0B4182), // Rich Royal Blue top
+                            Color(0xFF072957), // Deep Blue middle
+                            Color(0xFF041A3B)  // Dark Navy Blue bottom
+                        )
+                    )
                 )
+                .border(1.5.dp, goldenBorderBrush, cardShape)
+                .padding(horizontal = 22.dp, vertical = 26.dp)
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Title: Introduction (White-to-Gold gradient like screenshot)
+                Text(
+                    text = "Introduction",
+                    style = TextStyle(
+                        brush = Brush.horizontalGradient(
+                            colors = listOf(Color.White, Color(0xFFFCE28B), Color(0xFFE5B83B))
+                        ),
+                        fontSize = 21.sp,
+                        fontWeight = FontWeight.Bold
+                    ),
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(bottom = 22.dp)
+                )
+
+                // Numbered Rules List
+                RuleItemRow(
+                    number = "1.",
+                    text = "Badges are divided into Event Badges and Honor Badges. You can tap the badges on the Medal Wall to know how to get them."
+                )
+                Spacer(modifier = Modifier.height(14.dp))
+                RuleItemRow(
+                    number = "2.",
+                    text = "You can wear up to 10 badges at the same time. They will be displayed in your Info Card and Room Chat Area."
+                )
+                Spacer(modifier = Modifier.height(14.dp))
+                RuleItemRow(
+                    number = "3.",
+                    text = "Some badges are time-limited and expired ones cannot be worn."
+                )
+
+                Spacer(modifier = Modifier.height(28.dp))
+
+                // Got it Button (Blue fill + Golden border)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                        .clip(buttonShape)
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(Color(0xFF1055A3), Color(0xFF0A3973))
+                            )
+                        )
+                        .border(1.5.dp, Color(0xFFE5C158), buttonShape)
+                        .clickable(onClick = onDismiss),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Got it",
+                        color = Color.White,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-fun RuleSection(title: String, desc: String) {
-    Column(modifier = Modifier.padding(bottom = 12.dp)) {
-        Text(text = "*$title*", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 4.dp))
-        Text(text = desc, color = Color.White, fontSize = 13.sp, lineHeight = 20.sp)
+fun RuleItemRow(number: String, text: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.Top
+    ) {
+        Text(
+            text = number,
+            color = Color.White,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Medium,
+            lineHeight = 22.sp,
+            modifier = Modifier.width(24.dp)
+        )
+        Text(
+            text = text,
+            color = Color.White.copy(alpha = 0.95f),
+            fontSize = 14.sp,
+            lineHeight = 22.sp,
+            modifier = Modifier.weight(1f)
+        )
     }
 }
 
@@ -569,12 +658,12 @@ fun getMedalsData(): List<MedalItem> = listOf(
     MedalItem("gamer_1", "Super Gamer 1", "/IMG_20261023_110852.png", "/1000201032-background.mp4", 1, "achievement", "black", 120, 0.5f, 200, 0.5f, "gamer", "Play games to earn"),
     MedalItem("gamer_2", "Super Gamer 2", "/IMG_20261023_110852.png", "/1000201032-background.mp4", 2, "achievement", "black", 120, 0.5f, 200, 0.5f, "gamer", "Play games to earn"),
     MedalItem("gamer_3", "Super Gamer 3", "/IMG_20261023_110852.png", "/1000201032-background.mp4", 3, "achievement", "black", 120, 0.5f, 200, 0.5f, "gamer", "Play games to earn"),
-    
+
     // VIP & Pure Love (Activity/Gifts)
     MedalItem("vip_1", "VIP 1", "/IMG_20261023_110912.png", "/1000200506-background.mp4", 1, "activity", "black", 120, 0.5f, 200, 0.5f, "vip", "VIP Event"),
     MedalItem("vip_2", "VIP 2", "/IMG_20261023_110930.png", "/1000200505-background.mp4", 2, "activity", "black", 120, 0.5f, 200, 0.5f, "vip", "VIP Event"),
     MedalItem("love_1", "Pure Love", "/IMG_20261023_111000.png", "/1000200507-background.mp4", 1, "gift", "black", 120, 0.5f, 200, 0.5f, "love", "Gift rewards"),
-    
+
     // Medals 11, 12, 13
     MedalItem("medal_11", "Medal 11", "/IMG_20261023_111027.png", "/1000200513-background.mp4", 1, "activity", "black", 120, 0.5f, 200, 0.5f, "medals_x", "Special event rewards"),
     MedalItem("medal_12", "Medal 12", "/IMG_20261023_111053.png", "/1000200512-background.mp4", 2, "activity", "black", 120, 0.5f, 200, 0.5f, "medals_x", "Special event rewards"),
