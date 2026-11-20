@@ -1592,3 +1592,9 @@ Current documentation does not certify that all historical features are build-, 
 - Added a native owned-medal showcase that reads the recipient's no-cache Store inventory, filters active `Medal` entries, displays the medal image with star and remaining-time metadata, and removes expired medals from the visible list.
 - Public Profile Medal now uses the same owned-medal showcase instead of always showing the empty state. Medal page Event tab and Wear Badge sheet also show the recipient's active medals, including Family TOP medal rewards (their existing inventory tab is `Medal`).
 - Existing Medal page styling, Public Profile layout, owner panel catalog, and other inventory categories remain unchanged. Native APK build and real-device verification are still required.
+
+## 2026-11-20 — Owner Assets panel layout
+- Removed the gift grid, gift tabs, and gift search from the Owner page's Gift Catalog destination; it now contains only the Assets panel.
+- Reworked Assets Type into a compact square dropdown that opens a small selection menu.
+- Asset choices are compact square image tiles; the selected asset name and thumbnail are shown in a left-aligned row, followed by the Title Assets preview and Days field.
+- Kept asset grant requests, asset catalog data, history, and backend endpoints unchanged.
