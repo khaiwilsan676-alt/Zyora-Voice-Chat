@@ -1556,6 +1556,15 @@ Current documentation does not certify that all historical features are build-, 
 - Native APK workflow/build verification is pending.
 
 
+## 2026-11-20 — Gift Sharing / Lucky Gift responsiveness
+- `GiftPicker.kt`: fixed the Lucky reward threshold ordering so the 2× outcome is reachable; previously the earlier 5× condition shadowed it.
+- Gift recipient IDs are now de-duplicated and the room-user/seat lookup maps plus recipient rows are memoized, avoiding repeated nested list searches during picker recompositions.
+- The in-flight gift send now snapshots the selected gift, tab, multiplier, recipient IDs, and cost before launching its coroutine so UI recompositions cannot mix transaction data mid-send.
+- `RoomPage.kt`: removed the unnecessary `seats.toList()` copy passed into GiftPicker.
+- Lucky gifts now render an immediate local sender-side notice/seat effect before the Socket.IO emit. The transfer ID is marked as seen first, so the later server echo does not create a duplicate animation. Other room members still receive the authoritative server event.
+- Gift picker layout, colors, gift catalogue, prices, multipliers, and server-side transaction delivery are unchanged.
+- Native APK CI and Redmi 14C send/receive, combo, wallet, and multi-recipient regression tests are required; no device smoothness claim is made until verified.
+
 ## 2026-11-20 — Persistent native root tabs for faster switching
 - `MainActivity.kt`: Home, Message, and Me are now hosted in separate stable `SaveableStateProvider` slots and remain composed while another root tab is selected. Previously, the single `when(tab)` branch disposed the outgoing screen, causing tab-local state and screen effects to be recreated on return.
 - Inactive root tabs are constrained to a transparent 1dp host; the selected tab retains the full content area. Existing bottom navigation, screen content, and visual styling are unchanged.
