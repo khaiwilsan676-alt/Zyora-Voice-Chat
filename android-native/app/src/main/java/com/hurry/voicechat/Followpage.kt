@@ -318,7 +318,7 @@ fun VisitorsPage(onBack:()->Unit) {
             }
         }
         live.on("profile_visitor_updated",listener)
-        live.on(Socket.EVENT_CONNECT) { live.emit("register",JSONObject().put("userId",prefs.getString("uid", "").orEmpty().ifBlank { myId }).put("accountId",myId)) }
+        live.on(Socket.EVENT_CONNECT) { live.emit("register",JSONObject().put("userId",prefs.getString("uid", "").orEmpty().ifBlank { myId }).put("accountId",myId).put("deviceName", "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}")) }
         live.connect()
         onDispose { live.off("profile_visitor_updated",listener); live.disconnect(); live.close() }
     }
