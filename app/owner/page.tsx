@@ -1142,7 +1142,7 @@ export default function StaffPanel() {
             role: String(u.role || 'NORMAL'),
             image: [u.image, u.dp, u.photo, u.photoURL, u.photoUrl, u.avatar, u.avatarUrl, u.profileImage, u.profileImageUrl, u.profile_image, u.imageUrl, u.picture, u.profile?.image, u.profile?.avatar, u.profile?.photo, u.userData?.image, u.userData?.avatar].find((value: any) => typeof value === 'string' && value.trim() && value.trim() !== 'null' && value.trim() !== 'undefined')?.trim() || '',
             longId: String(u.longId || u.longID || u.userLongId || u.accountId || u.accountNumber || u.displayAccountNumber || u.publicUserId || u.hurryId || '—'),
-            appLongId: String(u.appLongId || u.appLongID || u.uid || u.userId || u._id || '—'),
+            appLongId: String(u.firebaseUid || u.firebaseUID || u.uid || '—'),
             vipId: String(u.vipId || u.vipID || u.vipUserId || u.vipAccountId || '—'),
             appShortId: String(u.appShortId || u.appShortID || u.shortId || u.shortID || u.id || '—'),
             country: String(u.country || u.countryName || u.profile?.country || u.userData?.country || '—'),
@@ -2981,10 +2981,12 @@ export default function StaffPanel() {
               <button type="button" onClick={() => { setEditedUserName(selectedTagUserData.name || ''); setEditedUserImage(selectedTagUserData.image || ''); setIsUserProfileEditOpen(true); }} className="shrink-0 rounded-lg px-3 py-1.5 text-sm font-bold text-blue-600 hover:bg-blue-50">Edit</button>
             </div>
             <div className="grid grid-cols-1 gap-x-10 px-6 py-3 text-sm sm:grid-cols-2">
-              <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 border-b border-slate-100 py-4 sm:col-span-2">
+              <div className="flex min-w-0 items-center gap-2 border-b border-slate-100 py-4 sm:col-span-2">
                 <span className="shrink-0 font-semibold text-slate-500">App ID:</span>
                 <b className="min-w-0 break-all text-slate-900">{selectedTagUserData.longId || '—'}</b>
-                <span className="ml-auto shrink-0 font-semibold text-slate-500">App. Long ID:</span>
+              </div>
+              <div className="flex min-w-0 items-center gap-2 border-b border-slate-100 py-4 sm:col-span-2">
+                <span className="shrink-0 font-semibold text-slate-500">App. Long ID:</span>
                 <b className="min-w-0 break-all text-slate-900">{selectedTagUserData.appLongId || '—'}</b>
               </div>
               <div className="flex min-w-0 items-center gap-2 border-b border-slate-100 py-4">
