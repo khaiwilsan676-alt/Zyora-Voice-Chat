@@ -1585,3 +1585,9 @@ Current documentation does not certify that all historical features are build-, 
 - Native private chat input adds the gift entry point and opens the shared Room GiftPicker.
 - Chat GiftPicker is fixed to the active chat partner: only that avatar is shown; MIC and HOUSE recipient controls are hidden.
 - Chat gift payments use the canonical wallet debit endpoint and existing private-message Socket.IO delivery. Room GiftPicker behavior is unchanged.
+
+## 2026-11-20 — Owner-granted medals and Family Event badges
+- Owner Panel medal grants continue to use the existing Store inventory record, preserving the exact selected medal image/video and expiry for the recipient; the server now emits `store_inventory_updated` after a successful grant.
+- Added a native owned-medal showcase that reads the recipient's no-cache Store inventory, filters active `Medal` entries, displays the medal image with star and remaining-time metadata, and removes expired medals from the visible list.
+- Public Profile Medal now uses the same owned-medal showcase instead of always showing the empty state. Medal page Event tab and Wear Badge sheet also show the recipient's active medals, including Family TOP medal rewards (their existing inventory tab is `Medal`).
+- Existing Medal page styling, Public Profile layout, owner panel catalog, and other inventory categories remain unchanged. Native APK build and real-device verification are still required.
