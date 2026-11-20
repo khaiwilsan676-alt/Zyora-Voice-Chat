@@ -2864,7 +2864,7 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
         if(showWildParty) Wildparty(onClose={showWildParty=false},onMinimize={showWildParty=false})
         if(showFruitParty) Fruitparty(onClose={showFruitParty=false},onMinimize={showFruitParty=false})
         BackHandler(enabled=showDragonBattle) { showDragonBattle=false }
-        if(showDragonBattle) DragonBattleMainScreen(onClose={showDragonBattle=false},onMinimize={showDragonBattle=false})
+        if(showDragonBattle) DragonBattleGameHost(onClose={showDragonBattle=false},onMinimize={showDragonBattle=false})
         if(showEmoji) EmojiPicker(onClose={showEmoji=false},onSelectEmoji={ sticker ->
             val seatIndex=seats.indexOfFirst{it.occupied && it.accountId==accountId}
             if(seatIndex>=0){
