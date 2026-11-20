@@ -33,8 +33,8 @@ export default function SpecialIdsPanel({ users = [], ownerKey }: { users?: User
   }, [users, userQuery]);
 
   const assignId = async () => {
-    if (!selectedUser || !/^\d{4,20}$/.test(specialId.trim()) || !/^\d{1,4}$/.test(days) || Number(days) < 1 || Number(days) > 3650) {
-      setStatus('Select a user and enter a numeric ID and valid days.');
+    if (!selectedUser || !/^\d+$/.test(specialId.trim()) || !/^\d{1,4}$/.test(days) || Number(days) < 1 || Number(days) > 3650) {
+      setStatus('Select a user and enter a VIP ID using digits only, plus valid days.');
       return;
     }
     setSaving(true);
