@@ -919,11 +919,18 @@ fun PublicProfileScreen(
                     // Medal
                     Column(modifier = Modifier.padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         SectionHeader("Medal")
-                        EmptySectionCard(
-                            iconPath = "/public/IMG_20261113_121816.png",
-                            text = "No medal yet",
-                            profileAsset = profileAsset
+                        var hasMedal by remember { mutableStateOf(true) }
+                        NativeOwnedMedalShowcase(
+                            userId = targetUser?.accountId?.takeIf { it.isNotBlank() }
+                                ?: targetUser?.displayAccountNumber?.takeIf { it.isNotBlank() }
+                                ?: targetUser?.id?.takeIf { it.isNotBlank() }
+                                ?: targetUser?.uid?.takeIf { it.isNotBlank() }
+                                ?: currentUserId,
+                            onDataLoaded = { hasData -> hasMedal = hasData }
                         )
+                        if (!hasMedal) {
+                            EmptySectionCard(iconPath = "/public/IMG_20261113_121816.png", text = "No medal yet", profileAsset = profileAsset)
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(20.dp))
