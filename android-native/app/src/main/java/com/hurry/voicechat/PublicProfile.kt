@@ -273,7 +273,10 @@ fun PublicProfileScreen(
     var userGender by remember(profileCacheKey, cachedProfile, targetUser?.gender) { mutableStateOf(cachedProfile?.optString("gender")?.takeIf { it.isNotBlank() && it != "null" } ?: targetUser?.gender?.takeIf { it.isNotBlank() } ?: "Male") }
     
     var liveProfileTags by remember(profileCacheKey, cachedProfile) { mutableStateOf(cachedProfile) }
-    val displayAccNum = targetUser?.displayAccountNumber?.takeIf { it.isNotBlank() } ?: targetUser?.accountId?.takeIf { it.isNotBlank() } ?: "—"
+    val originalAccNum = targetUser?.displayAccountNumber?.takeIf { it.isNotBlank() } ?: targetUser?.accountId?.takeIf { it.isNotBlank() } ?: "—"
+    val activeSpecialId = liveProfileTags?.optString("vipId", "").orEmpty().takeIf { it.matches(Regex("\\d{4,20}")) && liveProfileTags?.optLong("vipIdExpiresAt", 0L)?.let { expiry -> expiry > System.currentTimeMillis() } == true }
+    val displayAccNum = activeSpecialId ?: originalAccNum
+    val hasSpecialIdBadge = activeSpecialId != null && liveProfileTags?.optBoolean("vipIdBadge", false) == true
     val isCoreOfficial = displayAccNum == "100002" || displayAccNum == "100003"
     val isRedOfficial = displayAccNum == "500001"
     val is500002Official = displayAccNum in setOf("500002", "500003", "500004", "500005", "500005")
@@ -653,7 +656,7 @@ fun PublicProfileScreen(
                     }
 
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
-                        if (isCoreOfficial || isRedOfficial || is500002Official || displayAccNum in setOf("500003", "500004", "500005")) {
+                        if (hasSpecialIdBadge || isCoreOfficial || isRedOfficial || is500002Official || displayAccNum in setOf("500003", "500004", "500005")) {
                             AsyncImage(model = profileAsset("/IMG_20261101_125212.png"), contentDescription = "Purple ID Badge", contentScale = ContentScale.Fit, modifier = Modifier.height(25.dp).widthIn(min = 22.dp, max = 35.dp).padding(end = 4.dp))
                             Text(displayAccNum, fontSize = 12.sp, color = Color.Gray)
                         } else Text("ID: $displayAccNum", fontSize = 12.sp, color = Color.Gray)
