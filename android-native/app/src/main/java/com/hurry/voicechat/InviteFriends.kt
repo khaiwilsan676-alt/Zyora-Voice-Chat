@@ -87,11 +87,11 @@ private fun InviteArt(file: String, modifier: Modifier = Modifier, key: InviteKe
                         val r = (p ushr 16) and 0xff
                         val g = (p ushr 8) and 0xff
                         val b = p and 0xff
-                        
+
                         if (key == InviteKey.GREEN) {
                             val maxRB = maxOf(r, b)
                             val greenness = g - maxRB
-                            
+
                             if (greenness > 5 && g > 30) {
                                 pixels[i] = 0x00000000
                             } else if (greenness > -15 && g > 20) {
@@ -148,7 +148,7 @@ fun InviteFriends(onBack: (() -> Unit)? = null, onClose: (() -> Unit)? = null) {
     val code = userPrefs.getString("accountId", null)?.takeIf { it.isNotBlank() } ?: userPrefs.getString("uid", null)?.takeIf { it.isNotBlank() }.orEmpty()
     val inviteIdToken = userPrefs.getString("idToken", "").orEmpty()
     val inviteLink = "https://khaiwilsan676-alt.github.io/Zyora-Voice-Chat/download/"
-    
+
     var isSheetOpen by remember { mutableStateOf(false) }
     var showDetailsPage by remember { mutableStateOf(false) }
     var copied by remember { mutableStateOf(false) }
@@ -166,7 +166,7 @@ fun InviteFriends(onBack: (() -> Unit)? = null, onClose: (() -> Unit)? = null) {
             }
         }
     }
-    
+
     var inviteRules by remember { mutableStateOf(false) }
     var giftRules by remember { mutableStateOf(false) }
     var rechargeRules by remember { mutableStateOf(false) }
@@ -205,7 +205,7 @@ fun InviteFriends(onBack: (() -> Unit)? = null, onClose: (() -> Unit)? = null) {
     }
 
     Box(Modifier.fillMaxSize().background(inviteRed)) {
-        
+
         Column(
             Modifier.fillMaxSize().verticalScroll(rememberScrollState())
         ) {
@@ -220,7 +220,7 @@ fun InviteFriends(onBack: (() -> Unit)? = null, onClose: (() -> Unit)? = null) {
                 Box(
                     Modifier.fillMaxSize().background(
                         Brush.verticalGradient(
-                            0.95f to Color.Transparent, 
+                            0.95f to Color.Transparent,
                             1.0f to inviteRed
                         )
                     )
@@ -330,18 +330,18 @@ fun InviteFriends(onBack: (() -> Unit)? = null, onClose: (() -> Unit)? = null) {
                     Box(Modifier.fillMaxWidth().wrapContentHeight()) {
                         InviteArt("1788102034828~2.jpg", Modifier.fillMaxWidth().wrapContentHeight(), key = InviteKey.GREEN)
 
-                        // Number of Invitation — previous horizontal position; bottom: 10vh
+                        // Number of Invitation — 2dp left (84.dp); bottom: 10vh
                         Column(
-                            Modifier.align(Alignment.BottomStart).padding(start = 86.dp, bottom = vh * 10f),
+                            Modifier.align(Alignment.BottomStart).padding(start = 84.dp, bottom = vh * 10f),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Text(inviteCount.toString(), color = inviteYellow, fontSize = 24.sp, fontWeight = FontWeight.Bold)
                             Text("Number\nInvitation", color = inviteYellow, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, lineHeight = 12.sp, textAlign = TextAlign.Center)
                         }
 
-                        // Total Coins Rewards — previous horizontal position; bottom: 10vh
+                        // Total Coins Rewards — 2dp right (79.dp); bottom: 10vh
                         Column(
-                            Modifier.align(Alignment.BottomEnd).padding(end = 81.dp, bottom = vh * 10f),
+                            Modifier.align(Alignment.BottomEnd).padding(end = 79.dp, bottom = vh * 10f),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             InviteArt("file_00000000e56882119c217d508b6733dc.png", Modifier.size(40.dp), key = InviteKey.WHITE)
@@ -377,7 +377,7 @@ fun InviteFriends(onBack: (() -> Unit)? = null, onClose: (() -> Unit)? = null) {
                             }
                         }
                     }
-                    
+
                     Spacer(Modifier.height(100.dp))
                 }
             }
@@ -388,7 +388,7 @@ fun InviteFriends(onBack: (() -> Unit)? = null, onClose: (() -> Unit)? = null) {
                 "1788074191602~2.jpg",
                 Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(end = 8.dp, bottom = 20.dp) 
+                    .padding(end = 8.dp, bottom = 20.dp)
                     .widthIn(max = 360.dp)
                     .fillMaxWidth(.88f)
                     .wrapContentHeight()
@@ -422,21 +422,21 @@ fun InviteFriends(onBack: (() -> Unit)? = null, onClose: (() -> Unit)? = null) {
         text = "If invite friend download & enter the Invite code in the input Given. Then a Inverter will Receive a 250,000Coins rewards hand to hand in there coins wallet",
         centered = true
     ) { inviteRules = false }
-    
+
     if (giftRules) InviteRulesDialog(
         text = "If Invited friend Will send Gift to any one So a Inviter user will receive 6% of the Sended gift Value.",
         centered = true
     ) { giftRules = false }
-    
+
     if (rechargeRules) InviteRulesDialog(
         text = "If the Invited friend Recharge more then >500000 so a inviter User will receive 250000 coins In there Coins wallet",
         centered = true
     ) { rechargeRules = false }
-    
+
     if (helpRules) InviteRulesDialog(
         text = "1. Invite a friend to register and receive instant coins. You will get 100,000 coins when they log in. If your friend logs into the Zyora app the next day or within 3 days, they will receive an additional 150,000 coins.\n\n2. If your invited friend recharges 500,000 coins within 90 days, you will receive 6% of the coins from each recharge. Additionally, if your friend sends gift coins, you will receive 6% of the coins from the gifts they send.\n\n3. The Zyora app must not already be downloaded or registered on your friend's phone, and they must not be part of another account's network. The invitation will be considered successful—and rewards granted—only when all these conditions are met.\n\n4. Invite your friends; you will earn free coins when they recharge or send gifts.",
         signature = "Best regards,\nThe Zyora Team",
-        centered = true,
+        centered = false,
         smallText = true
     ) { helpRules = false }
 }
@@ -448,17 +448,18 @@ private fun InviteDetailsCard() {
 
     val cardGradient = Brush.verticalGradient(
         colors = listOf(
-            Color(0xFF6B0A1F),
-            Color(0xFF8C1029),
-            Color(0xFF5A0618)
+            Color(0xFF560714),
+            Color(0xFF42040E),
+            Color(0xFF33030B)
         )
     )
-    val goldBorder = Color(0xFFE5C97B)
+    val goldBorder = Color(0xFFE5C158)
+    val goldBright = Color(0xFFF3D578)
     val goldSoft = Color(0xFFFFD52A)
-    val mutedText = Color(0xFFFFE76A).copy(alpha = 0.6f)
-    val inputBg = Color(0xFF3E0412).copy(alpha = 0.75f)
-    val inputBorder = goldBorder.copy(alpha = 0.35f)
-    val dividerColor = goldBorder.copy(alpha = 0.25f)
+    val mutedText = Color(0xFFE8C88A).copy(alpha = 0.65f)
+    val inputBg = Color(0xFF2B0208).copy(alpha = 0.85f)
+    val inputBorder = goldBorder.copy(alpha = 0.45f)
+    val dividerColor = goldBorder.copy(alpha = 0.3f)
 
     Box(
         modifier = Modifier
@@ -489,8 +490,8 @@ private fun InviteDetailsCard() {
                 )
                 drawPath(
                     path = cardPath,
-                    color = goldBorder,
-                    style = Stroke(width = 1.8.dp.toPx())
+                    brush = Brush.verticalGradient(listOf(goldBright, goldBorder, Color(0xFFB88928))),
+                    style = Stroke(width = 2.dp.toPx())
                 )
 
                 val innerMargin = 4.dp.toPx()
@@ -524,7 +525,7 @@ private fun InviteDetailsCard() {
                     lineTo(cx - innerGemSize, cy)
                     close()
                 }
-                drawPath(innerGem, color = Color(0xFFD91E36))
+                drawPath(innerGem, color = Color(0xFFB80D1E))
             }
             .padding(top = 26.dp, bottom = 36.dp, start = 16.dp, end = 16.dp)
     ) {
@@ -540,7 +541,7 @@ private fun InviteDetailsCard() {
                     for (i in 0..2) {
                         val x = i * 6.dp.toPx()
                         drawLine(
-                            color = goldSoft.copy(alpha = 0.45f),
+                            color = goldBright.copy(alpha = 0.55f),
                             start = Offset(x, 0f),
                             end = Offset(x + 4.dp.toPx(), size.height),
                             strokeWidth = 2.dp.toPx(),
@@ -558,7 +559,7 @@ private fun InviteDetailsCard() {
                     for (i in 0..2) {
                         val x = i * 6.dp.toPx()
                         drawLine(
-                            color = goldSoft.copy(alpha = 0.45f),
+                            color = goldBright.copy(alpha = 0.55f),
                             start = Offset(x + 4.dp.toPx(), 0f),
                             end = Offset(x, size.height),
                             strokeWidth = 2.dp.toPx(),
@@ -774,40 +775,109 @@ private fun InviteBrandGlyph(pathData: String, modifier: Modifier = Modifier) {
 
 @Composable
 private fun InviteRulesDialog(
-    text: String, 
+    text: String,
     signature: String? = null,
-    centered: Boolean, 
-    smallText: Boolean = false, 
+    centered: Boolean,
+    smallText: Boolean = false,
     onDismiss: () -> Unit
 ) {
-    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Box(Modifier.fillMaxWidth().padding(horizontal = 32.dp), contentAlignment = Alignment.Center) {
-            Column(
-                Modifier.fillMaxWidth().widthIn(max = 300.dp).clip(RoundedCornerShape(16.dp))
-                    .background(invitePopupPurple).border(3.dp, Color(0xFFFACC15), RoundedCornerShape(16.dp))
-                    .padding(start = 16.dp, end = 16.dp, top = 20.dp, bottom = 24.dp)
-            ) {
-                Text("Rules", modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp), color = inviteYellow, fontSize = 18.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp, textAlign = TextAlign.Center)
-                
-                Text(
-                    text,
-                    modifier = Modifier.fillMaxWidth(),
-                    color = Color.White,
-                    fontSize = if (smallText) 11.sp else 12.sp,
-                    lineHeight = if (smallText) 16.sp else 18.sp,
-                    fontWeight = FontWeight.Medium,
-                    textAlign = if (centered) TextAlign.Center else TextAlign.Start
-                )
-                
-                if (signature != null) {
-                    Text(
-                        signature,
-                        modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
-                        color = Color.White,
-                        fontSize = if (smallText) 11.sp else 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.End
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
+    ) {
+        val cardShape = RoundedCornerShape(14.dp)
+        val buttonShape = RoundedCornerShape(12.dp)
+        val goldenBorderBrush = Brush.verticalGradient(
+            listOf(Color(0xFFF3D578), Color(0xFFC59B38), Color(0xFFE5C158))
+        )
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.65f))
+                .clickable(onClick = onDismiss),
+            contentAlignment = Alignment.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(0.86f)
+                    .clip(cardShape)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color(0xFF7A0C22),
+                                Color(0xFF560717),
+                                Color(0xFF3B030F)
+                            )
+                        )
                     )
+                    .border(1.5.dp, goldenBorderBrush, cardShape)
+                    .clickable(enabled = false) {}
+                    .padding(horizontal = 22.dp, vertical = 26.dp)
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "Rules",
+                        style = TextStyle(
+                            brush = Brush.horizontalGradient(
+                                colors = listOf(Color.White, Color(0xFFFCE28B), Color(0xFFE5B83B))
+                            ),
+                            fontSize = 21.sp,
+                            fontWeight = FontWeight.Bold
+                        ),
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(bottom = 20.dp)
+                    )
+
+                    Text(
+                        text = text,
+                        modifier = Modifier.fillMaxWidth(),
+                        color = Color.White.copy(alpha = 0.95f),
+                        fontSize = if (smallText) 13.sp else 14.sp,
+                        lineHeight = if (smallText) 20.sp else 22.sp,
+                        fontWeight = FontWeight.Normal,
+                        textAlign = if (centered) TextAlign.Center else TextAlign.Start
+                    )
+
+                    if (signature != null) {
+                        Text(
+                            text = signature,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 14.dp),
+                            color = Color(0xFFFCE28B),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            textAlign = TextAlign.End
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(26.dp))
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                            .clip(buttonShape)
+                            .background(
+                                Brush.verticalGradient(
+                                    listOf(Color(0xFF9C122B), Color(0xFF6B091B))
+                                )
+                            )
+                            .border(1.5.dp, Color(0xFFE5C158), buttonShape)
+                            .clickable(onClick = onDismiss),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Got it",
+                            color = Color.White,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
                 }
             }
         }
