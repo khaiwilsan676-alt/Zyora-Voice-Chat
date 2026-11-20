@@ -42,6 +42,7 @@ export default function SpecialIdsPanel({ users = [] }: { users?: UserRow[] }) {
           value={specialId}
           onChange={(event) => setSpecialId(event.target.value)}
           placeholder="Enter Special ID"
+          inputMode="numeric"
           className="h-12 w-full max-w-sm rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-800 outline-none focus:border-slate-400"
         />
       </div>
