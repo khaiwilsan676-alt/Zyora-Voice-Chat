@@ -238,14 +238,17 @@ fun GiftPicker(
         if (totalSendCost > walletBalance) { triggerInsufficient("Insufficient Balance", true); return }
         if (!canAfford) return
 
-        val giftToSend = selectedGiftObj
-        val tabToSend = tabToSend
-        val multiplierToSend = multiplierToSend
-        val targetsToSend = targetsToSend.toList()
-        val firstRecipientToSendToSend = firstRecipientToSend
+        // Freeze the chosen gift and recipients for this transaction. UI state may
+        // recompose while the send coroutine is running.
+        val giftToSend = selectedGiftObj ?: return
+        val tabToSend = activeTab
+        val multiplierToSend = parseMultiplier(selectedMultiplier)
+        val targetsToSend = recipientIds.toList()
+        val firstRecipientToSend = firstRecipient
         val totalCostToSend = totalCost
-        val totalSendCostToSendToSend = totalSendCostToSend
-        val isLuckyToSend = isLuckyToSend
+        val totalSendCostToSend = totalSendCost
+        val isLuckyToSend = isLuckyGiftTab
+
         sending = true
         scope.launch {
             var luckyReturnAmount = 0L
@@ -272,8 +275,8 @@ fun GiftPicker(
                 onSendCoinTransfer(mapOf(
                     "roomId" to roomId,
                     "senderId" to currentUserAccountId,
-                    "targetsToSend" to targetsToSend,
-                    "amount" to totalSendCostToSend, // Exact coins debited across all selected recipients.
+                    "recipientIds" to targetsToSend,
+                    "amount" to totalSendCostToSend,
                     "giftName" to giftToSend.name,
                     "giftImage" to giftToSend.image,
                     "giftType" to tabToSend,
