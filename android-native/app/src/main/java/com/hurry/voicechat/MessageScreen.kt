@@ -2133,8 +2133,10 @@ fun NativeChatScreen(
                 if (socket != null && socket.connected() && chatRegistered) {
                     val giftImage = transfer["giftImage"]?.toString().orEmpty()
                     val giftName = transfer["giftName"]?.toString().orEmpty().ifBlank { "Gift" }
+                    val sentAt = System.currentTimeMillis()
+                    val giftMessageId = "gift_" + currentUserId + "_" + java.util.UUID.randomUUID()
                     val outgoing = JSONObject()
-                        .put("id", "gift_" + currentUserId + "_" + java.util.UUID.randomUUID())
+                        .put("id", giftMessageId)
                         .put("senderId", currentUserId).put("senderAccountId", currentAccountId)
                         .put("receiverId", receiverId).put("receiverAccountId", receiverId)
                         .put("senderName", currentName).put("senderPhoto", currentPhoto)
@@ -2144,7 +2146,11 @@ fun NativeChatScreen(
                         .put("imageUrl", if (giftImage.startsWith("http")) giftImage else RAW_MSG + giftImage.trimStart('/'))
                         .put("amount", transfer["amount"]?.toString()?.toLongOrNull() ?: 0L)
                         .put("giftType", transfer["giftType"]?.toString().orEmpty())
-                        .put("timestamp", System.currentTimeMillis())
+                        .put("timestamp", sentAt)
+                    messages.add(true to ("🎁 " + giftName))
+                    messageTimestamps.add(sentAt)
+                    messageIds.add(giftMessageId)
+                    saveConversationPreview(receiverId, name, image, "🎁 " + giftName, sentAt)
                     socket.emit("private_message", outgoing)
                 }
             },
