@@ -35,6 +35,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -301,50 +302,128 @@ private fun FullScreenVideoDialog(videoUrl: String, isMedal: Boolean, overlayIma
 
 @Composable
 private fun LevelUpgradeDialog(onDismiss: () -> Unit) {
-    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Surface(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp).widthIn(max = 300.dp),
-            shape = RoundedCornerShape(12.dp),
-            color = Color.Black,
-            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF333333)),
-            shadowElevation = 10.dp
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
+    ) {
+        val cardShape = RoundedCornerShape(14.dp)
+        val buttonShape = RoundedCornerShape(12.dp)
+        val goldenBorderBrush = Brush.verticalGradient(
+            listOf(Color(0xFFF3D578), Color(0xFFC59B38), Color(0xFFE5C158))
+        )
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.65f))
+                .clickable(onClick = onDismiss),
+            contentAlignment = Alignment.Center
         ) {
-            Column(Modifier.fillMaxWidth()) {
-                Row(
-                    Modifier.fillMaxWidth().padding(top = 20.dp, bottom = 12.dp),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
+            FloatingEmbersAnimation(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight(0.45f)
+                    .align(Alignment.TopCenter)
+            )
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(0.86f)
+                    .clip(cardShape)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color(0xFF0B4182),
+                                Color(0xFF072957),
+                                Color(0xFF041A3B)
+                            )
+                        )
+                    )
+                    .border(1.5.dp, goldenBorderBrush, cardShape)
+                    .clickable(enabled = false) {}
+                    .padding(horizontal = 22.dp, vertical = 26.dp)
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text("How to upgrade", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.3.sp)
-                }
-                Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp)) {
+                    Text(
+                        text = "How to upgrade",
+                        style = TextStyle(
+                            brush = Brush.horizontalGradient(
+                                colors = listOf(Color.White, Color(0xFFFCE28B), Color(0xFFE5B83B))
+                            ),
+                            fontSize = 21.sp,
+                            fontWeight = FontWeight.Bold
+                        ),
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(bottom = 22.dp)
+                    )
+
                     val methods = listOf(
                         Pair("Send Gifts", "1 coins = 1 EXP"),
                         Pair("Join rooms", "2000 EXP/Day"),
                         Pair("Share Rooms", "2000 EXP/Day"),
-                        Pair("Take the mic and unmute in your ov", "1 min = 500 exp, 10000 exp/day"),
-                        Pair("Take the mic and unmute in others'", "1 min = 500 exp, 20000 exp/day")
+                        Pair("Take the mic and unmute in your own room", "1 min = 500 exp, 10000 exp/day"),
+                        Pair("Take the mic and unmute in others' rooms", "1 min = 500 exp, 20000 exp/day")
                     )
+
                     methods.forEachIndexed { index, item ->
-                        Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Column(Modifier.weight(1f)) {
-                                Text(item.first, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, lineHeight = 17.sp, maxLines = 1, overflow = TextOverflow.Clip)
-                                Spacer(Modifier.height(4.dp))
-                                Text(item.second, color = Color.LightGray, fontSize = 13.sp, lineHeight = 16.sp)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.Top
+                        ) {
+                            Text(
+                                text = "${index + 1}.",
+                                color = Color.White,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium,
+                                lineHeight = 20.sp,
+                                modifier = Modifier.width(24.dp)
+                            )
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = item.first,
+                                    color = Color.White,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    lineHeight = 20.sp
+                                )
+                                Text(
+                                    text = item.second,
+                                    color = Color.White.copy(alpha = 0.85f),
+                                    fontSize = 13.sp,
+                                    lineHeight = 18.sp
+                                )
                             }
                         }
-                        if (index != methods.lastIndex) HorizontalDivider(color = Color(0xFF333333))
+                        if (index != methods.lastIndex) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                        }
                     }
-                }
-                Box(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 16.dp)) {
-                    Button(
-                        onClick = onDismiss,
-                        modifier = Modifier.fillMaxWidth().height(48.dp),
-                        shape = RoundedCornerShape(50),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB)),
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp)
+
+                    Spacer(modifier = Modifier.height(26.dp))
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                            .clip(buttonShape)
+                            .background(
+                                Brush.verticalGradient(
+                                    listOf(Color(0xFF1055A3), Color(0xFF0A3973))
+                                )
+                            )
+                            .border(1.5.dp, Color(0xFFE5C158), buttonShape)
+                            .clickable(onClick = onDismiss),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Text("Confirm", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.3.sp)
+                        Text(
+                            text = "Got it",
+                            color = Color.White,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
                     }
                 }
             }
@@ -473,7 +552,7 @@ fun Level(onBack: () -> Unit = {}) {
                         modifier = Modifier.matchParentSize().padding(horizontal = 32.dp), 
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Box(Modifier.size(48.dp).clip(CircleShape).background(Color(0xFF626A75)), contentAlignment = Alignment.Center) {
+                        Box(Modifier.size(56.dp).clip(CircleShape).background(Color(0xFF626A75)), contentAlignment = Alignment.Center) {
                             if (displayPhoto.isNotBlank()) {
                                 AsyncImage(
                                     model = displayPhoto,
@@ -482,15 +561,42 @@ fun Level(onBack: () -> Unit = {}) {
                                     contentScale = ContentScale.Crop
                                 )
                             } else {
-                                Text(displayName.take(1).uppercase(), color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+                                Text(displayName.take(1).uppercase(), color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.Bold)
                             }
                         }
                         Spacer(Modifier.width(14.dp))
                         Column(Modifier.weight(1f)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(displayName, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(
+                                    text = displayName,
+                                    color = Color.White,
+                                    fontSize = 17.sp,
+                                    fontWeight = FontWeight.Black,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.offset(y = (-2).dp)
+                                )
                                 Spacer(Modifier.width(8.dp))
-                                AsyncImage(model = levelAsset(levelTiers[0].badge), contentDescription = null, modifier = Modifier.height(28.dp).width(58.dp))
+                                Box(
+                                    modifier = Modifier.height(28.dp).width(58.dp),
+                                    contentAlignment = Alignment.CenterEnd
+                                ) {
+                                    AsyncImage(
+                                        model = levelAsset(levelTiers[0].badge),
+                                        contentDescription = null,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                    Text(
+                                        text = "Lv.1",
+                                        color = Color.White,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Normal,
+                                        maxLines = 1,
+                                        modifier = Modifier
+                                            .align(Alignment.CenterEnd)
+                                            .padding(end = 6.dp)
+                                    )
+                                }
                             }
                             Spacer(Modifier.height(3.dp)) 
                             Box(Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(20.dp)).background(Color.White.copy(alpha=.25f))) {
@@ -498,7 +604,13 @@ fun Level(onBack: () -> Unit = {}) {
                                     Box(Modifier.align(Alignment.CenterEnd).offset(x = 6.dp).size(12.dp).border(2.dp, Color(0xFFF4B63F), CircleShape).clip(CircleShape).background(Color.White))
                                 }
                             }
-                            Text("4.5k/20.2k remaining to reach Level 5 >", color = Color.White.copy(alpha=.9f), fontSize = 10.5.sp, modifier = Modifier.padding(top = 2.dp), maxLines = 1)
+                            Text(
+                                text = "4.5k/20.2k remaining to reach Level 5 >",
+                                color = Color.White.copy(alpha=.9f),
+                                fontSize = 10.5.sp,
+                                modifier = Modifier.padding(top = 4.dp),
+                                maxLines = 1
+                            )
                         }
                     }
                 }
@@ -1004,18 +1116,16 @@ fun Level(onBack: () -> Unit = {}) {
                         modifier = Modifier.fillMaxWidth().padding(top = 0.dp, bottom = 8.dp)
                     )
 
-                    // Bada outer box taaki sub center rahe
                     Box(
                         modifier = Modifier.fillMaxWidth(),
                         contentAlignment = Alignment.Center
                     ) {
-                        // Ye raha tera Card - exactly 1 medal card (48% width) jitna bada
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth(0.48f) 
                                 .height(280.dp)
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(Color.White.copy(alpha = 0.1f)) // Thoda background jisse card bounds clearly dikhein
+                                .background(Color.White.copy(alpha = 0.1f))
                         ) {
                             HorizontalPager(
                                 state = themePagerState,
@@ -1025,7 +1135,7 @@ fun Level(onBack: () -> Unit = {}) {
                                     model = levelAsset(themeBgImages[page]),
                                     contentDescription = null,
                                     modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Fit // AB NO CROP, PURI IMAGE FIT HOGI
+                                    contentScale = ContentScale.Fit
                                 )
                             }
 
