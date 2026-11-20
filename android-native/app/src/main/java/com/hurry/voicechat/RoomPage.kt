@@ -1573,13 +1573,20 @@ fun RoomPage(
             }
         }
         val connectListener = Emitter.Listener {
-            val profileDb = NativeIndexDatabase(appContext)
-            val currentProfile = currentProfileKeys.firstNotNullOfOrNull { profileDb.loadProfile(it) } ?: JSONObject()
-            if (!currentProfile.has("name") && latestRoomDisplayName.isNotBlank()) currentProfile.put("name", latestRoomDisplayName)
-            if (!currentProfile.has("image") && latestRoomDisplayImage.isNotBlank()) currentProfile.put("image", latestRoomDisplayImage)
-            currentProfileKeys.forEach { profileDb.saveProfile(it, currentProfile) }
+            // Join the room immediately after the WebSocket handshake. Profile cache
+            // persistence is useful metadata work, but must never sit on the critical
+            // room-entry path and delay the authoritative seat/presence snapshots.
             val joinPayload = JSONObject().put("roomId",roomId).put("userId",currentUser.uid.ifBlank{currentUser.id.ifBlank{accountId}}).put("accountId",accountId).put("roomOwnerId",roomOwner.uid.ifBlank{roomOwner.id.ifBlank{roomOwner.accountId.ifBlank{roomId}}}).put("name",latestRoomDisplayName).put("dp",latestRoomDisplayImage).put("roomName",latestRoomName).put("roomImage",latestRoomImage).put("suppressEntry", joinMessageSent)
             roomSocket.emit("room_join",joinPayload)
+            roomIoScope.launch {
+                runCatching {
+                    val profileDb = NativeIndexDatabase(appContext)
+                    val currentProfile = currentProfileKeys.firstNotNullOfOrNull { profileDb.loadProfile(it) } ?: JSONObject()
+                    if (!currentProfile.has("name") && latestRoomDisplayName.isNotBlank()) currentProfile.put("name", latestRoomDisplayName)
+                    if (!currentProfile.has("image") && latestRoomDisplayImage.isNotBlank()) currentProfile.put("image", latestRoomDisplayImage)
+                    currentProfileKeys.forEach { profileDb.saveProfile(it, currentProfile) }
+                }
+            }
             // A kept-room reconnect restores the existing room session. Do not replay
             // the entry vehicle animation when silently restoring that session.
             if (!joinMessageSent && latestEntryEffectEnabled) loadEquippedRoomVehicle()
