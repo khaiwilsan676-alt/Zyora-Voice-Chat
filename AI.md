@@ -1514,3 +1514,10 @@ Current documentation does not certify that all historical features are build-, 
 - Native `Level.kt`: load the canonical signed-in profile through the existing ProfilePersistence source and render its public-profile name/avatar in the Level header; keep valid local profile values as immediate fallback and avoid displaying a Guest placeholder for a signed-in account.
 - Native `RoomPage.kt`: normalize each authoritative seat snapshot so one account can occupy/render only one seat during a rapid seat transfer; preserve the last seat occurrence from the server payload and keep existing voice/speaking state reconciliation.
 - No visual redesign or unrelated room behavior changes. Native APK build and live multi-user seat-transfer verification remain pending.
+
+
+## 2026-11-20 — Room entry critical-path optimization
+- Native `RoomPage.kt`: the Socket.IO connect callback now emits the authenticated `room_join` event immediately after the WebSocket handshake, before performing optional local profile-cache reads/writes.
+- Root cause: synchronous `NativeIndexDatabase` profile cache work ran inside the connect callback ahead of `room_join`, delaying the server's room membership, presence, and seat snapshot flow on slower devices/storage.
+- Profile cache enrichment is now dispatched to the existing room-scoped IO coroutine scope; it remains account/profile-key scoped and is cancelled on real room exit. Room authorization, server-side join validation, seat/voice/chat behavior, and UI are unchanged.
+- Commit created for this optimization; native APK CI and real-device cold/warm room-entry timing plus voice/seat regression tests are still required. No measured speedup or bug-free claim is made until those checks pass.
