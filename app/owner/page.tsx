@@ -2969,19 +2969,38 @@ export default function StaffPanel() {
 
       {isTagModalOpen && selectedTagUserData && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4" onClick={() => setIsTagModalOpen(false)}>
-          <div className="relative w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <button type="button" onClick={() => setIsTagModalOpen(false)} className="absolute right-3 top-3 z-10 rounded-full p-2 text-slate-500 hover:bg-slate-100" aria-label="Close user details"><X className="h-5 w-5" /></button>
-            <div className="flex items-center gap-3 border-b border-slate-100 px-5 py-4 pr-14">
-              <div className="h-12 w-12 shrink-0 overflow-hidden rounded-full bg-slate-100">
-                {selectedTagUserData.image ? <img src={selectedTagUserData.image} alt={selectedTagUserData.name} className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center text-lg font-bold text-slate-500">{selectedTagUserData.name.charAt(0).toUpperCase()}</div>}
+          <div className="w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-4 border-b border-slate-100 px-6 py-5">
+              <div className="h-14 w-14 shrink-0 overflow-hidden rounded-full bg-slate-100">
+                {selectedTagUserData.image ? <img src={selectedTagUserData.image} alt={selectedTagUserData.name} className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center text-xl font-bold text-slate-500">{selectedTagUserData.name.charAt(0).toUpperCase()}</div>}
               </div>
-              <span className="min-w-0 truncate text-base font-bold text-slate-900">{selectedTagUserData.name}</span>
+              <span className="min-w-0 truncate text-lg font-bold text-slate-900">{selectedTagUserData.name}</span>
             </div>
-            <div className="space-y-0 px-5 py-2 text-sm">
-              <div className="flex items-center justify-between gap-4 border-b border-slate-100 py-3"><span className="font-semibold text-slate-500">Long ID:</span><span className="break-all text-right font-bold text-slate-900">{selectedTagUserData.longId || '—'}</span><span className="shrink-0 text-slate-500">App Long ID: <b className="text-slate-900">{selectedTagUserData.appLongId || '—'}</b></span></div>
-              <div className="flex items-center justify-between gap-4 border-b border-slate-100 py-3"><span className="font-semibold text-slate-500">Vip ID:</span><span className="break-all text-right font-bold text-slate-900">{selectedTagUserData.vipId || '—'}</span><span className="shrink-0 text-slate-500">App Short ID: <b className="text-slate-900">{selectedTagUserData.appShortId || '—'}</b></span></div>
-              <div className="flex items-center justify-between gap-4 border-b border-slate-100 py-3"><span className="font-semibold text-slate-500">Country:</span><b className="text-right text-slate-900">{selectedTagUserData.country || '—'}</b><span className="shrink-0 text-slate-500">Current Status: <b className="text-slate-900">{selectedTagUserData.accountStatus || 'Using'}</b></span></div>
-              <div className="flex items-center justify-between gap-4 py-3"><span className="min-w-0 break-words font-semibold text-slate-500">Device name: <b className="text-slate-900">{selectedTagUserData.deviceName || '—'}</b></span><span className="shrink-0 text-right text-slate-500">User IP address: <b className="break-all text-slate-900">{selectedTagUserData.ipAddress || '—'}</b></span></div>
+            <div className="grid grid-cols-1 gap-x-10 px-6 py-3 text-sm sm:grid-cols-2">
+              <div className="flex min-w-0 items-center gap-2 border-b border-slate-100 py-4 sm:col-span-2">
+                <span className="shrink-0 font-semibold text-slate-500">App ID:</span>
+                <b className="min-w-0 break-all text-slate-900">{selectedTagUserData.longId || '—'}</b>
+              </div>
+              <div className="flex min-w-0 items-center gap-2 border-b border-slate-100 py-4">
+                <span className="shrink-0 font-semibold text-slate-500">VIP ID:</span>
+                <b className="min-w-0 break-all text-slate-900">{selectedTagUserData.vipId || '—'}</b>
+              </div>
+              <div className="flex min-w-0 items-center gap-2 border-b border-slate-100 py-4">
+                <span className="shrink-0 font-semibold text-slate-500">Country:</span>
+                <b className="min-w-0 break-words text-slate-900">{selectedTagUserData.country || '—'}</b>
+              </div>
+              <div className="flex min-w-0 items-center gap-2 border-b border-slate-100 py-4">
+                <span className="shrink-0 font-semibold text-slate-500">Current Status:</span>
+                <b className="min-w-0 break-words text-slate-900">{selectedTagUserData.accountStatus || 'Using'}</b>
+              </div>
+              <div className="flex min-w-0 items-center gap-2 border-b border-slate-100 py-4">
+                <span className="shrink-0 font-semibold text-slate-500">User Device:</span>
+                <b className="min-w-0 break-words text-slate-900">{selectedTagUserData.deviceName || '—'}</b>
+              </div>
+              <div className="flex min-w-0 items-center gap-2 py-4">
+                <span className="shrink-0 font-semibold text-slate-500">IP Address:</span>
+                <b className="min-w-0 break-all text-slate-900">{selectedTagUserData.ipAddress || '—'}</b>
+              </div>
             </div>
           </div>
         </div>
