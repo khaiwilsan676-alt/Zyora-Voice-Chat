@@ -1144,8 +1144,8 @@ export default function StaffPanel() {
             appShortId: String(u.appShortId || u.appShortID || u.shortId || u.shortID || u.id || '—'),
             country: String(u.country || u.countryName || u.profile?.country || u.userData?.country || '—'),
             accountStatus: String(u.accountStatus || u.status || (u.isDeleted ? 'Delete' : u.isActive === false ? 'Delete' : 'Using')),
-            deviceName: String(u.deviceName || u.deviceModel || u.lastDeviceName || u.device?.name || u.lastDevice?.name || '—'),
-            ipAddress: String(u.ipAddress || u.lastIpAddress || u.lastIP || u.ip || u.lastLoginIp || '—')
+            deviceName: String(u.deviceName || u.deviceModel || u.lastDeviceName || u.userDevice || u.device?.name || u.lastDevice?.name || u.deviceInfo?.model || '—'),
+            ipAddress: String(u.ipAddress || u.lastIpAddress || u.lastIP || u.ip || u.lastLoginIp || u.lastLogin?.ip || '—')
           }));
         } catch (err) {
           console.warn('Socket.IO owner users load failed; trying HTTP users API:', err);
