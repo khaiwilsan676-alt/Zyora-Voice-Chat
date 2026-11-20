@@ -60,7 +60,9 @@ export default function SpecialIdsPanel({ users = [] }: { users?: UserRow[] }) {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50">
-            {visibleUsers.map((user, index) => (
+            {visibleUsers.map((sourceUser, index) => {
+              const user = selectedUser?.id === sourceUser.id ? { ...sourceUser, ...selectedUser } : sourceUser;
+              return (
               <tr key={user.id} className="text-sm hover:bg-slate-50/60">
                 <td className="px-3 py-3 text-xs font-bold text-slate-500">{index + 1}</td>
                 <td className="px-3 py-3">
@@ -75,7 +77,8 @@ export default function SpecialIdsPanel({ users = [] }: { users?: UserRow[] }) {
                 <td className="px-3 py-3 font-semibold text-slate-700">{user.vipId}</td>
                 <td className="px-3 py-3 text-slate-600">{user.vipIdDays ?? user.vipDays ?? user.specialIdDays ?? '—'}</td>
               </tr>
-            ))}
+              );
+            })}
             {visibleUsers.length === 0 && (
               <tr>
                 <td colSpan={6} className="px-3 py-10 text-center text-sm font-medium text-slate-400">
