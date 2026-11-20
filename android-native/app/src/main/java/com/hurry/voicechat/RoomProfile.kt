@@ -193,7 +193,7 @@ fun RoomProfile(
             }
             // Always refresh tag flags from the same remote profile source used by Public Profile.
             // Cached profile data must not hide a newly assigned Seller tag.
-            sequenceOf("officialHeadTag", "officialTag", "adminTag", "serviceTag", "csTag", "hostTag", "isHost", "coinSellerTag", "coinSeller", "sellerTag", "vipTag", "premiumTag").forEach { key ->
+            sequenceOf("officialHeadTag", "officialTag", "adminTag", "serviceTag", "csTag", "hostTag", "isHost", "coinSellerTag", "coinSeller", "sellerTag", "vipTag", "premiumTag", "vipId", "vipIdDays", "vipIdAssignedAt", "vipIdExpiresAt", "vipIdBadge", "vipIdBadgeType").forEach { key ->
                 if (latest.has(key)) merged.put(key, latest.opt(key))
             }
             val sellerEnabled = latest.optBoolean("coinSellerTag", false) ||
