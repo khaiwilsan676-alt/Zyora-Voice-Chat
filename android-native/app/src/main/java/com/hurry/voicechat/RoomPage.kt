@@ -3849,12 +3849,12 @@ private val Int.percentHeight: androidx.compose.ui.unit.Dp
                     Column(Modifier.weight(1f).clickable{onWildParty()}, horizontalAlignment=Alignment.CenterHorizontally){
                         if(wildIcon!=0) Image(painterResource(wildIcon),contentDescription="Wild party",modifier=Modifier.size(56.dp),contentScale=ContentScale.Fit)
                         Spacer(Modifier.height(2.dp))
-                        Text("Wild party",color=Color.White,fontSize=10.sp,maxLines=1,softWrap=false)
+                        Text("Wild party",color=Color.White,fontSize=10.sp,fontWeight=FontWeight.Bold,maxLines=1,softWrap=false)
                     }
                     Column(Modifier.weight(1f).clickable{onFruitParty()}, horizontalAlignment=Alignment.CenterHorizontally){
                         if(fruitIcon!=0) Image(painterResource(fruitIcon),contentDescription="Fruit party",modifier=Modifier.size(56.dp).clip(RoundedCornerShape(6.dp)),contentScale=ContentScale.Fit)
                         Spacer(Modifier.height(2.dp))
-                        Text("Fruit party",color=Color.White,fontSize=10.sp,maxLines=1,softWrap=false)
+                        Text("Fruit party",color=Color.White,fontSize=10.sp,fontWeight=FontWeight.Bold,maxLines=1,softWrap=false)
                     }
                     Box(Modifier.weight(1f),contentAlignment=Alignment.TopCenter){
                         DragonBattleGameItem(onClick=onDragonBattle)
