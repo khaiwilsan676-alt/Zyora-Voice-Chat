@@ -402,6 +402,7 @@ fun PrivateMessageInboxSync() {
             val body = if (isVoice) VoiceMessageStore.saveIncoming(context, payload) ?: ("VOICE::" + payload.optLong("durationSec", 1))
                 else when (payload.optString("type")) {
                     "image" -> "IMAGE::" + payload.optString("imageUrl")
+                    "gift" -> "🎁 " + payload.optString("giftName", "Gift")
                     "room_invitation" -> "ROOM_INVITE::" + (payload.optJSONObject("roomData")?.toString() ?: "{}")
                     "family_invite" -> "FAMILY_INVITE::" + (payload.optJSONObject("familyInvite")?.toString() ?: "{}")
                     else -> payload.optString("text")
@@ -816,6 +817,24 @@ fun NativeChatScreen(
     var peerOnline by remember(receiverId) { mutableStateOf(false) }
     var peerRoomId by remember(receiverId) { mutableStateOf("") }
 
+    var showChatGiftPicker by remember(receiverId) { mutableStateOf(false) }
+    var chatGiftWalletBalance by remember(currentAccountId) { mutableLongStateOf(0L) }
+    LaunchedEffect(currentAccountId) {
+        if (currentAccountId.isBlank()) return@LaunchedEffect
+        val balance = withContext(Dispatchers.IO) {
+            runCatching {
+                val encoded = java.net.URLEncoder.encode(currentAccountId, "UTF-8")
+                val conn = (java.net.URL("https://zyora-server.onrender.com/api/lucky-bag/wallet/$encoded").openConnection() as java.net.HttpURLConnection).apply {
+                    connectTimeout = 10000; readTimeout = 10000; useCaches = false
+                }
+                try {
+                    if (conn.responseCode !in 200..299) error("Wallet unavailable")
+                    JSONObject(conn.inputStream.bufferedReader().use { it.readText() }).optLong("balance", 0L).coerceAtLeast(0L)
+                } finally { conn.disconnect() }
+            }.getOrNull()
+        }
+        if (balance != null) chatGiftWalletBalance = balance
+    }
     var text by remember { mutableStateOf("") }
     var showOptions by remember { mutableStateOf(false) }
     var showReportPage by remember { mutableStateOf(false) }
@@ -1898,6 +1917,19 @@ fun NativeChatScreen(
                         Spacer(Modifier.width(10.dp))
                         
                         IconButton(
+                            onClick = { if (!isOfficial && receiverId.isNotBlank()) showChatGiftPicker = true },
+                            enabled = !isOfficial && receiverId.isNotBlank(),
+                            modifier = Modifier.size(30.dp)
+                        ) {
+                            AsyncImage(
+                                model = RAW_MSG + "gift.png",
+                                contentDescription = "Send gift",
+                                contentScale = ContentScale.Fit,
+                                modifier = Modifier.size(26.dp)
+                            )
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        IconButton(
                             onClick = { imagePickerLauncher.launch("image/*") },
                             enabled = !isOfficial,
                             modifier = Modifier.size(28.dp)
@@ -2066,6 +2098,58 @@ fun NativeChatScreen(
             }
         }
     }
+    if (showChatGiftPicker && !isOfficial) {
+        GiftPicker(
+            open = true,
+            onClose = { showChatGiftPicker = false },
+            currentUserAccountId = currentAccountId,
+            currentUserName = currentName,
+            currentUserImage = currentPhoto,
+            walletBalance = chatGiftWalletBalance,
+            directMode = true,
+            directRecipient = GiftPickerRoomUser(receiverId, name, image),
+            onDebitWallet = { requested ->
+                withContext(Dispatchers.IO) {
+                    runCatching {
+                        val conn = (java.net.URL("https://zyora-server.onrender.com/api/wallet/gift-debit").openConnection() as java.net.HttpURLConnection).apply {
+                            requestMethod = "POST"; doOutput = true; connectTimeout = 12000; readTimeout = 12000
+                            setRequestProperty("Content-Type", "application/json")
+                        }
+                        try {
+                            val body = JSONObject().put("userId", currentAccountId).put("amount", requested).toString()
+                            conn.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
+                            val code = conn.responseCode
+                            val stream = if (code in 200..299) conn.inputStream else conn.errorStream
+                            val result = JSONObject(stream.bufferedReader().use { it.readText() })
+                            if (code !in 200..299 || !result.optBoolean("success")) null
+                            else result.optLong("balance", 0L).coerceAtLeast(0L)
+                        } finally { conn.disconnect() }
+                    }.getOrNull()
+                }?.also { chatGiftWalletBalance = it }
+            },
+            onSendCoinTransfer = { transfer ->
+                val socket = directSocket
+                if (socket != null && socket.connected() && chatRegistered) {
+                    val giftImage = transfer["giftImage"]?.toString().orEmpty()
+                    val giftName = transfer["giftName"]?.toString().orEmpty().ifBlank { "Gift" }
+                    val outgoing = JSONObject()
+                        .put("id", "gift_" + currentUserId + "_" + java.util.UUID.randomUUID())
+                        .put("senderId", currentUserId).put("senderAccountId", currentAccountId)
+                        .put("receiverId", receiverId).put("receiverAccountId", receiverId)
+                        .put("senderName", currentName).put("senderPhoto", currentPhoto)
+                        .put("receiverName", name).put("receiverPhoto", image)
+                        .put("text", "🎁 " + giftName).put("type", "gift")
+                        .put("giftName", giftName).put("giftImage", giftImage)
+                        .put("imageUrl", if (giftImage.startsWith("http")) giftImage else RAW_MSG + giftImage.trimStart('/'))
+                        .put("amount", transfer["amount"]?.toString()?.toLongOrNull() ?: 0L)
+                        .put("giftType", transfer["giftType"]?.toString().orEmpty())
+                        .put("timestamp", System.currentTimeMillis())
+                    socket.emit("private_message", outgoing)
+                }
+            },
+        )
+    }
+
     DisposableEffect(directSocket, receiverId) {
         val socket = directSocket
         val sentListener = Emitter.Listener { args ->
