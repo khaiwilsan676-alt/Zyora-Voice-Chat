@@ -1892,74 +1892,8 @@ export default function StaffPanel() {
         )}
 
         {activeTab === 'gift_catalog' && (
-          <div className="p-8 max-w-6xl mx-auto w-full h-full overflow-y-auto">
-            <div className="flex items-center justify-between mb-6 border-b border-slate-200 pb-4">
-              <h2 className="text-2xl font-bold text-slate-800">All Gift Catalog</h2>
-              <div className="flex items-center gap-2">
-                {(['All', 'Hot', 'Lucky'] as const).map((tab) => (
-                  <button
-                    key={tab}
-                    onClick={() => setGiftTabFilter(tab)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
-                      giftTabFilter === tab
-                        ? 'bg-pink-600 text-white shadow-sm'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                    }`}
-                  >
-                    {tab} Gifts
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="mb-6">
-              <div className="relative w-full max-w-3xl">
-                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
-                <input
-                  type="text"
-                  value={giftSearchQuery}
-                  onChange={(e) => setGiftSearchQuery(e.target.value)}
-                  placeholder="Search gifts by name..."
-                  className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-pink-400 font-medium text-slate-900 placeholder:text-slate-400 caret-slate-900"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-              {filteredGifts.map((gift, idx) => (
-                <div key={gift.id} className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex flex-col items-center hover:shadow-md transition-shadow relative">
-                  <span className="absolute top-2 left-2 text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">
-                    #{idx + 1}
-                  </span>
-                  <span className={`absolute top-2 right-2 text-[9px] font-extrabold px-2 py-0.5 rounded-full ${
-                    gift.type === 'Hot' ? 'bg-red-100 text-red-600' : 'bg-purple-100 text-purple-600'
-                  }`}>
-                    {gift.type}
-                  </span>
-
-                  <div className="w-16 h-16 my-2 relative flex items-center justify-center">
-                    <img
-                      src={gift.image}
-                      alt={gift.name}
-                      className="w-full h-full object-contain"
-                      onError={(e) => { (e.target as HTMLImageElement).src = '/default-avatar.png'; }}
-                    />
-                  </div>
-
-                  <span className="font-bold text-slate-800 text-xs text-center">{gift.name}</span>
-                  <div className="flex items-center gap-1 mt-1 text-xs font-extrabold text-amber-500">
-                    <span>🪙</span>
-                    <span>{gift.coins.toLocaleString()}</span>
-                  </div>
-                </div>
-              ))}
-
-              {filteredGifts.length === 0 && (
-                <div className="col-span-full py-10 text-center text-slate-400 text-sm font-medium bg-white rounded-xl border border-slate-100">
-                  No gifts found
-                </div>
-              )}
-            </div>
+          <div className="p-6 md:p-8 max-w-6xl mx-auto w-full h-full overflow-y-auto">
+            <h2 className="mb-5 text-xl font-bold text-slate-800">Assets</h2>
             <OwnerAssetsPanel ownerKey={VALID_CREDENTIALS.secretKey} />
           </div>
         )}
