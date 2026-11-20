@@ -484,6 +484,7 @@ fun NativeOwnedMedalShowcase(userId: String, onDataLoaded: ((Boolean) -> Unit)? 
                         .filter { it.optString("tab") == "Medal" && it.optLong("expiresAt") > System.currentTimeMillis() }
                 } finally { connection.disconnect() }
             }.onSuccess { medals = it; onDataLoaded?.invoke(it.isNotEmpty()) }
+                .onFailure { onDataLoaded?.invoke(medals.isNotEmpty()) }
         }
     }
     LaunchedEffect(medals) {
