@@ -1613,3 +1613,9 @@ Current documentation does not certify that all historical features are build-, 
 - Owner asset grants now use the same shared official DM delivery helper, numeric account lookup includes all supported account-number fields, and message text uses actual line breaks. Both endpoints return `notification: delivered|queued|unavailable` rather than silently implying that a message was sent.
 - Owner Special IDs and Gift Catalog panels now show whether the system message was delivered, queued, or unavailable.
 - Original App ID is not overwritten. Native APK and deployed Render behavior still require build/live verification.
+
+
+## 2026-11-21 — Variable-length VIP ID and public search
+- Owner Special ID assignment accepts digit-only VIP IDs without the old 4–20 digit length restriction; the original permanent App ID remains unchanged.
+- Native User search now matches an active VIP ID as an additional alias (expiry-aware), while still returning the account's original profile identity. Search cache version was bumped so old results cannot hide new VIP-ID matches.
+- VIP ID is not used after its expiry; normal App ID lookup remains intact.
