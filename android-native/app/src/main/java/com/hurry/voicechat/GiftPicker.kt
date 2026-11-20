@@ -197,26 +197,24 @@ fun GiftPicker(
     val selectedGiftObj = currentGifts.find { it.id == selectedGift }
     val totalCost = selectedGiftObj?.let { it.coins * parseMultiplier(selectedMultiplier) } ?: 0
 
-    val roomUsersById = remember(roomUsers) { roomUsers.associateBy { it.accountId } }
-    val seatsById = remember(seats) { seats.associateBy { it.accountId } }
-    val recipientIds = remember(selectedTargets, roomUsers, seats) {
-        when {
-            selectedTargets.isNotEmpty() -> selectedTargets
-            roomUsers.isNotEmpty() -> roomUsers.map { it.accountId }
-            else -> seats.filter { it.occupied && it.accountId.isNotBlank() }.map { it.accountId }
-        }.asSequence().filter { it.isNotBlank() }.distinct().toList()
-    }
+    // Build one-pass lookups instead of repeatedly scanning the full user/seat
+    // lists for every recipient. These are rebuilt from the current snapshots so
+    // in-place room seat updates cannot leave stale cached recipients on screen.
+    val roomUsersById = roomUsers.associateBy { it.accountId }
+    val seatsById = seats.associateBy { it.accountId }
+    val recipientIds = when {
+        selectedTargets.isNotEmpty() -> selectedTargets
+        roomUsers.isNotEmpty() -> roomUsers.map { it.accountId }
+        else -> seats.filter { it.occupied && it.accountId.isNotBlank() }.map { it.accountId }
+    }.asSequence().filter { it.isNotBlank() }.distinct().toList()
     val recipientCount = recipientIds.size
-    val recipientUsers = remember(recipientIds, roomUsersById, seatsById) {
-        recipientIds.mapNotNull { id ->
-            roomUsersById[id]?.let {
-                GiftPickerRoomUser(it.accountId, it.name, it.image)
-            } ?: seatsById[id]?.let {
-                GiftPickerRoomUser(it.accountId, it.userName, it.userImage)
-            }
+    val firstRecipient = recipientIds.firstNotNullOfOrNull { id ->
+        roomUsersById[id]?.let {
+            GiftPickerRoomUser(it.accountId, it.name, it.image)
+        } ?: seatsById[id]?.let {
+            GiftPickerRoomUser(it.accountId, it.userName, it.userImage)
         }
     }
-    val firstRecipient = recipientUsers.firstOrNull()
     val totalSendCost = totalCost.toLong() * max(1, recipientCount)
     val canAfford = totalCost > 0 && recipientCount > 0 && totalSendCost <= walletBalance
     val isLuckyGiftTab = activeTab == "Lucky"
