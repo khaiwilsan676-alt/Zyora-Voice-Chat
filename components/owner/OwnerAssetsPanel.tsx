@@ -162,10 +162,10 @@ export default function OwnerAssetsPanel({ ownerKey }: { ownerKey: string }) {
         </div>}
         <div className="relative flex items-center gap-3">
           <span className="w-20 shrink-0 text-xs font-bold text-slate-600">Assets Type</span>
-          <button type="button" aria-label="Choose asset type" aria-expanded={typeMenuOpen} onClick={() => setTypeMenuOpen((open) => !open)} className="flex h-12 w-12 shrink-0 items-center justify-center gap-1 rounded-lg border border-slate-200 bg-white text-slate-700 shadow-sm">
+          <button type="button" aria-label="Choose asset type" aria-expanded={typeMenuOpen} onClick={() => setTypeMenuOpen((open) => !open)} className="flex h-[72px] w-[72px] shrink-0 flex-col items-center justify-center gap-1 rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm">
             <span className="text-[9px] font-extrabold">{type === 'Chat bubble' ? 'Chat' : type === 'Daily Check-in' ? 'Daily' : type.replace('Level ', 'Lv ')}</span><span className="text-[10px]">⌄</span>
           </button>
-          {typeMenuOpen && <div className="absolute left-20 top-14 z-30 w-48 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
+          {typeMenuOpen && <div className="absolute left-20 top-[76px] z-30 w-48 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
             {(['Chat bubble', 'Theme', 'Frame', 'Vehicle', 'Level Entry', 'Level Frame', 'Level Medal', 'Family Reward', 'Daily Check-in'] as AssetType[]).map((value) => (
               <button key={value} type="button" onClick={() => { setType(value); setSelected(null); setTypeMenuOpen(false); }} className={`block w-full rounded-lg px-3 py-2 text-left text-xs font-semibold ${type === value ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100'}`}>{value}</button>
             ))}
@@ -174,19 +174,16 @@ export default function OwnerAssetsPanel({ ownerKey }: { ownerKey: string }) {
         <div className="flex items-center gap-3">
           <span className="w-20 shrink-0 text-xs font-bold text-slate-600">Assets Name</span>
           <div className="flex min-w-0 flex-1 items-center gap-3">
-            <div className={`h-12 w-12 shrink-0 overflow-hidden rounded-lg border bg-white p-1 ${selected ? 'border-indigo-400' : 'border-slate-200'}`}>{selected && <img src={assetUrl(selected)} alt="" className="h-full w-full object-contain" />}</div>
+            <div className={`h-[72px] w-[72px] shrink-0 overflow-hidden rounded-xl border bg-white p-1.5 ${selected ? 'border-indigo-400' : 'border-slate-200'}`}>{selected && <img src={assetUrl(selected)} alt="" className="h-full w-full object-contain" />}</div>
             <span className="truncate text-sm font-semibold text-slate-800">{selected?.name || 'Select asset'}</span>
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
           {visibleAssets.map((asset) => (
-            <button key={asset.id} type="button" onClick={() => setSelected(asset)} aria-label={asset.name} aria-pressed={selected?.id === asset.id} className={`h-12 w-12 overflow-hidden rounded-lg border bg-white p-1 ${selected?.id === asset.id ? 'border-indigo-500 ring-2 ring-indigo-200' : 'border-slate-200'}`}>
+            <button key={asset.id} type="button" onClick={() => setSelected(asset)} aria-label={asset.name} aria-pressed={selected?.id === asset.id} className={`h-16 w-16 overflow-hidden rounded-xl border bg-white p-1.5 ${selected?.id === asset.id ? 'border-indigo-500 ring-2 ring-indigo-200' : 'border-slate-200'}`}>
               <img src={assetUrl(asset)} alt="" className="h-full w-full object-contain" loading="lazy" />
             </button>
           ))}
-        </div>
-        <div className="space-y-2"><div className="text-xs font-bold text-slate-600">Title Assets</div>
-          <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-white p-1">{selected && <img src={assetUrl(selected)} alt="" className="h-full w-full object-contain" />}</div>
         </div>
         <div className="flex items-center gap-3">
           <label className="w-20 shrink-0 text-xs font-bold text-slate-600" htmlFor="owner-asset-days">Days</label>
