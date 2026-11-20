@@ -101,6 +101,7 @@ export default function OwnerAssetsPanel({ ownerKey }: { ownerKey: string }) {
   const [history, setHistory] = useState<any[]>([]);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
+  const [typeMenuOpen, setTypeMenuOpen] = useState(false);
 
   const visibleAssets = useMemo(() => ASSETS.filter((asset) => asset.type === type), [type]);
   const assetUrl = (asset: Asset) => (asset.source === 'zyora' ? 'https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/' : ASSET_BASE) + asset.image;
@@ -153,41 +154,44 @@ export default function OwnerAssetsPanel({ ownerKey }: { ownerKey: string }) {
   };
 
   return (
-    <section className="mt-10 border-t border-slate-200 pt-8">
-      <div className="space-y-3">
-        <input value={userQuery} onChange={(event) => setUserQuery(event.target.value)} placeholder="Search User ID" className={inputClass} inputMode="numeric" />
+    <section className="w-full max-w-xl pt-2">
+      <div className="space-y-4">
+        <input value={userQuery} onChange={(event) => setUserQuery(event.target.value)} placeholder="Search User ID" className="w-full max-w-xs rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-800 outline-none focus:border-slate-400" inputMode="numeric" />
         {user && <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3">
           <img src={user.avatar || '/default-avatar.png'} alt="" className="h-10 w-10 rounded-full object-cover" />
           <div className="min-w-0"><div className="truncate text-sm font-bold text-slate-800">{user.name}</div><div className="text-xs text-slate-500">ID: {user.accountId}</div></div>
         </div>}
-        <div className="rounded-xl bg-slate-100 p-3">
-          <div className="mb-2 text-xs font-bold text-slate-600">Assets Type</div>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        <div className="relative flex items-center gap-3">
+          <span className="w-20 shrink-0 text-xs font-bold text-slate-600">Assets Type</span>
+          <button type="button" aria-label="Choose asset type" aria-expanded={typeMenuOpen} onClick={() => setTypeMenuOpen((open) => !open)} className="flex h-12 w-12 shrink-0 items-center justify-center gap-1 rounded-lg border border-slate-200 bg-white text-slate-700 shadow-sm">
+            <span className="text-[9px] font-extrabold">{type === 'Chat bubble' ? 'Chat' : type === 'Daily Check-in' ? 'Daily' : type.replace('Level ', 'Lv ')}</span><span className="text-[10px]">⌄</span>
+          </button>
+          {typeMenuOpen && <div className="absolute left-20 top-14 z-30 w-48 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
             {(['Chat bubble', 'Theme', 'Frame', 'Vehicle', 'Level Entry', 'Level Frame', 'Level Medal', 'Family Reward', 'Daily Check-in'] as AssetType[]).map((value) => (
-              <button key={value} type="button" onClick={() => { setType(value); setSelected(null); }} className={`rounded-lg px-3 py-3 text-xs font-bold transition-colors ${type === value ? 'bg-slate-800 text-white' : 'bg-white text-slate-600 hover:bg-slate-200'}`}>{value}</button>
+              <button key={value} type="button" onClick={() => { setType(value); setSelected(null); setTypeMenuOpen(false); }} className={`block w-full rounded-lg px-3 py-2 text-left text-xs font-semibold ${type === value ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100'}`}>{value}</button>
             ))}
+          </div>}
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="w-20 shrink-0 text-xs font-bold text-slate-600">Assets Name</span>
+          <div className="flex min-w-0 flex-1 items-center gap-3">
+            <div className={`h-12 w-12 shrink-0 overflow-hidden rounded-lg border bg-white p-1 ${selected ? 'border-indigo-400' : 'border-slate-200'}`}>{selected && <img src={assetUrl(selected)} alt="" className="h-full w-full object-contain" />}</div>
+            <span className="truncate text-sm font-semibold text-slate-800">{selected?.name || 'Select asset'}</span>
           </div>
         </div>
-        <div className="grid grid-cols-4 gap-2 sm:grid-cols-6 lg:grid-cols-8">
+        <div className="flex flex-wrap gap-2">
           {visibleAssets.map((asset) => (
-            <button key={asset.id} type="button" onClick={() => setSelected(asset)} aria-label={asset.name} className={`aspect-square overflow-hidden rounded-lg border bg-slate-100 p-1 ${selected?.id === asset.id ? 'border-indigo-500 ring-2 ring-indigo-200' : 'border-slate-200'}`}>
+            <button key={asset.id} type="button" onClick={() => setSelected(asset)} aria-label={asset.name} aria-pressed={selected?.id === asset.id} className={`h-12 w-12 overflow-hidden rounded-lg border bg-white p-1 ${selected?.id === asset.id ? 'border-indigo-500 ring-2 ring-indigo-200' : 'border-slate-200'}`}>
               <img src={assetUrl(asset)} alt="" className="h-full w-full object-contain" loading="lazy" />
             </button>
           ))}
         </div>
-        <div className="rounded-xl bg-slate-100 p-3">
-          <div className="mb-2 text-xs font-bold text-slate-600">Assets Name</div>
-          <select value={selected?.id || ''} onChange={(event) => setSelected(ASSETS.find((asset) => asset.id === event.target.value) || null)} className={inputClass}>
-            <option value="">Select asset</option>
-            {visibleAssets.map((asset) => <option key={asset.id} value={asset.id}>{asset.name}</option>)}
-          </select>
+        <div className="space-y-2"><div className="text-xs font-bold text-slate-600">Title Assets</div>
+          <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-white p-1">{selected && <img src={assetUrl(selected)} alt="" className="h-full w-full object-contain" />}</div>
         </div>
-        <div className="rounded-xl bg-slate-100 p-3">
-          <div className="mb-2 text-xs font-bold text-slate-600">Days</div>
-          <input value={days} onChange={(event) => setDays(event.target.value)} inputMode="numeric" className={inputClass} />
-        </div>
-        <div className="flex min-h-28 items-center justify-center rounded-xl bg-slate-100 p-3">
-          {selected && <img src={assetUrl(selected)} alt="" className="h-28 w-28 object-contain" />}
+        <div className="flex items-center gap-3">
+          <label className="w-20 shrink-0 text-xs font-bold text-slate-600" htmlFor="owner-asset-days">Days</label>
+          <input id="owner-asset-days" value={days} onChange={(event) => setDays(event.target.value)} inputMode="numeric" className="w-20 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 outline-none focus:border-slate-400" />
         </div>
         <button type="button" onClick={sendAsset} disabled={busy || !user || !selected} className="w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-extrabold text-white disabled:cursor-not-allowed disabled:opacity-40">{busy ? 'Sending…' : 'Send'}</button>
         {notice && <p className="text-xs font-semibold text-slate-600">{notice}</p>}
