@@ -498,7 +498,7 @@ fun NativeOwnedMedalShowcase(userId: String, onDataLoaded: ((Boolean) -> Unit)? 
     }
     if (medals.isEmpty()) {
         if (showEmpty) {
-            Column(Modifier.fillMaxWidth().weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+            Column(Modifier.fillMaxWidth().fillMaxHeight(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
                 AsyncImage(model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_0000000047308211a02722299d1fda2e.png", contentDescription = "No Badge", contentScale = ContentScale.Fit, modifier = Modifier.size(135.dp))
                 Spacer(Modifier.height(12.dp))
                 Text("No Badge", color = Color(0xFF7D92B0), fontSize = 14.sp)
