@@ -1570,3 +1570,10 @@ Current documentation does not certify that all historical features are build-, 
 - Inactive root tabs are constrained to a transparent 1dp host; the selected tab retains the full content area. Existing bottom navigation, screen content, and visual styling are unchanged.
 - This keeps screen state and existing socket/listener lifetimes warm across tab switches. It also means inactive screens remain composed, so background work and memory usage must be checked on-device.
 - APK compilation and Redmi 14C responsiveness testing are pending; no measured smoothness claim is made.
+
+
+## 2026-11-20 — Owner gift catalog: Level, Family and Daily Check-in rewards
+- Extended `components/owner/OwnerAssetsPanel.tsx` with separate selectable catalog groups for all native Level Entry, Level Frame and Level Medal images, the Family TOP1/TOP2/TOP3/TOP4-10 reward images, and Daily Check-in reward images (including Day 3 ×2, Day 5 ×1, Day 6 ×2 and Day 7 ×3 items).
+- New reward thumbnails and videos resolve from the Zyora repository's `public/` assets; existing Chat bubble, Theme, Frame and Vehicle catalog entries keep their original asset source and behavior.
+- The existing owner-key-protected grant endpoint and expiry-days input are reused; no new wallet debit or purchase behavior was added.
+- Verification still required: web production build, owner grant to a test account, and confirmation that each special reward category is represented correctly in native Bag/equipment. This catalog change alone does not prove native equip support for Medal, Family Tag or Daily Check-in inventory categories.
