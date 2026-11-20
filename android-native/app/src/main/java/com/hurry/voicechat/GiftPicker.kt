@@ -270,7 +270,7 @@ fun GiftPicker(
             }
             onRecordGiftTransaction(giftToSend.name, -netDeductionCost)
 
-            if (roomId.isNotEmpty() && currentUserAccountId.isNotEmpty() && targetsToSend.isNotEmpty()) {
+            if ((roomId.isNotEmpty() || directMode) && currentUserAccountId.isNotEmpty() && targetsToSend.isNotEmpty()) {
                 val uniqueTransferId = "tx-$currentUserAccountId-${System.currentTimeMillis()}-${(0..999999).random()}"
 
                 onSendCoinTransfer(mapOf(
