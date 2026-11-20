@@ -453,6 +453,81 @@ fun NativeOwnedFrameShowcase(userId: String, onDataLoaded: ((Boolean) -> Unit)? 
 }
 
 
+
+@Composable
+fun NativeOwnedMedalShowcase(userId: String, onDataLoaded: ((Boolean) -> Unit)? = null, showEmpty: Boolean = false) {
+    val appContext = LocalContext.current.applicationContext
+    var medals by remember(userId) {
+        mutableStateOf(readNativeStoreInventoryCache(appContext, userId).let { cached ->
+            (0 until cached.length()).mapNotNull { cached.optJSONObject(it) }
+                .filter { it.optString("tab") == "Medal" && it.optLong("expiresAt") > System.currentTimeMillis() }
+        })
+    }
+    var clock by remember(userId) { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(userId) { while (true) { clock = System.currentTimeMillis(); delay(1000L) } }
+    LaunchedEffect(userId) {
+        if (userId.isNotBlank()) withContext(Dispatchers.IO) {
+            runCatching {
+                val encoded = URLEncoder.encode(userId, "UTF-8")
+                val connection = (URL("https://zyora-server.onrender.com/api/store/inventory/$encoded").openConnection() as HttpURLConnection).apply {
+                    connectTimeout = 8000; readTimeout = 8000; useCaches = false
+                    setRequestProperty("Cache-Control", "no-cache, no-store")
+                    setRequestProperty("Pragma", "no-cache")
+                }
+                try {
+                    val code = connection.responseCode
+                    if (code !in 200..299) error("Medal inventory unavailable")
+                    val json = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
+                    val items = json.optJSONArray("items") ?: JSONArray()
+                    writeNativeStoreInventoryCache(appContext, userId, items)
+                    (0 until items.length()).mapNotNull { items.optJSONObject(it) }
+                        .filter { it.optString("tab") == "Medal" && it.optLong("expiresAt") > System.currentTimeMillis() }
+                } finally { connection.disconnect() }
+            }.onSuccess { medals = it; onDataLoaded?.invoke(it.isNotEmpty()) }
+        }
+    }
+    LaunchedEffect(medals) {
+        while (medals.isNotEmpty()) {
+            val expiry = medals.minOfOrNull { it.optLong("expiresAt") } ?: break
+            val remaining = (expiry - System.currentTimeMillis()).coerceAtLeast(0L)
+            if (remaining > 0L) delay(remaining)
+            val now = System.currentTimeMillis()
+            medals = medals.filter { it.optLong("expiresAt") > now }
+            onDataLoaded?.invoke(medals.isNotEmpty())
+        }
+    }
+    if (medals.isEmpty()) {
+        if (showEmpty) {
+            Column(Modifier.fillMaxWidth().weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                AsyncImage(model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_0000000047308211a02722299d1fda2e.png", contentDescription = "No Badge", contentScale = ContentScale.Fit, modifier = Modifier.size(135.dp))
+                Spacer(Modifier.height(12.dp))
+                Text("No Badge", color = Color(0xFF7D92B0), fontSize = 14.sp)
+            }
+        }
+    } else {
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            medals.chunked(3).forEach { row ->
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Top) {
+                    row.forEach { owned ->
+                        Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                            val image = owned.optString("image")
+                            val imageUrl = if (image.startsWith("http", true)) image else "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/" + image.removePrefix("/")
+                            AsyncImage(model = imageUrl, contentDescription = owned.optString("name"), modifier = Modifier.fillMaxWidth().height(92.dp), contentScale = ContentScale.Fit)
+                            Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                                repeat(owned.optInt("stars", 1).coerceIn(1, 5)) {
+                                    AsyncImage(model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_0000000004e881fa84e61b8616f8eaf8.png", contentDescription = "Star", modifier = Modifier.size(12.dp))
+                                }
+                            }
+                            val remaining = ((owned.optLong("expiresAt") - clock).coerceAtLeast(0L) / 1000L)
+                            Text("${remaining / 86400L}d ${(remaining % 86400L) / 3600L}h", color = Color.LightGray, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                        }
+                    }
+                    repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
+                }
+            }
+        }
+    }
+}
 @Composable
 fun NativeOwnedVehicleShowcase(userId: String, onDataLoaded: ((Boolean) -> Unit)? = null) {
     val appContext = LocalContext.current.applicationContext
