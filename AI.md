@@ -1558,7 +1558,7 @@ Current documentation does not certify that all historical features are build-, 
 
 ## 2026-11-20 — Gift Sharing / Lucky Gift responsiveness
 - `GiftPicker.kt`: fixed the Lucky reward threshold ordering so the 2× outcome is reachable; previously the earlier 5× condition shadowed it.
-- Gift recipient IDs are now de-duplicated and the room-user/seat lookup maps plus recipient rows are memoized, avoiding repeated nested list searches during picker recompositions.
+- Gift recipient IDs are now de-duplicated and resolved through one-pass room-user/seat lookup maps, avoiding repeated nested list searches during picker recompositions while always reflecting in-place seat updates.
 - The in-flight gift send now snapshots the selected gift, tab, multiplier, recipient IDs, and cost before launching its coroutine so UI recompositions cannot mix transaction data mid-send.
 - `RoomPage.kt`: removed the unnecessary `seats.toList()` copy passed into GiftPicker.
 - Lucky gifts now render an immediate local sender-side notice/seat effect before the Socket.IO emit. The transfer ID is marked as seen first, so the later server echo does not create a duplicate animation. Other room members still receive the authoritative server event.
