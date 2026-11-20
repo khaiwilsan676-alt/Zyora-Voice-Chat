@@ -1065,9 +1065,14 @@ app.get("/api/users", async (req, res) => {
           const identifiers = [user.id, user.uid, user.accountId].map(String);
           return {
             ...user,
+            // Return all supported legacy seller-tag aliases consistently.
+            coinSellerTag: Boolean(user.coinSellerTag || user.coinSeller || user.sellerTag),
+            coinSeller: rawSellerTagEnabled(user),
+            sellerTag: rawSellerTagEnabled(user),
             isOnline: identifiers.some((id) => onlineUsers.has(id)),
           };
         });
+      res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
       return res.json({ users: normalizedSellers });
     }
 
