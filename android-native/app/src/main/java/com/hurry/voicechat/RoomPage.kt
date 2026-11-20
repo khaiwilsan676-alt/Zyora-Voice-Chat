@@ -2756,7 +2756,7 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
         if(showGift) GiftPicker(
             open = true,
             onClose = { showGift = false },
-            seats = seats.toList(),
+            seats = seats,
             roomId = roomId,
             currentUserAccountId = accountId,
             currentUserName = roomDisplayName,
@@ -2768,6 +2768,88 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                 val outgoingTransfer = JSONObject(transfer)
                 if (outgoingTransfer.optBoolean("luckyGift", false)) {
                     lastLuckyComboPayload = JSONObject(outgoingTransfer.toString())
+
+                    // Optimistically play the sender's own Lucky Gift immediately.
+                    // The transfer ID is recorded first, so the server echo is ignored
+                    // by luckyGiftReceivedListener instead of rendering the same gift twice.
+                    val localTransferId = outgoingTransfer.optString("transferId")
+                    if (localTransferId.isNotBlank() && seenLuckyGiftTransferIds.add(localTransferId)) {
+                        if (seenLuckyGiftTransferIds.size > 200) {
+                            synchronized(seenLuckyGiftTransferIds) {
+                                while (seenLuckyGiftTransferIds.size > 150) {
+                                    seenLuckyGiftTransferIds.remove(seenLuckyGiftTransferIds.first())
+                                }
+                            }
+                        }
+                        val localSenderId = outgoingTransfer.optString("senderId")
+                        val localSenderName = outgoingTransfer.optString("senderName", "User")
+                        val localSenderImage = outgoingTransfer.optString("senderImage")
+                        val localGiftImageRaw = outgoingTransfer.optString("giftImage")
+                            .ifBlank { outgoingTransfer.optString("luckyImage") }
+                        val localGiftImage = when {
+                            localGiftImageRaw.isBlank() -> ""
+                            localGiftImageRaw.startsWith("http", true) -> localGiftImageRaw
+                            else -> "https://zyora-voice-chat.vercel.app/" + localGiftImageRaw.trimStart('/')
+                        }
+                        val localRecipientsJson = outgoingTransfer.optJSONArray("recipientIds") ?: JSONArray()
+                        val localRecipientIds = (0 until localRecipientsJson.length())
+                            .map { localRecipientsJson.optString(it) }.toSet()
+                        val localRecipientMode = when (outgoingTransfer.optString("recipientMode").lowercase()) {
+                            "mic" -> RecipientMode.MIC
+                            "room" -> RecipientMode.ROOM
+                            else -> RecipientMode.SINGLE
+                        }
+                        val localIsCombo = outgoingTransfer.optBoolean("comboReplay", false)
+                        val localMultiplier = outgoingTransfer.optInt("multiplier", 1).coerceAtLeast(1)
+                        val localTimestamp = outgoingTransfer.optLong("timestamp", System.currentTimeMillis())
+                        luckyGiftNotice = LuckyNotice(
+                            id = localTransferId,
+                            senderId = localSenderId,
+                            senderName = localSenderName,
+                            recipientName = outgoingTransfer.optString("recipientName", "User"),
+                            senderImage = localSenderImage.ifBlank { "https://zyora-server.onrender.com/default-avatar.png" },
+                            giftImage = localGiftImage,
+                            multiplier = if (localIsCombo && luckyGiftNotice?.senderId == localSenderId) {
+                                (luckyGiftNotice?.multiplier ?: localMultiplier) + 1
+                            } else localMultiplier,
+                            totalWinAmount = outgoingTransfer.optLong("luckyReturnAmount", 0L),
+                            maxWinTimes = outgoingTransfer.optInt("luckyReturnPercent", 0),
+                            recipientMode = localRecipientMode
+                        )
+                        showLuckyComboButton = true
+                        luckyComboTimeLeft = 5
+                        luckyComboGeneration++
+
+                        if (localGiftImage.isNotBlank()) {
+                            for (index in seats.indices) {
+                                val seat = seats[index]
+                                if (seat.occupied && seat.accountId in localRecipientIds) {
+                                    seats[index] = seat.copy(
+                                        gifSrc = localGiftImage,
+                                        gifTimestamp = localTimestamp,
+                                        gifDurationMs = 1800L
+                                    )
+                                    val seatNumber = seat.number
+                                    mainHandler.postDelayed({
+                                        val currentIndex = seats.indexOfFirst { it.number == seatNumber }
+                                        if (currentIndex >= 0 && seats[currentIndex].gifTimestamp == localTimestamp) {
+                                            seats[currentIndex] = seats[currentIndex].copy(
+                                                gifSrc = "", gifTimestamp = 0L, gifDurationMs = 5000L
+                                            )
+                                        }
+                                    }, 1800L)
+                                }
+                            }
+                        }
+                        mainHandler.postDelayed({
+                            if (luckyGiftNotice?.id == localTransferId) {
+                                luckyGiftNotice = luckyGiftNotice?.copy(isExiting = true)
+                                mainHandler.postDelayed({
+                                    if (luckyGiftNotice?.id == localTransferId) luckyGiftNotice = null
+                                }, 450L)
+                            }
+                        }, 5000L)
+                    }
                 }
                 roomSocketRef.value?.emit("coin_transfer", outgoingTransfer)
             },
