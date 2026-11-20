@@ -485,8 +485,15 @@ fun MessageScreen(onChat: (String, String, String) -> Unit, embeddedSheet: Boole
     val currentAuthUid = authPrefs.getString("uid", "").orEmpty().ifBlank { prefs.getString("uid", "").orEmpty() }
     val currentUserId = authPrefs.getString("accountId", "").orEmpty().ifBlank { prefs.getString("accountId", prefs.getString("userId", currentAuthUid)).orEmpty() }.ifBlank { currentAuthUid }
     val indexDb = remember { NativeIndexDatabase(context) }
-    val savedConversations = remember(currentUserId) {
-        if (currentUserId.isNotBlank()) indexDb.loadConversations("conversation_${currentUserId}_") else emptyList()
+    // Hydrate the inbox from local storage off the UI thread. Show the two
+    // built-in conversations immediately while the cached rows are being read.
+    var savedConversations by remember(currentUserId) { mutableStateOf<List<JSONObject>>(emptyList()) }
+    LaunchedEffect(currentUserId) {
+        savedConversations = withContext(Dispatchers.IO) {
+            if (currentUserId.isNotBlank()) {
+                runCatching { indexDb.loadConversations("conversation_${currentUserId}_") }.getOrDefault(emptyList())
+            } else emptyList()
+        }
     }
     val chats = remember(currentUserId, savedConversations.size) {
         mutableStateListOf<MessagePreview>().apply {
@@ -545,6 +552,7 @@ fun MessageScreen(onChat: (String, String, String) -> Unit, embeddedSheet: Boole
         }
     }
 
+    val inboxScope = rememberCoroutineScope()
     fun updateConversationPreview(peerId: String, peerName: String, peerPhoto: String, lastMessage: String, timestamp: Long) {
         if (peerId.isBlank() || peerId == currentUserId) return
         val time = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(timestamp))
@@ -557,7 +565,9 @@ fun MessageScreen(onChat: (String, String, String) -> Unit, embeddedSheet: Boole
         } ?: previous?.image.orEmpty()
         val resolvedName = peerName.takeIf { it.isNotBlank() && it != "User" } ?: previous?.name ?: "User"
         val saved = JSONObject().put("peerId", peerId).put("peerName", resolvedName).put("peerPhoto", resolvedPhoto).put("lastMessage", lastMessage).put("timestamp", timestamp).put("time", time)
-        indexDb.saveConversation("conversation_${currentUserId}_$peerId", peerId, saved)
+        inboxScope.launch(Dispatchers.IO) {
+            runCatching { indexDb.saveConversation("conversation_${currentUserId}_$peerId", peerId, saved) }
+        }
         val existing = chats.indexOfFirst { it.uid == peerId }
         if (existing >= 0) chats.removeAt(existing)
         val insertAt = when (peerId) {
@@ -588,10 +598,12 @@ fun MessageScreen(onChat: (String, String, String) -> Unit, embeddedSheet: Boole
                     val old = chats[index]
                     val updatedName = latestName.ifBlank { old.name }
                     chats[index] = old.copy(name = updatedName, image = latestPhoto)
-                    val saved = indexDb.loadConversations("conversation_${currentUserId}_")
-                        .firstOrNull { it.optString("peerId") == peerId } ?: JSONObject()
-                    saved.put("peerId", peerId).put("peerName", updatedName).put("peerPhoto", latestPhoto)
-                    indexDb.saveConversation("conversation_${currentUserId}_$peerId", peerId, saved)
+                    withContext(Dispatchers.IO) {
+                        val saved = indexDb.loadConversations("conversation_${currentUserId}_")
+                            .firstOrNull { it.optString("peerId") == peerId } ?: JSONObject()
+                        saved.put("peerId", peerId).put("peerName", updatedName).put("peerPhoto", latestPhoto)
+                        indexDb.saveConversation("conversation_${currentUserId}_$peerId", peerId, saved)
+                    }
                 }
             }
         }
