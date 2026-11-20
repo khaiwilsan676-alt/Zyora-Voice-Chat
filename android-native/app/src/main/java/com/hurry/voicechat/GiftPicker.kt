@@ -142,8 +142,8 @@ fun rollLuckyWin(): Int {
     if (luck > 0.999) return 30
     if (luck > 0.980) return 15
     if (luck > 0.966) return 10
-    if (luck > 0.900) return 5
-    if (luck > 0.910) return 2
+    if (luck > 0.910) return 5
+    if (luck > 0.900) return 2
     return 0
 }
 
@@ -197,19 +197,23 @@ fun GiftPicker(
     val selectedGiftObj = currentGifts.find { it.id == selectedGift }
     val totalCost = selectedGiftObj?.let { it.coins * parseMultiplier(selectedMultiplier) } ?: 0
 
+    val roomUsersById = remember(roomUsers) { roomUsers.associateBy { it.accountId } }
+    val seatsById = remember(seats) { seats.associateBy { it.accountId } }
     val recipientIds = remember(selectedTargets, roomUsers, seats) {
         when {
             selectedTargets.isNotEmpty() -> selectedTargets
             roomUsers.isNotEmpty() -> roomUsers.map { it.accountId }
             else -> seats.filter { it.occupied && it.accountId.isNotBlank() }.map { it.accountId }
-        }
+        }.asSequence().filter { it.isNotBlank() }.distinct().toList()
     }
     val recipientCount = recipientIds.size
-    val recipientUsers = recipientIds.mapNotNull { id ->
-        roomUsers.find { it.accountId == id }?.let {
-            GiftPickerRoomUser(it.accountId, it.name, it.image)
-        } ?: seats.find { it.accountId == id }?.let {
-            GiftPickerRoomUser(it.accountId, it.userName, it.userImage)
+    val recipientUsers = remember(recipientIds, roomUsersById, seatsById) {
+        recipientIds.mapNotNull { id ->
+            roomUsersById[id]?.let {
+                GiftPickerRoomUser(it.accountId, it.name, it.image)
+            } ?: seatsById[id]?.let {
+                GiftPickerRoomUser(it.accountId, it.userName, it.userImage)
+            }
         }
     }
     val firstRecipient = recipientUsers.firstOrNull()
@@ -234,16 +238,24 @@ fun GiftPicker(
         if (totalSendCost > walletBalance) { triggerInsufficient("Insufficient Balance", true); return }
         if (!canAfford) return
 
+        val giftToSend = selectedGiftObj
+        val tabToSend = tabToSend
+        val multiplierToSend = multiplierToSend
+        val targetsToSend = targetsToSend.toList()
+        val firstRecipientToSendToSend = firstRecipientToSend
+        val totalCostToSend = totalCost
+        val totalSendCostToSendToSend = totalSendCostToSend
+        val isLuckyToSend = isLuckyToSend
         sending = true
         scope.launch {
             var luckyReturnAmount = 0L
             var winTimes = 0
-            var netDeductionCost = totalSendCost
+            var netDeductionCost = totalSendCostToSend
 
-            if (isLuckyGiftTab) {
+            if (isLuckyToSend) {
                 winTimes = rollLuckyWin()
-                luckyReturnAmount = if (winTimes > 0) totalSendCost * winTimes else 0L
-                netDeductionCost = totalSendCost - luckyReturnAmount
+                luckyReturnAmount = if (winTimes > 0) totalSendCostToSend * winTimes else 0L
+                netDeductionCost = totalSendCostToSend - luckyReturnAmount
             }
 
             val updatedBalance = onDebitWallet(netDeductionCost)
@@ -252,28 +264,28 @@ fun GiftPicker(
                 triggerInsufficient("Insufficient Balance", true)
                 return@launch
             }
-            onRecordGiftTransaction(selectedGiftObj.name, -netDeductionCost)
+            onRecordGiftTransaction(giftToSend.name, -netDeductionCost)
 
-            if (roomId.isNotEmpty() && currentUserAccountId.isNotEmpty() && recipientIds.isNotEmpty()) {
+            if (roomId.isNotEmpty() && currentUserAccountId.isNotEmpty() && targetsToSend.isNotEmpty()) {
                 val uniqueTransferId = "tx-$currentUserAccountId-${System.currentTimeMillis()}-${(0..999999).random()}"
 
                 onSendCoinTransfer(mapOf(
                     "roomId" to roomId,
                     "senderId" to currentUserAccountId,
-                    "recipientIds" to recipientIds,
-                    "amount" to totalSendCost, // Exact coins debited across all selected recipients.
-                    "giftName" to selectedGiftObj.name,
-                    "giftImage" to selectedGiftObj.image,
-                    "giftType" to activeTab,
+                    "targetsToSend" to targetsToSend,
+                    "amount" to totalSendCostToSend, // Exact coins debited across all selected recipients.
+                    "giftName" to giftToSend.name,
+                    "giftImage" to giftToSend.image,
+                    "giftType" to tabToSend,
                     "senderName" to currentUserName,
                     "senderImage" to currentUserImage,
-                    "recipientName" to (firstRecipient?.name ?: "User"),
-                    "recipientImage" to (firstRecipient?.image ?: "/default-avatar.png"),
-                    "multiplier" to parseMultiplier(selectedMultiplier),
-                    "luckyGift" to isLuckyGiftTab,
+                    "recipientName" to (firstRecipientToSend?.name ?: "User"),
+                    "recipientImage" to (firstRecipientToSend?.image ?: "/default-avatar.png"),
+                    "multiplier" to multiplierToSend,
+                    "luckyGift" to isLuckyToSend,
                     "luckyReturnAmount" to luckyReturnAmount,
                     "luckyReturnPercent" to winTimes,
-                    "luckyImage" to selectedGiftObj.image,
+                    "luckyImage" to giftToSend.image,
                     "winTimes" to winTimes,
                     "transferId" to uniqueTransferId,
                     "eventId" to uniqueTransferId,
@@ -281,28 +293,28 @@ fun GiftPicker(
                     "recipientMode" to recipientMode.name.lowercase(),
                 ))
 
-                if (selectedGiftObj.video != null && !isLuckyGiftTab) {
+                if (giftToSend.video != null && !isLuckyToSend) {
                     onSendGiftVideoPlay(mapOf(
                         "roomId" to roomId,
                         "senderId" to currentUserAccountId,
-                        "giftName" to selectedGiftObj.name,
-                        "video" to selectedGiftObj.video,
-                        "videoStyle" to (selectedGiftObj.videoStyle ?: "fade"),
+                        "giftName" to giftToSend.name,
+                        "video" to giftToSend.video,
+                        "videoStyle" to (giftToSend.videoStyle ?: "fade"),
                         "timestamp" to System.currentTimeMillis(),
                     ))
                 }
             }
 
-            onSend(totalCost)
+            onSend(totalCostToSend)
 
-            if (isLuckyGiftTab) {
+            if (isLuckyToSend) {
                 sending = false
                 onClose()
                 return@launch
             }
 
-            if (selectedGiftObj.video != null) {
-                playingVideo = selectedGiftObj.video to (selectedGiftObj.videoStyle ?: "fade")
+            if (giftToSend.video != null) {
+                playingVideo = giftToSend.video to (giftToSend.videoStyle ?: "fade")
             } else {
                 sending = false
                 onClose()
