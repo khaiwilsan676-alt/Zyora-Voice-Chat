@@ -44,6 +44,8 @@ import androidx.compose.ui.viewinterop.AndroidView
 import coil3.compose.AsyncImage
 import coil3.compose.rememberAsyncImagePainter
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 private const val LEVEL_ASSET_BASE = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/"
 private fun levelAsset(file: String) = LEVEL_ASSET_BASE + file
@@ -363,9 +365,43 @@ fun Level(onBack: () -> Unit = {}) {
         userPrefs.getString("phone", "")?.trim().orEmpty()
     }
     val userPhoto = userPrefs.getString("photo", "")?.trim().orEmpty()
-    
+    val profileLookupId = sequenceOf("accountId", "id", "uid", "phone")
+        .map { userPrefs.getString(it, "")?.trim().orEmpty() }
+        .firstOrNull { it.isNotBlank() && it != "null" }.orEmpty().ifBlank { userUid }
+    var profileName by remember { mutableStateOf(userName.orEmpty()) }
+    var profilePhoto by remember { mutableStateOf(userPhoto) }
+
+    LaunchedEffect(profileLookupId) {
+        if (profileLookupId.isNotBlank()) {
+            val profile = withContext(Dispatchers.IO) {
+                runCatching {
+                    ProfilePersistence.load(
+                        TargetUser(
+                            id = profileLookupId,
+                            uid = userUid.ifBlank { profileLookupId },
+                            accountId = profileLookupId,
+                            displayAccountNumber = profileLookupId
+                        )
+                    )
+                }.getOrNull()
+            }
+            if (profile != null) {
+                val canonicalName = sequenceOf("name", "displayName", "userName", "nickname")
+                    .map { profile.optString(it, "").trim() }
+                    .firstOrNull { it.isNotBlank() && it != "null" && it.lowercase() !in listOf("guest", "user", "undefined") }
+                val canonicalPhoto = sequenceOf("image", "avatar", "profileImageUrl", "dp", "photoURL")
+                    .map { profile.optString(it, "").trim() }
+                    .firstOrNull { it.isNotBlank() && it != "null" && it != "undefined" }
+                if (canonicalName != null) profileName = canonicalName
+                if (canonicalPhoto != null) profilePhoto = canonicalPhoto
+            }
+        }
+    }
+
     val profilePainter = rememberAsyncImagePainter(model = levelAsset("file_0000000074a4821189d05fde51ca98f9.png"))
-    val displayName = userName ?: userUid.take(8).ifBlank { "Guest" }
+    val displayName = profileName.takeIf { it.isNotBlank() && it.lowercase() !in listOf("guest", "user", "null", "undefined") }
+        ?: userName ?: userUid.take(8).ifBlank { "User" }
+    val displayPhoto = profilePhoto.ifBlank { userPhoto }
     
     var showUpgrade by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
@@ -438,9 +474,9 @@ fun Level(onBack: () -> Unit = {}) {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Box(Modifier.size(48.dp).clip(CircleShape).background(Color(0xFF626A75)), contentAlignment = Alignment.Center) {
-                            if (userPhoto.isNotBlank()) {
+                            if (displayPhoto.isNotBlank()) {
                                 AsyncImage(
-                                    model = userPhoto,
+                                    model = displayPhoto,
                                     contentDescription = "User",
                                     modifier = Modifier.fillMaxSize().clip(CircleShape),
                                     contentScale = ContentScale.Crop
