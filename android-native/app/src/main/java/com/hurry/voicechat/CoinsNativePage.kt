@@ -211,11 +211,10 @@ private suspend fun fetchWalletAgentSellers(): List<WalletAgentSeller> = withCon
             val user = users.optJSONObject(index) ?: return@mapNotNull null
             val uid = user.optString("uid").ifBlank { user.optString("id") }
             val account = user.optString("accountId").ifBlank { user.optString("accountNumber") }
-            val sellerCenterActive =
-                user.optBoolean("coinSellerTag", false) ||
-                user.optBoolean("coinSeller", false) ||
-                user.optBoolean("sellerTag", false)
-            if (uid.isBlank() || account.isBlank() || !sellerCenterActive) return@mapNotNull null
+            // The backend sellers=true endpoint is already restricted to the owner's
+            // approved seller IDs. Do not re-filter its normalized payload using optional
+            // tag aliases: legacy profile rows may omit those aliases even when approved.
+            if (uid.isBlank() || account.isBlank()) return@mapNotNull null
             WalletAgentSeller(
                 uid = uid,
                 accountId = account,
@@ -239,7 +238,7 @@ private suspend fun fetchWalletAgentSellers(): List<WalletAgentSeller> = withCon
                 }
             }.map { it.await() }
         }
-    }.getOrDefault(emptyList())
+    }.getOrNull()
 }
 
 // ═══════════════════════════════════════════════════════
@@ -737,7 +736,9 @@ private fun AgentContent(onChat: (String, String, String) -> Unit, currentUserId
     var loaded by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        sellers = fetchWalletAgentSellers()
+        // Keep the last good list mounted if a temporary network/backend error occurs.
+        val refreshed = fetchWalletAgentSellers()
+        if (refreshed != null) sellers = refreshed
         loaded = true
     }
 
