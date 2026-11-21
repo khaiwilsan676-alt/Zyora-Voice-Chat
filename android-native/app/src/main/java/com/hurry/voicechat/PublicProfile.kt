@@ -236,7 +236,7 @@ fun PublicProfileScreen(
     }
     var albumImages by remember(profileCacheKey, cachedProfile) { mutableStateOf(ProfilePersistence.stringList(cachedProfile?.optString("albumImages", ""))) }
     var selectedAvatarUri by remember(profileCacheKey, cachedProfile) {
-        mutableStateOf<String?>(sequenceOf("image", "avatar", "profileImageUrl").map { cachedProfile?.optString(it, "").orEmpty() }.firstOrNull { it.isNotBlank() && it != "null" })
+        mutableStateOf<String?>(sequenceOf("image", "dp", "photo", "photoURL", "photoUrl", "avatar", "avatarUrl", "profileImage", "profileImageUrl", "profile_image", "imageUrl", "picture").map { key -> cachedProfile?.optString(key, "").orEmpty().trim() }.firstOrNull { it.isNotBlank() && it != "null" && it != "undefined" } ?: sequenceOf(targetUser?.image, targetUser?.photo).map { it?.trim().orEmpty() }.firstOrNull { it.isNotBlank() && it != "null" && it != "undefined" })
     }
     var receivedGifts by remember { mutableStateOf(listOf<String>()) } 
 
@@ -465,7 +465,7 @@ fun PublicProfileScreen(
         }
         merged.optString("name").takeIf { it.isNotBlank() && it != "null" }?.let { userName = it }
         
-        val savedAvatar = sequenceOf("image", "avatar", "profileImageUrl").map { merged.optString(it, "") }.firstOrNull { it.isNotBlank() && it != "null" }
+        val savedAvatar = sequenceOf("image", "dp", "photo", "photoURL", "photoUrl", "avatar", "avatarUrl", "profileImage", "profileImageUrl", "profile_image", "imageUrl", "picture").map { merged.optString(it, "").trim() }.firstOrNull { it.isNotBlank() && it != "null" && it != "undefined" }
         if (!savedAvatar.isNullOrBlank() && savedAvatar != selectedAvatarUri) selectedAvatarUri = savedAvatar
 
         merged.optString("bio").let { userBio = if (it != "null") it else "" }
@@ -528,7 +528,7 @@ fun PublicProfileScreen(
                             )
                         }
                     } else if (userPhoto.isNotBlank()) {
-                        AsyncImage(model = userPhoto, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                        FallbackAsyncImage(model = userPhoto, contentDescription = userName, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
                     } else {
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             Text(avatarLetter, color = Color.Black, fontSize = 64.sp, fontWeight = FontWeight.Bold)
