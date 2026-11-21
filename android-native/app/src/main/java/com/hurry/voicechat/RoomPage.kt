@@ -453,9 +453,23 @@ fun RoomPage(
     var luckyBagSenderName by remember { mutableStateOf("") }
     var luckyBagSenderImage by remember { mutableStateOf("") }
     var luckyBagId by remember { mutableStateOf("") }
+    var luckyBagExpiresAt by remember { mutableLongStateOf(0L) }
+    var luckyBagSecondsLeft by remember { mutableIntStateOf(0) }
     var luckyBagClaiming by remember { mutableStateOf(false) }
     var luckyBagClaimError by remember { mutableStateOf<String?>(null) }
     var luckyBagClaimAmount by remember { mutableLongStateOf(0L) }
+
+    LaunchedEffect(luckyBagExpiresAt) {
+        while (luckyBagExpiresAt > 0L) {
+            val remaining = ((luckyBagExpiresAt - System.currentTimeMillis() + 999L) / 1000L).coerceAtLeast(0L)
+            luckyBagSecondsLeft = remaining.toInt()
+            if (remaining <= 0L) {
+                showFloatingLuckyBag = false
+                break
+            }
+            kotlinx.coroutines.delay(1000L)
+        }
+    }
 
     LaunchedEffect(roomId, accountId) {
         withContext(Dispatchers.IO) {
@@ -472,6 +486,7 @@ fun RoomPage(
                         if (bag != null) {
                             withContext(Dispatchers.Main) {
                                 luckyBagId = bag.optString("bagId")
+                                luckyBagExpiresAt = bag.optLong("expiresAt", 0L)
                                 luckyBagSenderName = bag.optString("senderName", "User")
                                 luckyBagSenderImage = bag.optString("senderImage", "")
                                 showFloatingLuckyBag = true
@@ -2217,7 +2232,7 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
         LaunchedEffect(Unit) { while (true) { kotlinx.coroutines.delay(3000); if (!sideBannerPager.isScrollInProgress) sideBannerPager.animateScrollToPage((sideBannerPager.currentPage + 1) % sideBannerImages.size) } }
 
         // BOTTOM RIGHT CORNER (Task Image Reverted back here)
-        Column(modifier=Modifier.align(Alignment.BottomEnd).padding(end=10.dp, bottom=68.dp).heightIn(max=380.dp).verticalScroll(rememberScrollState()),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(2.dp)) {
+        Column(modifier=Modifier.align(Alignment.BottomEnd).padding(end=10.dp, bottom=68.dp).heightIn(max=380.dp).verticalScroll(rememberScrollState()),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(1.dp)) {
             // Lucky Bag sits in its own row immediately BEFORE the room banner.
             if (showFloatingLuckyBag) {
                 Row(
@@ -2233,26 +2248,29 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    AsyncImage(
-                        model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261021_170707.png",
-                        contentDescription = "Lucky Bag Sent",
-                        modifier = Modifier
-                            .size(62.dp)
-                            .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
-                            .drawWithCache {
-                                val edgeFade = Brush.horizontalGradient(
-                                    0f to Color.Transparent,
-                                    0.12f to Color.White,
-                                    0.88f to Color.White,
-                                    1f to Color.Transparent
-                                )
-                                onDrawWithContent {
-                                    drawContent()
-                                    drawRect(edgeFade, blendMode = BlendMode.DstIn)
-                                }
-                            },
-                        contentScale = ContentScale.Fit
-                    )
+                    Column(
+                        modifier = Modifier.width(56.dp).height(62.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        AsyncImage(
+                            model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261021_170707.png",
+                            contentDescription = "Lucky Bag Sent",
+                            modifier = Modifier.size(54.dp).graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                                .drawWithCache {
+                                    val edgeFade = Brush.horizontalGradient(
+                                        0f to Color.Transparent, 0.12f to Color.White,
+                                        0.88f to Color.White, 1f to Color.Transparent
+                                    )
+                                    onDrawWithContent { drawContent(); drawRect(edgeFade, blendMode = BlendMode.DstIn) }
+                                },
+                            contentScale = ContentScale.Fit
+                        )
+                        Text(
+                            text = "%d:%02d".format(luckyBagSecondsLeft / 60, luckyBagSecondsLeft % 60),
+                            color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Bold, maxLines = 1
+                        )
+                    }
                 }
             }
 
@@ -2262,7 +2280,7 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                 AsyncImage(
                     model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_000000009d808211b8ffb7c2183b4ef5.png",
                     contentDescription = "Resume Wild Party",
-                    modifier = Modifier.padding(bottom = 4.dp).size(54.dp).clickable {
+                    modifier = Modifier.padding(bottom = 2.dp).size(48.dp).clickable {
                         wildPartyMinimized = false
                         showWildParty = true
                     },
@@ -2282,10 +2300,10 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                 )
             }
             Column(horizontalAlignment=Alignment.CenterHorizontally, modifier = Modifier.offset(y = 6.dp)) {
-                androidx.compose.foundation.pager.HorizontalPager(state = sideBannerPager,modifier = Modifier.size(58.dp, 80.dp).clip(RoundedCornerShape(8.dp))) { page ->
+                androidx.compose.foundation.pager.HorizontalPager(state = sideBannerPager,modifier = Modifier.size(52.dp, 72.dp).clip(RoundedCornerShape(8.dp))) { page ->
                     AsyncImage(model = sideBannerImages[page],contentDescription = "Room side banner",modifier = Modifier.fillMaxSize().clickable(indication = null, interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }) { if (page == 0) onRoomSupport() },contentScale = ContentScale.Crop)
                 }
-                Row(horizontalArrangement=Arrangement.spacedBy(2.dp), verticalAlignment=Alignment.CenterVertically, modifier=Modifier.padding(top=4.dp)) {
+                Row(horizontalArrangement=Arrangement.spacedBy(2.dp), verticalAlignment=Alignment.CenterVertically, modifier=Modifier.padding(top=2.dp)) {
                     repeat(sideBannerImages.size) { i ->
                         val isActive = sideBannerPager.currentPage == i
                         Box(Modifier.size(if (isActive) 6.dp else 4.dp).clip(CircleShape).background(if (isActive) Color.White else Color.White.copy(alpha=.4f)))
@@ -2294,8 +2312,8 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
             }
             
             // Task Image reverted back to bottom right above games
-            TransparentGreenImage(url="https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG-20260902-WA0066.jpg",modifier=Modifier.offset(y = 12.dp).padding(top=2.dp).size(60.dp).clickable { showRoomTask=true })
-            AsyncImage(model="https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/file_000000002a8c81fab8232bebeeeb45cc.png",contentDescription="Games",modifier=Modifier.size(56.dp).clickable { showGames=true },contentScale=ContentScale.Fit)
+            TransparentGreenImage(url="https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG-20260902-WA0066.jpg",modifier=Modifier.offset(y = 12.dp).padding(top=1.dp).size(52.dp).clickable { showRoomTask=true })
+            AsyncImage(model="https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/file_000000002a8c81fab8232bebeeeb45cc.png",contentDescription="Games",modifier=Modifier.size(50.dp).clickable { showGames=true },contentScale=ContentScale.Fit)
         }
         
         RoomPageBlock {
@@ -2617,10 +2635,11 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
             luckyBagSenderImage = roomDisplayImage,
             luckyBagRoomId = roomId,
             luckyBagRoomName = roomName,
-            onLuckyBagSent={ name, image, amount, recipients, bagId ->
+            onLuckyBagSent={ name, image, amount, recipients, bagId, expiresAt ->
                 luckyBagSenderName = name
                 luckyBagSenderImage = image
                 luckyBagId = bagId
+                luckyBagExpiresAt = expiresAt
                 luckyBagClaimAmount = amount
                 luckyBagClaimError = null
                 // Show the same room Lucky Packet image to its sender too.
