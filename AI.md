@@ -1697,3 +1697,8 @@ Current documentation does not certify that all historical features are build-, 
 - Removed the unrelated Rich, Room, Millionaire, Gamer, VIP, Pure Love and special-event medal images from the Medal page. Existing Medal page header, tabs, background, slots, colors and overall layout are preserved.
 - `Level.kt`: exposed the existing Level medal catalog for reuse; the Level page's medal section and assets are unchanged.
 - Native APK build and on-device confirmation are still required.
+
+## 2026-11-22 — Medal page compile regression
+- Root cause: the Level / Family medal-grid edit in `Medal.kt` omitted the closing brace for the medal content container. Kotlin then parsed subsequent medal dialogs and helper composables in the wrong scope, producing cascading unresolved-reference errors plus an end-of-file brace error.
+- Fix: restored the missing closing brace only; medal categories, data, UI styling, and layout remain unchanged.
+- Verification: a fresh native APK workflow is required; no build or device result is claimed until that workflow completes.
