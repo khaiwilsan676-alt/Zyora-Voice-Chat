@@ -500,9 +500,14 @@ fun JitsiRoomAudio(
             if (!ready) return@Listener
             ensurePlaybackWorker(isVoicePacket)
             if (isVoicePacket) {
+                // Zyora-Server mixes all remote microphones separately for each
+                // recipient and intentionally emits only { roomId } (no single
+                // publisher ID). Treat that recipient-specific mix as one stream;
+                // otherwise every mixed voice packet is discarded here.
                 val speakerId = sequenceOf("userId", "accountId", "senderId", "senderAccountId", "publisherId")
                     .map { data.optString(it).trim() }
-                    .firstOrNull { it.isNotBlank() } ?: return@Listener
+                    .firstOrNull { it.isNotBlank() }
+                    ?: if (isVoicePacket) "room-mix" else return@Listener
                 if (speakerId == localAccountId) return@Listener
                 // Server voice frames are fixed 20 ms / 640-byte PCM packets.
                 if (bytes.size != ROOM_VOICE_FRAME_BYTES) return@Listener
