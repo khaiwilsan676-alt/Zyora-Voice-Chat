@@ -78,7 +78,7 @@ private enum class WpMode { SINGLE, MIX_BIG, MIX_SMALL }
 private val wpAnimals = listOf(
  WpAnimal("Rabbit","img_20261121_095524",270f,0f,-11f,71,5),
  WpAnimal("Deer","img_20261121_095459",315f,-4f,-9f,62,5),
- WpAnimal("Dog","img_20261121_102923",0f,-8f,-17f,62,5),
+ WpAnimal("Dog","img_20261121_102923",0f,-8f,-14f,62,5),
  WpAnimal("Camel","img_20261121_095328",45f,-6f,-18f,60,5),
  WpAnimal("Eagle","img_20261121_103004",90f,0f,-18f,61,10),
  WpAnimal("Bear","img_20261121_102944",135f,5f,-15f,60,15),
@@ -1211,8 +1211,8 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
  var winnerIndex by remember{mutableIntStateOf(0)}
  var mode by remember{mutableStateOf(WpMode.SINGLE)}
  var chipIndex by remember{mutableIntStateOf(1)}
- var bets by remember{mutableStateOf<Map<String, Long>>(emptyMap())}
- var lastBets by remember{mutableStateOf<Map<String, Long>>(emptyMap())}
+ var bets by remember{mutableStateOf>(emptyMap())}
+ var lastBets by remember{mutableStateOf>(emptyMap())}
  var history by remember{mutableStateOf<List<WpRound>>(emptyList())}
  var historyOpen by remember{mutableStateOf(false)}
  var rulesOpen by remember{mutableStateOf(false)}
@@ -1380,8 +1380,8 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
   scope.launch{
    val amount=wpChips[chipIndex].value
    if(phase==WpPhase.BETTING&&balance>=amount){
-    triggerBetVisuals(name, amount)
     launch(Dispatchers.IO) { soundManager.playBetClick() }
+    triggerBetVisuals(name, amount)
     walletChange(-amount,"Bet on $name in Wild Party")
     bets=bets.toMutableMap().also{it[name]=(it[name]?:0L)+amount}
    }
@@ -1764,8 +1764,8 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
       scope.launch {
        val cost = lastBets.values.sum()
        if (phase == WpPhase.BETTING && cost > 0 && balance >= cost) {
-        lastBets.forEach { (k, v) -> if (v > 0L) triggerBetVisuals(k, v) }
         launch(Dispatchers.IO) { soundManager.playBetClick() }
+        lastBets.forEach { (k, v) -> if (v > 0L) triggerBetVisuals(k, v) }
         walletChange(-cost, "Repeat Bet in Wild Party")
         bets = bets.toMutableMap().also { m -> lastBets.forEach { (k, v) -> m[k] = (m[k] ?: 0L) + v } }
        }
