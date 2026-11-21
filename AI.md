@@ -1619,3 +1619,10 @@ Current documentation does not certify that all historical features are build-, 
 - Owner Special ID assignment accepts digit-only VIP IDs without the old 4–20 digit length restriction; the original permanent App ID remains unchanged.
 - Native User search now matches an active VIP ID as an additional alias (expiry-aware), while still returning the account's original profile identity. Search cache version was bumped so old results cannot hide new VIP-ID matches.
 - VIP ID is not used after its expiry; normal App ID lookup remains intact.
+
+
+## 2026-11-21 — Room voice silent playback root-cause fix
+- Root cause: Zyora-Server/server.js mixes remote microphone PCM per recipient and emits room_voice_chunk with only { roomId }, because the mixed packet has no single speaker identity. Native JitsiRoomAudio.kt required a sender/account ID before enqueuing every voice packet, so it silently discarded every server-mixed packet and nobody could hear remote voices.
+- Native JitsiRoomAudio.kt: accept the server's recipient-specific mixed voice stream under a stable room-mix queue key when no publisher ID is present. Continue using real publisher IDs when supplied and preserve self-packet filtering for individually identified packets. No UI, capture format, permission, mute, or server behavior changes.
+- Commit: 9b7141b7607ddeb93ff9ae7b8f50ca576974344d.
+- Verification: confirmed the deployed-server source packet shape and committed the native listener fix. APK build and live multi-device voice test remain required; not yet hardware-verified.
