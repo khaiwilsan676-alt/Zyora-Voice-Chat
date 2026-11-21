@@ -1205,6 +1205,7 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
  val soundManager = remember(context) { WpSoundManager(context.applicationContext) }
  val walletAuthPrefs=remember(context){context.getSharedPreferences("hurry_auth",Context.MODE_PRIVATE)}
  val walletCachePrefs=remember(context){context.getSharedPreferences("zyora_wallet_cache",Context.MODE_PRIVATE)}
+ val pendingWalletPrefs=remember(context){context.getSharedPreferences("wild_party_wallet_pending",Context.MODE_PRIVATE)}
  val walletAccountId=remember(walletAuthPrefs){
   walletAuthPrefs.getString("uid",null)?.takeIf{it.isNotBlank()}
    ?:walletAuthPrefs.getString("accountId","").orEmpty()
@@ -1263,7 +1264,6 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
    val arr=JSONArray(context.getSharedPreferences("wild_party_native",Context.MODE_PRIVATE).getString("history","[]"))
    history=(0 until arr.length()).mapNotNull{i->arr.optJSONObject(i)?.let{WpRound(it.optInt("round"),it.optString("winner"),it.optLong("time"),it.optLong("myBet",0L),it.optLong("winAmount",0L))}}.filter{it.time>=wpReset()}.sortedBy{it.round}.takeLast(50)
   }
-  runCatching{syncPendingWalletChanges()}
   runCatching{
    val walletUserId=walletAccountId.takeIf{it.isNotBlank()}
    // Keep the real Wallet page balance visible immediately; never replace it with a fake zero.
@@ -1302,11 +1302,9 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
   delay(120)
   loading=false
  }
- LaunchedEffect(walletAccountId){if(walletAccountId.isNotBlank())runCatching{syncPendingWalletChanges()}}
  LaunchedEffect(history.size){
   topHistoryScrollState.scrollTo(0)
  }
- val pendingWalletPrefs=remember(context){context.getSharedPreferences("wild_party_wallet_pending",Context.MODE_PRIVATE)}
  fun pendingWalletKey()="queue_$walletAccountId"
  suspend fun syncPendingWalletChanges(){
   val userId=walletAccountId.takeIf{it.isNotBlank()}?:return
@@ -1365,6 +1363,7 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
   runCatching{syncPendingWalletChanges()}.onFailure{android.util.Log.w("WildParty","Wallet sync queued for retry",it)}
  }
 
+ LaunchedEffect(walletAccountId){if(walletAccountId.isNotBlank())runCatching{syncPendingWalletChanges()}}
  fun persistHistory(){
   val arr=JSONArray()
   history.takeLast(50).forEach{arr.put(JSONObject().put("round",it.round).put("winner",it.winner).put("time",it.time).put("myBet",it.myBet).put("winAmount",it.winAmount))}
