@@ -1296,6 +1296,20 @@ fun RoomPage(
                 }
             }
         }
+        val luckyBagClaimReservedListener = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
+            val ownIds = setOf(canonicalWalletUserId, accountId, currentUser.uid, currentUser.id).filter { it.isNotBlank() }.toSet()
+            if (payload.optString("roomId") == roomId && payload.optString("senderId") in ownIds) {
+                mainHandler.post {
+                    runCatching {
+                        NativeIndexDatabase(appContext).saveLuckyBagClaim(
+                            payload.optString("bagId"), payload.optString("roomId"),
+                            payload.optString("userId"), JSONObject(payload.toString())
+                        )
+                    }
+                }
+            }
+        }
         val luckyGiftReceivedListener = Emitter.Listener { args ->
             val payload = args.firstOrNull() as? JSONObject ?: return@Listener
             if (payload.optString("roomId") != roomId || !payload.optBoolean("luckyGift", false)) return@Listener
@@ -1655,6 +1669,7 @@ fun RoomPage(
         roomSocket.on("room_follow_updated", roomFollowListener)
         roomSocket.on("lucky_bag_banner",luckyBagBannerListener)
         roomSocket.on("lucky_bag_transaction",luckyBagTransactionListener)
+        roomSocket.on("lucky_bag_claim_reserved", luckyBagClaimReservedListener)
         roomSocket.on("wallet_balance_updated",walletBalanceListener)
         roomSocket.on(Socket.EVENT_CONNECT,connectListener)
         if (roomSocket.connected()) {
@@ -1708,6 +1723,7 @@ fun RoomPage(
             roomSocket.off("room_follow_updated", roomFollowListener)
             roomSocket.off("lucky_bag_banner",luckyBagBannerListener)
             roomSocket.off("lucky_bag_transaction",luckyBagTransactionListener)
+            roomSocket.off("lucky_bag_claim_reserved", luckyBagClaimReservedListener)
             roomSocket.off("wallet_balance_updated",walletBalanceListener)
             roomSocket.off(Socket.EVENT_CONNECT,connectListener)
             roomSocket.disconnect()
@@ -2239,10 +2255,16 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                     modifier = Modifier
                         .padding(bottom = 4.dp)
                         .clickable {
-                            // The first Lucky Bag image above the room banner opens
-                            // the same in-room confirmation/reveal sheet.
+                            // A previous claim on this device reopens the same confirmation card.
                             luckyBagClaimError = null
-                            showLuckyBagCenterReveal = true
+                            val savedClaim = appContext.getSharedPreferences("lucky_bag_claims", android.content.Context.MODE_PRIVATE)
+                                .getLong("claim_" + luckyBagId + "_" + canonicalWalletUserId, 0L)
+                            if (savedClaim > 0L) {
+                                luckyBagClaimAmount = savedClaim
+                                showLuckyBagClaimedCard = true
+                            } else {
+                                showLuckyBagCenterReveal = true
+                            }
                             showFloatingLuckyBag = false
                         },
                     horizontalArrangement = Arrangement.End,
@@ -3240,6 +3262,8 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
             luckyBagClaiming = luckyBagClaiming,
             luckyBagClaimError = luckyBagClaimError,
             luckyBagClaimAmount = luckyBagClaimAmount,
+            claimantName = roomDisplayName,
+            claimantImage = roomDisplayImage,
             canonicalWalletUserId = canonicalWalletUserId,
             roomWalletBalance = roomWalletBalance,
             showFloatingLuckyBag = showFloatingLuckyBag,
@@ -3247,7 +3271,11 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
             onShowLuckyBagClaimedCardChange = { showLuckyBagClaimedCard = it },
             onLuckyBagClaimingChange = { luckyBagClaiming = it },
             onLuckyBagClaimErrorChange = { luckyBagClaimError = it },
-            onLuckyBagClaimAmountChange = { luckyBagClaimAmount = it },
+            onLuckyBagClaimAmountChange = {
+                luckyBagClaimAmount = it
+                if (it > 0L) appContext.getSharedPreferences("lucky_bag_claims", android.content.Context.MODE_PRIVATE)
+                    .edit().putLong("claim_" + luckyBagId + "_" + canonicalWalletUserId, it).apply()
+            },
             onShowFloatingLuckyBagChange = { showFloatingLuckyBag = it },
             onRoomWalletBalanceChange = { roomWalletBalance = it }
         )
