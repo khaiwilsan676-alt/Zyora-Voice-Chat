@@ -1,11 +1,15 @@
 package com.hurry.voicechat
 
-import android.graphics.BitmapFactory
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.util.LruCache
-import android.view.SurfaceView
 import android.view.ViewGroup
-import android.widget.FrameLayout
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -17,29 +21,38 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
-import androidx.media3.datasource.cache.CacheDataSource
 import androidx.media3.database.StandaloneDatabaseProvider
-import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.datasource.cache.CacheDataSource
 import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
 import androidx.media3.datasource.cache.SimpleCache
-import java.io.File
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.io.File
 import java.net.URL
+
+private const val GITHUB_PUBLIC_BASE =
+    "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/"
+
+private const val SEAT_BANNER_BASE_IMAGE = "${GITHUB_PUBLIC_BASE}IMG_20261121_210809.png"
+private const val WELCOME_BANNER_IMAGE = "${GITHUB_PUBLIC_BASE}IMG_20261121_210639.png"
+private const val THANKS_BANNER_IMAGE = "${GITHUB_PUBLIC_BASE}IMG_20261121_210722.png"
+private const val GIFT_ME_BANNER_IMAGE = "${GITHUB_PUBLIC_BASE}IMG_20261121_210747.png"
 
 data class EmojiSticker(
     val id: String,
@@ -104,59 +117,59 @@ fun EmojiPicker(onClose: () -> Unit = {}, onSelectEmoji: (EmojiSticker) -> Unit 
 
     val stickers = listOf(
         // SABKA EK HI SQUARE SIZE (1.1f)
-        EmojiSticker("welcome","Welcome","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261028_183916.png", null, 1.1f),
-        EmojiSticker("thanks","Thanks","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261028_184100.png", null, 1.1f),
-        EmojiSticker("gift_me","Gift me","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261028_184037.png", null, 1.1f),
-        EmojiSticker("kiss_r","Kiss-R","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261028_184130.png", null, 1.1f),
-        EmojiSticker("kiss_l","Kiss-L","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261028_184200.png", null, 1.1f),
-        EmojiSticker("punch_r","Punch-R","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261028_184240.png", null, 1.1f),
-        EmojiSticker("punch_l","Punch-L","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/IMG_20261028_184300.png", null, 1.1f),
-        
+        EmojiSticker("welcome", "Welcome", "${GITHUB_PUBLIC_BASE}IMG_20261028_183916.png", null, 1.1f),
+        EmojiSticker("thanks", "Thanks", "${GITHUB_PUBLIC_BASE}IMG_20261028_184100.png", null, 1.1f),
+        EmojiSticker("gift_me", "Gift me", "${GITHUB_PUBLIC_BASE}IMG_20261028_184037.png", null, 1.1f),
+
         // GIF WALE EMOJI BHI SAME SQUARE SIZE (1.1f)
-        EmojiSticker("laugh","Laugh","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/512.gif", null, 1.1f),
-        EmojiSticker("sad","Sad","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/512%20(6).gif", null, 1.1f),
-        EmojiSticker("love","Sleep","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/512%20(3).gif", null, 1.1f),
-        EmojiSticker("thinking","Thinking","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/512%20(2).gif", null, 1.1f),
-        EmojiSticker("party","Party","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/512%20(16).gif", null, 1.1f),
-        EmojiSticker("loving","Loving","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/512%20(15).gif", null, 1.1f),
-        EmojiSticker("smart","Smart","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/512%20(13).gif", null, 1.1f),
-        EmojiSticker("irritating","Irritating","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/512%20(12).gif", null, 1.1f),
-        EmojiSticker("rolling","Rolling","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/512%20(10).gif", null, 1.1f),
-        EmojiSticker("unamused","Unamused","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/512%20(11).gif", null, 1.1f),
-        EmojiSticker("pleading","Pleading","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/512%20(4).gif", null, 1.1f),
-        EmojiSticker("hug","Hug","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/512%20(8).gif", null, 1.1f),
-        EmojiSticker("Angery"," Angery","https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/512%20(1).gif", null, 1.1f)
+        EmojiSticker("smile", "Smile", "${GITHUB_PUBLIC_BASE}512.gif", null, 1.1f),
+        EmojiSticker("sad", "Sad", "${GITHUB_PUBLIC_BASE}512%20(6).gif", null, 1.1f),
+        EmojiSticker("shy_smile", "Shy-Smile", "${GITHUB_PUBLIC_BASE}512%20(3).gif", null, 1.1f),
+        EmojiSticker("crying", "Crying", "${GITHUB_PUBLIC_BASE}512%20(2).gif", null, 1.1f),
+        EmojiSticker("party", "Party", "${GITHUB_PUBLIC_BASE}512%20(16).gif", null, 1.1f),
+        EmojiSticker("loving", "Loving", "${GITHUB_PUBLIC_BASE}512%20(15).gif", null, 1.1f),
+        EmojiSticker("smart", "Smart", "${GITHUB_PUBLIC_BASE}512%20(13).gif", null, 1.1f),
+        EmojiSticker("irritating", "Irritating", "${GITHUB_PUBLIC_BASE}512%20(12).gif", null, 1.1f),
+        EmojiSticker("rolling", "Rolling", "${GITHUB_PUBLIC_BASE}512%20(10).gif", null, 1.1f),
+        EmojiSticker("unamused", "Unamused", "${GITHUB_PUBLIC_BASE}512%20(11).gif", null, 1.1f),
+        EmojiSticker("pleading", "Pleading", "${GITHUB_PUBLIC_BASE}512%20(4).gif", null, 1.1f),
+        EmojiSticker("hug", "Hug", "${GITHUB_PUBLIC_BASE}512%20(8).gif", null, 1.1f),
+        EmojiSticker("shocking", "Shocking", "${GITHUB_PUBLIC_BASE}512%20(1).gif", null, 1.1f)
     )
 
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
         Box(Modifier.fillMaxSize().clickable(onClick = onClose))
-        
+
         Box(
             Modifier
                 .fillMaxWidth()
                 .fillMaxHeight(.42f)
                 .background(Color.Black, shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
         ) {
-            
+
             // Border waali photo normal hi rahegi
             AsyncImage(
-                model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/file_0000000022f481fab7ddec2efb9449f9.png",
+                model = "${GITHUB_PUBLIC_BASE}file_0000000022f481fab7ddec2efb9449f9.png",
                 contentDescription = "Top Border",
                 modifier = Modifier
                     .fillMaxWidth()
                     .offset(y = (-10).dp)
                     .wrapContentHeight(align = Alignment.Top)
-                    .align(Alignment.TopCenter), 
-                contentScale = ContentScale.FillWidth 
+                    .align(Alignment.TopCenter),
+                contentScale = ContentScale.FillWidth
             )
 
             Column(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp)) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Tab("Emojis", activeTab == "emojis") { activeTab = "emojis" }
                     Spacer(Modifier.width(32.dp))
                     Tab("Premium", activeTab == "premium") { activeTab = "premium" }
                 }
-                
+
                 if (activeTab == "emojis") {
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(4),
@@ -166,25 +179,8 @@ fun EmojiPicker(onClose: () -> Unit = {}, onSelectEmoji: (EmojiSticker) -> Unit 
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         items(stickers) { s ->
-                            val isBigEmoji = s.id in listOf("welcome", "thanks", "gift_me", "punch_l", "punch_r")
-                            var imageSize = if (isBigEmoji) 60.dp else 48.dp 
-                            var imageOffsetY = 0.dp
-                            var textOffsetY = 0.dp
-
-                            // YAHAN CONDITION LAGAI HAI ADJUSTMENTS KE LIYE:
-                            when (s.id) {
-                                "kiss_r" -> {
-                                    imageOffsetY = 4.dp // 2% niche
-                                    // BSS YAHAN CHANGE KIYA HAI TEXT KO NEECHE KARNE K LIYE TAAKI 'Gift me' SE ALIGN HO JAYE
-                                    textOffsetY = 12.dp  
-                                }
-                                "punch_l", "punch_r" -> {
-                                    imageSize = 58.dp      // 1% chhota
-                                    imageOffsetY = (-2).dp // 1% upar
-                                    // BSS YAHAN CHANGE KIYA HAI TEXT KO OUPER KARNE K LIYE
-                                    textOffsetY = (-10).dp 
-                                }
-                            }
+                            val isBigEmoji = s.id in listOf("welcome", "thanks", "gift_me")
+                            val imageSize = if (isBigEmoji) 60.dp else 48.dp
 
                             Column(
                                 Modifier.fillMaxWidth().clickable {
@@ -196,16 +192,13 @@ fun EmojiPicker(onClose: () -> Unit = {}, onSelectEmoji: (EmojiSticker) -> Unit 
                                 CustomStaticImage(
                                     url = s.src,
                                     contentDescription = s.name,
-                                    modifier = Modifier
-                                        .size(imageSize)
-                                        .offset(y = imageOffsetY) // Image ki position wahi ki wahi rahegi
+                                    modifier = Modifier.size(imageSize)
                                 )
                                 Text(
-                                    s.name.trim(), 
-                                    fontSize = 11.sp, 
-                                    color = Color.White.copy(alpha = .90f), 
-                                    maxLines = 1,
-                                    modifier = Modifier.offset(y = textOffsetY) // Text upar/neeche yahan se ho raha hai bina image hilaye
+                                    s.name.trim(),
+                                    fontSize = 11.sp,
+                                    color = Color.White.copy(alpha = .90f),
+                                    maxLines = 1
                                 )
                             }
                         }
@@ -220,19 +213,87 @@ fun EmojiPicker(onClose: () -> Unit = {}, onSelectEmoji: (EmojiSticker) -> Unit 
     }
 }
 
-@Composable 
+@Composable
 private fun Tab(label: String, selected: Boolean, onClick: () -> Unit) {
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable(onClick = onClick)) {
         Text(label, color = if (selected) Color.White else Color.White.copy(alpha = .60f), fontSize = 14.sp)
         if (selected) {
-            Box(Modifier.padding(top = 4.dp).height(2.dp).width(42.dp).background(Color.White, RoundedCornerShape(2.dp)))
+            Box(
+                Modifier
+                    .padding(top = 4.dp)
+                    .height(2.dp)
+                    .width(42.dp)
+                    .background(Color.White, RoundedCornerShape(2.dp))
+            )
         }
     }
 }
 
 // =========================================================================================
-// TUMHARI SEAT VIDEO LOGIC EKDAM WAHI HAI (Green remove logic safe hai)
+// WELCOME / THANKS / GIFT ME SEAT BANNER OVERLAY + TUMHARI SEAT VIDEO LOGIC SAFE HAI
 // =========================================================================================
+
+private fun resolveSeatBannerUrl(src: String): String? = when {
+    src.contains("IMG_20261028_183916.png") || src.contains("IMG_20261121_210639.png") -> WELCOME_BANNER_IMAGE
+    src.contains("IMG_20261028_184100.png") || src.contains("IMG_20261121_210722.png") -> THANKS_BANNER_IMAGE
+    src.contains("IMG_20261028_184037.png") || src.contains("IMG_20261121_210747.png") -> GIFT_ME_BANNER_IMAGE
+    else -> null
+}
+
+@Composable
+private fun AnimatedSeatBannerOverlay(
+    baseImageUrl: String,
+    bannerImageUrl: String,
+    overlaySize: Dp
+) {
+    val density = LocalDensity.current
+    val infiniteTransition = rememberInfiniteTransition(label = "seatBannerWave")
+
+    // Left (-1f) se start -> halka upar hokar Right (+1f) -> fir same smooth reverse
+    val progress by infiniteTransition.animateFloat(
+        initialValue = -1f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 950, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "bannerWaveProgress"
+    )
+
+    val maxShiftXPx = with(density) { (overlaySize * 0.09f).toPx() }
+    val maxLiftYPx = with(density) { (overlaySize * 0.055f).toPx() }
+
+    Box(
+        modifier = Modifier
+            .requiredSize(overlaySize)
+            .aspectRatio(1f),
+        contentAlignment = Alignment.Center
+    ) {
+        // Seat par base image
+        AsyncImage(
+            model = baseImageUrl,
+            contentDescription = "Seat reaction base",
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Fit
+        )
+
+        // Base image ke bottom half ke upar smooth hilta hua banner
+        AsyncImage(
+            model = bannerImageUrl,
+            contentDescription = "Seat reaction banner",
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth(0.95f)
+                .fillMaxHeight(0.50f)
+                .graphicsLayer {
+                    translationX = progress * maxShiftXPx
+                    translationY = -maxLiftYPx * (1f - progress * progress)
+                    rotationZ = progress * 4.5f
+                },
+            contentScale = ContentScale.Fit
+        )
+    }
+}
 
 // Shared bounded disk cache for seat emoji MP4s. Reuses downloaded bytes
 // across room re-entry and player recreation; evicts least-recently-used data.
@@ -249,7 +310,7 @@ private object SeatEmojiVideoCache {
         }
 }
 
-// The picker owns seat emoji sizing. Seat reactions render the original image/GIF source.
+// The picker owns seat emoji sizing. Seat reactions render the banner overlay or original image/GIF source.
 @Composable
 fun SeatEmojiOverlay(
     src: String,
@@ -258,24 +319,36 @@ fun SeatEmojiOverlay(
     onVideoFinished: () -> Unit = {}
 ) {
     val overlaySize = (seatSize * scale.coerceIn(1.1f, 3.5f)).coerceAtLeast(24.dp)
+    val bannerUrl = remember(src) { resolveSeatBannerUrl(src) }
+
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        if (src.substringBefore("?").substringBefore("#").lowercase().endsWith(".mp4")) {
-            TransparentSeatVideoPlayer(
-                videoUrl = src,
-                modifier = Modifier
-                    .requiredSize(overlaySize)
-                    .aspectRatio(1f),
-                onVideoFinished = onVideoFinished
-            )
-        } else {
-            AsyncImage(
-                model = src,
-                contentDescription = "Seat emoji",
-                modifier = Modifier
-                    .requiredSize(overlaySize)
-                    .aspectRatio(1f),
-                contentScale = ContentScale.Fit
-            )
+        when {
+            bannerUrl != null -> {
+                AnimatedSeatBannerOverlay(
+                    baseImageUrl = SEAT_BANNER_BASE_IMAGE,
+                    bannerImageUrl = bannerUrl,
+                    overlaySize = overlaySize
+                )
+            }
+            src.substringBefore("?").substringBefore("#").lowercase().endsWith(".mp4") -> {
+                TransparentSeatVideoPlayer(
+                    videoUrl = src,
+                    modifier = Modifier
+                        .requiredSize(overlaySize)
+                        .aspectRatio(1f),
+                    onVideoFinished = onVideoFinished
+                )
+            }
+            else -> {
+                AsyncImage(
+                    model = src,
+                    contentDescription = "Seat emoji",
+                    modifier = Modifier
+                        .requiredSize(overlaySize)
+                        .aspectRatio(1f),
+                    contentScale = ContentScale.Fit
+                )
+            }
         }
     }
 }
