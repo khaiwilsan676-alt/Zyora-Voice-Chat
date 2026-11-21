@@ -1668,3 +1668,10 @@ Current documentation does not certify that all historical features are build-, 
 - Native `Roomcup.kt`: the room header's Today cup counter now displays the complete integer total of all room `sent` gift-contribution coins, without K/M/B abbreviation. The existing room-scoped daily endpoint and aggregation remain unchanged; leaderboard row formatting, gift sending, wallet debit, and UI layout are untouched.
 - Native commit: `895dadf91d8060af69461906f80f80ccb1c077aa`.
 - Native APK build and live room gift-count verification remain required.
+
+
+## 2026-11-22 — Native room live-voice latency reduction
+- `JitsiRoomAudio.kt`: removed the fixed 40 ms playback startup sleep and the extra 10 ms wait before each voice mix, so complete incoming PCM frames are played as soon as available. Reduced the AudioTrack buffer target from eight to four 20 ms frames (while respecting Android's minimum buffer) and made the speaking indicator activate on the first detected 20 ms speech frame.
+- Mic frame format, Socket.IO room relay, per-speaker queues, seat authorization, mute behavior, Bluetooth/media routing, and room UI are unchanged.
+- Native commit: `7a45c62e4335a65a3f66221bbf4b0ef35dd9fe42`.
+- Native APK build and real-device multi-speaker latency/dropout testing remain required; no measured latency claim is made.
