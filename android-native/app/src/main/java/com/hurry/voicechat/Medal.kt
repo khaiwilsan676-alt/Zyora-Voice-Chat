@@ -284,46 +284,37 @@ fun MedalScreen(onBack: () -> Unit) {
                 ) {
                     if (activeTab == "event") {
                         item(span = { GridItemSpan(maxLineSpan) }) {
-                            Column {
-                                NativeOwnedMedalShowcase(userId = medalUserId)
-                                Spacer(Modifier.height(8.dp))
+                            NativeOwnedMedalShowcase(userId = medalUserId)
+                        }
+                    } else {
+                        items(medalsList, key = { it.levelText }) { medal ->
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(Color(0xFF1E2740), RoundedCornerShape(12.dp))
+                                    .clickable { },
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                AsyncImage(
+                                    model = RAW_URL + medal.imageFile,
+                                    contentDescription = "${medal.levelText} Medal",
+                                    contentScale = ContentScale.Fit,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(108.dp)
+                                        .padding(8.dp)
+                                )
+                                Text(
+                                    text = "${medal.levelText} Medal",
+                                    color = Color(0xFFE5EEFA),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier.padding(bottom = 8.dp)
+                                )
                             }
                         }
                     }
-                    items(filteredMedals.size) { index ->
-                        val medal = filteredMedals[index]
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    val group = getTierMedals(medal)
-                                    val idx = group.indexOfFirst { it.id == medal.id }
-                                    activeTier = if (idx >= 0) idx else 0
-                                    selectedMedal = medal
-                                },
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            AsyncImage(
-                                model = medal.video.fullUrl,
-                                contentDescription = medal.name,
-                                contentScale = ContentScale.Fit,
-                                colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) }),
-                                modifier = Modifier.size(92.dp)
-                            )
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Text(
-                                text = medal.name,
-                                color = Color(0xFFE5EEFA),
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Medium,
-                                textAlign = TextAlign.Center,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                    }
-                    }
-                }
             }
         }
 
