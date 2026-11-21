@@ -1535,23 +1535,66 @@ async function creditLuckyBagWallet(userId, amount) {
 async function refundLuckyBag(bagId) {
   const bag = getLuckyBag(bagId);
   if (!bag || bag.status !== "open" || Number(bag.claimedCount || 0) !== 0) return false;
+
+  // Idempotent credit prevents duplicate refunds if the server retries after
+  // a transient failure between wallet credit and updating the live bag state.
+  const creditedNow = await creditWalletOnce(
+    bag.senderId,
+    bag.amount,
+    `luckybag-refund:${bag.bagId}`
+  );
   bag.status = "refunded";
   bag.refundedAt = Date.now();
-  await creditLuckyBagWallet(bag.senderId, bag.amount);
-  const transaction = { id: `luckybag_refund:${bag.bagId}`, userId: bag.senderId, type: "lucky_bag_refund", amount: bag.amount, bagId: bag.bagId, createdAt: Date.now() };
-  publishLuckyBagTransaction(transaction);
-  io.emit("lucky_bag_refunded", { bagId: bag.bagId, senderId: bag.senderId, amount: bag.amount });
+  const balance = await walletBalance(bag.senderId);
+  if (creditedNow) {
+    const transaction = { id: `luckybag_refund:${bag.bagId}`, userId: bag.senderId, type: "lucky_bag_refund", amount: bag.amount, bagId: bag.bagId, createdAt: bag.refundedAt };
+    publishLuckyBagTransaction(transaction);
+  }
+  io.emit("lucky_bag_refunded", { bagId: bag.bagId, senderId: bag.senderId, amount: bag.amount, balance });
+  io.emit("wallet_balance_updated", { userId: bag.senderId, balance, reason: "lucky_bag_refund", bagId: bag.bagId });
   liveLuckyBags.delete(String(bagId));
   return true;
 }
+async function expireLuckyBag(bagId) {
+  const bag = getLuckyBag(bagId);
+  if (!bag || bag.status !== "open") return false;
+  if (Date.now() < Number(bag.expiresAt || 0)) {
+    scheduleLuckyBagRefund(bag);
+    return false;
+  }
+  if (Number(bag.claimedCount || 0) === 0) {
+    return refundLuckyBag(bagId);
+  }
+
+  // Claims already reserved/looted are not refunded. Mark the bag expired so
+  // it disappears from the room immediately while pending claim confirmations
+  // can still finish against this short-lived in-memory record.
+  bag.status = "expired";
+  bag.expiredAt = Date.now();
+  io.emit("lucky_bag_expired", { bagId: bag.bagId, roomId: bag.roomId, senderId: bag.senderId });
+  return true;
+}
 function scheduleLuckyBagRefund(bag) {
+  const key = String(bag.bagId);
+  const previous = luckyBagTimers.get(key);
+  if (previous) clearTimeout(previous);
   const wait = Math.max(0, Number(bag.expiresAt) - Date.now());
   const timer = setTimeout(() => {
-    refundLuckyBag(bag.bagId).catch((err) => console.error("Lucky Bag refund error:", err.message))
-      .finally(() => luckyBagTimers.delete(String(bag.bagId)));
+    expireLuckyBag(key).catch((err) => {
+      console.error("Lucky Bag expiry/refund error:", err.message);
+      // Retry transient wallet/database failures; the idempotency key protects
+      // the sender from receiving the same refund twice.
+      const retry = setTimeout(() => {
+        expireLuckyBag(key).catch((retryError) => console.error("Lucky Bag refund retry error:", retryError.message));
+      }, 15000);
+      if (typeof retry.unref === "function") retry.unref();
+      luckyBagTimers.set(key, retry);
+    }).finally(() => {
+      if (luckyBagTimers.get(key) === timer) luckyBagTimers.delete(key);
+    });
   }, wait);
   if (typeof timer.unref === "function") timer.unref();
-  luckyBagTimers.set(String(bag.bagId), timer);
+  luckyBagTimers.set(key, timer);
 }
 app.post("/api/wallet/initialize", async (req, res) => {
   try {
