@@ -122,10 +122,7 @@ fun EmojiPicker(onClose: () -> Unit = {}, onSelectEmoji: (EmojiSticker) -> Unit 
         EmojiSticker("gift_me", "Gift me", "${GITHUB_PUBLIC_BASE}IMG_20261028_184037.png", null, 1.1f),
 
         // GIF WALE EMOJI BHI SAME SQUARE SIZE (1.1f)
-        EmojiSticker("smile", "Smile", "${GITHUB_PUBLIC_BASE}512.gif", null, 1.1f),
         EmojiSticker("sad", "Sad", "${GITHUB_PUBLIC_BASE}512%20(6).gif", null, 1.1f),
-        EmojiSticker("shy_smile", "Shy-Smile", "${GITHUB_PUBLIC_BASE}512%20(3).gif", null, 1.1f),
-        EmojiSticker("crying", "Crying", "${GITHUB_PUBLIC_BASE}512%20(2).gif", null, 1.1f),
         EmojiSticker("party", "Party", "${GITHUB_PUBLIC_BASE}512%20(16).gif", null, 1.1f),
         EmojiSticker("loving", "Loving", "${GITHUB_PUBLIC_BASE}512%20(15).gif", null, 1.1f),
         EmojiSticker("smart", "Smart", "${GITHUB_PUBLIC_BASE}512%20(13).gif", null, 1.1f),
@@ -133,9 +130,7 @@ fun EmojiPicker(onClose: () -> Unit = {}, onSelectEmoji: (EmojiSticker) -> Unit 
         EmojiSticker("rolling", "Rolling", "${GITHUB_PUBLIC_BASE}512%20(10).gif", null, 1.1f),
         EmojiSticker("unamused", "Unamused", "${GITHUB_PUBLIC_BASE}512%20(11).gif", null, 1.1f),
         EmojiSticker("pleading", "Pleading", "${GITHUB_PUBLIC_BASE}512%20(4).gif", null, 1.1f),
-        EmojiSticker("hug", "Hug", "${GITHUB_PUBLIC_BASE}512%20(8).gif", null, 1.1f),
-        EmojiSticker("shocking", "Shocking", "${GITHUB_PUBLIC_BASE}512%20(1).gif", null, 1.1f),
-        EmojiSticker("kiss", "Kiss-R", "${GITHUB_PUBLIC_BASE}512%20(14).gif", null, 1.1f)
+        EmojiSticker("hug", "Hug", "${GITHUB_PUBLIC_BASE}512%20(8).gif", null, 1.1f)
     )
 
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
@@ -250,19 +245,20 @@ private fun AnimatedSeatBannerOverlay(
     val density = LocalDensity.current
     val infiniteTransition = rememberInfiniteTransition(label = "seatBannerWave")
 
-    // Left (-1f) se start -> halka upar hokar Right (+1f) -> fir same smooth reverse
+    // Slow & smooth: Left (-1f) se start -> halka upar hokar Right (+1f) -> fir same smooth reverse
     val progress by infiniteTransition.animateFloat(
         initialValue = -1f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 950, easing = FastOutSlowInEasing),
+            animation = tween(durationMillis = 1550, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
         ),
         label = "bannerWaveProgress"
     )
 
-    val maxShiftXPx = with(density) { (overlaySize * 0.09f).toPx() }
-    val maxLiftYPx = with(density) { (overlaySize * 0.055f).toPx() }
+    val maxShiftXPx = with(density) { (overlaySize * 0.085f).toPx() }
+    val maxLiftYPx = with(density) { (overlaySize * 0.05f).toPx() }
+    val baseDropYPx = with(density) { (overlaySize * 0.09f).toPx() }
 
     Box(
         modifier = Modifier
@@ -278,18 +274,20 @@ private fun AnimatedSeatBannerOverlay(
             contentScale = ContentScale.Fit
         )
 
-        // Base image ke bottom half ke upar smooth hilta hua banner
+        // Base image ke bottom half se thoda niche + thoda bada + slow smooth hilta hua banner
         AsyncImage(
             model = bannerImageUrl,
             contentDescription = "Seat reaction banner",
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .fillMaxWidth(0.95f)
-                .fillMaxHeight(0.50f)
+                .fillMaxWidth(1f)
+                .fillMaxHeight(0.56f)
                 .graphicsLayer {
+                    scaleX = 1.12f
+                    scaleY = 1.12f
                     translationX = progress * maxShiftXPx
-                    translationY = -maxLiftYPx * (1f - progress * progress)
-                    rotationZ = progress * 4.5f
+                    translationY = baseDropYPx - maxLiftYPx * (1f - progress * progress)
+                    rotationZ = progress * 4.0f
                 },
             contentScale = ContentScale.Fit
         )
