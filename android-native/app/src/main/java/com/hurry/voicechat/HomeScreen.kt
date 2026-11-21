@@ -214,22 +214,6 @@ fun HomeScreen(
     unreadMessageCount: Int = 0
 ) {
     val mine = mineSelected
-    if (!mine) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.White),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = "404 Error",
-                color = Color.Black,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold
-            )
-        }
-        return
-    }
     val context = LocalContext.current
     val dao = remember {
         runCatching { HurryDatabase.get(context).roomDao() }.getOrNull()
