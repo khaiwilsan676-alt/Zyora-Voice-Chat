@@ -1632,3 +1632,10 @@ Current documentation does not certify that all historical features are build-, 
 - Follow-up root-cause fix after music was audible but remote microphones were not: the server's recipient-side mixer was combining microphone frames into one anonymous packet. The native client is designed to queue/mix independent publisher streams, so the server now relays each 20 ms PCM frame separately to every other room socket and includes the publisher account ID (`userId`). The sender is excluded server-side to prevent hearing their own microphone.
 - Changed `Zyora-Server/server.js` in commit `a524150c709bdc6e2f604558223b8ff3ac8738d5`.
 - Native playback already supports per-publisher queues and local PCM mixing; no UI or native capture behavior changed. Requires the Render backend to deploy the server commit and a live two-device test. Not yet hardware-verified.
+
+## 2026-11-21 — Lucky Bag sender open, expiry timer, and compact room shortcuts
+- The Lucky Bag sender's own in-room floating bag remains tappable and uses the same claim/open flow as every other room member; the backend claim route does not exclude the sender.
+- The send response's authoritative `expiresAt` is passed through `LuckyBag.kt` and `Fourgride.kt` into `RoomPage.kt`. The small countdown beneath the floating Lucky Bag shows remaining time from the server expiry and hides the expired icon.
+- Reduced the right-corner room shortcut artwork sizes and tightened the vertical gaps without changing the column anchor or bottom offset.
+- Native code commits: `81f5c9252195e7cd9d699cbfe787709c147794b0`, `14277d7fe28743a4ee49751dbcd56fcf5388a675`, `26f94edfb5303a7255e706279491288767f1c512`, `737a0e37f422e7f7de950e7a9fd08fcde04c673f`.
+- Verification: source changes committed; APK build and live-device UI behavior still need verification.
