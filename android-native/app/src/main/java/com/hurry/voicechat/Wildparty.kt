@@ -1369,29 +1369,33 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
   require(delta!=0L){"Invalid wallet amount"}
   val userId=walletAccountId.takeIf{it.isNotBlank()}?:error("Wallet account is unavailable")
   val amount=kotlin.math.abs(delta)
-  if(delta<0L)check(balance>=amount){"Not enough coins"}
-  val next=(balance+delta).coerceAtLeast(0L)
-  balance=next
-  walletCachePrefs.edit().putLong("balance_$userId",next).apply()
-
   val nowMs=System.currentTimeMillis()
   val transactionId="wild_party_${if(delta<0L)"bet" else "win"}_${nowMs}_${java.util.UUID.randomUUID()}"
   val now=Calendar.getInstance()
   val date=String.format("%04d.%02d.%02d %02d:%02d",now.get(Calendar.YEAR),now.get(Calendar.MONTH)+1,now.get(Calendar.DAY_OF_MONTH),now.get(Calendar.HOUR_OF_DAY),now.get(Calendar.MINUTE))
-  val queue=runCatching{JSONArray(pendingWalletPrefs.getString(pendingWalletKey(),"[]")?:"[]")}.getOrDefault(JSONArray())
-  queue.put(JSONObject().put("id",transactionId).put("delta",delta).put("title",title).put("date",date))
-  check(pendingWalletPrefs.edit().putString(pendingWalletKey(),queue.toString()).commit()){"Could not save pending Wallet transaction"}
-   scope.launch(Dispatchers.IO) {
-    runCatching {
-     dao.insertTransaction(TransactionEntity(title=title,amount=delta,date=date,timestamp=nowMs,type="coin"))
-     NativeIndexDatabase(context).saveWalletTransaction(transactionId,userId,title,delta,date,nowMs,"coin")
-    }.onFailure { android.util.Log.w("WildParty","Local wallet history write deferred",it) }
-   }
-   scope.launch {
-    delay(250)
-    runCatching { syncPendingWalletChanges() }
-     .onFailure { android.util.Log.w("WildParty","Wallet sync queued for retry",it) }
-   }
+
+  // Serialize every local balance mutation with initial refresh and server sync.
+  // This prevents a late GET/sync response from overwriting a newer bet or win.
+  walletSyncMutex.withLock {
+   if(delta<0L)check(balance>=amount){"Not enough coins"}
+   val next=(balance+delta).coerceAtLeast(0L)
+   balance=next
+   walletCachePrefs.edit().putLong("balance_$userId",next).apply()
+   val queue=runCatching{JSONArray(pendingWalletPrefs.getString(pendingWalletKey(),"[]")?:"[]")}.getOrDefault(JSONArray())
+   queue.put(JSONObject().put("id",transactionId).put("delta",delta).put("title",title).put("date",date))
+   check(pendingWalletPrefs.edit().putString(pendingWalletKey(),queue.toString()).commit()){"Could not save pending Wallet transaction"}
+  }
+  scope.launch(Dispatchers.IO) {
+   runCatching {
+    dao.insertTransaction(TransactionEntity(title=title,amount=delta,date=date,timestamp=nowMs,type="coin"))
+    NativeIndexDatabase(context).saveWalletTransaction(transactionId,userId,title,delta,date,nowMs,"coin")
+   }.onFailure { android.util.Log.w("WildParty","Local wallet history write deferred",it) }
+  }
+  scope.launch {
+   delay(250)
+   runCatching { syncPendingWalletChanges() }
+    .onFailure { android.util.Log.w("WildParty","Wallet sync queued for retry",it) }
+  }
  }
 
  LaunchedEffect(walletAccountId){if(walletAccountId.isNotBlank())runCatching{syncPendingWalletChanges()}}
