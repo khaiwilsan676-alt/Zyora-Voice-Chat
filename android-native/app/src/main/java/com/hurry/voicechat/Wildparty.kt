@@ -1314,7 +1314,7 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
   val key=pendingWalletKey()
   val queue=runCatching{JSONArray(pendingWalletPrefs.getString(key,"[]")?:"[]")}.getOrElse{return}
   var serverBalance:Long?=null
-  val remaining=JSONArray()
+  val completedIds=mutableSetOf<String>()
   for(i in 0 until queue.length()){
    val item=queue.optJSONObject(i)?:continue
    val txId=item.optString("id");val delta=item.optLong("delta")
@@ -1334,7 +1334,17 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
      json.optLong("balance",-1L).also{check(it>=0L)}
     }finally{connection.disconnect()}
    }}
-   if(result.isSuccess)serverBalance=result.getOrThrow() else remaining.put(item)
+   if(result.isSuccess){
+    serverBalance=result.getOrThrow()
+    completedIds.add(txId)
+   }
+  }
+  // Merge against the newest disk queue; never erase bets queued during network sync.
+  val latestQueue=runCatching{JSONArray(pendingWalletPrefs.getString(key,"[]")?:"[]")}.getOrDefault(JSONArray())
+  val remaining=JSONArray()
+  for(i in 0 until latestQueue.length()){
+   val item=latestQueue.optJSONObject(i)?:continue
+   if(item.optString("id") !in completedIds)remaining.put(item)
   }
   pendingWalletPrefs.edit().putString(key,remaining.toString()).apply()
   if(serverBalance!=null){
