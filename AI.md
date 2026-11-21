@@ -1702,3 +1702,8 @@ Current documentation does not certify that all historical features are build-, 
 - Root cause: the Level / Family medal-grid edit in `Medal.kt` omitted the closing brace for the medal content container. Kotlin then parsed subsequent medal dialogs and helper composables in the wrong scope, producing cascading unresolved-reference errors plus an end-of-file brace error.
 - Fix: restored the missing closing brace only; medal categories, data, UI styling, and layout remain unchanged.
 - Verification: a fresh native APK workflow is required; no build or device result is claimed until that workflow completes.
+
+## 2026-11-22 — Native APK Medal scope compile fix
+- Latest workflow #745 showed that the previous brace restoration still left the medal grid's containing Compose scopes unclosed. This caused `MedalScreen` declarations (including `getMedalsData`) to be parsed in the wrong scope and generated cascading unresolved-reference errors.
+- Restored the missing LazyVerticalGrid/container scope closure in `Medal.kt`; no medal data, tab logic, colors, or intended UI layout changed.
+- Verification: workflow #745 failed; a new APK workflow triggered by this fix must pass before calling the APK build successful.
