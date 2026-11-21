@@ -1281,7 +1281,10 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
     try{
      if(walletConnection.responseCode !in 200..299) error("Wallet unavailable")
      val wallet=JSONObject(walletConnection.inputStream.bufferedReader().use{it.readText()})
-     balance=wallet.optLong("balance",0L).coerceAtLeast(0L)
+     val serverBalance=wallet.optLong("balance",0L).coerceAtLeast(0L)
+     val pending=runCatching{JSONArray(pendingWalletPrefs.getString("queue_$walletUserId","[]")?:"[]")}.getOrDefault(JSONArray())
+     val pendingDelta=(0 until pending.length()).sumOf{pending.optJSONObject(it)?.optLong("delta")?:0L}
+     balance=(serverBalance+pendingDelta).coerceAtLeast(0L)
      val old=dao.getUserData()?:UserDataEntity(balance=balance)
      dao.saveUserData(old.copy(balance=balance))
      context.getSharedPreferences("zyora_wallet_cache",Context.MODE_PRIVATE).edit()
