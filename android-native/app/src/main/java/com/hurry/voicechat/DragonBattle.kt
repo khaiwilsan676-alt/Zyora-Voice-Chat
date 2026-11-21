@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -137,7 +136,7 @@ fun DragonBattleGameHost(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .wrapContentHeight()
+                .height(480.dp)
                 .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)),
             contentAlignment = Alignment.BottomCenter
         ) {
@@ -146,8 +145,7 @@ fun DragonBattleGameHost(
                 model = DRAGON_BATTLE_BG,
                 contentDescription = "Dragon Battle Background",
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .wrapContentHeight(),
+                    .fillMaxSize(),
                 contentScale = ContentScale.FillWidth
             )
 
