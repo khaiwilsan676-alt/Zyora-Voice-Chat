@@ -1115,17 +1115,23 @@ fun RoomPage(
                 val id=payload.optString("id", "${payload.optString("senderId","user")}-${payload.optLong("createdAt",System.currentTimeMillis())}")
                 val type=payload.optString("type","message")
                 val senderId = payload.optString("senderAccountId",payload.optString("senderId",""))
-                val profileDb = NativeIndexDatabase(appContext)
-                val cachedSender = profileDb.loadProfile(senderId)
+                // Never perform synchronous IndexDB/profile disk I/O on the Socket.IO
+                // callback thread. Parse and publish the message immediately; persist
+                // profile metadata in the room's owned IO scope in the background.
                 val remoteSender = payload.optString("senderName","").takeUnless { it == "null" }.orEmpty()
                 val remoteImage = payload.optString("senderAvatar",payload.optString("senderImage","")).takeUnless { it == "null" }.orEmpty()
-                val sender = remoteSender.ifBlank { cachedSender?.optString("name").orEmpty().ifBlank { "Unknown" } }
-                val image = remoteImage.ifBlank { cachedSender?.optString("image").orEmpty().ifBlank { cachedSender?.optString("avatar").orEmpty() } }
+                val sender = remoteSender.ifBlank { senderId.ifBlank { "Unknown" } }
+                val image = remoteImage
                 if (senderId.isNotBlank() && (remoteSender.isNotBlank() || remoteImage.isNotBlank())) {
-                    val updatedProfile = cachedSender ?: JSONObject()
-                    if (remoteSender.isNotBlank()) updatedProfile.put("name", remoteSender)
-                    if (remoteImage.isNotBlank()) updatedProfile.put("image", remoteImage)
-                    profileDb.saveProfile(senderId, updatedProfile)
+                    roomIoScope.launch {
+                        runCatching {
+                            val profileDb = NativeIndexDatabase(appContext)
+                            val updatedProfile = profileDb.loadProfile(senderId) ?: JSONObject()
+                            if (remoteSender.isNotBlank()) updatedProfile.put("name", remoteSender)
+                            if (remoteImage.isNotBlank()) updatedProfile.put("image", remoteImage)
+                            profileDb.saveProfile(senderId, updatedProfile)
+                        }
+                    }
                 }
                 val mentionJson = payload.optJSONArray("mentions") ?: JSONArray()
                 val parsedMentions = (0 until mentionJson.length()).mapNotNull { index -> mentionJson.optJSONObject(index)?.let { mention -> val targetId = mention.optString("accountId").trim(); val targetName = mention.optString("name").trim(); if (targetId.isNotBlank() && targetName.isNotBlank()) NativeMention(targetId, targetName) else null } }
