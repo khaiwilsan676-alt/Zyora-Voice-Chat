@@ -2,28 +2,40 @@ package com.hurry.voicechat
 
 import android.content.Context
 import androidx.compose.foundation.*
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.VolumeOff
-import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.*
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Fill
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.*
+import androidx.compose.ui.zIndex
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.json.JSONArray
@@ -33,30 +45,30 @@ import kotlin.math.*
 
 private data class WpAnimal(val name:String,val image:String,val angle:Float,val dx:Float,val dy:Float,val size:Int,val multiplier:Int)
 private data class WpChip(val label:String,val value:Long,val image:String)
-private data class WpRound(val round:Int,val winner:String,val time:Long)
+private data class WpRound(val round:Int,val winner:String,val time:Long,val myBet:Long=0L,val winAmount:Long=0L)
 private enum class WpPhase { BETTING, SPINNING, RESULT }
 private enum class WpMode { SINGLE, MIX_BIG, MIX_SMALL }
 
 private val wpAnimals = listOf(
- WpAnimal("Deer","wp_img_20260822_011134",270f,0f,-13f,71,5),
- WpAnimal("Dog","wp_img_20260822_011118",315f,-4f,-9f,55,5),
- WpAnimal("Zebra","wp_img_20260822_011103",0f,-8f,-19f,68,5),
- WpAnimal("Fox","wp_img_20260822_011041",45f,-6f,-18f,52,5),
- WpAnimal("Eagle","wp_img_20260822_011151",90f,0f,-18f,61,10),
- WpAnimal("Bear","wp_img_20260822_011205",135f,5f,-15f,60,15),
- WpAnimal("Tiger","wp_img_20260822_011218",180f,7f,-8f,63,25),
- WpAnimal("Lion","wp_img_20260822_011028",225f,5f,-5f,65,45)
+ WpAnimal("Rabbit","img_20261121_095524",270f,0f,-13f,71,5),
+ WpAnimal("Deer","img_20261121_095459",315f,-4f,-9f,55,5),
+ WpAnimal("Dog","img_20261121_102923",0f,-8f,-19f,68,5),
+ WpAnimal("Camel","img_20261121_095328",45f,-6f,-18f,52,5),
+ WpAnimal("Eagle","img_20261121_103004",90f,0f,-18f,61,10),
+ WpAnimal("Bear","img_20261121_102944",135f,5f,-15f,60,15),
+ WpAnimal("Tiger","img_20261121_095350",180f,7f,-8f,63,25),
+ WpAnimal("Lion","img_20261121_095405",225f,5f,-5f,65,45)
 )
 private val wpChips = listOf(
- WpChip("1K",1000,"wp_1787389350745_2"),
- WpChip("10K",10000,"wp_img_20260822_143032"),
- WpChip("50K",50000,"wp_img_20260822_143348"),
- WpChip("500K",500000,"wp_img_20260822_143408"),
- WpChip("5M",5000000,"wp_img_20260822_143422_2")
+ WpChip("1K",1000,"img_20261121_102630"),
+ WpChip("10K",10000,"img_20261121_102707"),
+ WpChip("50K",50000,"img_20261121_102752"),
+ WpChip("500K",500000,"img_20261121_102814"),
+ WpChip("5M",5000000,"img_20261121_102835")
 )
 private val wpGold=Color(0xFFFFD33D)
 private val wpDark=Color(0xF20C0C0E)
-private fun wpAsset(c:Context,n:String)=c.resources.getIdentifier(n,"drawable",c.packageName)
+private fun wpAsset(c:Context,n:String)=c.resources.getIdentifier(n,"drawable",c.packageName).takeIf{it!=0}?:c.resources.getIdentifier("wp_$n","drawable",c.packageName)
 private fun wpReset(now:Long=System.currentTimeMillis()):Long {
  val c=Calendar.getInstance().apply{timeInMillis=now}
  if(c.get(Calendar.HOUR_OF_DAY)<5)c.add(Calendar.DAY_OF_YEAR,-1)
@@ -77,6 +89,706 @@ private fun wpOutcome(round:Int):Pair<WpMode,Int>{
  }
 }
 private fun wpFormat(v:Long)=when{v>=1_000_000->"${"%.1f".format(v/1_000_000.0).removeSuffix(".0")}M";v>=1000->"${"%.0f".format(v/1000.0)}K";else->v.toString()}
+private fun wpFormatTime(timeMillis: Long): String {
+ val c = Calendar.getInstance().apply { timeInMillis = timeMillis }
+ return String.format("%02d-%02d %02d:%02d", c.get(Calendar.MONTH) + 1, c.get(Calendar.DAY_OF_MONTH), c.get(Calendar.HOUR_OF_DAY), c.get(Calendar.MINUTE))
+}
+
+@Composable
+private fun WpHistoryNewPill(modifier: Modifier = Modifier) {
+ val shape = RoundedCornerShape(50)
+ Box(
+  modifier = modifier
+   .wrapContentSize(unbounded = true)
+   .shadow(elevation = 2.dp, shape = shape, clip = false)
+   .clip(shape)
+   .background(
+    Brush.verticalGradient(
+     colors = listOf(
+      Color(0xFFFFF49A),
+      Color(0xFFFFD028),
+      Color(0xFFE69500),
+      Color(0xFFB36300)
+     )
+    )
+   )
+   .border(
+    width = 0.65.dp,
+    brush = Brush.verticalGradient(
+     colors = listOf(
+      Color(0xFFFFFDE0),
+      Color(0xFFFFD95A),
+      Color(0xFF944C00)
+     )
+    ),
+    shape = shape
+   )
+   .drawBehind {
+    drawRoundRect(
+     brush = Brush.verticalGradient(
+      colors = listOf(
+       Color.White.copy(alpha = 0.62f),
+       Color.Transparent
+      ),
+      startY = 0f,
+      endY = size.height * 0.48f
+     ),
+     topLeft = Offset(0.5.dp.toPx(), 0.4.dp.toPx()),
+     size = Size(size.width - 1.dp.toPx(), size.height * 0.45f),
+     cornerRadius = CornerRadius(size.height / 2f, size.height / 2f)
+    )
+   }
+   .padding(horizontal = 3.5.dp, vertical = 0.5.dp),
+  contentAlignment = Alignment.Center
+ ) {
+  Text(
+   text = "New",
+   color = Color(0xFF4A1D00),
+   fontSize = 6.5.sp,
+   lineHeight = 7.sp,
+   fontWeight = FontWeight.Black,
+   maxLines = 1,
+   softWrap = false,
+   style = TextStyle(shadow = Shadow(Color(0xFFFFF7B8), Offset(0f, 0.5f), 0.6f))
+  )
+ }
+}
+
+@Composable
+private fun WpWinnerAvatarPlaceholder(modifier: Modifier = Modifier) {
+ Canvas(
+  modifier = modifier
+   .clip(CircleShape)
+   .background(Color(0xFF16171C))
+ ) {
+  val iconColor = Color(0xFF70747D)
+  val cx = size.width / 2f
+  drawCircle(
+   color = iconColor,
+   radius = size.minDimension * 0.17f,
+   center = Offset(cx, size.height * 0.36f)
+  )
+  drawOval(
+   color = iconColor,
+   topLeft = Offset(size.width * 0.21f, size.height * 0.57f),
+   size = Size(size.width * 0.58f, size.height * 0.36f)
+  )
+ }
+}
+
+@Composable
+private fun WpLoadingPage(
+ progress: Float,
+ modifier: Modifier = Modifier
+) {
+ val context = LocalContext.current
+ val bgRes = wpAsset(context, "file_00000000db188211a99b006efa3949e4")
+ val logoRes = wpAsset(context, "file_000000009d808211b8ffb7c2183b4ef5")
+ val clampedProgress = progress.coerceIn(0f, 1f)
+ val barShape = RoundedCornerShape(50)
+
+ Box(
+  modifier = modifier
+   .fillMaxSize()
+   .background(Color(0xFF1A120B))
+   .clickable(
+    interactionSource = remember { MutableInteractionSource() },
+    indication = null,
+    onClick = {}
+   )
+ ) {
+  if (bgRes != 0) {
+   Image(
+    painter = painterResource(bgRes),
+    contentDescription = null,
+    modifier = Modifier.fillMaxSize(),
+    contentScale = ContentScale.Crop
+   )
+  }
+
+  // Background image ko thoda sa dim karne ke liye subtle overlay
+  Box(
+   modifier = Modifier
+    .fillMaxSize()
+    .background(Color.Black.copy(alpha = 0.24f))
+  )
+
+  // Top Title: Wild Party
+  Text(
+   text = "Wild Party",
+   modifier = Modifier
+    .align(Alignment.TopCenter)
+    .padding(top = 12.dp),
+   color = Color.White,
+   fontSize = 26.sp,
+   fontWeight = FontWeight.ExtraBold,
+   fontFamily = FontFamily.Serif,
+   fontStyle = FontStyle.Italic,
+   style = TextStyle(
+    shadow = Shadow(
+     color = Color.Black.copy(alpha = 0.72f),
+     offset = Offset(0f, 3f),
+     blurRadius = 6f
+    )
+   )
+  )
+
+  // Center Game Logo
+  if (logoRes != 0) {
+   Image(
+    painter = painterResource(logoRes),
+    contentDescription = "Wild Party Logo",
+    modifier = Modifier
+     .align(Alignment.Center)
+     .offset(y = (-14).dp)
+     .size(126.dp),
+    contentScale = ContentScale.Fit
+   )
+  }
+
+  // Bottom Golden-Bordered Glossy Blue Striped Loading Bar
+  Box(
+   modifier = Modifier
+    .align(Alignment.BottomCenter)
+    .fillMaxWidth()
+    .padding(start = 22.dp, end = 22.dp, bottom = 26.dp)
+    .height(25.dp)
+    .shadow(elevation = 6.dp, shape = barShape, clip = false)
+    .clip(barShape)
+    .background(
+     Brush.verticalGradient(
+      colors = listOf(
+       Color(0xFF562C05),
+       Color(0xFF7E460A),
+       Color(0xFF693706)
+      )
+     )
+    )
+    .border(
+     width = 2.8.dp,
+     brush = Brush.verticalGradient(
+      colors = listOf(
+       Color(0xFFFFF8B8),
+       Color(0xFFFFDA3E),
+       Color(0xFFE09200),
+       Color(0xFFFFE56D)
+      )
+     ),
+     shape = barShape
+    )
+    .padding(2.8.dp),
+   contentAlignment = Alignment.Center
+  ) {
+   Box(
+    modifier = Modifier
+     .fillMaxSize()
+     .clip(barShape),
+    contentAlignment = Alignment.Center
+   ) {
+    Canvas(Modifier.fillMaxSize()) {
+     // Subtle inner top shadow on dark brown track
+     drawRect(
+      brush = Brush.verticalGradient(
+       colors = listOf(
+        Color.Black.copy(alpha = 0.36f),
+        Color.Transparent
+       ),
+       startY = 0f,
+       endY = size.height * 0.42f
+      )
+     )
+
+     val fillWidth = size.width * clampedProgress
+     if (fillWidth > 0f) {
+      clipRect(left = 0f, top = 0f, right = fillWidth, bottom = size.height) {
+       // Glossy Blue Base Fill (Green ki jagah Blue)
+       drawRect(
+        brush = Brush.verticalGradient(
+         colors = listOf(
+          Color(0xFF8BE8FF),
+          Color(0xFF21A6FF),
+          Color(0xFF006EE6),
+          Color(0xFF0047AB)
+         )
+        ),
+        size = size
+       )
+
+       // Diagonal Glossy Stripes (same pattern as reference image)
+       val stripeWidth = 14.dp.toPx()
+       val stripeGap = 15.dp.toPx()
+       val step = stripeWidth + stripeGap
+       val slant = size.height * 0.85f
+       var x = -slant
+       while (x < size.width + slant) {
+        val stripePath = Path().apply {
+         moveTo(x, size.height)
+         lineTo(x + slant, 0f)
+         lineTo(x + slant + stripeWidth, 0f)
+         lineTo(x + stripeWidth, size.height)
+         close()
+        }
+        drawPath(
+         path = stripePath,
+         brush = Brush.verticalGradient(
+          colors = listOf(
+           Color.White.copy(alpha = 0.52f),
+           Color(0xFFB3F0FF).copy(alpha = 0.28f),
+           Color(0xFF66D1FF).copy(alpha = 0.16f)
+          )
+         )
+        )
+        x += step
+       }
+
+       // Top Glossy Shine Strip
+       drawRect(
+        brush = Brush.verticalGradient(
+         colors = listOf(
+          Color.White.copy(alpha = 0.50f),
+          Color.White.copy(alpha = 0.12f),
+          Color.Transparent
+         ),
+         startY = 0f,
+         endY = size.height * 0.50f
+        ),
+        size = Size(size.width, size.height * 0.50f)
+       )
+      }
+     }
+    }
+
+    Text(
+     text = "${(clampedProgress * 100).toInt()}%",
+     color = Color.White,
+     fontSize = 12.5.sp,
+     fontWeight = FontWeight.ExtraBold,
+     style = TextStyle(
+      shadow = Shadow(
+       color = Color.Black.copy(alpha = 0.75f),
+       offset = Offset(0f, 1.2f),
+       blurRadius = 2.5f
+      )
+     )
+    )
+   }
+  }
+ }
+}
+
+@Composable
+private fun WpBetBadge(
+ amountText: String,
+ coinResId: Int,
+ modifier: Modifier = Modifier
+) {
+ val shape = RoundedCornerShape(4.5.dp)
+ Box(
+  modifier = modifier
+   .wrapContentWidth(unbounded = true)
+   .shadow(elevation = 3.dp, shape = shape, clip = false)
+   .clip(shape)
+   .background(
+    Brush.verticalGradient(
+     colors = listOf(
+      Color(0xFFFFF4BD),
+      Color(0xFFFFE192),
+      Color(0xFFFAC670),
+      Color(0xFFF2AA56)
+     )
+    )
+   )
+   .border(
+    width = 1.dp,
+    brush = Brush.verticalGradient(
+     colors = listOf(
+      Color(0xFFFFFCE0),
+      Color(0xFFFFE7A3),
+      Color(0xFFE0953F)
+     )
+    ),
+    shape = shape
+   )
+   .drawBehind {
+    drawRoundRect(
+     brush = Brush.verticalGradient(
+      colors = listOf(
+       Color.White.copy(alpha = 0.55f),
+       Color.Transparent
+      ),
+      startY = 0f,
+      endY = size.height * 0.45f
+     ),
+     topLeft = Offset(1.dp.toPx(), 0.8.dp.toPx()),
+     size = Size(size.width - 2.dp.toPx(), size.height * 0.42f),
+     cornerRadius = CornerRadius(3.5.dp.toPx(), 3.5.dp.toPx())
+    )
+   }
+   .padding(horizontal = 5.dp, vertical = 1.5.dp),
+  contentAlignment = Alignment.Center
+ ) {
+  Row(
+   verticalAlignment = Alignment.CenterVertically,
+   horizontalArrangement = Arrangement.spacedBy(2.dp)
+  ) {
+   Text(
+    text = "You:",
+    color = Color(0xFFB5440A),
+    fontSize = 9.sp,
+    fontWeight = FontWeight.ExtraBold,
+    fontFamily = FontFamily.Serif,
+    maxLines = 1,
+    softWrap = false,
+    style = TextStyle(shadow = Shadow(Color(0xFFFFF6CC), Offset(0f, 0.8f), 1f))
+   )
+   if (coinResId != 0) {
+    Image(
+     painter = painterResource(coinResId),
+     contentDescription = null,
+     modifier = Modifier.size(11.dp),
+     contentScale = ContentScale.Fit
+    )
+   }
+   Text(
+    text = amountText,
+    color = Color(0xFFBC3E05),
+    fontSize = 9.5.sp,
+    fontWeight = FontWeight.Black,
+    maxLines = 1,
+    softWrap = false,
+    style = TextStyle(shadow = Shadow(Color(0xFFFFF4C2), Offset(0f, 0.8f), 1f))
+   )
+  }
+ }
+}
+
+@Composable
+private fun WpGlassTopButton(
+ onClick: () -> Unit,
+ modifier: Modifier = Modifier,
+ content: @Composable BoxScope.() -> Unit
+) {
+ val shape = RoundedCornerShape(10.dp)
+ Box(
+  modifier = modifier
+   .size(28.dp)
+   .clip(shape)
+   .background(
+    Brush.verticalGradient(
+     colors = listOf(
+      Color.White.copy(alpha = 0.42f),
+      Color(0xFFB8C4DC).copy(alpha = 0.16f),
+      Color(0xFF1F2640).copy(alpha = 0.24f),
+      Color.White.copy(alpha = 0.26f)
+     )
+    )
+   )
+   .border(
+    width = 1.25.dp,
+    brush = Brush.verticalGradient(
+     colors = listOf(
+      Color.White.copy(alpha = 0.92f),
+      Color.White.copy(alpha = 0.32f),
+      Color.White.copy(alpha = 0.58f)
+     )
+    ),
+    shape = shape
+   )
+   .clickable(onClick = onClick),
+  contentAlignment = Alignment.Center
+ ) {
+  Canvas(Modifier.fillMaxSize()) {
+   drawOval(
+    brush = Brush.verticalGradient(
+     colors = listOf(
+      Color.White.copy(alpha = 0.72f),
+      Color.White.copy(alpha = 0.18f),
+      Color.Transparent
+     ),
+     startY = 0f,
+     endY = size.height * 0.52f
+    ),
+    topLeft = Offset(size.width * 0.10f, size.height * 0.04f),
+    size = Size(size.width * 0.80f, size.height * 0.44f)
+   )
+   drawCircle(
+    color = Color.White.copy(alpha = 0.88f),
+    radius = size.minDimension * 0.075f,
+    center = Offset(size.width * 0.22f, size.height * 0.21f)
+   )
+   drawOval(
+    brush = Brush.verticalGradient(
+     colors = listOf(
+      Color.Transparent,
+      Color.White.copy(alpha = 0.24f)
+     ),
+     startY = size.height * 0.72f,
+     endY = size.height
+    ),
+    topLeft = Offset(size.width * 0.16f, size.height * 0.74f),
+    size = Size(size.width * 0.68f, size.height * 0.24f)
+   )
+  }
+  content()
+ }
+}
+
+@Composable
+private fun WpGlassBackButton(
+ onClick: () -> Unit,
+ modifier: Modifier = Modifier
+) {
+ val shape = RoundedCornerShape(10.dp)
+ Box(
+  modifier = modifier
+   .size(30.dp)
+   .clip(shape)
+   .background(
+    Brush.verticalGradient(
+     colors = listOf(
+      Color.White.copy(alpha = 0.36f),
+      Color(0xFF424652).copy(alpha = 0.38f),
+      Color(0xFF14151A).copy(alpha = 0.85f),
+      Color.White.copy(alpha = 0.18f)
+     )
+    )
+   )
+   .border(
+    width = 1.dp,
+    brush = Brush.verticalGradient(
+     colors = listOf(
+      Color.White.copy(alpha = 0.85f),
+      Color.White.copy(alpha = 0.25f),
+      Color.White.copy(alpha = 0.45f)
+     )
+    ),
+    shape = shape
+   )
+   .clickable(onClick = onClick),
+  contentAlignment = Alignment.Center
+ ) {
+  Canvas(Modifier.fillMaxSize()) {
+   drawOval(
+    brush = Brush.verticalGradient(
+     colors = listOf(
+      Color.White.copy(alpha = 0.58f),
+      Color.White.copy(alpha = 0.10f),
+      Color.Transparent
+     ),
+     startY = 0f,
+     endY = size.height * 0.50f
+    ),
+    topLeft = Offset(size.width * 0.12f, size.height * 0.04f),
+    size = Size(size.width * 0.76f, size.height * 0.42f)
+   )
+   drawCircle(
+    color = Color.White.copy(alpha = 0.82f),
+    radius = size.minDimension * 0.065f,
+    center = Offset(size.width * 0.22f, size.height * 0.22f)
+   )
+  }
+  Canvas(Modifier.size(13.dp)) {
+   val chevron = Path().apply {
+    moveTo(8.5.dp.toPx(), 2.2.dp.toPx())
+    lineTo(3.8.dp.toPx(), size.height / 2f)
+    lineTo(8.5.dp.toPx(), size.height - 2.2.dp.toPx())
+   }
+   drawPath(
+    chevron,
+    Color.White,
+    style = Stroke(2.4.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
+   )
+  }
+ }
+}
+
+@Composable
+private fun WpBottomBalanceBar(
+ coinResId: Int,
+ balance: Long,
+ modifier: Modifier = Modifier
+) {
+ val pillShape = RoundedCornerShape(7.dp)
+ val goldColor = Color(0xFFFFD84D)
+ Row(
+  modifier = modifier,
+  verticalAlignment = Alignment.CenterVertically,
+  horizontalArrangement = Arrangement.spacedBy(5.dp)
+ ) {
+  Box(
+   modifier = Modifier
+    .clip(pillShape)
+    .background(
+     Brush.verticalGradient(
+      colors = listOf(
+       Color.White.copy(alpha = 0.58f),
+       Color(0xFFD5BFA6).copy(alpha = 0.34f),
+       Color(0xFF5A3418).copy(alpha = 0.50f),
+       Color(0xFF3E200C).copy(alpha = 0.55f)
+      )
+     )
+    )
+    .border(
+     width = 1.dp,
+     brush = Brush.verticalGradient(
+      colors = listOf(
+       Color.White.copy(alpha = 0.90f),
+       Color.White.copy(alpha = 0.38f),
+       Color(0xFFE6C8A0).copy(alpha = 0.45f)
+      )
+     ),
+     shape = pillShape
+    )
+    .drawBehind {
+     drawRect(
+      brush = Brush.verticalGradient(
+       colors = listOf(
+        Color.White.copy(alpha = 0.42f),
+        Color.Transparent
+       ),
+       startY = 0f,
+       endY = size.height * 0.48f
+      )
+     )
+    }
+    .padding(horizontal = 4.dp, vertical = 3.dp),
+   contentAlignment = Alignment.Center
+  ) {
+   Row(
+    verticalAlignment = Alignment.CenterVertically,
+    horizontalArrangement = Arrangement.spacedBy(3.dp)
+   ) {
+    if (coinResId != 0) {
+     Image(
+      painterResource(coinResId),
+      contentDescription = null,
+      modifier = Modifier.size(18.dp),
+      contentScale = ContentScale.Fit
+     )
+    }
+    Canvas(Modifier.size(width = 8.dp, height = 7.dp)) {
+     val tri = Path().apply {
+      moveTo(size.width / 2f, 0.8.dp.toPx())
+      lineTo(size.width - 0.8.dp.toPx(), size.height - 0.8.dp.toPx())
+      lineTo(0.8.dp.toPx(), size.height - 0.8.dp.toPx())
+      close()
+     }
+     drawPath(tri, goldColor, style = Fill)
+     drawPath(tri, goldColor, style = Stroke(1.3.dp.toPx(), join = StrokeJoin.Round))
+    }
+   }
+  }
+  Row(
+   verticalAlignment = Alignment.CenterVertically,
+   horizontalArrangement = Arrangement.spacedBy(3.dp)
+  ) {
+   Text(
+    balance.toString(),
+    color = goldColor,
+    fontSize = 13.sp,
+    fontWeight = FontWeight.Black,
+    style = TextStyle(shadow = Shadow(Color.Black.copy(alpha = 0.65f), Offset(0f, 1.5f), 3f))
+   )
+   Canvas(Modifier.size(width = 7.dp, height = 11.dp)) {
+    val chevron = Path().apply {
+     moveTo(1.5.dp.toPx(), 1.5.dp.toPx())
+     lineTo(size.width - 1.5.dp.toPx(), size.height / 2f)
+     lineTo(1.5.dp.toPx(), size.height - 1.5.dp.toPx())
+    }
+    drawPath(
+     chevron,
+     Color.Black.copy(alpha = 0.45f),
+     style = Stroke(2.6.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
+    )
+    drawPath(
+     chevron,
+     goldColor,
+     style = Stroke(2.0.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
+    )
+   }
+  }
+ }
+}
+
+@Composable
+private fun WpGlossyRepeatButton(
+ onClick: () -> Unit,
+ modifier: Modifier = Modifier
+) {
+ val outerShape = RoundedCornerShape(9.dp)
+ val innerShape = RoundedCornerShape(7.dp)
+ Box(
+  modifier = modifier
+   .clip(outerShape)
+   .background(Color(0xFF472710).copy(alpha = 0.72f))
+   .border(
+    width = 1.2.dp,
+    brush = Brush.verticalGradient(
+     colors = listOf(
+      Color.White.copy(alpha = 0.94f),
+      Color(0xFFEBDCD0).copy(alpha = 0.75f),
+      Color.White.copy(alpha = 0.85f)
+     )
+    ),
+    shape = outerShape
+   )
+   .clickable(onClick = onClick)
+   .padding(2.dp),
+  contentAlignment = Alignment.Center
+ ) {
+  Box(
+   modifier = Modifier
+    .clip(innerShape)
+    .background(
+     Brush.verticalGradient(
+      colors = listOf(
+       Color.White.copy(alpha = 0.52f),
+       Color(0xFFCBB5A0).copy(alpha = 0.30f),
+       Color(0xFF563218).copy(alpha = 0.68f),
+       Color(0xFF6B4122).copy(alpha = 0.58f)
+      )
+     )
+    )
+    .border(
+     width = 0.8.dp,
+     brush = Brush.verticalGradient(
+      colors = listOf(
+       Color.White.copy(alpha = 0.85f),
+       Color.White.copy(alpha = 0.28f),
+       Color.White.copy(alpha = 0.52f)
+      )
+     ),
+     shape = innerShape
+    )
+    .drawBehind {
+     drawRoundRect(
+      brush = Brush.verticalGradient(
+       colors = listOf(
+        Color.White.copy(alpha = 0.45f),
+        Color.White.copy(alpha = 0.10f),
+        Color.Transparent
+       ),
+       startY = 0f,
+       endY = size.height * 0.52f
+      ),
+      topLeft = Offset(1.dp.toPx(), 0.5.dp.toPx()),
+      size = Size(size.width - 2.dp.toPx(), size.height * 0.48f),
+      cornerRadius = CornerRadius(5.dp.toPx(), 5.dp.toPx())
+     )
+    }
+    .padding(horizontal = 7.dp, vertical = 4.dp),
+   contentAlignment = Alignment.Center
+  ) {
+   Text(
+    "Repeat",
+    color = Color.White,
+    fontSize = 10.sp,
+    fontWeight = FontWeight.Black,
+    style = TextStyle(shadow = Shadow(Color.Black.copy(alpha = 0.55f), Offset(0f, 1.5f), 2.5f))
+   )
+  }
+ }
+}
 
 @Composable
 fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modifier){
@@ -91,8 +803,8 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
  var winnerIndex by remember{mutableIntStateOf(0)}
  var mode by remember{mutableStateOf(WpMode.SINGLE)}
  var chipIndex by remember{mutableIntStateOf(1)}
- var bets by remember{mutableStateOf<Map<String,Long>>(emptyMap())}
- var lastBets by remember{mutableStateOf<Map<String,Long>>(emptyMap())}
+ var bets by remember{mutableStateOf>(emptyMap())}
+ var lastBets by remember{mutableStateOf>(emptyMap())}
  var history by remember{mutableStateOf<List<WpRound>>(emptyList())}
  var historyOpen by remember{mutableStateOf(false)}
  var rulesOpen by remember{mutableStateOf(false)}
@@ -102,15 +814,21 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
  var betAmount by remember{mutableLongStateOf(0L)}
  var winnerTimer by remember{mutableIntStateOf(5)}
  var loading by remember{mutableStateOf(true)}
+ var loadingProgress by remember{mutableFloatStateOf(0f)}
  var processedRound by remember{mutableIntStateOf(-1)}
 
  LaunchedEffect(Unit){
   runCatching{
    balance=dao.getUserData()?.balance?:82927L
    val arr=JSONArray(context.getSharedPreferences("wild_party_native",Context.MODE_PRIVATE).getString("history","[]"))
-   history=(0 until arr.length()).mapNotNull{i->arr.optJSONObject(i)?.let{WpRound(it.optInt("round"),it.optString("winner"),it.optLong("time"))}}.filter{it.time>=wpReset()}.sortedBy{it.round}.takeLast(50)
+   history=(0 until arr.length()).mapNotNull{i->arr.optJSONObject(i)?.let{WpRound(it.optInt("round"),it.optString("winner"),it.optLong("time"),it.optLong("myBet",0L),it.optLong("winAmount",0L))}}.filter{it.time>=wpReset()}.sortedBy{it.round}.takeLast(50)
   }
-  delay(180);loading=false
+  for (step in 1..50) {
+   loadingProgress = step / 50f
+   delay(24)
+  }
+  delay(120)
+  loading=false
  }
  suspend fun walletChange(delta:Long,title:String){
   val old=dao.getUserData()?:UserDataEntity(balance=balance)
@@ -122,7 +840,7 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
  }
  fun persistHistory(){
   val arr=JSONArray()
-  history.takeLast(50).forEach{arr.put(JSONObject().put("round",it.round).put("winner",it.winner).put("time",it.time))}
+  history.takeLast(50).forEach{arr.put(JSONObject().put("round",it.round).put("winner",it.winner).put("time",it.time).put("myBet",it.myBet).put("winAmount",it.winAmount))}
   context.getSharedPreferences("wild_party_native",Context.MODE_PRIVATE).edit().putString("history",arr.toString()).apply()
  }
  LaunchedEffect(loading){
@@ -146,13 +864,13 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
    processedRound=round
    val result=wpOutcome(round);val animal=wpAnimals[result.second]
    val label=when(result.first){WpMode.MIX_BIG->"Mix Big";WpMode.MIX_SMALL->"Mix Small";else->animal.name}
-   history=(history+WpRound(round,label,System.currentTimeMillis())).takeLast(50);persistHistory()
    betAmount=bets.values.sum()
    winAmount=when(result.first){
     WpMode.MIX_BIG->listOf("Eagle","Bear","Tiger","Lion").sumOf{n->(bets[n]?:0L)*wpAnimals.first{it.name==n}.multiplier}
-    WpMode.MIX_SMALL->listOf("Deer","Dog","Zebra","Fox").sumOf{n->(bets[n]?:0L)*5L}
+    WpMode.MIX_SMALL->listOf("Rabbit","Deer","Dog","Camel").sumOf{n->(bets[n]?:0L)*5L}
     WpMode.SINGLE->(bets[animal.name]?:0L)*animal.multiplier
    }
+   history=(history+WpRound(round,label,System.currentTimeMillis(),betAmount,winAmount)).takeLast(50);persistHistory()
    delay(1500);if(winAmount>0)walletChange(winAmount,"Won in Wild Party")
    winnerTimer=5;winnerOpen=true
   }
@@ -161,16 +879,17 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
  fun place(name:String){scope.launch{val amount=wpChips[chipIndex].value;if(phase==WpPhase.BETTING&&balance>=amount){walletChange(-amount,"Bet on $name in Wild Party");bets=bets.toMutableMap().also{it[name]=(it[name]?:0L)+amount}}}}
  BoxWithConstraints(modifier.fillMaxSize().background(Color.Transparent),contentAlignment=Alignment.BottomCenter){
   val h=maxHeight*.65f
+  val multiplierBg=wpAsset(context,"wp_file_00000000330c8211b80be136b631b3e0")
+  val coin=wpAsset(context,"wp_file_00000000e56882119c217d508b6733dc")
   Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=.5f)))
   Box(Modifier.fillMaxWidth().height(h).background(Color(0xFF28180D))){
    val bg=wpAsset(context,"wp_1787337855180_2")
    if(bg!=0)Image(painterResource(bg),null,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
    // Original TSX top multiplier badges (same artwork and placement).
-   val multiplierBg=wpAsset(context,"wp_file_00000000330c8211b80be136b631b3e0")
    @Composable fun MultiplierBadge(big:Boolean){
     Box(Modifier.size(65.dp),contentAlignment=Alignment.Center){
      if(multiplierBg!=0)Image(painterResource(multiplierBg),null,Modifier.fillMaxSize(),contentScale=ContentScale.Fit)
-     val names=if(big) listOf("Eagle","Bear","Tiger","Lion") else listOf("Dog","Deer","Zebra","Fox")
+     val names=if(big) listOf("Eagle","Bear","Tiger","Lion") else listOf("Rabbit","Deer","Dog","Camel")
      val positions=listOf(
       Triple((-9).dp,(-8).dp,-10f),
       Triple(9.dp,(-8).dp,10f),
@@ -189,55 +908,212 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
     Box(Modifier.align(Alignment.TopEnd).padding(end=4.dp)){MultiplierBadge(false)}
    }
    Box(Modifier.fillMaxWidth().align(Alignment.TopCenter).padding(top=8.dp)){
-    Row(Modifier.align(Alignment.TopStart).padding(start=8.dp),horizontalArrangement=Arrangement.spacedBy(4.dp),verticalAlignment=Alignment.CenterVertically){
-     Box(Modifier.size(24.dp).clip(RoundedCornerShape(6.dp)).background(Color.White.copy(alpha=.20f)).border(1.dp,Color.White.copy(alpha=.40f),RoundedCornerShape(6.dp)).clickable{muted=!muted},contentAlignment=Alignment.Center){
-      Canvas(Modifier.size(16.dp)){val p=androidx.compose.ui.graphics.Path().apply{moveTo(1.dp.toPx(),5.dp.toPx());lineTo(5.dp.toPx(),5.dp.toPx());lineTo(10.dp.toPx(),1.dp.toPx());lineTo(10.dp.toPx(),15.dp.toPx());lineTo(5.dp.toPx(),11.dp.toPx());lineTo(1.dp.toPx(),11.dp.toPx());close()};drawPath(p,Color.White.copy(alpha=if(muted).5f else 1f));if(muted){drawLine(Color.White,androidx.compose.ui.geometry.Offset(2.dp.toPx(),2.dp.toPx()),androidx.compose.ui.geometry.Offset(14.dp.toPx(),14.dp.toPx()),1.7.dp.toPx(),cap=androidx.compose.ui.graphics.StrokeCap.Round)}else{drawArc(Color.White,-55f,110f,false,topLeft=androidx.compose.ui.geometry.Offset(7.dp.toPx(),2.dp.toPx()),size=androidx.compose.ui.geometry.Size(9.dp.toPx(),12.dp.toPx()),style=androidx.compose.ui.graphics.drawscope.Stroke(1.5.dp.toPx()))}}
+    Row(Modifier.align(Alignment.CenterStart).padding(start=8.dp),horizontalArrangement=Arrangement.spacedBy(6.dp),verticalAlignment=Alignment.CenterVertically){
+     WpGlassTopButton(onClick = { muted = !muted }) {
+      Canvas(Modifier.size(15.dp)) {
+       val p = Path().apply {
+        moveTo(1.5.dp.toPx(), 5.dp.toPx())
+        lineTo(5.dp.toPx(), 5.dp.toPx())
+        lineTo(9.5.dp.toPx(), 1.8.dp.toPx())
+        lineTo(9.5.dp.toPx(), 13.2.dp.toPx())
+        lineTo(5.dp.toPx(), 10.dp.toPx())
+        lineTo(1.5.dp.toPx(), 10.dp.toPx())
+        close()
+       }
+       drawPath(p, Color.White.copy(alpha = if (muted) 0.55f else 1f), style = Fill)
+       drawPath(p, Color.White.copy(alpha = if (muted) 0.55f else 1f), style = Stroke(1.2.dp.toPx(), join = StrokeJoin.Round))
+       if (muted) {
+        drawLine(
+         Color.White,
+         Offset(2.dp.toPx(), 2.dp.toPx()),
+         Offset(13.dp.toPx(), 13.dp.toPx()),
+         2.2.dp.toPx(),
+         cap = StrokeCap.Round
+        )
+       } else {
+        drawArc(
+         Color.White,
+         -52f,
+         104f,
+         false,
+         topLeft = Offset(7.2.dp.toPx(), 2.5.dp.toPx()),
+         size = Size(7.2.dp.toPx(), 10.dp.toPx()),
+         style = Stroke(1.9.dp.toPx(), cap = StrokeCap.Round)
+        )
+       }
+      }
      }
-     Box(Modifier.size(24.dp).clip(RoundedCornerShape(6.dp)).background(Color.White.copy(alpha=.20f)).border(1.dp,Color.White.copy(alpha=.40f),RoundedCornerShape(6.dp)).clickable{rulesOpen=true},contentAlignment=Alignment.Center){Text("?",color=Color.White,fontSize=14.sp,fontWeight=FontWeight.ExtraBold)}
+     WpGlassTopButton(onClick = { rulesOpen = true }) {
+      Text(
+       "?",
+       color = Color.White,
+       fontSize = 15.sp,
+       fontWeight = FontWeight.Black,
+       style = TextStyle(shadow = Shadow(Color.White.copy(alpha = 0.55f), Offset.Zero, 6f))
+      )
+     }
     }
-    Text("Wild Party",Modifier.align(Alignment.TopCenter),color=Color.White,fontSize=18.sp,fontWeight=FontWeight.Black,fontStyle=androidx.compose.ui.text.font.FontStyle.Italic)
-    Row(Modifier.align(Alignment.TopEnd).padding(end=8.dp),horizontalArrangement=Arrangement.spacedBy(4.dp),verticalAlignment=Alignment.CenterVertically){
-     Box(Modifier.size(24.dp).clip(RoundedCornerShape(6.dp)).background(Color.White.copy(alpha=.20f)).border(1.dp,Color.White.copy(alpha=.40f),RoundedCornerShape(6.dp)).clickable{historyOpen=true},contentAlignment=Alignment.Center){
-      Column(verticalArrangement=Arrangement.spacedBy(2.dp),horizontalAlignment=Alignment.CenterHorizontally){repeat(2){Box(Modifier.width(16.dp).height(2.5.dp).clip(RoundedCornerShape(2.dp)).background(Color.White))};Row(horizontalArrangement=Arrangement.spacedBy(1.dp)){Box(Modifier.width(10.dp).height(2.5.dp).clip(RoundedCornerShape(2.dp)).background(Color.White));Box(Modifier.width(3.dp).height(2.5.dp).clip(RoundedCornerShape(2.dp)).background(Color.White))}}
+    Text(
+     "Wild Party",
+     Modifier.align(Alignment.Center),
+     color = Color.White,
+     fontSize = 18.sp,
+     fontWeight = FontWeight.Black,
+     fontStyle = FontStyle.Italic,
+     style = TextStyle(shadow = Shadow(Color.Black.copy(alpha = 0.45f), Offset(0f, 2f), 4f))
+    )
+    Row(Modifier.align(Alignment.CenterEnd).padding(end=8.dp),horizontalArrangement=Arrangement.spacedBy(6.dp),verticalAlignment=Alignment.CenterVertically){
+     WpGlassTopButton(onClick = { historyOpen = true }) {
+      Canvas(Modifier.size(14.dp)) {
+       val hBar = 2.4.dp.toPx()
+       val r = CornerRadius(hBar / 2f, hBar / 2f)
+       drawRoundRect(Color.White, Offset(0.5.dp.toPx(), 2.dp.toPx()), Size(13.dp.toPx(), hBar), r)
+       drawRoundRect(Color.White, Offset(0.5.dp.toPx(), 6.dp.toPx()), Size(13.dp.toPx(), hBar), r)
+       drawRoundRect(Color.White, Offset(0.5.dp.toPx(), 10.dp.toPx()), Size(8.5.dp.toPx(), hBar), r)
+       drawRoundRect(Color.White, Offset(10.5.dp.toPx(), 10.dp.toPx()), Size(3.dp.toPx(), hBar), r)
+      }
      }
-     Box(Modifier.size(24.dp).clip(RoundedCornerShape(6.dp)).background(Color.White.copy(alpha=.20f)).border(1.dp,Color.White.copy(alpha=.40f),RoundedCornerShape(6.dp)).clickable{onMinimize()},contentAlignment=Alignment.Center){Canvas(Modifier.size(16.dp)){val p=androidx.compose.ui.graphics.Path().apply{moveTo(1.dp.toPx(),4.dp.toPx());lineTo(15.dp.toPx(),4.dp.toPx());lineTo(8.dp.toPx(),14.dp.toPx());close()};drawPath(p,Color.White)}}
-     Box(Modifier.size(24.dp).clip(RoundedCornerShape(6.dp)).background(Color.White.copy(alpha=.20f)).border(1.dp,Color.White.copy(alpha=.40f),RoundedCornerShape(6.dp)).clickable{onClose()},contentAlignment=Alignment.Center){Canvas(Modifier.size(16.dp)){val a=3.dp.toPx();val b=13.dp.toPx();drawLine(Color.White,androidx.compose.ui.geometry.Offset(a,a),androidx.compose.ui.geometry.Offset(b,b),2.2.dp.toPx(),cap=androidx.compose.ui.graphics.StrokeCap.Round);drawLine(Color.White,androidx.compose.ui.geometry.Offset(b,a),androidx.compose.ui.geometry.Offset(a,b),2.2.dp.toPx(),cap=androidx.compose.ui.graphics.StrokeCap.Round)}}
+     WpGlassTopButton(onClick = { onMinimize() }) {
+      Canvas(Modifier.size(14.dp)) {
+       val tri = Path().apply {
+        moveTo(2.2.dp.toPx(), 4.2.dp.toPx())
+        lineTo(11.8.dp.toPx(), 4.2.dp.toPx())
+        lineTo(7.dp.toPx(), 10.8.dp.toPx())
+        close()
+       }
+       drawPath(tri, Color.White.copy(alpha = 0.35f), style = Stroke(3.6.dp.toPx(), join = StrokeJoin.Round))
+       drawPath(
+        tri,
+        Brush.verticalGradient(listOf(Color(0xFFDDE3EE), Color.White)),
+        style = Fill
+       )
+       drawPath(
+        tri,
+        Brush.verticalGradient(listOf(Color(0xFFDDE3EE), Color.White)),
+        style = Stroke(2.2.dp.toPx(), join = StrokeJoin.Round)
+       )
+      }
+     }
+     WpGlassTopButton(onClick = { onClose() }) {
+      Canvas(Modifier.size(14.dp)) {
+       val a = 3.1.dp.toPx()
+       val b = 10.9.dp.toPx()
+       drawLine(Color.White.copy(alpha = 0.35f), Offset(a, a), Offset(b, b), 4.6.dp.toPx(), cap = StrokeCap.Round)
+       drawLine(Color.White.copy(alpha = 0.35f), Offset(b, a), Offset(a, b), 4.6.dp.toPx(), cap = StrokeCap.Round)
+       drawLine(Color.White, Offset(a, a), Offset(b, b), 3.0.dp.toPx(), cap = StrokeCap.Round)
+       drawLine(Color.White, Offset(b, a), Offset(a, b), 3.0.dp.toPx(), cap = StrokeCap.Round)
+      }
+     }
     }
    }
    Row(Modifier.fillMaxWidth().padding(top=44.dp,start=8.dp,end=8.dp).heightIn(min=28.dp).horizontalScroll(rememberScrollState()).clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha=.25f)).border(1.dp,Color.White.copy(alpha=.20f),RoundedCornerShape(50)).padding(horizontal=10.dp,vertical=3.dp),horizontalArrangement=Arrangement.spacedBy(6.dp),verticalAlignment=Alignment.CenterVertically){
-    if(history.isEmpty())Text("History",color=Color.White.copy(alpha=.5f),fontSize=10.sp,fontStyle=androidx.compose.ui.text.font.FontStyle.Italic)
-    else history.takeLast(9).forEach{record->
-     val mixBig=record.winner=="Mix Big";val mixSmall=record.winner=="Mix Small"
-     if(mixBig||mixSmall){
+    if(history.isEmpty())Text("History",color=Color.White.copy(alpha=.5f),fontSize=10.sp,fontStyle=FontStyle.Italic)
+    else {
+     val topHistory = history.takeLast(9)
+     topHistory.forEachIndexed{recordIdx,record->
+      val isNewest = recordIdx == topHistory.lastIndex
+      val mixBig=record.winner=="Mix Big";val mixSmall=record.winner=="Mix Small"
       Box(Modifier.size(24.dp),contentAlignment=Alignment.Center){
-       if(multiplierBg!=0)Image(painterResource(multiplierBg),null,Modifier.fillMaxSize(),contentScale=ContentScale.Fit)
-       val group=if(mixBig)listOf("Eagle","Bear","Tiger","Lion") else listOf("Dog","Deer","Zebra","Fox")
-       group.forEachIndexed{idx,n->val aid=wpAsset(context,wpAnimals.first{it.name==n}.image);if(aid!=0)Image(painterResource(aid),null,Modifier.align(when(idx){0->Alignment.TopStart;1->Alignment.TopEnd;2->Alignment.BottomStart;else->Alignment.BottomEnd}).size(12.dp),contentScale=ContentScale.Crop)}
+       if(mixBig||mixSmall){
+        if(multiplierBg!=0)Image(painterResource(multiplierBg),null,Modifier.fillMaxSize(),contentScale=ContentScale.Fit)
+        val group=if(mixBig)listOf("Eagle","Bear","Tiger","Lion") else listOf("Rabbit","Deer","Dog","Camel")
+        group.forEachIndexed{idx,n->val aid=wpAsset(context,wpAnimals.first{it.name==n}.image);if(aid!=0)Image(painterResource(aid),null,Modifier.align(when(idx){0->Alignment.TopStart;1->Alignment.TopEnd;2->Alignment.BottomStart;else->Alignment.BottomEnd}).size(12.dp),contentScale=ContentScale.Crop)}
+       }else{val aid=wpAsset(context,wpAnimals.firstOrNull{it.name==record.winner}?.image?: "");if(aid!=0)Image(painterResource(aid),record.winner,Modifier.fillMaxSize(),contentScale=ContentScale.Fit)}
+       if(isNewest){
+        WpHistoryNewPill(modifier = Modifier.align(Alignment.BottomCenter).offset(y = 1.dp))
+       }
       }
-     }else{val aid=wpAsset(context,wpAnimals.firstOrNull{it.name==record.winner}?.image?: "");if(aid!=0)Image(painterResource(aid),record.winner,Modifier.size(24.dp),contentScale=ContentScale.Fit)}
+     }
     }
    }
    Box(Modifier.align(Alignment.Center).size(320.dp),contentAlignment=Alignment.Center){
-    // Keep the original wheel background image; remove only the unwanted extra wheel-tune overlay.
-    val wheelBg=wpAsset(context,"wp_1787344138649_2")
-    if(wheelBg!=0)Image(painterResource(wheelBg),null,Modifier.fillMaxSize(),contentScale=ContentScale.Fit)
-    Box(Modifier.size(260.dp).clip(CircleShape).background(Color(0xCC311D0C)).border(5.dp,Color(0xFFFFD16B),CircleShape))
-    Canvas(Modifier.size(250.dp)){drawCircle(Color(0xFF6B3B14),style=androidx.compose.ui.graphics.drawscope.Stroke(5.dp.toPx()));for(i in 0..7){val a=Math.toRadians(i*45.0-90);val c=size.width/2;drawLine(Color(0xFFFFD56A),androidx.compose.ui.geometry.Offset(c,c),androidx.compose.ui.geometry.Offset(c+cos(a).toFloat()*size.width*.48f,c+sin(a).toFloat()*size.height*.48f),2.dp.toPx())}}
+    // Center background image (public/IMG_20261121_102855.png)
+    val centerBg=wpAsset(context,"img_20261121_102855")
+    if(centerBg!=0)Image(painterResource(centerBg),null,Modifier.fillMaxSize(),contentScale=ContentScale.Fit)
     wpAnimals.forEachIndexed{i,a->
      val rad=Math.toRadians(a.angle.toDouble());val x=(cos(rad)*130).dp+a.dx.dp;val y=(sin(rad)*130).dp+a.dy.dp
      val active=highlight==i||(phase==WpPhase.RESULT&&((mode==WpMode.MIX_BIG&&i>=4)||(mode==WpMode.MIX_SMALL&&i<4)))
      val image=wpAsset(context,a.image)
-     Box(Modifier.offset(x,y).size(a.size.dp).clip(CircleShape).background(Color(0xFF4A2B13)).border(if(active)3.dp else 1.dp,if(active)wpGold else Color(0xFFB8864B),CircleShape).clickable{place(a.name)}.padding(4.dp),contentAlignment=Alignment.Center){
-      if(image!=0)Image(painterResource(image),a.name,Modifier.fillMaxSize().graphicsLayer{alpha=if(phase==WpPhase.BETTING||active)1f else .4f},contentScale=ContentScale.Fit)
-      val amount=bets[a.name]?:0L
-      if(amount>0)Text(wpFormat(amount),Modifier.align(Alignment.BottomCenter).clip(CircleShape).background(Color(0xFFF6D7B0)).padding(horizontal=5.dp,vertical=1.dp),color=Color(0xFF65330E),fontSize=8.sp,fontWeight=FontWeight.Black)
+     val amount=bets[a.name]?:0L
+     Box(Modifier.offset(x,y).size(a.size.dp).zIndex(if(amount>0)2f else 0f),contentAlignment=Alignment.Center){
+      Box(Modifier.fillMaxSize().clip(CircleShape).background(Color(0xFF4A2B13)).border(if(active)3.dp else 1.dp,if(active)wpGold else Color(0xFFB8864B),CircleShape).clickable{place(a.name)}.padding(4.dp),contentAlignment=Alignment.Center){
+       if(image!=0)Image(painterResource(image),a.name,Modifier.fillMaxSize().graphicsLayer{alpha=if(phase==WpPhase.BETTING||active)1f else .4f},contentScale=ContentScale.Fit)
+      }
+      if(amount>0)WpBetBadge(
+       amountText=wpFormat(amount),
+       coinResId=coin,
+       modifier=Modifier.align(Alignment.BottomCenter).offset(y=5.dp)
+      )
      }
     }
-    Box(Modifier.size(68.dp).clip(CircleShape).background(Color(0xFF8B4D16)).border(3.dp,wpGold,CircleShape),contentAlignment=Alignment.Center){
-     Column(horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){
-      Text("${countdown}s",color=Color.White,fontWeight=FontWeight.Black,fontSize=19.sp,lineHeight=20.sp)
-      Text(when(phase){WpPhase.BETTING->"BETTING";WpPhase.SPINNING->"SPINNING";WpPhase.RESULT->"RESULT"},color=wpGold,fontWeight=FontWeight.ExtraBold,fontSize=7.sp)
-      Text("ROUND #$round",color=Color.White.copy(alpha=.9f),fontWeight=FontWeight.Bold,fontSize=6.sp)
+    Box(
+     Modifier
+      .size(68.dp)
+      .clip(CircleShape)
+      .background(
+       Brush.verticalGradient(
+        colors = listOf(
+         Color(0xFFFFFAD6),
+         Color(0xFFFFEBA8),
+         Color(0xFFFDBA68),
+         Color(0xFFEC7A30)
+        )
+       )
+      )
+      .border(
+       width = 2.5.dp,
+       brush = Brush.verticalGradient(
+        colors = listOf(
+         Color(0xFFFFEC9E),
+         Color(0xFFF5B756),
+         Color(0xFFD97A2B)
+        )
+       ),
+       shape = CircleShape
+      ),
+     contentAlignment = Alignment.Center
+    ){
+     Column(
+      horizontalAlignment = Alignment.CenterHorizontally,
+      verticalArrangement = Arrangement.Center
+     ){
+      if(phase == WpPhase.BETTING){
+       Text(
+        "Select\nAnimal now",
+        color = Color(0xFF4A1F06),
+        fontSize = 8.5.sp,
+        lineHeight = 9.5.sp,
+        fontWeight = FontWeight.ExtraBold,
+        fontStyle = FontStyle.Italic,
+        textAlign = TextAlign.Center
+       )
+       Spacer(Modifier.height(2.dp))
+       Text(
+        "${countdown}s",
+        color = Color(0xFF4E2105),
+        fontWeight = FontWeight.Black,
+        fontSize = 20.sp,
+        lineHeight = 20.sp
+       )
+      } else {
+       Text(
+        "${countdown}s",
+        color = Color(0xFFC84600),
+        fontWeight = FontWeight.Black,
+        fontSize = 21.sp,
+        lineHeight = 21.sp,
+        style = TextStyle(shadow = Shadow(Color(0xFFFFE59E).copy(alpha = 0.7f), Offset(0f, 1f), 2f))
+       )
+       Spacer(Modifier.height(3.dp))
+       Text(
+        "Waiting..",
+        color = Color(0xFF5A2206),
+        fontWeight = FontWeight.ExtraBold,
+        fontStyle = FontStyle.Italic,
+        fontSize = 8.5.sp,
+        lineHeight = 9.5.sp
+       )
+      }
      }
     }
    }
@@ -256,59 +1132,496 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
     Modifier.align(Alignment.BottomStart).padding(start=8.dp,bottom=60.dp).size(width=40.dp,height=55.dp),
     contentScale=ContentScale.FillBounds
    )
-   Row(Modifier.align(Alignment.BottomStart).padding(start=10.dp,bottom=12.dp),verticalAlignment=Alignment.CenterVertically){
-    val coin=wpAsset(context,"wp_file_00000000e56882119c217d508b6733dc");if(coin!=0)Image(painterResource(coin),null,Modifier.size(20.dp))
-    Text(balance.toString(),color=wpGold,fontSize=12.sp,fontWeight=FontWeight.Black)
-   }
+   WpBottomBalanceBar(
+    coinResId = coin,
+    balance = balance,
+    modifier = Modifier.align(Alignment.BottomStart).padding(start = 8.dp, bottom = 10.dp)
+   )
    Row(Modifier.align(Alignment.BottomEnd).padding(end=8.dp,bottom=8.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){
-    Text("Repeat",Modifier.clip(RoundedCornerShape(6.dp)).background(Color.White.copy(alpha=.2f)).clickable{scope.launch{val cost=lastBets.values.sum();if(phase==WpPhase.BETTING&&cost>0&&balance>=cost){walletChange(-cost,"Repeat Bet in Wild Party");bets=bets.toMutableMap().also{m->lastBets.forEach{(k,v)->m[k]=(m[k]?:0L)+v}}}}}.padding(horizontal=7.dp,vertical=7.dp),color=Color.White,fontSize=9.sp,fontWeight=FontWeight.Black)
+    WpGlossyRepeatButton(
+     onClick = {
+      scope.launch {
+       val cost = lastBets.values.sum()
+       if (phase == WpPhase.BETTING && cost > 0 && balance >= cost) {
+        walletChange(-cost, "Repeat Bet in Wild Party")
+        bets = bets.toMutableMap().also { m -> lastBets.forEach { (k, v) -> m[k] = (m[k] ?: 0L) + v } }
+       }
+      }
+     }
+    )
     wpChips.forEachIndexed{i,c->val id=wpAsset(context,c.image);Box(Modifier.size(34.dp).graphicsLayer{val scale=if(chipIndex==i)1.08f else 1f;scaleX=scale;scaleY=scale;translationY=if(chipIndex==i)-8.dp.toPx() else 0f}.border(if(chipIndex==i)2.dp else 0.dp,wpGold,CircleShape).clip(CircleShape).background(Color(0xFF54351C)).clickable{chipIndex=i},contentAlignment=Alignment.Center){if(id!=0)Image(painterResource(id),c.label,Modifier.fillMaxSize(),contentScale=ContentScale.Fit)else Text(c.label,color=Color.White,fontSize=8.sp)}}
    }
-   if(loading)Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=.8f)),contentAlignment=Alignment.Center){
-    Column(horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(24.dp)){
-     val loadingArt=wpAsset(context,"wp_file_000000009d808211b8ffb7c2183b4ef5")
-     if(loadingArt!=0)Image(painterResource(loadingArt),null,Modifier.size(96.dp),contentScale=ContentScale.Fit)
-     CircularProgressIndicator(color=wpGold)
+   if(loading)WpLoadingPage(progress=loadingProgress)
+  }
+
+  // History Page (same height as Main page, max 20 rows, Time | Result | My Bet | Win Amount)
+  if(historyOpen)WpFullHeightSheet(title="History",sheetHeight=h,onDismiss={historyOpen=false}){
+   Row(
+    modifier = Modifier
+     .fillMaxWidth()
+     .background(Color(0xFF151515))
+     .padding(horizontal = 14.dp, vertical = 11.dp),
+    verticalAlignment = Alignment.CenterVertically
+   ) {
+    Text("Time", Modifier.weight(1.35f), color = Color(0xFFAFAFAF), fontSize = 13.sp, fontWeight = FontWeight.Medium)
+    Text("Result", Modifier.weight(0.90f), color = Color(0xFFAFAFAF), fontSize = 13.sp, fontWeight = FontWeight.Medium, textAlign = TextAlign.Center)
+    Text("My Bet", Modifier.weight(0.95f), color = Color(0xFFAFAFAF), fontSize = 13.sp, fontWeight = FontWeight.Medium, textAlign = TextAlign.Center)
+    Text("Win Amount", Modifier.weight(1.10f), color = Color(0xFFAFAFAF), fontSize = 13.sp, fontWeight = FontWeight.Medium, textAlign = TextAlign.End)
+   }
+   val recentTwenty = history.takeLast(20).reversed()
+   if (recentTwenty.isEmpty()) {
+    Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+     Text("No History Yet", color = Color.White.copy(alpha = 0.45f), fontSize = 13.sp)
+    }
+   } else {
+    LazyColumn(Modifier.fillMaxWidth().weight(1f)) {
+     items(recentTwenty, key = { it.round }) { r ->
+      Row(
+       modifier = Modifier
+        .fillMaxWidth()
+        .padding(horizontal = 14.dp, vertical = 9.dp),
+       verticalAlignment = Alignment.CenterVertically
+      ) {
+       Text(
+        wpFormatTime(r.time),
+        Modifier.weight(1.35f),
+        color = Color.White,
+        fontSize = 13.sp,
+        fontWeight = FontWeight.Medium
+       )
+       Box(Modifier.weight(0.90f), contentAlignment = Alignment.Center) {
+        val mixBig = r.winner == "Mix Big"
+        val mixSmall = r.winner == "Mix Small"
+        if (mixBig || mixSmall) {
+         Box(Modifier.size(30.dp), contentAlignment = Alignment.Center) {
+          if (multiplierBg != 0) Image(painterResource(multiplierBg), null, Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
+          val group = if (mixBig) listOf("Eagle", "Bear", "Tiger", "Lion") else listOf("Rabbit", "Deer", "Dog", "Camel")
+          group.forEachIndexed { idx, n ->
+           val aid = wpAsset(context, wpAnimals.first { it.name == n }.image)
+           if (aid != 0) Image(
+            painterResource(aid),
+            null,
+            Modifier.align(when (idx) { 0 -> Alignment.TopStart; 1 -> Alignment.TopEnd; 2 -> Alignment.BottomStart; else -> Alignment.BottomEnd }).size(14.dp),
+            contentScale = ContentScale.Crop
+           )
+          }
+         }
+        } else {
+         val aid = wpAsset(context, wpAnimals.firstOrNull { it.name == r.winner }?.image ?: "")
+         if (aid != 0) Image(painterResource(aid), r.winner, Modifier.size(30.dp), contentScale = ContentScale.Fit)
+        }
+       }
+       Text(
+        if (r.myBet > 0L) wpFormat(r.myBet) else "0",
+        Modifier.weight(0.95f),
+        color = Color.White,
+        fontSize = 14.sp,
+        fontWeight = FontWeight.Bold,
+        textAlign = TextAlign.Center
+       )
+       Text(
+        if (r.winAmount > 0L) wpFormat(r.winAmount) else "0",
+        Modifier.weight(1.10f),
+        color = if (r.winAmount > 0L) wpGold else Color.White,
+        fontSize = 14.sp,
+        fontWeight = FontWeight.Bold,
+        textAlign = TextAlign.End
+       )
+      }
+      HorizontalDivider(
+       modifier = Modifier.padding(horizontal = 12.dp),
+       thickness = 0.7.dp,
+       color = Color.White.copy(alpha = 0.08f)
+      )
+     }
     }
    }
   }
-  if(historyOpen)WpSheet("History",{historyOpen=false}){
-   Row(Modifier.fillMaxWidth().padding(vertical=7.dp),horizontalArrangement=Arrangement.SpaceAround){Text("Round",color=wpGold,fontSize=10.sp);wpAnimals.forEach{val id=wpAsset(context,it.image);if(id!=0)Image(painterResource(id),null,Modifier.size(23.dp))}}
-   LazyColumn(Modifier.fillMaxWidth().weight(1f)){items(history.reversed(),key={it.round}){r->Row(Modifier.fillMaxWidth().padding(vertical=7.dp),horizontalArrangement=Arrangement.SpaceAround,verticalAlignment=Alignment.CenterVertically){Text("#${r.round}",color=Color.White,fontSize=10.sp);wpAnimals.forEachIndexed{i,a->val yes=r.winner==a.name||(r.winner=="Mix Big"&&i>=4)||(r.winner=="Mix Small"&&i<4);Text(if(yes)"✓" else "✕",color=if(yes)Color(0xFF34D399)else Color(0xFF9F5360),fontSize=12.sp)}};HorizontalDivider(color=Color.White.copy(alpha=.06f))}}}
-  if(rulesOpen)WpSheet("Rules",{rulesOpen=false}){Column(Modifier.verticalScroll(rememberScrollState()).padding(18.dp),verticalArrangement=Arrangement.spacedBy(13.dp)){listOf("Select your Chip and Choose the animals.","If Lion wins you will receive 45 times × your Bet.","For placing bet click on the Animals.","All 5 time gives 5 × your bet.","45, 25, 15, 10 TIME gives you × your bet.","Mix Big gives rewards on Eagle, Bear, Tiger, Lion. Mix Small rewards Deer, Dog, Zebra, Fox.").forEach{Text("•  $it",color=Color.White,fontSize=13.sp,fontWeight=FontWeight.SemiBold)}}}
-  if(winnerOpen)WpSheet("Wild Party Winners",{winnerOpen=false}){
-   Column(Modifier.fillMaxWidth().fillMaxHeight().verticalScroll(rememberScrollState()).padding(horizontal=16.dp,vertical=12.dp),horizontalAlignment=Alignment.CenterHorizontally){
-    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.End){Text("${winnerTimer}s",color=Color.White,fontWeight=FontWeight.Black,fontSize=12.sp)}
-    Text("Winning Amount   ${winAmount}",color=wpGold,fontWeight=FontWeight.Black,fontSize=17.sp)
-    Text("Bet Amount   ${betAmount}",color=Color.White,fontSize=13.sp)
-    Spacer(Modifier.height(12.dp))
-    val heading=wpAsset(context,"wp_img_20260913_000423")
-    if(heading!=0)Image(painterResource(heading),null,Modifier.fillMaxWidth(.80f).height(70.dp),contentScale=ContentScale.Fit)
+
+  // Rules Page (same height as Main page, exact layout as 2nd image)
+  if(rulesOpen)WpFullHeightSheet(title="Rules",sheetHeight=h,onDismiss={rulesOpen=false}){
+   Column(
+    modifier = Modifier
+     .fillMaxWidth()
+     .weight(1f)
+     .verticalScroll(rememberScrollState())
+     .padding(horizontal = 16.dp, vertical = 10.dp)
+   ) {
+    // Basic Rules
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+     Box(Modifier.size(6.dp).clip(CircleShape).background(Color.White))
+     Text("Basic Rules", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+    }
     Spacer(Modifier.height(10.dp))
-    Row(
-     Modifier.fillMaxWidth().height(150.dp),
-     horizontalArrangement=Arrangement.spacedBy(4.dp,Alignment.CenterHorizontally),
-     verticalAlignment=Alignment.Bottom
-    ){
-     val frameItems=listOf(
-      Triple("2nd","wp_img_20260912_235156",.84f),
-      Triple("1st","wp_img_20260912_235215",1f),
-      Triple("3rd","wp_img_20260912_235230",.84f)
+    Row(Modifier.padding(start = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+     Text("•", color = Color(0xFFE0E0E0), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+     Text(
+      "Players can choose 8 areas to place bets within the specified time, and will be rewarded with the corresponding multiplier if the prediction is correct.",
+      color = Color(0xFFE0E0E0),
+      fontSize = 13.5.sp,
+      lineHeight = 19.sp
      )
-     frameItems.forEachIndexed{index,item->
-      val frame=wpAsset(context,item.second)
-      val animalImage=wpAsset(context,wpAnimals[winnerIndex.coerceIn(0,7)].image)
-      Box(Modifier.weight(1f).fillMaxHeight(if(index==1)1f else .88f),contentAlignment=Alignment.Center){
-       if(frame!=0)Image(painterResource(frame),null,Modifier.fillMaxSize(),contentScale=ContentScale.Fit)
-       if(animalImage!=0)Image(
-        painterResource(animalImage),null,
-        Modifier.align(Alignment.Center).size(if(index==1)48.dp else 40.dp).clip(CircleShape),
-        contentScale=ContentScale.Crop
-       )
+    }
+
+    Spacer(Modifier.height(20.dp))
+
+    // Mix Prize
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+     Box(Modifier.size(6.dp).clip(CircleShape).background(Color.White))
+     Text("Mix Prize", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+    }
+    Spacer(Modifier.height(10.dp))
+    Row(Modifier.padding(start = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+     Text("•", color = Color(0xFFE0E0E0), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+     Text(
+      "The mix prize will be triggered irregularly (Open 4 large or 4 small animals together)",
+      color = Color(0xFFE0E0E0),
+      fontSize = 13.5.sp,
+      lineHeight = 19.sp
+     )
+    }
+
+    Spacer(Modifier.height(20.dp))
+
+    // Payout Rule
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+     Box(Modifier.size(6.dp).clip(CircleShape).background(Color.White))
+     Text("Payout Rule", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+    }
+    Spacer(Modifier.height(12.dp))
+    Text("Prize = Bet × Multiple", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+    Spacer(Modifier.height(10.dp))
+
+    val gridLine = Color.White.copy(alpha = 0.08f)
+    val smallGroup = wpAnimals.subList(0, 4)
+    val bigGroup = wpAnimals.subList(4, 8)
+
+    @Composable
+    fun PayoutAnimalRow(group: List<WpAnimal>) {
+     Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), verticalAlignment = Alignment.CenterVertically) {
+      Box(Modifier.weight(1.15f).padding(vertical = 14.dp), contentAlignment = Alignment.Center) {
+       Text("Position", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+      }
+      group.forEach { a ->
+       Box(Modifier.fillMaxHeight().width(0.7.dp).background(gridLine))
+       Box(Modifier.weight(1f).padding(vertical = 8.dp), contentAlignment = Alignment.Center) {
+        val aid = wpAsset(context, a.image)
+        if (aid != 0) Image(painterResource(aid), a.name, Modifier.size(38.dp), contentScale = ContentScale.Fit)
+       }
+      }
+     }
+    }
+
+    @Composable
+    fun PayoutMultipleRow(group: List<WpAnimal>) {
+     Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), verticalAlignment = Alignment.CenterVertically) {
+      Box(Modifier.weight(1.15f).padding(vertical = 14.dp), contentAlignment = Alignment.Center) {
+       Text("Multiple", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+      }
+      group.forEach { a ->
+       Box(Modifier.fillMaxHeight().width(0.7.dp).background(gridLine))
+       Box(Modifier.weight(1f).padding(vertical = 14.dp), contentAlignment = Alignment.Center) {
+        Text("${a.multiplier}", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+       }
+      }
+     }
+    }
+
+    Column(
+     modifier = Modifier
+      .fillMaxWidth()
+      .clip(RoundedCornerShape(12.dp))
+      .background(Color(0xFF141414))
+    ) {
+     PayoutAnimalRow(smallGroup)
+     HorizontalDivider(thickness = 0.7.dp, color = gridLine)
+     PayoutMultipleRow(smallGroup)
+     HorizontalDivider(thickness = 0.7.dp, color = gridLine)
+     PayoutAnimalRow(bigGroup)
+     HorizontalDivider(thickness = 0.7.dp, color = gridLine)
+     PayoutMultipleRow(bigGroup)
+    }
+    Spacer(Modifier.height(14.dp))
+   }
+  }
+
+  // Winner Page (Exact layout & spacing as reference image, using existing heading & frame drawables)
+  if(winnerOpen){
+   val winnerSheetShape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
+   Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
+    Box(
+     Modifier
+      .fillMaxSize()
+      .background(Color.Black.copy(alpha = 0.45f))
+      .clickable { winnerOpen = false }
+    )
+    Column(
+     modifier = Modifier
+      .fillMaxWidth()
+      .heightIn(max = h * 0.86f)
+      .clip(winnerSheetShape)
+      .background(Color(0xFF060608))
+      .clickable(
+       interactionSource = remember { MutableInteractionSource() },
+       indication = null,
+       onClick = {}
+      )
+      .verticalScroll(rememberScrollState())
+      .padding(start = 18.dp, end = 18.dp, top = 14.dp, bottom = 18.dp),
+     horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+     // Top Section: Countdown (top-right) + Winner Animal (left) + Prizes & Your Bet (right)
+     Box(Modifier.fillMaxWidth()) {
+      Text(
+       text = "${winnerTimer}s",
+       modifier = Modifier
+        .align(Alignment.TopEnd)
+        .padding(top = 2.dp, end = 2.dp),
+       color = Color.White,
+       fontWeight = FontWeight.Bold,
+       fontSize = 15.sp
+      )
+      Row(
+       modifier = Modifier
+        .fillMaxWidth()
+        .padding(top = 12.dp, start = 4.dp, end = 10.dp),
+       verticalAlignment = Alignment.CenterVertically
+      ) {
+       Box(Modifier.size(82.dp), contentAlignment = Alignment.Center) {
+        if (mode == WpMode.MIX_BIG || mode == WpMode.MIX_SMALL) {
+         if (multiplierBg != 0) Image(painterResource(multiplierBg), null, Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
+         val group = if (mode == WpMode.MIX_BIG) listOf("Eagle", "Bear", "Tiger", "Lion") else listOf("Rabbit", "Deer", "Dog", "Camel")
+         group.forEachIndexed { idx, n ->
+          val aid = wpAsset(context, wpAnimals.first { it.name == n }.image)
+          if (aid != 0) Image(
+           painterResource(aid),
+           null,
+           Modifier
+            .align(when (idx) { 0 -> Alignment.TopStart; 1 -> Alignment.TopEnd; 2 -> Alignment.BottomStart; else -> Alignment.BottomEnd })
+            .size(38.dp),
+           contentScale = ContentScale.Fit
+          )
+         }
+        } else {
+         val winAnimalImg = wpAsset(context, wpAnimals[winnerIndex.coerceIn(0, 7)].image)
+         if (winAnimalImg != 0) {
+          Image(
+           painterResource(winAnimalImg),
+           contentDescription = null,
+           modifier = Modifier.fillMaxSize(),
+           contentScale = ContentScale.Fit
+          )
+         }
+        }
+       }
+
+       Spacer(Modifier.width(24.dp))
+
+       Column(
+        modifier = Modifier.weight(1f),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+       ) {
+        Row(
+         modifier = Modifier.fillMaxWidth(),
+         verticalAlignment = Alignment.CenterVertically
+        ) {
+         Text(
+          text = "Prizes",
+          modifier = Modifier.weight(1f),
+          color = Color.White,
+          fontSize = 15.sp,
+          fontWeight = FontWeight.Bold
+         )
+         Row(
+          modifier = Modifier.weight(0.85f),
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.spacedBy(6.dp)
+         ) {
+          if (coin != 0) {
+           Image(
+            painterResource(coin),
+            contentDescription = null,
+            modifier = Modifier.size(18.dp),
+            contentScale = ContentScale.Fit
+           )
+          }
+          Text(
+           text = "$winAmount",
+           color = Color.White,
+           fontSize = 15.sp,
+           fontWeight = FontWeight.Bold
+          )
+         }
+        }
+
+        Row(
+         modifier = Modifier.fillMaxWidth(),
+         verticalAlignment = Alignment.CenterVertically
+        ) {
+         Text(
+          text = "Your Bet",
+          modifier = Modifier.weight(1f),
+          color = Color.White,
+          fontSize = 15.sp,
+          fontWeight = FontWeight.Bold
+         )
+         Row(
+          modifier = Modifier.weight(0.85f),
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.spacedBy(6.dp)
+         ) {
+          if (coin != 0) {
+           Image(
+            painterResource(coin),
+            contentDescription = null,
+            modifier = Modifier.size(18.dp),
+            contentScale = ContentScale.Fit
+           )
+          }
+          Text(
+           text = "$betAmount",
+           color = Color.White,
+           fontSize = 15.sp,
+           fontWeight = FontWeight.Bold
+          )
+         }
+        }
+       }
+      }
+     }
+
+     Spacer(Modifier.height(16.dp))
+
+     // Middle Heading Artwork (Top Winner image)
+     val heading = wpAsset(context, "wp_img_20260913_000423")
+     if (heading != 0) {
+      Image(
+       painterResource(heading),
+       contentDescription = null,
+       modifier = Modifier
+        .fillMaxWidth(0.94f)
+        .height(36.dp),
+       contentScale = ContentScale.Fit
+      )
+     }
+
+     Spacer(Modifier.height(14.dp))
+
+     // Bottom Podium: 2nd | 1st (slightly higher) | 3rd using existing frame drawables
+     val frameItems = listOf(
+      Triple("2nd", "wp_img_20260912_235156", 0),
+      Triple("1st", "wp_img_20260912_235215", 1),
+      Triple("3rd", "wp_img_20260912_235230", 2)
+     )
+     Row(
+      modifier = Modifier
+       .fillMaxWidth()
+       .padding(horizontal = 4.dp),
+      horizontalArrangement = Arrangement.SpaceEvenly,
+      verticalAlignment = Alignment.Bottom
+     ) {
+      frameItems.forEachIndexed { index, item ->
+       val isFirst = index == 1
+       val frame = wpAsset(context, item.second)
+       val frameSize = if (isFirst) 84.dp else 76.dp
+       val avatarSize = if (isFirst) 58.dp else 52.dp
+       val showMe = isFirst && winAmount > 0L
+
+       Column(
+        modifier = Modifier
+         .weight(1f)
+         .padding(bottom = if (isFirst) 12.dp else 0.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+       ) {
+        Box(
+         modifier = Modifier.size(frameSize),
+         contentAlignment = Alignment.Center
+        ) {
+         WpWinnerAvatarPlaceholder(
+          modifier = Modifier
+           .size(avatarSize)
+           .offset(y = 2.dp)
+         )
+         if (frame != 0) {
+          Image(
+           painterResource(frame),
+           contentDescription = item.first,
+           modifier = Modifier.fillMaxSize(),
+           contentScale = ContentScale.Fit
+          )
+         }
+        }
+        Spacer(Modifier.height(6.dp))
+        Text(
+         text = if (showMe) "You" else "-",
+         color = Color.White,
+         fontSize = 13.sp,
+         fontWeight = FontWeight.Bold,
+         maxLines = 1
+        )
+        Spacer(Modifier.height(4.dp))
+        Row(
+         verticalAlignment = Alignment.CenterVertically,
+         horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+         if (coin != 0) {
+          Image(
+           painterResource(coin),
+           contentDescription = null,
+           modifier = Modifier.size(15.dp),
+           contentScale = ContentScale.Fit
+          )
+         }
+         Text(
+          text = if (showMe) wpFormat(winAmount) else "-",
+          color = Color.White,
+          fontSize = 13.sp,
+          fontWeight = FontWeight.Bold,
+          maxLines = 1
+         )
+        }
+       }
       }
      }
     }
    }
+  }
+ }
+}
+
+@Composable
+private fun WpFullHeightSheet(
+ title: String,
+ sheetHeight: Dp,
+ onDismiss: () -> Unit,
+ content: @Composable ColumnScope.() -> Unit
+) {
+ Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
+  Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.45f)).clickable { onDismiss() })
+  Column(
+   modifier = Modifier
+    .fillMaxWidth()
+    .height(sheetHeight)
+    .background(Color.Black)
+  ) {
+   Box(
+    modifier = Modifier
+     .fillMaxWidth()
+     .padding(horizontal = 12.dp, vertical = 10.dp)
+   ) {
+    WpGlassBackButton(
+     onClick = onDismiss,
+     modifier = Modifier.align(Alignment.CenterStart)
+    )
+    Text(
+     title,
+     modifier = Modifier.align(Alignment.Center),
+     color = Color.White,
+     fontSize = 18.sp,
+     fontWeight = FontWeight.Bold
+    )
+   }
+   content()
   }
  }
 }
