@@ -598,11 +598,12 @@ private fun DragonBattleMainOverlay(
         AsyncImage(
             model = DRAGON_BOTTOM_LEFT_IMAGE,
             contentDescription = null,
-            modifier = Modifier.align(Alignment.BottomStart).padding(start = 8.dp, bottom = 60.dp).size(44.dp),
+            modifier = Modifier.align(Alignment.Start).padding(start = 8.dp, bottom = 60.dp).size(44.dp),
             contentScale = ContentScale.Fit
         )
 
-\n        // 4. PLAYERS ICON
+
+        // 4. PLAYERS ICON
         Row(
             modifier = Modifier.fillMaxWidth().padding(bottom = 2.dp),
             horizontalArrangement = Arrangement.Start
