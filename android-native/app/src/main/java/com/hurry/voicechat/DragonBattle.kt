@@ -325,7 +325,8 @@ private fun DragonBattleMainOverlay(
         }
     }
 
-    var selectedChipIndex by remember { mutableIntStateOf(0) }\n    var muted by remember { mutableStateOf(false) }
+    var selectedChipIndex by remember { mutableIntStateOf(0) }
+    var muted by remember { mutableStateOf(false) }
     var balance by remember { mutableLongStateOf(500_000L) }
 
     var potA by remember { mutableLongStateOf(0L) }
