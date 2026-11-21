@@ -1675,3 +1675,11 @@ Current documentation does not certify that all historical features are build-, 
 - Mic frame format, Socket.IO room relay, per-speaker queues, seat authorization, mute behavior, Bluetooth/media routing, and room UI are unchanged.
 - Native commit: `7a45c62e4335a65a3f66221bbf4b0ef35dd9fe42`.
 - Native APK build and real-device multi-speaker latency/dropout testing remain required; no measured latency claim is made.
+
+
+## 2026-11-22 — Native profile and room avatar fallback correction
+- `MeScreen.kt`: resolve the signed-in avatar from all supported profile keys (`image`, `dp`, `photo`, `photoURL`, `photoUrl`, `avatar`, `avatarUrl`, `profileImage`, `profileImageUrl`, `profile_image`, `imageUrl`, `picture`) and render the shared Zyora fallback when no valid image exists.
+- `PublicProfile.kt`: use the incoming `TargetUser.image/photo` when local cache has no avatar, accept the same profile-image aliases from remote profile data, and use the shared fallback instead of leaving an empty avatar surface.
+- `RoomPage.kt`: resolve the same image aliases in active-user and seat snapshots so the room seats/invite list do not lose DPs when the server uses a legacy image field.
+- `RoomProfile.kt`: resolve legacy avatar fields and use the same fallback in the room member profile.
+- UI layout, colors, avatar sizing, room voice/socket lifecycle, and wallet behavior are unchanged. Native APK build and live multi-device avatar/profile-sync verification are still required; no measured latency claim is made.
