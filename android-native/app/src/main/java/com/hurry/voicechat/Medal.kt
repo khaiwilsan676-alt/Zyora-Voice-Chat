@@ -317,6 +317,7 @@ fun MedalScreen(onBack: () -> Unit) {
                     }
             }
         }
+        }
 
         // FULL SCREEN MEDAL DETAIL DIALOG (IMAGE ONLY - SAME AS SCREENSHOT)
         if (selectedMedal != null && displayMedal != null) {
