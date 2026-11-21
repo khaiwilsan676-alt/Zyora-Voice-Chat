@@ -1654,3 +1654,10 @@ Current documentation does not certify that all historical features are build-, 
 - `LuckyBagNotificationSlider.kt`: the confirmation card places the details strip under the sender name and shows the current user's avatar/name beside the received amount. The sender/claimant UI remains otherwise unchanged.
 - A successful claim amount is cached locally by bag and user. Reopening the room Lucky Bag during its lifetime opens the same confirmation card again; confirming remains idempotent and does not credit coins twice.
 - Verification: source changes committed. Native APK build, deployed backend, and real-time two-device behavior remain unverified.
+
+
+## 2026-11-21 — Lucky Bag sender claim details reliability
+- `luckybag.kt`: while the sender's Claim details screen refreshes live server claims, each returned claimant row is also upserted into the sender device's `NativeIndexDatabase` cache with bag/room IDs, total bag amount, recipient limit, opened count, and claimed total. This supplements the Socket.IO cache event so a short socket interruption does not lose sender-side claim history.
+- Claim details display unclaimed coin quantity, opened people count/limit, claimed quantity/total, and each claimant's avatar/name with their grabbed amount. The compact status line remains shifted upward by 5dp.
+- The Confirm card keeps its reward/details strip directly under the sender name and the claimant avatar/name on the left with received coins on the right. Reopening an already-claimed bag continues to use the locally saved claim amount and the same Confirm card.
+- No unrelated UI or positioning changes. APK/device verification remains pending.
