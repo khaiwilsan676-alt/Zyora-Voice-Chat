@@ -1691,3 +1691,9 @@ Current documentation does not certify that all historical features are build-, 
 - `HomeScreen.kt`: retained existing room snapshot memory/Room-DB warm cache, five-minute refresh throttle, remembered country filtering/row grouping, stable room-row keys, and lazy rendering. No UI redesign or refresh cadence change.
 - Room socket join/presence/seats behavior, voice transport, music behavior, room layout, colors, and homepage layout are unchanged.
 - Native build and on-device scroll/frame-time/reconnect tests are required to confirm measured improvement; no claim of verified zero-lag is made.
+
+## 2026-11-22 — Medal page category cleanup
+- `Medal.kt`: the Honor tab now renders only the seven Level medals from the shared Level reward catalog (`Lv.5`, `Lv.15`, `Lv.30`, `Lv.50`, `Lv.65`, `Lv.75`, `Lv.90`). The Event tab shows the existing Family medal showcase only.
+- Removed the unrelated Rich, Room, Millionaire, Gamer, VIP, Pure Love and special-event medal images from the Medal page. Existing Medal page header, tabs, background, slots, colors and overall layout are preserved.
+- `Level.kt`: exposed the existing Level medal catalog for reuse; the Level page's medal section and assets are unchanged.
+- Native APK build and on-device confirmation are still required.
