@@ -275,7 +275,7 @@ fun JitsiRoomAudio(
                                 if (voiceDetected) {
                                     speechFrames += 1
                                     silenceFrames = 0
-                                    if (!voiceActive && speechFrames >= 2) {
+                                    if (!voiceActive && speechFrames >= 1) {
                                         voiceActive = true
                                         if (roomSocket.connected()) {
                                             roomSocket.emit("room_voice_activity", JSONObject().put("roomId", roomId).put("speaking", true))
@@ -378,7 +378,7 @@ fun JitsiRoomAudio(
                 AudioTrack.Builder()
                     .setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).build())
                     .setAudioFormat(AudioFormat.Builder().setSampleRate(sampleRate).setEncoding(AudioFormat.ENCODING_PCM_16BIT).setChannelMask(channelMask).build())
-                    .setBufferSizeInBytes(maxOf(minOut * 2, frameBytes * 8))
+                    .setBufferSizeInBytes(maxOf(minOut, frameBytes * 4))
                     .setTransferMode(AudioTrack.MODE_STREAM).build()
                     .takeIf { it.state == AudioTrack.STATE_INITIALIZED }
             }.getOrNull()
@@ -389,11 +389,8 @@ fun JitsiRoomAudio(
                 val current = if (isVoicePacket) voicePlaybackThread else musicPlaybackThread
                 if (current?.isAlive == true) return
                 val worker = thread(name = if (isVoicePacket) "ZyoraRoomVoicePlayback" else "ZyoraRoomMusicPlayback", isDaemon = true) {
-                    // Prime the voice jitter buffers before first playback. This absorbs
-                    // small per-sender Socket.IO arrival differences when 2+ people speak.
-                    if (isVoicePacket) {
-                        try { Thread.sleep(40) } catch (_: InterruptedException) { }
-                    }
+                    // Start playback as soon as the first complete frame arrives.
+                    // A fixed startup sleep added avoidable latency to every room voice session.
                     while (alive.get()) {
                         val packet = if (isVoicePacket) {
                             if (!latestPlaybackVoiceEnabled) {
@@ -401,12 +398,8 @@ fun JitsiRoomAudio(
                                 try { Thread.sleep(20) } catch (_: InterruptedException) { if (!alive.get()) break }
                                 continue
                             }
-                            // Collect a full packet window before mixing independent publishers.
-                            // A 40 ms prebuffer above plus this short window prevents late-arriving
-                            // speakers from being played as a second, offset copy of the same moment.
-                            if (voiceSpeakerQueues.values.any { it.isNotEmpty() }) {
-                                try { Thread.sleep(10) } catch (_: InterruptedException) { if (!alive.get()) break }
-                            }
+                            // Mix frames already available without an extra per-frame wait.
+                            // Each publisher keeps its own bounded queue for network jitter.
                             val mixed = LongArray(ROOM_VOICE_FRAME_BYTES / 2)
                             var activeSpeakers = 0
                             voiceSpeakerQueues.values.forEach { speakerQueue ->
