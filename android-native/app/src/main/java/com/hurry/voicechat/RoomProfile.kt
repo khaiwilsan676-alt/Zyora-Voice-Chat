@@ -158,7 +158,7 @@ fun RoomProfile(
     var loadedProfile by remember(profileCacheKeys) { mutableStateOf(cachedProfile) }
 
     var displayName by remember(user.uid, user.id, user.accountId, user.name, cachedProfile) { mutableStateOf(cachedProfile?.optString("name")?.takeIf { it.isNotBlank() && it != "null" } ?: user.name.ifBlank { "User" }) }
-    var displayImage by remember(user.uid, user.id, user.accountId, user.image, cachedProfile) { mutableStateOf(sequenceOf("image", "avatar", "profileImageUrl").map { cachedProfile?.optString(it, "").orEmpty() }.firstOrNull { it.isNotBlank() && it != "null" } ?: user.image) }
+    var displayImage by remember(user.uid, user.id, user.accountId, user.image, cachedProfile) { mutableStateOf(sequenceOf("image", "dp", "photo", "photoURL", "photoUrl", "avatar", "avatarUrl", "profileImage", "profileImageUrl", "profile_image", "imageUrl", "picture").map { key -> cachedProfile?.optString(key, "").orEmpty().trim() }.firstOrNull { it.isNotBlank() && it != "null" && it != "undefined" } ?: user.image) }
     val displayProfileImage = displayImage
     var displayGender by remember(user.uid, user.id, user.accountId, user.gender, cachedProfile) { mutableStateOf(cachedProfile?.optString("gender")?.takeIf { it.isNotBlank() && it != "null" } ?: user.gender) }
     var displayAge by remember(user.uid, user.id, user.accountId, user.age, cachedProfile) { mutableIntStateOf(if (cachedProfile?.has("age") == true) cachedProfile.optInt("age", user.age) else user.age) }
@@ -184,7 +184,7 @@ fun RoomProfile(
             }
         }
         remote?.let { latest ->
-            sequenceOf("name", "displayName", "userName", "nickname", "image", "avatar", "profileImageUrl", "flag", "country", "countryName", "countryCode", "country_code", "nationality", "location").forEach { key ->
+            sequenceOf("name", "displayName", "userName", "nickname", "image", "dp", "photo", "photoURL", "photoUrl", "avatar", "avatarUrl", "profileImage", "profileImageUrl", "profile_image", "imageUrl", "picture", "flag", "country", "countryName", "countryCode", "country_code", "nationality", "location").forEach { key ->
                 val value = latest.optString(key, "").trim()
                 val isPlaceholderName = key in setOf("name", "displayName", "userName", "nickname") && value.equals("User", ignoreCase = true)
                 val isPlaceholderAvatar = key in setOf("image", "avatar", "profileImageUrl") &&
