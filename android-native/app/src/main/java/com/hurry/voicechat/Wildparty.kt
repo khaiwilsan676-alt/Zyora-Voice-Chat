@@ -1308,7 +1308,8 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
   topHistoryScrollState.scrollTo(0)
  }
  fun pendingWalletKey()="queue_$walletAccountId"
- suspend fun syncPendingWalletChanges(){
+ val walletSyncMutex = remember(walletAccountId) { Mutex() }
+  suspend fun syncPendingWalletChanges() = walletSyncMutex.withLock {
   val userId=walletAccountId.takeIf{it.isNotBlank()}?:return
   val key=pendingWalletKey()
   val queue=runCatching{JSONArray(pendingWalletPrefs.getString(key,"[]")?:"[]")}.getOrElse{return}
@@ -1355,7 +1356,7 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
   val next=(balance+delta).coerceAtLeast(0L)
   balance=next
   walletCachePrefs.edit().putLong("balance_$userId",next).apply()
-  val old=dao.getUserData()?:UserDataEntity(balance=next);dao.saveUserData(old.copy(balance=next))
+
   val nowMs=System.currentTimeMillis()
   val transactionId="wild_party_${if(delta<0L)"bet" else "win"}_${nowMs}_${java.util.UUID.randomUUID()}"
   val now=Calendar.getInstance()
@@ -1363,9 +1364,17 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
   val queue=runCatching{JSONArray(pendingWalletPrefs.getString(pendingWalletKey(),"[]")?:"[]")}.getOrDefault(JSONArray())
   queue.put(JSONObject().put("id",transactionId).put("delta",delta).put("title",title).put("date",date))
   check(pendingWalletPrefs.edit().putString(pendingWalletKey(),queue.toString()).commit()){"Could not save pending Wallet transaction"}
-  dao.insertTransaction(TransactionEntity(title=title,amount=delta,date=date,timestamp=nowMs,type="coin"))
-  withContext(Dispatchers.IO){NativeIndexDatabase(context).saveWalletTransaction(transactionId,userId,title,delta,date,nowMs,"coin")}
-  runCatching{syncPendingWalletChanges()}.onFailure{android.util.Log.w("WildParty","Wallet sync queued for retry",it)}
+   scope.launch(Dispatchers.IO) {
+    runCatching {
+     dao.insertTransaction(TransactionEntity(title=title,amount=delta,date=date,timestamp=nowMs,type="coin"))
+     NativeIndexDatabase(context).saveWalletTransaction(transactionId,userId,title,delta,date,nowMs,"coin")
+    }.onFailure { android.util.Log.w("WildParty","Local wallet history write deferred",it) }
+   }
+   scope.launch {
+    delay(250)
+    runCatching { syncPendingWalletChanges() }
+     .onFailure { android.util.Log.w("WildParty","Wallet sync queued for retry",it) }
+   }
  }
 
  LaunchedEffect(walletAccountId){if(walletAccountId.isNotBlank())runCatching{syncPendingWalletChanges()}}
@@ -1459,8 +1468,9 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
     WpMode.SINGLE->(bets[animal.name]?:0L)*animal.multiplier
    }
    history=(history+WpRound(round,label,System.currentTimeMillis(),betAmount,winAmount)).takeLast(50);persistHistory()
-   delay(1500);if(winAmount>0)runCatching{walletChange(winAmount,"Won in Wild Party")}.onFailure{android.util.Log.e("WildParty","Wallet win sync failed",it)}
-   winnerTimer=5;winnerOpen=true
+    winnerTimer=5
+    winnerOpen=true
+    if(winAmount>0)launch{runCatching{walletChange(winAmount,"Won in Wild Party")}.onFailure{android.util.Log.e("WildParty","Wallet win queue failed",it)}}
   }
  }
  LaunchedEffect(winnerOpen){
