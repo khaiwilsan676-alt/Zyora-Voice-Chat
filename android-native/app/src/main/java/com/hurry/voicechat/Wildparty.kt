@@ -1203,7 +1203,15 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
  val scope= rememberCoroutineScope()
  val dao= remember{WalletDatabase.get(context).walletDao()}
  val soundManager = remember(context) { WpSoundManager(context.applicationContext) }
- var balance by remember{mutableLongStateOf(0L)}
+ val walletAuthPrefs=remember(context){context.getSharedPreferences("hurry_auth",Context.MODE_PRIVATE)}
+ val walletCachePrefs=remember(context){context.getSharedPreferences("zyora_wallet_cache",Context.MODE_PRIVATE)}
+ val walletAccountId=remember(walletAuthPrefs){
+  walletAuthPrefs.getString("uid",null)?.takeIf{it.isNotBlank()}
+   ?:walletAuthPrefs.getString("accountId","").orEmpty()
+ }
+ var balance by remember(walletAccountId){
+  mutableLongStateOf(walletCachePrefs.getLong("balance_$walletAccountId",0L).coerceAtLeast(0L))
+ }
  var phase by remember{mutableStateOf(WpPhase.BETTING)}
  var round by remember{mutableIntStateOf(1)}
  var countdown by remember{mutableIntStateOf(30)}
@@ -1251,10 +1259,15 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
  LaunchedEffect(Unit){
   launch(Dispatchers.IO) { soundManager.preload() }
   runCatching{
-   val authPrefs=context.getSharedPreferences("hurry_auth",Context.MODE_PRIVATE)
-   val walletUserId=authPrefs.getString("uid",null)?.takeIf{it.isNotBlank()}
-    ?:authPrefs.getString("accountId","").orEmpty().takeIf{it.isNotBlank()}
+   val walletUserId=walletAccountId.takeIf{it.isNotBlank()}
+   // Keep the real Wallet page balance visible immediately; never replace it with a fake zero.
    if(walletUserId!=null){
+    if(!walletCachePrefs.contains("balance_$walletUserId")){
+     dao.getUserData()?.balance?.let{localBalance->
+      balance=localBalance.coerceAtLeast(0L)
+      walletCachePrefs.edit().putLong("balance_$walletUserId",balance).apply()
+     }
+    }
     val encoded=java.net.URLEncoder.encode(walletUserId,"UTF-8")
     val walletConnection=(URL("https://zyora-server.onrender.com/api/lucky-bag/wallet/$encoded").openConnection() as HttpURLConnection).apply{
      connectTimeout=12000;readTimeout=12000;setRequestProperty("Cache-Control","no-cache")
