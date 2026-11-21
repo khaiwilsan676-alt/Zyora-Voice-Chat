@@ -57,7 +57,7 @@ private data class NativeLevelTier(
     val rewards: List<Pair<Int, String>>
 )
 
-private data class NativeLevelMedalItem(
+internal data class NativeLevelMedalItem(
     val levelText: String,
     val imageFile: String,
     val videoFile: String
@@ -88,7 +88,7 @@ private val levelTiers = listOf(
     NativeLevelTier("Lv.91 - Lv.100","IMG_20261028_004732.png",listOf(92 to "740,000,000",94 to "800,000,000",96 to "860,000,000",98 to "930,000,000",100 to "1,000,000,000"))
 )
 
-private val medalsList = listOf(
+internal val medalsList = listOf(
     NativeLevelMedalItem("Lv.5", "IMG_20261024_153426.png", "1000220021-background.mp4"),
     NativeLevelMedalItem("Lv.15", "file_00000000bd988211840a0dcbe09101ee.png", "1000220022-background.mp4"),
     NativeLevelMedalItem("Lv.30", "IMG_20261024_153407.png", "1000220023-background.mp4"),
