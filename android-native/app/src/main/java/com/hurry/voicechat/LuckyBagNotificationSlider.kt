@@ -476,6 +476,7 @@ fun LuckyBagOpenConfirmCards(
                                     onLuckyBagClaimErrorChange("Lucky Bag confirmation unavailable")
                                 } else {
                                     onShowLuckyBagClaimedCardChange(false)
+                                    onShowFloatingLuckyBagChange(true)
                                     onLuckyBagClaimErrorChange(null)
                                     
                                     CoroutineScope(Dispatchers.IO).launch {
