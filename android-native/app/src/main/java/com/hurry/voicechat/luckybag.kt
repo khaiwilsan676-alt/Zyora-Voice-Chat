@@ -37,7 +37,7 @@ private val LuckyCream = Color(0xFFF5D9A8)
 private val LuckyPink = Color(0xFFFE3C68)
 
 @Composable
-fun LuckyBag(senderId: String, senderName: String, senderImage: String, roomId: String, roomName: String, onClose: () -> Unit = {}, onSent: (String, String, Long, Int, String) -> Unit = { _, _, _, _, _ -> }) {
+fun LuckyBag(senderId: String, senderName: String, senderImage: String, roomId: String, roomName: String, onClose: () -> Unit = {}, onSent: (String, String, Long, Int, String, Long) -> Unit = { _, _, _, _, _, _ -> }) {
     var selectedCoins by remember { mutableIntStateOf(10000) }
     var recipients by remember { mutableIntStateOf(5) }
     var showClaim by remember { mutableStateOf(false) }
@@ -165,7 +165,7 @@ fun LuckyBag(senderId: String, senderName: String, senderImage: String, roomId: 
                                 }
                                 sending = false
                                 result.onSuccess { json ->
-                                    onSent(senderName, senderImage, selectedCoins.toLong(), recipients, json.optString("bagId"))
+                                    onSent(senderName, senderImage, selectedCoins.toLong(), recipients, json.optString("bagId"), json.optLong("expiresAt", System.currentTimeMillis() + 5 * 60 * 1000L))
                                     showClaim = false
                                     onClose()
                                 }.onFailure { error ->
