@@ -49,7 +49,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.*
 import androidx.compose.ui.zIndex
 import coil3.compose.AsyncImage
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -76,6 +78,8 @@ private data class WpFlyingCoin(
 )
 private enum class WpPhase { BETTING, SPINNING, RESULT }
 private enum class WpMode { SINGLE, MIX_BIG, MIX_SMALL }
+
+private val wpWalletSyncScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
 private val wpAnimals = listOf(
  WpAnimal("Rabbit","img_20261121_095524",270f,0f,-11f,71,5),
@@ -1663,7 +1667,7 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
        )
       }
      }
-     WpGlassTopButton(onClick = { scope.launch(Dispatchers.IO) { runCatching { syncPendingWalletChanges() } }; onClose() }) {
+     WpGlassTopButton(onClick = { wpWalletSyncScope.launch { runCatching { syncPendingWalletChanges() } }; onClose() }) {
       Canvas(Modifier.size(14.dp)) {
        val a = 3.1.dp.toPx()
        val b = 10.9.dp.toPx()
