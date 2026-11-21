@@ -1645,3 +1645,12 @@ Current documentation does not certify that all historical features are build-, 
 - `backend/server.js`: when the five-minute Lucky Bag timer expires, the bag is removed from active room listings. If no claim was made, the full sent amount is returned to the sender's canonical wallet using an idempotency key, and the refreshed wallet balance is broadcast immediately.
 - If at least one claim was reserved, the bag expires without refunding already-claimed coins; pending claim confirmations can still complete. Transient refund/storage failures are retried without double-crediting.
 - No UI layout or positioning changes.
+
+
+## 2026-11-21 — Live Lucky Bag claim details and repeat confirmation
+- `backend/server.js`: Lucky Bag claims now capture claimant display name and avatar URL with the reserved amount. The live room endpoint returns actual recipient count, claimed coin total, and per-user claim rows; already-claimed users can retrieve their existing claim instead of receiving a duplicate-claim error.
+- `luckybag.kt`: the Doc screen replaces placeholder totals with live values (unclaimed coins, opened people count, claimed/total coins) and a list of claimant avatars/names with each Grab amount. It refreshes while open and falls back to the sender-device cache.
+- `RoomPage.kt` + `NativeIndexDatabase.kt`: claim events are saved only on the sender's device in the local `index.db` table. No Lucky Bag claim-history collection is added to MongoDB.
+- `LuckyBagNotificationSlider.kt`: the confirmation card places the details strip under the sender name and shows the current user's avatar/name beside the received amount. The sender/claimant UI remains otherwise unchanged.
+- A successful claim amount is cached locally by bag and user. Reopening the room Lucky Bag during its lifetime opens the same confirmation card again; confirming remains idempotent and does not credit coins twice.
+- Verification: source changes committed. Native APK build, deployed backend, and real-time two-device behavior remain unverified.
