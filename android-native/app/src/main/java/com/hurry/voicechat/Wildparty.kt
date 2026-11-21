@@ -1211,8 +1211,8 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
  var winnerIndex by remember{mutableIntStateOf(0)}
  var mode by remember{mutableStateOf(WpMode.SINGLE)}
  var chipIndex by remember{mutableIntStateOf(1)}
- var bets by remember{mutableStateOf>(emptyMap())}
- var lastBets by remember{mutableStateOf>(emptyMap())}
+ var bets by remember{mutableStateOf<Map<String, Long>>(emptyMap())}
+ var lastBets by remember{mutableStateOf<Map<String, Long>>(emptyMap())}
  var history by remember{mutableStateOf<List<WpRound>>(emptyList())}
  var historyOpen by remember{mutableStateOf(false)}
  var rulesOpen by remember{mutableStateOf(false)}
