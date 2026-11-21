@@ -1,6 +1,13 @@
 package com.hurry.voicechat
 
 import android.content.Context
+import android.media.AudioAttributes
+import android.media.MediaPlayer
+import android.os.Build
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.*
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -31,6 +38,8 @@ import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -40,24 +49,37 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.*
 import androidx.compose.ui.zIndex
 import coil3.compose.AsyncImage
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.File
+import java.net.HttpURLConnection
+import java.net.URL
 import java.util.Calendar
 import kotlin.math.*
 
 private data class WpAnimal(val name:String,val image:String,val angle:Float,val dx:Float,val dy:Float,val size:Int,val multiplier:Int)
 private data class WpChip(val label:String,val value:Long,val image:String)
 private data class WpRound(val round:Int,val winner:String,val time:Long,val myBet:Long=0L,val winAmount:Long=0L)
+private data class WpFlyingCoin(
+ val id: Long,
+ val start: Offset,
+ val end: Offset,
+ val delayMs: Long,
+ val curveOffsetX: Float,
+ val curveOffsetY: Float
+)
 private enum class WpPhase { BETTING, SPINNING, RESULT }
 private enum class WpMode { SINGLE, MIX_BIG, MIX_SMALL }
 
 private val wpAnimals = listOf(
- WpAnimal("Rabbit","img_20261121_095524",270f,0f,-13f,71,5),
- WpAnimal("Deer","img_20261121_095459",315f,-4f,-9f,55,5),
- WpAnimal("Dog","img_20261121_102923",0f,-8f,-19f,68,5),
- WpAnimal("Camel","img_20261121_095328",45f,-6f,-18f,52,5),
+ WpAnimal("Rabbit","img_20261121_095524",270f,0f,-11f,71,5),
+ WpAnimal("Deer","img_20261121_095459",315f,-4f,-9f,62,5),
+ WpAnimal("Dog","img_20261121_102923",0f,-8f,-17f,62,5),
+ WpAnimal("Camel","img_20261121_095328",45f,-6f,-18f,60,5),
  WpAnimal("Eagle","img_20261121_103004",90f,0f,-18f,61,10),
  WpAnimal("Bear","img_20261121_102944",135f,5f,-15f,60,15),
  WpAnimal("Tiger","img_20261121_095350",180f,7f,-8f,63,25),
@@ -107,6 +129,221 @@ private fun wpFormat(v:Long)=when{v>=1_000_000->"${"%.1f".format(v/1_000_000.0).
 private fun wpFormatTime(timeMillis: Long): String {
  val c = Calendar.getInstance().apply { timeInMillis = timeMillis }
  return String.format("%02d-%02d %02d:%02d", c.get(Calendar.MONTH) + 1, c.get(Calendar.DAY_OF_MONTH), c.get(Calendar.HOUR_OF_DAY), c.get(Calendar.MINUTE))
+}
+
+private class WpSoundManager(private val context: Context) {
+ private val baseUrl = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/"
+ private val spinFileName = "VID_20261121_003408_517_bsl.mp4"
+ private val betFileName = "VID_20261121_003527_312_bsl.mp4"
+ private val winnerFileName = "VID_20261121_003223_909_bsl.mp4"
+
+ private val spinPool = mutableListOf<MediaPlayer>()
+ private val betPool = mutableListOf<MediaPlayer>()
+ private var winnerPlayer: MediaPlayer? = null
+ private var spinCursor = 0
+ private var betCursor = 0
+ @Volatile private var muted = false
+ @Volatile private var released = false
+
+ suspend fun preload() = withContext(Dispatchers.IO) {
+  val spinFile = ensureCached(spinFileName)
+  val betFile = ensureCached(betFileName)
+  val winFile = ensureCached(winnerFileName)
+  if (released) return@withContext
+  synchronized(this@WpSoundManager) {
+   if (released) return@synchronized
+   if (spinFile != null && spinPool.isEmpty()) {
+    repeat(4) { createPreparedPlayer(spinFile)?.let { spinPool.add(it) } }
+   }
+   if (betFile != null && betPool.isEmpty()) {
+    repeat(4) { createPreparedPlayer(betFile)?.let { betPool.add(it) } }
+   }
+   if (winFile != null && winnerPlayer == null) {
+    winnerPlayer = createPreparedPlayer(winFile)
+   }
+   applyVolumeLocked(if (muted) 0f else 1f)
+  }
+ }
+
+ private fun ensureCached(fileName: String): File? {
+  val target = File(context.cacheDir, "wp_sfx_$fileName")
+  if (target.exists() && target.length() > 0L) return target
+  return runCatching {
+   val tmp = File(context.cacheDir, "wp_sfx_${fileName}.tmp")
+   val conn = (URL(baseUrl + fileName).openConnection() as HttpURLConnection).apply {
+    connectTimeout = 8000
+    readTimeout = 10000
+    instanceFollowRedirects = true
+   }
+   try {
+    if (conn.responseCode in 200..299) {
+     conn.inputStream.use { input ->
+      tmp.outputStream().use { output -> input.copyTo(output) }
+     }
+     if (tmp.exists() && tmp.length() > 0L) {
+      if (target.exists()) target.delete()
+      tmp.renameTo(target)
+      target
+     } else null
+    } else null
+   } finally {
+    conn.disconnect()
+   }
+  }.getOrNull()
+ }
+
+ private fun createPreparedPlayer(file: File): MediaPlayer? {
+  return runCatching {
+   MediaPlayer().apply {
+    setAudioAttributes(
+     AudioAttributes.Builder()
+      .setUsage(AudioAttributes.USAGE_GAME)
+      .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+      .build()
+    )
+    setDataSource(file.absolutePath)
+    prepare()
+   }
+  }.getOrNull()
+ }
+
+ private fun applyVolumeLocked(vol: Float) {
+  spinPool.forEach { runCatching { it.setVolume(vol, vol) } }
+  betPool.forEach { runCatching { it.setVolume(vol, vol) } }
+  winnerPlayer?.let { runCatching { it.setVolume(vol, vol) } }
+ }
+
+ fun setMuted(isMuted: Boolean) {
+  synchronized(this) {
+   muted = isMuted
+   if (released) return
+   if (isMuted) {
+    applyVolumeLocked(0f)
+    spinPool.forEach { runCatching { if (it.isPlaying) it.pause(); it.seekTo(0) } }
+    betPool.forEach { runCatching { if (it.isPlaying) it.pause(); it.seekTo(0) } }
+    winnerPlayer?.let { runCatching { if (it.isPlaying) it.pause(); it.seekTo(0) } }
+   } else {
+    applyVolumeLocked(1f)
+   }
+  }
+ }
+
+ fun playSpinTick(speedMultiplier: Float) {
+  if (muted || released) return
+  synchronized(this) {
+   if (muted || released || spinPool.isEmpty()) return
+   val mp = spinPool[spinCursor % spinPool.size]
+   spinCursor++
+   runCatching {
+    if (mp.isPlaying) mp.pause()
+    mp.setVolume(1f, 1f)
+    mp.seekTo(0)
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+     runCatching {
+      mp.playbackParams = mp.playbackParams.setSpeed(speedMultiplier.coerceIn(0.95f, 1.95f))
+     }
+    }
+    if (!mp.isPlaying) mp.start()
+   }
+  }
+ }
+
+ fun playBetClick() {
+  if (muted || released) return
+  synchronized(this) {
+   if (muted || released || betPool.isEmpty()) return
+   val mp = betPool[betCursor % betPool.size]
+   betCursor++
+   runCatching {
+    if (mp.isPlaying) mp.pause()
+    mp.setVolume(1f, 1f)
+    mp.seekTo(0)
+    mp.start()
+   }
+  }
+ }
+
+ fun playWinner() {
+  if (muted || released) return
+  synchronized(this) {
+   if (muted || released) return
+   val mp = winnerPlayer ?: return
+   runCatching {
+    if (mp.isPlaying) mp.pause()
+    mp.setVolume(1f, 1f)
+    mp.seekTo(0)
+    mp.start()
+   }
+  }
+ }
+
+ fun stopWinner() {
+  synchronized(this) {
+   if (released) return
+   winnerPlayer?.let { mp ->
+    runCatching {
+     if (mp.isPlaying) mp.pause()
+     mp.seekTo(0)
+    }
+   }
+  }
+ }
+
+ fun release() {
+  synchronized(this) {
+   released = true
+   spinPool.forEach { runCatching { it.stop(); it.release() } }
+   spinPool.clear()
+   betPool.forEach { runCatching { it.stop(); it.release() } }
+   betPool.clear()
+   winnerPlayer?.let { runCatching { it.stop(); it.release() } }
+   winnerPlayer = null
+  }
+ }
+}
+
+@Composable
+private fun WpFlyingCoinItem(
+ coinItem: WpFlyingCoin,
+ coinRes: String,
+ onFinished: (Long) -> Unit
+) {
+ val progress = remember { Animatable(0f) }
+ var started by remember { mutableStateOf(false) }
+
+ LaunchedEffect(coinItem.id) {
+  if (coinItem.delayMs > 0L) delay(coinItem.delayMs)
+  started = true
+  progress.animateTo(
+   targetValue = 1f,
+   animationSpec = tween(durationMillis = 360, easing = FastOutSlowInEasing)
+  )
+  onFinished(coinItem.id)
+ }
+
+ if (!started) return
+
+ val t = progress.value
+ val oneMinusT = 1f - t
+ val midX = (coinItem.start.x + coinItem.end.x) / 2f + coinItem.curveOffsetX
+ val midY = min(coinItem.start.y, coinItem.end.y) - 46f + coinItem.curveOffsetY
+ val x = oneMinusT * oneMinusT * coinItem.start.x + 2f * oneMinusT * t * midX + t * t * coinItem.end.x
+ val y = oneMinusT * oneMinusT * coinItem.start.y + 2f * oneMinusT * t * midY + t * t * coinItem.end.y
+ val scale = if (t < 0.2f) 0.72f + (t / 0.2f) * 0.33f else 1.05f - ((t - 0.2f) / 0.8f) * 0.28f
+
+ AsyncImage(
+  model = coinRes,
+  contentDescription = null,
+  modifier = Modifier
+   .size(18.dp)
+   .graphicsLayer {
+    translationX = x - 9.dp.toPx()
+    translationY = y - 9.dp.toPx()
+    scaleX = scale
+    scaleY = scale
+   },
+  contentScale = ContentScale.Fit
+ )
 }
 
 @Composable
@@ -965,6 +1202,7 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
  val context=LocalContext.current
  val scope= rememberCoroutineScope()
  val dao= remember{WalletDatabase.get(context).walletDao()}
+ val soundManager = remember(context) { WpSoundManager(context.applicationContext) }
  var balance by remember{mutableLongStateOf(82927L)}
  var phase by remember{mutableStateOf(WpPhase.BETTING)}
  var round by remember{mutableIntStateOf(1)}
@@ -973,8 +1211,8 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
  var winnerIndex by remember{mutableIntStateOf(0)}
  var mode by remember{mutableStateOf(WpMode.SINGLE)}
  var chipIndex by remember{mutableIntStateOf(1)}
- var bets by remember{mutableStateOf<Map<String, Long>>(emptyMap())}
- var lastBets by remember{mutableStateOf<Map<String, Long>>(emptyMap())}
+ var bets by remember{mutableStateOf>(emptyMap())}
+ var lastBets by remember{mutableStateOf>(emptyMap())}
  var history by remember{mutableStateOf<List<WpRound>>(emptyList())}
  var historyOpen by remember{mutableStateOf(false)}
  var rulesOpen by remember{mutableStateOf(false)}
@@ -987,12 +1225,31 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
  var loadingProgress by remember{mutableFloatStateOf(0f)}
  var processedRound by remember{mutableIntStateOf(-1)}
 
+ // Flying coins + bottom-left popup states
+ val bottomLeftPopup = remember { Animatable(0f) }
+ var gameContainerRootPos by remember { mutableStateOf(Offset.Zero) }
+ var bottomLeftRootCenter by remember { mutableStateOf(Offset.Zero) }
+ val animalRootCenters = remember { mutableStateMapOf<String, Offset>() }
+ var flyingCoins by remember { mutableStateOf<List<WpFlyingCoin>>(emptyList()) }
+ var coinIdSeq by remember { mutableLongStateOf(0L) }
+
  val topHistoryScrollState = rememberScrollState()
  val grayColorFilter = remember {
   ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
  }
 
+ DisposableEffect(soundManager) {
+  onDispose { soundManager.release() }
+ }
+
+ LaunchedEffect(muted) {
+  withContext(Dispatchers.IO) {
+   soundManager.setMuted(muted)
+  }
+ }
+
  LaunchedEffect(Unit){
+  launch(Dispatchers.IO) { soundManager.preload() }
   runCatching{
    balance=dao.getUserData()?.balance?:82927L
    val arr=JSONArray(context.getSharedPreferences("wild_party_native",Context.MODE_PRIVATE).getString("history","[]"))
@@ -1021,8 +1278,41 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
   history.takeLast(50).forEach{arr.put(JSONObject().put("round",it.round).put("winner",it.winner).put("time",it.time).put("myBet",it.myBet).put("winAmount",it.winAmount))}
   context.getSharedPreferences("wild_party_native",Context.MODE_PRIVATE).edit().putString("history",arr.toString()).apply()
  }
+ fun triggerBetVisuals(targetAnimalName: String, amount: Long) {
+  scope.launch {
+   bottomLeftPopup.snapTo(0f)
+   bottomLeftPopup.animateTo(1f, animationSpec = tween(85, easing = FastOutSlowInEasing))
+   bottomLeftPopup.animateTo(0f, animationSpec = tween(110, easing = FastOutSlowInEasing))
+  }
+  val targetRoot = animalRootCenters[targetAnimalName]
+  if (targetRoot != null && bottomLeftRootCenter != Offset.Zero) {
+   val start = bottomLeftRootCenter - gameContainerRootPos
+   val end = targetRoot - gameContainerRootPos
+   val coinCount = when {
+    amount >= 5_000_000L -> 6
+    amount >= 500_000L -> 5
+    amount >= 50_000L -> 4
+    amount >= 10_000L -> 3
+    else -> 2
+   }
+   val spawned = List(coinCount) { idx ->
+    coinIdSeq++
+    val spread = (idx - (coinCount - 1) / 2f) * 14f
+    WpFlyingCoin(
+     id = coinIdSeq,
+     start = start,
+     end = end,
+     delayMs = idx * 42L,
+     curveOffsetX = spread,
+     curveOffsetY = (idx % 2) * -10f
+    )
+   }
+   flyingCoins = flyingCoins + spawned
+  }
+ }
  LaunchedEffect(loading){
   if(loading)return@LaunchedEffect
+  var lastSpinStep = -1
   while(true){
    val now=System.currentTimeMillis()
    val elapsedMs=(now-wpReset(now)).coerceAtLeast(0L)
@@ -1032,7 +1322,10 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
    round=(elapsed/47L).toInt()+1
    val outcome=wpOutcome(round);mode=outcome.first;winnerIndex=outcome.second
    when{
-    cycle<30->{phase=WpPhase.BETTING;countdown=30-cycle;highlight=-1;winnerOpen=false}
+    cycle<30->{
+     phase=WpPhase.BETTING;countdown=30-cycle;highlight=-1;winnerOpen=false
+     lastSpinStep = -1
+    }
     cycle<40->{
      phase=WpPhase.SPINNING
      countdown=40-cycle
@@ -1040,9 +1333,18 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
      val totalSteps=48+winnerIndex
      val eased=1.0-(1.0-p).pow(2.2)
      val step=floor(eased*(totalSteps+0.5)).toInt().coerceAtMost(totalSteps)
-     highlight=step%8
+     val nextHighlight=step%8
+     if (step != lastSpinStep) {
+      lastSpinStep = step
+      val spinSpeed = (1.0f + (1.0 - p).pow(1.2).toFloat() * 0.85f).coerceIn(1.0f, 1.85f)
+      launch(Dispatchers.IO) { soundManager.playSpinTick(spinSpeed) }
+     }
+     highlight=nextHighlight
     }
-    else->{phase=WpPhase.RESULT;countdown=47-cycle;highlight=winnerIndex}
+    else->{
+     phase=WpPhase.RESULT;countdown=47-cycle;highlight=winnerIndex
+     lastSpinStep = -1
+    }
    }
    delay(if(cycle in 30..39) 16L else 100L)
   }
@@ -1065,14 +1367,61 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
    winnerTimer=5;winnerOpen=true
   }
  }
- LaunchedEffect(winnerOpen){if(winnerOpen){repeat(5){delay(1000);winnerTimer=4-it};winnerOpen=false}}
- fun place(name:String){scope.launch{val amount=wpChips[chipIndex].value;if(phase==WpPhase.BETTING&&balance>=amount){walletChange(-amount,"Bet on $name in Wild Party");bets=bets.toMutableMap().also{it[name]=(it[name]?:0L)+amount}}}}
- BoxWithConstraints(modifier.fillMaxSize().background(Color.Transparent),contentAlignment=Alignment.BottomCenter){
+ LaunchedEffect(winnerOpen){
+  if(winnerOpen){
+   launch(Dispatchers.IO) { soundManager.playWinner() }
+   repeat(5){delay(1000);winnerTimer=4-it}
+   winnerOpen=false
+  } else {
+   launch(Dispatchers.IO) { soundManager.stopWinner() }
+  }
+ }
+ fun place(name:String){
+  scope.launch{
+   val amount=wpChips[chipIndex].value
+   if(phase==WpPhase.BETTING&&balance>=amount){
+    launch(Dispatchers.IO) { soundManager.playBetClick() }
+    triggerBetVisuals(name, amount)
+    walletChange(-amount,"Bet on $name in Wild Party")
+    bets=bets.toMutableMap().also{it[name]=(it[name]?:0L)+amount}
+   }
+  }
+ }
+ BoxWithConstraints(
+  modifier
+   .fillMaxSize()
+   .zIndex(100f)
+   .background(Color.Transparent),
+  contentAlignment = Alignment.BottomCenter
+ ){
   val h=maxHeight*.65f
   val multiplierBg=wpAsset("wp_file_00000000330c8211b80be136b631b3e0")
   val coin=wpAsset("wp_file_00000000e56882119c217d508b6733dc")
-  Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=.5f)))
-  Box(Modifier.fillMaxWidth().height(h).background(Color(0xFF28180D))){
+  // Full-screen dim backdrop blocks touches from reaching the Room page behind the game
+  Box(
+   Modifier
+    .fillMaxSize()
+    .background(Color.Black.copy(alpha = .5f))
+    .clickable(
+     interactionSource = remember { MutableInteractionSource() },
+     indication = null,
+     onClick = {}
+    )
+  )
+  Box(
+   Modifier
+    .fillMaxWidth()
+    .height(h)
+    .background(Color(0xFF28180D))
+    .clickable(
+     interactionSource = remember { MutableInteractionSource() },
+     indication = null,
+     onClick = {}
+    )
+    .onGloballyPositioned { coords ->
+     gameContainerRootPos = coords.positionInRoot()
+    }
+  ){
    val bg=wpAsset("wp_1787337855180_2")
    if (bg.isNotBlank())AsyncImage(
     model = bg, contentDescription = null, modifier = Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
@@ -1251,7 +1600,17 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
      val isColorless = phase != WpPhase.BETTING && !active
      val image=wpAsset(a.image)
      val amount=bets[a.name]?:0L
-     Box(Modifier.offset(x,y).size(a.size.dp).zIndex(if(amount>0)2f else 0f),contentAlignment=Alignment.Center){
+     Box(
+      Modifier
+       .offset(x,y)
+       .size(a.size.dp)
+       .zIndex(if(amount>0)3f else 0f)
+       .onGloballyPositioned { coords ->
+        val p = coords.positionInRoot()
+        animalRootCenters[a.name] = Offset(p.x + coords.size.width / 2f, p.y + coords.size.height / 2f)
+       },
+      contentAlignment=Alignment.Center
+     ){
       Box(
        Modifier
         .fillMaxSize()
@@ -1268,7 +1627,7 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
         modifier = Modifier
          .fillMaxSize()
          .graphicsLayer{
-          alpha = if(phase==WpPhase.BETTING||active) 1f else .85f
+          alpha = 1f
           val s = if(active) 1.08f else 1f
           scaleX = s
           scaleY = s
@@ -1279,7 +1638,7 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
       if(amount>0)WpBetBadge(
        amountText=wpFormat(amount),
        coinResId=coin,
-       modifier=Modifier.align(Alignment.BottomCenter).offset(y=5.dp)
+       modifier=Modifier.align(Alignment.TopEnd).offset(x = 6.dp, y = (-4).dp)
       )
      }
     }
@@ -1366,7 +1725,20 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
    if (bottomLeftDecor.isNotBlank())AsyncImage(
     model = bottomLeftDecor,
     contentDescription = null,
-    modifier = Modifier.align(Alignment.BottomStart).padding(start=8.dp,bottom=60.dp).size(44.dp),
+    modifier = Modifier
+     .align(Alignment.BottomStart)
+     .padding(start=8.dp,bottom=60.dp)
+     .size(44.dp)
+     .onGloballyPositioned { coords ->
+      val p = coords.positionInRoot()
+      bottomLeftRootCenter = Offset(p.x + coords.size.width / 2f, p.y + coords.size.height / 2f)
+     }
+     .graphicsLayer {
+      translationY = -1.dp.toPx() * bottomLeftPopup.value
+      val s = 1f + 0.04f * bottomLeftPopup.value
+      scaleX = s
+      scaleY = s
+     },
     contentScale=ContentScale.Fit,
     alignment=Alignment.BottomStart
    )
@@ -1375,12 +1747,25 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
     balance = balance,
     modifier = Modifier.align(Alignment.BottomStart).padding(start = 8.dp, bottom = 10.dp)
    )
-   Row(Modifier.align(Alignment.BottomEnd).padding(end=8.dp,bottom=8.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){
+   Row(
+    Modifier
+     .align(Alignment.BottomEnd)
+     .clickable(
+      interactionSource = remember { MutableInteractionSource() },
+      indication = null,
+      onClick = {}
+     )
+     .padding(end=8.dp,bottom=8.dp),
+    verticalAlignment=Alignment.CenterVertically,
+    horizontalArrangement=Arrangement.spacedBy(4.dp)
+   ){
     WpGlossyRepeatButton(
      onClick = {
       scope.launch {
        val cost = lastBets.values.sum()
        if (phase == WpPhase.BETTING && cost > 0 && balance >= cost) {
+        launch(Dispatchers.IO) { soundManager.playBetClick() }
+        lastBets.forEach { (k, v) -> if (v > 0L) triggerBetVisuals(k, v) }
         walletChange(-cost, "Repeat Bet in Wild Party")
         bets = bets.toMutableMap().also { m -> lastBets.forEach { (k, v) -> m[k] = (m[k] ?: 0L) + v } }
        }
@@ -1389,15 +1774,26 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
     )
     wpChips.forEachIndexed{i,c->
      val id=wpAsset(c.image)
+     val isSelected = chipIndex == i
+     val chipRotation by animateFloatAsState(
+      targetValue = if (isSelected) 10f else 0f,
+      animationSpec = tween(durationMillis = 140),
+      label = "chipRotation"
+     )
      Box(
       Modifier
        .size(34.dp)
        .graphicsLayer{
-        val scale=if(chipIndex==i)1.08f else 1f
+        val scale=if(isSelected)1.08f else 1f
         scaleX=scale
         scaleY=scale
-        translationY=if(chipIndex==i)-8.dp.toPx() else 0f
+        translationY=if(isSelected)-8.dp.toPx() else 0f
+        rotationZ=chipRotation
        }
+       .then(
+        if (isSelected) Modifier.border(1.8.dp, Color(0xFFFFD83D), CircleShape)
+        else Modifier
+       )
        .clickable(
         interactionSource = remember { MutableInteractionSource() },
         indication = null
@@ -1410,6 +1806,21 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
        modifier = Modifier.fillMaxSize(),
        contentScale = ContentScale.Fit
       ) else Text(c.label,color=Color.White,fontSize=8.sp)
+     }
+    }
+   }
+   if (flyingCoins.isNotEmpty() && coin.isNotBlank()) {
+    Box(Modifier.fillMaxSize().zIndex(25f)) {
+     flyingCoins.forEach { fc ->
+      key(fc.id) {
+       WpFlyingCoinItem(
+        coinItem = fc,
+        coinRes = coin,
+        onFinished = { finishedId ->
+         flyingCoins = flyingCoins.filterNot { it.id == finishedId }
+        }
+       )
+      }
      }
     }
    }
@@ -1754,7 +2165,7 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
 
      Spacer(Modifier.height(16.dp))
 
-     // Middle Heading Artwork (Top Winner image - size increased without shifting other elements)
+     // Middle Heading Artwork (Top Winner image - thoda niche + size increased without shifting other elements)
      val heading = wpAsset( "wp_img_20260913_000423")
      if (heading.isNotBlank()) {
       Box(
@@ -1768,7 +2179,8 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
         contentDescription = null,
         modifier = Modifier
          .fillMaxWidth()
-         .requiredHeight(56.dp),
+         .offset(y = 6.dp)
+         .requiredHeight(72.dp),
         contentScale = ContentScale.Fit
        )
       }
@@ -1866,12 +2278,26 @@ private fun WpFullHeightSheet(
  content: @Composable ColumnScope.() -> Unit
 ) {
  Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
-  Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.45f)).clickable { onDismiss() })
+  Box(
+   Modifier
+    .fillMaxSize()
+    .background(Color.Black.copy(alpha = 0.45f))
+    .clickable(
+     interactionSource = remember { MutableInteractionSource() },
+     indication = null,
+     onClick = { onDismiss() }
+    )
+  )
   Column(
    modifier = Modifier
     .fillMaxWidth()
     .height(sheetHeight)
     .background(Color.Black)
+    .clickable(
+     interactionSource = remember { MutableInteractionSource() },
+     indication = null,
+     onClick = {}
+    )
   ) {
    Box(
     modifier = Modifier
@@ -1898,7 +2324,19 @@ private fun WpFullHeightSheet(
 @Composable
 private fun WpSheet(title:String,onDismiss:()->Unit,content:@Composable ColumnScope.()->Unit){
  Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=.45f)).clickable{onDismiss()},contentAlignment=Alignment.BottomCenter){
-  Column(Modifier.fillMaxWidth().fillMaxHeight(.40f).clip(RoundedCornerShape(topStart=12.dp,topEnd=12.dp)).background(wpDark).padding(horizontal=14.dp,vertical=12.dp)){
+  Column(
+   Modifier
+    .fillMaxWidth()
+    .fillMaxHeight(.40f)
+    .clip(RoundedCornerShape(topStart=12.dp,topEnd=12.dp))
+    .background(wpDark)
+    .clickable(
+     interactionSource = remember { MutableInteractionSource() },
+     indication = null,
+     onClick = {}
+    )
+    .padding(horizontal=14.dp,vertical=12.dp)
+  ){
    Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){Text("‹",Modifier.clickable{onDismiss()}.padding(horizontal=8.dp),color=Color.White,fontSize=28.sp);Text(title,Modifier.weight(1f),color=Color.White,fontWeight=FontWeight.Black,fontSize=16.sp,textAlign=TextAlign.Center);Spacer(Modifier.width(32.dp))}
    HorizontalDivider(color=Color.White.copy(alpha=.1f));content()
   }
