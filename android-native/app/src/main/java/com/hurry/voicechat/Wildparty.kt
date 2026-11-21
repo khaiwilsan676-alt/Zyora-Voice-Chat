@@ -1259,6 +1259,7 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
   }
  }
 
+ val walletSyncMutex = remember(walletAccountId) { Mutex() }
  LaunchedEffect(Unit){
   launch(Dispatchers.IO) { soundManager.preload() }
   // Restore game history independently; wallet network failures must never hide it.
@@ -1267,7 +1268,8 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
    history=(0 until arr.length()).mapNotNull{i->arr.optJSONObject(i)?.let{WpRound(it.optInt("round"),it.optString("winner"),it.optLong("time"),it.optLong("myBet",0L),it.optLong("winAmount",0L))}}.filter{it.time>=wpReset()}.sortedBy{it.round}.takeLast(50)
   }
   scope.launch(Dispatchers.IO) {
-   runCatching {
+   walletSyncMutex.withLock {
+    runCatching {
    val walletUserId=walletAccountId.takeIf{it.isNotBlank()}
    // Keep the real Wallet page balance visible immediately; never replace it with a fake zero.
    if(walletUserId!=null){
@@ -1297,20 +1299,19 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
     balance=0L
    }
 
+    }
    }
   }
-  for (step in 1..50) {
-   loadingProgress = step / 50f
-   delay(24)
+  for (step in 1..20) {
+   loadingProgress = step / 20f
+   delay(12)
   }
-  delay(120)
   loading=false
  }
  LaunchedEffect(history.size){
   topHistoryScrollState.scrollTo(0)
  }
  fun pendingWalletKey()="queue_$walletAccountId"
- val walletSyncMutex = remember(walletAccountId) { Mutex() }
   suspend fun syncPendingWalletChanges() = walletSyncMutex.withLock {
   val userId=walletAccountId.takeIf{it.isNotBlank()}?:return
   val key=pendingWalletKey()
