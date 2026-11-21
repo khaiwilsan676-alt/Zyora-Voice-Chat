@@ -1683,3 +1683,11 @@ Current documentation does not certify that all historical features are build-, 
 - `RoomPage.kt`: resolve the same image aliases in active-user and seat snapshots so the room seats/invite list do not lose DPs when the server uses a legacy image field.
 - `RoomProfile.kt`: resolve legacy avatar fields and use the same fallback in the room member profile.
 - UI layout, colors, avatar sizing, room voice/socket lifecycle, and wallet behavior are unchanged. Native APK build and live multi-device avatar/profile-sync verification are still required; no measured latency claim is made.
+
+
+## 2026-11-22 — Homepage/Room scroll and realtime callback performance
+- `RoomPage.kt`: removed synchronous `NativeIndexDatabase.loadProfile/saveProfile` calls from the Socket.IO room-message callback. Message parsing/render dispatch now proceeds without waiting on profile disk I/O; profile metadata persistence runs in the room-owned `Dispatchers.IO` scope.
+- `RoomPage.kt`: added explicit LazyColumn content types for chat and kick-notice rows while retaining stable message/notice keys, reducing avoidable item remeasurement/recomposition work.
+- `HomeScreen.kt`: retained existing room snapshot memory/Room-DB warm cache, five-minute refresh throttle, remembered country filtering/row grouping, stable room-row keys, and lazy rendering. No UI redesign or refresh cadence change.
+- Room socket join/presence/seats behavior, voice transport, music behavior, room layout, colors, and homepage layout are unchanged.
+- Native build and on-device scroll/frame-time/reconnect tests are required to confirm measured improvement; no claim of verified zero-lag is made.
