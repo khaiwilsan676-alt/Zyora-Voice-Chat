@@ -315,6 +315,7 @@ fun MedalScreen(onBack: () -> Unit) {
                             }
                         }
                     }
+                    }
             }
         }
         }
