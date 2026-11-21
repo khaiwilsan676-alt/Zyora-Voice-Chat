@@ -78,7 +78,7 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
     }
     var photo by remember(uid, cachedProfile) {
         mutableStateOf(
-            sequenceOf("image", "avatar", "profileImageUrl").map { cachedProfile?.optString(it, "").orEmpty() }.firstOrNull { it.isNotBlank() && it != "null" }.orEmpty()
+            sequenceOf("image", "dp", "photo", "photoURL", "photoUrl", "avatar", "avatarUrl", "profileImage", "profileImageUrl", "profile_image", "imageUrl", "picture").map { key -> cachedProfile?.optString(key, "").orEmpty().trim() }.firstOrNull { it.isNotBlank() && it != "null" && it != "undefined" }.orEmpty()
         )
     }
     val savedAccount = prefs.getString("accountNumber", null)?.takeIf { it.isNotBlank() }
@@ -236,9 +236,9 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
         sellerCenterActive = profile.optBoolean("coinSellerTag", false) || profile.optBoolean("coinSeller", false) || profile.optBoolean("sellerTag", false)
         sequenceOf("country", "countryName", "countryCode", "country_code", "nationality", "location").map { profile.optString(it, "").trim() }.firstOrNull { it.isNotBlank() && it != "null" }?.let { profileCountry = it }
         profile.optString("name").takeIf { it.isNotBlank() && it != "null" && it.lowercase() !in listOf("guest", "user", "undefined") && it != name }?.let { name = it }
-        sequenceOf("image", "avatar", "profileImageUrl")
-            .map { profile.optString(it, "") }
-            .firstOrNull { it.isNotBlank() && it != "null" }
+        sequenceOf("image", "dp", "photo", "photoURL", "photoUrl", "avatar", "avatarUrl", "profileImage", "profileImageUrl", "profile_image", "imageUrl", "picture")
+            .map { profile.optString(it, "").trim() }
+            .firstOrNull { it.isNotBlank() && it != "null" && it != "undefined" }
             ?.takeIf { it != photo }
             ?.let { photo = it }
     }
@@ -282,7 +282,7 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
                             ))
                         }, contentAlignment = Alignment.Center) {
                             if (displayPhoto.isNotBlank()) {
-                                AsyncImage(displayPhoto, null, Modifier.fillMaxSize().clip(CircleShape), contentScale = ContentScale.Crop)
+                                FallbackAsyncImage(displayPhoto, name, Modifier.fillMaxSize().clip(CircleShape), contentScale = ContentScale.Crop)
                             } else {
                                 Box(Modifier.fillMaxSize().clip(CircleShape).background(Color(0xFF666666)), contentAlignment = Alignment.Center) {
                                     Text(name.take(1).uppercase(), color = Color.White, fontSize = 34.sp, fontWeight = FontWeight.Normal)
