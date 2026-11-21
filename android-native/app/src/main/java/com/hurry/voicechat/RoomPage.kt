@@ -698,6 +698,7 @@ fun RoomPage(
     var wildPartyMinimized by remember { mutableStateOf(false) }
     var showFruitParty by remember{mutableStateOf(false)}
     var showDragonBattle by remember{mutableStateOf(false)}
+    var dragonBattleMinimized by remember { mutableStateOf(false) }
     var showSeatSheet by remember{mutableStateOf(false)}
     var selectedChatProfile by remember { mutableStateOf<NativeRoomMessage?>(null) }
 
@@ -2268,6 +2269,18 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                     contentScale = ContentScale.Fit
                 )
             }
+            // Keep Dragon Battle composed while minimized so its live round resumes in place.
+            if (dragonBattleMinimized) {
+                AsyncImage(
+                    model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261121_020906.png",
+                    contentDescription = "Resume Dragon Battle",
+                    modifier = Modifier.padding(bottom = 4.dp).size(54.dp).clickable {
+                        dragonBattleMinimized = false
+                        showDragonBattle = true
+                    },
+                    contentScale = ContentScale.Fit
+                )
+            }
             Column(horizontalAlignment=Alignment.CenterHorizontally, modifier = Modifier.offset(y = 6.dp)) {
                 androidx.compose.foundation.pager.HorizontalPager(state = sideBannerPager,modifier = Modifier.size(58.dp, 80.dp).clip(RoundedCornerShape(8.dp))) { page ->
                     AsyncImage(model = sideBannerImages[page],contentDescription = "Room side banner",modifier = Modifier.fillMaxSize().clickable(indication = null, interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }) { if (page == 0) onRoomSupport() },contentScale = ContentScale.Crop)
@@ -2893,8 +2906,14 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
             modifier = if (showWildParty) Modifier.fillMaxSize() else Modifier.size(1.dp).graphicsLayer { alpha = 0f }
         )
         if(showFruitParty) Fruitparty(onClose={showFruitParty=false},onMinimize={showFruitParty=false})
-        BackHandler(enabled=showDragonBattle) { showDragonBattle=false }
-        if(showDragonBattle) DragonBattleGameHost(onClose={showDragonBattle=false},onMinimize={showDragonBattle=false})
+        BackHandler(enabled=showDragonBattle) { showDragonBattle=false; dragonBattleMinimized=false }
+        if (showDragonBattle || dragonBattleMinimized) {
+            DragonBattleGameHost(
+                onClose = { showDragonBattle = false; dragonBattleMinimized = false },
+                onMinimize = { showDragonBattle = false; dragonBattleMinimized = true },
+                modifier = if (showDragonBattle) Modifier.fillMaxSize() else Modifier.size(1.dp).graphicsLayer { alpha = 0f }
+            )
+        }
         if(showEmoji) EmojiPicker(onClose={showEmoji=false},onSelectEmoji={ sticker ->
             val seatIndex=seats.indexOfFirst{it.occupied && it.accountId==accountId}
             if(seatIndex>=0){
