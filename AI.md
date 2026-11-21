@@ -1662,3 +1662,9 @@ Current documentation does not certify that all historical features are build-, 
 - The Confirm card keeps its reward/details strip directly under the sender name and the claimant avatar/name on the left with received coins on the right. Reopening an already-claimed bag continues to use the locally saved claim amount and the same Confirm card.
 - No unrelated UI or positioning changes. APK/device verification remains pending.
 - Wallet Agent card persistence fix: `AgentContent` now retains the last non-empty seller list instead of replacing it with an empty/incomplete `/api/users?sellers=true` response, and retries the endpoint every 15 seconds. This prevents transient Render/MongoDB cold-start or partial-response failures from making the approved seller cards disappear; no UI redesign or seller-ID policy change.
+
+
+## 2026-11-22 — Room Cup daily total full-number display
+- Native `Roomcup.kt`: the room header's Today cup counter now displays the complete integer total of all room `sent` gift-contribution coins, without K/M/B abbreviation. The existing room-scoped daily endpoint and aggregation remain unchanged; leaderboard row formatting, gift sending, wallet debit, and UI layout are untouched.
+- Native commit: `895dadf91d8060af69461906f80f80ccb1c077aa`.
+- Native APK build and live room gift-count verification remain required.
