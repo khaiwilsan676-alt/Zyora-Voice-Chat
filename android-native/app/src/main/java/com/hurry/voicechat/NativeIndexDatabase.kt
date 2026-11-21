@@ -6,7 +6,7 @@ import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import org.json.JSONObject
 
-internal class NativeIndexDatabase(context: Context) : SQLiteOpenHelper(context.applicationContext, "index.db", null, 8) {
+internal class NativeIndexDatabase(context: Context) : SQLiteOpenHelper(context.applicationContext, "index.db", null, 9) {
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL("CREATE TABLE IF NOT EXISTS chat_cache (chat_key TEXT PRIMARY KEY NOT NULL, payload TEXT NOT NULL, updated_at INTEGER NOT NULL)")
         db.execSQL("CREATE TABLE IF NOT EXISTS profile_cache (profile_key TEXT PRIMARY KEY NOT NULL, payload TEXT NOT NULL, updated_at INTEGER NOT NULL)")
@@ -14,6 +14,7 @@ internal class NativeIndexDatabase(context: Context) : SQLiteOpenHelper(context.
         db.execSQL("CREATE TABLE IF NOT EXISTS voice_cache (message_id TEXT PRIMARY KEY NOT NULL, peer_id TEXT NOT NULL, audio BLOB NOT NULL, duration_seconds INTEGER NOT NULL, updated_at INTEGER NOT NULL)")
         db.execSQL("CREATE TABLE IF NOT EXISTS room_lock_cache (room_id TEXT PRIMARY KEY NOT NULL, is_locked INTEGER NOT NULL, room_password TEXT NOT NULL, updated_at INTEGER NOT NULL)")
         db.execSQL("CREATE TABLE IF NOT EXISTS lucky_bag_transactions (transaction_id TEXT PRIMARY KEY NOT NULL, user_id TEXT NOT NULL, type TEXT NOT NULL, amount INTEGER NOT NULL, bag_id TEXT NOT NULL, created_at INTEGER NOT NULL)")
+        db.execSQL("CREATE TABLE IF NOT EXISTS lucky_bag_claims (bag_id TEXT NOT NULL, room_id TEXT NOT NULL, claim_user_id TEXT NOT NULL, payload TEXT NOT NULL, created_at INTEGER NOT NULL, PRIMARY KEY(bag_id, claim_user_id))")
         db.execSQL("CREATE TABLE IF NOT EXISTS user_reports (report_id TEXT PRIMARY KEY NOT NULL, payload TEXT NOT NULL, created_at INTEGER NOT NULL)")
         db.execSQL("CREATE TABLE IF NOT EXISTS wallet_transactions (transaction_id TEXT PRIMARY KEY NOT NULL, user_id TEXT NOT NULL, title TEXT NOT NULL, amount INTEGER NOT NULL, date TEXT NOT NULL, timestamp INTEGER NOT NULL, type TEXT NOT NULL)")
     }
@@ -25,6 +26,7 @@ internal class NativeIndexDatabase(context: Context) : SQLiteOpenHelper(context.
         if (oldVersion < 6) db.execSQL("CREATE TABLE IF NOT EXISTS lucky_bag_transactions (transaction_id TEXT PRIMARY KEY NOT NULL, user_id TEXT NOT NULL, type TEXT NOT NULL, amount INTEGER NOT NULL, bag_id TEXT NOT NULL, created_at INTEGER NOT NULL)")
         if (oldVersion < 7) db.execSQL("CREATE TABLE IF NOT EXISTS user_reports (report_id TEXT PRIMARY KEY NOT NULL, payload TEXT NOT NULL, created_at INTEGER NOT NULL)")
         if (oldVersion < 8) db.execSQL("CREATE TABLE IF NOT EXISTS wallet_transactions (transaction_id TEXT PRIMARY KEY NOT NULL, user_id TEXT NOT NULL, title TEXT NOT NULL, amount INTEGER NOT NULL, date TEXT NOT NULL, timestamp INTEGER NOT NULL, type TEXT NOT NULL)")
+        if (oldVersion < 9) db.execSQL("CREATE TABLE IF NOT EXISTS lucky_bag_claims (bag_id TEXT NOT NULL, room_id TEXT NOT NULL, claim_user_id TEXT NOT NULL, payload TEXT NOT NULL, created_at INTEGER NOT NULL, PRIMARY KEY(bag_id, claim_user_id))")
     }
     fun saveChat(key: String, payload: String) {
         val values = ContentValues()
@@ -130,6 +132,25 @@ internal class NativeIndexDatabase(context: Context) : SQLiteOpenHelper(context.
                     .put("bagId", cursor.getString(4))
                     .put("createdAt", cursor.getLong(5))
             }
+        }
+        return result
+    }
+
+    /** Lucky Bag claim rows are cached only on the sender's device. */
+    fun saveLuckyBagClaim(bagId: String, roomId: String, claimUserId: String, payload: JSONObject) {
+        if (bagId.isBlank() || roomId.isBlank() || claimUserId.isBlank()) return
+        val values = ContentValues().apply {
+            put("bag_id", bagId); put("room_id", roomId); put("claim_user_id", claimUserId)
+            put("payload", payload.toString()); put("created_at", payload.optLong("claimedAt", System.currentTimeMillis()))
+        }
+        writableDatabase.insertWithOnConflict("lucky_bag_claims", null, values, SQLiteDatabase.CONFLICT_REPLACE)
+    }
+    fun loadLuckyBagClaimsForRoom(roomId: String, limit: Int = 100): List<JSONObject> {
+        if (roomId.isBlank()) return emptyList()
+        val result = mutableListOf<JSONObject>()
+        readableDatabase.query("lucky_bag_claims", arrayOf("payload"), "room_id=?", arrayOf(roomId),
+            null, null, "created_at DESC", limit.coerceIn(1, 500).toString()).use { cursor ->
+            while (cursor.moveToNext()) runCatching { JSONObject(cursor.getString(0)) }.getOrNull()?.let(result::add)
         }
         return result
     }
