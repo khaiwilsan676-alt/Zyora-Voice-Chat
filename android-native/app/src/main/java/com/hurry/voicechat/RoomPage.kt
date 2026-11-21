@@ -3434,7 +3434,7 @@ private fun RoomChatMessages(
                                     }
                                 }
                             }
-                            items(kickNotices, key = { it.id }) { notice ->
+                            items(kickNotices, key = { it.id }, contentType = { "room_kick_notice" }) { notice ->
                                 Column(Modifier.fillMaxWidth().padding(start=4.dp, top=0.dp, end=82.dp, bottom=2.dp)) {
                                     Column(Modifier.wrapContentWidth().clip(RoundedCornerShape(12.dp)).background(Color.Black.copy(alpha=.30f)).padding(horizontal=12.dp, vertical=8.dp), verticalArrangement=Arrangement.spacedBy(4.dp)) {
                                         Row(verticalAlignment=Alignment.CenterVertically, horizontalArrangement=Arrangement.spacedBy(6.dp)) {
@@ -3456,7 +3456,7 @@ private fun RoomChatMessages(
                                     }
                                 }
                             }
-                            items(messages,key={it.id}){message ->
+                            items(messages, key = { it.id }, contentType = { message -> if (message.type == "join") "room_join_message" else "room_chat_message" }) { message ->
                                 if(message.type=="join") {
                                     Column(Modifier.padding(vertical=2.dp).wrapContentWidth().clip(RoundedCornerShape(8.dp)).background(Color.Black.copy(alpha=.30f)).padding(horizontal=12.dp,vertical=4.dp),horizontalAlignment=Alignment.Start,verticalArrangement=Arrangement.spacedBy(2.dp)){
                                         Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp), modifier=Modifier.clickable { onSelectMessage(message) }){
