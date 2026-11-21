@@ -736,10 +736,17 @@ private fun AgentContent(onChat: (String, String, String) -> Unit, currentUserId
     var loaded by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        // Keep the last good list mounted if a temporary network/backend error occurs.
-        val refreshed = fetchWalletAgentSellers()
-        if (refreshed != null) sellers = refreshed
-        loaded = true
+        // Seller IDs are owner-configured and must not vanish because a transient
+        // Render/MongoDB response returned an empty or incomplete list.
+        // Keep the last known-good cards and retry in the background.
+        while (true) {
+            val refreshed = fetchWalletAgentSellers()
+            if (!refreshed.isNullOrEmpty()) {
+                sellers = refreshed
+            }
+            loaded = true
+            kotlinx.coroutines.delay(15_000)
+        }
     }
 
     DisposableEffect(sellers) {
