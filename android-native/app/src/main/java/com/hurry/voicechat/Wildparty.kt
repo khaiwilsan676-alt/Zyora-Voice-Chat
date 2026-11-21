@@ -134,8 +134,8 @@ private fun wpFormatTime(timeMillis: Long): String {
 private class WpSoundManager(private val context: Context) {
  private val baseUrl = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/"
  private val spinFileName = "VID_20261121_003408_517_bsl.mp4"
- private val betFileName = "VID_20261121_003527_312_bsl.mp4"
- private val winnerFileName = betFileName
+ private val betFileName = "VID_20261121_003223_909_bsl.mp4"
+ private val winnerFileName = "VID_20261121_003527_312_bsl.mp4"
 
  private val spinPool = mutableListOf<MediaPlayer>()
  private val betPool = mutableListOf<MediaPlayer>()
@@ -1381,6 +1381,7 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
    val amount=wpChips[chipIndex].value
    if(phase==WpPhase.BETTING&&balance>=amount){
     triggerBetVisuals(name, amount)
+    launch(Dispatchers.IO) { soundManager.playBetClick() }
     walletChange(-amount,"Bet on $name in Wild Party")
     bets=bets.toMutableMap().also{it[name]=(it[name]?:0L)+amount}
    }
@@ -1764,6 +1765,7 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
        val cost = lastBets.values.sum()
        if (phase == WpPhase.BETTING && cost > 0 && balance >= cost) {
         lastBets.forEach { (k, v) -> if (v > 0L) triggerBetVisuals(k, v) }
+        launch(Dispatchers.IO) { soundManager.playBetClick() }
         walletChange(-cost, "Repeat Bet in Wild Party")
         bets = bets.toMutableMap().also { m -> lastBets.forEach { (k, v) -> m[k] = (m[k] ?: 0L) + v } }
        }
