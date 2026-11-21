@@ -18,13 +18,17 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -103,6 +107,180 @@ private fun wpFormat(v:Long)=when{v>=1_000_000->"${"%.1f".format(v/1_000_000.0).
 private fun wpFormatTime(timeMillis: Long): String {
  val c = Calendar.getInstance().apply { timeInMillis = timeMillis }
  return String.format("%02d-%02d %02d:%02d", c.get(Calendar.MONTH) + 1, c.get(Calendar.DAY_OF_MONTH), c.get(Calendar.HOUR_OF_DAY), c.get(Calendar.MINUTE))
+}
+
+@Composable
+private fun WpWildPartyTitle(
+ height: Dp = 22.dp,
+ modifier: Modifier = Modifier
+) {
+ val width = height * 3.68f
+ Canvas(modifier = modifier.size(width = width, height = height)) {
+  val sx = size.width / 220f
+  val sy = size.height / 60f
+  fun x(v: Float) = v * sx
+  fun y(v: Float) = v * sy
+
+  val titlePath = Path().apply {
+   fillType = PathFillType.EvenOdd
+
+   // W
+   moveTo(x(3f), y(15f))
+   quadraticTo(x(8f), y(14f), x(11.5f), y(18f))
+   lineTo(x(12f), y(38f))
+   quadraticTo(x(15f), y(42f), x(19.5f), y(37f))
+   lineTo(x(21f), y(18f))
+   lineTo(x(18f), y(15f))
+   quadraticTo(x(21.5f), y(12f), x(26.5f), y(16.5f))
+   lineTo(x(26f), y(38f))
+   quadraticTo(x(29.5f), y(42f), x(34f), y(37f))
+   lineTo(x(36.5f), y(16f))
+   quadraticTo(x(33.5f), y(12f), x(33f), y(9.5f))
+   quadraticTo(x(39f), y(8f), x(44f), y(15f))
+   cubicTo(x(43.5f), y(28f), x(42f), y(40f), x(37f), y(45.5f))
+   quadraticTo(x(31f), y(48f), x(24.5f), y(42f))
+   quadraticTo(x(18.5f), y(48f), x(12f), y(46.5f))
+   cubicTo(x(6.5f), y(43f), x(5.5f), y(32f), x(6f), y(19.5f))
+   close()
+
+   // i - dot
+   moveTo(x(53.5f), y(9.5f))
+   lineTo(x(57.5f), y(13.5f))
+   lineTo(x(52.5f), y(18.5f))
+   lineTo(x(49f), y(14.5f))
+   close()
+
+   // i - stem
+   moveTo(x(48.5f), y(25f))
+   quadraticTo(x(52f), y(22f), x(55.5f), y(21f))
+   lineTo(x(55.5f), y(41f))
+   lineTo(x(58.5f), y(42.5f))
+   quadraticTo(x(54.5f), y(47f), x(51.5f), y(46.5f))
+   quadraticTo(x(49.5f), y(44.5f), x(50f), y(41f))
+   lineTo(x(50f), y(27f))
+   close()
+
+   // l
+   moveTo(x(60.5f), y(13.5f))
+   quadraticTo(x(64.5f), y(10f), x(68.5f), y(9f))
+   lineTo(x(68.5f), y(41f))
+   lineTo(x(73f), y(42.5f))
+   quadraticTo(x(68.5f), y(47f), x(65f), y(46.5f))
+   quadraticTo(x(62.5f), y(44.5f), x(63f), y(41f))
+   lineTo(x(63f), y(16f))
+   close()
+
+   // d - outer
+   moveTo(x(83.5f), y(11.5f))
+   quadraticTo(x(87.5f), y(8.5f), x(92f), y(8.5f))
+   lineTo(x(92f), y(41f))
+   lineTo(x(96f), y(43f))
+   quadraticTo(x(91.5f), y(47f), x(88.5f), y(46.5f))
+   lineTo(x(86.5f), y(43.5f))
+   quadraticTo(x(80.5f), y(47.5f), x(76f), y(43.5f))
+   cubicTo(x(73f), y(39.5f), x(73.5f), y(29f), x(77.5f), y(24.5f))
+   quadraticTo(x(81.5f), y(21.5f), x(86.5f), y(24f))
+   lineTo(x(86.5f), y(14f))
+   close()
+
+   // d - counter
+   moveTo(x(86.5f), y(28f))
+   quadraticTo(x(81.5f), y(26.5f), x(79.5f), y(31.5f))
+   cubicTo(x(78.5f), y(35.5f), x(79.5f), y(40.5f), x(83f), y(41.5f))
+   quadraticTo(x(85.5f), y(41.5f), x(86.5f), y(39.5f))
+   close()
+
+   // P - outer
+   moveTo(x(109.5f), y(6f))
+   quadraticTo(x(112.5f), y(9.5f), x(115f), y(12f))
+   cubicTo(x(124f), y(11.5f), x(130.5f), y(17f), x(130.5f), y(24.5f))
+   cubicTo(x(130.5f), y(32f), x(124f), y(37f), x(115f), y(37.5f))
+   lineTo(x(115f), y(44.5f))
+   cubicTo(x(114.5f), y(51.5f), x(109f), y(56f), x(101.5f), y(57f))
+   cubicTo(x(106.5f), y(53.5f), x(109f), y(49f), x(109f), y(43f))
+   lineTo(x(109f), y(20f))
+   lineTo(x(103.5f), y(17.5f))
+   quadraticTo(x(107.5f), y(13.5f), x(109.5f), y(6f))
+   close()
+
+   // P - counter
+   moveTo(x(115f), y(17.5f))
+   cubicTo(x(121.5f), y(17.5f), x(124.5f), y(20.5f), x(124.5f), y(25f))
+   cubicTo(x(124.5f), y(29.5f), x(121f), y(32.5f), x(115f), y(32.5f))
+   close()
+
+   // a - outer
+   moveTo(x(139.5f), y(22f))
+   quadraticTo(x(144.5f), y(21.5f), x(148.5f), y(24.5f))
+   lineTo(x(148.5f), y(41f))
+   lineTo(x(152f), y(43f))
+   quadraticTo(x(148f), y(47f), x(145f), y(46.5f))
+   lineTo(x(143f), y(43.5f))
+   quadraticTo(x(137.5f), y(47.5f), x(133f), y(43.5f))
+   cubicTo(x(130f), y(39.5f), x(130.5f), y(29f), x(134.5f), y(24.5f))
+   quadraticTo(x(136.5f), y(22.5f), x(139.5f), y(22f))
+   close()
+
+   // a - counter
+   moveTo(x(143f), y(28f))
+   quadraticTo(x(138f), y(26.5f), x(136.5f), y(32f))
+   cubicTo(x(135.5f), y(36f), x(136.5f), y(40.5f), x(139.5f), y(41.5f))
+   quadraticTo(x(142f), y(41.5f), x(143f), y(39.5f))
+   close()
+
+   // r
+   moveTo(x(153.5f), y(25.5f))
+   quadraticTo(x(157.5f), y(22f), x(161f), y(21.5f))
+   lineTo(x(161f), y(27f))
+   quadraticTo(x(165f), y(21.5f), x(169.5f), y(21.5f))
+   quadraticTo(x(172f), y(22.5f), x(171.5f), y(27f))
+   quadraticTo(x(170.5f), y(29.5f), x(167.5f), y(29.5f))
+   quadraticTo(x(164.5f), y(27.5f), x(161f), y(31.5f))
+   lineTo(x(161f), y(42f))
+   quadraticTo(x(158.5f), y(46.5f), x(155.5f), y(46.5f))
+   lineTo(x(155.5f), y(28f))
+   close()
+
+   // t - stem
+   moveTo(x(181.5f), y(13f))
+   quadraticTo(x(183.5f), y(16f), x(183.5f), y(19.5f))
+   lineTo(x(183.5f), y(40f))
+   quadraticTo(x(185.5f), y(42f), x(190f), y(41f))
+   quadraticTo(x(186f), y(47f), x(181.5f), y(47f))
+   quadraticTo(x(177.5f), y(46f), x(178f), y(40.5f))
+   lineTo(x(178f), y(19.5f))
+   close()
+
+   // t - crossbar
+   moveTo(x(173f), y(26f))
+   lineTo(x(190f), y(23f))
+   lineTo(x(189.5f), y(27.5f))
+   lineTo(x(173.5f), y(30f))
+   close()
+
+   // y
+   moveTo(x(191.5f), y(25f))
+   quadraticTo(x(195.5f), y(22f), x(199f), y(21.5f))
+   lineTo(x(199.5f), y(39f))
+   quadraticTo(x(202.5f), y(42f), x(208f), y(38f))
+   lineTo(x(208f), y(24.5f))
+   quadraticTo(x(211.5f), y(22f), x(214.5f), y(21.5f))
+   lineTo(x(214.5f), y(41.5f))
+   cubicTo(x(214.5f), y(50.5f), x(208f), y(56f), x(198.5f), y(57f))
+   cubicTo(x(204.5f), y(53f), x(208f), y(49f), x(208f), y(43f))
+   quadraticTo(x(202f), y(47.5f), x(197f), y(44.5f))
+   quadraticTo(x(194f), y(42f), x(194f), y(37f))
+   lineTo(x(194f), y(28f))
+   close()
+  }
+
+  // Subtle shadow
+  withTransform({ translate(left = 0f, top = 1.6.dp.toPx()) }) {
+   drawPath(path = titlePath, color = Color.Black.copy(alpha = 0.48f))
+  }
+  // Main crisp white lettering
+  drawPath(path = titlePath, color = Color.White)
+ }
 }
 
 @Composable
@@ -224,24 +402,12 @@ private fun WpLoadingPage(
     .background(Color.Black.copy(alpha = 0.24f))
   )
 
-  // Top Title: Wild Party
-  Text(
-   text = "Wild Party",
+  // Top Title: Wild Party (chota & image jaisa same style)
+  WpWildPartyTitle(
+   height = 22.dp,
    modifier = Modifier
     .align(Alignment.TopCenter)
-    .padding(top = 12.dp),
-   color = Color.White,
-   fontSize = 26.sp,
-   fontWeight = FontWeight.ExtraBold,
-   fontFamily = FontFamily.Serif,
-   fontStyle = FontStyle.Italic,
-   style = TextStyle(
-    shadow = Shadow(
-     color = Color.Black.copy(alpha = 0.72f),
-     offset = Offset(0f, 3f),
-     blurRadius = 6f
-    )
-   )
+    .padding(top = 12.dp)
   )
 
   // Center Game Logo
@@ -435,17 +601,18 @@ private fun WpBetBadge(
      cornerRadius = CornerRadius(3.5.dp.toPx(), 3.5.dp.toPx())
     )
    }
-   .padding(horizontal = 5.dp, vertical = 1.5.dp),
+   .padding(horizontal = 7.5.dp, vertical = 0.5.dp),
   contentAlignment = Alignment.Center
  ) {
   Row(
    verticalAlignment = Alignment.CenterVertically,
-   horizontalArrangement = Arrangement.spacedBy(2.dp)
+   horizontalArrangement = Arrangement.spacedBy(2.5.dp)
   ) {
    Text(
     text = "You:",
     color = Color(0xFFB5440A),
-    fontSize = 9.sp,
+    fontSize = 8.5.sp,
+    lineHeight = 9.5.sp,
     fontWeight = FontWeight.ExtraBold,
     fontFamily = FontFamily.Serif,
     maxLines = 1,
@@ -454,16 +621,17 @@ private fun WpBetBadge(
    )
    if (coinResId.isNotBlank()) {
     AsyncImage(
-    model = coinResId,
+     model = coinResId,
      contentDescription = null,
-     modifier = Modifier.size(11.dp),
+     modifier = Modifier.size(10.dp),
      contentScale = ContentScale.Fit
     )
    }
    Text(
     text = amountText,
     color = Color(0xFFBC3E05),
-    fontSize = 9.5.sp,
+    fontSize = 9.sp,
+    lineHeight = 9.5.sp,
     fontWeight = FontWeight.Black,
     maxLines = 1,
     softWrap = false,
@@ -521,11 +689,6 @@ private fun WpGlassTopButton(
     ),
     topLeft = Offset(size.width * 0.10f, size.height * 0.04f),
     size = Size(size.width * 0.80f, size.height * 0.44f)
-   )
-   drawCircle(
-    color = Color.White.copy(alpha = 0.88f),
-    radius = size.minDimension * 0.075f,
-    center = Offset(size.width * 0.22f, size.height * 0.21f)
    )
    drawOval(
     brush = Brush.verticalGradient(
@@ -591,11 +754,6 @@ private fun WpGlassBackButton(
     ),
     topLeft = Offset(size.width * 0.12f, size.height * 0.04f),
     size = Size(size.width * 0.76f, size.height * 0.42f)
-   )
-   drawCircle(
-    color = Color.White.copy(alpha = 0.82f),
-    radius = size.minDimension * 0.065f,
-    center = Offset(size.width * 0.22f, size.height * 0.22f)
    )
   }
   Canvas(Modifier.size(13.dp)) {
@@ -671,7 +829,7 @@ private fun WpBottomBalanceBar(
    ) {
     if (coinResId.isNotBlank()) {
      AsyncImage(
- model = coinResId,
+      model = coinResId,
       contentDescription = null,
       modifier = Modifier.size(18.dp),
       contentScale = ContentScale.Fit
@@ -694,7 +852,7 @@ private fun WpBottomBalanceBar(
    horizontalArrangement = Arrangement.spacedBy(3.dp)
   ) {
    Text(
-    balance.toString(),
+    if (balance >= 100_000_000L) wpFormat(balance) else balance.toString(),
     color = goldColor,
     fontSize = 13.sp,
     fontWeight = FontWeight.Black,
@@ -814,8 +972,8 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
  var winnerIndex by remember{mutableIntStateOf(0)}
  var mode by remember{mutableStateOf(WpMode.SINGLE)}
  var chipIndex by remember{mutableIntStateOf(1)}
- var bets by remember{mutableStateOf<Map<String, Long>>(emptyMap())}
- var lastBets by remember{mutableStateOf<Map<String, Long>>(emptyMap())}
+ var bets by remember{mutableStateOf>(emptyMap())}
+ var lastBets by remember{mutableStateOf>(emptyMap())}
  var history by remember{mutableStateOf<List<WpRound>>(emptyList())}
  var historyOpen by remember{mutableStateOf(false)}
  var rulesOpen by remember{mutableStateOf(false)}
@@ -827,6 +985,11 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
  var loading by remember{mutableStateOf(true)}
  var loadingProgress by remember{mutableFloatStateOf(0f)}
  var processedRound by remember{mutableIntStateOf(-1)}
+
+ val topHistoryScrollState = rememberScrollState()
+ val grayColorFilter = remember {
+  ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
+ }
 
  LaunchedEffect(Unit){
   runCatching{
@@ -840,6 +1003,9 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
   }
   delay(120)
   loading=false
+ }
+ LaunchedEffect(history.size){
+  topHistoryScrollState.scrollTo(0)
  }
  suspend fun walletChange(delta:Long,title:String){
   val old=dao.getUserData()?:UserDataEntity(balance=balance)
@@ -857,15 +1023,27 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
  LaunchedEffect(loading){
   if(loading)return@LaunchedEffect
   while(true){
-   val elapsed=((System.currentTimeMillis()-wpReset())/1000L).coerceAtLeast(0)
-   val cycle=(elapsed%47).toInt();round=(elapsed/47).toInt()+1
+   val now=System.currentTimeMillis()
+   val elapsedMs=(now-wpReset(now)).coerceAtLeast(0L)
+   val elapsed=elapsedMs/1000L
+   val cycleMs=elapsedMs%47_000L
+   val cycle=(cycleMs/1000L).toInt()
+   round=(elapsed/47L).toInt()+1
    val outcome=wpOutcome(round);mode=outcome.first;winnerIndex=outcome.second
    when{
     cycle<30->{phase=WpPhase.BETTING;countdown=30-cycle;highlight=-1;winnerOpen=false}
-    cycle<40->{phase=WpPhase.SPINNING;countdown=40-cycle;val p=((cycle*1000L+System.currentTimeMillis()%1000L-30000L).coerceIn(0,10000))/10000.0;highlight=(floor((1-(1-p).pow(3))*(120+winnerIndex)).toInt()%8)}
+    cycle<40->{
+     phase=WpPhase.SPINNING
+     countdown=40-cycle
+     val p=((cycleMs-30_000L).coerceIn(0L,10_000L))/10_000.0
+     val totalSteps=48+winnerIndex
+     val eased=1.0-(1.0-p).pow(2.2)
+     val step=floor(eased*(totalSteps+0.5)).toInt().coerceAtMost(totalSteps)
+     highlight=step%8
+    }
     else->{phase=WpPhase.RESULT;countdown=47-cycle;highlight=winnerIndex}
    }
-   delay(100)
+   delay(if(cycle in 30..39) 16L else 100L)
   }
  }
  LaunchedEffect(phase,round,loading){
@@ -896,14 +1074,19 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
   Box(Modifier.fillMaxWidth().height(h).background(Color(0xFF28180D))){
    val bg=wpAsset("wp_1787337855180_2")
    if (bg.isNotBlank())AsyncImage(
- model = bg, contentDescription = null, modifier = Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
+    model = bg, contentDescription = null, modifier = Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
    // Original TSX top multiplier badges (same artwork and placement).
    @Composable fun MultiplierBadge(big:Boolean){
     Box(Modifier.size(65.dp),contentAlignment=Alignment.Center){
      if (multiplierBg.isNotBlank())AsyncImage(
- model = multiplierBg, contentDescription = null, modifier = Modifier.fillMaxSize(),contentScale=ContentScale.Fit)
-     val names=if(big) listOf("Eagle","Bear","Tiger","Lion") else listOf("Rabbit","Deer","Dog","Camel")
-     val positions=listOf(
+      model = multiplierBg, contentDescription = null, modifier = Modifier.fillMaxSize(),contentScale=ContentScale.Fit)
+     val names=if(big) listOf("Eagle","Bear","Tiger","Lion") else listOf("Dog","Camel","Rabbit","Deer")
+     val positions=if(big) listOf(
+      Triple((-11).dp,(-12).dp,-10f),
+      Triple(9.dp,(-12).dp,10f),
+      Triple((-14).dp,12.dp,-15f),
+      Triple(14.dp,12.dp,10f)
+     ) else listOf(
       Triple((-9).dp,(-8).dp,-10f),
       Triple(9.dp,(-8).dp,10f),
       Triple((-14).dp,12.dp,-15f),
@@ -913,7 +1096,15 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
       val id=wpAsset(wpAnimals.first{it.name==name}.image)
       val (x,y,rotation)=positions[index]
       if (id.isNotBlank())AsyncImage(
- model = id, contentDescription = name, modifier = Modifier.offset(x,y).size(if(index<2)32.dp else 34.dp).graphicsLayer{rotationZ=rotation},contentScale=ContentScale.Crop)
+       model = id,
+       contentDescription = name,
+       modifier = Modifier
+        .offset(x,y)
+        .size(if(index<2)32.dp else 34.dp)
+        .zIndex(if(name=="Eagle" || name=="Rabbit" || name=="Deer") 5f else 0f)
+        .graphicsLayer{rotationZ=rotation},
+       contentScale=if(name=="Rabbit") ContentScale.Fit else ContentScale.Crop
+      )
      }
     }
    }
@@ -967,14 +1158,9 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
       )
      }
     }
-    Text(
-     "Wild Party",
-     Modifier.align(Alignment.Center),
-     color = Color.White,
-     fontSize = 18.sp,
-     fontWeight = FontWeight.Black,
-     fontStyle = FontStyle.Italic,
-     style = TextStyle(shadow = Shadow(Color.Black.copy(alpha = 0.45f), Offset(0f, 2f), 4f))
+    WpWildPartyTitle(
+     height = 22.dp,
+     modifier = Modifier.align(Alignment.Center)
     )
     Row(Modifier.align(Alignment.CenterEnd).padding(end=8.dp),horizontalArrangement=Arrangement.spacedBy(6.dp),verticalAlignment=Alignment.CenterVertically){
      WpGlassTopButton(onClick = { historyOpen = true }) {
@@ -1020,22 +1206,32 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
      }
     }
    }
-   Row(Modifier.fillMaxWidth().padding(top=44.dp,start=8.dp,end=8.dp).heightIn(min=28.dp).horizontalScroll(rememberScrollState()).clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha=.25f)).border(1.dp,Color.White.copy(alpha=.20f),RoundedCornerShape(50)).padding(horizontal=10.dp,vertical=3.dp),horizontalArrangement=Arrangement.spacedBy(6.dp),verticalAlignment=Alignment.CenterVertically){
+   Row(
+    Modifier
+     .fillMaxWidth()
+     .padding(top=44.dp,start=8.dp,end=8.dp)
+     .heightIn(min=28.dp)
+     .clip(RoundedCornerShape(50))
+     .background(Color.Black.copy(alpha=.25f))
+     .border(1.dp,Color.White.copy(alpha=.20f),RoundedCornerShape(50))
+     .horizontalScroll(topHistoryScrollState)
+     .padding(horizontal=10.dp,vertical=3.dp),
+    horizontalArrangement=Arrangement.spacedBy(6.dp),
+    verticalAlignment=Alignment.CenterVertically
+   ){
     if(history.isEmpty())Text("History",color=Color.White.copy(alpha=.5f),fontSize=10.sp,fontStyle=FontStyle.Italic)
     else {
-     val topHistory = history.takeLast(9)
+     val topHistory = history.takeLast(20).reversed()
      topHistory.forEachIndexed{recordIdx,record->
-      val isNewest = recordIdx == topHistory.lastIndex
+      val isNewest = recordIdx == 0
       val mixBig=record.winner=="Mix Big";val mixSmall=record.winner=="Mix Small"
       Box(Modifier.size(24.dp),contentAlignment=Alignment.Center){
        if(mixBig||mixSmall){
-        if (multiplierBg.isNotBlank())AsyncImage(
- model = multiplierBg, contentDescription = null, modifier = Modifier.fillMaxSize(),contentScale=ContentScale.Fit)
         val group=if(mixBig)listOf("Eagle","Bear","Tiger","Lion") else listOf("Rabbit","Deer","Dog","Camel")
         group.forEachIndexed{idx,n->val aid=wpAsset(wpAnimals.first{it.name==n}.image);if (aid.isNotBlank())AsyncImage(
- model = aid, contentDescription = null, modifier = Modifier.align(when(idx){0->Alignment.TopStart;1->Alignment.TopEnd;2->Alignment.BottomStart;else->Alignment.BottomEnd}).size(12.dp),contentScale=ContentScale.Crop)}
+         model = aid, contentDescription = null, modifier = Modifier.align(when(idx){0->Alignment.TopStart;1->Alignment.TopEnd;2->Alignment.BottomStart;else->Alignment.BottomEnd}).size(12.dp),contentScale=ContentScale.Fit)}
        }else{val aid=wpAsset(wpAnimals.firstOrNull{it.name==record.winner}?.image?: "");if (aid.isNotBlank())AsyncImage(
- model = aid, contentDescription = record.winner, modifier = Modifier.fillMaxSize(),contentScale=ContentScale.Fit)}
+        model = aid, contentDescription = record.winner, modifier = Modifier.fillMaxSize(),contentScale=ContentScale.Fit)}
        if(isNewest){
         WpHistoryNewPill(modifier = Modifier.align(Alignment.BottomCenter).offset(y = 1.dp))
        }
@@ -1043,20 +1239,41 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
      }
     }
    }
-   Box(Modifier.align(Alignment.Center).size(320.dp),contentAlignment=Alignment.Center){
+   Box(Modifier.align(Alignment.Center).offset(y = 19.dp).size(320.dp),contentAlignment=Alignment.Center){
     // Center background image (public/IMG_20261121_102855.png)
     val centerBg=wpAsset("img_20261121_102855")
     if (centerBg.isNotBlank())AsyncImage(
- model = centerBg, contentDescription = null, modifier = Modifier.fillMaxSize(),contentScale=ContentScale.Fit)
+     model = centerBg, contentDescription = null, modifier = Modifier.fillMaxSize(),contentScale=ContentScale.Fit)
     wpAnimals.forEachIndexed{i,a->
-     val rad=Math.toRadians(a.angle.toDouble());val x=(cos(rad)*130).dp+a.dx.dp;val y=(sin(rad)*130).dp+a.dy.dp
+     val rad=Math.toRadians(a.angle.toDouble());val x=(cos(rad)*130).dp+a.dx.dp;val y=(sin(rad)*130).dp+a.dy.dp-5.dp
      val active=highlight==i||(phase==WpPhase.RESULT&&((mode==WpMode.MIX_BIG&&i>=4)||(mode==WpMode.MIX_SMALL&&i<4)))
+     val isColorless = phase != WpPhase.BETTING && !active
      val image=wpAsset(a.image)
      val amount=bets[a.name]?:0L
      Box(Modifier.offset(x,y).size(a.size.dp).zIndex(if(amount>0)2f else 0f),contentAlignment=Alignment.Center){
-      Box(Modifier.fillMaxSize().clip(CircleShape).background(Color(0xFF4A2B13)).border(if(active)3.dp else 1.dp,if(active)wpGold else Color(0xFFB8864B),CircleShape).clickable{place(a.name)}.padding(4.dp),contentAlignment=Alignment.Center){
+      Box(
+       Modifier
+        .fillMaxSize()
+        .clickable(
+         interactionSource = remember { MutableInteractionSource() },
+         indication = null
+        ) { place(a.name) },
+       contentAlignment = Alignment.Center
+      ){
        if (image.isNotBlank())AsyncImage(
- model = image, contentDescription = a.name, modifier = Modifier.fillMaxSize().graphicsLayer{alpha=if(phase==WpPhase.BETTING||active)1f else .4f},contentScale=ContentScale.Fit)
+        model = image,
+        contentDescription = a.name,
+        colorFilter = if (isColorless) grayColorFilter else null,
+        modifier = Modifier
+         .fillMaxSize()
+         .graphicsLayer{
+          alpha = if(phase==WpPhase.BETTING||active) 1f else .85f
+          val s = if(active) 1.08f else 1f
+          scaleX = s
+          scaleY = s
+         },
+        contentScale = ContentScale.Fit
+       )
       }
       if(amount>0)WpBetBadge(
        amountText=wpFormat(amount),
@@ -1139,15 +1356,18 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
    // Original TSX bottom decoration sits behind the balance and chip controls.
    val bottomDecor=wpAsset("wp_img_20260822_011000")
    if (bottomDecor.isNotBlank())AsyncImage(
- model = bottomDecor, contentDescription = null, modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(112.dp),
+    model = bottomDecor, contentDescription = null, modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(112.dp),
     contentScale=ContentScale.Fit,
     alignment=Alignment.BottomCenter
    )
    // TSX Bottom Left Decor: separate artwork above the bottom decoration (not the coin).
    val bottomLeftDecor=wpAsset("wp_file_00000000993c8208ae462545f9ccb0ba")
    if (bottomLeftDecor.isNotBlank())AsyncImage(
- model = bottomLeftDecor, contentDescription = null, modifier = Modifier.align(Alignment.BottomStart).padding(start=8.dp,bottom=60.dp).size(width=40.dp,height=55.dp),
-    contentScale=ContentScale.FillBounds
+    model = bottomLeftDecor,
+    contentDescription = null,
+    modifier = Modifier.align(Alignment.BottomStart).padding(start=8.dp,bottom=60.dp).size(44.dp),
+    contentScale=ContentScale.Fit,
+    alignment=Alignment.BottomStart
    )
    WpBottomBalanceBar(
     coinResId = coin,
@@ -1166,8 +1386,31 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
       }
      }
     )
-    wpChips.forEachIndexed{i,c->val id=wpAsset(c.image);Box(Modifier.size(34.dp).graphicsLayer{val scale=if(chipIndex==i)1.08f else 1f;scaleX=scale;scaleY=scale;translationY=if(chipIndex==i)-8.dp.toPx() else 0f}.border(if(chipIndex==i)2.dp else 0.dp,wpGold,CircleShape).clip(CircleShape).background(Color(0xFF54351C)).clickable{chipIndex=i},contentAlignment=Alignment.Center){if (id.isNotBlank())AsyncImage(
- model = id, contentDescription = c.label, modifier = Modifier.fillMaxSize(),contentScale=ContentScale.Fit)else Text(c.label,color=Color.White,fontSize=8.sp)}}
+    wpChips.forEachIndexed{i,c->
+     val id=wpAsset(c.image)
+     Box(
+      Modifier
+       .size(34.dp)
+       .graphicsLayer{
+        val scale=if(chipIndex==i)1.08f else 1f
+        scaleX=scale
+        scaleY=scale
+        translationY=if(chipIndex==i)-8.dp.toPx() else 0f
+       }
+       .clickable(
+        interactionSource = remember { MutableInteractionSource() },
+        indication = null
+       ){chipIndex=i},
+      contentAlignment=Alignment.Center
+     ){
+      if (id.isNotBlank())AsyncImage(
+       model = id,
+       contentDescription = c.label,
+       modifier = Modifier.fillMaxSize(),
+       contentScale = ContentScale.Fit
+      ) else Text(c.label,color=Color.White,fontSize=8.sp)
+     }
+    }
    }
    if(loading)WpLoadingPage(progress=loadingProgress)
   }
@@ -1212,21 +1455,19 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
         val mixSmall = r.winner == "Mix Small"
         if (mixBig || mixSmall) {
          Box(Modifier.size(30.dp), contentAlignment = Alignment.Center) {
-          if (multiplierBg.isNotBlank()) AsyncImage(
- model = multiplierBg, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
           val group = if (mixBig) listOf("Eagle", "Bear", "Tiger", "Lion") else listOf("Rabbit", "Deer", "Dog", "Camel")
           group.forEachIndexed { idx, n ->
            val aid = wpAsset( wpAnimals.first { it.name == n }.image)
            if (aid.isNotBlank()) AsyncImage(
- model = aid, contentDescription = null, modifier = Modifier.align(when (idx) { 0 -> Alignment.TopStart; 1 -> Alignment.TopEnd; 2 -> Alignment.BottomStart; else -> Alignment.BottomEnd }).size(14.dp),
-            contentScale = ContentScale.Crop
+            model = aid, contentDescription = null, modifier = Modifier.align(when (idx) { 0 -> Alignment.TopStart; 1 -> Alignment.TopEnd; 2 -> Alignment.BottomStart; else -> Alignment.BottomEnd }).size(15.dp),
+            contentScale = ContentScale.Fit
            )
           }
          }
         } else {
          val aid = wpAsset( wpAnimals.firstOrNull { it.name == r.winner }?.image ?: "")
          if (aid.isNotBlank()) AsyncImage(
- model = aid, contentDescription = r.winner, modifier = Modifier.size(30.dp), contentScale = ContentScale.Fit)
+          model = aid, contentDescription = r.winner, modifier = Modifier.size(30.dp), contentScale = ContentScale.Fit)
         }
        }
        Text(
@@ -1325,7 +1566,7 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
        Box(Modifier.weight(1f).padding(vertical = 8.dp), contentAlignment = Alignment.Center) {
         val aid = wpAsset( a.image)
         if (aid.isNotBlank()) AsyncImage(
- model = aid, contentDescription = a.name, modifier = Modifier.size(38.dp), contentScale = ContentScale.Fit)
+         model = aid, contentDescription = a.name, modifier = Modifier.size(38.dp), contentScale = ContentScale.Fit)
        }
       }
      }
@@ -1364,7 +1605,7 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
    }
   }
 
-  // Winner Page (Exact layout & spacing as reference image, using existing heading & frame drawables)
+  // Winner Page (Auto-closes only when countdown ends; user cannot manually dismiss)
   if(winnerOpen){
    val winnerSheetShape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
@@ -1372,7 +1613,11 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
      Modifier
       .fillMaxSize()
       .background(Color.Black.copy(alpha = 0.45f))
-      .clickable { winnerOpen = false }
+      .clickable(
+       interactionSource = remember { MutableInteractionSource() },
+       indication = null,
+       onClick = {}
+      )
     )
     Column(
      modifier = Modifier
@@ -1408,15 +1653,13 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
       ) {
        Box(Modifier.size(82.dp), contentAlignment = Alignment.Center) {
         if (mode == WpMode.MIX_BIG || mode == WpMode.MIX_SMALL) {
-         if (multiplierBg.isNotBlank()) AsyncImage(
- model = multiplierBg, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
          val group = if (mode == WpMode.MIX_BIG) listOf("Eagle", "Bear", "Tiger", "Lion") else listOf("Rabbit", "Deer", "Dog", "Camel")
          group.forEachIndexed { idx, n ->
           val aid = wpAsset( wpAnimals.first { it.name == n }.image)
           if (aid.isNotBlank()) AsyncImage(
- model = aid, contentDescription = null, modifier = Modifier
+           model = aid, contentDescription = null, modifier = Modifier
             .align(when (idx) { 0 -> Alignment.TopStart; 1 -> Alignment.TopEnd; 2 -> Alignment.BottomStart; else -> Alignment.BottomEnd })
-            .size(38.dp),
+            .size(40.dp),
            contentScale = ContentScale.Fit
           )
          }
@@ -1424,7 +1667,7 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
          val winAnimalImg = wpAsset( wpAnimals[winnerIndex.coerceIn(0, 7)].image)
          if (winAnimalImg.isNotBlank()) {
           AsyncImage(
- model = winAnimalImg,
+           model = winAnimalImg,
            contentDescription = null,
            modifier = Modifier.fillMaxSize(),
            contentScale = ContentScale.Fit
@@ -1445,26 +1688,26 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
         ) {
          Text(
           text = "Prizes",
-          modifier = Modifier.weight(1f),
+          modifier = Modifier.weight(0.70f),
           color = Color.White,
           fontSize = 15.sp,
           fontWeight = FontWeight.Bold
          )
          Row(
-          modifier = Modifier.weight(0.85f),
+          modifier = Modifier.weight(1.15f),
           verticalAlignment = Alignment.CenterVertically,
           horizontalArrangement = Arrangement.spacedBy(6.dp)
          ) {
           if (coin.isNotBlank()) {
            AsyncImage(
- model = coin,
+            model = coin,
             contentDescription = null,
             modifier = Modifier.size(18.dp),
             contentScale = ContentScale.Fit
            )
           }
           Text(
-           text = "$winAmount",
+           text = wpFormat(winAmount),
            color = Color.White,
            fontSize = 15.sp,
            fontWeight = FontWeight.Bold
@@ -1478,26 +1721,26 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
         ) {
          Text(
           text = "Your Bet",
-          modifier = Modifier.weight(1f),
+          modifier = Modifier.weight(0.70f),
           color = Color.White,
           fontSize = 15.sp,
           fontWeight = FontWeight.Bold
          )
          Row(
-          modifier = Modifier.weight(0.85f),
+          modifier = Modifier.weight(1.15f),
           verticalAlignment = Alignment.CenterVertically,
           horizontalArrangement = Arrangement.spacedBy(6.dp)
          ) {
           if (coin.isNotBlank()) {
            AsyncImage(
- model = coin,
+            model = coin,
             contentDescription = null,
             modifier = Modifier.size(18.dp),
             contentScale = ContentScale.Fit
            )
           }
           Text(
-           text = "$betAmount",
+           text = wpFormat(betAmount),
            color = Color.White,
            fontSize = 15.sp,
            fontWeight = FontWeight.Bold
@@ -1510,17 +1753,24 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
 
      Spacer(Modifier.height(16.dp))
 
-     // Middle Heading Artwork (Top Winner image)
+     // Middle Heading Artwork (Top Winner image - size increased without shifting other elements)
      val heading = wpAsset( "wp_img_20260913_000423")
      if (heading.isNotBlank()) {
-      AsyncImage(
- model = heading,
-       contentDescription = null,
+      Box(
        modifier = Modifier
-        .fillMaxWidth(0.94f)
+        .fillMaxWidth()
         .height(36.dp),
-       contentScale = ContentScale.Fit
-      )
+       contentAlignment = Alignment.Center
+      ) {
+       AsyncImage(
+        model = heading,
+        contentDescription = null,
+        modifier = Modifier
+         .fillMaxWidth()
+         .requiredHeight(56.dp),
+        contentScale = ContentScale.Fit
+       )
+      }
      }
 
      Spacer(Modifier.height(14.dp))
@@ -1562,7 +1812,7 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
          )
          if (frame.isNotBlank()) {
           AsyncImage(
- model = frame,
+           model = frame,
            contentDescription = item.first,
            modifier = Modifier.fillMaxSize(),
            contentScale = ContentScale.Fit
@@ -1584,7 +1834,7 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
         ) {
          if (coin.isNotBlank()) {
           AsyncImage(
- model = coin,
+           model = coin,
            contentDescription = null,
            modifier = Modifier.size(15.dp),
            contentScale = ContentScale.Fit
