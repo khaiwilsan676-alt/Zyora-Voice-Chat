@@ -1,6 +1,5 @@
 package com.hurry.voicechat
 
-import android.content.Context
 import androidx.compose.foundation.*
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -69,6 +68,7 @@ private val wpChips = listOf(
 private val wpGold=Color(0xFFFFD33D)
 private val wpDark=Color(0xF20C0C0E)
 private fun wpAsset(n:String):String {
+ if (n.isBlank()) return ""
  val raw=n.removePrefix("wp_")
  val file=when {
   raw.startsWith("img_") -> "IMG_${raw.removePrefix("img_")}.png"
@@ -912,7 +912,7 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
       val id=wpAsset(wpAnimals.first{it.name==name}.image)
       val (x,y,rotation)=positions[index]
       if (id.isNotBlank())AsyncImage(
- model = id, contentDescription = "name", modifier = Modifier.offset(x,y).size(if(index<2)32.dp else 34.dp).graphicsLayer{rotationZ=rotation},contentScale=ContentScale.Crop)
+ model = id, contentDescription = name, modifier = Modifier.offset(x,y).size(if(index<2)32.dp else 34.dp).graphicsLayer{rotationZ=rotation},contentScale=ContentScale.Crop)
      }
     }
    }
@@ -1034,7 +1034,7 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
         group.forEachIndexed{idx,n->val aid=wpAsset(wpAnimals.first{it.name==n}.image);if (aid.isNotBlank())AsyncImage(
  model = aid, contentDescription = null, modifier = Modifier.align(when(idx){0->Alignment.TopStart;1->Alignment.TopEnd;2->Alignment.BottomStart;else->Alignment.BottomEnd}).size(12.dp),contentScale=ContentScale.Crop)}
        }else{val aid=wpAsset(wpAnimals.firstOrNull{it.name==record.winner}?.image?: "");if (aid.isNotBlank())AsyncImage(
- model = aid,record.winner,Modifier.fillMaxSize(),contentScale=ContentScale.Fit)}
+ model = aid, contentDescription = record.winner, modifier = Modifier.fillMaxSize(),contentScale=ContentScale.Fit)}
        if(isNewest){
         WpHistoryNewPill(modifier = Modifier.align(Alignment.BottomCenter).offset(y = 1.dp))
        }
