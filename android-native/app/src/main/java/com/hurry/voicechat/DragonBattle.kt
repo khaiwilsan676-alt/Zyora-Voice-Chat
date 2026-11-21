@@ -98,6 +98,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.util.Locale
 import kotlin.math.PI
+import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.exp
 import kotlin.math.sin
@@ -110,7 +111,7 @@ private const val BASE_URL =
     "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/"
 
 private const val DRAGON_BATTLE_BG =
-    "${BASE_URL}public/IMG-20261121-WA0034.jpg"
+    "${BASE_URL}public/file_00000000f3248211a67433d26cac032b.png"
 private const val DRAGON_BATTLE_LOGO =
     "${BASE_URL}public/IMG_20261121_020906.png"
 
@@ -267,16 +268,42 @@ private class DragonBetSoundManager(private val context: Context) {
     @Volatile private var muted = false
     @Volatile private var released = false
 
+    private val sfxSampleRate = 22050
+
+    // Crisp card-turn / card-flip paper swish-snap PCM buffer
+    private val cardFlipPcm: ShortArray by lazy {
+        val count = (sfxSampleRate * 0.12).toInt()
+        val data = ShortArray(count)
+        var seed = 0x5DEECE66DL
+        var prevNoise = 0.0
+        var lowPass = 0.0
+        for (i in 0 until count) {
+            val t = i.toDouble() / sfxSampleRate
+            seed = (seed * 25214903917L + 11L) and ((1L shl 48) - 1L)
+            val white = ((seed ushr 32).toDouble() / 65536.0) * 2.0 - 1.0
+            // Band-limited paper swish
+            val highPass = white - prevNoise * 0.65
+            prevNoise = white
+            lowPass = lowPass * 0.55 + highPass * 0.45
+            val swishEnv = if (t < 0.022) (t / 0.022) else exp(-(t - 0.022) * 34.0)
+            // Crisp card snap transient near 32ms
+            val snapEnv = exp(-abs(t - 0.032) * 190.0)
+            val snapTone = sin(2.0 * PI * 480.0 * t) * snapEnv * 0.38
+            val sample = ((lowPass * swishEnv * 0.85) + snapTone).coerceIn(-1.0, 1.0)
+            data[i] = (sample * Short.MAX_VALUE).toInt().toShort()
+        }
+        data
+    }
+
     // Heavy punchy "DHAM" impact PCM buffer (22050 Hz mono 16-bit)
-    private val dhamSampleRate = 22050
     private val dhamPcm: ShortArray by lazy {
-        val count = (dhamSampleRate * 0.24).toInt()
+        val count = (sfxSampleRate * 0.24).toInt()
         val data = ShortArray(count)
         var phase = 0.0
         for (i in 0 until count) {
-            val t = i.toDouble() / dhamSampleRate
+            val t = i.toDouble() / sfxSampleRate
             val freq = 38.0 + 115.0 * exp(-t * 22.0)
-            phase += 2.0 * PI * freq / dhamSampleRate
+            phase += 2.0 * PI * freq / sfxSampleRate
             val body = sin(phase) * exp(-t * 11.5)
             val snap = sin(2.0 * PI * 240.0 * t) * exp(-t * 55.0) * 0.45
             val sample = ((body + snap) * 0.92).coerceIn(-1.0, 1.0)
@@ -286,6 +313,7 @@ private class DragonBetSoundManager(private val context: Context) {
     }
 
     suspend fun preload() = withContext(Dispatchers.IO) {
+        cardFlipPcm
         dhamPcm
         val betFile = ensureCached(betFileName)
         val winFile = ensureCached(winnerFileName)
@@ -378,10 +406,9 @@ private class DragonBetSoundManager(private val context: Context) {
         }
     }
 
-    fun playDham() {
+    private fun playStaticPcm(pcm: ShortArray, holdMs: Long) {
         if (muted || released) return
         runCatching {
-            val pcm = dhamPcm
             val byteSize = pcm.size * 2
             val track = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 AudioTrack.Builder()
@@ -394,7 +421,7 @@ private class DragonBetSoundManager(private val context: Context) {
                     .setAudioFormat(
                         AudioFormat.Builder()
                             .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-                            .setSampleRate(dhamSampleRate)
+                            .setSampleRate(sfxSampleRate)
                             .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
                             .build()
                     )
@@ -405,7 +432,7 @@ private class DragonBetSoundManager(private val context: Context) {
                 @Suppress("DEPRECATION")
                 AudioTrack(
                     android.media.AudioManager.STREAM_MUSIC,
-                    dhamSampleRate,
+                    sfxSampleRate,
                     AudioFormat.CHANNEL_OUT_MONO,
                     AudioFormat.ENCODING_PCM_16BIT,
                     byteSize,
@@ -414,10 +441,18 @@ private class DragonBetSoundManager(private val context: Context) {
             }
             track.write(pcm, 0, pcm.size)
             track.play()
-            Thread.sleep(270L)
+            Thread.sleep(holdMs)
             runCatching { track.stop() }
             runCatching { track.release() }
         }
+    }
+
+    fun playCardFlip() {
+        playStaticPcm(cardFlipPcm, 150L)
+    }
+
+    fun playDham() {
+        playStaticPcm(dhamPcm, 270L)
     }
 
     fun playWinner() {
@@ -675,7 +710,6 @@ private fun DragonBattleTitle(
             close()
         }
 
-        // Single sweeping crossbar uniting both 't' stems cleanly without EvenOdd holes
         val crossbarPath = Path().apply {
             moveTo(x(229.5f), y(26.5f))
             lineTo(x(263.5f), y(22.5f))
@@ -1065,7 +1099,7 @@ private fun DragonPlayingCardFace(
         modifier = modifier
             .clip(cardShape)
             .background(Color.White)
-            .border(0.7.dp, Color(0xFFB5B5B5), cardShape)
+            .border(0.8.dp, Color(0xFFA8A8A8), cardShape)
     ) {
         Column(
             modifier = Modifier
@@ -1094,7 +1128,7 @@ private fun DragonPlayingCardFace(
             color = suitColor,
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(end = 1.5.dp, bottom = 2.dp)
+                .padding(end = 2.dp, bottom = 2.dp)
                 .size(20.dp)
         )
     }
@@ -1313,7 +1347,7 @@ internal fun DragonBattleGameItem(onClick: () -> Unit) {
 
 /**
  * Screen ke ekdam BOTTOM par open hoga.
- * Height exact Wild Party ke barabar (maxHeight * 0.65f) rahegi.
+ * Height sirf choti Background Image ki exact original height ke barabar rahegi.
  */
 @Composable
 fun DragonBattleGameHost(
@@ -1322,6 +1356,7 @@ fun DragonBattleGameHost(
     onMinimize: () -> Unit = {}
 ) {
     var isLoaded by remember { mutableStateOf(false) }
+    var bgAspectRatio by remember { mutableFloatStateOf(1f) }
 
     BoxWithConstraints(
         modifier = modifier
@@ -1330,7 +1365,7 @@ fun DragonBattleGameHost(
             .background(Color.Transparent),
         contentAlignment = Alignment.BottomCenter
     ) {
-        val sheetHeight = maxHeight * 0.65f
+        val sheetHeight = (maxWidth / bgAspectRatio).coerceAtMost(maxHeight * 0.85f)
 
         Box(
             modifier = Modifier
@@ -1359,6 +1394,12 @@ fun DragonBattleGameHost(
                 AsyncImage(
                     model = DRAGON_BATTLE_BG,
                     contentDescription = "Dragon Battle Loading Background",
+                    onSuccess = { state ->
+                        val s = state.painter.intrinsicSize
+                        if (s.width > 0f && s.height > 0f && s.width.isFinite() && s.height.isFinite()) {
+                            bgAspectRatio = s.width / s.height
+                        }
+                    },
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
                 )
@@ -1370,6 +1411,7 @@ fun DragonBattleGameHost(
         } else {
             DragonBattleMainOverlay(
                 sheetHeight = sheetHeight,
+                onBgAspectRatio = { ratio -> bgAspectRatio = ratio },
                 modifier = Modifier.fillMaxSize(),
                 onClose = onClose,
                 onMinimize = onMinimize
@@ -1401,7 +1443,6 @@ private fun DragonBattleLoadingOverlay(
                 .background(Color.Black.copy(alpha = 0.24f))
         )
 
-        // Matching stylized Dragon Battle title on Loading Page
         DragonBattleTitle(
             height = 30.dp,
             modifier = Modifier
@@ -1414,7 +1455,7 @@ private fun DragonBattleLoadingOverlay(
             contentDescription = "Dragon Battle Logo",
             modifier = Modifier
                 .align(Alignment.Center)
-                .padding(bottom = 26.dp)
+                .padding(bottom = 20.dp)
                 .size(145.dp),
             contentScale = ContentScale.Fit
         )
@@ -1423,7 +1464,7 @@ private fun DragonBattleLoadingOverlay(
             progress = progress,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(horizontal = 20.dp, vertical = 22.dp)
+                .padding(horizontal = 20.dp, vertical = 20.dp)
         )
     }
 }
@@ -1521,6 +1562,7 @@ private fun BlueGlossyLoadingBar(
 @Composable
 private fun DragonBattleMainOverlay(
     sheetHeight: Dp,
+    onBgAspectRatio: (Float) -> Unit,
     modifier: Modifier = Modifier,
     onClose: () -> Unit = {},
     onMinimize: () -> Unit = {}
@@ -1549,7 +1591,6 @@ private fun DragonBattleMainOverlay(
     var historyOpen by remember { mutableStateOf(false) }
     var historyList by remember { mutableStateOf(listOf("C", "B", "A", "B", "A")) }
 
-    // Winner page states (same as Wild Party)
     var winnerOpen by remember { mutableStateOf(false) }
     var winnerDragon by remember { mutableStateOf("A") }
     var winnerTimer by remember { mutableIntStateOf(5) }
@@ -1577,7 +1618,7 @@ private fun DragonBattleMainOverlay(
     LaunchedEffect(Unit) {
         launch(Dispatchers.IO) { soundManager.preload() }
         while (true) {
-            // 1. Start Betting -> Show "Start Betting !" banner (Left -> Center 1.5s -> Right) & 20s countdown
+            // 1. Start Betting -> "Start Betting !" banner + 20s countdown
             isRevealing = false
             revealedCount = 0
             showRankA = false
@@ -1596,19 +1637,20 @@ private fun DragonBattleMainOverlay(
                 delay(1000L)
             }
 
-            // 2. Time khatam -> "Stop Betting !" banner (Left -> Center 1.5s -> Right)
+            // 2. Time khatam -> "Stop Betting !" banner
             timeLeft = 0
             isRevealing = true
             showBanner("Stop Betting !")
             delay(2150L)
 
-            // 3. Cards show honge -> "Show !" banner + flip 1 card every 1.5s (Group A -> B -> C)
+            // 3. Cards show honge -> "Show !" banner + flip 1 card every 1.5s with turn sound (Group A -> B -> C)
             val dealt = dealDragonRoundCards()
             roundCards = dealt
             showBanner("Show !")
 
             for (cardStep in 1..9) {
                 revealedCount = cardStep
+                launch(Dispatchers.IO) { soundManager.playCardFlip() }
                 if (cardStep == 3 || cardStep == 6 || cardStep == 9) {
                     delay(430L)
                     when (cardStep) {
@@ -1623,7 +1665,7 @@ private fun DragonBattleMainOverlay(
                 }
             }
 
-            // 4. Show Winning Tag (winner_cutout.png) on top card group + White Shine Rays behind Dragon + update History (max 20)
+            // 4. Winner tag + White rays + History (max 20) + Winner Page (5s auto-close)
             val winner = pickDragonWinner(dealt.first, dealt.second, dealt.third)
             winnerDragon = winner
             highlightedWinnerDragon = winner
@@ -1693,7 +1735,7 @@ private fun DragonBattleMainOverlay(
     val handLabelC = remember(cardsC) { getDragonHandLabel(cardsC) }
 
     Box(modifier = modifier, contentAlignment = Alignment.BottomCenter) {
-        // Main Game Container (exact same height as Wild Party)
+        // Main Game Container locked to the original small background image height
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -1708,17 +1750,35 @@ private fun DragonBattleMainOverlay(
             AsyncImage(
                 model = DRAGON_BATTLE_BG,
                 contentDescription = "Dragon Battle Background",
+                onSuccess = { state ->
+                    val s = state.painter.intrinsicSize
+                    if (s.width > 0f && s.height > 0f && s.width.isFinite() && s.height.isFinite()) {
+                        onBgAspectRatio(s.width / s.height)
+                    }
+                },
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
+            )
+
+            // Bottom-left artwork placed cleanly above the balance bar without pushing other items up
+            AsyncImage(
+                model = DRAGON_BOTTOM_LEFT_IMAGE,
+                contentDescription = null,
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(start = 10.dp, bottom = 42.dp)
+                    .size(38.dp)
+                    .zIndex(2f),
+                contentScale = ContentScale.Fit
             )
 
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 8.dp, vertical = 8.dp),
+                    .padding(start = 8.dp, end = 8.dp, top = 6.dp, bottom = 5.dp),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
-                // Top controls and centered stylized Dragon Battle title
+                // 1. Top controls and centered stylized Dragon Battle title
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -1806,10 +1866,11 @@ private fun DragonBattleMainOverlay(
                     }
                 }
 
-                // 2. TOP 3 CARD TABLES (+ winner_cutout.png tag on winning group) + CENTER TIMER
+                // 2. TOP 3 CARD TABLES (Slight card overlap + winner_cutout.png tag) + CENTER TIMER
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .padding(top = 3.dp)
                         .zIndex(5f),
                     contentAlignment = Alignment.Center
                 ) {
@@ -1885,13 +1946,14 @@ private fun DragonBattleMainOverlay(
                     }
                 }
 
-                // 3. DRAGONS (A, B, C) + BETTING BOXES (Winning Dragon has bright White Shine Rays behind it)
+                // 3. DRAGONS (A, B, C) + BETTING BOXES (Same sizes, shifted slightly lower inside compact bg)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .weight(1f),
+                        .weight(1f)
+                        .padding(bottom = 38.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.Bottom
                 ) {
                     DragonBetColumn(
                         label = "A",
@@ -1922,18 +1984,7 @@ private fun DragonBattleMainOverlay(
                     )
                 }
 
-                // Bottom-left artwork sitting neatly above the balance bar
-                AsyncImage(
-                    model = DRAGON_BOTTOM_LEFT_IMAGE,
-                    contentDescription = null,
-                    modifier = Modifier
-                        .align(Alignment.Start)
-                        .padding(start = 2.dp, bottom = 2.dp)
-                        .size(38.dp),
-                    contentScale = ContentScale.Fit
-                )
-
-                // Wild Party identical bottom balance bar + repeat + chips row
+                // 4. Bottom balance bar + repeat + chips row (Wild Party identical)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -1942,7 +1993,7 @@ private fun DragonBattleMainOverlay(
                             indication = null,
                             onClick = {}
                         )
-                        .padding(bottom = 2.dp),
+                        .padding(bottom = 1.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
@@ -2011,7 +2062,7 @@ private fun DragonBattleMainOverlay(
                 }
             }
 
-            // Exact same Wild Party height Rules Overlay (on ? click)
+            // Exact same background-image height Rules Overlay (on ? click)
             if (rulesOpen) {
                 DragonRulesOverlay(
                     modifier = Modifier.matchParentSize().zIndex(40f),
@@ -2019,7 +2070,7 @@ private fun DragonBattleMainOverlay(
                 )
             }
 
-            // Exact same Wild Party height History Overlay (on 3-line icon click)
+            // Exact same background-image height History Overlay (on 3-line icon click)
             if (historyOpen) {
                 DragonHistoryOverlay(
                     history = historyList.take(20),
@@ -2029,7 +2080,7 @@ private fun DragonBattleMainOverlay(
             }
         }
 
-        // Winner Page (Same design & behavior as Wild Party - auto-closes on countdown end)
+        // Winner Page (Auto-closes on countdown end)
         if (winnerOpen) {
             DragonWinnerOverlay(
                 sheetHeight = sheetHeight,
@@ -2071,7 +2122,7 @@ private fun DragonWinnerOverlay(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(max = sheetHeight * 0.86f)
+                .heightIn(max = sheetHeight * 0.94f)
                 .clip(winnerSheetShape)
                 .background(Color(0xFF060608))
                 .clickable(
@@ -2567,18 +2618,19 @@ private fun OverlappingThreeCardsTable(
                     .padding(2.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Row(
-                    modifier = Modifier.fillMaxSize(),
-                    horizontalArrangement = Arrangement.spacedBy(1.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                // Slightly overlapping 3 cards inside the tray
+                BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                    val cardWidth = maxWidth * 0.38f
+                    val stepX = (maxWidth - cardWidth) / 2f
                     cards.take(3).forEachIndexed { idx, card ->
                         FlippableDragonCard(
                             card = card,
                             isFlipped = idx < flippedCount,
                             modifier = Modifier
-                                .weight(1f)
+                                .offset(x = stepX * idx)
+                                .width(cardWidth)
                                 .fillMaxHeight()
+                                .zIndex(idx.toFloat())
                         )
                     }
                 }
