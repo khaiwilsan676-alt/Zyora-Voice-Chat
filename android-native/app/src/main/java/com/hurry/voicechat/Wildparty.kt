@@ -1251,7 +1251,26 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
  LaunchedEffect(Unit){
   launch(Dispatchers.IO) { soundManager.preload() }
   runCatching{
-   balance=dao.getUserData()?.balance?:82927L
+   val authPrefs=context.getSharedPreferences("hurry_auth",Context.MODE_PRIVATE)
+   val walletUserId=authPrefs.getString("uid",null)?.takeIf{it.isNotBlank()}
+    ?:authPrefs.getString("accountId","").orEmpty().takeIf{it.isNotBlank()}
+   if(walletUserId!=null){
+    val encoded=java.net.URLEncoder.encode(walletUserId,"UTF-8")
+    val walletConnection=(URL("https://zyora-server.onrender.com/api/lucky-bag/wallet/$encoded").openConnection() as HttpURLConnection).apply{
+     connectTimeout=12000;readTimeout=12000;setRequestProperty("Cache-Control","no-cache")
+    }
+    try{
+     if(walletConnection.responseCode !in 200..299) error("Wallet unavailable")
+     val wallet=JSONObject(walletConnection.inputStream.bufferedReader().use{it.readText()})
+     balance=wallet.optLong("balance",0L).coerceAtLeast(0L)
+     val old=dao.getUserData()?:UserDataEntity(balance=balance)
+     dao.saveUserData(old.copy(balance=balance))
+     context.getSharedPreferences("zyora_wallet_cache",Context.MODE_PRIVATE).edit()
+      .putLong("balance_$walletUserId",balance).putLong("last_sync_$walletUserId",System.currentTimeMillis()).apply()
+    }finally{walletConnection.disconnect()}
+   }else{
+    balance=0L
+   }
    val arr=JSONArray(context.getSharedPreferences("wild_party_native",Context.MODE_PRIVATE).getString("history","[]"))
    history=(0 until arr.length()).mapNotNull{i->arr.optJSONObject(i)?.let{WpRound(it.optInt("round"),it.optString("winner"),it.optLong("time"),it.optLong("myBet",0L),it.optLong("winAmount",0L))}}.filter{it.time>=wpReset()}.sortedBy{it.round}.takeLast(50)
   }
