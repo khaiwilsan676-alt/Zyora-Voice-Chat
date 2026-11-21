@@ -1626,3 +1626,9 @@ Current documentation does not certify that all historical features are build-, 
 - Native JitsiRoomAudio.kt: accept the server's recipient-specific mixed voice stream under a stable room-mix queue key when no publisher ID is present. Continue using real publisher IDs when supplied and preserve self-packet filtering for individually identified packets. No UI, capture format, permission, mute, or server behavior changes.
 - Commit: 9b7141b7607ddeb93ff9ae7b8f50ca576974344d.
 - Verification: confirmed the deployed-server source packet shape and committed the native listener fix. APK build and live multi-device voice test remain required; not yet hardware-verified.
+
+
+## 2026-11-21 — Room voice per-speaker relay fix
+- Follow-up root-cause fix after music was audible but remote microphones were not: the server's recipient-side mixer was combining microphone frames into one anonymous packet. The native client is designed to queue/mix independent publisher streams, so the server now relays each 20 ms PCM frame separately to every other room socket and includes the publisher account ID (`userId`). The sender is excluded server-side to prevent hearing their own microphone.
+- Changed `Zyora-Server/server.js` in commit `a524150c709bdc6e2f604558223b8ff3ac8738d5`.
+- Native playback already supports per-publisher queues and local PCM mixing; no UI or native capture behavior changed. Requires the Render backend to deploy the server commit and a live two-device test. Not yet hardware-verified.
