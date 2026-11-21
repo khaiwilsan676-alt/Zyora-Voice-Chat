@@ -695,6 +695,7 @@ fun RoomPage(
     var showGames by remember{mutableStateOf(false)}
     var showRoomTask by remember{mutableStateOf(false)}
     var showWildParty by remember{mutableStateOf(false)}
+    var wildPartyMinimized by remember { mutableStateOf(false) }
     var showFruitParty by remember{mutableStateOf(false)}
     var showDragonBattle by remember{mutableStateOf(false)}
     var showSeatSheet by remember{mutableStateOf(false)}
@@ -2254,6 +2255,19 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                 }
             }
 
+            // Minimized Wild Party stays composed and keeps its live round/state.
+            // Tapping its logo resumes the exact same running game without reloading.
+            if (wildPartyMinimized) {
+                AsyncImage(
+                    model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_000000009d808211b8ffb7c2183b4ef5.png",
+                    contentDescription = "Resume Wild Party",
+                    modifier = Modifier.padding(bottom = 4.dp).size(54.dp).clickable {
+                        wildPartyMinimized = false
+                        showWildParty = true
+                    },
+                    contentScale = ContentScale.Fit
+                )
+            }
             Column(horizontalAlignment=Alignment.CenterHorizontally, modifier = Modifier.offset(y = 6.dp)) {
                 androidx.compose.foundation.pager.HorizontalPager(state = sideBannerPager,modifier = Modifier.size(58.dp, 80.dp).clip(RoundedCornerShape(8.dp))) { page ->
                     AsyncImage(model = sideBannerImages[page],contentDescription = "Room side banner",modifier = Modifier.fillMaxSize().clickable(indication = null, interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }) { if (page == 0) onRoomSupport() },contentScale = ContentScale.Crop)
@@ -2874,7 +2888,11 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
         }
         if(showGames) GamesSheet(onClose={showGames=false},onWildParty={showGames=false;showWildParty=true},onFruitParty={showGames=false;showFruitParty=true},onDragonBattle={showGames=false;showDragonBattle=true})
         if(showRoomTask) Roomtask(onBack={showRoomTask=false})
-        if(showWildParty) Wildparty(onClose={showWildParty=false},onMinimize={showWildParty=false})
+        if (showWildParty || wildPartyMinimized) Wildparty(
+            onClose = { showWildParty = false; wildPartyMinimized = false },
+            onMinimize = { showWildParty = false; wildPartyMinimized = true },
+            modifier = if (showWildParty) Modifier.fillMaxSize() else Modifier.size(1.dp).graphicsLayer { alpha = 0f }
+        )
         if(showFruitParty) Fruitparty(onClose={showFruitParty=false},onMinimize={showFruitParty=false})
         BackHandler(enabled=showDragonBattle) { showDragonBattle=false }
         if(showDragonBattle) DragonBattleGameHost(onClose={showDragonBattle=false},onMinimize={showDragonBattle=false})
