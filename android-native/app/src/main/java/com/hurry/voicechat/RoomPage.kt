@@ -2601,6 +2601,19 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
             }
         )
         
+        // Block all room controls while a full-screen Store/Bag/Games/Lucky Bag
+        // overlay is open. Keep this blocker below the actual overlay content.
+        if (showStore || showGames || showLuckyBagCenterReveal || showLuckyBagClaimedCard) {
+            Box(
+                Modifier.fillMaxSize()
+                    .zIndex(400f)
+                    .clickable(
+                        indication = null,
+                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+                    ) { }
+            )
+        }
+
         val roomFollowers = followedRoomUsers.filter { it.accountId != roomOwner.accountId && it.accountId != roomOwner.id }
         if(showStore) StorePage(onBack={showStore=false}, initialView=storeInitialView, userId=accountId.ifBlank{roomOwner.accountId.ifBlank{roomOwner.id}})
         if(showInfo) RoomInfo(
