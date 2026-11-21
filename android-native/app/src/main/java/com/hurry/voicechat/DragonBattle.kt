@@ -19,16 +19,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.VolumeUp
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Groups
-import androidx.compose.material.icons.filled.HelpOutline
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.OpenWith
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -55,7 +46,6 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Shadow
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -335,7 +325,7 @@ private fun DragonBattleMainOverlay(
         }
     }
 
-    var selectedChipIndex by remember { mutableIntStateOf(0) }
+    var selectedChipIndex by remember { mutableIntStateOf(0) }\n    var muted by remember { mutableStateOf(false) }
     var balance by remember { mutableLongStateOf(500_000L) }
 
     var potA by remember { mutableLongStateOf(0L) }
@@ -372,38 +362,92 @@ private fun DragonBattleMainOverlay(
         modifier = modifier.padding(horizontal = 8.dp, vertical = 6.dp),
         verticalArrangement = Arrangement.SpaceBetween
     ) {
-        // 1. TOP HEADER BAR
+        // Wild Party-matching top controls and centered title.
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            modifier = Modifier.fillMaxWidth().height(36.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                HeaderCircleIcon(Icons.Default.OpenWith) {}
-                HeaderCircleIcon(Icons.AutoMirrored.Filled.VolumeUp) {}
-                HeaderCircleIcon(Icons.Default.HelpOutline) {}
-                HeaderCircleIcon(Icons.Default.EmojiEvents) {}
+            Row(
+                modifier = Modifier.weight(1f),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                WpGlassTopButton(onClick = { muted = !muted }) {
+                    Canvas(Modifier.size(15.dp)) {
+                        val speaker = Path().apply {
+                            moveTo(1.5.dp.toPx(), 5.dp.toPx())
+                            lineTo(5.dp.toPx(), 5.dp.toPx())
+                            lineTo(9.5.dp.toPx(), 1.8.dp.toPx())
+                            lineTo(9.5.dp.toPx(), 13.2.dp.toPx())
+                            lineTo(5.dp.toPx(), 10.dp.toPx())
+                            lineTo(1.5.dp.toPx(), 10.dp.toPx())
+                            close()
+                        }
+                        drawPath(speaker, Color.White.copy(alpha = if (muted) 0.55f else 1f), style = Fill)
+                        drawPath(speaker, Color.White.copy(alpha = if (muted) 0.55f else 1f), style = Stroke(1.2.dp.toPx(), join = StrokeJoin.Round))
+                        if (muted) {
+                            drawLine(Color.White, Offset(2.dp.toPx(), 2.dp.toPx()), Offset(13.dp.toPx(), 13.dp.toPx()), 2.2.dp.toPx(), cap = StrokeCap.Round)
+                        } else {
+                            drawArc(Color.White, -52f, 104f, false, topLeft = Offset(7.2.dp.toPx(), 2.5.dp.toPx()), size = Size(7.2.dp.toPx(), 10.dp.toPx()), style = Stroke(1.9.dp.toPx(), cap = StrokeCap.Round))
+                        }
+                    }
+                }
+                WpGlassTopButton(onClick = {}) {
+                    Text("?", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Black,
+                        style = TextStyle(shadow = Shadow(Color.White.copy(alpha = 0.55f), Offset.Zero, 6f)))
+                }
             }
 
             Text(
                 text = "Dragon Battle",
+                modifier = Modifier.weight(1.4f),
+                textAlign = TextAlign.Center,
                 style = TextStyle(
                     color = Color.White,
                     fontSize = 20.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    fontFamily = FontFamily.Serif,
-                    shadow = Shadow(
-                        color = Color(0xCC2B1200),
-                        offset = Offset(1f, 3f),
-                        blurRadius = 4f
-                    )
+                    fontWeight = FontWeight.Black,
+                    shadow = Shadow(Color.Black.copy(alpha = 0.48f), Offset(0f, 1.6f), 2f)
                 )
             )
 
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                HeaderCircleIcon(Icons.Default.Menu) {}
-                HeaderCircleIcon(Icons.Default.KeyboardArrowDown, onMinimize)
-                HeaderCircleIcon(Icons.Default.Close, onClose)
+            Row(
+                modifier = Modifier.weight(1f),
+                horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.End),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                WpGlassTopButton(onClick = {}) {
+                    Canvas(Modifier.size(14.dp)) {
+                        val hBar = 2.4.dp.toPx()
+                        val r = CornerRadius(hBar / 2f, hBar / 2f)
+                        drawRoundRect(Color.White, Offset(0.5.dp.toPx(), 2.dp.toPx()), Size(13.dp.toPx(), hBar), r)
+                        drawRoundRect(Color.White, Offset(0.5.dp.toPx(), 6.dp.toPx()), Size(13.dp.toPx(), hBar), r)
+                        drawRoundRect(Color.White, Offset(0.5.dp.toPx(), 10.dp.toPx()), Size(8.5.dp.toPx(), hBar), r)
+                        drawRoundRect(Color.White, Offset(10.5.dp.toPx(), 10.dp.toPx()), Size(3.dp.toPx(), hBar), r)
+                    }
+                }
+                WpGlassTopButton(onClick = onMinimize) {
+                    Canvas(Modifier.size(14.dp)) {
+                        val tri = Path().apply {
+                            moveTo(2.2.dp.toPx(), 4.2.dp.toPx())
+                            lineTo(11.8.dp.toPx(), 4.2.dp.toPx())
+                            lineTo(7.dp.toPx(), 10.8.dp.toPx())
+                            close()
+                        }
+                        drawPath(tri, Color.White.copy(alpha = 0.35f), style = Stroke(3.6.dp.toPx(), join = StrokeJoin.Round))
+                        drawPath(tri, Brush.verticalGradient(listOf(Color(0xFFDDE3EE), Color.White)), style = Fill)
+                        drawPath(tri, Brush.verticalGradient(listOf(Color(0xFFDDE3EE), Color.White)), style = Stroke(2.2.dp.toPx(), join = StrokeJoin.Round))
+                    }
+                }
+                WpGlassTopButton(onClick = onClose) {
+                    Canvas(Modifier.size(14.dp)) {
+                        val a = 3.1.dp.toPx()
+                        val b = 10.9.dp.toPx()
+                        drawLine(Color.White.copy(alpha = 0.35f), Offset(a, a), Offset(b, b), 4.6.dp.toPx(), cap = StrokeCap.Round)
+                        drawLine(Color.White.copy(alpha = 0.35f), Offset(b, a), Offset(a, b), 4.6.dp.toPx(), cap = StrokeCap.Round)
+                        drawLine(Color.White, Offset(a, a), Offset(b, b), 3.dp.toPx(), cap = StrokeCap.Round)
+                        drawLine(Color.White, Offset(b, a), Offset(a, b), 3.dp.toPx(), cap = StrokeCap.Round)
+                    }
+                }
             }
         }
 
@@ -534,29 +578,6 @@ private fun DragonBattleMainOverlay(
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun HeaderCircleIcon(
-    icon: ImageVector,
-    onClick: () -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .size(24.dp)
-            .clip(CircleShape)
-            .background(Color(0x993D2314))
-            .border(1.dp, Color(0x88FFE0A3), CircleShape)
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = Color.White,
-            modifier = Modifier.size(14.dp)
-        )
     }
 }
 
