@@ -1266,12 +1266,44 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
   topHistoryScrollState.scrollTo(0)
  }
  suspend fun walletChange(delta:Long,title:String){
-  val old=dao.getUserData()?:UserDataEntity(balance=balance)
-  val next=(old.balance+delta).coerceAtLeast(0L)
+  require(delta != 0L) { "Invalid wallet amount" }
+  val authPrefs=context.getSharedPreferences("hurry_auth",Context.MODE_PRIVATE)
+  val walletUserId=authPrefs.getString("uid",null)?.takeIf{it.isNotBlank()}
+   ?:authPrefs.getString("accountId","").orEmpty().takeIf{it.isNotBlank()}
+   ?:error("Wallet account is unavailable")
+  val amount=kotlin.math.abs(delta)
+  val action=if(delta<0L) "bet" else "win"
+  val transactionId="wild_party_${action}_${System.currentTimeMillis()}_${java.util.UUID.randomUUID()}"
+  val response=withContext(Dispatchers.IO){
+   val connection=(URL("https://zyora-server.onrender.com/api/wallet/wild-party").openConnection() as HttpURLConnection).apply{
+    requestMethod="POST";connectTimeout=15000;readTimeout=15000;doOutput=true
+    setRequestProperty("Content-Type","application/json; charset=utf-8")
+    setRequestProperty("Cache-Control","no-cache")
+   }
+   try{
+    val payload=JSONObject().put("userId",walletUserId).put("transactionId",transactionId)
+     .put("amount",amount).put("action",action)
+    connection.outputStream.bufferedWriter().use{it.write(payload.toString())}
+    val stream=if(connection.responseCode in 200..299) connection.inputStream else connection.errorStream
+    val body=stream?.bufferedReader()?.use{it.readText()}.orEmpty()
+    val json=runCatching{JSONObject(body)}.getOrNull()
+    if(connection.responseCode !in 200..299 || json?.optBoolean("success")!=true)
+     error(json?.optString("error")?.takeIf{it.isNotBlank()} ?: "Wallet transaction failed")
+    json
+   }finally{connection.disconnect()}
+  }
+  val next=response.optLong("balance",-1L)
+  check(next>=0L) { "Wallet returned an invalid balance" }
+  val old=dao.getUserData()?:UserDataEntity(balance=next)
   dao.saveUserData(old.copy(balance=next));balance=next
-  val c=Calendar.getInstance()
-  val date=String.format("%04d.%02d.%02d %02d:%02d",c.get(Calendar.YEAR),c.get(Calendar.MONTH)+1,c.get(Calendar.DAY_OF_MONTH),c.get(Calendar.HOUR_OF_DAY),c.get(Calendar.MINUTE))
+  val cache=context.getSharedPreferences("zyora_wallet_cache",Context.MODE_PRIVATE)
+  cache.edit().putLong("balance_${walletUserId}",next).putLong("last_sync_${walletUserId}",System.currentTimeMillis()).apply()
+  val now=Calendar.getInstance()
+  val date=String.format("%04d.%02d.%02d %02d:%02d",now.get(Calendar.YEAR),now.get(Calendar.MONTH)+1,now.get(Calendar.DAY_OF_MONTH),now.get(Calendar.HOUR_OF_DAY),now.get(Calendar.MINUTE))
   dao.insertTransaction(TransactionEntity(title=title,amount=delta,date=date,timestamp=System.currentTimeMillis(),type="coin"))
+  withContext(Dispatchers.IO){
+   NativeIndexDatabase(context).saveWalletTransaction(transactionId,walletUserId,title,delta,date,System.currentTimeMillis(),"coin")
+  }
  }
  fun persistHistory(){
   val arr=JSONArray()
