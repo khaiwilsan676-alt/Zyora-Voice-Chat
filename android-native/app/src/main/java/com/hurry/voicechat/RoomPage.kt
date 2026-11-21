@@ -2620,7 +2620,6 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
         if (showStore || showGames || showLuckyBagCenterReveal || showLuckyBagClaimedCard) {
             Box(
                 Modifier.fillMaxSize()
-                    .zIndex(400f)
                     .clickable(
                         indication = null,
                         interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
