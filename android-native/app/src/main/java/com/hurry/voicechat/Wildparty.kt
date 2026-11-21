@@ -895,12 +895,12 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
   Box(Modifier.fillMaxWidth().height(h).background(Color(0xFF28180D))){
    val bg=wpAsset("wp_1787337855180_2")
    if (bg.isNotBlank())AsyncImage(
- model = bg,null,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
+ model = bg, contentDescription = null, modifier = Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
    // Original TSX top multiplier badges (same artwork and placement).
    @Composable fun MultiplierBadge(big:Boolean){
     Box(Modifier.size(65.dp),contentAlignment=Alignment.Center){
      if (multiplierBg.isNotBlank())AsyncImage(
- model = multiplierBg,null,Modifier.fillMaxSize(),contentScale=ContentScale.Fit)
+ model = multiplierBg, contentDescription = null, modifier = Modifier.fillMaxSize(),contentScale=ContentScale.Fit)
      val names=if(big) listOf("Eagle","Bear","Tiger","Lion") else listOf("Rabbit","Deer","Dog","Camel")
      val positions=listOf(
       Triple((-9).dp,(-8).dp,-10f),
@@ -912,7 +912,7 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
       val id=wpAsset(wpAnimals.first{it.name==name}.image)
       val (x,y,rotation)=positions[index]
       if (id.isNotBlank())AsyncImage(
- model = id,name,Modifier.offset(x,y).size(if(index<2)32.dp else 34.dp).graphicsLayer{rotationZ=rotation},contentScale=ContentScale.Crop)
+ model = id, contentDescription = "name", modifier = Modifier.offset(x,y).size(if(index<2)32.dp else 34.dp).graphicsLayer{rotationZ=rotation},contentScale=ContentScale.Crop)
      }
     }
    }
@@ -1029,10 +1029,10 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
       Box(Modifier.size(24.dp),contentAlignment=Alignment.Center){
        if(mixBig||mixSmall){
         if (multiplierBg.isNotBlank())AsyncImage(
- model = multiplierBg,null,Modifier.fillMaxSize(),contentScale=ContentScale.Fit)
+ model = multiplierBg, contentDescription = null, modifier = Modifier.fillMaxSize(),contentScale=ContentScale.Fit)
         val group=if(mixBig)listOf("Eagle","Bear","Tiger","Lion") else listOf("Rabbit","Deer","Dog","Camel")
         group.forEachIndexed{idx,n->val aid=wpAsset(wpAnimals.first{it.name==n}.image);if (aid.isNotBlank())AsyncImage(
- model = aid,null,Modifier.align(when(idx){0->Alignment.TopStart;1->Alignment.TopEnd;2->Alignment.BottomStart;else->Alignment.BottomEnd}).size(12.dp),contentScale=ContentScale.Crop)}
+ model = aid, contentDescription = null, modifier = Modifier.align(when(idx){0->Alignment.TopStart;1->Alignment.TopEnd;2->Alignment.BottomStart;else->Alignment.BottomEnd}).size(12.dp),contentScale=ContentScale.Crop)}
        }else{val aid=wpAsset(wpAnimals.firstOrNull{it.name==record.winner}?.image?: "");if (aid.isNotBlank())AsyncImage(
  model = aid,record.winner,Modifier.fillMaxSize(),contentScale=ContentScale.Fit)}
        if(isNewest){
@@ -1046,7 +1046,7 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
     // Center background image (public/IMG_20261121_102855.png)
     val centerBg=wpAsset("img_20261121_102855")
     if (centerBg.isNotBlank())AsyncImage(
- model = centerBg,null,Modifier.fillMaxSize(),contentScale=ContentScale.Fit)
+ model = centerBg, contentDescription = null, modifier = Modifier.fillMaxSize(),contentScale=ContentScale.Fit)
     wpAnimals.forEachIndexed{i,a->
      val rad=Math.toRadians(a.angle.toDouble());val x=(cos(rad)*130).dp+a.dx.dp;val y=(sin(rad)*130).dp+a.dy.dp
      val active=highlight==i||(phase==WpPhase.RESULT&&((mode==WpMode.MIX_BIG&&i>=4)||(mode==WpMode.MIX_SMALL&&i<4)))
@@ -1055,7 +1055,7 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
      Box(Modifier.offset(x,y).size(a.size.dp).zIndex(if(amount>0)2f else 0f),contentAlignment=Alignment.Center){
       Box(Modifier.fillMaxSize().clip(CircleShape).background(Color(0xFF4A2B13)).border(if(active)3.dp else 1.dp,if(active)wpGold else Color(0xFFB8864B),CircleShape).clickable{place(a.name)}.padding(4.dp),contentAlignment=Alignment.Center){
        if (image.isNotBlank())AsyncImage(
- model = image,a.name,Modifier.fillMaxSize().graphicsLayer{alpha=if(phase==WpPhase.BETTING||active)1f else .4f},contentScale=ContentScale.Fit)
+ model = image, contentDescription = a.name, modifier = Modifier.fillMaxSize().graphicsLayer{alpha=if(phase==WpPhase.BETTING||active)1f else .4f},contentScale=ContentScale.Fit)
       }
       if(amount>0)WpBetBadge(
        amountText=wpFormat(amount),
@@ -1138,16 +1138,14 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
    // Original TSX bottom decoration sits behind the balance and chip controls.
    val bottomDecor=wpAsset("wp_img_20260822_011000")
    if (bottomDecor.isNotBlank())AsyncImage(
- model = bottomDecor,null,
-    Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(112.dp),
+ model = bottomDecor, contentDescription = null, modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(112.dp),
     contentScale=ContentScale.Fit,
     alignment=Alignment.BottomCenter
    )
    // TSX Bottom Left Decor: separate artwork above the bottom decoration (not the coin).
    val bottomLeftDecor=wpAsset("wp_file_00000000993c8208ae462545f9ccb0ba")
    if (bottomLeftDecor.isNotBlank())AsyncImage(
- model = bottomLeftDecor,null,
-    Modifier.align(Alignment.BottomStart).padding(start=8.dp,bottom=60.dp).size(width=40.dp,height=55.dp),
+ model = bottomLeftDecor, contentDescription = null, modifier = Modifier.align(Alignment.BottomStart).padding(start=8.dp,bottom=60.dp).size(width=40.dp,height=55.dp),
     contentScale=ContentScale.FillBounds
    )
    WpBottomBalanceBar(
@@ -1168,7 +1166,7 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
      }
     )
     wpChips.forEachIndexed{i,c->val id=wpAsset(c.image);Box(Modifier.size(34.dp).graphicsLayer{val scale=if(chipIndex==i)1.08f else 1f;scaleX=scale;scaleY=scale;translationY=if(chipIndex==i)-8.dp.toPx() else 0f}.border(if(chipIndex==i)2.dp else 0.dp,wpGold,CircleShape).clip(CircleShape).background(Color(0xFF54351C)).clickable{chipIndex=i},contentAlignment=Alignment.Center){if (id.isNotBlank())AsyncImage(
- model = id,c.label,Modifier.fillMaxSize(),contentScale=ContentScale.Fit)else Text(c.label,color=Color.White,fontSize=8.sp)}}
+ model = id, contentDescription = c.label, modifier = Modifier.fillMaxSize(),contentScale=ContentScale.Fit)else Text(c.label,color=Color.White,fontSize=8.sp)}}
    }
    if(loading)WpLoadingPage(progress=loadingProgress)
   }
@@ -1214,14 +1212,12 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
         if (mixBig || mixSmall) {
          Box(Modifier.size(30.dp), contentAlignment = Alignment.Center) {
           if (multiplierBg.isNotBlank()) AsyncImage(
- model = multiplierBg, null, Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
+ model = multiplierBg, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
           val group = if (mixBig) listOf("Eagle", "Bear", "Tiger", "Lion") else listOf("Rabbit", "Deer", "Dog", "Camel")
           group.forEachIndexed { idx, n ->
            val aid = wpAsset( wpAnimals.first { it.name == n }.image)
            if (aid.isNotBlank()) AsyncImage(
- model = aid,
-            null,
-            Modifier.align(when (idx) { 0 -> Alignment.TopStart; 1 -> Alignment.TopEnd; 2 -> Alignment.BottomStart; else -> Alignment.BottomEnd }).size(14.dp),
+ model = aid, contentDescription = null, modifier = Modifier.align(when (idx) { 0 -> Alignment.TopStart; 1 -> Alignment.TopEnd; 2 -> Alignment.BottomStart; else -> Alignment.BottomEnd }).size(14.dp),
             contentScale = ContentScale.Crop
            )
           }
@@ -1229,7 +1225,7 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
         } else {
          val aid = wpAsset( wpAnimals.firstOrNull { it.name == r.winner }?.image ?: "")
          if (aid.isNotBlank()) AsyncImage(
- model = aid, r.winner, Modifier.size(30.dp), contentScale = ContentScale.Fit)
+ model = aid, contentDescription = r.winner, modifier = Modifier.size(30.dp), contentScale = ContentScale.Fit)
         }
        }
        Text(
@@ -1328,7 +1324,7 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
        Box(Modifier.weight(1f).padding(vertical = 8.dp), contentAlignment = Alignment.Center) {
         val aid = wpAsset( a.image)
         if (aid.isNotBlank()) AsyncImage(
- model = aid, a.name, Modifier.size(38.dp), contentScale = ContentScale.Fit)
+ model = aid, contentDescription = a.name, modifier = Modifier.size(38.dp), contentScale = ContentScale.Fit)
        }
       }
      }
@@ -1412,14 +1408,12 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
        Box(Modifier.size(82.dp), contentAlignment = Alignment.Center) {
         if (mode == WpMode.MIX_BIG || mode == WpMode.MIX_SMALL) {
          if (multiplierBg.isNotBlank()) AsyncImage(
- model = multiplierBg, null, Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
+ model = multiplierBg, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
          val group = if (mode == WpMode.MIX_BIG) listOf("Eagle", "Bear", "Tiger", "Lion") else listOf("Rabbit", "Deer", "Dog", "Camel")
          group.forEachIndexed { idx, n ->
           val aid = wpAsset( wpAnimals.first { it.name == n }.image)
           if (aid.isNotBlank()) AsyncImage(
- model = aid,
-           null,
-           Modifier
+ model = aid, contentDescription = null, modifier = Modifier
             .align(when (idx) { 0 -> Alignment.TopStart; 1 -> Alignment.TopEnd; 2 -> Alignment.BottomStart; else -> Alignment.BottomEnd })
             .size(38.dp),
            contentScale = ContentScale.Fit
