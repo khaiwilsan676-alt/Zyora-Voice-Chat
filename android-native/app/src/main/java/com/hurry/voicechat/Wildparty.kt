@@ -1635,7 +1635,7 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
        )
       }
      }
-     WpGlassTopButton(onClick = { onClose() }) {
+     WpGlassTopButton(onClick = { scope.launch { runCatching { syncPendingWalletChanges() }; onClose() } }) {
       Canvas(Modifier.size(14.dp)) {
        val a = 3.1.dp.toPx()
        val b = 10.9.dp.toPx()
