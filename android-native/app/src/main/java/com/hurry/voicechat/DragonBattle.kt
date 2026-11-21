@@ -47,6 +47,13 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Fill
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
@@ -79,6 +86,10 @@ private const val DRAGON_B_IMAGE =
     "${BASE_URL}public/IMG_20261121_020547.png"
 private const val DRAGON_C_IMAGE =
     "${BASE_URL}public/IMG_20261121_020609.png"
+private const val DRAGON_COIN_IMAGE =
+    "${BASE_URL}public/file_00000000e56882119c217d508b6733dc.png"
+private const val DRAGON_BOTTOM_LEFT_IMAGE =
+    "${BASE_URL}public/file_00000000993c8208ae462545f9ccb0ba.png"
 
 private data class BetChip(
     val label: String,
@@ -473,94 +484,36 @@ private fun DragonBattleMainOverlay(
             )
         }
 
-        // 4. PLAYERS ICON
+        AsyncImage(\n            model = DRAGON_BOTTOM_LEFT_IMAGE,\n            contentDescription = null,\n            modifier = Modifier.align(Alignment.BottomStart).padding(start = 8.dp, bottom = 60.dp).size(44.dp),\n            contentScale = ContentScale.Fit\n        )\n\n        // 4. PLAYERS ICON
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 2.dp),
+            modifier = Modifier.fillMaxWidth().padding(bottom = 2.dp),
             horizontalArrangement = Arrangement.Start
         ) {
             Box(
-                modifier = Modifier
-                    .size(30.dp)
-                    .clip(RoundedCornerShape(7.dp))
+                modifier = Modifier.size(30.dp).clip(RoundedCornerShape(7.dp))
                     .background(Color(0xAA4A2508))
                     .border(1.2.dp, Color(0xFFE5B34A), RoundedCornerShape(7.dp)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Default.Groups,
-                    contentDescription = "Players",
-                    tint = Color(0xFFFFE082),
-                    modifier = Modifier.size(18.dp)
-                )
+                Icon(Icons.Default.Groups, contentDescription = "Players",
+                    tint = Color(0xFFFFE082), modifier = Modifier.size(18.dp))
             }
         }
 
-        // 5. BOTTOM BAR: BALANCE + REPEAT + 5 CHIPS
+        // Wild Party identical bottom-left artwork and balance / repeat styling.
+        Box(Modifier.fillMaxWidth().height(0.dp)) 
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Row(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(50))
-                    .background(Color(0x993B1D05))
-                    .border(1.dp, Color(0xFFE5B34A), RoundedCornerShape(50))
-                    .padding(horizontal = 7.dp, vertical = 3.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(15.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFFFFC107)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "S",
-                        color = Color(0xFF6B3900),
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.ExtraBold
-                    )
-                }
-                Spacer(modifier = Modifier.width(3.dp))
-                Text(
-                    text = formatShortAmount(balance),
-                    color = Color(0xFFFFE57F),
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = " >",
-                    color = Color(0xFFFFE57F),
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(7.dp))
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(Color(0xFF9E7B4F), Color(0xFF5D4021))
-                        )
-                    )
-                    .border(1.dp, Color(0xFFE5C17B), RoundedCornerShape(7.dp))
-                    .clickable { lastBetTable?.let { placeBet(it) } }
-                    .padding(horizontal = 8.dp, vertical = 5.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "Repeat",
-                    color = Color.White,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
+            DragonBalanceBar(
+                balance = balance,
+                modifier = Modifier.weight(1f, fill = false)
+            )
+            DragonRepeatButton(
+                onClick = { lastBetTable?.let { placeBet(it) } }
+            )
             Row(
                 horizontalArrangement = Arrangement.spacedBy(3.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -568,30 +521,15 @@ private fun DragonBattleMainOverlay(
                 BET_CHIPS.forEachIndexed { index, chip ->
                     val isSelected = selectedChipIndex == index
                     Box(
-                        modifier = Modifier
-                            .size(if (isSelected) 40.dp else 34.dp)
+                        modifier = Modifier.size(if (isSelected) 40.dp else 34.dp)
                             .scale(if (isSelected) 1.05f else 1f)
                             .clip(CircleShape)
-                            .then(
-                                if (isSelected) {
-                                    Modifier.border(
-                                        width = 2.dp,
-                                        color = Color(0xFFFFE047),
-                                        shape = CircleShape
-                                    )
-                                } else {
-                                    Modifier
-                                }
-                            )
+                            .then(if (isSelected) Modifier.border(2.dp, Color(0xFFFFE047), CircleShape) else Modifier)
                             .clickable { selectedChipIndex = index },
                         contentAlignment = Alignment.Center
                     ) {
-                        AsyncImage(
-                            model = chip.imageUrl,
-                            contentDescription = chip.label,
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Fit
-                        )
+                        AsyncImage(model = chip.imageUrl, contentDescription = chip.label,
+                            modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
                     }
                 }
             }
@@ -761,3 +699,36 @@ private fun formatShortAmount(amount: Long): String {
         else -> amount.toString()
     }
 }
+@Composable
+private fun DragonBalanceBar(balance: Long, modifier: Modifier = Modifier) {
+    val shape = RoundedCornerShape(7.dp)
+    Row(modifier = modifier.clip(shape)
+        .background(Brush.verticalGradient(listOf(Color.White.copy(.58f), Color(0xFFD5BFA6).copy(.34f), Color(0xFF5A3418).copy(.50f), Color(0xFF3E200C).copy(.55f))))
+        .border(1.dp, Brush.verticalGradient(listOf(Color.White.copy(.90f), Color.White.copy(.38f), Color(0xFFE6C8A0).copy(.45f))), shape)
+        .padding(horizontal = 4.dp, vertical = 3.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+        AsyncImage(model = DRAGON_COIN_IMAGE, contentDescription = "Coins", modifier = Modifier.size(18.dp), contentScale = ContentScale.Fit)
+        Text("›", color = Color(0xFFFFD84D), fontSize = 15.sp, fontWeight = FontWeight.Black)
+        Text(formatShortAmount(balance), color = Color(0xFFFFD84D), fontSize = 13.sp, fontWeight = FontWeight.Black,
+            style = TextStyle(shadow = Shadow(Color.Black.copy(alpha = .65f), Offset(0f, 1.5f), 3f)))
+    }
+}
+
+@Composable
+private fun DragonRepeatButton(onClick: () -> Unit) {
+    val outer = RoundedCornerShape(9.dp)
+    val inner = RoundedCornerShape(7.dp)
+    Box(Modifier.clip(outer).background(Color(0xFF472710).copy(alpha = .72f))
+        .border(1.2.dp, Brush.verticalGradient(listOf(Color.White.copy(.94f), Color(0xFFEBDCD0).copy(.75f), Color.White.copy(.85f))), outer)
+        .clickable(onClick = onClick).padding(2.dp), contentAlignment = Alignment.Center) {
+        Box(Modifier.clip(inner)
+            .background(Brush.verticalGradient(listOf(Color.White.copy(.52f), Color(0xFFCBB5A0).copy(.30f), Color(0xFF563218).copy(.68f), Color(0xFF6B4122).copy(.58f))))
+            .border(.8.dp, Brush.verticalGradient(listOf(Color.White.copy(.85f), Color.White.copy(.28f), Color.White.copy(.52f))), inner)
+            .padding(horizontal = 7.dp, vertical = 4.dp), contentAlignment = Alignment.Center) {
+            Text("Repeat", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Black,
+                style = TextStyle(shadow = Shadow(Color.Black.copy(alpha = .55f), Offset(0f, 1.5f), 2.5f)))
+        }
+    }
+}
+
+
