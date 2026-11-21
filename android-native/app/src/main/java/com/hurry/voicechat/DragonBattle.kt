@@ -95,6 +95,70 @@ private val BET_CHIPS = listOf(
     BetChip("10M", 10_000_000L, "${BASE_URL}public/IMG_20261121_020809.png")
 )
 
+
+@Composable
+private fun DragonGlassTopButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    content: @Composable androidx.compose.foundation.layout.BoxScope.() -> Unit
+) {
+    val shape = RoundedCornerShape(10.dp)
+    Box(
+        modifier = modifier
+            .size(28.dp)
+            .clip(shape)
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        Color.White.copy(alpha = 0.42f),
+                        Color(0xFFB8C4DC).copy(alpha = 0.16f),
+                        Color(0xFF1F2640).copy(alpha = 0.24f),
+                        Color.White.copy(alpha = 0.26f)
+                    )
+                )
+            )
+            .border(
+                width = 1.25.dp,
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        Color.White.copy(alpha = 0.92f),
+                        Color.White.copy(alpha = 0.32f),
+                        Color.White.copy(alpha = 0.58f)
+                    )
+                ),
+                shape = shape
+            )
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Canvas(Modifier.fillMaxSize()) {
+            drawOval(
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        Color.White.copy(alpha = 0.72f),
+                        Color.White.copy(alpha = 0.18f),
+                        Color.Transparent
+                    ),
+                    startY = 0f,
+                    endY = size.height * 0.52f
+                ),
+                topLeft = Offset(size.width * 0.10f, size.height * 0.04f),
+                size = Size(size.width * 0.80f, size.height * 0.44f)
+            )
+            drawOval(
+                brush = Brush.verticalGradient(
+                    colors = listOf(Color.Transparent, Color.White.copy(alpha = 0.24f)),
+                    startY = size.height * 0.72f,
+                    endY = size.height
+                ),
+                topLeft = Offset(size.width * 0.16f, size.height * 0.74f),
+                size = Size(size.width * 0.68f, size.height * 0.24f)
+            )
+        }
+        content()
+    }
+}
+
 @Composable
 internal fun DragonBattleGameItem(onClick: () -> Unit) {
     Column(
@@ -373,7 +437,7 @@ private fun DragonBattleMainOverlay(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                WpGlassTopButton(onClick = { muted = !muted }) {
+                DragonGlassTopButton(onClick = { muted = !muted }) {
                     Canvas(Modifier.size(15.dp)) {
                         val speaker = Path().apply {
                             moveTo(1.5.dp.toPx(), 5.dp.toPx())
@@ -393,7 +457,7 @@ private fun DragonBattleMainOverlay(
                         }
                     }
                 }
-                WpGlassTopButton(onClick = {}) {
+                DragonGlassTopButton(onClick = {}) {
                     Text("?", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Black,
                         style = TextStyle(shadow = Shadow(Color.White.copy(alpha = 0.55f), Offset.Zero, 6f)))
                 }
@@ -416,7 +480,7 @@ private fun DragonBattleMainOverlay(
                 horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.End),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                WpGlassTopButton(onClick = {}) {
+                DragonGlassTopButton(onClick = {}) {
                     Canvas(Modifier.size(14.dp)) {
                         val hBar = 2.4.dp.toPx()
                         val r = CornerRadius(hBar / 2f, hBar / 2f)
@@ -426,7 +490,7 @@ private fun DragonBattleMainOverlay(
                         drawRoundRect(Color.White, Offset(10.5.dp.toPx(), 10.dp.toPx()), Size(3.dp.toPx(), hBar), r)
                     }
                 }
-                WpGlassTopButton(onClick = onMinimize) {
+                DragonGlassTopButton(onClick = onMinimize) {
                     Canvas(Modifier.size(14.dp)) {
                         val tri = Path().apply {
                             moveTo(2.2.dp.toPx(), 4.2.dp.toPx())
@@ -439,7 +503,7 @@ private fun DragonBattleMainOverlay(
                         drawPath(tri, Brush.verticalGradient(listOf(Color(0xFFDDE3EE), Color.White)), style = Stroke(2.2.dp.toPx(), join = StrokeJoin.Round))
                     }
                 }
-                WpGlassTopButton(onClick = onClose) {
+                DragonGlassTopButton(onClick = onClose) {
                     Canvas(Modifier.size(14.dp)) {
                         val a = 3.1.dp.toPx()
                         val b = 10.9.dp.toPx()
