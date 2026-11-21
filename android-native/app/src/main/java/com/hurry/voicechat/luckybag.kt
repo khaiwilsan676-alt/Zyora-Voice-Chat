@@ -5,6 +5,8 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -17,6 +19,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
+import org.json.JSONArray
 import java.net.HttpURLConnection
 import java.net.URL
 import androidx.compose.ui.Alignment
@@ -44,8 +47,51 @@ fun LuckyBag(senderId: String, senderName: String, senderImage: String, roomId: 
     var showRules by remember { mutableStateOf(false) }
     var sending by remember { mutableStateOf(false) }
     var sendError by remember { mutableStateOf<String?>(null) }
+    var claimBagData by remember { mutableStateOf(JSONObject()) }
+    var claimRows by remember { mutableStateOf<List<JSONObject>>(emptyList()) }
+    var claimLoading by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+
+    suspend fun refreshClaimDetails() {
+        claimLoading = true
+        val remote = withContext(Dispatchers.IO) {
+            runCatching {
+                val encoded = java.net.URLEncoder.encode(roomId, "UTF-8")
+                val connection = (URL("https://zyora-server.onrender.com/api/lucky-bag/room/" + encoded).openConnection() as HttpURLConnection).apply {
+                    connectTimeout = 5000; readTimeout = 5000
+                }
+                try {
+                    if (connection.responseCode !in 200..299) JSONObject()
+                    else JSONObject(connection.inputStream.bufferedReader().use { it.readText() }).optJSONObject("bag") ?: JSONObject()
+                } finally { connection.disconnect() }
+            }.getOrDefault(JSONObject())
+        }
+        val localRows = withContext(Dispatchers.IO) {
+            runCatching { NativeIndexDatabase(context).loadLuckyBagClaimsForRoom(roomId) }.getOrDefault(emptyList())
+        }
+        val bagId = remote.optString("bagId").ifBlank { localRows.firstOrNull()?.optString("bagId").orEmpty() }
+        val matchingLocal = localRows.filter { it.optString("bagId") == bagId }
+        val remoteRows = remote.optJSONArray("claims")?.let { array ->
+            (0 until array.length()).mapNotNull { array.optJSONObject(it) }
+        }.orEmpty()
+        claimBagData = if (remote.has("bagId")) remote else matchingLocal.firstOrNull()?.let { first ->
+            JSONObject().put("bagId", bagId)
+                .put("amount", first.optLong("bagAmount"))
+                .put("recipients", first.optInt("recipients"))
+                .put("claimedCount", first.optInt("claimedCount"))
+                .put("claimedTotal", first.optLong("claimedTotal"))
+        } ?: JSONObject()
+        claimRows = if (remoteRows.isNotEmpty()) remoteRows else matchingLocal
+        claimLoading = false
+    }
+
+    LaunchedEffect(showClaim, roomId) {
+        while (showClaim) {
+            refreshClaimDetails()
+            kotlinx.coroutines.delay(1500L)
+        }
+    }
 
     BackHandler(enabled = true) {
         when {
@@ -76,7 +122,7 @@ fun LuckyBag(senderId: String, senderName: String, senderImage: String, roomId: 
                 
                 // DOC icon (Claim Details) - Top Start
                 IconButton(
-                    onClick = { showClaim = true },
+                    onClick = { showClaim = true; scope.launch { refreshClaimDetails() } },
                     modifier = Modifier.align(Alignment.TopStart).padding(start = 16.dp, top = 32.dp).size(28.dp)
                 ) {
                     Icon(Icons.Default.Description, contentDescription = "Claim details", tint = Color.White, modifier = Modifier.fillMaxSize(0.9f))
@@ -280,19 +326,51 @@ fun LuckyBag(senderId: String, senderName: String, senderImage: String, roomId: 
                     // Grey Header separator
                     Box(Modifier.fillMaxWidth().height(8.dp).background(Color(0xFFF0F0F0)))
                     
-                    // Claim status Text
+                    val totalCoins = claimBagData.optLong("amount", 0L).coerceAtLeast(0L)
+                    val grabbedCoins = claimBagData.optLong("claimedTotal", claimRows.sumOf { it.optLong("amount", 0L) }).coerceIn(0L, totalCoins)
+                    val unclaimedCoins = (totalCoins - grabbedCoins).coerceAtLeast(0L)
+                    val openedCount = claimBagData.optInt("claimedCount", claimRows.size).coerceAtLeast(claimRows.size)
+                    val peopleLimit = claimBagData.optInt("recipients", 0)
                     Text(
-                        text = "Unclaimed, Opened 30/30, Total 500,000/500,000 Gold Coins",
+                        text = "Unclaimed " + "%,d".format(unclaimedCoins) + "   Opened " + openedCount + "/" + peopleLimit + "   " + "%,d".format(grabbedCoins) + "/" + "%,d".format(totalCoins),
                         color = Color(0xFFD0A27D),
-                        fontSize = 13.sp,
+                        fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)
+                        modifier = Modifier.padding(horizontal = 16.dp).offset(y = (-5).dp).padding(bottom = 5.dp)
                     )
 
-                    // Line separator
                     Box(Modifier.fillMaxWidth().height(1.dp).background(Color(0xFFEEEEEE)))
-                    
-                    // Area for claimed user list... (Empty for now)
+                    if (claimLoading && claimRows.isEmpty()) {
+                        Text("Loading...", color = Color(0xFFB9A18D), fontSize = 12.sp, modifier = Modifier.padding(16.dp))
+                    } else if (claimRows.isEmpty()) {
+                        Text("No one has opened this Lucky Bag yet", color = Color(0xFFB9A18D), fontSize = 12.sp, modifier = Modifier.padding(16.dp))
+                    } else {
+                        Column(Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState())) {
+                            claimRows.forEach { claim ->
+                                Row(
+                                    Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 9.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    AsyncImage(
+                                        model = claim.optString("userImage").ifBlank { "https://zyora-server.onrender.com/default-avatar.png" },
+                                        contentDescription = null,
+                                        modifier = Modifier.size(38.dp).clip(RoundedCornerShape(50)),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                    Text(
+                                        claim.optString("userName").ifBlank { "User" },
+                                        color = Color(0xFF49413B), fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
+                                        modifier = Modifier.padding(start = 10.dp).weight(1f), maxLines = 1
+                                    )
+                                    Text(
+                                        "Grab " + "%,d".format(claim.optLong("amount", 0L)),
+                                        color = Color(0xFFD0A27D), fontSize = 12.sp, fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                Box(Modifier.fillMaxWidth().height(1.dp).background(Color(0xFFF3F0ED)))
+                            }
+                        }
+                    }
 
                 }
             }
