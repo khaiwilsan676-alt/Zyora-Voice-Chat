@@ -69,13 +69,11 @@ private const val DRAGON_BATTLE_BG =
 private const val DRAGON_BATTLE_LOGO =
     "${BASE_URL}public/IMG_20261121_020906.png"
 
-// Top Cards & Timer
 private const val CARD_IMAGE =
     "${BASE_URL}public/IMG_20261121_020825.png"
 private const val TIMER_BG_IMAGE =
     "${BASE_URL}public/file_000000009cb882119b1349bc49e0d864.png"
 
-// Dragons A, B, C
 private const val DRAGON_A_IMAGE =
     "${BASE_URL}public/IMG_20261121_020609.png"
 private const val DRAGON_B_IMAGE =
@@ -121,9 +119,8 @@ internal fun DragonBattleGameItem(onClick: () -> Unit) {
 }
 
 /**
- * Full screen NAHI lega.
- * Bottom pe open hoga aur sirf Background Image ki exact height mein hi sab aayega.
- * Pehle Loading Page -> fir Main Game UI.
+ * Screen ke ekdam BOTTOM par open hoga.
+ * Height sirf Background Image ki exact height ke barabar rahegi.
  */
 @Composable
 fun DragonBattleGameHost(
@@ -134,34 +131,39 @@ fun DragonBattleGameHost(
     var isLoaded by remember { mutableStateOf(false) }
 
     Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .wrapContentHeight()
-            .clip(RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp)),
+        modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.BottomCenter
     ) {
-        // Background Image determines the exact height of the entire game container
-        AsyncImage(
-            model = DRAGON_BATTLE_BG,
-            contentDescription = "Dragon Battle Background",
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .wrapContentHeight(),
-            contentScale = ContentScale.FillWidth
-        )
+                .wrapContentHeight()
+                .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)),
+            contentAlignment = Alignment.BottomCenter
+        ) {
+            // Sirf is background image ki height hi game ki total height decide karegi
+            AsyncImage(
+                model = DRAGON_BATTLE_BG,
+                contentDescription = "Dragon Battle Background",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .wrapContentHeight(),
+                contentScale = ContentScale.FillWidth
+            )
 
-        // All UI stays strictly inside the background image bounds (matchParentSize)
-        if (!isLoaded) {
-            DragonBattleLoadingOverlay(
-                modifier = Modifier.matchParentSize(),
-                onLoadingFinished = { isLoaded = true }
-            )
-        } else {
-            DragonBattleMainOverlay(
-                modifier = Modifier.matchParentSize(),
-                onClose = onClose,
-                onMinimize = onMinimize
-            )
+            // Loading aur Main UI dono isi exact image height ke andar lock rahenge
+            if (!isLoaded) {
+                DragonBattleLoadingOverlay(
+                    modifier = Modifier.matchParentSize(),
+                    onLoadingFinished = { isLoaded = true }
+                )
+            } else {
+                DragonBattleMainOverlay(
+                    modifier = Modifier.matchParentSize(),
+                    onClose = onClose,
+                    onMinimize = onMinimize
+                )
+            }
         }
     }
 }
@@ -183,7 +185,6 @@ private fun DragonBattleLoadingOverlay(
     }
 
     Box(modifier = modifier) {
-        // Top Title: Dragon Battle
         Text(
             text = "Dragon Battle",
             modifier = Modifier
@@ -202,7 +203,6 @@ private fun DragonBattleLoadingOverlay(
             )
         )
 
-        // Center Logo
         AsyncImage(
             model = DRAGON_BATTLE_LOGO,
             contentDescription = "Dragon Battle Logo",
@@ -213,7 +213,6 @@ private fun DragonBattleLoadingOverlay(
             contentScale = ContentScale.Fit
         )
 
-        // Bottom Blue Striped Loading Bar
         BlueGlossyLoadingBar(
             progress = progress,
             modifier = Modifier
@@ -319,7 +318,6 @@ private fun DragonBattleMainOverlay(
     onClose: () -> Unit = {},
     onMinimize: () -> Unit = {}
 ) {
-    // 20-second looping countdown
     var timeLeft by remember { mutableIntStateOf(20) }
     LaunchedEffect(Unit) {
         while (true) {
@@ -415,7 +413,6 @@ private fun DragonBattleMainOverlay(
                 OverlappingThreeCardsTable(multiplier = "2.92")
             }
 
-            // Center 20s Countdown Timer
             Box(
                 modifier = Modifier
                     .offset(y = (-7).dp)
@@ -478,7 +475,7 @@ private fun DragonBattleMainOverlay(
             )
         }
 
-        // 4. PLAYERS ICON (Left side above bottom bar)
+        // 4. PLAYERS ICON
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -508,7 +505,6 @@ private fun DragonBattleMainOverlay(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            // Balance Pill
             Row(
                 modifier = Modifier
                     .clip(RoundedCornerShape(50))
@@ -546,7 +542,6 @@ private fun DragonBattleMainOverlay(
                 )
             }
 
-            // Repeat Button
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(7.dp))
@@ -568,7 +563,6 @@ private fun DragonBattleMainOverlay(
                 )
             }
 
-            // 5 Bottom Chips (5K, 50K, 500K, 5M, 10M)
             Row(
                 horizontalArrangement = Arrangement.spacedBy(3.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -630,9 +624,6 @@ private fun HeaderCircleIcon(
     }
 }
 
-/**
- * 1 Table = 3 cards in 1 Row with half-overlap + multiplier below
- */
 @Composable
 private fun OverlappingThreeCardsTable(multiplier: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
