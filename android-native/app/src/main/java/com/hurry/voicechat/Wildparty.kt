@@ -275,7 +275,8 @@ private fun WpWildPartyTitle(
   }
 
   // Subtle shadow
-  withTransform({ translate(left = 0f, top = 1.6.dp.toPx()) }) {
+  val shadowOffsetPx = 1.6.dp.toPx()
+  withTransform({ translate(left = 0f, top = shadowOffsetPx) }) {
    drawPath(path = titlePath, color = Color.Black.copy(alpha = 0.48f))
   }
   // Main crisp white lettering
@@ -972,8 +973,8 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
  var winnerIndex by remember{mutableIntStateOf(0)}
  var mode by remember{mutableStateOf(WpMode.SINGLE)}
  var chipIndex by remember{mutableIntStateOf(1)}
- var bets by remember{mutableStateOf>(emptyMap())}
- var lastBets by remember{mutableStateOf>(emptyMap())}
+ var bets by remember{mutableStateOf<Map<String, Long>>(emptyMap())}
+ var lastBets by remember{mutableStateOf<Map<String, Long>>(emptyMap())}
  var history by remember{mutableStateOf<List<WpRound>>(emptyList())}
  var historyOpen by remember{mutableStateOf(false)}
  var rulesOpen by remember{mutableStateOf(false)}
