@@ -79,7 +79,8 @@ fun RoomDailyCupTotal(roomId: String) {
         total = latest
     }
     Text(
-        text = formatCupCoins(total),
+        // Room header must show the complete daily sent-gift coin total (no K/M/B shorthand).
+        text = total.coerceAtLeast(0L).toString(),
         color = Color(0xFFFFD54F),
         fontSize = 11.sp,
         fontWeight = FontWeight.Normal,
