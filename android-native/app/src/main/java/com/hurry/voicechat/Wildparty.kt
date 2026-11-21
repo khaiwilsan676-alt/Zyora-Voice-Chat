@@ -1266,7 +1266,8 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
    val arr=JSONArray(context.getSharedPreferences("wild_party_native",Context.MODE_PRIVATE).getString("history","[]"))
    history=(0 until arr.length()).mapNotNull{i->arr.optJSONObject(i)?.let{WpRound(it.optInt("round"),it.optString("winner"),it.optLong("time"),it.optLong("myBet",0L),it.optLong("winAmount",0L))}}.filter{it.time>=wpReset()}.sortedBy{it.round}.takeLast(50)
   }
-  runCatching{
+  scope.launch(Dispatchers.IO) {
+   runCatching {
    val walletUserId=walletAccountId.takeIf{it.isNotBlank()}
    // Keep the real Wallet page balance visible immediately; never replace it with a fake zero.
    if(walletUserId!=null){
@@ -1296,6 +1297,7 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
     balance=0L
    }
 
+   }
   }
   for (step in 1..50) {
    loadingProgress = step / 50f
