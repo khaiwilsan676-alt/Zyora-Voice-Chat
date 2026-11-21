@@ -117,10 +117,6 @@ fun EmojiPicker(onClose: () -> Unit = {}, onSelectEmoji: (EmojiSticker) -> Unit 
 
     val stickers = listOf(
         // SABKA EK HI SQUARE SIZE (1.1f)
-        EmojiSticker("welcome", "Welcome", "${GITHUB_PUBLIC_BASE}IMG_20261028_183916.png", null, 1.1f),
-        EmojiSticker("thanks", "Thanks", "${GITHUB_PUBLIC_BASE}IMG_20261028_184100.png", null, 1.1f),
-        EmojiSticker("gift_me", "Gift me", "${GITHUB_PUBLIC_BASE}IMG_20261028_184037.png", null, 1.1f),
-
         // GIF WALE EMOJI BHI SAME SQUARE SIZE (1.1f)
         EmojiSticker("sad", "Sad", "${GITHUB_PUBLIC_BASE}512%20(6).gif", null, 1.1f),
         EmojiSticker("party", "Party", "${GITHUB_PUBLIC_BASE}512%20(16).gif", null, 1.1f),
