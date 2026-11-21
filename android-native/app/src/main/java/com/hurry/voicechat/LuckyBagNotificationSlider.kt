@@ -1,10 +1,10 @@
 package com.hurry.voicechat
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.foundation.MarqueeSpacing
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.text.style.TextAlign
@@ -17,10 +17,8 @@ import kotlinx.coroutines.withContext
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
-import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.*
@@ -46,7 +44,7 @@ import org.json.JSONObject
 import kotlinx.coroutines.delay
 
 private const val LUCKY_BAG_SOCKET_URL = "https://zyora-server.onrender.com"
-private const val LUCKY_BAG_BANNER_IMAGE = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_000000001abc8211b1623dee45d87328.png"
+private const val LUCKY_BAG_CARD_PNG = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261028_182446.png"
 
 private data class LuckyBagBannerData(
     val bagId: String,
@@ -60,12 +58,10 @@ private data class LuckyBagBannerData(
 )
 
 /** Global banner layer: mounted above the active page so it can appear on every tab/screen. */
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun LuckyBagNotificationSlider(currentUserId: String, onGoToRoom: (String, String) -> Unit) {
     var banner by remember { mutableStateOf<LuckyBagBannerData?>(null) }
     var visible by remember { mutableStateOf(false) }
-    var seconds by remember { mutableIntStateOf(5) }
 
     DisposableEffect(currentUserId) {
         var socket: Socket? = null
@@ -83,7 +79,6 @@ fun LuckyBagNotificationSlider(currentUserId: String, onGoToRoom: (String, Strin
             )
             if (data.bagId.isNotBlank() && data.roomId.isNotBlank()) {
                 banner = data
-                seconds = 5
                 visible = true
             }
         }
@@ -102,10 +97,7 @@ fun LuckyBagNotificationSlider(currentUserId: String, onGoToRoom: (String, Strin
     LaunchedEffect(banner?.bagId) {
         if (banner != null) {
             visible = true
-            for (s in 5 downTo 1) {
-                seconds = s
-                delay(1000)
-            }
+            delay(5000)
             visible = false
             delay(350)
             banner = null
@@ -118,98 +110,167 @@ fun LuckyBagNotificationSlider(currentUserId: String, onGoToRoom: (String, Strin
             enter = slideInHorizontally(initialOffsetX = { it }),
             exit = slideOutHorizontally(targetOffsetX = { -it }),
             modifier = Modifier
-                .fillMaxWidth()
+                .fillMaxWidth(0.94f)
                 .statusBarsPadding()
-                .padding(top = 2.dp)
+                .padding(top = 6.dp)
         ) {
             val item = banner
             if (item != null) {
-                // Parent Box
+                // Parent Box (Patli si patti)
                 Box(
                     Modifier
                         .fillMaxWidth()
-                        .defaultMinSize(minHeight = 76.dp)
+                        .height(52.dp)
                 ) {
-                    // 1. BACKGROUND FADE LAYER (Fade sirf iss image par lagega)
-                    AsyncImage(
-                        model = LUCKY_BAG_BANNER_IMAGE,
-                        contentDescription = null,
+                    // 1. CUSTOM PATTI BACKGROUND WITH LEFT-RIGHT FADE LAYER
+                    Canvas(
                         modifier = Modifier
-                            .fillMaxWidth()
+                            .matchParentSize()
                             .graphicsLayer { alpha = 0.99f }
                             .drawWithContent {
                                 drawContent()
                                 drawRect(
                                     brush = Brush.horizontalGradient(
                                         0.0f to Color.Transparent,
-                                        0.20f to Color.Black, // Left se 20%
-                                        0.80f to Color.Black, // Right se 20%
+                                        0.16f to Color.Black,
+                                        0.84f to Color.Black,
                                         1.0f to Color.Transparent
                                     ),
                                     blendMode = BlendMode.DstIn
                                 )
-                            },
-                        contentScale = ContentScale.FillWidth 
-                    )
-
-                    // 2. CONTENT LAYER (Isme koi fade nahi hoga, text aur button ekdum clear honge)
-                    Row(
-                        Modifier.matchParentSize().padding(start = 8.dp, end = 3.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        AsyncImage(
-                            model = item.senderImage.takeIf { it.isNotBlank() } ?: "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/default-avatar.png",
-                            contentDescription = "Sender avatar",
-                            modifier = Modifier.size(43.dp).clip(RoundedCornerShape(8.dp)),
-                            contentScale = ContentScale.Crop
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        
-                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    item.senderName,
-                                    color = Color.White,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier.weight(1f, fill = false)
-                                )
-                                Spacer(Modifier.width(5.dp))
-                                
-                                Box(
-                                    Modifier
-                                        .size(23.dp)
-                                        .background(Color.Black.copy(alpha = 0.2f), CircleShape),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(seconds.toString(), color = Color(0xFFFFE6A0), fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                                }
                             }
-                            
-                            Text(
-                                "Sent ${item.amount} Coins Lucky Bag · ${item.roomName}",
-                                color = Color.White,
-                                fontSize = 12.sp,
-                                maxLines = 1,
-                                overflow = TextOverflow.Clip,
-                                modifier = Modifier.basicMarquee(
-                                    iterations = Int.MAX_VALUE,
-                                    spacing = MarqueeSpacing(14.dp)
-                                )
+                    ) {
+                        val w = size.width
+                        val h = size.height
+
+                        // Main Coral-Red Gradient Patti
+                        drawRect(
+                            brush = Brush.horizontalGradient(
+                                0.0f to Color(0xFFB72B3E),
+                                0.25f to Color(0xFFE03F4E),
+                                0.55f to Color(0xFFE55052),
+                                0.80f to Color(0xFFD94A4B),
+                                1.0f to Color(0xFFB13040)
+                            )
+                        )
+
+                        // Soft Warm Inner Glow
+                        drawRect(
+                            brush = Brush.verticalGradient(
+                                0.0f to Color(0x28FFF0D4),
+                                0.45f to Color.Transparent,
+                                1.0f to Color(0x22FF9E7A)
+                            )
+                        )
+
+                        // Top & Bottom Thin Golden-Peach Border Lines
+                        val borderBrush = Brush.horizontalGradient(
+                            0.0f to Color.Transparent,
+                            0.20f to Color(0xD9FFE1C6),
+                            0.50f to Color(0xFFFFF1E0),
+                            0.80f to Color(0xD9FFE1C6),
+                            1.0f to Color.Transparent
+                        )
+                        drawLine(
+                            brush = borderBrush,
+                            start = Offset(0f, 1.dp.toPx()),
+                            end = Offset(w, 1.dp.toPx()),
+                            strokeWidth = 1.4.dp.toPx()
+                        )
+                        drawLine(
+                            brush = borderBrush,
+                            start = Offset(0f, h - 1.dp.toPx()),
+                            end = Offset(w, h - 1.dp.toPx()),
+                            strokeWidth = 1.4.dp.toPx()
+                        )
+
+                        // Subtle Sparkle Dots (Image jaisa glow feel)
+                        val sparkles = listOf(
+                            Offset(w * 0.26f, h * 0.92f) to 2.2.dp.toPx(),
+                            Offset(w * 0.62f, h * 0.35f) to 1.6.dp.toPx(),
+                            Offset(w * 0.80f, h * 0.86f) to 1.8.dp.toPx(),
+                            Offset(w * 0.90f, h * 0.22f) to 2.0.dp.toPx()
+                        )
+                        sparkles.forEach { (center, radius) ->
+                            drawCircle(
+                                color = Color(0xCCFFF8E7),
+                                radius = radius,
+                                center = center
                             )
                         }
-                        
-                        // Yaha ek thos 49.dp ka gap lagaya hai (Changed from 40dp to 49.dp). Ab scroll text idhar hi ruk jayega, aage ghusega nahi.
-                        Spacer(Modifier.width(49.dp))
-                        
+                    }
+
+                    // 2. CONTENT LAYER (Bina fade ke ekdum crisp & clear)
+                    Row(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .padding(start = 18.dp, end = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // User Avatar
+                        AsyncImage(
+                            model = item.senderImage.takeIf { it.isNotBlank() }
+                                ?: "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/default-avatar.png",
+                            contentDescription = "Sender avatar",
+                            modifier = Modifier
+                                .size(38.dp)
+                                .clip(CircleShape)
+                                .border(1.5.dp, Color(0xFFFFE5BE), CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
+
+                        Spacer(Modifier.width(8.dp))
+
+                        // Name & Short Text (No Countdown, No Scroll)
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Text(
+                                text = item.senderName,
+                                color = Color(0xFFFFD86B),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                lineHeight = 14.sp
+                            )
+                            Text(
+                                text = "sent you a lucky bag",
+                                color = Color(0xFFFFF2EE),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Normal,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                lineHeight = 13.sp
+                            )
+                        }
+
+                        Spacer(Modifier.width(6.dp))
+
+                        // Chhoti si Lucky Bag Card PNG (Open button se pehle)
+                        AsyncImage(
+                            model = LUCKY_BAG_CARD_PNG,
+                            contentDescription = "Lucky Bag Card",
+                            modifier = Modifier.size(40.dp),
+                            contentScale = ContentScale.Fit
+                        )
+
+                        Spacer(Modifier.width(8.dp))
+
+                        // Open Button (Exact image jaisa pill button)
                         Box(
-                            Modifier
-                                .offset(x = 5.dp)
-                                .padding(end = 2.dp)
-                                .size(width = 54.dp, height = 32.dp)
-                                .background(Brush.verticalGradient(listOf(Color(0xFFFFF2A2), Color(0xFFFFD28A), Color(0xFFC78426))), RoundedCornerShape(50))
+                            modifier = Modifier
+                                .size(width = 56.dp, height = 27.dp)
+                                .clip(RoundedCornerShape(50))
+                                .background(
+                                    Brush.verticalGradient(
+                                        listOf(
+                                            Color(0xFFF9DC82),
+                                            Color(0xFFEEC060)
+                                        )
+                                    )
+                                )
                                 .clickable {
                                     onGoToRoom(item.roomId, item.roomName)
                                     visible = false
@@ -218,9 +279,9 @@ fun LuckyBagNotificationSlider(currentUserId: String, onGoToRoom: (String, Strin
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                "GO",
-                                color = Color(0xFF80502F),
-                                fontSize = 13.sp,
+                                text = "open",
+                                color = Color(0xFFC8281A),
+                                fontSize = 12.sp,
                                 fontWeight = FontWeight.ExtraBold
                             )
                         }
