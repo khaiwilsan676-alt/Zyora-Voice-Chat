@@ -1431,7 +1431,7 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
     WpMode.SINGLE->(bets[animal.name]?:0L)*animal.multiplier
    }
    history=(history+WpRound(round,label,System.currentTimeMillis(),betAmount,winAmount)).takeLast(50);persistHistory()
-   delay(1500);if(winAmount>0)walletChange(winAmount,"Won in Wild Party")
+   delay(1500);if(winAmount>0)runCatching{walletChange(winAmount,"Won in Wild Party")}.onFailure{android.util.Log.e("WildParty","Wallet win sync failed",it)}
    winnerTimer=5;winnerOpen=true
   }
  }
@@ -1450,8 +1450,8 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
    if(phase==WpPhase.BETTING&&balance>=amount){
     launch(Dispatchers.IO) { soundManager.playBetClick() }
     triggerBetVisuals(name, amount)
-    walletChange(-amount,"Bet on $name in Wild Party")
-    bets=bets.toMutableMap().also{it[name]=(it[name]?:0L)+amount}
+    val debited=runCatching{walletChange(-amount,"Bet on $name in Wild Party")}.onFailure{android.util.Log.e("WildParty","Wallet bet debit failed",it)}.isSuccess
+    if(debited) bets=bets.toMutableMap().also{it[name]=(it[name]?:0L)+amount}
    }
   }
  }
@@ -1639,7 +1639,8 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
    ){
     if(history.isEmpty())Text("History",color=Color.White.copy(alpha=.5f),fontSize=10.sp,fontStyle=FontStyle.Italic)
     else {
-     val topHistory = history.takeLast(20).reversed()
+     val sampleTopHistory = listOf("Tiger","Rabbit","Eagle","Dog","Lion").mapIndexed { index, animal -> WpRound(-5-index,animal,0L) }
+     val topHistory = (history.takeLast(15).reversed() + sampleTopHistory).take(20)
      topHistory.forEachIndexed{recordIdx,record->
       val isNewest = recordIdx == 0
       val mixBig=record.winner=="Mix Big";val mixSmall=record.winner=="Mix Small"
@@ -1834,8 +1835,8 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
        if (phase == WpPhase.BETTING && cost > 0 && balance >= cost) {
         launch(Dispatchers.IO) { soundManager.playBetClick() }
         lastBets.forEach { (k, v) -> if (v > 0L) triggerBetVisuals(k, v) }
-        walletChange(-cost, "Repeat Bet in Wild Party")
-        bets = bets.toMutableMap().also { m -> lastBets.forEach { (k, v) -> m[k] = (m[k] ?: 0L) + v } }
+        val debited=runCatching{walletChange(-cost, "Repeat Bet in Wild Party")}.onFailure{android.util.Log.e("WildParty","Wallet repeat-bet debit failed",it)}.isSuccess
+        if(debited) bets = bets.toMutableMap().also { m -> lastBets.forEach { (k, v) -> m[k] = (m[k] ?: 0L) + v } }
        }
       }
      }
