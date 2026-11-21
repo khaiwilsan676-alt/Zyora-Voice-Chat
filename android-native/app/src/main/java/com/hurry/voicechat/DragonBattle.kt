@@ -2,9 +2,18 @@ package com.hurry.voicechat
 
 import android.content.Context
 import android.media.AudioAttributes
+import android.media.AudioFormat
+import android.media.AudioTrack
 import android.media.MediaPlayer
+import android.os.Build
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -39,6 +48,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
@@ -49,6 +59,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -56,18 +67,27 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathFillType
+import androidx.compose.ui.graphics.PathOperation
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -77,6 +97,10 @@ import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.Locale
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.exp
+import kotlin.math.sin
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -94,6 +118,8 @@ private const val CARD_IMAGE =
     "${BASE_URL}public/IMG_20261121_020825.png"
 private const val TIMER_BG_IMAGE =
     "${BASE_URL}public/file_000000009cb882119b1349bc49e0d864.png"
+private const val DRAGON_WINNER_TAG_IMAGE =
+    "${BASE_URL}public/winner_cutout.png"
 
 private const val DRAGON_A_IMAGE =
     "${BASE_URL}public/IMG_20261121_020609.png"
@@ -119,6 +145,11 @@ private data class BetChip(
     val label: String,
     val value: Long,
     val imageUrl: String
+)
+
+private data class DragonBannerEvent(
+    val id: Long,
+    val text: String
 )
 
 private enum class DragonSuit(val power: Int, val isRed: Boolean) {
@@ -149,6 +180,29 @@ private fun dealDragonRoundCards(): Triple<List<DragonPlayingCard>, List<DragonP
         }
     }.shuffled()
     return Triple(deck.subList(0, 3), deck.subList(3, 6), deck.subList(6, 9))
+}
+
+private fun getDragonHandLabel(cards: List<DragonPlayingCard>): String {
+    if (cards.size < 3) return "High Card"
+    val sorted = cards.sortedWith(compareByDescending<DragonPlayingCard> { it.rankValue }.thenByDescending { it.suit.power })
+    val v0 = sorted[0].rankValue
+    val v1 = sorted[1].rankValue
+    val v2 = sorted[2].rankValue
+    val isFlush = sorted[0].suit == sorted[1].suit && sorted[1].suit == sorted[2].suit
+    val isNormalSeq = (v0 == v1 + 1 && v1 == v2 + 1)
+    val isA23Seq = (v0 == 14 && v1 == 3 && v2 == 2)
+    val isSeq = isNormalSeq || isA23Seq
+    val isSet = (v0 == v1 && v1 == v2)
+    val isPair = !isSet && (v0 == v1 || v1 == v2)
+
+    return when {
+        isSet -> "Set"
+        isFlush && isSeq -> "Pure Sequence"
+        isFlush -> "Colour"
+        isSeq -> "Sequence"
+        isPair -> "Pair"
+        else -> "High Card"
+    }
 }
 
 private fun evaluateDragonHandScore(cards: List<DragonPlayingCard>): Long {
@@ -213,7 +267,26 @@ private class DragonBetSoundManager(private val context: Context) {
     @Volatile private var muted = false
     @Volatile private var released = false
 
+    // Heavy punchy "DHAM" impact PCM buffer (22050 Hz mono 16-bit)
+    private val dhamSampleRate = 22050
+    private val dhamPcm: ShortArray by lazy {
+        val count = (dhamSampleRate * 0.24).toInt()
+        val data = ShortArray(count)
+        var phase = 0.0
+        for (i in 0 until count) {
+            val t = i.toDouble() / dhamSampleRate
+            val freq = 38.0 + 115.0 * exp(-t * 22.0)
+            phase += 2.0 * PI * freq / dhamSampleRate
+            val body = sin(phase) * exp(-t * 11.5)
+            val snap = sin(2.0 * PI * 240.0 * t) * exp(-t * 55.0) * 0.45
+            val sample = ((body + snap) * 0.92).coerceIn(-1.0, 1.0)
+            data[i] = (sample * Short.MAX_VALUE).toInt().toShort()
+        }
+        data
+    }
+
     suspend fun preload() = withContext(Dispatchers.IO) {
+        dhamPcm
         val betFile = ensureCached(betFileName)
         val winFile = ensureCached(winnerFileName)
         if (released) return@withContext
@@ -305,6 +378,48 @@ private class DragonBetSoundManager(private val context: Context) {
         }
     }
 
+    fun playDham() {
+        if (muted || released) return
+        runCatching {
+            val pcm = dhamPcm
+            val byteSize = pcm.size * 2
+            val track = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                AudioTrack.Builder()
+                    .setAudioAttributes(
+                        AudioAttributes.Builder()
+                            .setUsage(AudioAttributes.USAGE_GAME)
+                            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                            .build()
+                    )
+                    .setAudioFormat(
+                        AudioFormat.Builder()
+                            .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                            .setSampleRate(dhamSampleRate)
+                            .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                            .build()
+                    )
+                    .setBufferSizeInBytes(byteSize)
+                    .setTransferMode(AudioTrack.MODE_STATIC)
+                    .build()
+            } else {
+                @Suppress("DEPRECATION")
+                AudioTrack(
+                    android.media.AudioManager.STREAM_MUSIC,
+                    dhamSampleRate,
+                    AudioFormat.CHANNEL_OUT_MONO,
+                    AudioFormat.ENCODING_PCM_16BIT,
+                    byteSize,
+                    AudioTrack.MODE_STATIC
+                )
+            }
+            track.write(pcm, 0, pcm.size)
+            track.play()
+            Thread.sleep(270L)
+            runCatching { track.stop() }
+            runCatching { track.release() }
+        }
+    }
+
     fun playWinner() {
         if (muted || released) return
         synchronized(this) {
@@ -338,6 +453,546 @@ private class DragonBetSoundManager(private val context: Context) {
             betPool.clear()
             winnerPlayer?.let { runCatching { it.stop(); it.release() } }
             winnerPlayer = null
+        }
+    }
+}
+
+/**
+ * Stylized calligraphic "Dragon Battle" title matching the reference screenshot
+ * (used on both Main Screen and Loading Page).
+ */
+@Composable
+private fun DragonBattleTitle(
+    height: Dp = 26.dp,
+    modifier: Modifier = Modifier
+) {
+    val width = height * 4.56f
+    Canvas(modifier = modifier.size(width = width, height = height)) {
+        val sx = size.width / 310f
+        val sy = size.height / 68f
+        fun x(v: Float) = v * sx
+        fun y(v: Float) = v * sy
+
+        val titlePath = Path().apply {
+            fillType = PathFillType.EvenOdd
+
+            // D - outer (calligraphic swash)
+            moveTo(x(4f), y(15f))
+            quadraticTo(x(9f), y(9.5f), x(17f), y(9f))
+            cubicTo(x(31f), y(8.5f), x(42f), y(16f), x(42f), y(28.5f))
+            cubicTo(x(42f), y(41.5f), x(31f), y(48.5f), x(17f), y(48.5f))
+            lineTo(x(7f), y(48.5f))
+            quadraticTo(x(9.5f), y(44.5f), x(11.5f), y(41.5f))
+            lineTo(x(13f), y(16.5f))
+            quadraticTo(x(8f), y(17.5f), x(4f), y(15f))
+            close()
+
+            // D - counter
+            moveTo(x(18.5f), y(16f))
+            cubicTo(x(28.5f), y(16f), x(35f), y(20.5f), x(35f), y(28.5f))
+            cubicTo(x(35f), y(37.5f), x(28f), y(42.5f), x(18f), y(42.5f))
+            lineTo(x(17f), y(42.5f))
+            close()
+
+            // r
+            moveTo(x(45f), y(27f))
+            quadraticTo(x(48.5f), y(23f), x(52f), y(23f))
+            lineTo(x(52f), y(29f))
+            quadraticTo(x(56f), y(23f), x(61f), y(23f))
+            quadraticTo(x(64.5f), y(24f), x(63.5f), y(28.5f))
+            quadraticTo(x(62f), y(31f), x(59f), y(30.5f))
+            quadraticTo(x(56f), y(29.5f), x(52.5f), y(33.5f))
+            lineTo(x(52.5f), y(44f))
+            quadraticTo(x(50f), y(48f), x(47f), y(47.5f))
+            lineTo(x(47f), y(29f))
+            close()
+
+            // a - outer
+            moveTo(x(74f), y(23f))
+            quadraticTo(x(79f), y(22.5f), x(83f), y(26f))
+            lineTo(x(83f), y(42.5f))
+            lineTo(x(86.5f), y(44.5f))
+            quadraticTo(x(83f), y(48f), x(79.5f), y(47.5f))
+            lineTo(x(77.5f), y(44.5f))
+            quadraticTo(x(72f), y(48.5f), x(67f), y(44.5f))
+            cubicTo(x(64f), y(40.5f), x(64.5f), y(30f), x(68.5f), y(25.5f))
+            quadraticTo(x(70.5f), y(23.5f), x(74f), y(23f))
+            close()
+
+            // a - counter
+            moveTo(x(77.5f), y(29f))
+            quadraticTo(x(72.5f), y(27.5f), x(70.8f), y(33f))
+            cubicTo(x(69.8f), y(37f), x(70.8f), y(41.5f), x(74f), y(42.5f))
+            quadraticTo(x(76.5f), y(42.5f), x(77.5f), y(40.5f))
+            close()
+
+            // g - outer (with curved descending tail)
+            moveTo(x(98f), y(23f))
+            quadraticTo(x(103f), y(22.5f), x(107f), y(26f))
+            lineTo(x(107f), y(44f))
+            cubicTo(x(107f), y(54.5f), x(100.5f), y(61f), x(90f), y(60.5f))
+            quadraticTo(x(87f), y(59.5f), x(87.5f), y(56f))
+            quadraticTo(x(89f), y(53.5f), x(92f), y(54.5f))
+            cubicTo(x(97f), y(55.5f), x(101f), y(51.5f), x(101.5f), y(45f))
+            quadraticTo(x(96f), y(48.5f), x(91.5f), y(44.5f))
+            cubicTo(x(88.5f), y(40.5f), x(88.5f), y(30f), x(92.5f), y(25.5f))
+            quadraticTo(x(94.5f), y(23.5f), x(98f), y(23f))
+            close()
+
+            // g - counter
+            moveTo(x(101.5f), y(29f))
+            quadraticTo(x(96.5f), y(27.5f), x(94.8f), y(33f))
+            cubicTo(x(93.8f), y(37f), x(94.8f), y(41.5f), x(98f), y(42.5f))
+            quadraticTo(x(100.5f), y(42.5f), x(101.5f), y(40.5f))
+            close()
+
+            // o - outer
+            moveTo(x(122.5f), y(23f))
+            cubicTo(x(129.5f), y(23f), x(133f), y(29f), x(133f), y(35.5f))
+            cubicTo(x(133f), y(42.5f), x(129f), y(48f), x(122.5f), y(48f))
+            cubicTo(x(115.5f), y(48f), x(112f), y(42.5f), x(112f), y(35.5f))
+            cubicTo(x(112f), y(29f), x(115.5f), y(23f), x(122.5f), y(23f))
+            close()
+
+            // o - counter
+            moveTo(x(122.5f), y(28.5f))
+            cubicTo(x(119f), y(28.5f), x(117.5f), y(31.5f), x(117.5f), y(35.5f))
+            cubicTo(x(117.5f), y(39.5f), x(119f), y(42.5f), x(122.5f), y(42.5f))
+            cubicTo(x(126f), y(42.5f), x(127.5f), y(39.5f), x(127.5f), y(35.5f))
+            cubicTo(x(127.5f), y(31.5f), x(126f), y(28.5f), x(122.5f), y(28.5f))
+            close()
+
+            // n
+            moveTo(x(136f), y(27f))
+            quadraticTo(x(139.5f), y(23f), x(143f), y(23f))
+            lineTo(x(143f), y(28f))
+            quadraticTo(x(147.5f), y(22.5f), x(153f), y(23.5f))
+            cubicTo(x(157f), y(24.5f), x(158.5f), y(28f), x(158.5f), y(33.5f))
+            lineTo(x(158.5f), y(43f))
+            lineTo(x(161.5f), y(44.5f))
+            quadraticTo(x(158f), y(48f), x(155f), y(47.5f))
+            quadraticTo(x(153f), y(46f), x(153f), y(42.5f))
+            lineTo(x(153f), y(33.5f))
+            cubicTo(x(153f), y(30f), x(151.5f), y(28.5f), x(149f), y(28.5f))
+            quadraticTo(x(145.5f), y(28.5f), x(143.5f), y(32f))
+            lineTo(x(143.5f), y(44f))
+            quadraticTo(x(141f), y(48f), x(138f), y(47.5f))
+            lineTo(x(138f), y(29f))
+            close()
+
+            // B - outer
+            moveTo(x(172f), y(15f))
+            quadraticTo(x(176f), y(10f), x(185f), y(9.5f))
+            cubicTo(x(195f), y(9.5f), x(200.5f), y(13.5f), x(200.5f), y(19.5f))
+            cubicTo(x(200.5f), y(23.5f), x(198f), y(26.2f), x(194f), y(27.5f))
+            cubicTo(x(199.5f), y(28.8f), x(203.5f), y(32.5f), x(203.5f), y(38f))
+            cubicTo(x(203.5f), y(44.5f), x(197f), y(48f), x(187f), y(48f))
+            lineTo(x(174f), y(48f))
+            quadraticTo(x(176f), y(44.5f), x(177.5f), y(41.5f))
+            lineTo(x(178.5f), y(16.5f))
+            quadraticTo(x(175f), y(17f), x(172f), y(15f))
+            close()
+
+            // B - upper counter
+            moveTo(x(184.5f), y(15f))
+            cubicTo(x(191.5f), y(15f), x(194.2f), y(17f), x(194.2f), y(20.2f))
+            cubicTo(x(194.2f), y(23.5f), x(191f), y(25.2f), x(184.2f), y(25.2f))
+            close()
+
+            // B - lower counter
+            moveTo(x(184.2f), y(30.2f))
+            cubicTo(x(192.5f), y(30.2f), x(196.8f), y(32.5f), x(196.8f), y(36.8f))
+            cubicTo(x(196.8f), y(40.8f), x(192.5f), y(42.5f), x(184f), y(42.5f))
+            close()
+
+            // a - outer
+            moveTo(x(216f), y(23f))
+            quadraticTo(x(221f), y(22.5f), x(225f), y(26f))
+            lineTo(x(225f), y(42.5f))
+            lineTo(x(228.5f), y(44.5f))
+            quadraticTo(x(225f), y(48f), x(221.5f), y(47.5f))
+            lineTo(x(219.5f), y(44.5f))
+            quadraticTo(x(214f), y(48.5f), x(209f), y(44.5f))
+            cubicTo(x(206f), y(40.5f), x(206.5f), y(30f), x(210.5f), y(25.5f))
+            quadraticTo(x(212.5f), y(23.5f), x(216f), y(23f))
+            close()
+
+            // a - counter
+            moveTo(x(219.5f), y(29f))
+            quadraticTo(x(214.5f), y(27.5f), x(212.8f), y(33f))
+            cubicTo(x(211.8f), y(37f), x(212.8f), y(41.5f), x(216f), y(42.5f))
+            quadraticTo(x(218.5f), y(42.5f), x(219.5f), y(40.5f))
+            close()
+
+            // t1 - stem
+            moveTo(x(238f), y(14f))
+            quadraticTo(x(240f), y(17f), x(240f), y(20.5f))
+            lineTo(x(240f), y(41f))
+            quadraticTo(x(242f), y(43f), x(246.5f), y(42f))
+            quadraticTo(x(242.5f), y(48f), x(238f), y(48f))
+            quadraticTo(x(234f), y(47f), x(234.5f), y(41.5f))
+            lineTo(x(234.5f), y(20.5f))
+            close()
+
+            // t2 - stem
+            moveTo(x(255f), y(14f))
+            quadraticTo(x(257f), y(17f), x(257f), y(20.5f))
+            lineTo(x(257f), y(41f))
+            quadraticTo(x(259f), y(43f), x(263.5f), y(42f))
+            quadraticTo(x(259.5f), y(48f), x(255f), y(48f))
+            quadraticTo(x(251f), y(47f), x(251.5f), y(41.5f))
+            lineTo(x(251.5f), y(20.5f))
+            close()
+
+            // l
+            moveTo(x(266.5f), y(14.5f))
+            quadraticTo(x(270.5f), y(11f), x(274.5f), y(10f))
+            lineTo(x(274.5f), y(42f))
+            lineTo(x(278.5f), y(43.5f))
+            quadraticTo(x(274.5f), y(48f), x(271f), y(47.5f))
+            quadraticTo(x(268.5f), y(45.5f), x(269f), y(42f))
+            lineTo(x(269f), y(17f))
+            close()
+
+            // e - outer
+            moveTo(x(292f), y(23f))
+            cubicTo(x(298.5f), y(23f), x(302.5f), y(27.5f), x(302f), y(34f))
+            quadraticTo(x(301.8f), y(36.2f), x(299.5f), y(36.8f))
+            lineTo(x(286f), y(37.5f))
+            cubicTo(x(286.5f), y(41.5f), x(289.5f), y(43.5f), x(293.5f), y(43f))
+            quadraticTo(x(297.5f), y(42.5f), x(300.5f), y(39.5f))
+            quadraticTo(x(301.5f), y(42f), x(299.5f), y(45f))
+            cubicTo(x(296.5f), y(48f), x(291f), y(48.5f), x(286.5f), y(46.5f))
+            cubicTo(x(281.5f), y(44f), x(280f), y(38.5f), x(280.5f), y(33.5f))
+            cubicTo(x(281f), y(27f), x(285.5f), y(23f), x(292f), y(23f))
+            close()
+
+            // e - counter
+            moveTo(x(291.5f), y(27.8f))
+            cubicTo(x(288.2f), y(27.8f), x(286.3f), y(30.2f), x(286f), y(33.5f))
+            lineTo(x(296.5f), y(33f))
+            cubicTo(x(296.5f), y(29.8f), x(294.6f), y(27.8f), x(291.5f), y(27.8f))
+            close()
+        }
+
+        // Single sweeping crossbar uniting both 't' stems cleanly without EvenOdd holes
+        val crossbarPath = Path().apply {
+            moveTo(x(229.5f), y(26.5f))
+            lineTo(x(263.5f), y(22.5f))
+            lineTo(x(263f), y(27f))
+            lineTo(x(230f), y(30.5f))
+            close()
+        }
+
+        val unifiedPath = Path().apply {
+            op(titlePath, crossbarPath, PathOperation.Union)
+        }
+
+        val shadowOffsetPx = 1.8.dp.toPx()
+        withTransform({ translate(left = 0f, top = shadowOffsetPx) }) {
+            drawPath(path = unifiedPath, color = Color.Black.copy(alpha = 0.52f))
+        }
+        drawPath(path = unifiedPath, color = Color.White)
+    }
+}
+
+@Composable
+private fun DragonWinnerWhiteRays(modifier: Modifier = Modifier) {
+    val infiniteTransition = rememberInfiniteTransition(label = "winnerRays")
+    val rotation by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 4800, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "winnerRaysRot"
+    )
+    val pulse by infiniteTransition.animateFloat(
+        initialValue = 0.88f,
+        targetValue = 1.08f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 650, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "winnerRaysPulse"
+    )
+
+    Canvas(
+        modifier = modifier.graphicsLayer {
+            scaleX = pulse
+            scaleY = pulse
+        }
+    ) {
+        val center = Offset(size.width / 2f, size.height / 2f)
+        val radius = size.minDimension * 0.50f
+
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(
+                    Color.White.copy(alpha = 0.92f),
+                    Color(0xFFFFFCE0).copy(alpha = 0.55f),
+                    Color.White.copy(alpha = 0.16f),
+                    Color.Transparent
+                ),
+                center = center,
+                radius = radius
+            ),
+            radius = radius,
+            center = center
+        )
+
+        val rayCount = 12
+        val halfSpreadDeg = 8.5f
+        for (i in 0 until rayCount) {
+            val baseAngle = rotation + i * (360f / rayCount)
+            val a1 = Math.toRadians((baseAngle - halfSpreadDeg).toDouble())
+            val a2 = Math.toRadians((baseAngle + halfSpreadDeg).toDouble())
+            val rayPath = Path().apply {
+                moveTo(center.x, center.y)
+                lineTo(
+                    center.x + (cos(a1) * radius).toFloat(),
+                    center.y + (sin(a1) * radius).toFloat()
+                )
+                lineTo(
+                    center.x + (cos(a2) * radius).toFloat(),
+                    center.y + (sin(a2) * radius).toFloat()
+                )
+                close()
+            }
+            drawPath(
+                path = rayPath,
+                brush = Brush.radialGradient(
+                    colors = listOf(
+                        Color.White.copy(alpha = 0.85f),
+                        Color.White.copy(alpha = 0.35f),
+                        Color.Transparent
+                    ),
+                    center = center,
+                    radius = radius
+                )
+            )
+        }
+    }
+}
+
+@Composable
+private fun DragonHandRankSlamBanner(
+    label: String,
+    modifier: Modifier = Modifier
+) {
+    val dropY = remember(label) { Animatable(-28f) }
+    val scale = remember(label) { Animatable(1.65f) }
+    val alpha = remember(label) { Animatable(0f) }
+
+    LaunchedEffect(label) {
+        launch { alpha.animateTo(1f, tween(90)) }
+        launch { dropY.animateTo(0f, tween(170, easing = FastOutSlowInEasing)) }
+        scale.animateTo(0.92f, tween(150, easing = FastOutSlowInEasing))
+        scale.animateTo(1.04f, tween(80))
+        scale.animateTo(1f, tween(70))
+    }
+
+    val ribbonBrush = Brush.horizontalGradient(
+        colors = listOf(
+            Color(0x20000000),
+            Color(0xCC0D0A08),
+            Color(0xD90D0A08),
+            Color(0xCC0D0A08),
+            Color(0x20000000)
+        )
+    )
+    val goldEdgeBrush = Brush.horizontalGradient(
+        colors = listOf(
+            Color.Transparent,
+            Color(0xCCFFE596),
+            Color(0xFFFFF4C2),
+            Color(0xCCFFE596),
+            Color.Transparent
+        )
+    )
+    val textGradient = Brush.verticalGradient(
+        colors = listOf(
+            Color(0xFFFFFCE0),
+            Color(0xFFFFE484),
+            Color(0xFFE5A43B)
+        )
+    )
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(22.dp)
+            .graphicsLayer {
+                translationY = dropY.value
+                scaleX = scale.value
+                scaleY = scale.value
+                this.alpha = alpha.value
+            }
+            .background(ribbonBrush),
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            Modifier
+                .align(Alignment.TopCenter)
+                .fillMaxWidth()
+                .height(0.9.dp)
+                .background(goldEdgeBrush)
+        )
+        Box(
+            Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .height(0.9.dp)
+                .background(goldEdgeBrush)
+        )
+        val fontSize = when {
+            label.length >= 12 -> 10.sp
+            label.length >= 8 -> 11.5.sp
+            else -> 13.5.sp
+        }
+        Text(
+            text = label,
+            maxLines = 1,
+            softWrap = false,
+            overflow = TextOverflow.Clip,
+            style = TextStyle(
+                color = Color(0xCC2A1200),
+                fontSize = fontSize,
+                fontWeight = FontWeight.Black,
+                fontStyle = FontStyle.Italic,
+                shadow = Shadow(Color.Black, Offset(0f, 1.5f), 3f)
+            ),
+            modifier = Modifier.offset(y = 0.8.dp)
+        )
+        Text(
+            text = label,
+            maxLines = 1,
+            softWrap = false,
+            overflow = TextOverflow.Clip,
+            style = TextStyle(
+                brush = textGradient,
+                fontSize = fontSize,
+                fontWeight = FontWeight.Black,
+                fontStyle = FontStyle.Italic
+            )
+        )
+    }
+}
+
+@Composable
+private fun DragonPhaseBanner(
+    event: DragonBannerEvent,
+    onFinished: (Long) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    BoxWithConstraints(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(62.dp)
+            .clipToBounds(),
+        contentAlignment = Alignment.Center
+    ) {
+        val density = LocalDensity.current
+        val widthPx = with(density) { maxWidth.toPx() }.coerceAtLeast(1f)
+        val slideOffset = remember(event.id) { Animatable(-widthPx) }
+
+        LaunchedEffect(event.id) {
+            slideOffset.snapTo(-widthPx)
+            slideOffset.animateTo(
+                targetValue = 0f,
+                animationSpec = tween(durationMillis = 320, easing = FastOutSlowInEasing)
+            )
+            delay(1500L)
+            slideOffset.animateTo(
+                targetValue = widthPx,
+                animationSpec = tween(durationMillis = 320, easing = FastOutSlowInEasing)
+            )
+            onFinished(event.id)
+        }
+
+        val ribbonBgBrush = Brush.horizontalGradient(
+            colors = listOf(
+                Color.Transparent,
+                Color(0x904B1F04),
+                Color(0xB8632C06),
+                Color(0x904B1F04),
+                Color.Transparent
+            )
+        )
+        val borderGlowBrush = Brush.horizontalGradient(
+            colors = listOf(
+                Color.Transparent,
+                Color(0xCCFFE5A0),
+                Color(0xFFFFF5CC),
+                Color(0xCCFFE5A0),
+                Color.Transparent
+            )
+        )
+        val textGradient = Brush.verticalGradient(
+            colors = listOf(
+                Color(0xFFFFFBC8),
+                Color(0xFFFFE14D),
+                Color(0xFFFF9900),
+                Color(0xFFE66A00)
+            )
+        )
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(54.dp)
+                .graphicsLayer {
+                    translationX = slideOffset.value
+                }
+                .background(ribbonBgBrush),
+            contentAlignment = Alignment.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth()
+                    .height(1.4.dp)
+                    .background(borderGlowBrush)
+            )
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .height(1.4.dp)
+                    .background(borderGlowBrush)
+            )
+
+            Text(
+                text = event.text,
+                maxLines = 1,
+                softWrap = false,
+                style = TextStyle(
+                    color = Color(0xCC4A1900),
+                    fontSize = 31.sp,
+                    fontWeight = FontWeight.Black,
+                    fontStyle = FontStyle.Italic,
+                    letterSpacing = 0.5.sp,
+                    shadow = Shadow(
+                        color = Color(0xE6300E00),
+                        offset = Offset(0f, 3.5f),
+                        blurRadius = 6f
+                    )
+                ),
+                modifier = Modifier.offset(y = 1.8.dp)
+            )
+            Text(
+                text = event.text,
+                maxLines = 1,
+                softWrap = false,
+                style = TextStyle(
+                    brush = textGradient,
+                    fontSize = 31.sp,
+                    fontWeight = FontWeight.Black,
+                    fontStyle = FontStyle.Italic,
+                    letterSpacing = 0.5.sp
+                )
+            )
         }
     }
 }
@@ -403,34 +1058,34 @@ private fun DragonPlayingCardFace(
     card: DragonPlayingCard,
     modifier: Modifier = Modifier
 ) {
-    val suitColor = if (card.suit.isRed) Color(0xFFE53935) else Color(0xFF222222)
-    val cardShape = RoundedCornerShape(4.dp)
+    val suitColor = if (card.suit.isRed) Color(0xFFE53935) else Color(0xFF1F1F1F)
+    val cardShape = RoundedCornerShape(3.dp)
 
     Box(
         modifier = modifier
             .clip(cardShape)
             .background(Color.White)
-            .border(0.8.dp, Color(0xFF3A3A3A), cardShape)
+            .border(0.7.dp, Color(0xFFB5B5B5), cardShape)
     ) {
         Column(
             modifier = Modifier
                 .align(Alignment.TopStart)
-                .padding(start = 2.5.dp, top = 1.5.dp),
+                .padding(start = 2.dp, top = 1.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
                 text = card.rankLabel,
                 color = suitColor,
-                fontSize = if (card.rankLabel.length > 1) 12.sp else 14.sp,
-                lineHeight = 14.sp,
-                fontWeight = FontWeight.ExtraBold,
+                fontSize = if (card.rankLabel.length > 1) 11.sp else 13.5.sp,
+                lineHeight = 13.5.sp,
+                fontWeight = FontWeight.Black,
                 maxLines = 1,
                 softWrap = false
             )
             DragonSuitVectorIcon(
                 suit = card.suit,
                 color = suitColor,
-                modifier = Modifier.size(9.dp)
+                modifier = Modifier.size(8.5.dp)
             )
         }
 
@@ -439,8 +1094,8 @@ private fun DragonPlayingCardFace(
             color = suitColor,
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(end = 3.dp, bottom = 3.dp)
-                .size(22.dp)
+                .padding(end = 1.5.dp, bottom = 2.dp)
+                .size(20.dp)
         )
     }
 }
@@ -453,7 +1108,7 @@ private fun FlippableDragonCard(
 ) {
     val rotation by animateFloatAsState(
         targetValue = if (isFlipped) 180f else 0f,
-        animationSpec = tween(durationMillis = 450, easing = FastOutSlowInEasing),
+        animationSpec = tween(durationMillis = 420, easing = FastOutSlowInEasing),
         label = "dragonCardFlip"
     )
 
@@ -470,7 +1125,7 @@ private fun FlippableDragonCard(
                 contentDescription = "Card Back",
                 modifier = Modifier
                     .fillMaxSize()
-                    .clip(RoundedCornerShape(4.dp)),
+                    .clip(RoundedCornerShape(3.dp)),
                 contentScale = ContentScale.Fit
             )
         } else {
@@ -677,7 +1332,6 @@ fun DragonBattleGameHost(
     ) {
         val sheetHeight = maxHeight * 0.65f
 
-        // Full-screen dim backdrop (blocks clicks from reaching Room behind)
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -747,22 +1401,12 @@ private fun DragonBattleLoadingOverlay(
                 .background(Color.Black.copy(alpha = 0.24f))
         )
 
-        Text(
-            text = "Dragon Battle",
+        // Matching stylized Dragon Battle title on Loading Page
+        DragonBattleTitle(
+            height = 30.dp,
             modifier = Modifier
                 .align(Alignment.TopCenter)
-                .padding(top = 12.dp),
-            style = TextStyle(
-                color = Color.White,
-                fontSize = 26.sp,
-                fontWeight = FontWeight.ExtraBold,
-                fontFamily = FontFamily.Serif,
-                shadow = Shadow(
-                    color = Color(0xCC2B1200),
-                    offset = Offset(2f, 3f),
-                    blurRadius = 5f
-                )
-            )
+                .padding(top = 12.dp)
         )
 
         AsyncImage(
@@ -890,6 +1534,14 @@ private fun DragonBattleMainOverlay(
     var revealedCount by remember { mutableIntStateOf(0) }
     var roundCards by remember { mutableStateOf(dealDragonRoundCards()) }
 
+    var showRankA by remember { mutableStateOf(false) }
+    var showRankB by remember { mutableStateOf(false) }
+    var showRankC by remember { mutableStateOf(false) }
+    var highlightedWinnerDragon by remember { mutableStateOf<String?>(null) }
+
+    var activeBanner by remember { mutableStateOf<DragonBannerEvent?>(null) }
+    var bannerSeq by remember { mutableLongStateOf(0L) }
+
     var selectedChipIndex by remember { mutableIntStateOf(0) }
     var muted by remember { mutableStateOf(false) }
     var balance by remember { mutableLongStateOf(500_000L) }
@@ -913,6 +1565,11 @@ private fun DragonBattleMainOverlay(
 
     var lastBetTable by remember { mutableStateOf<String?>(null) }
 
+    fun showBanner(text: String) {
+        bannerSeq++
+        activeBanner = DragonBannerEvent(bannerSeq, text)
+    }
+
     DisposableEffect(soundManager) {
         onDispose { soundManager.release() }
     }
@@ -920,33 +1577,56 @@ private fun DragonBattleMainOverlay(
     LaunchedEffect(Unit) {
         launch(Dispatchers.IO) { soundManager.preload() }
         while (true) {
-            // 1. Betting countdown (20s -> 1s)
+            // 1. Start Betting -> Show "Start Betting !" banner (Left -> Center 1.5s -> Right) & 20s countdown
             isRevealing = false
             revealedCount = 0
+            showRankA = false
+            showRankB = false
+            showRankC = false
+            highlightedWinnerDragon = null
             winnerOpen = false
             potA = 0L; youA = 0L
             potB = 0L; youB = 0L
             potC = 0L; youC = 0L
+
+            showBanner("Start Betting !")
 
             for (sec in 20 downTo 1) {
                 timeLeft = sec
                 delay(1000L)
             }
 
-            // 2. Round finished -> Deal random cards & flip 1 card every 1.5s: Group A -> Group B -> Group C
+            // 2. Time khatam -> "Stop Betting !" banner (Left -> Center 1.5s -> Right)
             timeLeft = 0
             isRevealing = true
+            showBanner("Stop Betting !")
+            delay(2150L)
+
+            // 3. Cards show honge -> "Show !" banner + flip 1 card every 1.5s (Group A -> B -> C)
             val dealt = dealDragonRoundCards()
             roundCards = dealt
+            showBanner("Show !")
 
             for (cardStep in 1..9) {
                 revealedCount = cardStep
-                delay(1500L)
+                if (cardStep == 3 || cardStep == 6 || cardStep == 9) {
+                    delay(430L)
+                    when (cardStep) {
+                        3 -> showRankA = true
+                        6 -> showRankB = true
+                        9 -> showRankC = true
+                    }
+                    launch(Dispatchers.IO) { soundManager.playDham() }
+                    delay(1070L)
+                } else {
+                    delay(1500L)
+                }
             }
 
-            // 3. Evaluate winner, credit reward, update history & show Winner Page (5s auto-close)
+            // 4. Show Winning Tag (winner_cutout.png) on top card group + White Shine Rays behind Dragon + update History (max 20)
             val winner = pickDragonWinner(dealt.first, dealt.second, dealt.third)
             winnerDragon = winner
+            highlightedWinnerDragon = winner
             historyList = (listOf(winner) + historyList).take(20)
 
             val totalBet = youA + youB + youC
@@ -962,7 +1642,7 @@ private fun DragonBattleMainOverlay(
                 balance += prize
             }
 
-            delay(1000L)
+            delay(1800L)
             winnerTimer = 5
             winnerOpen = true
             launch(Dispatchers.IO) { soundManager.playWinner() }
@@ -1008,6 +1688,9 @@ private fun DragonBattleMainOverlay(
     val flippedA = revealedCount.coerceIn(0, 3)
     val flippedB = (revealedCount - 3).coerceIn(0, 3)
     val flippedC = (revealedCount - 6).coerceIn(0, 3)
+    val handLabelA = remember(cardsA) { getDragonHandLabel(cardsA) }
+    val handLabelB = remember(cardsB) { getDragonHandLabel(cardsB) }
+    val handLabelC = remember(cardsC) { getDragonHandLabel(cardsC) }
 
     Box(modifier = modifier, contentAlignment = Alignment.BottomCenter) {
         // Main Game Container (exact same height as Wild Party)
@@ -1035,13 +1718,14 @@ private fun DragonBattleMainOverlay(
                     .padding(horizontal = 8.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
-                // Wild Party-matching top controls and centered title.
-                Row(
-                    modifier = Modifier.fillMaxWidth().height(32.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                // Top controls and centered stylized Dragon Battle title
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(34.dp)
                 ) {
                     Row(
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.align(Alignment.CenterStart),
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -1076,21 +1760,14 @@ private fun DragonBattleMainOverlay(
                         }
                     }
 
-                    Text(
-                        text = "Dragon Battle",
-                        modifier = Modifier.weight(1.4f),
-                        textAlign = TextAlign.Center,
-                        style = TextStyle(
-                            color = Color.White,
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Black,
-                            shadow = Shadow(Color.Black.copy(alpha = 0.48f), Offset(0f, 1.6f), 2f)
-                        )
+                    DragonBattleTitle(
+                        height = 28.dp,
+                        modifier = Modifier.align(Alignment.Center)
                     )
 
                     Row(
-                        modifier = Modifier.weight(1f),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.End),
+                        modifier = Modifier.align(Alignment.CenterEnd),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         DragonGlassTopButton(onClick = { historyOpen = true; rulesOpen = false }) {
@@ -1129,37 +1806,58 @@ private fun DragonBattleMainOverlay(
                     }
                 }
 
-                // 2. TOP 3 CARD TABLES + CENTER 20s TIMER
+                // 2. TOP 3 CARD TABLES (+ winner_cutout.png tag on winning group) + CENTER TIMER
                 Box(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .zIndex(5f),
                     contentAlignment = Alignment.Center
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        verticalAlignment = Alignment.CenterVertically
+                        horizontalArrangement = Arrangement.spacedBy(5.dp),
+                        verticalAlignment = Alignment.Top
                     ) {
                         OverlappingThreeCardsTable(
                             multiplier = "2.92",
                             cards = cardsA,
-                            flippedCount = flippedA
+                            flippedCount = flippedA,
+                            handRankLabel = handLabelA,
+                            showHandRank = showRankA,
+                            isWinner = highlightedWinnerDragon == "A",
+                            modifier = Modifier
+                                .weight(1f)
+                                .zIndex(if (highlightedWinnerDragon == "A") 12f else 0f)
                         )
                         OverlappingThreeCardsTable(
                             multiplier = "2.92",
                             cards = cardsB,
-                            flippedCount = flippedB
+                            flippedCount = flippedB,
+                            handRankLabel = handLabelB,
+                            showHandRank = showRankB,
+                            isWinner = highlightedWinnerDragon == "B",
+                            modifier = Modifier
+                                .weight(1f)
+                                .zIndex(if (highlightedWinnerDragon == "B") 12f else 0f)
                         )
                         OverlappingThreeCardsTable(
                             multiplier = "2.92",
                             cards = cardsC,
-                            flippedCount = flippedC
+                            flippedCount = flippedC,
+                            handRankLabel = handLabelC,
+                            showHandRank = showRankC,
+                            isWinner = highlightedWinnerDragon == "C",
+                            modifier = Modifier
+                                .weight(1f)
+                                .zIndex(if (highlightedWinnerDragon == "C") 12f else 0f)
                         )
                     }
 
                     Box(
                         modifier = Modifier
-                            .offset(y = (-7).dp)
-                            .size(40.dp),
+                            .offset(y = (-5).dp)
+                            .size(30.dp)
+                            .zIndex(15f),
                         contentAlignment = Alignment.Center
                     ) {
                         AsyncImage(
@@ -1170,21 +1868,24 @@ private fun DragonBattleMainOverlay(
                         )
                         Text(
                             text = timeLeft.toString(),
+                            textAlign = TextAlign.Center,
+                            maxLines = 1,
                             style = TextStyle(
                                 color = Color.White,
-                                fontSize = 16.sp,
+                                fontSize = 11.5.sp,
+                                lineHeight = 11.5.sp,
                                 fontWeight = FontWeight.ExtraBold,
                                 shadow = Shadow(
                                     color = Color(0xCC000000),
-                                    offset = Offset(1f, 2f),
-                                    blurRadius = 3f
+                                    offset = Offset(0.8f, 1.2f),
+                                    blurRadius = 2.5f
                                 )
                             )
                         )
                     }
                 }
 
-                // 3. DRAGONS (A, B, C) + BETTING BOXES
+                // 3. DRAGONS (A, B, C) + BETTING BOXES (Winning Dragon has bright White Shine Rays behind it)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -1197,6 +1898,7 @@ private fun DragonBattleMainOverlay(
                         dragonImage = DRAGON_A_IMAGE,
                         pot = potA,
                         you = youA,
+                        isWinner = highlightedWinnerDragon == "A",
                         modifier = Modifier.weight(1f),
                         onClick = { placeBet("A") }
                     )
@@ -1205,6 +1907,7 @@ private fun DragonBattleMainOverlay(
                         dragonImage = DRAGON_B_IMAGE,
                         pot = potB,
                         you = youB,
+                        isWinner = highlightedWinnerDragon == "B",
                         modifier = Modifier.weight(1f),
                         onClick = { placeBet("B") }
                     )
@@ -1213,6 +1916,7 @@ private fun DragonBattleMainOverlay(
                         dragonImage = DRAGON_C_IMAGE,
                         pot = potC,
                         you = youC,
+                        isWinner = highlightedWinnerDragon == "C",
                         modifier = Modifier.weight(1f),
                         onClick = { placeBet("C") }
                     )
@@ -1290,10 +1994,27 @@ private fun DragonBattleMainOverlay(
                 }
             }
 
+            // Center Phase Banner ("Start Betting !", "Stop Betting !", "Show !")
+            activeBanner?.let { banner ->
+                key(banner.id) {
+                    DragonPhaseBanner(
+                        event = banner,
+                        onFinished = { finishedId ->
+                            if (activeBanner?.id == finishedId) {
+                                activeBanner = null
+                            }
+                        },
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .zIndex(30f)
+                    )
+                }
+            }
+
             // Exact same Wild Party height Rules Overlay (on ? click)
             if (rulesOpen) {
                 DragonRulesOverlay(
-                    modifier = Modifier.matchParentSize(),
+                    modifier = Modifier.matchParentSize().zIndex(40f),
                     onBack = { rulesOpen = false }
                 )
             }
@@ -1301,8 +2022,8 @@ private fun DragonBattleMainOverlay(
             // Exact same Wild Party height History Overlay (on 3-line icon click)
             if (historyOpen) {
                 DragonHistoryOverlay(
-                    history = historyList,
-                    modifier = Modifier.matchParentSize(),
+                    history = historyList.take(20),
+                    modifier = Modifier.matchParentSize().zIndex(40f),
                     onBack = { historyOpen = false }
                 )
             }
@@ -1362,7 +2083,6 @@ private fun DragonWinnerOverlay(
                 .padding(start = 18.dp, end = 18.dp, top = 14.dp, bottom = 18.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Top Section: Countdown (top-right) + Winner Dragon (left) + Prizes & Your Bet (right)
             Box(Modifier.fillMaxWidth()) {
                 Text(
                     text = "${winnerTimer}s",
@@ -1461,7 +2181,6 @@ private fun DragonWinnerOverlay(
 
             Spacer(Modifier.height(16.dp))
 
-            // Middle Heading Artwork (Top Winner image - exact same placement as Wild Party)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1481,7 +2200,6 @@ private fun DragonWinnerOverlay(
 
             Spacer(Modifier.height(14.dp))
 
-            // Bottom Podium: 2nd | 1st (slightly higher) | 3rd
             val frameItems = listOf(
                 Triple("2nd", DRAGON_WINNER_FRAME_2ND, 0),
                 Triple("1st", DRAGON_WINNER_FRAME_1ST, 1),
@@ -1609,23 +2327,29 @@ private fun DragonRulesOverlay(
                 Text(
                     text = "6.",
                     color = Color.White,
-                    fontSize = 14.sp,
+                    fontSize = 13.5.sp,
                     fontWeight = FontWeight.Medium,
                     modifier = Modifier.width(22.dp)
                 )
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(3.dp)
-                ) {
-                    Text("Spades", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                    Text("♠", color = Color(0xFF8C8C96), fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                    Text("> Hearts", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                    Text("♥", color = Color(0xFFE53935), fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                    Text("> Plums", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                    Text("♣", color = Color(0xFF8C8C96), fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                    Text("> Diamonds", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                    Text("♦", color = Color(0xFFE53935), fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                }
+                Text(
+                    text = buildAnnotatedString {
+                        append("Spades ")
+                        withStyle(SpanStyle(color = Color(0xFF9E9EA8), fontWeight = FontWeight.Bold)) { append("♠") }
+                        append(" > Hearts ")
+                        withStyle(SpanStyle(color = Color(0xFFE53935), fontWeight = FontWeight.Bold)) { append("♥") }
+                        append(" > Plums ")
+                        withStyle(SpanStyle(color = Color(0xFF9E9EA8), fontWeight = FontWeight.Bold)) { append("♣") }
+                        append(" > Diamonds ")
+                        withStyle(SpanStyle(color = Color(0xFFE53935), fontWeight = FontWeight.Bold)) { append("♦") }
+                    },
+                    color = Color.White,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    softWrap = false,
+                    overflow = TextOverflow.Clip,
+                    modifier = Modifier.weight(1f)
+                )
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -1663,6 +2387,7 @@ private fun DragonHistoryOverlay(
     modifier: Modifier = Modifier,
     onBack: () -> Unit
 ) {
+    val maxTwentyHistory = remember(history) { history.take(20) }
     Column(
         modifier = modifier
             .background(Color.Black)
@@ -1709,7 +2434,7 @@ private fun DragonHistoryOverlay(
                 .weight(1f)
                 .background(Color.Black)
         ) {
-            itemsIndexed(history) { index, winner ->
+            itemsIndexed(maxTwentyHistory) { index, winner ->
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -1810,35 +2535,102 @@ private fun DragonHistoryBadge(isWin: Boolean) {
 private fun OverlappingThreeCardsTable(
     multiplier: String,
     cards: List<DragonPlayingCard>,
-    flippedCount: Int
+    flippedCount: Int,
+    handRankLabel: String,
+    showHandRank: Boolean,
+    isWinner: Boolean,
+    modifier: Modifier = Modifier
 ) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(
-            modifier = Modifier
-                .width(88.dp)
-                .height(56.dp),
-            contentAlignment = Alignment.CenterStart
-        ) {
-            cards.take(3).forEachIndexed { idx, card ->
-                FlippableDragonCard(
-                    card = card,
-                    isFlipped = idx < flippedCount,
+    val trayShape = RoundedCornerShape(6.dp)
+    val tabShape = RoundedCornerShape(bottomStart = 6.dp, bottomEnd = 6.dp)
+    val trayBg = Color(0xE62E180B)
+    val trayBorder = if (isWinner) Color(0xFFFFE58F) else Color(0xAA9E6B38)
+    val tagScale by animateFloatAsState(
+        targetValue = if (isWinner) 1f else 0.7f,
+        animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing),
+        label = "winnerTagScale"
+    )
+
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        // Outer unclipped Box so winner_cutout.png sits naturally over the top-right corner
+        Box(modifier = Modifier.fillMaxWidth()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(60.dp)
+                    .clip(trayShape)
+                    .background(trayBg)
+                    .border(if (isWinner) 1.4.dp else 1.1.dp, trayBorder, trayShape)
+                    .padding(2.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalArrangement = Arrangement.spacedBy(1.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    cards.take(3).forEachIndexed { idx, card ->
+                        FlippableDragonCard(
+                            card = card,
+                            isFlipped = idx < flippedCount,
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                        )
+                    }
+                }
+
+                if (showHandRank) {
+                    DragonHandRankSlamBanner(
+                        label = handRankLabel,
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = 3.dp)
+                            .zIndex(5f)
+                    )
+                }
+            }
+
+            // Winning tag (winner_cutout.png) on top-right corner — NO rotation applied
+            if (isWinner) {
+                AsyncImage(
+                    model = DRAGON_WINNER_TAG_IMAGE,
+                    contentDescription = "Winner Tag",
                     modifier = Modifier
-                        .offset(x = (idx * 22).dp)
-                        .size(width = 44.dp, height = 56.dp)
-                        .zIndex(idx.toFloat())
+                        .align(Alignment.TopEnd)
+                        .offset(x = 8.dp, y = (-12).dp)
+                        .size(48.dp)
+                        .zIndex(20f)
+                        .graphicsLayer {
+                            scaleX = tagScale
+                            scaleY = tagScale
+                        },
+                    contentScale = ContentScale.Fit
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(2.dp))
-
-        Text(
-            text = multiplier,
-            color = Color(0xFFFFD699),
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Bold
-        )
+        // Attached dark brown 2.92 multiplier tab
+        Box(
+            modifier = Modifier
+                .offset(y = (-1).dp)
+                .clip(tabShape)
+                .background(Color(0xE634190C))
+                .border(0.8.dp, Color(0x888E5B2D), tabShape)
+                .padding(horizontal = 12.dp, vertical = 1.5.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = multiplier,
+                color = Color(0xFFF6AEAE),
+                fontSize = 10.sp,
+                lineHeight = 11.sp,
+                fontWeight = FontWeight.ExtraBold
+            )
+        }
     }
 }
 
@@ -1848,6 +2640,7 @@ private fun DragonBetColumn(
     dragonImage: String,
     pot: Long,
     you: Long,
+    isWinner: Boolean,
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
@@ -1858,14 +2651,23 @@ private fun DragonBetColumn(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(82.dp),
+                .height(84.dp),
             contentAlignment = Alignment.Center
         ) {
+            if (isWinner) {
+                DragonWinnerWhiteRays(
+                    modifier = Modifier
+                        .size(110.dp)
+                        .zIndex(0f)
+                )
+            }
+
             Text(
                 text = label,
                 modifier = Modifier
                     .align(Alignment.TopStart)
-                    .padding(start = 2.dp, top = 2.dp),
+                    .padding(start = 2.dp, top = 2.dp)
+                    .zIndex(2f),
                 style = TextStyle(
                     color = Color(0xFFFFF3C4),
                     fontSize = 22.sp,
@@ -1882,7 +2684,9 @@ private fun DragonBetColumn(
             AsyncImage(
                 model = dragonImage,
                 contentDescription = "Dragon $label",
-                modifier = Modifier.size(78.dp),
+                modifier = Modifier
+                    .size(78.dp)
+                    .zIndex(1f),
                 contentScale = ContentScale.Fit
             )
         }
@@ -1893,7 +2697,11 @@ private fun DragonBetColumn(
                 .height(62.dp)
                 .clip(RoundedCornerShape(9.dp))
                 .background(Color(0xD94B1A19))
-                .border(1.dp, Color(0x55E5B34A), RoundedCornerShape(9.dp))
+                .border(
+                    width = if (isWinner) 1.6.dp else 1.dp,
+                    color = if (isWinner) Color(0xFFFFF0A6) else Color(0x55E5B34A),
+                    shape = RoundedCornerShape(9.dp)
+                )
                 .padding(bottom = 5.dp),
             contentAlignment = Alignment.BottomCenter
         ) {
