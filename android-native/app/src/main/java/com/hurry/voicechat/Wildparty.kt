@@ -1203,7 +1203,7 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
  val scope= rememberCoroutineScope()
  val dao= remember{WalletDatabase.get(context).walletDao()}
  val soundManager = remember(context) { WpSoundManager(context.applicationContext) }
- var balance by remember{mutableLongStateOf(82927L)}
+ var balance by remember{mutableLongStateOf(0L)}
  var phase by remember{mutableStateOf(WpPhase.BETTING)}
  var round by remember{mutableIntStateOf(1)}
  var countdown by remember{mutableIntStateOf(30)}
