@@ -52,6 +52,8 @@ import coil3.compose.AsyncImage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
@@ -1338,7 +1340,10 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
    val pendingDelta=(0 until remaining.length()).sumOf{remaining.optJSONObject(it)?.optLong("delta")?:0L}
    val visible=(serverBalance!!+pendingDelta).coerceAtLeast(0L)
    balance=visible
-   val old=dao.getUserData()?:UserDataEntity(balance=visible);dao.saveUserData(old.copy(balance=visible))
+   withContext(Dispatchers.IO) {
+    val old=dao.getUserData()?:UserDataEntity(balance=visible)
+    dao.saveUserData(old.copy(balance=visible))
+   }
    walletCachePrefs.edit().putLong("balance_$userId",visible).putLong("last_sync_$userId",System.currentTimeMillis()).apply()
   }
  }
@@ -1635,7 +1640,7 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
        )
       }
      }
-     WpGlassTopButton(onClick = { scope.launch { runCatching { syncPendingWalletChanges() }; onClose() } }) {
+     WpGlassTopButton(onClick = { scope.launch(Dispatchers.IO) { runCatching { syncPendingWalletChanges() } }; onClose() }) {
       Canvas(Modifier.size(14.dp)) {
        val a = 3.1.dp.toPx()
        val b = 10.9.dp.toPx()
