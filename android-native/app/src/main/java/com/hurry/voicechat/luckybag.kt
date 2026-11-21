@@ -75,6 +75,23 @@ fun LuckyBag(senderId: String, senderName: String, senderImage: String, roomId: 
         val remoteRows = remote.optJSONArray("claims")?.let { array ->
             (0 until array.length()).mapNotNull { array.optJSONObject(it) }
         }.orEmpty()
+        // Keep a sender-device copy of every server-returned claim as well as
+        // the socket copy, so a short socket interruption cannot lose details.
+        val cachedRemoteRows = withContext(Dispatchers.IO) {
+            val db = NativeIndexDatabase(context)
+            remoteRows.map { row ->
+                JSONObject(row.toString())
+                    .put("bagId", bagId)
+                    .put("roomId", roomId)
+                    .put("bagAmount", remote.optLong("amount", 0L))
+                    .put("recipients", remote.optInt("recipients", 0))
+                    .put("claimedCount", remote.optInt("claimedCount", remoteRows.size))
+                    .put("claimedTotal", remote.optLong("claimedTotal", remoteRows.sumOf { it.optLong("amount", 0L) }))
+                    .also { saved ->
+                        db.saveLuckyBagClaim(bagId, roomId, saved.optString("userId"), saved)
+                    }
+            }
+        }
         claimBagData = if (remote.has("bagId")) remote else matchingLocal.firstOrNull()?.let { first ->
             JSONObject().put("bagId", bagId)
                 .put("amount", first.optLong("bagAmount"))
@@ -82,7 +99,7 @@ fun LuckyBag(senderId: String, senderName: String, senderImage: String, roomId: 
                 .put("claimedCount", first.optInt("claimedCount"))
                 .put("claimedTotal", first.optLong("claimedTotal"))
         } ?: JSONObject()
-        claimRows = if (remoteRows.isNotEmpty()) remoteRows else matchingLocal
+        claimRows = if (cachedRemoteRows.isNotEmpty()) cachedRemoteRows else matchingLocal
         claimLoading = false
     }
 
