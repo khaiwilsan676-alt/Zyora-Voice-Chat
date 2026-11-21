@@ -58,7 +58,7 @@ fun BagPage(onBack: () -> Unit = {}) {
                         for (i in 0 until array.length()) {
                             val item = array.optJSONObject(i) ?: continue
                             val tab = item.optString("tab")
-                            if (tab == "Avatar Frame" || tab == "Theme") {
+                            if (tab == "Avatar Frame" || tab == "Theme" || tab == "Room Theme") {
                                 add(BagRewardItem(
                                     item.optString("itemId"),
                                     item.optString("name", "Reward"),
@@ -85,9 +85,9 @@ fun BagPage(onBack: () -> Unit = {}) {
             Text("Bag", fontSize = 20.sp, color = Color(0xFF111827), fontWeight = FontWeight.Bold)
         }
         Row(Modifier.fillMaxWidth().background(Color.White).padding(horizontal = 16.dp, vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-            listOf("Avatar Frame", "Theme").forEach { tab ->
+            listOf("Avatar Frame", "Theme", "Room Theme").forEach { tab ->
                 Column(Modifier.clickable { selectedTab = tab }, horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(if (tab == "Avatar Frame") "Frame" else "Theme", color = if (selectedTab == tab) Color(0xFF2563EB) else Color(0xFF6B7280), fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    Text(when (tab) { "Avatar Frame" -> "Frame"; "Room Theme" -> "Room Theme"; else -> "Theme" }, color = if (selectedTab == tab) Color(0xFF2563EB) else Color(0xFF6B7280), fontWeight = FontWeight.Bold, fontSize = 15.sp)
                     Spacer(Modifier.height(5.dp))
                     Box(Modifier.width(42.dp).height(3.dp).clip(RoundedCornerShape(3.dp)).background(if (selectedTab == tab) Color(0xFF2563EB) else Color.Transparent))
                 }
@@ -98,7 +98,7 @@ fun BagPage(onBack: () -> Unit = {}) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Loading...", color = Color.Gray) }
         } else if (visibleItems.isEmpty()) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(if (selectedTab == "Avatar Frame") "No frames yet" else "No themes yet", color = Color(0xFF9CA3AF), fontSize = 14.sp)
+                Text(when (selectedTab) { "Avatar Frame" -> "No frames yet"; "Room Theme" -> "No room themes yet"; else -> "No themes yet" }, color = Color(0xFF9CA3AF), fontSize = 14.sp)
             }
         } else {
             LazyColumn(Modifier.fillMaxSize().padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
