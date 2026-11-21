@@ -3979,7 +3979,7 @@ const DAILY_CHECKIN_REWARDS = {
   6: { coins: 10000, items: [{ itemId: "daily-theme-day6", name: "Daily Reward Theme", tab: "Theme", image: "IMG-20260903-WA0076.jpg" }] },
   7: { coins: 15000, items: [
     { itemId: "daily-frame-day7", name: "Big Reward Frame", tab: "Avatar Frame", image: "file_0000000044388211996656afc9ce9c03.png" },
-    { itemId: "daily-theme-day7", name: "Big Reward Theme", tab: "Theme", image: "IMG-20260903-WA0077.jpg" }
+    { itemId: "daily-room-theme-day7", name: "Big Reward Room Theme", tab: "Room Theme", image: "IMG-20260903-WA0077.jpg" }
   ] }
 };
 function indiaDateKey() {
