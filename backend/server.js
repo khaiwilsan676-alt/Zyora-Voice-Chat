@@ -169,7 +169,8 @@ if (typeof presenceLeaseRefresh.unref === "function") presenceLeaseRefresh.unref
 
 const memoryRoundWinners = {
   fruitparty: { round: -1, winners: [] },
-  wildparty: { round: -1, winners: [] }
+  wildparty: { round: -1, winners: [] },
+  dragonbattle: { round: -1, winners: [] }
 };
 
 /*
@@ -2354,48 +2355,84 @@ io.on("connection", (socket) => {
 
   const handleGameWinner = async (gameName, payload = {}) => {
     const round = Number(payload.round || 0);
-    if (!round) return;
+    if (!Number.isSafeInteger(round) || round <= 0) return;
 
     const win = Number(payload.win || 0);
     if (!Number.isFinite(win) || win <= 0) return;
 
+    const identity = String(payload.accountId || payload.userId || payload.uid || "").trim();
+    let profile = null;
+    if (db && identity) {
+      try {
+        profile = await db.collection("users").findOne({
+          $or: [
+            { accountId: identity }, { accountNumber: identity },
+            { uid: identity }, { id: identity }, { appLongId: identity },
+            { displayUserNumber: identity }
+          ]
+        });
+      } catch (error) {
+        console.warn("Could not resolve game winner profile:", error.message);
+      }
+    }
+
     const name = String(
-      payload.name ||
-      payload.userName ||
-      payload.displayName ||
-      payload.username ||
-      "User"
+      profile?.name || profile?.displayName || profile?.userName ||
+      payload.name || payload.userName || payload.displayName || payload.username || "User"
     ).trim() || "User";
-
     const avatar = String(
-      payload.avatar ||
-      payload.photo ||
-      payload.image ||
-      payload.photoUrl ||
-      payload.photoURL ||
-      payload.profilePhoto ||
-      "/default-avatar.png"
+      profile?.image || profile?.dp || profile?.photoURL || profile?.photoUrl ||
+      profile?.avatar || payload.avatar || payload.photo || payload.image ||
+      payload.photoUrl || payload.photoURL || payload.profilePhoto || "/default-avatar.png"
     ).trim() || "/default-avatar.png";
+    const userKey = identity || `${name.toLowerCase()}|${avatar}`;
+    const redisKey = `game:winners:${gameName}:${round}`;
 
-    const currentData = memoryRoundWinners[gameName];
-    if (currentData.round !== round) {
-      currentData.round = round;
-      currentData.winners = [];
+    try {
+      let winners = [];
+      if (redis) {
+        const stored = await redis.get(redisKey);
+        if (Array.isArray(stored)) winners = stored;
+        else if (typeof stored === "string" && stored) {
+          try { winners = JSON.parse(stored); } catch { winners = []; }
+        }
+      }
+      if (!Array.isArray(winners) || !winners.length) {
+        const cached = memoryRoundWinners[gameName];
+        winners = cached.round === round ? [...cached.winners] : [];
+      }
+
+      const existing = winners.find((winner) => String(winner.userKey || winner.key || "") === userKey);
+      if (existing) {
+        existing.win = Math.max(Number(existing.win) || 0, win);
+        existing.name = name;
+        existing.avatar = avatar;
+        existing.userKey = userKey;
+      } else {
+        winners.push({ userKey, name, win, avatar });
+      }
+      winners.sort((a, b) => Number(b.win || 0) - Number(a.win || 0));
+      winners = winners.slice(0, 3);
+
+      memoryRoundWinners[gameName] = { round, winners };
+      if (redis) {
+        await redis.set(redisKey, JSON.stringify(winners), { ex: 172800 });
+      }
+      io.emit(`${gameName}_top_winners`, winners.map(({ userKey: _key, ...winner }) => winner));
+    } catch (error) {
+      console.error(`Could not persist ${gameName} round winners:`, error.message);
+      const currentData = memoryRoundWinners[gameName];
+      if (currentData.round !== round) {
+        currentData.round = round;
+        currentData.winners = [];
+      }
+      const existing = currentData.winners.find((winner) => winner.userKey === userKey);
+      if (existing) existing.win = Math.max(Number(existing.win) || 0, win);
+      else currentData.winners.push({ userKey, name, win, avatar });
+      currentData.winners.sort((a, b) => b.win - a.win);
+      currentData.winners = currentData.winners.slice(0, 3);
+      io.emit(`${gameName}_top_winners`, currentData.winners.map(({ userKey: _key, ...winner }) => winner));
     }
-
-    const existing = currentData.winners.find(
-      (winner) => winner.name === name && winner.avatar === avatar
-    );
-    if (existing) {
-      existing.win = Math.max(Number(existing.win) || 0, win);
-    } else {
-      currentData.winners.push({ name, win, avatar });
-    }
-
-    currentData.winners.sort((a, b) => b.win - a.win);
-    currentData.winners = currentData.winners.slice(0, 3);
-
-    io.emit(`${gameName}_top_winners`, currentData.winners);
   };
 
   socket.on("fruitparty_winner_update", (payload) => {
@@ -2404,6 +2441,10 @@ io.on("connection", (socket) => {
 
   socket.on("wildparty_winner_update", (payload) => {
     handleGameWinner("wildparty", payload);
+  });
+
+  socket.on("dragonbattle_winner_update", (payload) => {
+    handleGameWinner("dragonbattle", payload);
   });
 
   socket.on("presence_online", (userId) => {
