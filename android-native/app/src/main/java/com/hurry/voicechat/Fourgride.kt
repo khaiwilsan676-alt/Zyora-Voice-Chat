@@ -147,7 +147,7 @@ fun Fourgride(
     luckyBagSenderImage: String = "",
     luckyBagRoomId: String = "",
     luckyBagRoomName: String = "Room",
-    onLuckyBagSent: ((String, String, Long, Int, String) -> Unit)? = null,
+    onLuckyBagSent: ((String, String, Long, Int, String, Long) -> Unit)? = null,
     isRoomOwner: Boolean = false,
     roomId: String = ""
 ) {
