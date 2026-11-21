@@ -134,7 +134,8 @@ fun EmojiPicker(onClose: () -> Unit = {}, onSelectEmoji: (EmojiSticker) -> Unit 
         EmojiSticker("unamused", "Unamused", "${GITHUB_PUBLIC_BASE}512%20(11).gif", null, 1.1f),
         EmojiSticker("pleading", "Pleading", "${GITHUB_PUBLIC_BASE}512%20(4).gif", null, 1.1f),
         EmojiSticker("hug", "Hug", "${GITHUB_PUBLIC_BASE}512%20(8).gif", null, 1.1f),
-        EmojiSticker("shocking", "Shocking", "${GITHUB_PUBLIC_BASE}512%20(1).gif", null, 1.1f)
+        EmojiSticker("shocking", "Shocking", "${GITHUB_PUBLIC_BASE}512%20(1).gif", null, 1.1f),
+        EmojiSticker("kiss", "Kiss-R", "${GITHUB_PUBLIC_BASE}512%20(14).gif", null, 1.1f)
     )
 
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
