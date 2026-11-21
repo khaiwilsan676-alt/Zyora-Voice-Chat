@@ -1639,3 +1639,9 @@ Current documentation does not certify that all historical features are build-, 
 - Reduced the right-corner room shortcut artwork sizes and tightened the vertical gaps without changing the column anchor or bottom offset.
 - Native code commits: `81f5c9252195e7cd9d699cbfe787709c147794b0`, `14277d7fe28743a4ee49751dbcd56fcf5388a675`, `26f94edfb5303a7255e706279491288767f1c512`, `737a0e37f422e7f7de950e7a9fd08fcde04c673f`.
 - Verification: source changes committed; APK build and live-device UI behavior still need verification.
+
+
+## 2026-11-21 — Lucky Bag expiry and sender refund
+- `backend/server.js`: when the five-minute Lucky Bag timer expires, the bag is removed from active room listings. If no claim was made, the full sent amount is returned to the sender's canonical wallet using an idempotency key, and the refreshed wallet balance is broadcast immediately.
+- If at least one claim was reserved, the bag expires without refunding already-claimed coins; pending claim confirmations can still complete. Transient refund/storage failures are retried without double-crediting.
+- No UI layout or positioning changes.
