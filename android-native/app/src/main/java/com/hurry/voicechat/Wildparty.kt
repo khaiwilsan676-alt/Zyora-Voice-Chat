@@ -1263,6 +1263,7 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
    val arr=JSONArray(context.getSharedPreferences("wild_party_native",Context.MODE_PRIVATE).getString("history","[]"))
    history=(0 until arr.length()).mapNotNull{i->arr.optJSONObject(i)?.let{WpRound(it.optInt("round"),it.optString("winner"),it.optLong("time"),it.optLong("myBet",0L),it.optLong("winAmount",0L))}}.filter{it.time>=wpReset()}.sortedBy{it.round}.takeLast(50)
   }
+  runCatching{syncPendingWalletChanges()}
   runCatching{
    val walletUserId=walletAccountId.takeIf{it.isNotBlank()}
    // Keep the real Wallet page balance visible immediately; never replace it with a fake zero.
@@ -1298,49 +1299,69 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
   delay(120)
   loading=false
  }
+ LaunchedEffect(walletAccountId){if(walletAccountId.isNotBlank())runCatching{syncPendingWalletChanges()}}
  LaunchedEffect(history.size){
   topHistoryScrollState.scrollTo(0)
  }
- suspend fun walletChange(delta:Long,title:String){
-  require(delta != 0L) { "Invalid wallet amount" }
-  val authPrefs=context.getSharedPreferences("hurry_auth",Context.MODE_PRIVATE)
-  val walletUserId=authPrefs.getString("uid",null)?.takeIf{it.isNotBlank()}
-   ?:authPrefs.getString("accountId","").orEmpty().takeIf{it.isNotBlank()}
-   ?:error("Wallet account is unavailable")
-  val amount=kotlin.math.abs(delta)
-  val action=if(delta<0L) "bet" else "win"
-  val transactionId="wild_party_${action}_${System.currentTimeMillis()}_${java.util.UUID.randomUUID()}"
-  val response=withContext(Dispatchers.IO){
-   val connection=(URL("https://zyora-server.onrender.com/api/wallet/wild-party").openConnection() as HttpURLConnection).apply{
-    requestMethod="POST";connectTimeout=15000;readTimeout=15000;doOutput=true
-    setRequestProperty("Content-Type","application/json; charset=utf-8")
-    setRequestProperty("Cache-Control","no-cache")
-   }
-   try{
-    val payload=JSONObject().put("userId",walletUserId).put("transactionId",transactionId)
-     .put("amount",amount).put("action",action)
-    connection.outputStream.bufferedWriter().use{it.write(payload.toString())}
-    val stream=if(connection.responseCode in 200..299) connection.inputStream else connection.errorStream
-    val body=stream?.bufferedReader()?.use{it.readText()}.orEmpty()
-    val json=runCatching{JSONObject(body)}.getOrNull()
-    if(connection.responseCode !in 200..299 || json?.optBoolean("success")!=true)
-     error(json?.optString("error")?.takeIf{it.isNotBlank()} ?: "Wallet transaction failed")
-    json
-   }finally{connection.disconnect()}
+ val pendingWalletPrefs=remember(context){context.getSharedPreferences("wild_party_wallet_pending",Context.MODE_PRIVATE)}
+ fun pendingWalletKey()="queue_$walletAccountId"
+ suspend fun syncPendingWalletChanges(){
+  val userId=walletAccountId.takeIf{it.isNotBlank()}?:return
+  val key=pendingWalletKey()
+  val queue=runCatching{JSONArray(pendingWalletPrefs.getString(key,"[]")?:"[]")}.getOrElse{return}
+  var serverBalance:Long?=null
+  val remaining=JSONArray()
+  for(i in 0 until queue.length()){
+   val item=queue.optJSONObject(i)?:continue
+   val txId=item.optString("id");val delta=item.optLong("delta")
+   if(txId.isBlank()||delta==0L)continue
+   val result=runCatching{withContext(Dispatchers.IO){
+    val connection=(URL("https://zyora-server.onrender.com/api/wallet/wild-party").openConnection() as HttpURLConnection).apply{
+     requestMethod="POST";connectTimeout=7000;readTimeout=7000;doOutput=true
+     setRequestProperty("Content-Type","application/json; charset=utf-8");setRequestProperty("Cache-Control","no-cache")
+    }
+    try{
+     val payload=JSONObject().put("userId",userId).put("transactionId",txId).put("amount",kotlin.math.abs(delta)).put("action",if(delta<0L)"bet" else "win")
+     connection.outputStream.bufferedWriter().use{it.write(payload.toString())}
+     val code=connection.responseCode
+     val body=(if(code in 200..299)connection.inputStream else connection.errorStream)?.bufferedReader()?.use{it.readText()}.orEmpty()
+     val json=JSONObject(body)
+     if(code !in 200..299||!json.optBoolean("success"))error(json.optString("error","Wallet sync failed"))
+     json.optLong("balance",-1L).also{check(it>=0L)}
+    }finally{connection.disconnect()}
+   }}
+   if(result.isSuccess)serverBalance=result.getOrThrow() else remaining.put(item)
   }
-  val next=response.optLong("balance",-1L)
-  check(next>=0L) { "Wallet returned an invalid balance" }
-  val old=dao.getUserData()?:UserDataEntity(balance=next)
-  dao.saveUserData(old.copy(balance=next));balance=next
-  val cache=context.getSharedPreferences("zyora_wallet_cache",Context.MODE_PRIVATE)
-  cache.edit().putLong("balance_${walletUserId}",next).putLong("last_sync_${walletUserId}",System.currentTimeMillis()).apply()
-  val now=Calendar.getInstance()
-  val date=String.format("%04d.%02d.%02d %02d:%02d",now.get(Calendar.YEAR),now.get(Calendar.MONTH)+1,now.get(Calendar.DAY_OF_MONTH),now.get(Calendar.HOUR_OF_DAY),now.get(Calendar.MINUTE))
-  dao.insertTransaction(TransactionEntity(title=title,amount=delta,date=date,timestamp=System.currentTimeMillis(),type="coin"))
-  withContext(Dispatchers.IO){
-   NativeIndexDatabase(context).saveWalletTransaction(transactionId,walletUserId,title,delta,date,System.currentTimeMillis(),"coin")
+  pendingWalletPrefs.edit().putString(key,remaining.toString()).apply()
+  if(serverBalance!=null){
+   val pendingDelta=(0 until remaining.length()).sumOf{remaining.optJSONObject(it)?.optLong("delta")?:0L}
+   val visible=(serverBalance!!+pendingDelta).coerceAtLeast(0L)
+   balance=visible
+   val old=dao.getUserData()?:UserDataEntity(balance=visible);dao.saveUserData(old.copy(balance=visible))
+   walletCachePrefs.edit().putLong("balance_$userId",visible).putLong("last_sync_$userId",System.currentTimeMillis()).apply()
   }
  }
+ suspend fun walletChange(delta:Long,title:String){
+  require(delta!=0L){"Invalid wallet amount"}
+  val userId=walletAccountId.takeIf{it.isNotBlank()}?:error("Wallet account is unavailable")
+  val amount=kotlin.math.abs(delta)
+  if(delta<0L)check(balance>=amount){"Not enough coins"}
+  val next=(balance+delta).coerceAtLeast(0L)
+  balance=next
+  walletCachePrefs.edit().putLong("balance_$userId",next).apply()
+  val old=dao.getUserData()?:UserDataEntity(balance=next);dao.saveUserData(old.copy(balance=next))
+  val nowMs=System.currentTimeMillis()
+  val transactionId="wild_party_${if(delta<0L)"bet" else "win"}_${nowMs}_${java.util.UUID.randomUUID()}"
+  val now=Calendar.getInstance()
+  val date=String.format("%04d.%02d.%02d %02d:%02d",now.get(Calendar.YEAR),now.get(Calendar.MONTH)+1,now.get(Calendar.DAY_OF_MONTH),now.get(Calendar.HOUR_OF_DAY),now.get(Calendar.MINUTE))
+  val queue=runCatching{JSONArray(pendingWalletPrefs.getString(pendingWalletKey(),"[]")?:"[]")}.getOrDefault(JSONArray())
+  queue.put(JSONObject().put("id",transactionId).put("delta",delta).put("title",title).put("date",date))
+  check(pendingWalletPrefs.edit().putString(pendingWalletKey(),queue.toString()).commit()){"Could not save pending Wallet transaction"}
+  dao.insertTransaction(TransactionEntity(title=title,amount=delta,date=date,timestamp=nowMs,type="coin"))
+  withContext(Dispatchers.IO){NativeIndexDatabase(context).saveWalletTransaction(transactionId,userId,title,delta,date,nowMs,"coin")}
+  runCatching{syncPendingWalletChanges()}.onFailure{android.util.Log.w("WildParty","Wallet sync queued for retry",it)}
+ }
+
  fun persistHistory(){
   val arr=JSONArray()
   history.takeLast(50).forEach{arr.put(JSONObject().put("round",it.round).put("winner",it.winner).put("time",it.time).put("myBet",it.myBet).put("winAmount",it.winAmount))}
