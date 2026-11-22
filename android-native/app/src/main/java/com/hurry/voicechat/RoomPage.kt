@@ -335,7 +335,7 @@ fun RoomPage(
     val roomDisplayImage = cachedCurrentProfile?.let { profile ->
         sequenceOf("image", "dp", "photo", "photoURL", "photoUrl", "avatar", "avatarUrl", "profileImage", "profileImageUrl", "profile_image", "imageUrl", "picture")
             .map { profile.optString(it, "").trim() }
-            .firstOrNull { it.isNotBlank() && it != "null" && it != "undefined" }
+            .firstOrNull { it.isNotBlank() && it != "null" && it != "undefined" && !it.endsWith("/default-avatar.png", true) }
     } ?: currentUser.image.trim().takeIf { it.isNotBlank() && it != "null" && it != "undefined" && !it.endsWith("/default-avatar.png", true) }
         ?: ZYORA_DEFAULT_AVATAR_URL
     var copiedId by remember { mutableStateOf("") }
@@ -3100,7 +3100,7 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                             val previous = seats[index]
                             seats[index] = NativeRoomSeat(number = previous.number, locked = previous.locked)
                         }
-                        if(seatIndex>=0) seats[seatIndex]=seat.copy(occupied=true,userName=roomDisplayName.ifBlank{"User"},userImage=roomDisplayImage.ifBlank { "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/default-avatar.png" },accountId=accountId,muted=false,selfMuted=false,speaking=false,locked=false)
+                        if(seatIndex>=0) seats[seatIndex]=seat.copy(occupied=true,userName=roomDisplayName.ifBlank{"User"},userImage=roomDisplayImage.ifBlank { ZYORA_DEFAULT_AVATAR_URL },accountId=accountId,muted=false,selfMuted=false,speaking=false,locked=false)
                         roomSocketRef.value?.emit("room_seat_action",JSONObject().put("roomId",roomId).put("userId",accountId).put("action","take").put("seatNumber",seat.number).put("user",user))
                         showSeatSheet=false;selectedSeat=0
                     }
@@ -3541,7 +3541,7 @@ private fun RoomInviteSheet(
                 items(visibleUsers, key = { it.accountId }) { user ->
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         AsyncImage(
-                            model = user.image.ifBlank { "https://zyora-voice-chat.vercel.app/default-avatar.png" },
+                            model = user.image.ifBlank { ZYORA_DEFAULT_AVATAR_URL },
                             contentDescription = user.name,
                             modifier = Modifier.size(38.dp).clip(CircleShape),
                             contentScale = ContentScale.Crop
