@@ -498,7 +498,8 @@ fun RoomPage(
         }
     }
 
-    LaunchedEffect(roomAdminIds) {
+    LaunchedEffect(roomAdminIds, showInfo) {
+        if (!showInfo) return@LaunchedEffect
         if (roomAdminIds.isEmpty()) {
             roomAdminUsers = emptyList()
         } else {
@@ -600,9 +601,13 @@ fun RoomPage(
             }
         }
     }
+    // Room-info-only data is loaded when the sheet is opened, not during room entry.
+    // This keeps non-critical member/admin lookups off the room join critical path.
+    var showInfo by remember { mutableStateOf(false) }
     var followed by remember{mutableStateOf(false)}
     var followedRoomUsers by remember(roomId) { mutableStateOf<List<RoomInfoFollower>>(emptyList()) }
-    LaunchedEffect(roomId) {
+    LaunchedEffect(roomId, showInfo) {
+        if (!showInfo) return@LaunchedEffect
         followedRoomUsers = withContext(Dispatchers.IO) {
             runCatching {
                 val encodedRoom = java.net.URLEncoder.encode(roomId, "UTF-8")
@@ -701,7 +706,6 @@ fun RoomPage(
     var storeInitialView by remember { mutableStateOf("store") }
     var showExitMenu by remember{mutableStateOf(false)}
     // The room remains composed while minimized; no socket-only keep/dispose handoff is used.
-    var showInfo by remember{mutableStateOf(false)}
     var showRoomCup by remember { mutableStateOf(false) }
     var showRoomCupOnline by remember { mutableStateOf(false) }
     var showSettings by remember{mutableStateOf(false)}
