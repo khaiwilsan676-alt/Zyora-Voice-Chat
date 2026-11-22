@@ -71,6 +71,38 @@ internal object FamilyProfileApi {
     suspend fun create(id:String,name:String,image:String,announcement:String)=request("/api/families","POST",JSONObject().put("familyId",id).put("name",name).put("image",image).put("announcement",announcement))
     suspend fun load(id:String)=parse(request("/api/families/${URLEncoder.encode(id,"UTF-8")}"))
     suspend fun memberCount(id:String):Int=parse(request("/api/families/${URLEncoder.encode(id,"UTF-8")}")).members.size
+    fun cachedLeaderboard(context: Context):List<FamilyRecord> = runCatching {
+        val raw = context.getSharedPreferences("zyora_family_cache", Context.MODE_PRIVATE)
+            .getString("leaderboard", "[]") ?: "[]"
+        val rows = JSONArray(raw)
+        (0 until rows.length()).mapNotNull { i ->
+            rows.optJSONObject(i)?.let { parse(JSONObject().put("family", it)) }
+        }
+    }.getOrDefault(emptyList())
+
+    fun saveLeaderboardCache(context: Context, families: List<FamilyRecord>) {
+        runCatching {
+            val rows = JSONArray()
+            families.forEach { family ->
+                val members = JSONArray()
+                family.members.forEach { member ->
+                    members.put(JSONObject()
+                        .put("uid", member.uid).put("accountId", member.accountId)
+                        .put("name", member.name).put("image", member.image)
+                        .put("gender", member.gender).put("coinsSent", member.coins)
+                        .put("tag", member.tag).put("role", member.role))
+                }
+                rows.put(JSONObject()
+                    .put("familyId", family.id).put("name", family.name)
+                    .put("image", family.image).put("announcement", family.announcement)
+                    .put("ownerUid", family.ownerUid).put("ownerAccountId", family.ownerAccountId)
+                    .put("totalCoinsSent", family.totalCoinsSent).put("members", members))
+            }
+            context.getSharedPreferences("zyora_family_cache", Context.MODE_PRIVATE)
+                .edit().putString("leaderboard", rows.toString()).apply()
+        }
+    }
+
     suspend fun leaderboard():List<FamilyRecord> { val root=request("/api/families/leaderboard"); val rows=root.optJSONArray("families")?:JSONArray(); return (0 until rows.length()).mapNotNull { i -> rows.optJSONObject(i)?.let { parse(JSONObject().put("family",it)) } } }
     suspend fun update(id:String,n:String,i:String,a:String)=request("/api/families/${URLEncoder.encode(id,"UTF-8")}","PUT",JSONObject().put("name",n).put("image",i).put("announcement",a))
     suspend fun accept(id:String,context:Context):JSONObject {
