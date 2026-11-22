@@ -1565,7 +1565,7 @@ export default function StaffPanel() {
           />
           <SidebarCategory
             icon="🛒" title="Store" activeItem={activeTab} setActiveItem={setActiveTab} setIsSidebarOpen={setIsSidebarOpen}
-            items={[{ id: 'themes', label: 'Themes', icon: '🎨' }, { id: 'special_ids', label: 'Special IDs', icon: '💎' }, { id: 'gift_catalog', label: 'Gift Catalog', icon: '🎁' }]}
+            items={[{ id: 'themes', label: 'Themes', icon: '🎨' }, { id: 'special_ids', label: 'Special ID / Tags', icon: '💎' }, { id: 'gift_catalog', label: 'Gift Catalog', icon: '🎁' }]}
           />
           <SidebarCategory
             icon="💰" title="Economy" activeItem={activeTab} setActiveItem={setActiveTab} setIsSidebarOpen={setIsSidebarOpen}
@@ -1933,7 +1933,7 @@ export default function StaffPanel() {
 
         {activeTab === 'special_ids' && (
           <div className="p-6 md:p-8 max-w-6xl mx-auto w-full h-full overflow-y-auto">
-            <h2 className="mb-5 text-xl font-bold text-slate-800">Special IDs</h2>
+            <h2 className="mb-5 text-xl font-bold text-slate-800">Special ID / Tags</h2>
             <SpecialIdsPanel users={users} ownerKey={VALID_CREDENTIALS.secretKey} />
           </div>
         )}
