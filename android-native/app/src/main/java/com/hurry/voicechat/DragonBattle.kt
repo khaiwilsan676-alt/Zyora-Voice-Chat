@@ -120,7 +120,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 private data class DragonRoundWinner(val name: String, val avatar: String, val win: Long)
-private data class DragonWalletResponse(val success: Boolean, val balance: Long, val error: String)
+private data class DragonWalletResponse(val success: Boolean, val balance: Long, val error: String, val statusCode: Int = 0)
 
 private suspend fun dragonWalletRequest(
     userId: String,
@@ -154,19 +154,21 @@ private suspend fun dragonWalletRequest(
                 DragonWalletResponse(
                     success = false,
                     balance = -1L,
-                    error = "Wallet server returned non-JSON (HTTP $code): $preview"
+                    error = "Wallet server returned non-JSON (HTTP $code): $preview",
+                    statusCode = code
                 )
             } else {
                 DragonWalletResponse(
                     success = code in 200..299 && json.optBoolean("success"),
                     balance = json.optLong("balance", -1L),
-                    error = json.optString("error", "Wallet update failed")
+                    error = json.optString("error", "Wallet update failed"),
+                    statusCode = code
                 )
             }
         } finally {
             connection.disconnect()
         }
-    }.getOrElse { DragonWalletResponse(false, -1L, it.message ?: "Wallet connection failed") }
+    }.getOrElse { DragonWalletResponse(false, -1L, it.message ?: "Wallet connection failed", 0) }
 }
 
 private suspend fun fetchDragonWallet(userId: String): Long? = withContext(Dispatchers.IO) {
@@ -1646,12 +1648,16 @@ private fun DragonBattleMainOverlay(
     val soundManager = remember(context) { DragonBetSoundManager(context.applicationContext) }
     val authPrefs = remember(context) { context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE) }
     val walletCachePrefs = remember(context) { context.getSharedPreferences("zyora_wallet_cache", Context.MODE_PRIVATE) }
+    val dragonPendingPrefs = remember(context) { context.getSharedPreferences("dragon_battle_wallet_pending", Context.MODE_PRIVATE) }
     val dragonWalletUserId = remember(authPrefs) {
         authPrefs.getString("uid", null)?.takeIf { it.isNotBlank() }
             ?: authPrefs.getString("accountId", "").orEmpty()
     }
     val walletSyncMutex = remember(dragonWalletUserId) { Mutex() }
-    var walletPendingDelta by remember(dragonWalletUserId) { mutableLongStateOf(0L) }
+    var walletPendingDelta by remember(dragonWalletUserId) {
+        val saved = runCatching { JSONArray(dragonPendingPrefs.getString("queue_$dragonWalletUserId", "[]") ?: "[]") }.getOrDefault(JSONArray())
+        mutableLongStateOf((0 until saved.length()).sumOf { saved.optJSONObject(it)?.optLong("delta") ?: 0L })
+    }
     var walletReady by remember(dragonWalletUserId) { mutableStateOf(false) }
     val dragonAccountId = remember(authPrefs) {
         authPrefs.getString("accountId", "").orEmpty().ifBlank { authPrefs.getString("uid", "").orEmpty() }
@@ -1732,7 +1738,21 @@ private fun DragonBattleMainOverlay(
             val eventUserId = payload.optString("userId")
             val updatedBalance = payload.optLong("balance", -1L)
             if (eventUserId in setOf(dragonWalletUserId, dragonAccountId) && updatedBalance >= 0L) {
-                balance = (updatedBalance + walletPendingDelta).coerceAtLeast(0L)
+                val appliedId = payload.optString("transactionId")
+                val queueKey = "queue_$dragonWalletUserId"
+                synchronized(dragonPendingPrefs) {
+                    val saved = runCatching { JSONArray(dragonPendingPrefs.getString(queueKey, "[]") ?: "[]") }.getOrDefault(JSONArray())
+                    val remaining = JSONArray()
+                    for (index in 0 until saved.length()) {
+                        val item = saved.optJSONObject(index) ?: continue
+                        if (appliedId.isBlank() || item.optString("id") != appliedId) remaining.put(item)
+                    }
+                    if (appliedId.isNotBlank() && remaining.length() != saved.length()) {
+                        dragonPendingPrefs.edit().putString(queueKey, remaining.toString()).commit()
+                    }
+                    walletPendingDelta = (0 until remaining.length()).sumOf { remaining.optJSONObject(it)?.optLong("delta") ?: 0L }
+                    balance = (updatedBalance + walletPendingDelta).coerceAtLeast(0L)
+                }
                 walletReady = true
                 walletCachePrefs.edit()
                     .putLong("balance_$dragonWalletUserId", balance)
@@ -1789,44 +1809,79 @@ private fun DragonBattleMainOverlay(
         activeBanner = DragonBannerEvent(bannerSeq, text)
     }
 
+    suspend fun syncDragonWalletChanges(rejectedTransactionId: String? = null, onRejected: () -> Unit = {}) {
+        if (dragonWalletUserId.isBlank()) return
+        walletSyncMutex.withLock {
+            val queueKey = "queue_$dragonWalletUserId"
+            while (true) {
+                val currentQueue = synchronized(dragonPendingPrefs) {
+                    runCatching { JSONArray(dragonPendingPrefs.getString(queueKey, "[]") ?: "[]") }.getOrDefault(JSONArray())
+                }
+                if (currentQueue.length() == 0) break
+                val item = currentQueue.optJSONObject(0) ?: break
+                val txId = item.optString("id")
+                val delta = item.optLong("delta")
+                if (txId.isBlank() || delta == 0L) {
+                    synchronized(dragonPendingPrefs) {
+                        val latest = runCatching { JSONArray(dragonPendingPrefs.getString(queueKey, "[]") ?: "[]") }.getOrDefault(JSONArray())
+                        val cleaned = JSONArray()
+                        for (i in 1 until latest.length()) latest.optJSONObject(i)?.let(cleaned::put)
+                        dragonPendingPrefs.edit().putString(queueKey, cleaned.toString()).commit()
+                    }
+                    continue
+                }
+                val action = if (delta < 0L) "bet" else "win"
+                val result = dragonWalletRequest(dragonWalletUserId, txId, kotlin.math.abs(delta), action)
+                if (!result.success && result.statusCode != 409) {
+                    android.util.Log.w("DragonBattle", "Wallet transaction retained for retry: ${result.error}")
+                    break
+                }
+                val latestQueue = synchronized(dragonPendingPrefs) {
+                    val latest = runCatching { JSONArray(dragonPendingPrefs.getString(queueKey, "[]") ?: "[]") }.getOrDefault(JSONArray())
+                    val remaining = JSONArray()
+                    for (i in 0 until latest.length()) {
+                        val queued = latest.optJSONObject(i) ?: continue
+                        if (queued.optString("id") != txId) remaining.put(queued)
+                    }
+                    check(dragonPendingPrefs.edit().putString(queueKey, remaining.toString()).commit())
+                    remaining
+                }
+                walletPendingDelta = (0 until latestQueue.length()).sumOf { latestQueue.optJSONObject(it)?.optLong("delta") ?: 0L }
+                if (result.success && result.balance >= 0L) {
+                    balance = (result.balance + walletPendingDelta).coerceAtLeast(0L)
+                    walletReady = true
+                    walletCachePrefs.edit().putLong("balance_$dragonWalletUserId", balance)
+                        .putLong("last_sync_$dragonWalletUserId", System.currentTimeMillis()).apply()
+                } else {
+                    val latest = fetchDragonWallet(dragonWalletUserId)
+                    if (latest != null) balance = (latest + walletPendingDelta).coerceAtLeast(0L)
+                    walletCachePrefs.edit().putLong("balance_$dragonWalletUserId", balance).apply()
+                    if (txId == rejectedTransactionId) {
+                        onRejected()
+                        showBanner("Wallet rejected bet - coins restored")
+                    }
+                    android.util.Log.e("DragonBattle", "Wallet $action rejected: ${result.error}")
+                }
+            }
+        }
+    }
+
     fun queueDragonWalletChange(delta: Long, action: String, onRejected: () -> Unit = {}) {
         if (dragonWalletUserId.isBlank() || delta == 0L) {
             onRejected()
             return
         }
-        val amount = kotlin.math.abs(delta)
         val transactionId = "dragon_battle_${action}_${System.currentTimeMillis()}_${java.util.UUID.randomUUID()}"
-        walletPendingDelta += delta
+        val queueKey = "queue_$dragonWalletUserId"
+        synchronized(dragonPendingPrefs) {
+            val queue = runCatching { JSONArray(dragonPendingPrefs.getString(queueKey, "[]") ?: "[]") }.getOrDefault(JSONArray())
+            queue.put(JSONObject().put("id", transactionId).put("delta", delta).put("action", action))
+            check(dragonPendingPrefs.edit().putString(queueKey, queue.toString()).commit())
+            walletPendingDelta = (0 until queue.length()).sumOf { queue.optJSONObject(it)?.optLong("delta") ?: 0L }
+        }
         balance = (balance + delta).coerceAtLeast(0L)
         walletCachePrefs.edit().putLong("balance_$dragonWalletUserId", balance).apply()
-        scope.launch {
-            walletSyncMutex.withLock {
-                val result = dragonWalletRequest(dragonWalletUserId, transactionId, amount, action)
-                if (result.success && result.balance >= 0L) {
-                    walletPendingDelta -= delta
-                    balance = (result.balance + walletPendingDelta).coerceAtLeast(0L)
-                    walletCachePrefs.edit()
-                        .putLong("balance_$dragonWalletUserId", balance)
-                        .putLong("last_sync_$dragonWalletUserId", System.currentTimeMillis())
-                        .apply()
-                } else {
-                    walletPendingDelta -= delta
-                    val latest = fetchDragonWallet(dragonWalletUserId)
-                    if (latest != null) {
-                        balance = (latest + walletPendingDelta).coerceAtLeast(0L)
-                        walletCachePrefs.edit()
-                            .putLong("balance_$dragonWalletUserId", balance)
-                            .putLong("last_sync_$dragonWalletUserId", System.currentTimeMillis())
-                            .apply()
-                    } else {
-                        balance = (balance - delta).coerceAtLeast(0L)
-                    }
-                    onRejected()
-                    showBanner(if (action == "bet") "Wallet rejected bet - coins restored" else "Wallet payout sync failed")
-                    android.util.Log.e("DragonBattle", "Wallet $action failed: ${result.error}")
-                }
-            }
-        }
+        scope.launch { syncDragonWalletChanges(transactionId, onRejected) }
     }
 
     DisposableEffect(soundManager) {
@@ -1846,15 +1901,28 @@ private fun DragonBattleMainOverlay(
                 }
             }
             if (canonical != null) {
+                val savedQueue = runCatching { JSONArray(dragonPendingPrefs.getString("queue_$dragonWalletUserId", "[]") ?: "[]") }.getOrDefault(JSONArray())
+                walletPendingDelta = (0 until savedQueue.length()).sumOf { savedQueue.optJSONObject(it)?.optLong("delta") ?: 0L }
                 balance = (canonical!! + walletPendingDelta).coerceAtLeast(0L)
                 walletCachePrefs.edit()
                     .putLong("balance_$dragonWalletUserId", balance)
                     .putLong("last_sync_$dragonWalletUserId", System.currentTimeMillis())
                     .apply()
                 walletReady = true
+                syncDragonWalletChanges()
             } else {
                 walletReady = false
                 showBanner("Wallet unavailable - try again")
+            }
+        }
+    }
+
+    LaunchedEffect(dragonWalletUserId) {
+        if (dragonWalletUserId.isNotBlank()) {
+            while (true) {
+                delay(15000L)
+                runCatching { syncDragonWalletChanges() }
+                    .onFailure { android.util.Log.w("DragonBattle", "Pending wallet retry deferred", it) }
             }
         }
     }
