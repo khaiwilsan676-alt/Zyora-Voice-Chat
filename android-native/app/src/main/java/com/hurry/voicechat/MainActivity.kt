@@ -1060,7 +1060,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                         modifier = Modifier
                             .clip(RoundedCornerShape(5.dp))
-                            .background(Color.Black.copy(alpha = 0.70f))
+                            .background(Color.Black.copy(alpha = 0.30f))
                             .padding(horizontal = 12.dp, vertical = 7.dp)
                     )
                 }
