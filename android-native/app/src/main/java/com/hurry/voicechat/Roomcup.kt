@@ -105,7 +105,7 @@ fun RoomCupSheet(roomId:String,userId:String,userName:String,userImage:String,on
     LaunchedEffect(roomId,period) { while (true) { kotlinx.coroutines.delay(10000); refreshTick++ } }
     
     LaunchedEffect(roomId,period,refreshTick) {
-        loading=true
+        if (entries.isEmpty()) loading=true
         val data=withContext(Dispatchers.IO) { runCatching {
             val r=java.net.URLEncoder.encode(roomId,"UTF-8")
             val u=java.net.URLEncoder.encode(userId,"UTF-8")
@@ -120,7 +120,8 @@ fun RoomCupSheet(roomId:String,userId:String,userName:String,userImage:String,on
                 }
             } finally { c.disconnect() }
         }.getOrNull() }
-        entries=data?.first.orEmpty(); mine=data?.second; loading=false
+        if (data != null) { entries=data.first; mine=data.second }
+        loading=false
     }
     
     val clock=remember{SimpleDateFormat("HH:mm",Locale.getDefault()).apply{timeZone=TimeZone.getTimeZone("GMT+05:30")}}
