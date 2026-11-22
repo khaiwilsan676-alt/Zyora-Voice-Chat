@@ -1310,37 +1310,24 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
     val updatedBalance = payload.optLong("balance", -1L)
     if (eventUserId in setOf(walletAccountId, walletAccountNumber) && updatedBalance >= 0L) {
      scope.launch {
-      // Socket snapshots can arrive while this device still has unconfirmed bets/wins.
-      // Merge the authoritative server balance with the durable pending queue instead
-      // of replacing the visible balance and temporarily losing those local changes.
+      // Server snapshot is canonical; never add unconfirmed device deltas.
       walletStateMutex.withLock {
-       val pending = runCatching {
-        JSONArray(pendingWalletPrefs.getString("queue_$walletAccountId", "[]") ?: "[]")
-       }.getOrDefault(JSONArray())
-       // The server includes transactionId after it has already applied that
-       // transaction. Remove that exact queued item before merging, otherwise
-       // its optimistic delta would be counted twice until the next queue sync.
        val appliedId = payload.optString("transactionId")
-       val remaining = JSONArray()
-       for (index in 0 until pending.length()) {
-        val item = pending.optJSONObject(index) ?: continue
-        if (appliedId.isBlank() || item.optString("id") != appliedId) remaining.put(item)
-       }
-       if (appliedId.isNotBlank() && remaining.length() != pending.length()) {
-        synchronized(pendingWalletPrefs) {
-         check(pendingWalletPrefs.edit().putString("queue_$walletAccountId", remaining.toString()).commit())
+       if (appliedId.isNotBlank()) synchronized(pendingWalletPrefs) {
+        val pending = runCatching { JSONArray(pendingWalletPrefs.getString("queue_$walletAccountId", "[]") ?: "[]") }.getOrDefault(JSONArray())
+        val remaining = JSONArray()
+        for (index in 0 until pending.length()) {
+         val item = pending.optJSONObject(index) ?: continue
+         if (item.optString("id") != appliedId) remaining.put(item)
         }
+        check(pendingWalletPrefs.edit().putString("queue_$walletAccountId", remaining.toString()).commit())
        }
-       val pendingDelta = (0 until remaining.length()).sumOf {
-        remaining.optJSONObject(it)?.optLong("delta") ?: 0L
-       }
-       val visible = (updatedBalance + pendingDelta).coerceAtLeast(0L)
-       balance = visible
-       walletCachePrefs.edit().putLong("balance_$walletAccountId", visible)
+       balance = updatedBalance
+       walletCachePrefs.edit().putLong("balance_$walletAccountId", updatedBalance)
         .putLong("last_sync_$walletAccountId", System.currentTimeMillis()).apply()
        withContext(Dispatchers.IO) {
-        val old = dao.getUserData() ?: UserDataEntity(balance = visible)
-        dao.saveUserData(old.copy(balance = visible))
+        val old = dao.getUserData() ?: UserDataEntity(balance = updatedBalance)
+        dao.saveUserData(old.copy(balance = updatedBalance))
        }
       }
      }
@@ -1386,9 +1373,8 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
      val serverBalance=wallet.optLong("balance",0L).coerceAtLeast(0L)
      walletStateMutex.withLock {
       // Re-read after HTTP: bets may have been queued while GET was in flight.
-      val pending=runCatching{JSONArray(pendingWalletPrefs.getString("queue_$walletUserId","[]")?:"[]")}.getOrDefault(JSONArray())
-      val pendingDelta=(0 until pending.length()).sumOf{pending.optJSONObject(it)?.optLong("delta")?:0L}
-      val visible=(serverBalance+pendingDelta).coerceAtLeast(0L)
+      // Render only MongoDB-confirmed coins; queued deltas are not canonical.
+      val visible=serverBalance
       balance=visible
       val old=dao.getUserData()?:UserDataEntity(balance=visible)
       dao.saveUserData(old.copy(balance=visible))
@@ -1456,8 +1442,7 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
     }
     check(pendingWalletPrefs.edit().putString(key,remaining.toString()).commit()){"Could not persist remaining wallet queue"}
     if(serverBalance!=null){
-     val pendingDelta=(0 until remaining.length()).sumOf{remaining.optJSONObject(it)?.optLong("delta")?:0L}
-     val visible=(serverBalance!!+pendingDelta).coerceAtLeast(0L)
+     val visible=serverBalance!!
      balance=visible
      balanceToPersist=visible
     }
