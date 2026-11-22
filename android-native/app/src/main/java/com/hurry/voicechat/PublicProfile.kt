@@ -287,7 +287,7 @@ fun PublicProfileScreen(
     val showHost = !is500002Official && (isCoreOfficial || liveProfileTags?.optBoolean("hostTag", false) == true || liveProfileTags?.optBoolean("isHost", false) == true)
     val showCoinSeller = isCoreOfficial || targetUser?.coinSellerTag == true || liveProfileTags?.optBoolean("coinSellerTag", false) == true || liveProfileTags?.optBoolean("coinSeller", false) == true || liveProfileTags?.optBoolean("sellerTag", false) == true
     
-    val defaultAvatar = "/default-avatar.png"
+    val defaultAvatar = ZYORA_DEFAULT_AVATAR_URL
     val userPhotoRaw = selectedAvatarUri ?: defaultAvatar
     val userPhoto = profileAsset(userPhotoRaw)
 
@@ -382,7 +382,7 @@ fun PublicProfileScreen(
         
         remote?.let { latest ->
             val remoteName = sequenceOf("name", "displayName", "userName", "nickname").map { latest.optString(it, "").trim() }.firstOrNull { it.isNotBlank() && it != "null" && !it.equals("User", ignoreCase = true) }
-            val remoteAvatar = sequenceOf("image", "avatar", "profileImageUrl").map { latest.optString(it, "").trim() }.firstOrNull { it.isNotBlank() && it != "null" }
+            val remoteAvatar = sequenceOf("image", "dp", "photo", "photoURL", "photoUrl", "avatar", "avatarUrl", "profileImage", "profileImageUrl", "profile_image", "imageUrl", "picture").map { latest.optString(it, "").trim() }.firstOrNull { it.isNotBlank() && it != "null" && it != "undefined" }
             if (!remoteName.isNullOrBlank()) {
                 merged.put("name", remoteName)
                 merged.put("displayName", remoteName)
@@ -535,7 +535,7 @@ fun PublicProfileScreen(
                         }
                     }
 
-                    AsyncImage(
+                    FallbackAsyncImage(
                         model = userPhoto,
                         contentDescription = "Avatar",
                         contentScale = ContentScale.Crop,
