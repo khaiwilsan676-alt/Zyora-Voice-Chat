@@ -163,7 +163,7 @@ export default function SpecialIdsPanel({ users = [], ownerKey }: { users?: User
             ) : (() => {
               const selectedTag = PROFILE_TAGS.find(tag => tag.key === tagKey);
               return selectedTag ? <div className="flex h-12 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3">
-                <img src={"https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/" + selectedTag.image.replace(/^\\//, '')} alt={selectedTag.label} className="h-8 max-w-[90px] object-contain" />
+                <img src={"https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/" + (selectedTag.image.startsWith('/') ? selectedTag.image.slice(1) : selectedTag.image)} alt={selectedTag.label} className="h-8 max-w-[90px] object-contain" />
                 <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-700">{selectedTag.label}</span>
               </div> : null;
             })()}
@@ -228,7 +228,7 @@ export default function SpecialIdsPanel({ users = [], ownerKey }: { users?: User
                     <span className="inline-flex items-center gap-2">
                       {idActive && <><img src="https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261101_125212.png" alt="Official ID" className="h-5 w-auto object-contain" />{user.vipId}</>}
                       {tagActive && <span className="inline-flex items-center gap-1.5 rounded-md border border-violet-200 bg-violet-50 px-2 py-1"><img src="https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261101_125212.png" alt="Official Image Tag" className="h-6 max-w-[90px] object-contain" /><span className="text-[9px] font-extrabold uppercase tracking-wide text-violet-700">Official Image Tag</span></span>}
-                      {activeProfileTags.map(tag => <span key={tag.key} className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-slate-50 px-2 py-1"><img src={"https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/" + tag.image.replace(/^\\//, '')} alt={tag.label} className="h-6 max-w-[90px] object-contain" /><span className="text-[9px] font-extrabold uppercase tracking-wide text-slate-700">{tag.label}</span></span>)}
+                      {activeProfileTags.map(tag => <span key={tag.key} className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-slate-50 px-2 py-1"><img src={"https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/" + (tag.image.startsWith('/') ? tag.image.slice(1) : tag.image)} alt={tag.label} className="h-6 max-w-[90px] object-contain" /><span className="text-[9px] font-extrabold uppercase tracking-wide text-slate-700">{tag.label}</span></span>)}
                     </span>
                   </td>
                   <td className="px-3 py-3 text-slate-600">{expiry ? `${remaining ?? 0} days` : 'Permanent'}</td>
