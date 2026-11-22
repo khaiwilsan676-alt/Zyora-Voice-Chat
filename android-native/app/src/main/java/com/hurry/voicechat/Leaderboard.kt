@@ -693,7 +693,7 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour", onOpenProfile:(R
                             // Rank 2 Column (Avatar + Frame overlapping, Info below frame same as Top 1)
                             val rank2 = leaderboardRows.getOrNull(1)
                             Column(
-                                modifier = Modifier.weight(1f).clickable(enabled = tab != "room" && rank2 != null) { rank2?.let { onOpenProfile(RoomUser(id = it.id, uid = it.id, accountId = it.id, name = it.name, image = it.image, gender = it.gender, country = it.country)) },
+                                modifier = Modifier.weight(1f).clickable(enabled = tab != "room" && rank2 != null) { rank2?.let { onOpenProfile(RoomUser(id = it.id, uid = it.id, accountId = it.id, name = it.name, image = it.image, gender = it.gender, country = it.country)) } },
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 Box(modifier = Modifier.fillMaxWidth().height(175.dp), contentAlignment = Alignment.Center) {
@@ -758,7 +758,7 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour", onOpenProfile:(R
                             // Rank 3 Column (Avatar + Frame overlapping, Info below frame same as Top 1)
                             val rank3 = leaderboardRows.getOrNull(2)
                             Column(
-                                modifier = Modifier.weight(1f).clickable(enabled = tab != "room" && rank3 != null) { rank3?.let { onOpenProfile(RoomUser(id = it.id, uid = it.id, accountId = it.id, name = it.name, image = it.image, gender = it.gender, country = it.country)) },
+                                modifier = Modifier.weight(1f).clickable(enabled = tab != "room" && rank3 != null) { rank3?.let { onOpenProfile(RoomUser(id = it.id, uid = it.id, accountId = it.id, name = it.name, image = it.image, gender = it.gender, country = it.country)) } },
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 Box(modifier = Modifier.fillMaxWidth().height(175.dp), contentAlignment = Alignment.Center) {
