@@ -1232,6 +1232,7 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
  var mode by remember{mutableStateOf(WpMode.SINGLE)}
  var chipIndex by remember{mutableIntStateOf(1)}
  var bets by remember{mutableStateOf<Map<String, Long>>(emptyMap())}
+ var betsRound by remember{mutableIntStateOf(-1)}
  var lastBets by remember{mutableStateOf<Map<String, Long>>(emptyMap())}
  var history by remember{mutableStateOf<List<WpRound>>(emptyList())}
  var historyOpen by remember{mutableStateOf(false)}
@@ -1563,6 +1564,10 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
    if (winnerDataRound != round) {
     winnerDataRound = round
     globalRoundWinners = emptyList()
+    if (betsRound != round) {
+     bets = emptyMap()
+     betsRound = round
+    }
     walletSocket?.emit("wildparty_top_winners_request", JSONObject().put("round", round))
    }
    val outcome=wpOutcome(round);mode=outcome.first;winnerIndex=outcome.second
@@ -1601,11 +1606,12 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
    processedRound=round
    val result=wpOutcome(round);val animal=wpAnimals[result.second]
    val label=when(result.first){WpMode.MIX_BIG->"Mix Big";WpMode.MIX_SMALL->"Mix Small";else->animal.name}
-   betAmount=bets.values.sum()
+   val roundBets = if (betsRound == round) bets else emptyMap()
+   betAmount=roundBets.values.sum()
    winAmount=when(result.first){
-    WpMode.MIX_BIG->listOf("Eagle","Bear","Tiger","Lion").sumOf{n->(bets[n]?:0L)*wpAnimals.first{it.name==n}.multiplier}
-    WpMode.MIX_SMALL->listOf("Rabbit","Deer","Dog","Camel").sumOf{n->(bets[n]?:0L)*5L}
-    WpMode.SINGLE->(bets[animal.name]?:0L)*animal.multiplier
+    WpMode.MIX_BIG->listOf("Eagle","Bear","Tiger","Lion").sumOf{n->(roundBets[n]?:0L)*wpAnimals.first{it.name==n}.multiplier}
+    WpMode.MIX_SMALL->listOf("Rabbit","Deer","Dog","Camel").sumOf{n->(roundBets[n]?:0L)*5L}
+    WpMode.SINGLE->(roundBets[animal.name]?:0L)*animal.multiplier
    }
    history=(history+WpRound(round,label,System.currentTimeMillis(),betAmount,winAmount)).takeLast(50);persistHistory()
     winnerTimer=7
@@ -1637,7 +1643,8 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
     launch(Dispatchers.IO) { soundManager.playBetClick() }
     triggerBetVisuals(name, amount)
     val debited=runCatching{walletChange(-amount,"Bet on $name in Wild Party")}.onFailure{android.util.Log.e("WildParty","Wallet bet debit failed",it)}.isSuccess
-    if(debited) {
+    if(debited && phase==WpPhase.BETTING) {
+     if (betsRound != round) { bets = emptyMap(); betsRound = round }
      bets=bets.toMutableMap().also{it[name]=(it[name]?:0L)+amount}
      betAmount=bets.values.sum()
     }
