@@ -1468,7 +1468,7 @@ fun RoomPage(
         val roomFollowListener = Emitter.Listener { args ->
             val payload = args.firstOrNull() as? JSONObject
             if (payload?.optString("roomId") == roomId) {
-                CoroutineScope(Dispatchers.IO).launch {
+                roomIoScope.launch {
                     val updated = runCatching {
                         val encodedRoom = java.net.URLEncoder.encode(roomId, "UTF-8")
                         val connection = (java.net.URL("https://zyora-server.onrender.com/api/room-follows?roomId=$encodedRoom").openConnection() as java.net.HttpURLConnection).apply {
@@ -1573,7 +1573,7 @@ fun RoomPage(
                     .getString("uid", "").orEmpty()
             ).filter { it.isNotBlank() && it != "guest" }.distinct()
             if (vehicleLookupIds.isEmpty()) return
-            CoroutineScope(Dispatchers.IO).launch {
+            roomIoScope.launch {
                 val equipped = vehicleLookupIds.firstNotNullOfOrNull { lookupId ->
                     runCatching {
                         val encoded = java.net.URLEncoder.encode(lookupId, "UTF-8")
