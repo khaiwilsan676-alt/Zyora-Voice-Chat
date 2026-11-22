@@ -342,6 +342,28 @@ fun RoomPage(
     // Room-info-only data is loaded when the sheet is opened, not during room entry.
     // This keeps non-critical member/admin lookups off the room join critical path.
     var showInfo by remember { mutableStateOf(false) }
+    var ownerVipId by remember(roomOwnerAccountId) { mutableStateOf("") }
+    var ownerVipBadge by remember(roomOwnerAccountId) { mutableStateOf(false) }
+    LaunchedEffect(roomOwnerAccountId) {
+        val profile = withContext(Dispatchers.IO) {
+            runCatching {
+                ProfilePersistence.load(TargetUser(
+                    id = roomOwnerAccountId, uid = roomOwner.uid.ifBlank { roomOwner.id },
+                    accountId = roomOwnerAccountId, name = roomOwner.name, image = roomOwner.image
+                ))
+            }.getOrNull()
+        }
+        val candidate = profile?.optString("vipId", "").orEmpty().trim()
+        val expiry = profile?.optLong("vipIdExpiresAt", 0L) ?: 0L
+        if (candidate.matches(Regex("\\d{1,20}")) && (expiry == 0L || expiry > System.currentTimeMillis()) &&
+            profile?.optBoolean("vipIdBadge", false) == true) {
+            ownerVipId = candidate
+            ownerVipBadge = true
+        } else {
+            ownerVipId = ""
+            ownerVipBadge = false
+        }
+    }
     var roomName by remember{mutableStateOf(roomOwner.name.ifBlank{"Room"})}
     var roomImage by remember{mutableStateOf(roomOwner.image)}
     var announcement by remember{mutableStateOf("")}
@@ -1882,10 +1904,18 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                                 }
                                 val roomOwnerAccountId = roomOwner.accountId.ifBlank { roomOwner.id.ifBlank { roomId } }
                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp), modifier = Modifier.offset(y = (-3).dp)) {
-                                    when (roomOwnerAccountId) {
-                                        "100002", "100003", "500001", "500002", "500003", "500004", "500005", "500005", "500005" -> {
+                                    if (ownerVipBadge && ownerVipId.isNotBlank()) {
+                                        AsyncImage(
+                                            model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261101_125212.png",
+                                            contentDescription = "VIP ID",
+                                            contentScale = ContentScale.Fit,
+                                            modifier = Modifier.height(13.dp).widthIn(min = 12.dp, max = 18.dp)
+                                        )
+                                        Text(ownerVipId, color = Color.White.copy(alpha = 0.9f), fontSize = 10.sp)
+                                    } else when (roomOwnerAccountId) {
+                                        "100002", "100003", "500001", "500002", "500003", "500004", "500005" -> {
                                             AsyncImage(
-                                                model = "https://zyora-voice-chat.vercel.app/IMG_20261101_125212.png",
+                                                model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261101_125212.png",
                                                 contentDescription = "Purple ID Badge",
                                                 contentScale = ContentScale.Fit,
                                                 modifier = Modifier.height(13.dp).widthIn(min = 12.dp, max = 18.dp)
@@ -2714,7 +2744,7 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
             isOpen=true,
             onClose={showInfo=false},
             isRoomOwner=accountId==roomOwner.accountId.ifBlank{roomOwner.id},
-            roomOwner=RoomInfoOwner(id=roomOwner.id,uid=roomOwner.uid,accountId=roomOwner.accountId,name=roomOwner.name,image=roomOwner.image),
+            roomOwner=RoomInfoOwner(id=roomOwner.id,uid=roomOwner.uid,accountId=roomOwner.accountId,name=roomOwner.name,image=roomOwner.image,vipId=ownerVipId,vipIdBadge=ownerVipBadge),
             roomData=RoomInfoData(roomName,roomImage,announcement,roomId),
             roomFollowers=roomFollowers,
             roomAdmins=roomAdminUsers,
