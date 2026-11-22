@@ -713,7 +713,7 @@ private fun MessageRow(chat: MessagePreview, onClick: () -> Unit, onJoinRoom: (S
     ) {
         
         // Avatar + Blue Border + Bottom Music Pill Icon (Sirf normal user ke liye)
-        Box(contentAlignment = Alignment.BottomCenter, modifier = Modifier.clickable { if (showRoomPresence) onJoinRoom(chat.roomId) else onOpenProfile(RoomProfileUser(id = chat.uid, uid = chat.uid, accountId = chat.uid, name = chat.name, image = chat.image)) }) {
+        Box(contentAlignment = Alignment.BottomCenter, modifier = Modifier.clickable { onOpenProfile(RoomProfileUser(id = chat.uid, uid = chat.uid, accountId = chat.uid, name = chat.name, image = chat.image)) }) {
             AsyncImage(
                 model = resolveChatAvatar(chat.image.ifBlank { RAW_MSG + "default-avatar.png" }), contentDescription = chat.name,
                 modifier = Modifier
