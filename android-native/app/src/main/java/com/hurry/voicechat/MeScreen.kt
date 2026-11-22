@@ -83,7 +83,12 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
     }
     val savedAccount = prefs.getString("accountNumber", null)?.takeIf { it.isNotBlank() }
         ?: prefs.getString("accountId", "") ?: ""
-    val account = savedAccount.ifBlank { nativeMeAccountNumber(uid) }
+    val assignedSpecialId = cachedProfile?.optString("vipId", "").orEmpty().trim().takeIf {
+        it.matches(Regex("\\d{4,20}")) &&
+            (cachedProfile?.optLong("vipIdExpiresAt", 0L) ?: 0L) > System.currentTimeMillis() &&
+            cachedProfile?.optBoolean("vipIdBadge", false) == true
+    }
+    val account = assignedSpecialId ?: savedAccount.ifBlank { nativeMeAccountNumber(uid) }
     val visitorUserId = prefs.getString("accountId", "").orEmpty().ifBlank { uid }
     val initialFollowSnapshot = remember(visitorUserId) { SocialFollowApi.cachedSnapshot(context, visitorUserId) }
     // Visitor totals are hydrated from the local cache asynchronously below.
@@ -233,6 +238,7 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
             TargetUser(id = uid, uid = uid, accountId = account, displayAccountNumber = account)
         ) ?: return@LaunchedEffect
         NativeIndexDatabase(context).saveProfile(uid, profile)
+        cachedProfile = profile
         sellerCenterActive = profile.optBoolean("coinSellerTag", false) || profile.optBoolean("coinSeller", false) || profile.optBoolean("sellerTag", false)
         sequenceOf("country", "countryName", "countryCode", "country_code", "nationality", "location").map { profile.optString(it, "").trim() }.firstOrNull { it.isNotBlank() && it != "null" }?.let { profileCountry = it }
         profile.optString("name").takeIf { it.isNotBlank() && it != "null" && it.lowercase() !in listOf("guest", "user", "undefined") && it != name }?.let { name = it }
@@ -300,7 +306,7 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(5.dp)
                             ) {
-                                if (account in setOf("100002", "100003", "500001", "500002", "500003", "500004", "500005", "500005", "500005")) {
+                                if (assignedSpecialId != null || account in setOf("100002", "100003", "500001", "500002", "500003", "500004", "500005")) {
                                     Image(
                                         painter = painterResource(R.drawable.wp_img_20261101_125212),
                                         contentDescription = "Official ID",
