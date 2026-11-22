@@ -1792,3 +1792,11 @@ Current documentation does not certify that all historical features are build-, 
 - Diamond exchange now commits both currency changes and its ledger row atomically, with an idempotency key sent by native CoinsNativePage.
 - Render build configuration now runs `npm run verify:contracts` before deployment. Contract assertions cover wallet atomicity and idempotency.
 - No wallet UI redesign was made. Render deployment, contract execution, native APK build, and live device wallet tests must be verified separately before claiming runtime completion.
+
+## 2026-11-22 — Fast profile rendering, leaderboard navigation, and gift settlement
+- Room chat NativeMessage now renders the local SQLite profile snapshot first and limits remote profile refreshes to once per sender per minute. This removes repeated HTTP profile reads for every message from the same user and keeps chat scrolling/rendering lighter.
+- Native Leaderboard now opens the selected user's Public Profile from the top-three podium and ranks 4–50. Room rankings remain non-profile navigation.
+- Leaderboard refresh now runs every 10 seconds and retains the last successful rows during transient network errors instead of clearing the screen.
+- Zyora-Server room gift settlement resolves sender/recipient wallet documents concurrently, batches all recipient diamond credits into one MongoDB bulk write, batches contribution upserts, and reads recipient balances in one query. All writes remain inside the same atomic transaction; the room gift event is still broadcast only after commit.
+- No UI redesign or visual styling changes were intended.
+- Verification pending: native APK compilation, Render deployment, and real two-account profile/gift latency tests. No measured Wafa-equivalent latency is claimed.
