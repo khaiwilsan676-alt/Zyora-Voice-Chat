@@ -1380,6 +1380,15 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
   val next=(balance+delta).coerceAtLeast(0L)
   balance=next
   walletCachePrefs.edit().putLong("balance_$userId",next).apply()
+  // The Wallet page reads Room's UserDataEntity, not this composable state.
+  // Persist the same immediate balance there so +/− is reflected app-wide
+  // before the background server request completes.
+  withContext(Dispatchers.IO) {
+   runCatching {
+    val old=dao.getUserData()?:UserDataEntity(balance=next)
+    dao.saveUserData(old.copy(balance=next))
+   }.onFailure { android.util.Log.e("WildParty","Immediate Wallet balance persistence failed",it) }
+  }
   synchronized(pendingWalletPrefs) {
    val queue=runCatching{JSONArray(pendingWalletPrefs.getString(pendingWalletKey(),"[]")?:"[]")}.getOrDefault(JSONArray())
    queue.put(JSONObject().put("id",transactionId).put("delta",delta).put("title",title).put("date",date))
@@ -1510,7 +1519,10 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
     launch(Dispatchers.IO) { soundManager.playBetClick() }
     triggerBetVisuals(name, amount)
     val debited=runCatching{walletChange(-amount,"Bet on $name in Wild Party")}.onFailure{android.util.Log.e("WildParty","Wallet bet debit failed",it)}.isSuccess
-    if(debited) bets=bets.toMutableMap().also{it[name]=(it[name]?:0L)+amount}
+    if(debited) {
+     bets=bets.toMutableMap().also{it[name]=(it[name]?:0L)+amount}
+     betAmount=bets.values.sum()
+    }
    }
   }
  }
@@ -1895,7 +1907,10 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
         launch(Dispatchers.IO) { soundManager.playBetClick() }
         lastBets.forEach { (k, v) -> if (v > 0L) triggerBetVisuals(k, v) }
         val debited=runCatching{walletChange(-cost, "Repeat Bet in Wild Party")}.onFailure{android.util.Log.e("WildParty","Wallet repeat-bet debit failed",it)}.isSuccess
-        if(debited) bets = bets.toMutableMap().also { m -> lastBets.forEach { (k, v) -> m[k] = (m[k] ?: 0L) + v } }
+        if(debited) {
+         bets = bets.toMutableMap().also { m -> lastBets.forEach { (k, v) -> m[k] = (m[k] ?: 0L) + v } }
+         betAmount=bets.values.sum()
+        }
        }
       }
      }
