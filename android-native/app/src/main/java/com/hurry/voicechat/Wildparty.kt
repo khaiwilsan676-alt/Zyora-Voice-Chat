@@ -1647,6 +1647,9 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
      if (betsRound != round) { bets = emptyMap(); betsRound = round }
      bets=bets.toMutableMap().also{it[name]=(it[name]?:0L)+amount}
      betAmount=bets.values.sum()
+    } else if (debited) {
+     runCatching { walletChange(amount,"Refund: Wild Party round changed") }
+      .onFailure { android.util.Log.e("WildParty","Round-change refund failed",it) }
     }
    }
   }
