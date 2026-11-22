@@ -225,24 +225,35 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
     }
 
     Box(Modifier.fillMaxSize().background(Color(0xFF111827))) {
-        val backgroundPlayer = remember(context) {
-            ExoPlayer.Builder(context).build().apply {
+        var backgroundPlayer by remember(context) { mutableStateOf<ExoPlayer?>(null) }
+        LaunchedEffect(context) {
+            // Disk-cache database creation can block the first login frame.
+            // Initialize it on IO, then attach the prepared player on the UI thread.
+            val videoCache = withContext(Dispatchers.IO) {
+                runCatching { ZyoraLoginVideoCache.get(context.applicationContext) }.getOrNull()
+            }
+            val player = ExoPlayer.Builder(context).build().apply {
                 val mediaItem = MediaItem.fromUri(Uri.parse(HURRY_VIDEO))
-                val cacheDataSource = CacheDataSource.Factory()
-                    .setCache(ZyoraLoginVideoCache.get(context))
-                    .setUpstreamDataSourceFactory(DefaultDataSource.Factory(context))
-                    .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
-                setMediaSource(
+                val mediaSource = if (videoCache != null) {
+                    val cacheDataSource = CacheDataSource.Factory()
+                        .setCache(videoCache)
+                        .setUpstreamDataSourceFactory(DefaultDataSource.Factory(context))
+                        .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
                     ProgressiveMediaSource.Factory(cacheDataSource).createMediaSource(mediaItem)
-                )
+                } else {
+                    ProgressiveMediaSource.Factory(DefaultDataSource.Factory(context))
+                        .createMediaSource(mediaItem)
+                }
+                setMediaSource(mediaSource)
                 repeatMode = Player.REPEAT_MODE_ONE
                 volume = 0f
                 playWhenReady = true
                 prepare()
             }
+            backgroundPlayer = player
         }
         DisposableEffect(backgroundPlayer) {
-            onDispose { backgroundPlayer.release() }
+            onDispose { backgroundPlayer?.release() }
         }
         AndroidView(
             modifier = Modifier.fillMaxSize(),
@@ -258,9 +269,8 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
                 }
             },
             update = { view ->
+                // Rebind only when the player changes; never restart playback on recomposition.
                 if (view.player !== backgroundPlayer) view.player = backgroundPlayer
-                if (backgroundPlayer.playbackState == Player.STATE_IDLE) backgroundPlayer.prepare()
-                if (!backgroundPlayer.isPlaying) backgroundPlayer.play()
             }
         )
         Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = if (page == "welcome") .30f else .40f)))
