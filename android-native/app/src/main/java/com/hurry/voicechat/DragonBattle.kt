@@ -1732,6 +1732,7 @@ private fun DragonBattleMainOverlay(
     var showRankB by remember { mutableStateOf(false) }
     var showRankC by remember { mutableStateOf(false) }
     var highlightedWinnerDragon by remember { mutableStateOf<String?>(null) }
+    var winnerTagVisible by remember { mutableStateOf(false) }
 
     var activeBanner by remember { mutableStateOf<DragonBannerEvent?>(null) }
     var bannerSeq by remember { mutableLongStateOf(0L) }
@@ -1969,6 +1970,7 @@ private fun DragonBattleMainOverlay(
             showRankB = false
             showRankC = false
             highlightedWinnerDragon = null
+            winnerTagVisible = false
             winnerOpen = false
             potA = 0L; youA = 0L
             potB = 0L; youB = 0L
@@ -1981,11 +1983,11 @@ private fun DragonBattleMainOverlay(
             cornerPopupProgress.snapTo(0f)
             showBanner("Start Betting !")
 
-            // Same 30-second betting window as Wild Party; deadline is epoch-based.
-            val bettingDeadlineMs = roundStartMs + 30_000L
+            // Dragon Battle betting window: exactly 20 seconds.
+            val bettingDeadlineMs = roundStartMs + 20_000L
             while (true) {
                 val remainingMs = bettingDeadlineMs - System.currentTimeMillis()
-                timeLeft = ((remainingMs + 999L) / 1000L).coerceIn(0L, 30L).toInt()
+                timeLeft = ((remainingMs + 999L) / 1000L).coerceIn(0L, 20L).toInt()
                 if (remainingMs <= 0L) break
                 delay(minOf(150L, remainingMs))
             }
@@ -2001,17 +2003,14 @@ private fun DragonBattleMainOverlay(
             for (cardStep in 1..9) {
                 revealedCount = cardStep
                 launch(Dispatchers.IO) { soundManager.playCardFlip() }
+                delay(1_500L)
                 if (cardStep == 3 || cardStep == 6 || cardStep == 9) {
-                    delay(180L)
                     when (cardStep) {
                         3 -> showRankA = true
                         6 -> showRankB = true
                         9 -> showRankC = true
                     }
                     launch(Dispatchers.IO) { soundManager.playDham() }
-                    delay(420L)
-                } else {
-                    delay(600L)
                 }
             }
 
@@ -2020,6 +2019,7 @@ private fun DragonBattleMainOverlay(
             dragonWinnerSocket?.emit("dragonbattle_top_winners_request", JSONObject().put("round", sharedRoundId))
             winnerDragon = winner
             highlightedWinnerDragon = winner
+            winnerTagVisible = true
             launch(Dispatchers.IO) { soundManager.playDham() }
             historyList = (listOf(winner) + historyList).take(20)
 
@@ -2047,6 +2047,8 @@ private fun DragonBattleMainOverlay(
                 coinAnimPhase = 3
                 scatteredCoins = emptyList()
             }
+            delay(2_000L)
+            winnerTagVisible = false
 
             val randomPopupAmount = listOf(5_000L, 12_500L, 25_000L, 48_000L, 75_000L, 120_000L, 250_000L, 500_000L, 850_000L)[Random(sharedRoundId xor 0x5F3759DFL).nextInt(9)]
             cornerPopupText = "+${formatShortAmount(randomPopupAmount)}"
@@ -2292,6 +2294,7 @@ private fun DragonBattleMainOverlay(
                             handRankLabel = handLabelA,
                             showHandRank = showRankA,
                             isWinner = highlightedWinnerDragon == "A",
+                            showWinnerTag = winnerTagVisible && highlightedWinnerDragon == "A",
                             modifier = Modifier
                                 .weight(1f)
                                 .zIndex(if (highlightedWinnerDragon == "A") 12f else 0f)
@@ -2303,6 +2306,7 @@ private fun DragonBattleMainOverlay(
                             handRankLabel = handLabelB,
                             showHandRank = showRankB,
                             isWinner = highlightedWinnerDragon == "B",
+                            showWinnerTag = winnerTagVisible && highlightedWinnerDragon == "B",
                             modifier = Modifier
                                 .weight(1f)
                                 .zIndex(if (highlightedWinnerDragon == "B") 12f else 0f)
@@ -2314,6 +2318,7 @@ private fun DragonBattleMainOverlay(
                             handRankLabel = handLabelC,
                             showHandRank = showRankC,
                             isWinner = highlightedWinnerDragon == "C",
+                            showWinnerTag = winnerTagVisible && highlightedWinnerDragon == "C",
                             modifier = Modifier
                                 .weight(1f)
                                 .zIndex(if (highlightedWinnerDragon == "C") 12f else 0f)
@@ -3114,6 +3119,7 @@ private fun OverlappingThreeCardsTable(
     handRankLabel: String,
     showHandRank: Boolean,
     isWinner: Boolean,
+    showWinnerTag: Boolean,
     modifier: Modifier = Modifier
 ) {
     val trayShape = RoundedCornerShape(6.dp)
@@ -3171,7 +3177,7 @@ private fun OverlappingThreeCardsTable(
             }
 
             // Winning tag (winner_cutout.png) on top-right corner — NO rotation applied
-            if (isWinner) {
+            if (showWinnerTag) {
                 AsyncImage(
                     model = DRAGON_WINNER_TAG_IMAGE,
                     contentDescription = "Winner Tag",
