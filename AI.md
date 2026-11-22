@@ -1910,3 +1910,10 @@ Current documentation does not certify that all historical features are build-, 
 - Gift settlement and wallet debit logic, Room Cup UI/layout, and room seat layout were not changed.
 - Server commit: `0a3c8506e7ebd62d7f0ca5ad3081d2c3ec4f0e6b`.
 - Render deployment and live cumulative-gift verification are pending; no production runtime result is claimed.
+
+## 2026-11-22 — Wallet overwrite and shared Dragon Battle round fix
+- `Wildparty.kt`: wallet socket snapshots now merge with the durable pending transaction queue. When the server event includes the transaction ID already applied to MongoDB, that exact queue item is removed before merging, preventing both stale overwrites and temporary double-counting.
+- `RoomPage.kt`: Gift Picker now accepts wallet updates addressed by Firebase UID or permanent account ID; the server's gift-transfer event uses the sender's account ID, while the initial wallet fetch uses the canonical UID. This was why the room Gift Picker could keep showing an old coin balance after a successful gift.
+- `DragonBattle.kt`: game cycles are anchored to the next shared minute boundary, and the deck is deterministically shuffled from the shared round ID. Devices on the same round now reveal the same cards and winner instead of independently shuffling a local deck. Existing 20-second betting phase, card reveal timing, payout logic, and UI are preserved.
+- The deployed `Zyora-Server/server.js` already uses MongoDB `users.coins` as the canonical wallet, protects wallet fields from profile saves, and performs idempotent atomic game/gift debits and credits. No second wallet store was added.
+- Native APK compilation and two-device verification remain pending; shared global pot totals are not claimed by this change.
