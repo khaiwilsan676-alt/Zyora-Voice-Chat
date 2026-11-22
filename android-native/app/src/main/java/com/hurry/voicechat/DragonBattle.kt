@@ -1696,11 +1696,11 @@ private fun DragonBattleMainOverlay(
         val onConnect = io.socket.emitter.Emitter.Listener {
             dragonWinnerSocket?.emit("dragonbattle_top_winners_request", JSONObject().put("round", activeDragonRoundId))
         }
-        dragonWinnerSocket?.on("dragonbattle_top_winners", onWinners)
+        dragonWinnerSocket?.on("dragonbattle_top_winners_v2", onWinners)
         dragonWinnerSocket?.on(Socket.EVENT_CONNECT, onConnect)
         dragonWinnerSocket?.connect()
         onDispose {
-            dragonWinnerSocket?.off("dragonbattle_top_winners", onWinners)
+            dragonWinnerSocket?.off("dragonbattle_top_winners_v2", onWinners)
             dragonWinnerSocket?.off(Socket.EVENT_CONNECT, onConnect)
             dragonWinnerSocket?.disconnect()
             dragonWinnerSocket?.close()
