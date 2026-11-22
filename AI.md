@@ -1802,3 +1802,11 @@ Current documentation does not certify that all historical features are build-, 
 - Zyora-Server room gift settlement resolves sender/recipient wallet documents concurrently, batches all recipient diamond credits into one MongoDB bulk write, batches contribution upserts, and reads recipient balances in one query. All writes remain inside the same atomic transaction; the room gift event is still broadcast only after commit.
 - No UI redesign or visual styling changes were intended.
 - Verification pending: native APK compilation, Render deployment, and real two-account profile/gift latency tests. No measured Wafa-equivalent latency is claimed.
+
+
+## 2026-11-22 — Family and leaderboard performance follow-up
+- Family leaderboard now restores its last successful snapshot from local preferences before requesting fresh data; the network result is saved for the next visit. Existing family layout and styling are unchanged.
+- Family leaderboard legacy-user migration now runs once per server process and batches its upserts, rather than performing sequential MongoDB writes every time the leaderboard endpoint is opened.
+- Global leaderboard totals are now grouped, sorted, and limited inside MongoDB. The server no longer downloads up to 150,000 contribution documents into Node.js for every leaderboard request.
+- Home room cards already use a keyed LazyColumn with a stable row key and a shared Room/SQLite warm cache; no home UI redesign was made in this pass.
+- Verification: Zyora-Server JavaScript syntax check passed. Android Kotlin compilation, Render deployment, and real-device scroll/latency profiling remain unverified.
