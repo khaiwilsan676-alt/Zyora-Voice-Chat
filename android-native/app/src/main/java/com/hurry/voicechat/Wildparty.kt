@@ -1219,6 +1219,7 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
   walletAuthPrefs.getString("uid",null)?.takeIf{it.isNotBlank()}
    ?:walletAuthPrefs.getString("accountId","").orEmpty()
  }
+ val walletAccountNumber=remember(walletAuthPrefs){walletAuthPrefs.getString("accountId","").orEmpty()}
  var balance by remember(walletAccountId){
   mutableLongStateOf(walletCachePrefs.getLong("balance_$walletAccountId",0L).coerceAtLeast(0L))
  }
