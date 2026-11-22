@@ -46,6 +46,12 @@ private fun formatCupCoins(value: Long): String {
     }
 }
 
+/** Room header API values below 1,000 are already expressed in millions (e.g. 305 = 305M). */
+private fun formatRoomCupTotal(value: Long): String {
+    val formatted = formatCupCoins(value)
+    return if (formatted.any { it.isLetter() }) formatted else "${formatted}M"
+}
+
 /** Daily room cup total shown in the room's top cup pill. */
 @Composable
 fun RoomDailyCupTotal(roomId: String) {
@@ -102,7 +108,7 @@ fun RoomDailyCupTotal(roomId: String) {
     }
     Text(
         // Room header uses compact K/M/B formatting for the complete daily sent-gift coin total.
-        text = formatCupCoins(total),
+        text = formatRoomCupTotal(total),
         color = Color(0xFFFFD54F),
         fontSize = 11.sp,
         fontWeight = FontWeight.Normal,
