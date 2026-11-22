@@ -956,7 +956,6 @@ fun RoomPage(
             showGames -> showGames = false
             showRoomTask -> showRoomTask = false
             showWildParty -> showWildParty = false
-            showFruitParty -> showFruitParty = false
             showSeatSheet -> showSeatSheet = false
             else -> showExitMenu = true
         }
