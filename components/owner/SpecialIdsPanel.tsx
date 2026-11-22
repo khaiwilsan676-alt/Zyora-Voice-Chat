@@ -21,6 +21,9 @@ export default function SpecialIdsPanel({ users = [], ownerKey }: { users?: User
   const [userQuery, setUserQuery] = useState('');
   const [specialId, setSpecialId] = useState('');
   const [days, setDays] = useState('');
+  const [kind, setKind] = useState<'id' | 'tag'>('id');
+  const [tagName, setTagName] = useState('');
+  const [permanent, setPermanent] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserRow | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -40,9 +43,8 @@ export default function SpecialIdsPanel({ users = [], ownerKey }: { users?: User
   }), [users]);
 
   const assignId = async () => {
-    if (!selectedUser || !selectedUser.hurryId || !/^\d+$/.test(specialId.trim()) ||
-        !/^\d{1,4}$/.test(days) || Number(days) < 1 || Number(days) > 3650) {
-      setStatus('Select a user and enter a numeric VIP ID and valid days (1–3650).');
+    if (!selectedUser || !selectedUser.hurryId || (kind === 'id' ? !/^\d+$/.test(specialId.trim()) : !tagName.trim()) || (!permanent && (!/^\d{1,4}$/.test(days) || Number(days) < 1 || Number(days) > 3650))) {
+      setStatus('Select a user and enter a valid ID/tag and duration.');
       return;
     }
     setSaving(true);
@@ -53,8 +55,11 @@ export default function SpecialIdsPanel({ users = [], ownerKey }: { users?: User
         headers: { 'Content-Type': 'application/json', 'x-owner-key': ownerKey },
         body: JSON.stringify({
           recipientAccountId: selectedUser.hurryId,
+          assignmentType: kind,
           specialId: specialId.trim(),
-          days: Number(days),
+          tagName: tagName.trim(),
+          permanent,
+          days: permanent ? 0 : Number(days),
           badgeType: 'ID Badge'
         })
       });
@@ -69,13 +74,8 @@ export default function SpecialIdsPanel({ users = [], ownerKey }: { users?: User
           : `Zyora API returned an invalid response (HTTP ${response.status}).`);
       }
       if (!response.ok || !result?.success) throw new Error(result?.error || `Could not assign ID (HTTP ${response.status})`);
-      setStatus(result.notification === 'delivered'
-        ? `ID ${specialId.trim()} assigned and Zyora System message delivered to ${selectedUser.name || 'user'}.`
-        : result.notification === 'queued'
-          ? `ID ${specialId.trim()} assigned; Zyora System message queued for ${selectedUser.name || 'user'}.`
-          : `ID ${specialId.trim()} saved, but System message could not be queued. Check Render Redis connection.`);
-      setSpecialId('');
-      setDays('');
+      setStatus(`${kind === 'id' ? 'ID ' + specialId.trim() : 'Tag ' + tagName.trim()} ${permanent ? 'permanently' : 'for ' + days + ' days'} assigned.`);
+      setSpecialId(''); setTagName(''); setDays(''); setPermanent(false);
       setUserQuery('');
     } catch (error) {
       setStatus(error instanceof Error ? error.message : 'Could not assign ID');
@@ -117,16 +117,17 @@ export default function SpecialIdsPanel({ users = [], ownerKey }: { users?: User
       </div>
 
       <div className="space-y-2">
-        <label htmlFor="special-id-value" className="block text-xs font-bold text-slate-600">Special ID</label>
+        <label className="block text-xs font-bold text-slate-600">Special ID / Tags</label>
+        <div className="flex gap-2"><button type="button" onClick={() => setKind("id")} className="rounded-lg bg-slate-100 px-3 py-2 text-xs font-bold">Special ID</button><button type="button" onClick={() => setKind("tag")} className="rounded-lg bg-slate-100 px-3 py-2 text-xs font-bold">Custom Tag</button></div>
         <div className="flex flex-wrap items-center gap-2">
-          <input
+          {kind === "id" ? <input
             id="special-id-value"
             value={specialId}
             onChange={event => setSpecialId(event.target.value.replace(/[^0-9]/g, ''))}
             placeholder="Enter ID number"
             inputMode="numeric"
             className="h-10 w-40 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-800 outline-none"
-          />
+          /> : <input value={tagName} onChange={event => setTagName(event.target.value.slice(0, 32))} placeholder="Enter any tag name" maxLength={32} className="h-10 w-40 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-800 outline-none" />}
           <div className="relative">
             <button type="button" onClick={() => setMenuOpen(value => !value)} className="flex h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700">
               <BadgeCheck className="h-4 w-4" /> ID Badge <ChevronDown className="h-4 w-4" />
@@ -137,13 +138,14 @@ export default function SpecialIdsPanel({ users = [], ownerKey }: { users?: User
               </div>
             )}
           </div>
-          <input
+          <label className="flex h-10 items-center gap-1 text-xs font-semibold"><input type="checkbox" checked={permanent} onChange={event => setPermanent(event.target.checked)} /> Permanent</label>
+          {!permanent && <input
             value={days}
             onChange={event => setDays(event.target.value.replace(/[^0-9]/g, ''))}
             placeholder="Days"
             inputMode="numeric"
             className="h-10 w-20 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-800 outline-none"
-          />
+          />}
           <button type="button" onClick={assignId} disabled={saving || !selectedUser} className="h-10 rounded-lg bg-slate-900 px-4 text-xs font-bold text-white disabled:opacity-40">
             {saving ? 'Sending…' : 'Give ID'}
           </button>
