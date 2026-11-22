@@ -1486,9 +1486,9 @@ private fun DragonBattleLoadingOverlay(
     var progress by remember { mutableFloatStateOf(0f) }
 
     LaunchedEffect(Unit) {
-        val totalSteps = 100
+        val totalSteps = 28
         for (i in 1..totalSteps) {
-            delay(25L)
+            delay(20L)
             progress = i / totalSteps.toFloat()
         }
         onLoadingFinished()
@@ -1790,9 +1790,15 @@ private fun DragonBattleMainOverlay(
             balance = 0L
             walletReady = false
         } else {
-            val canonical = fetchDragonWallet(dragonWalletUserId)
+            var canonical: Long? = null
+            repeat(2) { attempt ->
+                if (canonical == null) {
+                    canonical = fetchDragonWallet(dragonWalletUserId)
+                    if (canonical == null && attempt == 0) delay(600L)
+                }
+            }
             if (canonical != null) {
-                balance = (canonical + walletPendingDelta).coerceAtLeast(0L)
+                balance = (canonical!! + walletPendingDelta).coerceAtLeast(0L)
                 walletCachePrefs.edit()
                     .putLong("balance_$dragonWalletUserId", balance)
                     .putLong("last_sync_$dragonWalletUserId", System.currentTimeMillis())
@@ -1800,7 +1806,7 @@ private fun DragonBattleMainOverlay(
                 walletReady = true
             } else {
                 walletReady = false
-                showBanner("Wallet unavailable - retrying")
+                showBanner("Wallet unavailable - try again")
             }
         }
     }
@@ -1935,20 +1941,6 @@ private fun DragonBattleMainOverlay(
                 winnerTimer = 4 - step
             }
             winnerOpen = false
-        }
-    }
-
-    // Re-fetch the same result round while the existing winner sheet is visible.
-    // The winner write is asynchronous on the server, so one early request can return empty.
-    LaunchedEffect(winnerOpen, dragonWinnerRoundId) {
-        if (winnerOpen && dragonWinnerRoundId > 0L) {
-            repeat(12) {
-                dragonWinnerSocket?.emit(
-                    "dragonbattle_top_winners_request",
-                    JSONObject().put("round", dragonWinnerRoundId)
-                )
-                delay(250L)
-            }
         }
     }
 
