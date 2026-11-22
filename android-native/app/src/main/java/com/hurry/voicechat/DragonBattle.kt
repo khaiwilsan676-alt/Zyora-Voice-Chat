@@ -146,13 +146,22 @@ private suspend fun dragonWalletRequest(
             connection.outputStream.bufferedWriter().use { it.write(payload.toString()) }
             val code = connection.responseCode
             val body = (if (code in 200..299) connection.inputStream else connection.errorStream)
-                ?.bufferedReader()?.use { it.readText() }.orEmpty()
-            val json = JSONObject(body)
-            DragonWalletResponse(
-                success = code in 200..299 && json.optBoolean("success"),
-                balance = json.optLong("balance", -1L),
-                error = json.optString("error", "Wallet update failed")
-            )
+                ?.bufferedReader()?.use { it.readText() }.orEmpty().trim()
+            val json = runCatching { JSONObject(body) }.getOrNull()
+            if (json == null) {
+                val preview = body.take(140).replace(Regex("\\s+"), " ")
+                DragonWalletResponse(
+                    success = false,
+                    balance = -1L,
+                    error = "Wallet server returned non-JSON (HTTP $code): $preview"
+                )
+            } else {
+                DragonWalletResponse(
+                    success = code in 200..299 && json.optBoolean("success"),
+                    balance = json.optLong("balance", -1L),
+                    error = json.optString("error", "Wallet update failed")
+                )
+            }
         } finally {
             connection.disconnect()
         }
@@ -168,9 +177,11 @@ private suspend fun fetchDragonWallet(userId: String): Long? = withContext(Dispa
             setRequestProperty("Cache-Control", "no-cache")
         }
         try {
-            if (connection.responseCode !in 200..299) return@runCatching null
-            JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
-                .optLong("balance", -1L).takeIf { it >= 0L }
+            val code = connection.responseCode
+            if (code !in 200..299) return@runCatching null
+            val body = connection.inputStream.bufferedReader().use { it.readText() }.trim()
+            val json = runCatching { JSONObject(body) }.getOrNull() ?: return@runCatching null
+            json.optLong("balance", -1L).takeIf { it >= 0L }
         } finally {
             connection.disconnect()
         }
