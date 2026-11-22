@@ -1815,3 +1815,10 @@ Current documentation does not certify that all historical features are build-, 
 ## 2026-11-22 — Wild Party winner display duration
 - `Wildparty.kt`: increased the winner display timer from 5 to 7 seconds, including the initial countdown state and auto-close loop. The winner result, payout, wallet transaction, animation, sounds, and layout are unchanged.
 - Native APK build and on-device winner-duration verification are required; no runtime result is claimed.
+
+
+## 2026-11-22 — Room entry and Dragon Battle render workload follow-up
+- `RoomPage.kt`: deferred room-info-only follower and admin profile lookups until the Room Info sheet is actually opened. Previously these non-critical HTTP requests started on every room entry, competing with the Socket.IO join/presence/seat startup work. Opening Room Info still fetches fresh members/admins.
+- `DragonBattle.kt`: combined the 12 winner-ray wedges into one draw path and one shared radial gradient per frame instead of allocating 12 separate paths and gradients on every animation frame. Ray count, angles, pulse, colors, and winner/game logic are unchanged.
+- Homepage lazy room rows, stable keys, cache strategy, layout, and card styling remain unchanged. No wallet, payout, betting, round timing, or voice behavior was modified.
+- APK build and on-device frame-time/room-entry timing tests are still required; this source change is not yet runtime-verified.
