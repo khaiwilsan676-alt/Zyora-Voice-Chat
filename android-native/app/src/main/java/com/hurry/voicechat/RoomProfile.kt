@@ -196,7 +196,7 @@ fun RoomProfile(
             }
             // Always refresh tag flags from the same remote profile source used by Public Profile.
             // Cached profile data must not hide a newly assigned Seller tag.
-            sequenceOf("officialHeadTag", "officialTag", "adminTag", "serviceTag", "csTag", "hostTag", "isHost", "coinSellerTag", "coinSeller", "sellerTag", "vipTag", "premiumTag", "vipId", "vipIdDays", "vipIdAssignedAt", "vipIdExpiresAt", "vipIdBadge", "vipIdBadgeType").forEach { key ->
+            sequenceOf("officialHeadTag", "officialTag", "adminTag", "serviceTag", "csTag", "hostTag", "isHost", "coinSellerTag", "coinSeller", "sellerTag", "vipTag", "premiumTag", "vipId", "vipIdDays", "vipIdAssignedAt", "vipIdExpiresAt", "vipIdBadge", "vipIdBadgeType", "ownerCustomTag", "ownerCustomTagExpiresAt").forEach { key ->
                 if (latest.has(key)) merged.put(key, latest.opt(key))
             }
             val sellerEnabled = latest.optBoolean("coinSellerTag", false) ||
@@ -255,7 +255,7 @@ fun RoomProfile(
 
     val hasAnyTag = officialHeadTag || officialTag || adminTag || serviceTag || hostTag || coinSellerTag || vipTag || premiumTag
     val originalAccountId = generateStableId(user.accountId ?: user.id ?: user.uid ?: "User")
-    val activeSpecialId = loadedProfile?.optString("vipId", "").orEmpty().takeIf { it.matches(Regex("\\d{1,20}")) && loadedProfile?.optLong("vipIdExpiresAt", 0L)?.let { expiry -> expiry > System.currentTimeMillis() } == true }
+    val activeSpecialId = loadedProfile?.optString("vipId", "").orEmpty().takeIf { it.matches(Regex("\\d{1,20}")) && loadedProfile?.optLong("vipIdExpiresAt", 0L)?.let { expiry -> expiry == 0L || expiry > System.currentTimeMillis() } == true }
     val accountId = activeSpecialId ?: originalAccountId
     val hasSpecialIdBadge = activeSpecialId != null && loadedProfile?.optBoolean("vipIdBadge", false) == true
     
@@ -443,6 +443,8 @@ fun RoomProfile(
                             }
                         }
 
+                        val ownerTag = cachedProfile?.optString("ownerCustomTag", "").orEmpty().takeIf { it.isNotBlank() && (cachedProfile?.optLong("ownerCustomTagExpiresAt", 0L) ?: 0L).let { expiry -> expiry == 0L || expiry > System.currentTimeMillis() } }
+                        if (ownerTag != null) Text(ownerTag, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF7C3AED), modifier = Modifier.padding(top = 6.dp))
                         roomProfileTags.drop(3).chunked(3).forEach { tagRow ->
                             Row(
                                 modifier = Modifier.padding(top = 8.dp),
