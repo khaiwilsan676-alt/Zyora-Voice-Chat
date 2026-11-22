@@ -1852,7 +1852,16 @@ fun NativeChatScreen(
                         }
                         
                         Spacer(Modifier.width(10.dp))
-                        
+
+                        // Keep the existing image action visible; only the direct-chat Gift Picker was requested to be removed.
+                        IconButton(
+                            onClick = { },
+                            enabled = false,
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(Icons.Outlined.Image, contentDescription = "Image", tint = Color(0xFF6B7280), modifier = Modifier.size(26.dp))
+                        }
+                        Spacer(Modifier.width(10.dp))
 
                         if (isVoiceMode) {
                             Box(
