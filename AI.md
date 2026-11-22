@@ -1713,3 +1713,12 @@ Current documentation does not certify that all historical features are build-, 
 - `Roomcup.kt`: restored the requested compact K/M/B formatter on the room header's top Cup counter. The earlier full-integer display was incorrect for this specific counter; leaderboard row formatting remains unchanged.
 - Native commit: `719c1c6286778135f32e00ce098949990397204a`.
 - Daily/weekly contribution amount discrepancy is still under investigation; the source path stores gift `amount` from the sent transaction value and sums `room_gift_contributions` records. Do not mark the totals issue fixed until actual persisted transaction amounts and the deployed Render revision are verified.
+
+
+## 2026-11-22 — Default avatar missing in Room and Public Profile
+- Root cause: native profile screens referenced `/default-avatar.png` and the old Hurry repository path, but the Zyora `public/` directory does not contain `default-avatar.png`. The existing Zyora fallback artwork is `file_00000000d0408211a5b096ee1cc2d12a.png`.
+- `FallbackAsyncImage.kt`: use the real Zyora fallback URL for empty/placeholder values and switch to it when a supplied DP fails to load, rather than leaving a blank avatar.
+- `RoomProfile.kt`: correct the relative asset base URL from the old Hurry repository to Zyora and use the shared fallback for missing/broken member avatars.
+- `PublicProfile.kt` and `MeScreen.kt`: always render the shared fallback when no valid DP exists; use the same fallback-aware image component for the profile avatar.
+- `RoomPage.kt`: normalize legacy profile image keys and use the actual Zyora fallback URL for room self-avatar/seat/chat payloads instead of missing server/Hurry `default-avatar.png` paths.
+- No avatar dimensions, colors, profile layout, room layout, or existing uploaded DP values were intentionally changed. Native APK compilation and on-device Room/Public Profile verification are still required.
