@@ -85,7 +85,7 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
         ?: prefs.getString("accountId", "") ?: ""
     val assignedSpecialId = cachedProfile?.optString("vipId", "").orEmpty().trim().takeIf {
         it.matches(Regex("\\d{1,20}")) &&
-            (cachedProfile?.optLong("vipIdExpiresAt", 0L) ?: 0L) > System.currentTimeMillis() &&
+            (cachedProfile?.optLong("vipIdExpiresAt", 0L) ?: 0L).let { expiry -> expiry == 0L || expiry > System.currentTimeMillis() } &&
             cachedProfile?.optBoolean("vipIdBadge", false) == true
     }
     val account = assignedSpecialId ?: savedAccount.ifBlank { nativeMeAccountNumber(uid) }
