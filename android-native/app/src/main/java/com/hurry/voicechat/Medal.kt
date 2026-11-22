@@ -291,8 +291,7 @@ fun MedalScreen(onBack: () -> Unit) {
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .background(Color(0xFF1E2740), RoundedCornerShape(12.dp))
-                                    .clickable { },
+                                    .clickable { selectedMedal = MedalItem("level_${medal.levelText}", "${medal.levelText} Medal", medal.imageFile, medal.videoFile, 1, "achievement", cardVideoSize = 120, cardVideoTop = 0.5f, sheetVideoSize = 200, sheetVideoTop = 0.5f, giftText = "Level reward") },
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 AsyncImage(
@@ -302,7 +301,6 @@ fun MedalScreen(onBack: () -> Unit) {
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .height(108.dp)
-                                        .padding(8.dp)
                                 )
                                 Text(
                                     text = "${medal.levelText} Medal",
@@ -457,11 +455,11 @@ fun MedalDetailDialog(
                 ) {
                     GoldenSunburstEffect(modifier = Modifier.fillMaxSize())
 
-                    AsyncImage(
-                        model = displayMedal.video.fullUrl,
-                        contentDescription = displayMedal.name,
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier.size(215.dp)
+                    StoreVideoPreview(
+                        url = displayMedal.previewVideo.fullUrl,
+                        modifier = Modifier.size(215.dp).clip(RoundedCornerShape(4.dp)),
+                        mute = true,
+                        loop = true
                     )
                 }
 
