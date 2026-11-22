@@ -3269,8 +3269,11 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                     if (idx >= 0) {
                         val nextMuted = !seats[idx].muted
                         seats[idx] = seats[idx].copy(muted = nextMuted)
+                        val isSelfSeat = seats[idx].accountId.trim() == accountId.trim()
                         roomSocketRef.value?.emit("room_seat_action", JSONObject().put("roomId", roomId)
-                            .put("userId", accountId).put("action", "owner_mute").put("seatNumber", selectedSeat).put("isMuted", nextMuted))
+                            .put("userId", accountId)
+                            .put("action", if (isSelfSeat) "self_mute" else "owner_mute")
+                            .put("seatNumber", selectedSeat).put("isMuted", nextMuted))
                     }
                 },
                 onLock = {
