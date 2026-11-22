@@ -371,7 +371,7 @@ fun RoomProfile(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.Center
                         ) {
-                            if (ownerImageTagUrl != null || hasSpecialIdBadge || isCoreOfficialAccount || is500002OfficialAccount || isRedOfficialAccount) {
+                            if (ownerImageTagUrl != null || activeSpecialId != null || hasSpecialIdBadge || isCoreOfficialAccount || is500002OfficialAccount || isRedOfficialAccount) {
                                 AsyncImage(model = ownerImageTagUrl ?: "IMG_20261101_125212.png".fullUrl(), contentDescription = "Purple ID Badge", contentScale = ContentScale.Fit, modifier = Modifier.height(24.dp).widthIn(min = 18.dp, max = 30.dp).padding(end = 4.dp))
                                 Text(accountId, color = Color.DarkGray, fontSize = 14.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(start = 4.dp))
                             } else {
