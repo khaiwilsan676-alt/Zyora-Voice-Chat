@@ -170,7 +170,7 @@ private suspend fun exchangeCanonicalWallet(userId: String, diamonds: Long): JSO
             setRequestProperty("Content-Type", "application/json; charset=utf-8")
         }
         try {
-            val payload = JSONObject().put("userId", userId).put("diamonds", diamonds)
+            val payload = JSONObject().put("userId", userId).put("diamonds", diamonds).put("transactionId", "wallet_exchange_" + java.util.UUID.randomUUID())
             connection.outputStream.use { it.write(payload.toString().toByteArray(Charsets.UTF_8)) }
             if (connection.responseCode !in 200..299) return@runCatching null
             JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
