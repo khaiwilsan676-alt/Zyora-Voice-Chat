@@ -430,16 +430,21 @@ fun JitsiRoomAudio(
                                 }
                             }
                         } else {
+                            if (!latestPlaybackVoiceEnabled) {
+                                musicPlaybackQueue.clear()
+                                try { Thread.sleep(20) } catch (_: InterruptedException) { if (!alive.get()) break }
+                                continue
+                            }
                             try { musicPlaybackQueue.poll(100, TimeUnit.MILLISECONDS) }
                             catch (_: InterruptedException) { if (!alive.get()) break else null } ?: continue
                         }
-                        if (isVoicePacket && !latestPlaybackVoiceEnabled) continue
+                        if (!latestPlaybackVoiceEnabled) continue
                         val track = synchronized(playerLock) { if (isVoicePacket) voicePlayer else musicPlayer } ?: continue
                         var offset = 0
                         var failed = false
                         try {
                             if (track.playState != AudioTrack.PLAYSTATE_PLAYING) track.play()
-                            while (offset < packet.size && alive.get() && (!isVoicePacket || latestPlaybackVoiceEnabled)) {
+                            while (offset < packet.size && alive.get() && latestPlaybackVoiceEnabled) {
                                 val written = track.write(packet, offset, packet.size - offset, AudioTrack.WRITE_BLOCKING)
                                 if (written <= 0) { failed = true; break }
                                 offset += written
@@ -556,11 +561,13 @@ fun JitsiRoomAudio(
                 val voicePlaybackEnabled = latestPlaybackVoiceEnabled
                 if (!voicePlaybackEnabled) {
                     voiceSpeakerQueues.values.forEach { it.clear() }
-                    // Flush the partially buffered pre-mute frame once. Without this,
-                    // stale AudioTrack data can overlap the first packets after unmute.
+                    musicPlaybackQueue.clear()
+                    // This switch controls all incoming room sound on this device only.
+                    // It never stops another member's microphone or music publisher.
                     if (lastPlaybackVoiceEnabled) {
                         synchronized(playerLock) {
                             runCatching { voicePlayer?.pause(); voicePlayer?.flush() }
+                            runCatching { musicPlayer?.pause(); musicPlayer?.flush() }
                         }
                     }
                 }
