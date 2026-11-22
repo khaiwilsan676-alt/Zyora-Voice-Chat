@@ -2420,7 +2420,7 @@ private fun DragonBattleMainOverlay(
                             else -> baseCenter
                         }
                         val coinAlpha = if (coinAnimPhase == 2) (1f - flyCornerProgress.value * 0.85f).coerceIn(0f, 1f) else 1f
-                        val coinScale = if (coinAnimPhase == 2) (1f - flyCornerProgress.value * 0.45f).coerceIn(0.4f, 1f) else 1f
+                        val coinScale = 1f
 
                         AsyncImage(
                             model = DRAGON_COIN_IMAGE,
