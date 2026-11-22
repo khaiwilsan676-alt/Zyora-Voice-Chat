@@ -362,38 +362,59 @@ fun RoomSettingPage(
         }
     }
 
-    var storeRoomThemes by remember { mutableStateOf<List<RoomThemeChoice>>(emptyList()) }
+    val settingsCachePrefs = remember(roomOwnerId) {
+        context.getSharedPreferences("room_settings_inventory_cache", Context.MODE_PRIVATE)
+    }
+    var storeRoomThemes by remember(roomOwnerId) {
+        mutableStateOf(runCatching {
+            val cached = JSONArray(settingsCachePrefs.getString("themes_$currentUserId", "[]").orEmpty())
+            (0 until cached.length()).mapNotNull { index ->
+                val item = cached.optJSONObject(index) ?: return@mapNotNull null
+                val expiry = item.optLong("expiresAt")
+                val id = item.optString("id")
+                val image = item.optString("image")
+                if (id.isNotBlank() && image.isNotBlank() && (expiry == 0L || expiry > System.currentTimeMillis()))
+                    RoomThemeChoice(id, item.optString("name", id), image, expiry) else null
+            }
+        }.getOrDefault(emptyList()))
+    }
     LaunchedEffect(currentUserId, sheet == "theme") {
-        if (currentUserId.isBlank()) return@LaunchedEffect
-        withContext(Dispatchers.IO) {
+        if (currentUserId.isBlank() || sheet != "theme") return@LaunchedEffect
+        val refreshed = withContext(Dispatchers.IO) {
             runCatching {
                 val encoded = java.net.URLEncoder.encode(currentUserId, "UTF-8")
                 val conn = (URL("$SETTINGS_API/api/store/inventory/$encoded").openConnection() as HttpURLConnection).apply {
-                    connectTimeout = 10000
-                    readTimeout = 10000
+                    connectTimeout = 6000
+                    readTimeout = 8000
                     setRequestProperty("Accept", "application/json")
                     setRequestProperty("Cache-Control", "no-cache, no-store")
                     setRequestProperty("Pragma", "no-cache")
                 }
                 try {
-                    if (conn.responseCode !in 200..299) emptyList()
-                    else {
-                        val root = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
-                        val arr = root.optJSONArray("items") ?: JSONArray()
-                        (0 until arr.length()).mapNotNull { index ->
-                            val item = arr.optJSONObject(index) ?: return@mapNotNull null
-                            val id = item.optString("itemId")
-                            val expiry = item.optLong("expiresAt")
-                            if (item.optString("tab") == "Theme" && id.isNotBlank() && expiry > System.currentTimeMillis()) {
-                                val image = item.optString("image")
-                                if (image.isNotBlank()) RoomThemeChoice(id, item.optString("name", id), STORE_THEME_ASSET_BASE + image, expiry) else null
-                            } else null
-                        }
+                    if (conn.responseCode !in 200..299) error("Inventory unavailable")
+                    val root = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
+                    val arr = root.optJSONArray("items") ?: JSONArray()
+                    (0 until arr.length()).mapNotNull { index ->
+                        val item = arr.optJSONObject(index) ?: return@mapNotNull null
+                        val id = item.optString("itemId")
+                        val expiry = item.optLong("expiresAt")
+                        if (item.optString("tab") == "Theme" && id.isNotBlank() && expiry > System.currentTimeMillis()) {
+                            val image = item.optString("image")
+                            if (image.isNotBlank()) RoomThemeChoice(id, item.optString("name", id), STORE_THEME_ASSET_BASE + image, expiry) else null
+                        } else null
                     }
                 } finally { conn.disconnect() }
-            }.getOrDefault(emptyList())
-        }.let { found ->
-            storeRoomThemes = found
+            }.getOrNull()
+        }
+        // Show cached owned themes immediately; replace them only after a valid server response.
+        if (refreshed != null) {
+            storeRoomThemes = refreshed
+            val cache = JSONArray()
+            refreshed.forEach { theme ->
+                cache.put(JSONObject().put("id", theme.id).put("name", theme.name)
+                    .put("image", theme.image).put("expiresAt", theme.expiresAt))
+            }
+            settingsCachePrefs.edit().putString("themes_$currentUserId", cache.toString()).apply()
         }
     }
 
