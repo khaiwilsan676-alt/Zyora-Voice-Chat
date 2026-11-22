@@ -1264,6 +1264,8 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
  }
 
  val walletSyncMutex = remember(walletAccountId) { Mutex() }
+ // Protects only short local balance/queue merges; never held during HTTP.
+ val walletStateMutex = remember(walletAccountId) { Mutex() }
  LaunchedEffect(Unit){
   launch(Dispatchers.IO) { soundManager.preload() }
   // Restore game history independently; wallet network failures must never hide it.
@@ -1291,13 +1293,17 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
      if(walletConnection.responseCode !in 200..299) error("Wallet unavailable")
      val wallet=JSONObject(walletConnection.inputStream.bufferedReader().use{it.readText()})
      val serverBalance=wallet.optLong("balance",0L).coerceAtLeast(0L)
-     val pending=runCatching{JSONArray(pendingWalletPrefs.getString("queue_$walletUserId","[]")?:"[]")}.getOrDefault(JSONArray())
-     val pendingDelta=(0 until pending.length()).sumOf{pending.optJSONObject(it)?.optLong("delta")?:0L}
-     balance=(serverBalance+pendingDelta).coerceAtLeast(0L)
-     val old=dao.getUserData()?:UserDataEntity(balance=balance)
-     dao.saveUserData(old.copy(balance=balance))
-     context.getSharedPreferences("zyora_wallet_cache",Context.MODE_PRIVATE).edit()
-      .putLong("balance_$walletUserId",balance).putLong("last_sync_$walletUserId",System.currentTimeMillis()).apply()
+     walletStateMutex.withLock {
+      // Re-read after HTTP: bets may have been queued while GET was in flight.
+      val pending=runCatching{JSONArray(pendingWalletPrefs.getString("queue_$walletUserId","[]")?:"[]")}.getOrDefault(JSONArray())
+      val pendingDelta=(0 until pending.length()).sumOf{pending.optJSONObject(it)?.optLong("delta")?:0L}
+      val visible=(serverBalance+pendingDelta).coerceAtLeast(0L)
+      balance=visible
+      val old=dao.getUserData()?:UserDataEntity(balance=visible)
+      dao.saveUserData(old.copy(balance=visible))
+      context.getSharedPreferences("zyora_wallet_cache",Context.MODE_PRIVATE).edit()
+       .putLong("balance_$walletUserId",visible).putLong("last_sync_$walletUserId",System.currentTimeMillis()).apply()
+     }
     }finally{walletConnection.disconnect()}
    }else{
     balance=0L
@@ -1347,22 +1353,27 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
    }
   }
   // Merge against the newest disk queue; never erase bets queued during network sync.
-  val latestQueue=runCatching{JSONArray(pendingWalletPrefs.getString(key,"[]")?:"[]")}.getOrDefault(JSONArray())
-  val remaining=JSONArray()
-  for(i in 0 until latestQueue.length()){
-   val item=latestQueue.optJSONObject(i)?:continue
-   if(item.optString("id") !in completedIds)remaining.put(item)
-  }
-  pendingWalletPrefs.edit().putString(key,remaining.toString()).apply()
-  if(serverBalance!=null){
-   val pendingDelta=(0 until remaining.length()).sumOf{remaining.optJSONObject(it)?.optLong("delta")?:0L}
-   val visible=(serverBalance!!+pendingDelta).coerceAtLeast(0L)
-   balance=visible
-   withContext(Dispatchers.IO) {
-    val old=dao.getUserData()?:UserDataEntity(balance=visible)
-    dao.saveUserData(old.copy(balance=visible))
+  walletStateMutex.withLock {
+   // Merge server-confirmed transactions with every newer queued mutation.
+   synchronized(pendingWalletPrefs) {
+    val latestQueue=runCatching{JSONArray(pendingWalletPrefs.getString(key,"[]")?:"[]")}.getOrDefault(JSONArray())
+    val remaining=JSONArray()
+    for(i in 0 until latestQueue.length()){
+     val item=latestQueue.optJSONObject(i)?:continue
+     if(item.optString("id") !in completedIds)remaining.put(item)
+    }
+    check(pendingWalletPrefs.edit().putString(key,remaining.toString()).commit()){"Could not persist remaining wallet queue"}
+    if(serverBalance!=null){
+     val pendingDelta=(0 until remaining.length()).sumOf{remaining.optJSONObject(it)?.optLong("delta")?:0L}
+     val visible=(serverBalance!!+pendingDelta).coerceAtLeast(0L)
+     balance=visible
+     withContext(Dispatchers.IO) {
+      val old=dao.getUserData()?:UserDataEntity(balance=visible)
+      dao.saveUserData(old.copy(balance=visible))
+     }
+     walletCachePrefs.edit().putLong("balance_$userId",visible).putLong("last_sync_$userId",System.currentTimeMillis()).apply()
+    }
    }
-   walletCachePrefs.edit().putLong("balance_$userId",visible).putLong("last_sync_$userId",System.currentTimeMillis()).apply()
   }
  }
  suspend fun walletChange(delta:Long,title:String){
@@ -1374,25 +1385,24 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
   val now=Calendar.getInstance()
   val date=String.format("%04d.%02d.%02d %02d:%02d",now.get(Calendar.YEAR),now.get(Calendar.MONTH)+1,now.get(Calendar.DAY_OF_MONTH),now.get(Calendar.HOUR_OF_DAY),now.get(Calendar.MINUTE))
 
-  // Apply the bet/win to the on-screen wallet immediately. Never wait for
-  // the network-sync mutex here: that mutex can be held during slow HTTP calls.
-  if(delta<0L)check(balance>=amount){"Not enough coins"}
-  val next=(balance+delta).coerceAtLeast(0L)
-  balance=next
-  walletCachePrefs.edit().putLong("balance_$userId",next).apply()
-  // The Wallet page reads Room's UserDataEntity, not this composable state.
-  // Persist the same immediate balance there so +/− is reflected app-wide
-  // before the background server request completes.
-  withContext(Dispatchers.IO) {
-   runCatching {
+  // Apply local debit/credit + durable queue as one short atomic operation.
+  // This lock is independent of the network mutex, so bets never wait for HTTP.
+  walletStateMutex.withLock {
+   val current=balance
+   if(delta<0L)check(current>=amount){"Not enough coins"}
+   val next=(current+delta).coerceAtLeast(0L)
+   synchronized(pendingWalletPrefs) {
+    val key=pendingWalletKey()
+    val queue=runCatching{JSONArray(pendingWalletPrefs.getString(key,"[]")?:"[]")}.getOrDefault(JSONArray())
+    queue.put(JSONObject().put("id",transactionId).put("delta",delta).put("title",title).put("date",date))
+    check(pendingWalletPrefs.edit().putString(key,queue.toString()).commit()){"Could not save pending Wallet transaction"}
+   }
+   balance=next
+   walletCachePrefs.edit().putLong("balance_$userId",next).apply()
+   withContext(Dispatchers.IO) {
     val old=dao.getUserData()?:UserDataEntity(balance=next)
     dao.saveUserData(old.copy(balance=next))
-   }.onFailure { android.util.Log.e("WildParty","Immediate Wallet balance persistence failed",it) }
-  }
-  synchronized(pendingWalletPrefs) {
-   val queue=runCatching{JSONArray(pendingWalletPrefs.getString(pendingWalletKey(),"[]")?:"[]")}.getOrDefault(JSONArray())
-   queue.put(JSONObject().put("id",transactionId).put("delta",delta).put("title",title).put("date",date))
-   check(pendingWalletPrefs.edit().putString(pendingWalletKey(),queue.toString()).commit()){"Could not save pending Wallet transaction"}
+   }
   }
   scope.launch(Dispatchers.IO) {
    runCatching {
