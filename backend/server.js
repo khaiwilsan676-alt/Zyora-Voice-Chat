@@ -173,6 +173,9 @@ const memoryRoundWinners = {
   dragonbattle: { round: -1, winners: [] }
 };
 
+// Serialize each Dragon Battle round write so a page refresh cannot read before save completes.
+const dragonBattleWinnerWrites = new Map();
+
 /*
  * roomId -> Map(userId -> socket count)
  */
@@ -2443,13 +2446,27 @@ io.on("connection", (socket) => {
     handleGameWinner("wildparty", payload);
   });
 
-  socket.on("dragonbattle_winner_update", (payload) => {
-    handleGameWinner("dragonbattle", payload);
+  socket.on("dragonbattle_winner_update", (payload = {}) => {
+    const round = Number(payload.round || 0);
+    if (!Number.isSafeInteger(round) || round <= 0) return;
+    const queueKey = String(round);
+    const previous = dragonBattleWinnerWrites.get(queueKey) || Promise.resolve();
+    const write = previous
+      .catch(() => {})
+      .then(() => handleGameWinner("dragonbattle", payload))
+      .catch((error) => console.error("Dragon Battle winner write failed:", error.message));
+    dragonBattleWinnerWrites.set(queueKey, write);
+    write.then(() => {
+      if (dragonBattleWinnerWrites.get(queueKey) === write) dragonBattleWinnerWrites.delete(queueKey);
+    });
   });
 
   socket.on("dragonbattle_top_winners_request", async (payload = {}) => {
     const round = Number(payload.round || 0);
     if (!Number.isSafeInteger(round) || round <= 0) return;
+    const queueKey = String(round);
+    const pendingWrite = dragonBattleWinnerWrites.get(queueKey);
+    if (pendingWrite) await pendingWrite;
     const key = `game:winners:dragonbattle:${round}`;
     let winners = [];
     try {
