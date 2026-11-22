@@ -1306,7 +1306,7 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
       // of replacing the visible balance and temporarily losing those local changes.
       walletStateMutex.withLock {
        val pending = runCatching {
-        JSONArray(pendingWalletPrefs.getString(pendingWalletKey(), "[]") ?: "[]")
+        JSONArray(pendingWalletPrefs.getString("queue_$walletAccountId", "[]") ?: "[]")
        }.getOrDefault(JSONArray())
        // The server includes transactionId after it has already applied that
        // transaction. Remove that exact queued item before merging, otherwise
@@ -1319,7 +1319,7 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
        }
        if (appliedId.isNotBlank() && remaining.length() != pending.length()) {
         synchronized(pendingWalletPrefs) {
-         check(pendingWalletPrefs.edit().putString(pendingWalletKey(), remaining.toString()).commit())
+         check(pendingWalletPrefs.edit().putString("queue_$walletAccountId", remaining.toString()).commit())
         }
        }
        val pendingDelta = (0 until remaining.length()).sumOf {
