@@ -96,14 +96,30 @@ val topBlueGradient = Brush.verticalGradient(
     1.0f to Color(0xFFE5E7EB)
 )
 
+private fun SocialFollowUser.toRoomUser(): RoomUser {
+    val identity = accountId.ifBlank { uid.ifBlank { id } }
+    return RoomUser(id = id.ifBlank { identity }, uid = uid.ifBlank { identity },
+        accountId = identity, name = name, image = image, gender = gender, country = country)
+}
+
+private fun socialCountryFlagUrl(country: String, fallback: String): String {
+    val raw = country.trim().ifBlank { fallback.trim() }
+    if (raw.isBlank()) return ""
+    val code = if (raw.length == 2 && raw.all { it.isLetter() }) raw.lowercase(Locale.ROOT)
+    else Locale.getISOCountries().firstOrNull { c ->
+        Locale("", c).getDisplayCountry(Locale.ENGLISH).equals(raw, true)
+    }?.lowercase(Locale.ROOT).orEmpty()
+    return code.takeIf { it.length == 2 }?.let { "https://flagcdn.com/w40/$it.png" }.orEmpty()
+}
+
 @Composable 
-fun FollowPage(type:String, onBack:()->Unit) {
+fun FollowPage(type:String, onBack:()->Unit, onOpenProfile:(RoomUser)->Unit = {}, onOpenChat:(String,String,String)->Unit = {}) {
     if(type.equals("Visitors",true)) {
-        VisitorsPage(onBack)
+        VisitorsPage(onBack, onOpenProfile, onOpenChat)
     } else {
         // Keep each destination isolated so switching between Fans/Friends/Following
         // cannot reuse another tab's remembered rows or render it as the default.
-        key(type) { OtherSocialPages(type = type, onBack = onBack) }
+        key(type) { OtherSocialPages(type = type, onBack = onBack, onOpenProfile = onOpenProfile) }
     }
 }
 
@@ -111,7 +127,7 @@ fun FollowPage(type:String, onBack:()->Unit) {
 // FANS, FRIENDS, FOLLOWING UI
 // -------------------------------------------------------------
 @Composable
-fun OtherSocialPages(type: String, onBack: () -> Unit) {
+fun OtherSocialPages(type: String, onBack: () -> Unit, onOpenProfile:(RoomUser)->Unit = {}) {
     val socialPage = type in setOf("Friends", "Fans", "Following")
     
     Column(
@@ -166,24 +182,21 @@ fun OtherSocialPages(type: String, onBack: () -> Unit) {
                 else -> LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(horizontal=16.dp,vertical=12.dp)) {
                     items(rows,key={it.id}) { person ->
                         Row(Modifier.fillMaxWidth().padding(vertical=9.dp),verticalAlignment=Alignment.CenterVertically) {
-                            AsyncImage(model=person.image.takeIf{it.isNotBlank()},contentDescription=person.name,modifier=Modifier.size(52.dp).clip(CircleShape).background(Color.LightGray),contentScale=ContentScale.Crop)
+                            AsyncImage(model=person.image.takeIf{it.isNotBlank()},contentDescription=person.name,modifier=Modifier.size(52.dp).clip(CircleShape).background(Color.LightGray).clickable { onOpenProfile(person.toRoomUser()) },contentScale=ContentScale.Crop)
                             Spacer(Modifier.width(12.dp))
                             Column(Modifier.weight(1f)) {
                                 Row(verticalAlignment=Alignment.CenterVertically) {
                                     Text(person.name, color=Color(0xFF111827),fontSize=15.sp,fontWeight=FontWeight.SemiBold,maxLines=1)
                                     if(person.gender.isNotBlank()) {
                                         Spacer(Modifier.width(5.dp)); val male=person.gender.equals("male",true)||person.gender.equals("m",true)||person.gender=="♂"
-                                        Box(Modifier.size(16.dp).clip(CircleShape).background(if(male)Color(0xFF3B82F6) else Color(0xFFEC4899)),contentAlignment=Alignment.Center) { Text(if(male)"♂" else "♀",color=Color.White,fontSize=10.sp) }
+                                        Box(Modifier.size(16.dp).clip(CircleShape).background(if(male)Color(0xFF3B82F6) else Color(0xFFEC4899)),contentAlignment=Alignment.Center) { CustomGenderIcon(isFemale = !male, modifier = Modifier.size(10.dp)) }
                                     }
-                                    if(person.country.isNotBlank()) Text(countryFlag(person.country),modifier=Modifier.padding(start=5.dp),fontSize=14.sp)
+                                    if(person.country.isNotBlank() || person.countryFlag.isNotBlank()) {
+                                        val flagSource = person.countryFlag.takeIf { it.startsWith("http", true) } ?: socialCountryFlagUrl(person.country, person.countryFlag)
+                                        if (flagSource.isNotBlank()) AsyncImage(model=flagSource, contentDescription="Country", modifier=Modifier.padding(start=5.dp).size(width=20.dp,height=14.dp).clip(RoundedCornerShape(2.dp)), contentScale=ContentScale.Crop)
+                                    }
                                 }
-                                Row(verticalAlignment=Alignment.CenterVertically) {
-                                    val account=person.accountId.ifBlank{person.id}
-                                    if(account in setOf("100002","100003","500001","500002","500003","500004","500005","500005","500005","500005")) {
-                                        AsyncImage(model="https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261101_125212.png",contentDescription="ID",modifier=Modifier.height(18.dp).widthIn(max=28.dp),contentScale=ContentScale.Fit)
-                                        Text(account,color=Color(0xFF6B7280),fontSize=11.sp)
-                                    } else Text("ID: $account",color=Color(0xFF6B7280),fontSize=11.sp)
-                                }
+
                             }
                         }
                     }
@@ -251,7 +264,7 @@ fun FollowingCanvas(modifier: Modifier) {
 // VISITORS UI (API LOGIC)
 // -------------------------------------------------------------
 @Composable 
-fun VisitorsPage(onBack:()->Unit) {
+fun VisitorsPage(onBack:()->Unit, onOpenProfile:(RoomUser)->Unit = {}, onOpenChat:(String,String,String)->Unit = {}) {
     val context=LocalContext.current
     val prefs=remember(context){context.getSharedPreferences("hurry_auth",Context.MODE_PRIVATE)}
     val myId=remember(prefs){prefs.getString("accountId","").orEmpty().ifBlank{prefs.getString("uid","").orEmpty()}.ifBlank{prefs.getString("id","").orEmpty()}}
@@ -394,7 +407,7 @@ fun VisitorsPage(onBack:()->Unit) {
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 0.dp, bottom = 10.dp)
             ) {
                 items(rows) { visitor ->
-                    VisitorItemRow(v = visitor, isMyVisitorsTab = tab == 0, baseUrl = baseUrl)
+                    VisitorItemRow(v = visitor, isMyVisitorsTab = tab == 0, baseUrl = baseUrl, onOpenProfile = onOpenProfile, onOpenChat = onOpenChat)
                 }
             }
         }
@@ -432,7 +445,7 @@ private fun VisitorTab(title:String, selected:Boolean, onClick:()->Unit) {
 }
 
 @Composable 
-private fun VisitorItemRow(v:VisitorData, isMyVisitorsTab:Boolean, baseUrl:String) {
+private fun VisitorItemRow(v:VisitorData, isMyVisitorsTab:Boolean, baseUrl:String, onOpenProfile:(RoomUser)->Unit, onOpenChat:(String,String,String)->Unit) {
     Row(
         Modifier
             .fillMaxWidth()
@@ -447,6 +460,7 @@ private fun VisitorItemRow(v:VisitorData, isMyVisitorsTab:Boolean, baseUrl:Strin
                 .size(54.dp)
                 .clip(CircleShape)
                 .background(Color.LightGray)
+                .clickable { onOpenProfile(RoomUser(id=v.id, uid=v.id, accountId=v.id, name=v.name, image=v.avatar, gender=v.gender)) }
         )
         Spacer(Modifier.width(12.dp))
 
@@ -507,6 +521,7 @@ private fun VisitorItemRow(v:VisitorData, isMyVisitorsTab:Boolean, baseUrl:Strin
                 modifier = Modifier
                     .size(36.dp)
                     .clip(CircleShape)
+                    .clickable { onOpenChat(v.id, v.name, v.avatar) }
             )
         }
     }
