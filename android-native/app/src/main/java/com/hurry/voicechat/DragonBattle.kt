@@ -2020,6 +2020,7 @@ private fun DragonBattleMainOverlay(
             winnerDragon = winner
             highlightedWinnerDragon = winner
             winnerTagVisible = true
+            launch { delay(2_000L); winnerTagVisible = false }
             launch(Dispatchers.IO) { soundManager.playDham() }
             historyList = (listOf(winner) + historyList).take(20)
 
@@ -2047,9 +2048,6 @@ private fun DragonBattleMainOverlay(
                 coinAnimPhase = 3
                 scatteredCoins = emptyList()
             }
-            delay(2_000L)
-            winnerTagVisible = false
-
             val randomPopupAmount = listOf(5_000L, 12_500L, 25_000L, 48_000L, 75_000L, 120_000L, 250_000L, 500_000L, 850_000L)[Random(sharedRoundId xor 0x5F3759DFL).nextInt(9)]
             cornerPopupText = "+${formatShortAmount(randomPopupAmount)}"
             cornerPopupProgress.snapTo(0f)
