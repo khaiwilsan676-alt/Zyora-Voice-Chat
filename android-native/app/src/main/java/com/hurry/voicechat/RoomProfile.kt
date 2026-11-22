@@ -268,7 +268,7 @@ fun RoomProfile(
 
     val showLeaveSeat = isCurrentUser && user.isInSeat
     // Admins must never see moderation controls on the room owner's profile.
-    val showModerationRow = canModerate && !isCurrentUser && !user.isRoomOwner
+    val showModerationRow = canModerate && !isCurrentUser && !isRoomOwner
     val showActions = !isCurrentUser
 
     val authPrefs = remember(context) { context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE) }
