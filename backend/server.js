@@ -703,10 +703,6 @@ app.get("/api/rooms", async (req, res) => {
 
 app.put("/api/rooms", async (req, res) => {
   try {
-    if (!db) {
-      return res.status(503).json({ error: "GitHub storage is not connected" });
-    }
-
     const data = req.body || {};
 
     // Strict room ID definition using accountId or user uid
@@ -722,7 +718,7 @@ app.put("/api/rooms", async (req, res) => {
       return res.status(400).json({ error: "Missing room accountId" });
     }
 
-    const rooms = db.collection("rooms");
+    const rooms = db ? db.collection("rooms") : null;
     const roomFilter = {
       $or: [
         { accountId },
@@ -794,16 +790,16 @@ app.put("/api/rooms", async (req, res) => {
       { upsert: true }
     );
 
-    await rooms.updateOne(
-      roomFilter,
-      {
-        $set: roomData,
-        $setOnInsert: {
-          createdAt: Date.now()
-        }
-      },
-      { upsert: true }
-    );
+    if (rooms) {
+      await rooms.updateOne(
+        roomFilter,
+        {
+          $set: roomData,
+          $setOnInsert: { createdAt: Date.now() }
+        },
+        { upsert: true }
+      );
+    }
 
     if (redis) {
       try { await redis.del("rooms:list:v1"); }
