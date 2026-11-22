@@ -131,8 +131,7 @@ export default function SpecialIdsPanel({ users = [], ownerKey }: { users?: User
             inputMode="numeric"
             className="h-10 w-40 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-800 outline-none"
           /> : <div className="flex flex-wrap gap-2">
-            {[["officialHead","Official Head","/file_000000005c388246a5d95dba880d7eb9.png"],["official","Official","/IMG_20261027_102250.png"],["admin","Admin","/IMG_20261027_114117.png"],["service","Service","/IMG_20261027_102207.png"],["host","Host","/IMG_20261028_154914.png"],["coinSeller","Coin Seller","/IMG_20261027_105359.png"],["vip","VIP","/IMG_20261027_102250.png"],["premium","Premium","/IMG_20261027_102250.png"]].map(tag => <button key={tag[0]} type="button" onClick={() => setTagImage(tag[2])} className={"flex h-12 items-center justify-center rounded-lg border px-2 " + (tagImage === tag[2] ? "border-slate-900 bg-slate-100 ring-2 ring-slate-300" : "border-slate-200 bg-white")} title={tag[1]} aria-label={tag[1]}><img src={tag[2]} alt={tag[1]} className="h-8 max-w-[76px] object-contain" /></button>)}
-          </div>}
+            {<button type="button" onClick={() => setTagImage("/IMG_20261101_125212.png")} className={"flex h-12 items-center justify-center rounded-lg border px-3 " + (tagImage === "/IMG_20261101_125212.png" ? "border-slate-900 bg-slate-100 ring-2 ring-slate-300" : "border-slate-200 bg-white")} title="Official ID image" aria-label="Official ID image"><img src="/IMG_20261101_125212.png" alt="Official ID" className="h-8 max-w-[76px] object-contain" /></button>}</div>}
           {kind === 'id' && <div className="relative">
             <button type="button" onClick={() => setMenuOpen(value => !value)} className="flex h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700">
               <BadgeCheck className="h-4 w-4" /> ID Badge <ChevronDown className="h-4 w-4" />
@@ -190,7 +189,7 @@ export default function SpecialIdsPanel({ users = [], ownerKey }: { users?: User
                   <td className="px-3 py-3 font-semibold text-slate-700">{user.hurryId || '—'}</td>
                   <td className="px-3 py-3 font-semibold text-slate-700">
                     <span className="inline-flex items-center gap-2">
-                      {idActive && <><img src="/IMG_20261101_125212.png" alt="ID Badge" className="h-5 w-auto object-contain" />{user.vipId}</>}
+                      {idActive && <><img src="/IMG_20261101_125212.png" alt="Official ID" className="h-5 w-auto object-contain" />{user.vipId}</>}
                       {tagActive && <img src={user.ownerImageTag} alt="Assigned image tag" className="h-7 max-w-[90px] object-contain" />}
                     </span>
                   </td>
