@@ -1962,3 +1962,10 @@ Current documentation does not certify that all historical features are build-, 
 
 ## Dragon Battle timing update
 - `DragonBattle.kt`: Dragon Battle betting is now exactly 20 seconds; each of the 9 cards reveals at 1.5-second intervals; the winning dragon tag is visible for 2 seconds only. Existing round cadence, pot coin gather-to-winning-pot then fly-to-bottom-left animation, wallet transactions, and UI layout are preserved.
+
+
+## Owner/Admin self-mute from room profile (2026-11-22)
+- When the room owner or an admin opens their own occupied-seat profile, show a Mute/Unmute action beside Leave.
+- Self mute toggles only that user's microphone via the existing `self_mute` room-seat action; it does not use moderator mute and does not affect other users.
+- Other-user moderation behavior remains unchanged.
+- Updated: `android-native/app/src/main/java/com/hurry/voicechat/RoomProfile.kt` and `RoomPage.kt`.
