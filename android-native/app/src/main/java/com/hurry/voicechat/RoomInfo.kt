@@ -301,9 +301,11 @@ fun RoomInfo(
                     }
                 }
                 FallbackAsyncImage(
-                    model = roomData.roomDp.trim().takeIf { it.isNotBlank() && it != "null" && it != "undefined" }
-                        ?: ownerDisplayImage.trim().takeIf { it.isNotBlank() && it != "null" && it != "undefined" }
-                        ?: ZYORA_DEFAULT_AVATAR_URL,
+                    model = roomData.roomDp.trim().takeIf {
+                        it.isNotBlank() && it != "null" && it != "undefined" &&
+                            !it.equals("/default-avatar.png", true) &&
+                            !it.endsWith("/default-avatar.png", true)
+                    } ?: ZYORA_DEFAULT_AVATAR_URL,
                     contentDescription = "Room",
                     modifier = Modifier.align(Alignment.TopCenter).offset(y = (-40).dp)
                         .requiredSize(80.dp).clip(RoundedCornerShape(12.dp))
