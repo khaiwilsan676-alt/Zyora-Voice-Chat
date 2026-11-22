@@ -1641,6 +1641,7 @@ private fun DragonBattleMainOverlay(
     var winnerTimer by remember { mutableIntStateOf(5) }
     var roundBetAmount by remember { mutableLongStateOf(0L) }
     var roundWinAmount by remember { mutableLongStateOf(0L) }
+    var dragonWinnerRoundId by remember { mutableLongStateOf(0L) }
 
     var potA by remember { mutableLongStateOf(0L) }
     var youA by remember { mutableLongStateOf(0L) }
@@ -1735,6 +1736,7 @@ private fun DragonBattleMainOverlay(
             // 4. Winner tag + Dham sound + White rays + History (max 20)
             val winner = pickDragonWinner(dealt.first, dealt.second, dealt.third)
             val sharedWinnerRound = System.currentTimeMillis() / 60_000L
+            dragonWinnerRoundId = sharedWinnerRound
             dragonWinnerSocket?.emit(
                 "dragonbattle_top_winners_request",
                 JSONObject().put("round", sharedWinnerRound)
@@ -1805,6 +1807,20 @@ private fun DragonBattleMainOverlay(
                 winnerTimer = 4 - step
             }
             winnerOpen = false
+        }
+    }
+
+    // Re-fetch the same result round while the existing winner sheet is visible.
+    // The winner write is asynchronous on the server, so one early request can return empty.
+    LaunchedEffect(winnerOpen, dragonWinnerRoundId) {
+        if (winnerOpen && dragonWinnerRoundId > 0L) {
+            repeat(12) {
+                dragonWinnerSocket?.emit(
+                    "dragonbattle_top_winners_request",
+                    JSONObject().put("round", dragonWinnerRoundId)
+                )
+                delay(250L)
+            }
         }
     }
 
