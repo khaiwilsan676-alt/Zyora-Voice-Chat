@@ -147,7 +147,7 @@ export default function SpecialIdsPanel({ users = [], ownerKey }: { users?: User
             className="h-10 w-20 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-800 outline-none"
           />}
           <button type="button" onClick={assignId} disabled={saving || !selectedUser} className="h-10 rounded-lg bg-slate-900 px-4 text-xs font-bold text-white disabled:opacity-40">
-            {saving ? 'Sending…' : 'Give ID'}
+            {saving ? 'Saving…' : kind === 'id' ? 'Give ID' : 'Give Tag'}
           </button>
         </div>
         {selectedUser && (
@@ -168,7 +168,7 @@ export default function SpecialIdsPanel({ users = [], ownerKey }: { users?: User
               <th className="px-3 py-3">Name</th>
               <th className="px-3 py-3">App ID</th>
               <th className="px-3 py-3">VIP ID</th>
-              <th className="px-3 py-3">Days</th>
+              <th className="px-3 py-3">Duration</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50">
@@ -188,7 +188,7 @@ export default function SpecialIdsPanel({ users = [], ownerKey }: { users?: User
                       {user.vipId}
                     </span>
                   </td>
-                  <td className="px-3 py-3 text-slate-600">{remaining ?? user.vipIdDays ?? user.vipDays ?? user.specialIdDays ?? '—'}</td>
+                  <td className="px-3 py-3 text-slate-600">{user.vipIdExpiresAt ? `${remaining ?? 0} days` : 'Permanent'}</td>
                 </tr>
               );
             })}
