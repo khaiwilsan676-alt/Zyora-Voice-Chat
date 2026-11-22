@@ -1308,8 +1308,22 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
        val pending = runCatching {
         JSONArray(pendingWalletPrefs.getString(pendingWalletKey(), "[]") ?: "[]")
        }.getOrDefault(JSONArray())
-       val pendingDelta = (0 until pending.length()).sumOf {
-        pending.optJSONObject(it)?.optLong("delta") ?: 0L
+       // The server includes transactionId after it has already applied that
+       // transaction. Remove that exact queued item before merging, otherwise
+       // its optimistic delta would be counted twice until the next queue sync.
+       val appliedId = payload.optString("transactionId")
+       val remaining = JSONArray()
+       for (index in 0 until pending.length()) {
+        val item = pending.optJSONObject(index) ?: continue
+        if (appliedId.isBlank() || item.optString("id") != appliedId) remaining.put(item)
+       }
+       if (appliedId.isNotBlank() && remaining.length() != pending.length()) {
+        synchronized(pendingWalletPrefs) {
+         check(pendingWalletPrefs.edit().putString(pendingWalletKey(), remaining.toString()).commit())
+        }
+       }
+       val pendingDelta = (0 until remaining.length()).sumOf {
+        remaining.optJSONObject(it)?.optLong("delta") ?: 0L
        }
        val visible = (updatedBalance + pendingDelta).coerceAtLeast(0L)
        balance = visible
