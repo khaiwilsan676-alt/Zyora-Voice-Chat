@@ -1374,13 +1374,13 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
   val now=Calendar.getInstance()
   val date=String.format("%04d.%02d.%02d %02d:%02d",now.get(Calendar.YEAR),now.get(Calendar.MONTH)+1,now.get(Calendar.DAY_OF_MONTH),now.get(Calendar.HOUR_OF_DAY),now.get(Calendar.MINUTE))
 
-  // Serialize every local balance mutation with initial refresh and server sync.
-  // This prevents a late GET/sync response from overwriting a newer bet or win.
-  walletSyncMutex.withLock {
-   if(delta<0L)check(balance>=amount){"Not enough coins"}
-   val next=(balance+delta).coerceAtLeast(0L)
-   balance=next
-   walletCachePrefs.edit().putLong("balance_$userId",next).apply()
+  // Apply the bet/win to the on-screen wallet immediately. Never wait for
+  // the network-sync mutex here: that mutex can be held during slow HTTP calls.
+  if(delta<0L)check(balance>=amount){"Not enough coins"}
+  val next=(balance+delta).coerceAtLeast(0L)
+  balance=next
+  walletCachePrefs.edit().putLong("balance_$userId",next).apply()
+  synchronized(pendingWalletPrefs) {
    val queue=runCatching{JSONArray(pendingWalletPrefs.getString(pendingWalletKey(),"[]")?:"[]")}.getOrDefault(JSONArray())
    queue.put(JSONObject().put("id",transactionId).put("delta",delta).put("title",title).put("date",date))
    check(pendingWalletPrefs.edit().putString(pendingWalletKey(),queue.toString()).commit()){"Could not save pending Wallet transaction"}
