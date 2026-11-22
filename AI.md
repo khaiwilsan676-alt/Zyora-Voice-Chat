@@ -1810,3 +1810,8 @@ Current documentation does not certify that all historical features are build-, 
 - Global leaderboard totals are now grouped, sorted, and limited inside MongoDB. The server no longer downloads up to 150,000 contribution documents into Node.js for every leaderboard request.
 - Home room cards already use a keyed LazyColumn with a stable row key and a shared Room/SQLite warm cache; no home UI redesign was made in this pass.
 - Verification: Zyora-Server JavaScript syntax check passed. Android Kotlin compilation, Render deployment, and real-device scroll/latency profiling remain unverified.
+
+
+## 2026-11-22 — Wild Party winner display duration
+- `Wildparty.kt`: increased the winner display timer from 5 to 7 seconds, including the initial countdown state and auto-close loop. The winner result, payout, wallet transaction, animation, sounds, and layout are unchanged.
+- Native APK build and on-device winner-duration verification are required; no runtime result is claimed.
