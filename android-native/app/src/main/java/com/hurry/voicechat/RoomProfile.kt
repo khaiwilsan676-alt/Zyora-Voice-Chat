@@ -196,7 +196,7 @@ fun RoomProfile(
             }
             // Always refresh tag flags from the same remote profile source used by Public Profile.
             // Cached profile data must not hide a newly assigned Seller tag.
-            sequenceOf("officialHeadTag", "officialTag", "adminTag", "serviceTag", "csTag", "hostTag", "isHost", "coinSellerTag", "coinSeller", "sellerTag", "vipTag", "premiumTag", "vipId", "vipIdDays", "vipIdAssignedAt", "vipIdExpiresAt", "vipIdBadge", "vipIdBadgeType", "ownerCustomTag", "ownerCustomTagExpiresAt").forEach { key ->
+            sequenceOf("officialHeadTag", "officialTag", "adminTag", "serviceTag", "csTag", "hostTag", "isHost", "coinSellerTag", "coinSeller", "sellerTag", "vipTag", "premiumTag", "vipId", "vipIdDays", "vipIdAssignedAt", "vipIdExpiresAt", "vipIdBadge", "vipIdBadgeType", "ownerCustomTag", "ownerCustomTagExpiresAt", "ownerImageTag", "ownerImageTagExpiresAt").forEach { key ->
                 if (latest.has(key)) merged.put(key, latest.opt(key))
             }
             val sellerEnabled = latest.optBoolean("coinSellerTag", false) ||
@@ -443,8 +443,8 @@ fun RoomProfile(
                             }
                         }
 
-                        val ownerTag = cachedProfile?.optString("ownerCustomTag", "").orEmpty().takeIf { it.isNotBlank() && (cachedProfile?.optLong("ownerCustomTagExpiresAt", 0L) ?: 0L).let { expiry -> expiry == 0L || expiry > System.currentTimeMillis() } }
-                        if (ownerTag != null) Text(ownerTag, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF7C3AED), modifier = Modifier.padding(top = 6.dp))
+                        val ownerImageTag = loadedProfile?.optString("ownerImageTag", "").orEmpty().takeIf { it.isNotBlank() && (loadedProfile?.optLong("ownerImageTagExpiresAt", 0L) ?: 0L).let { expiry -> expiry == 0L || expiry > System.currentTimeMillis() } }
+                        if (ownerImageTag != null) AsyncImage(model = ownerImageTag.fullUrl(), contentDescription = "Owner assigned image tag", contentScale = ContentScale.Fit, modifier = Modifier.padding(top = 6.dp).height(22.dp).widthIn(max = 100.dp))
                         roomProfileTags.drop(3).chunked(3).forEach { tagRow ->
                             Row(
                                 modifier = Modifier.padding(top = 8.dp),
