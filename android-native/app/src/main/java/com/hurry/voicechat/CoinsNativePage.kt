@@ -833,8 +833,9 @@ private fun AgentContent(onChat: (String, String, String) -> Unit, currentUserId
         }
     }
 
-    DisposableEffect(sellers) {
-        if (sellers.isEmpty()) return@DisposableEffect onDispose { }
+    val latestSellers by rememberUpdatedState(sellers)
+    var presenceSocket by remember { mutableStateOf<Socket?>(null) }
+    DisposableEffect(Unit) {
         val socket = runCatching {
             IO.socket("https://zyora-server.onrender.com", IO.Options().apply {
                 transports = arrayOf("websocket")
@@ -850,14 +851,14 @@ private fun AgentContent(onChat: (String, String, String) -> Unit, currentUserId
             val id = payload.optString("userId")
             val account = payload.optString("accountId")
             val online = payload.optBoolean("online", false)
-            sellers.filter { it.uid == id || it.accountId == id || it.uid == account || it.accountId == account }
+            latestSellers.filter { it.uid == id || it.accountId == id || it.uid == account || it.accountId == account }
                 .forEach { seller ->
                     onlineById = onlineById + (seller.uid to online) + (seller.accountId to online)
                 }
         }
         val onlineListener = Emitter.Listener { args ->
             val id = args.firstOrNull()?.toString().orEmpty()
-            sellers.filter { it.uid == id || it.accountId == id }.forEach { seller ->
+            latestSellers.filter { it.uid == id || it.accountId == id }.forEach { seller ->
                 onlineById = onlineById + (seller.uid to true) + (seller.accountId to true)
             }
         }
@@ -870,17 +871,29 @@ private fun AgentContent(onChat: (String, String, String) -> Unit, currentUserId
         socket.on("presence_status", statusListener)
         socket.on("user_online", onlineListener)
         socket.on("user_offline", offlineListener)
-        socket.connect()
-        sellers.forEach { seller ->
-            socket.emit("check_presence", seller.uid)
-            socket.emit("check_presence", seller.accountId)
+        socket.on(Socket.EVENT_CONNECT) {
+            latestSellers.forEach { seller ->
+                socket.emit("check_presence", seller.uid)
+                socket.emit("check_presence", seller.accountId)
+            }
         }
+        presenceSocket = socket
+        socket.connect()
         onDispose {
             socket.off("presence_status", statusListener)
             socket.off("user_online", onlineListener)
             socket.off("user_offline", offlineListener)
             socket.disconnect()
             socket.close()
+            presenceSocket = null
+        }
+    }
+    LaunchedEffect(sellers) {
+        presenceSocket?.takeIf { it.connected() }?.let { socket ->
+            sellers.forEach { seller ->
+                socket.emit("check_presence", seller.uid)
+                socket.emit("check_presence", seller.accountId)
+            }
         }
     }
 
