@@ -1776,3 +1776,10 @@ Current documentation does not certify that all historical features are build-, 
 - Dragon Battle pot panels now use an opaque dark-brown fill (`#32190D`) instead of the translucent fill. No other game styling or layout intentionally changed.
 - Commits: Zyora Server `8131b0928f2dcd9bc8ed543b69e07ce94b4920ad`; native Dragon Battle `bcda29a3cddca3a42284c4735e28021dcbedecab`; native Coins Wallet `8ebcc009a785e6b7559708822a32aa297d557fcf`.
 - Verification: source commits are present. Render deployment, native APK compilation, and live two-account tests for bet debit, win credit, cross-screen balance sync, reconnect, duplicate transaction retry, and insufficient-balance rollback are still required; no runtime success is claimed.
+
+### Dragon Battle wallet real-time sync
+- Dragon Battle bets and payouts use the same MongoDB `users.coins` balance as the main Coins Wallet.
+- The backend exposes an uncached Dragon Battle balance read endpoint and atomic, idempotent bet/win transactions; successful commits emit `wallet_balance_updated` to the registered user socket room.
+- Native Dragon Battle and Coins Wallet listen for balance events and persist the latest shared wallet snapshot; Dragon Battle preserves pending optimistic deltas while reconciling server updates.
+- Dragon Battle HTTP handling tolerates non-JSON proxy/HTML error responses and allows longer Render cold-start response times instead of crashing while parsing HTML as JSON.
+- Dragon Battle pot panels use an opaque dark-brown fill.
