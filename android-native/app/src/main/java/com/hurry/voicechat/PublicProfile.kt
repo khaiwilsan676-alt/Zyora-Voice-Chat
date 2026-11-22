@@ -274,7 +274,7 @@ fun PublicProfileScreen(
     
     var liveProfileTags by remember(profileCacheKey, cachedProfile) { mutableStateOf(cachedProfile) }
     val originalAccNum = targetUser?.displayAccountNumber?.takeIf { it.isNotBlank() } ?: targetUser?.accountId?.takeIf { it.isNotBlank() } ?: "—"
-    val activeSpecialId = liveProfileTags?.optString("vipId", "").orEmpty().takeIf { it.matches(Regex("\\d{1,20}")) && liveProfileTags?.optLong("vipIdExpiresAt", 0L)?.let { expiry -> expiry > System.currentTimeMillis() } == true }
+    val activeSpecialId = liveProfileTags?.optString("vipId", "").orEmpty().takeIf { it.matches(Regex("\\d{1,20}")) && liveProfileTags?.optLong("vipIdExpiresAt", 0L)?.let { expiry -> expiry == 0L || expiry > System.currentTimeMillis() } == true }
     val displayAccNum = activeSpecialId ?: originalAccNum
     val hasSpecialIdBadge = activeSpecialId != null && liveProfileTags?.optBoolean("vipIdBadge", false) == true
     val isCoreOfficial = displayAccNum == "100002" || displayAccNum == "100003"
@@ -392,7 +392,7 @@ fun PublicProfileScreen(
                 merged.put("image", remoteAvatar)
                 merged.put("photo", remoteAvatar)
             }
-            val keysToSync = listOf("coverPhotos", "coverPhoto", "albumImages", "bio", "age", "gender", "country", "countryName", "countryCode", "country_code", "nationality", "location", "officialHeadTag", "officialTag", "adminTag", "serviceTag", "csTag", "hostTag", "isHost", "coinSellerTag", "coinSeller", "sellerTag", "vipId", "vipIdDays", "vipIdAssignedAt", "vipIdExpiresAt", "vipIdBadge", "vipIdBadgeType", "familyCreated", "familyName", "familyImage", "familyCreatorId", "familyCode", "familyAnnouncement")
+            val keysToSync = listOf("coverPhotos", "coverPhoto", "albumImages", "bio", "age", "gender", "country", "countryName", "countryCode", "country_code", "nationality", "location", "officialHeadTag", "officialTag", "adminTag", "serviceTag", "csTag", "hostTag", "isHost", "coinSellerTag", "coinSeller", "sellerTag", "vipId", "vipIdDays", "vipIdAssignedAt", "vipIdExpiresAt", "vipIdBadge", "vipIdBadgeType", "ownerCustomTag", "ownerCustomTagExpiresAt", "familyCreated", "familyName", "familyImage", "familyCreatorId", "familyCode", "familyAnnouncement")
             keysToSync.forEach { key ->
                 if (latest.has(key)) {
                     val value = latest.optString(key, "")
@@ -654,6 +654,10 @@ fun PublicProfileScreen(
                         }
                     }
 
+                    val ownerTag = liveProfileTags?.optString("ownerCustomTag", "").orEmpty().takeIf { it.isNotBlank() && (liveProfileTags?.optLong("ownerCustomTagExpiresAt", 0L) ?: 0L).let { expiry -> expiry == 0L || expiry > System.currentTimeMillis() } }
+                    if (ownerTag != null) {
+                        Text(ownerTag, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF7C3AED), modifier = Modifier.padding(top = 4.dp))
+                    }
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
                         if (hasSpecialIdBadge || isCoreOfficial || isRedOfficial || is500002Official || displayAccNum in setOf("500003", "500004", "500005")) {
                             AsyncImage(model = profileAsset("/IMG_20261101_125212.png"), contentDescription = "Purple ID Badge", contentScale = ContentScale.Fit, modifier = Modifier.height(25.dp).widthIn(min = 22.dp, max = 35.dp).padding(end = 4.dp))
