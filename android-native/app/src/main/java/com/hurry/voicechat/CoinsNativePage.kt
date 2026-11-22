@@ -799,7 +799,7 @@ private fun AgentContent(onChat: (String, String, String) -> Unit, currentUserId
                         whatsapp = item.optString("whatsapp")
                     )
                 }
-            }.filter { it.uid.isNotBlank() && it.accountId.isNotBlank() }.distinctBy { it.uid }
+            }.filter { it.uid.isNotBlank() && it.accountId.isNotBlank() }.distinctBy { it.accountId }
         }.getOrDefault(emptyList()))
     }
     var onlineById by remember { mutableStateOf<Map<String, Boolean>>(emptyMap()) }
