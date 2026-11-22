@@ -263,14 +263,14 @@ private val DRAGON_RANKS = listOf(
     "J" to 11, "Q" to 12, "K" to 13, "A" to 14
 )
 
-private fun dealDragonRoundCards(): Triple<List<DragonPlayingCard>, List<DragonPlayingCard>, List<DragonPlayingCard>> {
+private fun dealDragonRoundCards(roundSeed: Long? = null): Triple<List<DragonPlayingCard>, List<DragonPlayingCard>, List<DragonPlayingCard>> {
     val deck = buildList {
         for (suit in DragonSuit.entries) {
             for ((label, value) in DRAGON_RANKS) {
                 add(DragonPlayingCard(label, value, suit))
             }
         }
-    }.shuffled()
+    }.shuffled(roundSeed?.let { Random(it) } ?: Random.Default)
     return Triple(deck.subList(0, 3), deck.subList(3, 6), deck.subList(6, 9))
 }
 
@@ -1860,6 +1860,12 @@ private fun DragonBattleMainOverlay(
     LaunchedEffect(Unit) {
         launch(Dispatchers.IO) { soundManager.preload() }
         while (true) {
+            // Anchor every device to the same server-clock minute boundary.
+            // This prevents each phone from starting its own independent game loop.
+            val roundStartMs = ((System.currentTimeMillis() / 60_000L) + 1L) * 60_000L
+            delay((roundStartMs - System.currentTimeMillis()).coerceAtLeast(0L))
+            val sharedRoundId = roundStartMs / 60_000L
+
             // 1. Start Betting -> "Start Betting !" banner + 20s countdown
             isRevealing = false
             revealedCount = 0
@@ -1892,7 +1898,7 @@ private fun DragonBattleMainOverlay(
             delay(2150L)
 
             // 3. Cards show honge -> "Show !" banner + flip 1 card every 1.5s with turn sound (Group A -> B -> C)
-            val dealt = dealDragonRoundCards()
+            val dealt = dealDragonRoundCards(sharedRoundId)
             roundCards = dealt
             showBanner("Show !")
 
@@ -1915,8 +1921,7 @@ private fun DragonBattleMainOverlay(
 
             // 4. Winner tag + Dham sound + White rays + History (max 20)
             val winner = pickDragonWinner(dealt.first, dealt.second, dealt.third)
-            val sharedWinnerRound = System.currentTimeMillis() / 60_000L
-            dragonWinnerRoundId = sharedWinnerRound
+            dragonWinnerRoundId = sharedRoundId
             dragonWinnerSocket?.emit(
                 "dragonbattle_top_winners_request",
                 JSONObject().put("round", sharedWinnerRound)
