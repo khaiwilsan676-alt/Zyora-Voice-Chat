@@ -39,7 +39,11 @@ object HurryApi {
             c.requestMethod = "GET"
             c.connectTimeout = 5000
             c.readTimeout = 5000
-            c.useCaches = true
+            // Room state is mutable and server replies are explicitly no-store.
+            // Never let HttpURLConnection return an older room snapshot from its cache.
+            c.useCaches = false
+            c.setRequestProperty("Cache-Control", "no-cache")
+            c.setRequestProperty("Pragma", "no-cache")
             try {
                 val status = c.responseCode
                 if (status !in 200..299) throw java.io.IOException("Room sync failed: HTTP $status")
