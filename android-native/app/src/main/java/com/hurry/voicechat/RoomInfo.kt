@@ -37,7 +37,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 
-data class RoomInfoOwner(val id:String="",val uid:String="",val accountId:String="",val name:String,val image:String)
+data class RoomInfoOwner(val id:String="",val uid:String="",val accountId:String="",val name:String,val image:String,val vipId:String="",val vipIdBadge:Boolean=false)
 data class RoomInfoData(val roomName:String,val roomDp:String,val roomAnnouncement:String,val roomId:String)
 data class RoomInfoFollower(val accountId:String,val name:String,val image:String,val country:String="",val gender:String="")
 
@@ -267,7 +267,7 @@ fun RoomInfo(
                     }
                 }
                 AsyncImage(
-                    model = roomData.roomDp.ifBlank { "/default-avatar.png" },
+                    model = roomData.roomDp.trim().takeIf { it.isNotBlank() && it != "null" && it != "undefined" } ?: ownerDisplayImage.trim().takeIf { it.isNotBlank() && it != "null" && it != "undefined" } ?: "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/default-avatar.png",
                     contentDescription = "Room",
                     modifier = Modifier.align(Alignment.TopCenter).offset(y = (-40).dp)
                         .requiredSize(80.dp).clip(RoundedCornerShape(12.dp))
