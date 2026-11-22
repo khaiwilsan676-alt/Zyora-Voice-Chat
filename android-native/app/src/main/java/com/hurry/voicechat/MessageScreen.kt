@@ -7,9 +7,6 @@ import android.media.AudioAttributes
 import android.media.AudioManager
 import android.media.MediaPlayer
 import android.media.MediaRecorder
-import com.google.mlkit.vision.common.InputImage
-import com.google.mlkit.vision.text.TextRecognition
-import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import com.google.android.gms.tasks.Tasks
 import android.os.Build
 import android.os.Handler
@@ -818,8 +815,6 @@ fun NativeChatScreen(
     var peerOnline by remember(receiverId) { mutableStateOf(false) }
     var peerRoomId by remember(receiverId) { mutableStateOf("") }
 
-    var showChatGiftPicker by remember(receiverId) { mutableStateOf(false) }
-    var chatGiftWalletBalance by remember(currentAccountId) { mutableLongStateOf(0L) }
     LaunchedEffect(canonicalChatWalletUserId) {
         if (canonicalChatWalletUserId.isBlank()) return@LaunchedEffect
         val balance = withContext(Dispatchers.IO) {
@@ -1002,46 +997,6 @@ fun NativeChatScreen(
         withContext(Dispatchers.IO) {
             runCatching { indexDb.saveChat(localConversationKey, serialized) }
                 .onFailure { android.util.Log.e("ZyoraChat", "Could not persist chat snapshot", it) }
-        }
-    }
-    val imagePickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        if (uri != null) {
-            val messageId = currentUserId + "_" + System.currentTimeMillis()
-            chatScope.launch {
-                val containsOtherAppUi = runCatching {
-                    withContext(Dispatchers.IO) {
-                        val image = InputImage.fromFilePath(context, uri)
-                        val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
-                        try {
-                            val recognizedText = Tasks.await(recognizer.process(image)).text
-                            containsProhibitedChatText(recognizedText)
-                        } finally {
-                            recognizer.close()
-                        }
-                    }
-                }.getOrDefault(false)
-                if (containsOtherAppUi) {
-                    blockPopupText = "Can't Send Image-prohibited"
-                    return@launch
-                }
-                val imageUrl = runCatching { uploadChatImage(context, uri, messageId, "chat-image") }.getOrNull()
-                if (!imageUrl.isNullOrBlank()) {
-                    val localImage = "IMAGE::" + imageUrl
-                    messages.add(true to localImage)
-                    messageTimestamps.add(System.currentTimeMillis())
-                    messageIds.add(messageId)
-                    saveConversationPreview(receiverId, name, image, "📷 Image", System.currentTimeMillis())
-                    val payload = JSONObject().put("id", messageId).put("senderId", currentUserId)
-                        .put("senderAccountId", currentAccountId).put("receiverId", receiverId)
-                        .put("receiverAccountId", receiverId).put("senderName", currentName)
-                        .put("senderPhoto", currentPhoto).put("receiverName", name).put("receiverPhoto", image)
-                        .put("text", "📷 Image").put("type", "image").put("imageUrl", imageUrl)
-                        .put("timestamp", System.currentTimeMillis())
-                    if (chatRegistered && directSocket?.connected() == true) directSocket?.emit("private_message", payload)
-                } else {
-                    android.widget.Toast.makeText(context, "Image upload failed. Try an image under 5 MB.", android.widget.Toast.LENGTH_LONG).show()
-                }
-            }
         }
     }
     LaunchedEffect(initialRoomInvitation, chatRegistered, receiverId) {
@@ -1876,27 +1831,6 @@ fun NativeChatScreen(
                 }
             }
 
-            if (!isOfficial) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(end = 16.dp, bottom = 6.dp),
-                    contentAlignment = Alignment.CenterEnd
-                ) {
-                    IconButton(
-                        onClick = { if (!isOfficial && receiverId.isNotBlank()) showChatGiftPicker = true },
-                        enabled = !isOfficial && receiverId.isNotBlank(),
-                        modifier = Modifier.size(34.dp)
-                    ) {
-                        AsyncImage(
-                            model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/file_0000000019c4821180028eebae10dbfc.png",
-                            contentDescription = "Send gift",
-                            contentScale = ContentScale.Fit,
-                            modifier = Modifier.size(30.dp)
-                        )
-                    }
-                }
-
                 Column(
                     Modifier.fillMaxWidth()
                         .background(Color.White)
@@ -1937,14 +1871,6 @@ fun NativeChatScreen(
                         
                         Spacer(Modifier.width(10.dp))
                         
-                        IconButton(
-                            onClick = { imagePickerLauncher.launch("image/*") },
-                            enabled = !isOfficial,
-                            modifier = Modifier.size(28.dp)
-                        ) {
-                            Icon(Icons.Outlined.Image, contentDescription = "Image", tint = Color(0xFF6B7280), modifier = Modifier.size(26.dp))
-                        }
-                        Spacer(Modifier.width(10.dp))
 
                         if (isVoiceMode) {
                             Box(
@@ -2106,65 +2032,6 @@ fun NativeChatScreen(
             }
         }
     }
-    if (showChatGiftPicker && !isOfficial) {
-        GiftPicker(
-            open = true,
-            onClose = { showChatGiftPicker = false },
-            currentUserAccountId = currentAccountId,
-            currentUserName = currentName,
-            currentUserImage = currentPhoto,
-            walletBalance = chatGiftWalletBalance,
-            directMode = true,
-            directRecipient = GiftPickerRoomUser(receiverId, name, image),
-            onDebitWallet = { requested ->
-                withContext(Dispatchers.IO) {
-                    runCatching {
-                        val conn = (java.net.URL("https://zyora-server.onrender.com/api/wallet/gift-debit").openConnection() as java.net.HttpURLConnection).apply {
-                            requestMethod = "POST"; doOutput = true; connectTimeout = 12000; readTimeout = 12000
-                            setRequestProperty("Content-Type", "application/json")
-                        }
-                        try {
-                            val transactionId = "chat_gift_" + java.util.UUID.randomUUID().toString()
-                            val body = JSONObject().put("userId", canonicalChatWalletUserId).put("amount", requested).put("transactionId", transactionId).toString()
-                            conn.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
-                            val code = conn.responseCode
-                            val stream = if (code in 200..299) conn.inputStream else conn.errorStream
-                            val result = JSONObject(stream.bufferedReader().use { it.readText() })
-                            if (code !in 200..299 || !result.optBoolean("success")) null
-                            else result.optLong("balance", 0L).coerceAtLeast(0L)
-                        } finally { conn.disconnect() }
-                    }.getOrNull()
-                }?.also { chatGiftWalletBalance = it }
-            },
-            onSendCoinTransfer = { transfer ->
-                val socket = directSocket
-                if (socket != null && socket.connected() && chatRegistered) {
-                    val giftImage = transfer["giftImage"]?.toString().orEmpty()
-                    val giftName = transfer["giftName"]?.toString().orEmpty().ifBlank { "Gift" }
-                    val sentAt = System.currentTimeMillis()
-                    val giftMessageId = "gift_" + currentUserId + "_" + java.util.UUID.randomUUID()
-                    val outgoing = JSONObject()
-                        .put("id", giftMessageId)
-                        .put("senderId", currentUserId).put("senderAccountId", currentAccountId)
-                        .put("receiverId", receiverId).put("receiverAccountId", receiverId)
-                        .put("senderName", currentName).put("senderPhoto", currentPhoto)
-                        .put("receiverName", name).put("receiverPhoto", image)
-                        .put("text", "🎁 " + giftName).put("type", "gift")
-                        .put("giftName", giftName).put("giftImage", giftImage)
-                        .put("imageUrl", if (giftImage.startsWith("http")) giftImage else RAW_MSG + giftImage.trimStart('/'))
-                        .put("amount", transfer["amount"]?.toString()?.toLongOrNull() ?: 0L)
-                        .put("giftType", transfer["giftType"]?.toString().orEmpty())
-                        .put("timestamp", sentAt)
-                    messages.add(true to ("🎁 " + giftName))
-                    messageTimestamps.add(sentAt)
-                    messageIds.add(giftMessageId)
-                    saveConversationPreview(receiverId, name, image, "🎁 " + giftName, sentAt)
-                    socket.emit("private_message", outgoing)
-                }
-            },
-        )
-    }
-
     DisposableEffect(directSocket, receiverId) {
         val socket = directSocket
         val sentListener = Emitter.Listener { args ->
