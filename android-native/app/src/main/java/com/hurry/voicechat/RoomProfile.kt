@@ -255,7 +255,7 @@ fun RoomProfile(
 
     val hasAnyTag = officialHeadTag || officialTag || adminTag || serviceTag || hostTag || coinSellerTag || vipTag || premiumTag
     val originalAccountId = generateStableId(user.accountId ?: user.id ?: user.uid ?: "User")
-    val activeSpecialId = loadedProfile?.optString("vipId", "").orEmpty().takeIf { it.matches(Regex("\\d{4,20}")) && loadedProfile?.optLong("vipIdExpiresAt", 0L)?.let { expiry -> expiry > System.currentTimeMillis() } == true }
+    val activeSpecialId = loadedProfile?.optString("vipId", "").orEmpty().takeIf { it.matches(Regex("\\d{1,20}")) && loadedProfile?.optLong("vipIdExpiresAt", 0L)?.let { expiry -> expiry > System.currentTimeMillis() } == true }
     val accountId = activeSpecialId ?: originalAccountId
     val hasSpecialIdBadge = activeSpecialId != null && loadedProfile?.optBoolean("vipIdBadge", false) == true
     
