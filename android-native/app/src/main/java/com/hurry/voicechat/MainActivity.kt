@@ -806,8 +806,18 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                                 })
                                 "Customer Service" -> HurrySupport(onBack = { openedMePage = null })
                                 "Help & Feedback" -> HelpFeedbackPage(onBack = { openedMePage = null })
-                                "Friends", "Fans", "Following", "Visitors" -> FollowPage(openedMePage!!, onBack = { openedMePage = null })
-                                else -> FollowPage(openedMePage!!, onBack = { openedMePage = null })
+                                "Friends", "Fans", "Following", "Visitors" -> FollowPage(
+                                    openedMePage!!,
+                                    onBack = { openedMePage = null },
+                                    onOpenProfile = { profile -> openedMePage = null; openedPublicProfile = profile },
+                                    onOpenChat = { receiverId, name, image -> openedMePage = null; if (receiverId.isNotBlank() && receiverId != userId) openedChat = Triple(receiverId, name, image) }
+                                )
+                                else -> FollowPage(
+                                    openedMePage!!,
+                                    onBack = { openedMePage = null },
+                                    onOpenProfile = { profile -> openedMePage = null; openedPublicProfile = profile },
+                                    onOpenChat = { receiverId, name, image -> openedMePage = null; if (receiverId.isNotBlank() && receiverId != userId) openedChat = Triple(receiverId, name, image) }
+                                )
                             }
                         }
                     }
