@@ -1957,7 +1957,7 @@ private fun DragonBattleMainOverlay(
             val elapsed = (now - resetMs).coerceAtLeast(0L)
             val currentRoundStart = resetMs + (elapsed / DRAGON_ROUND_DURATION_MS) * DRAGON_ROUND_DURATION_MS
             val roundStartMs = currentRoundStart + DRAGON_ROUND_DURATION_MS
-            val sharedRoundId = ((currentRoundStart - resetMs) / DRAGON_ROUND_DURATION_MS) + 1L
+            val sharedRoundId = ((roundStartMs - resetMs) / DRAGON_ROUND_DURATION_MS) + 1L
             activeDragonRoundId = sharedRoundId
             dragonWinnerSocket?.emit("dragonbattle_top_winners_request", JSONObject().put("round", sharedRoundId))
             delay((roundStartMs - System.currentTimeMillis()).coerceAtLeast(0L))
