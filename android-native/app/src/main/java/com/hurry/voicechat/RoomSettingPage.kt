@@ -249,6 +249,8 @@ fun RoomSettingPage(
     // 🔥 COMMON SAVE FUNCTION 🔥
     val performSave = { newState: RoomSettingsDataNative ->
         scope.launch {
+            // Ignore repeated taps while the same room-settings transaction is in flight.
+            if (saving) return@launch
             saving = true
             saveError = ""
             val ready = newState.copy(
@@ -276,7 +278,15 @@ fun RoomSettingPage(
                     .putBoolean("room_locked_$stableRoomId", permanent.isLocked)
                     .putString("room_password_$stableRoomId", permanent.roomPassword)
                     .apply()
-                withContext(Dispatchers.IO) { NativeIndexDatabase(context).saveRoomLock(stableRoomId, permanent.isLocked, permanent.roomPassword) }
+                // This database row is only a local warm-cache copy; do not make the
+                // visible Save completion wait for disk I/O after the server confirms.
+                scope.launch(Dispatchers.IO) {
+                    runCatching {
+                        NativeIndexDatabase(context).saveRoomLock(
+                            stableRoomId, permanent.isLocked, permanent.roomPassword
+                        )
+                    }
+                }
                 permanent
             }.onSuccess { permanent ->
                 state = permanent
