@@ -210,8 +210,8 @@ fun RoomSettingPage(
             .toList()
     }
 
-    LaunchedEffect(sheet, roomOwnerId) {
-        if (sheet != "admin-members" || roomOwnerId.isBlank()) return@LaunchedEffect
+    LaunchedEffect(sheet, roomOwnerId, members.isEmpty()) {
+        if (sheet != "admin-members" || roomOwnerId.isBlank() || members.isNotEmpty()) return@LaunchedEffect
         val refreshed = withContext(Dispatchers.IO) {
             runCatching {
                 val encodedRoom = java.net.URLEncoder.encode(roomOwnerId, "UTF-8")
