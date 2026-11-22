@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import io.socket.client.IO
+import io.socket.client.Socket
 import io.socket.emitter.Emitter
 
 import androidx.room.*
@@ -264,6 +265,17 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int, onChat: (Strin
         authPrefs.getString("uid", null)?.takeIf { it.isNotBlank() }
             ?: authPrefs.getString("accountId", "").orEmpty()
     }
+    val walletAccountId = remember {
+        authPrefs.getString("accountId", "").orEmpty().ifBlank { walletUserId }
+    }
+    val walletSocket = remember(walletUserId, walletAccountId) {
+        runCatching {
+            IO.socket("https://zyora-server.onrender.com", IO.Options().apply {
+                transports = arrayOf("websocket")
+                reconnection = true
+            })
+        }.getOrNull()
+    }
 
     var tab by remember { mutableStateOf(initialTab) }
     // Render the last known wallet snapshot immediately; never flash zero while refreshes run.
@@ -272,6 +284,43 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int, onChat: (Strin
     }
     var diamonds by remember(walletUserId) {
         mutableStateOf(walletCachePrefs.getLong("diamonds_$walletUserId", 0L).coerceAtLeast(0L))
+    }
+    DisposableEffect(walletSocket, walletUserId, walletAccountId) {
+        val registerWalletIdentity = {
+            if (walletUserId.isNotBlank()) {
+                walletSocket?.emit(
+                    "register",
+                    JSONObject().put("userId", walletUserId).put("accountId", walletAccountId)
+                )
+            }
+        }
+        val onConnect = Emitter.Listener { registerWalletIdentity() }
+        val onBalanceUpdated = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
+            val eventUserId = payload.optString("userId")
+            val updatedBalance = payload.optLong("balance", -1L)
+            if (eventUserId in setOf(walletUserId, walletAccountId) && updatedBalance >= 0L) {
+                scope.launch {
+                    coins = updatedBalance
+                    walletCachePrefs.edit()
+                        .putLong("balance_$walletUserId", updatedBalance)
+                        .putLong("last_sync_$walletUserId", System.currentTimeMillis())
+                        .apply()
+                    withContext(Dispatchers.IO) {
+                        dao.saveUserData(UserDataEntity(balance = updatedBalance, diamonds = diamonds))
+                    }
+                }
+            }
+        }
+        walletSocket?.on(Socket.EVENT_CONNECT, onConnect)
+        walletSocket?.on("wallet_balance_updated", onBalanceUpdated)
+        if (walletSocket?.connected() == true) registerWalletIdentity() else walletSocket?.connect()
+        onDispose {
+            walletSocket?.off(Socket.EVENT_CONNECT, onConnect)
+            walletSocket?.off("wallet_balance_updated", onBalanceUpdated)
+            walletSocket?.disconnect()
+            walletSocket?.close()
+        }
     }
     var din by remember { mutableStateOf("") }
     var cin by remember { mutableStateOf("") }
