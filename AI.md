@@ -1783,3 +1783,12 @@ Current documentation does not certify that all historical features are build-, 
 - Native Dragon Battle and Coins Wallet listen for balance events and persist the latest shared wallet snapshot; Dragon Battle preserves pending optimistic deltas while reconciling server updates.
 - Dragon Battle HTTP handling tolerates non-JSON proxy/HTML error responses and allows longer Render cold-start response times instead of crashing while parsing HTML as JSON.
 - Dragon Battle pot panels use an opaque dark-brown fill.
+
+
+## 2026-11-22 — Room voice relay latency investigation
+- Backend repository: `khaiwilsan676-alt/Zyora-Server`, branch `perf/voice-relay-latency`.
+- Root cause identified in `server.js`: incoming 20 ms PCM microphone frames were first placed into a per-room/per-publisher queue and then waited for a global 20 ms polling interval before relay. This added up to one additional frame interval of avoidable latency, plus repeated timer and queue work.
+- Backend change: relay each valid frame immediately after the existing room membership, active publisher, seat, mute, and payload-size checks. Keep publisher identity in the event, exclude the sender, and retain Socket.IO room broadcast semantics for the configured adapter. Android continues to perform bounded per-speaker jitter buffering and concurrent-speaker mixing.
+- Removed the now-unused server-side voice-frame queue lifecycle. No Android UI, audio sample format, voice permission rules, speaker cap, or music relay behavior was intentionally changed.
+- Backend commit: `851281758781688675e9ba3014e050da753b3d8c`.
+- Status: **Implemented on backend branch only**. Node syntax/CI, Render deployment, measured latency, and two-device voice tests remain pending. Do not describe the issue as fully fixed until those checks pass.
