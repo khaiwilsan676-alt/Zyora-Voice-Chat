@@ -2425,7 +2425,7 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
      ) {
       frameItems.filter { item ->
        val rankIndex = when(item.first){"1st"->0;"2nd"->1;else->2}
-       rankIndex < globalRoundWinners.size
+       globalRoundWinners.isEmpty() || rankIndex < globalRoundWinners.size
       }.forEachIndexed { index, item ->
        val isFirst = item.first == "1st"
        val frame = wpAsset( item.second)
