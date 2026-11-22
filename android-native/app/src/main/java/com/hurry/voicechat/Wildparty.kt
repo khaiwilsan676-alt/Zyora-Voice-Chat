@@ -1490,7 +1490,6 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
    }.onFailure { android.util.Log.w("WildParty","Local wallet history write deferred",it) }
   }
   scope.launch {
-   delay(250)
    runCatching { syncPendingWalletChanges() }
     .onFailure { android.util.Log.w("WildParty","Wallet sync queued for retry",it) }
   }
