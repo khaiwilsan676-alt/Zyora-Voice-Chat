@@ -1039,11 +1039,9 @@ fun RoomPage(
     // Keep the vehicle video as an independent room-screen preview, not inside the entry banner.
     var roomVehiclePreview by remember(roomId) { mutableStateOf("") }
     var roomVehiclePreviewItemId by remember(roomId) { mutableStateOf("") }
-    // One vehicle animation per actual room entry. Socket reconnects, duplicate
-    // server events and the retained-socket inventory fallback must not restart it.
-    val roomVehiclePlaybackClaimed = remember(roomId, accountId) {
-        java.util.concurrent.atomic.AtomicBoolean(false)
-    }
+    // Deduplicate by the server's entry ID, not by room: every member entry
+    // must play on every viewer's device.
+    val seenRoomVehicleEntryIds = remember(roomId) { mutableStateSetOf<String>() }
     var roomGiftVideoPreview by remember(roomId) { mutableStateOf("") }
     // Turning an effect OFF also dismisses an already-running local preview.
     // This is local-only and does not broadcast a setting to other room members.
@@ -1051,7 +1049,6 @@ fun RoomPage(
         if (!entryEffectEnabled) {
             roomVehiclePreview = ""
             roomVehiclePreviewItemId = ""
-            roomVehiclePlaybackClaimed.set(false)
         }
     }
     LaunchedEffect(giftEffectEnabled) {
@@ -1165,13 +1162,13 @@ fun RoomPage(
             val vehicle = payload.optJSONObject("vehicle") ?: return@Listener
             val video = vehicle.optString("video").trim()
             if (user.isBlank() || video.isBlank() || vehicle.optLong("expiresAt") <= System.currentTimeMillis()) return@Listener
+            val entryId = payload.optString("entryId").trim()
+            if (entryId.isBlank() || !seenRoomVehicleEntryIds.add(entryId)) return@Listener
             val videoUrl = if (video.startsWith("http", true)) video else "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/" + video
             val itemId = vehicle.optString("itemId").trim()
             mainHandler.post {
-                if (roomVehiclePlaybackClaimed.compareAndSet(false, true)) {
-                    roomVehiclePreview = videoUrl
-                    roomVehiclePreviewItemId = itemId
-                }
+                roomVehiclePreview = videoUrl
+                roomVehiclePreviewItemId = itemId
             }
         }
         val avatarFrameUpdatedListener = Emitter.Listener { args ->
@@ -1606,10 +1603,9 @@ fun RoomPage(
                         else "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/" + video
                     val itemId = equipped.optString("itemId").trim()
                     mainHandler.post {
-                        if (roomVehiclePlaybackClaimed.compareAndSet(false, true)) {
-                            roomVehiclePreview = videoUrl
-                            roomVehiclePreviewItemId = itemId
-                        }
+                        // The server excludes the joining socket from room_vehicle_entry.
+                        roomVehiclePreview = videoUrl
+                        roomVehiclePreviewItemId = itemId
                     }
                 }
             }
