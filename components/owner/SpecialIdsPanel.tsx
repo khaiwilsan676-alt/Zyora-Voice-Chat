@@ -40,8 +40,8 @@ export default function SpecialIdsPanel({ users = [], ownerKey }: { users?: User
   }), [users]);
 
   const assignId = async () => {
-    if (!selectedUser || !selectedUser.hurryId || !/^\\d+$/.test(specialId.trim()) ||
-        !/^\\d{1,4}$/.test(days) || Number(days) < 1 || Number(days) > 3650) {
+    if (!selectedUser || !selectedUser.hurryId || !/^\d+$/.test(specialId.trim()) ||
+        !/^\d{1,4}$/.test(days) || Number(days) < 1 || Number(days) > 3650) {
       setStatus('Select a user and enter a numeric VIP ID and valid days (1–3650).');
       return;
     }
