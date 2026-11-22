@@ -580,8 +580,9 @@ fun RoomPage(
                         val name = saved.optString("name", saved.optString("roomName", "")).takeUnless { it == "null" }.orEmpty()
                         val rawRoomImage = sequenceOf("dp", "image", "roomDp", "Room dp", "roomImage", "imageUrl", "avatar", "photo").map { saved.optString(it, "").trim() }.firstOrNull { it.isNotBlank() && it != "null" && it != "undefined" && it != "/default-avatar.png" }.orEmpty()
                         val image = when {
-                            rawRoomImage.startsWith("data:image/", true) || rawRoomImage.isBlank() ->
+                            rawRoomImage.startsWith("data:image/", true) ->
                                 "https://zyora-server.onrender.com/api/rooms/image?roomId=$encoded"
+                            rawRoomImage.isBlank() -> ""
                             rawRoomImage.startsWith("/") -> "https://zyora-server.onrender.com$rawRoomImage"
                             else -> rawRoomImage
                         }
