@@ -50,6 +50,11 @@ private fun formatCupCoins(value: Long): String {
 @Composable
 fun RoomDailyCupTotal(roomId: String) {
     var total by remember(roomId) { mutableStateOf(0L) }
+    var totalDayKey by remember(roomId) {
+        mutableStateOf(SimpleDateFormat("yyyy-MM-dd", Locale.US).apply {
+            timeZone = TimeZone.getTimeZone("Asia/Kolkata")
+        }.format(Date()))
+    }
     var refresh by remember(roomId) { mutableIntStateOf(0) }
     LaunchedEffect(roomId) {
         while (true) {
@@ -82,8 +87,18 @@ fun RoomDailyCupTotal(roomId: String) {
                 }
             }.getOrNull()
         }
-        // A failed/304 request is not a real zero. Keep the last confirmed total.
-        if (latest != null) total = latest
+        // A failed/304 request is not a real zero. Also protect the displayed
+        // running daily total from a temporarily stale/partial response (for
+        // example, a response containing only the latest 305-coin gift).
+        // Permit a lower value only after the IST daily reset.
+        val todayKey = SimpleDateFormat("yyyy-MM-dd", Locale.US).apply {
+            timeZone = TimeZone.getTimeZone("Asia/Kolkata")
+        }.format(Date())
+        if (todayKey != totalDayKey) {
+            totalDayKey = todayKey
+            total = 0L
+        }
+        if (latest != null) total = maxOf(total, latest)
     }
     Text(
         // Room header uses compact K/M/B formatting for the complete daily sent-gift coin total.
