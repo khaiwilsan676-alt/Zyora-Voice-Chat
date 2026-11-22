@@ -1895,3 +1895,11 @@ Current documentation does not certify that all historical features are build-, 
 - `backend/server.js`: serializes Fruit Party and Wild Party winner updates per game/round to prevent concurrent Redis read-modify-write races; adds the Wild Party top-three request response for users who connect after winners have already been recorded. Existing podium layout and winner timing remain unchanged.
 - Existing Dragon Battle server ranking remains capped at three unique users, sorted by highest win amount; no additional winner cards were added.
 - Native APK build and multi-device runtime verification are required; no runtime result is claimed.
+
+
+## 2026-11-22 — Faster Redis-backed Search ID and result tags
+- Native `SearchPage.kt`: user search results now carry the saved profile gender through to the Public Profile target and show the existing compact gender icon plus country flag beneath the name. Removed only the Lv.1 artwork from Search user rows; other search layout and Room results remain unchanged.
+- Production `Zyora-Server/server.js`: retained the Redis + short-lived in-process search cache, and split numeric ID lookups onto exact-match MongoDB conditions instead of also running regex scans across names and legacy fields. Non-numeric Socket.IO search callers retain the previous text/VIP lookup behavior.
+- Search result cache rows now include gender so the gender tag can render from the cached response.
+- Commits: native `6e211a4c21d45e095f64e1af1486a3954e0efe47`; server `95c02221400587e79a30e663258849157fc4b330`.
+- Verification pending: native APK compilation, Render deployment, and real-device ID-search latency / Redis-hit checks. No measured speedup or runtime completion is claimed.
