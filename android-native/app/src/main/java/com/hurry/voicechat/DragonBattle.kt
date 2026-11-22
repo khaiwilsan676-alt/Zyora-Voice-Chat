@@ -847,37 +847,38 @@ private fun DragonWinnerWhiteRays(modifier: Modifier = Modifier) {
             center = center
         )
 
+        // Build all 12 wedges into one path and share one gradient per frame.
+        // The previous loop allocated 12 Path + 12 Brush instances on every draw.
         val rayCount = 12
         val halfSpreadDeg = 8.5f
+        val raysPath = Path()
         for (i in 0 until rayCount) {
             val baseAngle = rotation + i * (360f / rayCount)
             val a1 = Math.toRadians((baseAngle - halfSpreadDeg).toDouble())
             val a2 = Math.toRadians((baseAngle + halfSpreadDeg).toDouble())
-            val rayPath = Path().apply {
-                moveTo(center.x, center.y)
-                lineTo(
-                    center.x + (cos(a1) * radius).toFloat(),
-                    center.y + (sin(a1) * radius).toFloat()
-                )
-                lineTo(
-                    center.x + (cos(a2) * radius).toFloat(),
-                    center.y + (sin(a2) * radius).toFloat()
-                )
-                close()
-            }
-            drawPath(
-                path = rayPath,
-                brush = Brush.radialGradient(
-                    colors = listOf(
-                        Color.White.copy(alpha = 0.85f),
-                        Color.White.copy(alpha = 0.35f),
-                        Color.Transparent
-                    ),
-                    center = center,
-                    radius = radius
-                )
+            raysPath.moveTo(center.x, center.y)
+            raysPath.lineTo(
+                center.x + (cos(a1) * radius).toFloat(),
+                center.y + (sin(a1) * radius).toFloat()
             )
+            raysPath.lineTo(
+                center.x + (cos(a2) * radius).toFloat(),
+                center.y + (sin(a2) * radius).toFloat()
+            )
+            raysPath.close()
         }
+        drawPath(
+            path = raysPath,
+            brush = Brush.radialGradient(
+                colors = listOf(
+                    Color.White.copy(alpha = 0.85f),
+                    Color.White.copy(alpha = 0.35f),
+                    Color.Transparent
+                ),
+                center = center,
+                radius = radius
+            )
+        )
     }
 }
 
