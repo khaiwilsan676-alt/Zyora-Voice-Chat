@@ -173,8 +173,8 @@ private suspend fun fetchDragonWallet(userId: String): Long? = withContext(Dispa
     runCatching {
         val encoded = java.net.URLEncoder.encode(userId, "UTF-8")
         val connection = (URL("https://zyora-server.onrender.com/api/lucky-bag/wallet/$encoded").openConnection() as HttpURLConnection).apply {
-            connectTimeout = 7000
-            readTimeout = 7000
+            connectTimeout = 45000
+            readTimeout = 45000
             setRequestProperty("Cache-Control", "no-cache")
         }
         try {
@@ -1731,7 +1731,7 @@ private fun DragonBattleMainOverlay(
                 balance = (updatedBalance + walletPendingDelta).coerceAtLeast(0L)
                 walletReady = true
                 walletCachePrefs.edit()
-                    .putLong("balance_$dragonWalletUserId", updatedBalance)
+                    .putLong("balance_$dragonWalletUserId", balance)
                     .putLong("last_sync_$dragonWalletUserId", System.currentTimeMillis())
                     .apply()
             }
