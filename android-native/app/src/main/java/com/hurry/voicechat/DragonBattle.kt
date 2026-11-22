@@ -1601,10 +1601,16 @@ private fun DragonBattleMainOverlay(
                 )
             }
         }
+        val onConnect = io.socket.emitter.Emitter.Listener {
+            val round = System.currentTimeMillis() / 60_000L
+            dragonWinnerSocket?.emit("dragonbattle_top_winners_request", JSONObject().put("round", round))
+        }
         dragonWinnerSocket?.on("dragonbattle_top_winners", onWinners)
+        dragonWinnerSocket?.on(Socket.EVENT_CONNECT, onConnect)
         dragonWinnerSocket?.connect()
         onDispose {
             dragonWinnerSocket?.off("dragonbattle_top_winners", onWinners)
+            dragonWinnerSocket?.off(Socket.EVENT_CONNECT, onConnect)
             dragonWinnerSocket?.disconnect()
             dragonWinnerSocket?.close()
         }
@@ -1749,7 +1755,6 @@ private fun DragonBattleMainOverlay(
             roundWinAmount = prize
             if (prize > 0L) {
                 balance += prize
-                val sharedWinnerRound = System.currentTimeMillis() / 60_000L
                 dragonWinnerSocket?.emit(
                     "dragonbattle_winner_update",
                     JSONObject()
@@ -2515,8 +2520,6 @@ private fun DragonWinnerOverlay(
                     val avatarSize = if (isFirst) 58.dp else 52.dp
                     val rankIndex = when (item.first) { "1st" -> 0; "2nd" -> 1; else -> 2 }
                     val globalWinner = topWinners.getOrNull(rankIndex)
-                    val showMe = globalWinner != null
-
                     Column(
                         modifier = Modifier
                             .weight(1f)
