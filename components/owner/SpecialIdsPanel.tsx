@@ -17,14 +17,32 @@ type UserRow = {
   ownerImageTagExpiresAt?: number;
   vipDays?: number | string;
   specialIdDays?: number | string;
+  officialHeadTag?: boolean; officialTag?: boolean; adminTag?: boolean; serviceTag?: boolean;
+  hostTag?: boolean; coinSellerTag?: boolean; vipTag?: boolean; premiumTag?: boolean;
+  officialHeadTagExpiresAt?: number; officialTagExpiresAt?: number; adminTagExpiresAt?: number;
+  serviceTagExpiresAt?: number; hostTagExpiresAt?: number; coinSellerTagExpiresAt?: number;
+  vipTagExpiresAt?: number; premiumTagExpiresAt?: number;
 };
+
+const PROFILE_TAGS = [
+  { key: 'officialHeadTag', label: 'Official Head', image: '/file_000000005c388246a5d95dba880d7eb9.png' },
+  { key: 'officialTag', label: 'Official', image: '/IMG_20261027_102250.png' },
+  { key: 'adminTag', label: 'Admin', image: '/IMG_20261027_114117.png' },
+  { key: 'serviceTag', label: 'Service', image: '/IMG_20261027_102207.png' },
+  { key: 'hostTag', label: 'Host', image: '/IMG_20261028_154914.png' },
+  { key: 'coinSellerTag', label: 'Coin Seller', image: '/IMG_20261027_105359.png' },
+  { key: 'vipTag', label: 'VIP', image: '/IMG_20261027_102250.png' },
+  { key: 'premiumTag', label: 'Premium', image: '/IMG_20261027_102250.png' },
+] as const;
+const OFFICIAL_IMAGE_TAG = '/IMG_20261101_125212.png';
 
 export default function SpecialIdsPanel({ users = [], ownerKey }: { users?: UserRow[]; ownerKey: string }) {
   const [userQuery, setUserQuery] = useState('');
   const [specialId, setSpecialId] = useState('');
   const [days, setDays] = useState('');
   const [kind, setKind] = useState<'id' | 'tag'>('id');
-  const [tagImage, setTagImage] = useState('');
+  const [tagImage, setTagImage] = useState(OFFICIAL_IMAGE_TAG);
+  const [tagKey, setTagKey] = useState<string>('ownerImageTag');
   const [permanent, setPermanent] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserRow | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -34,7 +52,7 @@ export default function SpecialIdsPanel({ users = [], ownerKey }: { users?: User
   const matchingUsers = useMemo(() => {
     const query = userQuery.trim().toLowerCase();
     if (!query) return [];
-    return users.filter(user => [user.name, user.hurryId, user.id, user.vipId]
+    return users.filter(user => [user.name, user.hurryId, user.id, user.vipId, (user as any).vipID, (user as any).specialId]
       .some(value => String(value || '').toLowerCase().includes(query))).slice(0, 8);
   }, [users, userQuery]);
 
@@ -42,11 +60,12 @@ export default function SpecialIdsPanel({ users = [], ownerKey }: { users?: User
   const assignedUsers = useMemo(() => users.filter(user => {
     const idActive = Boolean(user.vipId && (!user.vipIdExpiresAt || user.vipIdExpiresAt > Date.now()));
     const tagActive = Boolean(user.ownerImageTag && (!user.ownerImageTagExpiresAt || user.ownerImageTagExpiresAt > Date.now()));
-    return idActive || tagActive;
+    const profileTagActive = PROFILE_TAGS.some(tag => Boolean(user[tag.key] && (!(user as any)[tag.key + 'ExpiresAt'] || (user as any)[tag.key + 'ExpiresAt'] > Date.now())));
+    return idActive || tagActive || profileTagActive;
   }), [users]);
 
   const assignId = async () => {
-    if (!selectedUser || !selectedUser.hurryId || (kind === 'id' ? !/^\d+$/.test(specialId.trim()) : !tagImage) || (!permanent && (!/^\d{1,4}$/.test(days) || Number(days) < 1 || Number(days) > 3650))) {
+    if (!selectedUser || !selectedUser.hurryId || (kind === 'id' ? !/^\d+$/.test(specialId.trim()) : (tagKey === 'ownerImageTag' ? !tagImage : !PROFILE_TAGS.some(tag => tag.key === tagKey))) || (!permanent && (!/^\d{1,4}$/.test(days) || Number(days) < 1 || Number(days) > 3650))) {
       setStatus('Select a user and enter a valid ID/tag and duration.');
       return;
     }
@@ -58,9 +77,10 @@ export default function SpecialIdsPanel({ users = [], ownerKey }: { users?: User
         headers: { 'Content-Type': 'application/json', 'x-owner-key': ownerKey },
         body: JSON.stringify({
           recipientAccountId: selectedUser.hurryId,
-          assignmentType: kind === 'id' ? 'id' : 'imageTag',
+          assignmentType: kind === 'id' ? 'id' : tagKey === 'ownerImageTag' ? 'imageTag' : 'profileTag',
           specialId: specialId.trim(),
           tagImage,
+          tagKey,
           permanent,
           days: permanent ? 0 : Number(days),
           badgeType: 'ID Badge'
@@ -78,7 +98,7 @@ export default function SpecialIdsPanel({ users = [], ownerKey }: { users?: User
       }
       if (!response.ok || !result?.success) throw new Error(result?.error || `Could not assign ID (HTTP ${response.status})`);
       setStatus(`${kind === 'id' ? 'Special ID' : 'Image tag'} ${permanent ? 'permanently' : 'for ' + days + ' days'} assigned.`);
-      setSpecialId(''); setTagImage(''); setDays(''); setPermanent(false);
+      setSpecialId(''); setTagImage(OFFICIAL_IMAGE_TAG); setDays(''); setPermanent(false);
       setUserQuery('');
     } catch (error) {
       setStatus(error instanceof Error ? error.message : 'Could not assign ID');
@@ -131,10 +151,22 @@ export default function SpecialIdsPanel({ users = [], ownerKey }: { users?: User
             inputMode="numeric"
             className="h-10 w-40 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-800 outline-none"
           /> : <div className="flex flex-wrap items-center gap-2">
-            <button type="button" onClick={() => setTagImage("/IMG_20261101_125212.png")} className={"flex h-12 items-center gap-2 rounded-lg border px-3 " + (tagImage === "/IMG_20261101_125212.png" ? "border-slate-900 bg-slate-100 ring-2 ring-slate-300" : "border-slate-200 bg-white")} title="Select official image tag" aria-label="Select official image tag">
-              <img src="https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261101_125212.png" alt="Image tag preview" className="h-8 max-w-[76px] object-contain" />
-              <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-700">Official Image Tag</span>
-            </button>
+            <select value={tagKey} onChange={event => setTagKey(event.target.value)} className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700">
+              <option value="ownerImageTag">Official Image Tag</option>
+              {PROFILE_TAGS.map(tag => <option key={tag.key} value={tag.key}>{tag.label}</option>)}
+            </select>
+            {tagKey === 'ownerImageTag' ? (
+              <div className="flex h-12 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3">
+                <img src="https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261101_125212.png" alt="Official Image Tag preview" className="h-8 max-w-[76px] object-contain" />
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-700">Official Image Tag</span>
+              </div>
+            ) : (() => {
+              const selectedTag = PROFILE_TAGS.find(tag => tag.key === tagKey);
+              return selectedTag ? <div className="flex h-12 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3">
+                <img src={"https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/" + selectedTag.image.replace(/^\\//, '')} alt={selectedTag.label} className="h-8 max-w-[90px] object-contain" />
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-700">{selectedTag.label}</span>
+              </div> : null;
+            })()}
           </div>}
           {kind === 'id' && <div className="relative">
             <button type="button" onClick={() => setMenuOpen(value => !value)} className="flex h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700">
@@ -183,7 +215,8 @@ export default function SpecialIdsPanel({ users = [], ownerKey }: { users?: User
             {assignedUsers.map((user, index) => {
               const idActive = Boolean(user.vipId && (!user.vipIdExpiresAt || user.vipIdExpiresAt > Date.now()));
               const tagActive = Boolean(user.ownerImageTag && (!user.ownerImageTagExpiresAt || user.ownerImageTagExpiresAt > Date.now()));
-              const expiry = idActive ? user.vipIdExpiresAt : user.ownerImageTagExpiresAt;
+              const activeProfileTags = PROFILE_TAGS.filter(tag => Boolean(user[tag.key] && (!(user as any)[tag.key + 'ExpiresAt'] || (user as any)[tag.key + 'ExpiresAt'] > Date.now())));
+              const expiry = idActive ? user.vipIdExpiresAt : tagActive ? user.ownerImageTagExpiresAt : (activeProfileTags[0] ? (user as any)[activeProfileTags[0].key + 'ExpiresAt'] : 0);
               const remaining = expiry ? Math.max(0, Math.ceil((expiry - Date.now()) / 86400000)) : null;
               return (
                 <tr key={user.id} className="text-sm hover:bg-slate-50/60">
@@ -194,7 +227,8 @@ export default function SpecialIdsPanel({ users = [], ownerKey }: { users?: User
                   <td className="px-3 py-3 font-semibold text-slate-700">
                     <span className="inline-flex items-center gap-2">
                       {idActive && <><img src="https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261101_125212.png" alt="Official ID" className="h-5 w-auto object-contain" />{user.vipId}</>}
-                      {tagActive && <span className="inline-flex items-center gap-1.5 rounded-md border border-violet-200 bg-violet-50 px-2 py-1"><img src="https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261101_125212.png" alt="Assigned image tag" className="h-6 max-w-[90px] object-contain" /><span className="text-[9px] font-extrabold uppercase tracking-wide text-violet-700">Image Tag</span></span>}
+                      {tagActive && <span className="inline-flex items-center gap-1.5 rounded-md border border-violet-200 bg-violet-50 px-2 py-1"><img src="https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261101_125212.png" alt="Official Image Tag" className="h-6 max-w-[90px] object-contain" /><span className="text-[9px] font-extrabold uppercase tracking-wide text-violet-700">Official Image Tag</span></span>}
+                      {activeProfileTags.map(tag => <span key={tag.key} className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-slate-50 px-2 py-1"><img src={"https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/" + tag.image.replace(/^\\//, '')} alt={tag.label} className="h-6 max-w-[90px] object-contain" /><span className="text-[9px] font-extrabold uppercase tracking-wide text-slate-700">{tag.label}</span></span>)}
                     </span>
                   </td>
                   <td className="px-3 py-3 text-slate-600">{expiry ? `${remaining ?? 0} days` : 'Permanent'}</td>
@@ -202,7 +236,7 @@ export default function SpecialIdsPanel({ users = [], ownerKey }: { users?: User
               );
             })}
             {assignedUsers.length === 0 && (
-              <tr><td colSpan={6} className="px-3 py-10 text-center text-sm font-medium text-slate-400">No users have an active VIP ID yet</td></tr>
+              <tr><td colSpan={6} className="px-3 py-10 text-center text-sm font-medium text-slate-400">No users have an active VIP ID or profile tag yet</td></tr>
             )}
           </tbody>
         </table>
