@@ -1970,12 +1970,12 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                             showSeatSheet = false
                         } else if (canManageRoomSeats) {
                             showSeatSheet = true
-                        } else if (!tappedSeat.locked && accountId.isNotBlank() && accountId != "guest") {
+                        } else if (accountId.isNotBlank() && accountId != "guest") {
                             val displayName = roomDisplayName.ifBlank { "User" }
                             val displayImage = roomDisplayImage.ifBlank { ZYORA_DEFAULT_AVATAR_URL }
                             val user = JSONObject().put("name", displayName).put("image", displayImage).put("accountId", accountId)
                             val targetIndex = seats.indexOfFirst { it.number == tappedSeat.number }
-                            if (targetIndex >= 0 && !seats[targetIndex].occupied && !seats[targetIndex].locked) {
+                            if (targetIndex >= 0 && !seats[targetIndex].occupied) {
                                 // Move this account off its previous seat immediately.
                                 // Previously only the destination was painted optimistically,
                                 // leaving the old avatar visible until the server snapshot.
@@ -1992,7 +1992,7 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                                 }
                                 seats[targetIndex] = seats[targetIndex].copy(
                                     occupied = true, userName = displayName, userImage = displayImage,
-                                    accountId = accountId, muted = false
+                                    accountId = accountId, muted = tappedSeat.muted, locked = false
                                 )
                                 roomSocketRef.value?.emit(
                                     "room_seat_action",
@@ -3150,7 +3150,7 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                 isMySeat=seat.occupied && seat.accountId==accountId,
                 onDismiss={showSeatSheet=false;selectedSeat=0},
                 onTake={
-                    if(!seat.occupied && !seat.locked) {
+                    if(!seat.occupied) {
                         val user = JSONObject().put("name",roomDisplayName.ifBlank{"User"}).put("image",roomDisplayImage.ifBlank{ZYORA_DEFAULT_AVATAR_URL}).put("accountId",accountId)
                         // A seat move is one local state transition: clear every previous
                         // seat for this account BEFORE painting the destination. Otherwise
@@ -3161,7 +3161,7 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                             val previous = seats[index]
                             seats[index] = NativeRoomSeat(number = previous.number, locked = previous.locked)
                         }
-                        if(seatIndex>=0) seats[seatIndex]=seat.copy(occupied=true,userName=roomDisplayName.ifBlank{"User"},userImage=roomDisplayImage.ifBlank { ZYORA_DEFAULT_AVATAR_URL },accountId=accountId,muted=false,selfMuted=false,speaking=false,locked=false)
+                        if(seatIndex>=0) seats[seatIndex]=seat.copy(occupied=true,userName=roomDisplayName.ifBlank{"User"},userImage=roomDisplayImage.ifBlank { ZYORA_DEFAULT_AVATAR_URL },accountId=accountId,muted=seat.muted,selfMuted=false,speaking=false,locked=false)
                         roomSocketRef.value?.emit("room_seat_action",JSONObject().put("roomId",roomId).put("userId",accountId).put("action","take").put("seatNumber",seat.number).put("user",user))
                         showSeatSheet=false;selectedSeat=0
                     }
