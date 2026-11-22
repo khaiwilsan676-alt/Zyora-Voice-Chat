@@ -1876,3 +1876,10 @@ Current documentation does not certify that all historical features are build-, 
 - Equipped avatar frames already render through the shared `NativeAvatarFrameOverlay` in occupied room seats, Public Profile, Room Profile, and Me; the room listens for `avatar_frame_updated` to refresh other members' seats.
 - `MessageScreen.kt`: removed the direct-chat Gift Picker entry point, its wallet fetch/debit UI flow, and the image-send picker/control. Existing text and voice-message flows are retained; previously received image messages continue to render.
 - No chat server protocol, wallet transaction behavior elsewhere, room layout, or frame appearance was changed. Native APK compilation and multi-device room-entry playback checks remain pending.
+
+
+## 2026-11-22 — Room Cup sender totals identity reconciliation
+- `Zyora-Server/server.js`: the room contributions endpoint previously summed every sent gift into `totalRoomCoins`, but grouped leaderboard rows only by the literal `senderId`. Legacy gift records written with a Firebase UID while the room UI requests an accountId could therefore appear in the room-wide 2M total but be omitted from, or split across, the sender's daily/weekly row.
+- Resolve historical sender aliases (UID, id, accountId, accountNumber, displayUserNumber) to the canonical account ID before grouping; aggregate each sent gift record once and match the current user's aliases for the footer row.
+- Mark the contributions response `Cache-Control: no-store` so daily/weekly values are not held by an intermediary cache.
+- No gift price, wallet debit, transfer, room cup UI, ranking layout, or K/M formatting changed. Backend deployment and live MongoDB/device verification are still required.
