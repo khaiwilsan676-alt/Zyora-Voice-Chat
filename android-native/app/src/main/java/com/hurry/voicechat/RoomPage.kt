@@ -3127,6 +3127,12 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                         val currentSeat = seats.getOrNull(seatIndex)
                         if (currentSeat != null) {
                             val nextLocked = !currentSeat.locked
+                            // Paint lock/unlock immediately; do not wait for the room snapshot.
+                            seats[seatIndex] = if (nextLocked) {
+                                NativeRoomSeat(number = currentSeat.number, locked = true, muted = currentSeat.muted)
+                            } else {
+                                currentSeat.copy(locked = false)
+                            }
                             roomSocketRef.value?.takeIf { it.connected() }?.emit(
                                 "room_seat_action",
                                 JSONObject().put("roomId", roomId).put("userId", accountId)
@@ -3215,7 +3221,7 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                     if (idx >= 0 && (accountId == roomOwner.accountId || accountId == roomOwner.id || accountId == roomOwner.uid || accountId == roomId || roomAdminIds.any { it.trim() in currentUserSeatIds })) {
                         val nextLocked = !seats[idx].locked
                         val lockedSeat = seats[idx]
-                        seats[idx] = if (nextLocked) NativeRoomSeat(number = selectedSeat, locked = true)
+                        seats[idx] = if (nextLocked) NativeRoomSeat(number = selectedSeat, locked = true, muted = lockedSeat.muted)
                             else lockedSeat.copy(locked = false)
                         roomSocketRef.value?.emit("room_seat_action", JSONObject().put("roomId", roomId)
                             .put("userId", accountId).put("action", "lock").put("seatNumber", selectedSeat).put("isLocked", nextLocked))
