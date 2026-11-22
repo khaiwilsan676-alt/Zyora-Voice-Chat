@@ -392,7 +392,7 @@ fun PublicProfileScreen(
                 merged.put("image", remoteAvatar)
                 merged.put("photo", remoteAvatar)
             }
-            val keysToSync = listOf("coverPhotos", "coverPhoto", "albumImages", "bio", "age", "gender", "country", "countryName", "countryCode", "country_code", "nationality", "location", "officialHeadTag", "officialTag", "adminTag", "serviceTag", "csTag", "hostTag", "isHost", "coinSellerTag", "coinSeller", "sellerTag", "vipId", "vipIdDays", "vipIdAssignedAt", "vipIdExpiresAt", "vipIdBadge", "vipIdBadgeType", "ownerCustomTag", "ownerCustomTagExpiresAt", "familyCreated", "familyName", "familyImage", "familyCreatorId", "familyCode", "familyAnnouncement")
+            val keysToSync = listOf("coverPhotos", "coverPhoto", "albumImages", "bio", "age", "gender", "country", "countryName", "countryCode", "country_code", "nationality", "location", "officialHeadTag", "officialTag", "adminTag", "serviceTag", "csTag", "hostTag", "isHost", "coinSellerTag", "coinSeller", "sellerTag", "vipId", "vipIdDays", "vipIdAssignedAt", "vipIdExpiresAt", "vipIdBadge", "vipIdBadgeType", "ownerCustomTag", "ownerCustomTagExpiresAt", "ownerImageTag", "ownerImageTagExpiresAt", "familyCreated", "familyName", "familyImage", "familyCreatorId", "familyCode", "familyAnnouncement")
             keysToSync.forEach { key ->
                 if (latest.has(key)) {
                     val value = latest.optString(key, "")
@@ -654,9 +654,9 @@ fun PublicProfileScreen(
                         }
                     }
 
-                    val ownerTag = liveProfileTags?.optString("ownerCustomTag", "").orEmpty().takeIf { it.isNotBlank() && (liveProfileTags?.optLong("ownerCustomTagExpiresAt", 0L) ?: 0L).let { expiry -> expiry == 0L || expiry > System.currentTimeMillis() } }
-                    if (ownerTag != null) {
-                        Text(ownerTag, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF7C3AED), modifier = Modifier.padding(top = 4.dp))
+                    val ownerImageTag = liveProfileTags?.optString("ownerImageTag", "").orEmpty().takeIf { it.isNotBlank() && (liveProfileTags?.optLong("ownerImageTagExpiresAt", 0L) ?: 0L).let { expiry -> expiry == 0L || expiry > System.currentTimeMillis() } }
+                    if (ownerImageTag != null) {
+                        AsyncImage(model = profileAsset(ownerImageTag), contentDescription = "Owner assigned image tag", contentScale = ContentScale.Fit, modifier = Modifier.padding(top = 4.dp).height(22.dp).widthIn(max = 100.dp))
                     }
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
                         if (hasSpecialIdBadge || isCoreOfficial || isRedOfficial || is500002Official || displayAccNum in setOf("500003", "500004", "500005")) {
