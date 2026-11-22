@@ -1374,7 +1374,7 @@ fun PublicProfileScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             if (userPhoto.isNotBlank()) {
-                                AsyncImage(model = userPhoto, contentDescription = "Avatar", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                                FallbackAsyncImage(model = userPhoto, contentDescription = "Avatar", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
                             } else {
                                 Text(avatarLetter, fontSize = 20.sp, color = Color.Black, fontWeight = FontWeight.Bold)
                             }
