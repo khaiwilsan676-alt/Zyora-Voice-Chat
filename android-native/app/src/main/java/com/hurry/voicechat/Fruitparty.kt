@@ -149,6 +149,7 @@ fun Fruitparty(onClose:()->Unit,onMinimize:(()->Unit)?=null,isMinimized:Boolean=
  var countdown by remember{mutableIntStateOf(30)}
  var chipIndex by remember{mutableIntStateOf(0)}
   var bets by remember{mutableStateOf<Map<Int,Long>>(emptyMap())}
+ var betsRound by remember{mutableIntStateOf(round)}
  var history by remember{mutableStateOf<List<FruitHistory>>(emptyList())}
  var winners by remember{mutableStateOf<List<Int>>(emptyList())}
  var showHistory by remember{mutableStateOf(false)}
@@ -182,13 +183,23 @@ fun Fruitparty(onClose:()->Unit,onMinimize:(()->Unit)?=null,isMinimized:Boolean=
  fun placeBet(id:Int){
   val amount=fruitChipValues[chipIndex]
   if(phase!=FruitPhase.BETTING||!loaded||balance<amount)return
-  scope.launch{updateWallet(-amount,"Bet placed on Fruit Party");bets=bets.toMutableMap().also{it[id]=(it[id]?:0L)+amount}}
+  val placedRound=round
+  scope.launch{
+   updateWallet(-amount,"Bet placed on Fruit Party")
+   if(round==placedRound&&phase==FruitPhase.BETTING){
+    if(betsRound!=placedRound){bets=emptyMap();betsRound=placedRound}
+    bets=bets.toMutableMap().also{it[id]=(it[id]?:0L)+amount}
+   }else{
+    updateWallet(amount,"Refund: Fruit Party round changed")
+   }
+  }
  }
  LaunchedEffect(loaded){
   if(!loaded)return@LaunchedEffect
   while(true){
    val now=System.currentTimeMillis();val elapsed=now%41_000L
    val r=fruitRound(now);val win=fruitWinner(r)
+   if(r!=round&&betsRound!=r){bets=emptyMap();betsRound=r}
    round=r;winner=win
    when{
     elapsed<30_000L->{phase=FruitPhase.BETTING;countdown=30-(elapsed/1000L).toInt();highlight=-1;handPointer=fruitSpinPath[((elapsed/1000L).toInt())%8];showResult=false}
@@ -212,7 +223,7 @@ fun Fruitparty(onClose:()->Unit,onMinimize:(()->Unit)?=null,isMinimized:Boolean=
  LaunchedEffect(phase,round,loaded){
   if(!loaded||phase!=FruitPhase.RESULT||processedRound==round)return@LaunchedEffect
   processedRound=round
-  val current=bets.toMap()
+  val current=if(betsRound==round)bets.toMap()else emptyMap()
   val winnerId=fruitWinnerId(winner)
   val earned=fruitAward(winner,current)
   val totalBet=current.values.sum()
@@ -224,6 +235,7 @@ fun Fruitparty(onClose:()->Unit,onMinimize:(()->Unit)?=null,isMinimized:Boolean=
    if(totalBet>0){history=(listOf(record)+history).take(50);fruitSaveHistory(context,history)}
    winners=(listOf(winnerId)+winners).take(18)
    bets=emptyMap()
+   betsRound=round
   }
  }
  LaunchedEffect(isMinimized){if(isMinimized)minimizedSession=true}
