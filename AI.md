@@ -1883,3 +1883,9 @@ Current documentation does not certify that all historical features are build-, 
 - Resolve historical sender aliases (UID, id, accountId, accountNumber, displayUserNumber) to the canonical account ID before grouping; aggregate each sent gift record once and match the current user's aliases for the footer row.
 - Mark the contributions response `Cache-Control: no-store` so daily/weekly values are not held by an intermediary cache.
 - No gift price, wallet debit, transfer, room cup UI, ranking layout, or K/M formatting changed. Backend deployment and live MongoDB/device verification are still required.
+
+
+## 2026-11-22 — Room Cup amount-field consistency fix
+- `Zyora-Server/server.js`: room-wide daily/weekly totals and per-sender contribution rows now use one shared amount parser with the same precedence: `amount`, then legacy `coins`, then legacy `coinAmount`.
+- This prevents legacy sent-gift records from appearing in the sender list but being omitted from the room top counter. Values are normalized to non-negative whole coin amounts and each record is counted once.
+- Gift pricing, wallet debit, Room Cup UI/layout, and room seat layout are unchanged. Render deployment and live test with four 500,000-coin gifts are still required.
