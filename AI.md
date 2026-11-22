@@ -1837,3 +1837,11 @@ Current documentation does not certify that all historical features are build-, 
 - `DragonBattle.kt` already listens for the same wallet event; `RoomPage.kt` already forwards it to Gift Picker's `walletBalance` state; `CoinsNativePage.kt` already listens and updates the main wallet snapshot. These paths are retained.
 - No game bet/payout math, gift cost, seller transfer rules, screen layout, colors, or coin artwork changed.
 - Native APK build and multi-screen device tests are required; runtime synchronization is not claimed until verified.
+
+
+## 2026-11-22 — Wallet Agent card persistence and faster room seat moderation
+- `CoinsNativePage.kt`: cache the last approved Wallet Agent seller cards in app preferences and restore them immediately on re-entry; transient empty/partial API responses no longer clear the visible seller list. Deduplicate approved sellers by UID and keep one presence socket for the Agent tab instead of reconnecting it on each 15-second data refresh.
+- `RoomPage.kt`: apply seat lock/unlock locally immediately while the authoritative room snapshot catches up. Existing locked-seat tap flow opens the owner/admin action sheet, where the owner/admin can unlock, mute, or invite; empty seats retain mute state while locked.
+- `RoomProfile.kt`: allow room owner/admin moderators to see Mute/Lock controls on the room owner's profile too; self-moderation remains hidden.
+- `backend/server.js`: skip the MongoDB admin lookup for a verified room owner to make owner lock/mute taps faster; keep DB-backed admin authorization for non-owner moderators. Owner/admin mute now applies to empty and locked seats as well as occupied seats, and locking preserves the seat's mute state. Taking a seat resets that temporary empty-seat mute state.
+- UI artwork, seat layout, voice transport, and normal user self-mute behavior are unchanged. Native APK compilation and multi-device owner/admin/locked-seat verification are pending.
