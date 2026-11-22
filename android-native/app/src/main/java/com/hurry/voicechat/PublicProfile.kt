@@ -274,7 +274,7 @@ fun PublicProfileScreen(
     
     var liveProfileTags by remember(profileCacheKey, cachedProfile) { mutableStateOf(cachedProfile) }
     val originalAccNum = targetUser?.displayAccountNumber?.takeIf { it.isNotBlank() } ?: targetUser?.accountId?.takeIf { it.isNotBlank() } ?: "—"
-    val activeSpecialId = liveProfileTags?.optString("vipId", "").orEmpty().takeIf { it.matches(Regex("\\d{4,20}")) && liveProfileTags?.optLong("vipIdExpiresAt", 0L)?.let { expiry -> expiry > System.currentTimeMillis() } == true }
+    val activeSpecialId = liveProfileTags?.optString("vipId", "").orEmpty().takeIf { it.matches(Regex("\\d{1,20}")) && liveProfileTags?.optLong("vipIdExpiresAt", 0L)?.let { expiry -> expiry > System.currentTimeMillis() } == true }
     val displayAccNum = activeSpecialId ?: originalAccNum
     val hasSpecialIdBadge = activeSpecialId != null && liveProfileTags?.optBoolean("vipIdBadge", false) == true
     val isCoreOfficial = displayAccNum == "100002" || displayAccNum == "100003"
