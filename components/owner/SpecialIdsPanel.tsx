@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { BadgeCheck, ChevronDown } from 'lucide-react';
-import { apiUrl } from '@/src/lib/api';
+const SPECIAL_ID_ASSIGN_URL = 'https://zyora-server.onrender.com/api/owner/special-ids/assign';
 
 type UserRow = {
   id: string;
@@ -48,7 +48,7 @@ export default function SpecialIdsPanel({ users = [], ownerKey }: { users?: User
     setSaving(true);
     setStatus('');
     try {
-      const response = await fetch(apiUrl('/api/owner/special-ids/assign'), {
+      const response = await fetch(SPECIAL_ID_ASSIGN_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-owner-key': ownerKey },
         body: JSON.stringify({
@@ -58,8 +58,17 @@ export default function SpecialIdsPanel({ users = [], ownerKey }: { users?: User
           badgeType: 'ID Badge'
         })
       });
-      const result = await response.json();
-      if (!response.ok || !result?.success) throw new Error(result?.error || 'Could not assign ID');
+      const responseText = await response.text();
+      let result: any;
+      try {
+        result = JSON.parse(responseText);
+      } catch {
+        const isHtml = /^\s*<!doctype\s+html|^\s*<html/i.test(responseText);
+        throw new Error(isHtml
+          ? `Zyora API returned an HTML page (HTTP ${response.status}). The Render API route is unavailable or not deployed; check the Zyora-Server deployment.`
+          : `Zyora API returned an invalid response (HTTP ${response.status}).`);
+      }
+      if (!response.ok || !result?.success) throw new Error(result?.error || `Could not assign ID (HTTP ${response.status})`);
       setStatus(result.notification === 'delivered'
         ? `ID ${specialId.trim()} assigned and Zyora System message delivered to ${selectedUser.name || 'user'}.`
         : result.notification === 'queued'
