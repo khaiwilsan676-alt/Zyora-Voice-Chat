@@ -341,6 +341,21 @@ fun RoomInfo(
                                 Text(ownerDisplayName.ifBlank{"Unknown"}, fontSize=13.sp,
                                     fontWeight=FontWeight.SemiBold, color=Color.White, maxLines=1)
                                 Text("Room owner", fontSize=10.sp, color=Color.White.copy(alpha=.55f))
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                                    val displayOwnerId = roomOwner.vipId.takeIf { roomOwner.vipIdBadge && it.matches(Regex("\\d{1,20}")) }
+                                        ?: roomOwner.accountId.ifBlank { roomOwner.id.ifBlank { roomOwner.uid } }
+                                    if (roomOwner.vipIdBadge && roomOwner.vipId.isNotBlank()) {
+                                        AsyncImage(
+                                            model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261101_125212.png",
+                                            contentDescription = "VIP ID",
+                                            modifier = Modifier.height(11.dp).widthIn(min = 12.dp, max = 16.dp),
+                                            contentScale = ContentScale.Fit
+                                        )
+                                        Text(displayOwnerId, fontSize=10.sp, color=Color.White.copy(alpha=.70f))
+                                    } else {
+                                        Text("ID: $displayOwnerId", fontSize=10.sp, color=Color.White.copy(alpha=.70f))
+                                    }
+                                }
                             }
                         }
                         AsyncImage(
