@@ -61,7 +61,7 @@ fun RoomDailyCupTotal(roomId: String) {
         val latest = withContext(Dispatchers.IO) {
             runCatching {
                 val encodedRoom = java.net.URLEncoder.encode(roomId, "UTF-8")
-                val connection = URL("https://zyora-server.onrender.com/api/rooms/$encodedRoom/contributions?period=daily").openConnection() as HttpURLConnection
+                val connection = URL("https://zyora-server.onrender.com/api/rooms/$encodedRoom/contributions?period=daily&_=${System.currentTimeMillis()}").openConnection() as HttpURLConnection
                 connection.connectTimeout = 8_000
                 connection.readTimeout = 10_000
                 // This endpoint is live contribution data. Never let an HTTP cache
@@ -116,7 +116,7 @@ fun RoomCupSheet(roomId:String,userId:String,userName:String,userImage:String,on
         val data=withContext(Dispatchers.IO) { runCatching {
             val r=java.net.URLEncoder.encode(roomId,"UTF-8")
             val u=java.net.URLEncoder.encode(userId,"UTF-8")
-            val c=URL("https://zyora-server.onrender.com/api/rooms/$r/contributions?period=$period&userId=$u").openConnection() as HttpURLConnection
+            val c=URL("https://zyora-server.onrender.com/api/rooms/$r/contributions?period=$period&userId=$u&_=${System.currentTimeMillis()}").openConnection() as HttpURLConnection
             c.connectTimeout=8000; c.readTimeout=10000
             c.useCaches = false
             c.setRequestProperty("Cache-Control", "no-cache, no-store")
