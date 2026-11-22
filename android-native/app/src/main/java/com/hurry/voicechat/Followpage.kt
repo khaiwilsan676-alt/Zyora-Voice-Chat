@@ -40,7 +40,7 @@ import io.socket.client.Socket
 import io.socket.emitter.Emitter
 
 private const val VISITOR_API = "https://zyora-server.onrender.com"
-private data class VisitorData(val id:String,val name:String,val gender:String,val avatar:String,val lastViewedAt:Long,val viewCount:Int)
+private data class VisitorData(val id:String,val name:String,val gender:String,val avatar:String,val lastViewedAt:Long,val viewCount:Int,val uid:String="",val accountId:String="",val country:String="",val countryCode:String="")
 
 private fun processVisitorRows(rows: JSONArray): List<VisitorData> {
     val rawList = (0 until rows.length()).mapNotNull { i -> 
@@ -51,7 +51,10 @@ private fun processVisitorRows(rows: JSONArray): List<VisitorData> {
                 v.optString("gender"),
                 v.optString("avatar"),
                 v.optLong("lastViewedAt"),
-                v.optInt("viewCount",1).coerceAtLeast(1)
+                v.optInt("viewCount",1).coerceAtLeast(1),
+                v.optString("uid"), v.optString("accountId"),
+                v.optString("country",v.optString("countryName")),
+                v.optString("countryCode",v.optString("country_code"))
             )
         }
     }
@@ -329,12 +332,20 @@ fun VisitorsPage(onBack:()->Unit, onOpenProfile:(RoomUser)->Unit = {}, onOpenCha
                             next.put(JSONObject(old.toString()).put("name", visitor.optString("name", old.optString("name", "User")))
                                 .put("avatar", visitor.optString("avatar", old.optString("avatar")))
                                 .put("gender", visitor.optString("gender", old.optString("gender")))
+                                .put("uid", visitor.optString("uid", old.optString("uid")))
+                                .put("accountId", visitor.optString("accountId", old.optString("accountId")))
+                                .put("country", visitor.optString("country", old.optString("country")))
+                                .put("countryCode", visitor.optString("countryCode", old.optString("countryCode")))
                                 .put("lastViewedAt", now).put("viewCount", old.optInt("viewCount", 1).coerceAtLeast(1) + 1))
                             matched = true
                         } else if (next.length() < 19) next.put(old)
                     }
                     if (!matched) next.put(0, JSONObject().put("id", visitorId).put("name", visitor.optString("name", "User"))
                         .put("avatar", visitor.optString("avatar")).put("gender", visitor.optString("gender"))
+                        .put("uid", visitor.optString("uid"))
+                        .put("accountId", visitor.optString("accountId"))
+                        .put("country", visitor.optString("country"))
+                        .put("countryCode", visitor.optString("countryCode"))
                         .put("lastViewedAt", now).put("viewCount", 1))
                     db.saveProfile(key, JSONObject().put("visitors", next))
                     rows = processVisitorRows(next)
@@ -471,7 +482,10 @@ private fun VisitorItemRow(v:VisitorData, isMyVisitorsTab:Boolean, baseUrl:Strin
                 .size(54.dp)
                 .clip(CircleShape)
                 .background(Color.LightGray)
-                .clickable { onOpenProfile(RoomUser(id=v.id, uid=v.id, accountId=v.id, name=v.name, image=v.avatar, gender=v.gender)) }
+                .then(if (!isMyVisitorsTab) Modifier.clickable {
+                    val profileId = v.accountId.ifBlank { v.uid.ifBlank { v.id } }
+                    onOpenProfile(RoomUser(id=v.id, uid=v.uid.ifBlank { profileId }, accountId=profileId, name=v.name, image=v.avatar, gender=v.gender, country=v.country, countryCode=v.countryCode))
+                } else Modifier)
         )
         Spacer(Modifier.width(12.dp))
 
