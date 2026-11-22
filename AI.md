@@ -1868,3 +1868,11 @@ Current documentation does not certify that all historical features are build-, 
 - `room_seat_action: owner_mute` now authorizes verified room owners/admins, supports empty and locked seats, blocks self-moderation, and immediately notifies the affected user's voice client so its microphone publisher stops.
 - Locking an already-muted seat preserves its mute state. Taking the seat resets the temporary empty-seat mute state.
 - Server syntax check passed in CI; contract tests and Render deployment are still pending. Live multi-device mute/unmute/lock verification remains required.
+
+
+## 2026-11-22 — Room entry video fan-out and direct-chat controls
+- `RoomPage.kt`: equipped vehicle entry videos are deduplicated by server entry ID rather than a single room-wide playback flag. Each new member's equipped entry video is shown on every existing room member's device; videos queue in arrival order so quick consecutive joins do not overwrite one another. The joining device plays its own entry video from the existing inventory fallback because the server intentionally excludes the joining socket from the room broadcast.
+- Entry event deduplication is bounded to the latest 100 IDs and pending playback is capped at 20 queued videos per room screen. Turning entry effects off clears the active and queued previews.
+- Equipped avatar frames already render through the shared `NativeAvatarFrameOverlay` in occupied room seats, Public Profile, Room Profile, and Me; the room listens for `avatar_frame_updated` to refresh other members' seats.
+- `MessageScreen.kt`: removed the direct-chat Gift Picker entry point, its wallet fetch/debit UI flow, and the image-send picker/control. Existing text and voice-message flows are retained; previously received image messages continue to render.
+- No chat server protocol, wallet transaction behavior elsewhere, room layout, or frame appearance was changed. Native APK compilation and multi-device room-entry playback checks remain pending.
