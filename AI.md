@@ -1731,3 +1731,10 @@ Current documentation does not certify that all historical features are build-, 
 - `Roomcup.kt` top counter uses compact K/M/B formatting as requested. No UI layout or colors changed.
 - Server commit: `d1a6ac897b608a882f4fc2896af56f65f07dbaf2`; native counter documentation commit: `0df62bb3366fabb48b60a0cbea3dfe54f19b9a03`.
 - Verification still required: deploy the Zyora-Server commit on Render, inspect MongoDB `room_gift_contributions` for the affected room and transfer IDs, then test one 500,000-coin gift and confirm Daily + Weekly totals each increase by 500,000. Historical missing contribution rows are not backfilled automatically. APK build and live two-device verification remain pending.
+
+
+## 2026-11-22 — Root-cause follow-up: fallback was not reactive
+- Deeper root cause: `FallbackAsyncImage.kt` read `rememberAsyncImagePainter.state` as a plain property. Coil exposes this as a StateFlow; without collecting it, a later `Error` state did not reliably trigger Compose recomposition. The fallback image could therefore remain invisible after the selected DP failed to load.
+- Fixed by collecting the painter state with `collectAsState()` and switching to the real Zyora bundled fallback asset when the selected image is invalid or errors.
+- Updated the Public Profile edit-avatar preview and Room active-user avatar to use the same fallback-aware image component, in addition to Room seats, Room Profile, Public Profile and Me.
+- Existing user DP is still preferred; no profile image is overwritten or replaced in saved data. No UI layout/styling changes.
