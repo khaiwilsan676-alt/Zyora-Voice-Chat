@@ -1958,3 +1958,7 @@ Current documentation does not certify that all historical features are build-, 
 - Native seat UI keeps the existing mute indicator over the avatar for every occupant role (owner, admin, and regular user); no seat layout or styling changes.
 - Updated native client: `android-native/app/src/main/java/com/hurry/voicechat/RoomPage.kt`.
 - Updated realtime backend: `khaiwilsan676-alt/Zyora-Server/server.js`.
+
+
+## Dragon Battle timing update
+- `DragonBattle.kt`: Dragon Battle betting is now exactly 20 seconds; each of the 9 cards reveals at 1.5-second intervals; the winning dragon tag is visible for 2 seconds only. Existing round cadence, pot coin gather-to-winning-pot then fly-to-bottom-left animation, wallet transactions, and UI layout are preserved.
