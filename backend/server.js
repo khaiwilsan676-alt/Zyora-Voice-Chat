@@ -3300,16 +3300,26 @@ io.on("connection", (socket) => {
     if (!roomId || !actorId || !Number.isInteger(seatNumber) || seatNumber < 1) return;
     if (!socketIsInRoom(socket, roomId) || !socketOwnsIdentity(socket, actorId)) return;
 
+    // Resolve the owner from socket-bound identities first. Owners do not need
+    // a MongoDB admin-list lookup for every seat mute/lock tap.
+    const actorIdentityIds = new Set([
+      actorId, socket.roomAccountId, socket.accountId,
+      socket.roomUserId, socket.userId
+    ].map(value => String(value || "").trim()).filter(Boolean));
+    const ownerIds = new Set([
+      socket.roomOwnerId, roomId
+    ].map(value => String(value || "").trim()).filter(Boolean));
+    const isRoomOwner = [...actorIdentityIds].some(id => ownerIds.has(id));
+
     let roomAdmins = [];
-    if (db && (action === "leave" || action === "lock" || action === "owner_mute" || action === "mute")) {
+    if (!isRoomOwner && db &&
+        (action === "leave" || action === "lock" || action === "owner_mute" || action === "mute")) {
       try {
         const roomDoc = await db.collection("rooms").findOne({
           $or: [{ accountId: roomId }, { roomId }, { id: roomId }]
         });
         const rawAdmins = Array.isArray(roomDoc?.admin) ? roomDoc.admin : [];
-        // Admin entries have existed as account IDs, Firebase UIDs, and objects
-        // containing either identifier. Keep every identifier instead of selecting
-        // only the first field, so the same admin is recognized on every device.
+        // Admin entries may be account IDs, Firebase UIDs, or objects with either.
         roomAdmins = rawAdmins.flatMap(value => {
           if (value && typeof value === "object") {
             return [value.accountId, value.userId, value.id, value.uid]
@@ -3323,16 +3333,6 @@ io.on("connection", (socket) => {
       }
     }
 
-    // Socket room identity may be a Firebase UID while the UI sends accountId.
-    // Match both canonical and socket-bound identities for owner/admin moderation.
-    const actorIdentityIds = new Set([
-      actorId, socket.roomAccountId, socket.accountId,
-      socket.roomUserId, socket.userId
-    ].map(value => String(value || "").trim()).filter(Boolean));
-    const ownerIds = new Set([
-      socket.roomOwnerId, roomId
-    ].map(value => String(value || "").trim()).filter(Boolean));
-    const isRoomOwner = [...actorIdentityIds].some(id => ownerIds.has(id));
     const isRoomAdmin = roomAdmins.some(id => actorIdentityIds.has(id));
     const canModerateSeats = isRoomOwner || isRoomAdmin;
 
@@ -3389,11 +3389,10 @@ io.on("connection", (socket) => {
     }
 
     if (action === "owner_mute") {
-      // Owner/admin controls the occupied seat selected in the UI.
+      // Owner/admin can toggle mute on occupied, empty, or locked seats.
+      // Empty/locked seat mute state is retained until a user takes that seat.
       if (!canModerateSeats) return;
-      if (current.isOccupied) {
-        seats.set(seatNumber, { ...current, isMuted: Boolean(data.isMuted) });
-      }
+      seats.set(seatNumber, { ...current, isMuted: Boolean(data.isMuted) });
     }
 
     if (action === "mute") {
@@ -3417,7 +3416,7 @@ io.on("connection", (socket) => {
       seats.set(seatNumber, shouldLock
         ? {
             ...current, isLocked: true, isOccupied: false, user: undefined,
-            isMuted: false, isSpeaking: false, gif: undefined, socketId: undefined,
+            isMuted: Boolean(current.isMuted), isSpeaking: false, gif: undefined, socketId: undefined,
           }
         : { ...current, isLocked: false });
     }
