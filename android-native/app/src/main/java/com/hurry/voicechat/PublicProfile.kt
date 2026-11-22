@@ -604,7 +604,10 @@ fun PublicProfileScreen(
                     ) {
                         // Owner-assigned image uses the exact same inline tag slot as 100002's Official image.
                         val ownerImageTag = liveProfileTags?.optString("ownerImageTag", "").orEmpty().takeIf { it.isNotBlank() && (liveProfileTags?.optLong("ownerImageTagExpiresAt", 0L) ?: 0L).let { expiry -> expiry == 0L || expiry > System.currentTimeMillis() } }
-                        val ownerImageTagUrl = ownerImageTag?.let { profileAsset(it) }
+                        val ownerImageTagUrl = ownerImageTag?.let { value ->
+                            if (value.startsWith("http://") || value.startsWith("https://")) value
+                            else "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/${value.trimStart('/').removePrefix("public/")}"
+                        }
                         // Original layout: first two tags stay beside the name; all remaining tags sit below.
                         val publicProfileTags = listOfNotNull(
                             if (showOfficialHead) Triple("/file_000000005c388246a5d95dba880d7eb9.png", "Official Head", 31) else null,
