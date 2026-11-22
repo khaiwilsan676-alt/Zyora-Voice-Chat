@@ -2124,7 +2124,8 @@ fun NativeChatScreen(
                             setRequestProperty("Content-Type", "application/json")
                         }
                         try {
-                            val body = JSONObject().put("userId", canonicalChatWalletUserId).put("amount", requested).toString()
+                            val transactionId = "chat_gift_" + java.util.UUID.randomUUID().toString()
+                            val body = JSONObject().put("userId", canonicalChatWalletUserId).put("amount", requested).put("transactionId", transactionId).toString()
                             conn.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
                             val code = conn.responseCode
                             val stream = if (code in 200..299) conn.inputStream else conn.errorStream
