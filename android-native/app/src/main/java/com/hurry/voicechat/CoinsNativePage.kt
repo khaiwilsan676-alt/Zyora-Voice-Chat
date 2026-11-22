@@ -134,6 +134,8 @@ private suspend fun fetchCanonicalWallet(userId: String): JSONObject? = withCont
         val connection = (URL("https://zyora-server.onrender.com/api/lucky-bag/wallet/$encoded").openConnection() as HttpURLConnection).apply {
             connectTimeout = 12000
             readTimeout = 12000
+            setRequestProperty("Cache-Control", "no-cache, no-store")
+            setRequestProperty("Pragma", "no-cache")
         }
         try {
             if (connection.responseCode !in 200..299) return@runCatching null
@@ -286,6 +288,7 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int, onChat: (Strin
     var diamonds by remember(walletUserId) {
         mutableStateOf(walletCachePrefs.getLong("diamonds_$walletUserId", 0L).coerceAtLeast(0L))
     }
+    var lastWalletEventAt by remember(walletUserId) { mutableLongStateOf(0L) }
     DisposableEffect(walletSocket, walletUserId, walletAccountId) {
         val registerWalletIdentity = {
             if (walletUserId.isNotBlank()) {
@@ -300,15 +303,20 @@ private fun WalletNativePage(onBack: () -> Unit, initialTab: Int, onChat: (Strin
             val payload = args.firstOrNull() as? JSONObject ?: return@Listener
             val eventUserId = payload.optString("userId")
             val updatedBalance = payload.optLong("balance", -1L)
-            if (eventUserId in setOf(walletUserId, walletAccountId) && updatedBalance >= 0L) {
+            val eventAt = payload.optLong("updatedAt", System.currentTimeMillis())
+            if (eventUserId in setOf(walletUserId, walletAccountId) && updatedBalance >= 0L && eventAt >= lastWalletEventAt) {
+                lastWalletEventAt = eventAt
+                val updatedDiamonds = payload.optLong("diamonds", diamonds).coerceAtLeast(0L)
                 scope.launch {
                     coins = updatedBalance
+                    diamonds = updatedDiamonds
                     walletCachePrefs.edit()
                         .putLong("balance_$walletUserId", updatedBalance)
-                        .putLong("last_sync_$walletUserId", System.currentTimeMillis())
+                        .putLong("diamonds_$walletUserId", updatedDiamonds)
+                        .putLong("last_sync_$walletUserId", eventAt)
                         .apply()
                     withContext(Dispatchers.IO) {
-                        dao.saveUserData(UserDataEntity(balance = updatedBalance, diamonds = diamonds))
+                        dao.saveUserData(UserDataEntity(balance = updatedBalance, diamonds = updatedDiamonds))
                     }
                 }
             }
