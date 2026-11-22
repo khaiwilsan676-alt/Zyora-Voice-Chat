@@ -2013,7 +2013,6 @@ fun NativeChatScreen(
                 }
             }
         }
-    }
     DisposableEffect(directSocket, receiverId) {
         val socket = directSocket
         val sentListener = Emitter.Listener { args ->
