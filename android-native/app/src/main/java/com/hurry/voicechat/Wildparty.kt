@@ -2423,8 +2423,11 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
       horizontalArrangement = Arrangement.SpaceEvenly,
       verticalAlignment = Alignment.Bottom
      ) {
-      frameItems.forEachIndexed { index, item ->
-       val isFirst = index == 1
+      frameItems.filter { item ->
+       val rankIndex = when(item.first){"1st"->0;"2nd"->1;else->2}
+       rankIndex < globalRoundWinners.size
+      }.forEachIndexed { index, item ->
+       val isFirst = item.first == "1st"
        val frame = wpAsset( item.second)
        val frameSize = if (isFirst) 84.dp else 76.dp
        val avatarSize = if (isFirst) 58.dp else 52.dp
