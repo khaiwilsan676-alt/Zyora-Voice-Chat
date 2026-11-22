@@ -74,6 +74,7 @@ export default function ManageRooms() {
       const admin = editValues.admin.split(',').map(value => value.trim()).filter(Boolean);
       const payload: Record<string, unknown> = {
         accountId: selectedRoom.roomId,
+        dp: selectedRoom.dp || '/default-avatar.png',
         name: editValues.name.trim(),
         admin,
         micMode: Number(editValues.micMode) || 15,
