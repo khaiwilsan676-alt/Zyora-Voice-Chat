@@ -1829,3 +1829,11 @@ Current documentation does not certify that all historical features are build-, 
 - These requests are now cancelled by the existing room `onDispose` cleanup when the user exits or switches rooms, preventing stale background network/JSON/database work from continuing after the room is gone. The kept/minimized room remains composed, so its work is not cancelled merely by minimizing it.
 - No room UI, voice/socket join flow, vehicle eligibility, follow behavior, wallet, or game logic was changed.
 - Verification pending: Android APK compilation and real-device room-entry/exit profiling. No measured performance gain is claimed.
+
+
+## 2026-11-22 — Live wallet balance consistency across native screens
+- `Wildparty.kt`: added a registered Socket.IO wallet listener so Wild Party receives canonical `wallet_balance_updated` events and refreshes its visible balance and shared wallet cache without reopening the game.
+- `SellerCenter.kt`: restores the last shared wallet snapshot immediately, registers for the same live balance event, and persists the authoritative balance after initial refresh and successful seller transfers.
+- `DragonBattle.kt` already listens for the same wallet event; `RoomPage.kt` already forwards it to Gift Picker's `walletBalance` state; `CoinsNativePage.kt` already listens and updates the main wallet snapshot. These paths are retained.
+- No game bet/payout math, gift cost, seller transfer rules, screen layout, colors, or coin artwork changed.
+- Native APK build and multi-screen device tests are required; runtime synchronization is not claimed until verified.
