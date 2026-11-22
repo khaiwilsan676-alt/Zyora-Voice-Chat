@@ -175,6 +175,7 @@ const memoryRoundWinners = {
 
 // Serialize each Dragon Battle round write so a page refresh cannot read before save completes.
 const dragonBattleWinnerWrites = new Map();
+const gameWinnerWrites = new Map();
 
 /*
  * roomId -> Map(userId -> socket count)
@@ -2528,12 +2529,43 @@ io.on("connection", (socket) => {
     }
   };
 
-  socket.on("fruitparty_winner_update", (payload) => {
-    handleGameWinner("fruitparty", payload);
-  });
+  const queueGameWinnerUpdate = (gameName, payload = {}) => {
+    const round = Number(payload.round || 0);
+    if (!Number.isSafeInteger(round) || round <= 0) return;
+    const queueKey = `${gameName}:${round}`;
+    const previous = gameWinnerWrites.get(queueKey) || Promise.resolve();
+    const write = previous.catch(() => {})
+      .then(() => handleGameWinner(gameName, payload))
+      .catch(error => console.error(`${gameName} winner write failed:`, error.message));
+    gameWinnerWrites.set(queueKey, write);
+    write.then(() => { if (gameWinnerWrites.get(queueKey) === write) gameWinnerWrites.delete(queueKey); });
+  };
 
-  socket.on("wildparty_winner_update", (payload) => {
-    handleGameWinner("wildparty", payload);
+  socket.on("fruitparty_winner_update", payload => queueGameWinnerUpdate("fruitparty", payload));
+  socket.on("wildparty_winner_update", payload => queueGameWinnerUpdate("wildparty", payload));
+
+  socket.on("wildparty_top_winners_request", async (payload = {}) => {
+    const round = Number(payload.round || 0);
+    if (!Number.isSafeInteger(round) || round <= 0) return;
+    const queueKey = `wildparty:${round}`;
+    const pendingWrite = gameWinnerWrites.get(queueKey);
+    if (pendingWrite) await pendingWrite;
+    let winners = [];
+    try {
+      if (redis) {
+        const stored = await redis.get(`game:winners:wildparty:${round}`);
+        if (Array.isArray(stored)) winners = stored;
+        else if (typeof stored === "string" && stored) { try { winners = JSON.parse(stored); } catch { winners = []; } }
+      }
+    } catch (error) { console.warn("Could not load Wild Party winners:", error.message); }
+    if (!Array.isArray(winners) || !winners.length) {
+      const cached = memoryRoundWinners.wildparty;
+      winners = cached.round === round ? [...cached.winners] : [];
+    }
+    socket.emit("wildparty_top_winners", winners
+      .sort((a, b) => Number(b.win || 0) - Number(a.win || 0))
+      .slice(0, 3)
+      .map(({ userKey: _key, ...winner }) => winner));
   });
 
   socket.on("dragonbattle_winner_update", (payload = {}) => {
