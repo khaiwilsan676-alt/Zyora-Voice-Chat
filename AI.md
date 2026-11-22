@@ -1861,3 +1861,10 @@ Current documentation does not certify that all historical features are build-, 
 - `backend/server.js`: verified room owners skip the MongoDB admin lookup on seat moderation; admins still use DB-backed authorization. Owner/admin mute applies to occupied, empty, and locked seats; locking preserves mute state and taking a seat resets it.
 - `RoomSettingPage.kt`: room DP and custom-theme uploads run concurrently during save, duplicate save taps are ignored while a save is in progress, owned store themes are restored from a local cache before refreshing inventory, and existing room-member data avoids an unnecessary extra followers request.
 - Room Settings appearance, room seat layout, voice transport, game/wallet economy, and moderation authorization boundaries are unchanged. Android APK compilation and multi-device seat/settings verification are still required; no measured performance gain is claimed.
+
+
+## 2026-11-22 — Live Zyora-Server seat moderation parity
+- Production backend change is in the deployed source repository `khaiwilsan676-alt/Zyora-Server/server.js` (not only the native repository's mirrored backend file).
+- `room_seat_action: owner_mute` now authorizes verified room owners/admins, supports empty and locked seats, blocks self-moderation, and immediately notifies the affected user's voice client so its microphone publisher stops.
+- Locking an already-muted seat preserves its mute state. Taking the seat resets the temporary empty-seat mute state.
+- Server syntax check passed in CI; contract tests and Render deployment are still pending. Live multi-device mute/unmute/lock verification remains required.
