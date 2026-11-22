@@ -1950,3 +1950,11 @@ Current documentation does not certify that all historical features are build-, 
 - Room Info room avatar now uses the room's own DP; when the room has no valid DP, it displays the shared Zyora default avatar asset. It no longer substitutes the owner's personal avatar for a missing room DP.
 - RoomPage no longer converts an empty room DP into the room-image API URL, which could return a transparent placeholder and suppress the default avatar.
 - No other Room Info layout, colors, or sizing were intentionally changed. APK build has not yet been verified.
+
+
+## Room seat lock and mute behavior (2026-11-22)
+- Taking a locked seat now succeeds and atomically clears its lock on the authoritative Zyora server.
+- A seat's moderator mute flag is preserved when it is taken, so the new occupant remains muted until the owner/admin unmutes that seat.
+- Native seat UI keeps the existing mute indicator over the avatar for every occupant role (owner, admin, and regular user); no seat layout or styling changes.
+- Updated native client: `android-native/app/src/main/java/com/hurry/voicechat/RoomPage.kt`.
+- Updated realtime backend: `khaiwilsan676-alt/Zyora-Server/server.js`.
