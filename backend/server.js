@@ -2447,6 +2447,32 @@ io.on("connection", (socket) => {
     handleGameWinner("dragonbattle", payload);
   });
 
+  socket.on("dragonbattle_top_winners_request", async (payload = {}) => {
+    const round = Number(payload.round || 0);
+    if (!Number.isSafeInteger(round) || round <= 0) return;
+    const key = `game:winners:dragonbattle:${round}`;
+    let winners = [];
+    try {
+      if (redis) {
+        const stored = await redis.get(key);
+        if (Array.isArray(stored)) winners = stored;
+        else if (typeof stored === "string" && stored) {
+          try { winners = JSON.parse(stored); } catch { winners = []; }
+        }
+      }
+    } catch (error) {
+      console.warn("Could not load Dragon Battle winners:", error.message);
+    }
+    if (!Array.isArray(winners) || !winners.length) {
+      const cached = memoryRoundWinners.dragonbattle;
+      winners = cached.round === round ? cached.winners : [];
+    }
+    socket.emit("dragonbattle_top_winners", winners
+      .sort((a, b) => Number(b.win || 0) - Number(a.win || 0))
+      .slice(0, 3)
+      .map(({ userKey: _key, ...winner }) => winner));
+  });
+
   socket.on("presence_online", (userId) => {
     if (!userId) return;
 
