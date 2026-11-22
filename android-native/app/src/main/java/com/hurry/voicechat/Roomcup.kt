@@ -79,7 +79,7 @@ fun RoomDailyCupTotal(roomId: String) {
         total = latest
     }
     Text(
-        // Room header must show the complete daily sent-gift coin total (no K/M/B shorthand).
+        // Room header uses compact K/M/B formatting for the complete daily sent-gift coin total.
         text = formatCupCoins(total),
         color = Color(0xFFFFD54F),
         fontSize = 11.sp,
