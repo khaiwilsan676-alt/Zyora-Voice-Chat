@@ -93,7 +93,7 @@ const databaseClient = new GitHubClient();
 let db = null;
 let mediaMongoClient = null;
 let mediaDb = null;
-let mediaMongoConnecting = false;
+let mediaMongoConnectPromise = null;
 
 const crypto = require("node:crypto");
 function authSession() { return crypto.randomBytes(32).toString("base64url"); }
@@ -1262,22 +1262,31 @@ app.post("/api/users/unblock", async (req, res) => {
 const PROFILE_MEDIA_FOLDERS = new Set(["user-dp", "user-albums", "user-covers", "room-dp", "room-theme", "chat-image", "room-chat-image"]);
 const PROFILE_MEDIA_TYPES = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif" };
 async function connectMediaMongo() {
-  if (mediaDb || mediaMongoConnecting) return mediaDb;
+  if (mediaDb) return mediaDb;
+  // Share one in-flight connection across concurrent uploads/room writes/image reads.
+  // Returning mediaDb while the first connect is pending caused parallel requests
+  // to receive null and fail with a false 503 during cold start.
+  if (mediaMongoConnectPromise) return mediaMongoConnectPromise;
   const uri = String(process.env.MONGODB_URI || process.env.MONGO_URL || "").trim();
   if (!uri) return null;
-  mediaMongoConnecting = true;
-  try {
-    mediaMongoClient = new MongoClient(uri, { serverSelectionTimeoutMS: 10000, maxPoolSize: 5 });
-    await mediaMongoClient.connect();
-    const dbName = String(process.env.MONGODB_DB_NAME || "").trim();
-    mediaDb = dbName ? mediaMongoClient.db(dbName) : mediaMongoClient.db();
-    console.log("MongoDB profile media storage ready");
-    return mediaDb;
-  } catch (error) {
-    console.error("MongoDB media connection failed:", error.message);
-    mediaMongoClient = null; mediaDb = null;
-    return null;
-  } finally { mediaMongoConnecting = false; }
+  mediaMongoConnectPromise = (async () => {
+    try {
+      mediaMongoClient = new MongoClient(uri, { serverSelectionTimeoutMS: 10000, maxPoolSize: 5 });
+      await mediaMongoClient.connect();
+      const dbName = String(process.env.MONGODB_DB_NAME || "").trim();
+      mediaDb = dbName ? mediaMongoClient.db(dbName) : mediaMongoClient.db();
+      console.log("MongoDB profile media storage ready");
+      return mediaDb;
+    } catch (error) {
+      console.error("MongoDB media connection failed:", error.message);
+      mediaMongoClient = null;
+      mediaDb = null;
+      return null;
+    } finally {
+      mediaMongoConnectPromise = null;
+    }
+  })();
+  return mediaMongoConnectPromise;
 }
 app.post("/api/upload-image", async (req, res) => {
   try {
