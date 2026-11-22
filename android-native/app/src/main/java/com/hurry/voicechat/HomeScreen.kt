@@ -308,15 +308,22 @@ fun HomeScreen(
         // Keep the cached Room/DB snapshot on screen; refresh the full server snapshot
         // less frequently so background network traffic does not compete with scrolling.
         val refreshIntervalMs = 300_000L
+        var forceRefresh = false
         while (true) {
             val lastRefreshAt = NativeRoomMemoryCache.lastRefreshAt
             val elapsedSinceRefresh = System.currentTimeMillis() - lastRefreshAt
-            if (lastRefreshAt > 0L && NativeRoomMemoryCache.rooms != null && elapsedSinceRefresh < refreshIntervalMs) {
-                withTimeoutOrNull((refreshIntervalMs - elapsedSinceRefresh).coerceAtLeast(1L)) {
+            if (!forceRefresh && lastRefreshAt > 0L && NativeRoomMemoryCache.rooms != null && elapsedSinceRefresh < refreshIntervalMs) {
+                // A manual refresh must bypass the throttle. Previously the signal was
+                // consumed and the loop immediately re-entered this wait, so refresh
+                // never happened until the five-minute timer expired.
+                val manualRequested = withTimeoutOrNull((refreshIntervalMs - elapsedSinceRefresh).coerceAtLeast(1L)) {
                     NativeRoomMemoryCache.manualRefresh.receive()
-                }
+                    true
+                } ?: false
+                if (manualRequested) forceRefresh = true
                 continue
             }
+            forceRefresh = false
             if (NativeRoomMemoryCache.refreshInFlight) {
                 kotlinx.coroutines.delay(300L)
                 continue
