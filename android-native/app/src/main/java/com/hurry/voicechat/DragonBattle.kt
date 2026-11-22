@@ -115,8 +115,66 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 private data class DragonRoundWinner(val name: String, val avatar: String, val win: Long)
+private data class DragonWalletResponse(val success: Boolean, val balance: Long, val error: String)
+
+private suspend fun dragonWalletRequest(
+    userId: String,
+    transactionId: String,
+    amount: Long,
+    action: String
+): DragonWalletResponse = withContext(Dispatchers.IO) {
+    runCatching {
+        val connection = (URL("https://zyora-server.onrender.com/api/wallet/dragon-battle").openConnection() as HttpURLConnection).apply {
+            requestMethod = "POST"
+            connectTimeout = 7000
+            readTimeout = 7000
+            doOutput = true
+            setRequestProperty("Content-Type", "application/json; charset=utf-8")
+            setRequestProperty("Cache-Control", "no-cache")
+        }
+        try {
+            val payload = JSONObject()
+                .put("userId", userId)
+                .put("transactionId", transactionId)
+                .put("amount", amount)
+                .put("action", action)
+            connection.outputStream.bufferedWriter().use { it.write(payload.toString()) }
+            val code = connection.responseCode
+            val body = (if (code in 200..299) connection.inputStream else connection.errorStream)
+                ?.bufferedReader()?.use { it.readText() }.orEmpty()
+            val json = JSONObject(body)
+            DragonWalletResponse(
+                success = code in 200..299 && json.optBoolean("success"),
+                balance = json.optLong("balance", -1L),
+                error = json.optString("error", "Wallet update failed")
+            )
+        } finally {
+            connection.disconnect()
+        }
+    }.getOrElse { DragonWalletResponse(false, -1L, it.message ?: "Wallet connection failed") }
+}
+
+private suspend fun fetchDragonWallet(userId: String): Long? = withContext(Dispatchers.IO) {
+    runCatching {
+        val encoded = java.net.URLEncoder.encode(userId, "UTF-8")
+        val connection = (URL("https://zyora-server.onrender.com/api/lucky-bag/wallet/$encoded").openConnection() as HttpURLConnection).apply {
+            connectTimeout = 7000
+            readTimeout = 7000
+            setRequestProperty("Cache-Control", "no-cache")
+        }
+        try {
+            if (connection.responseCode !in 200..299) return@runCatching null
+            JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
+                .optLong("balance", -1L).takeIf { it >= 0L }
+        } finally {
+            connection.disconnect()
+        }
+    }.getOrNull()
+}
 
 private const val BASE_URL =
     "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/"
@@ -1572,6 +1630,14 @@ private fun DragonBattleMainOverlay(
     val density = LocalDensity.current
     val soundManager = remember(context) { DragonBetSoundManager(context.applicationContext) }
     val authPrefs = remember(context) { context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE) }
+    val walletCachePrefs = remember(context) { context.getSharedPreferences("zyora_wallet_cache", Context.MODE_PRIVATE) }
+    val dragonWalletUserId = remember(authPrefs) {
+        authPrefs.getString("uid", null)?.takeIf { it.isNotBlank() }
+            ?: authPrefs.getString("accountId", "").orEmpty()
+    }
+    val walletSyncMutex = remember(dragonWalletUserId) { Mutex() }
+    var walletPendingDelta by remember(dragonWalletUserId) { mutableLongStateOf(0L) }
+    var walletReady by remember(dragonWalletUserId) { mutableStateOf(false) }
     val dragonAccountId = remember(authPrefs) {
         authPrefs.getString("accountId", "").orEmpty().ifBlank { authPrefs.getString("uid", "").orEmpty() }
     }
@@ -1631,7 +1697,9 @@ private fun DragonBattleMainOverlay(
 
     var selectedChipIndex by remember { mutableIntStateOf(0) }
     var muted by remember { mutableStateOf(false) }
-    var balance by remember { mutableLongStateOf(500_000L) }
+    var balance by remember(dragonWalletUserId) {
+        mutableLongStateOf(walletCachePrefs.getLong("balance_$dragonWalletUserId", 0L).coerceAtLeast(0L))
+    }
     var rulesOpen by remember { mutableStateOf(false) }
     var historyOpen by remember { mutableStateOf(false) }
     var historyList by remember { mutableStateOf(listOf("C", "B", "A", "B", "A")) }
@@ -1673,8 +1741,68 @@ private fun DragonBattleMainOverlay(
         activeBanner = DragonBannerEvent(bannerSeq, text)
     }
 
+    fun queueDragonWalletChange(delta: Long, action: String, onRejected: () -> Unit = {}) {
+        if (dragonWalletUserId.isBlank() || delta == 0L) {
+            onRejected()
+            return
+        }
+        val amount = kotlin.math.abs(delta)
+        val transactionId = "dragon_battle_${action}_${System.currentTimeMillis()}_${java.util.UUID.randomUUID()}"
+        walletPendingDelta += delta
+        balance = (balance + delta).coerceAtLeast(0L)
+        walletCachePrefs.edit().putLong("balance_$dragonWalletUserId", balance).apply()
+        scope.launch {
+            walletSyncMutex.withLock {
+                val result = dragonWalletRequest(dragonWalletUserId, transactionId, amount, action)
+                if (result.success && result.balance >= 0L) {
+                    walletPendingDelta -= delta
+                    balance = (result.balance + walletPendingDelta).coerceAtLeast(0L)
+                    walletCachePrefs.edit()
+                        .putLong("balance_$dragonWalletUserId", balance)
+                        .putLong("last_sync_$dragonWalletUserId", System.currentTimeMillis())
+                        .apply()
+                } else {
+                    walletPendingDelta -= delta
+                    val latest = fetchDragonWallet(dragonWalletUserId)
+                    if (latest != null) {
+                        balance = (latest + walletPendingDelta).coerceAtLeast(0L)
+                        walletCachePrefs.edit()
+                            .putLong("balance_$dragonWalletUserId", balance)
+                            .putLong("last_sync_$dragonWalletUserId", System.currentTimeMillis())
+                            .apply()
+                    } else {
+                        balance = (balance - delta).coerceAtLeast(0L)
+                    }
+                    onRejected()
+                    showBanner(if (action == "bet") "Wallet rejected bet - coins restored" else "Wallet payout sync failed")
+                    android.util.Log.e("DragonBattle", "Wallet $action failed: ${result.error}")
+                }
+            }
+        }
+    }
+
     DisposableEffect(soundManager) {
         onDispose { soundManager.release() }
+    }
+
+    LaunchedEffect(dragonWalletUserId) {
+        if (dragonWalletUserId.isBlank()) {
+            balance = 0L
+            walletReady = false
+        } else {
+            val canonical = fetchDragonWallet(dragonWalletUserId)
+            if (canonical != null) {
+                balance = (canonical + walletPendingDelta).coerceAtLeast(0L)
+                walletCachePrefs.edit()
+                    .putLong("balance_$dragonWalletUserId", balance)
+                    .putLong("last_sync_$dragonWalletUserId", System.currentTimeMillis())
+                    .apply()
+                walletReady = true
+            } else {
+                walletReady = false
+                showBanner("Wallet unavailable - retrying")
+            }
+        }
     }
 
     LaunchedEffect(Unit) {
@@ -1756,7 +1884,7 @@ private fun DragonBattleMainOverlay(
             roundBetAmount = totalBet
             roundWinAmount = prize
             if (prize > 0L) {
-                balance += prize
+                queueDragonWalletChange(prize, "win")
                 dragonWinnerSocket?.emit(
                     "dragonbattle_winner_update",
                     JSONObject()
@@ -1832,39 +1960,42 @@ private fun DragonBattleMainOverlay(
 
     fun placeBet(table: String) {
         if (isRevealing || winnerOpen) return
+        if (!walletReady) {
+            showBanner("Connecting Wallet...")
+            return
+        }
         val chipValue = BET_CHIPS[selectedChipIndex].value
-        if (balance < chipValue) return
+        if (balance < chipValue) {
+            showBanner("Insufficient Coins")
+            return
+        }
         scope.launch(Dispatchers.IO) { soundManager.playBetClick() }
-        balance -= chipValue
         lastBetTable = table
         when (table) {
-            "A" -> {
-                potA += chipValue
-                youA += chipValue
-            }
-            "B" -> {
-                potB += chipValue
-                youB += chipValue
-            }
-            "C" -> {
-                potC += chipValue
-                youC += chipValue
-            }
+            "A" -> { potA += chipValue; youA += chipValue }
+            "B" -> { potB += chipValue; youB += chipValue }
+            "C" -> { potC += chipValue; youC += chipValue }
         }
-        // Spawn scattered coins inside the clicked pot box
         val existingForTable = scatteredCoins.count { it.table == table }
-        if (existingForTable < 24) {
-            val newCoins = List(2) {
-                coinSeq++
-                ScatteredPotCoin(
-                    id = coinSeq,
-                    table = table,
-                    offsetXFraction = (Random.nextFloat() * 0.66f) - 0.33f,
-                    offsetYFraction = (Random.nextFloat() * 0.36f) - 0.34f,
-                    rotationDeg = (Random.nextFloat() * 40f) - 20f
-                )
+        val newCoins = if (existingForTable < 24) List(2) {
+            coinSeq++
+            ScatteredPotCoin(
+                id = coinSeq,
+                table = table,
+                offsetXFraction = (Random.nextFloat() * 0.66f) - 0.33f,
+                offsetYFraction = (Random.nextFloat() * 0.36f) - 0.34f,
+                rotationDeg = (Random.nextFloat() * 40f) - 20f
+            )
+        } else emptyList()
+        scatteredCoins = scatteredCoins + newCoins
+        queueDragonWalletChange(-chipValue, "bet") {
+            when (table) {
+                "A" -> { potA = (potA - chipValue).coerceAtLeast(0L); youA = (youA - chipValue).coerceAtLeast(0L) }
+                "B" -> { potB = (potB - chipValue).coerceAtLeast(0L); youB = (youB - chipValue).coerceAtLeast(0L) }
+                "C" -> { potC = (potC - chipValue).coerceAtLeast(0L); youC = (youC - chipValue).coerceAtLeast(0L) }
             }
-            scatteredCoins = scatteredCoins + newCoins
+            val failedIds = newCoins.map { it.id }.toSet()
+            if (failedIds.isNotEmpty()) scatteredCoins = scatteredCoins.filterNot { it.id in failedIds }
         }
     }
 
@@ -2972,7 +3103,11 @@ private fun DragonBetColumn(
     onClick: () -> Unit
 ) {
     Column(
-        modifier = modifier.clickable(onClick = onClick),
+        modifier = modifier.clickable(
+            interactionSource = remember { MutableInteractionSource() },
+            indication = null,
+            onClick = onClick
+        ),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(
