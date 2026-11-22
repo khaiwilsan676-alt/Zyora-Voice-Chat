@@ -3103,9 +3103,12 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                 onMute = {
                     val index = seats.indexOfFirst { it.occupied && it.accountId == profileId }
                     if (index >= 0 && (accountId == roomOwner.accountId || accountId == roomOwner.id || accountId == roomOwner.uid || accountId == roomId || roomAdminIds.any { it.trim() in currentUserSeatIds })) {
-                        val nextMuted = !seats[index].muted
-                        seats[index] = seats[index].copy(muted = nextMuted)
-                        roomSocketRef.value?.emit("room_seat_action", JSONObject().put("roomId", roomId).put("userId", accountId).put("action", "owner_mute").put("seatNumber", seats[index].number).put("isMuted", nextMuted))
+                        val isSelfSeat = seats[index].accountId.trim() == accountId.trim()
+                        val nextMuted = if (isSelfSeat) !seats[index].selfMuted else !seats[index].muted
+                        seats[index] = if (isSelfSeat) seats[index].copy(selfMuted = nextMuted) else seats[index].copy(muted = nextMuted)
+                        roomSocketRef.value?.emit("room_seat_action", JSONObject().put("roomId", roomId).put("userId", accountId)
+                            .put("action", if (isSelfSeat) "self_mute" else "owner_mute")
+                            .put("seatNumber", seats[index].number).put("isMuted", nextMuted))
                     }
                 },
                 onLock = {
@@ -3172,10 +3175,16 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                     showSeatSheet=false;selectedSeat=0
                 },
                 onMute={
-                    val nextMuted=!seat.muted
-                    if(seatIndex>=0) seats[seatIndex]=seat.copy(muted=nextMuted)
-                    roomSocketRef.value?.emit("room_seat_action",JSONObject().put("roomId",roomId).put("userId",accountId).put("action","owner_mute").put("seatNumber",seat.number).put("isMuted",nextMuted))
-                    showSeatSheet=false;selectedSeat=0
+                    val isSelfSeat = seat.accountId.trim() == accountId.trim()
+                    val nextMuted = if (isSelfSeat) !seat.selfMuted else !seat.muted
+                    if (seatIndex >= 0) {
+                        seats[seatIndex] = if (isSelfSeat) seat.copy(selfMuted = nextMuted) else seat.copy(muted = nextMuted)
+                    }
+                    roomSocketRef.value?.emit("room_seat_action", JSONObject().put("roomId", roomId)
+                        .put("userId", accountId).put("action", if (isSelfSeat) "self_mute" else "owner_mute")
+                        .put("seatNumber", seat.number).put("isMuted", nextMuted))
+                    showSeatSheet = false
+                    selectedSeat = 0
                 },
                 onLock={
                     if(isRoomOwner || isRoomAdmin) {
@@ -3218,6 +3227,7 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                     image = profileSeat.userImage,
                     isInSeat = true,
                     isMuted = profileSeat.muted,
+                    isSelfMuted = profileSeat.selfMuted,
                     isLocked = profileSeat.locked
                 ),
                 isCurrentUser = profileSeat.accountId == accountId,
@@ -3267,9 +3277,9 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                 onMute = {
                     val idx = seats.indexOfFirst { it.number == selectedSeat }
                     if (idx >= 0) {
-                        val nextMuted = !seats[idx].muted
-                        seats[idx] = seats[idx].copy(muted = nextMuted)
                         val isSelfSeat = seats[idx].accountId.trim() == accountId.trim()
+                        val nextMuted = if (isSelfSeat) !seats[idx].selfMuted else !seats[idx].muted
+                        seats[idx] = if (isSelfSeat) seats[idx].copy(selfMuted = nextMuted) else seats[idx].copy(muted = nextMuted)
                         roomSocketRef.value?.emit("room_seat_action", JSONObject().put("roomId", roomId)
                             .put("userId", accountId)
                             .put("action", if (isSelfSeat) "self_mute" else "owner_mute")
