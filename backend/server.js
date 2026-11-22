@@ -2608,10 +2608,28 @@ io.on("connection", (socket) => {
       const cached = memoryRoundWinners.wildparty;
       winners = cached.round === round ? [...cached.winners] : [];
     }
-    socket.emit("wildparty_top_winners", winners
+    // Rebuild a clean global leaderboard from every recorded winner:
+    // one row per account, highest single win retained, then Top 3 by amount.
+    const uniqueWinners = new Map();
+    for (const winner of Array.isArray(winners) ? winners : []) {
+      const userKey = String(winner?.userKey || winner?.key || "").trim();
+      const win = Number(winner?.win || 0);
+      if (!userKey || !Number.isFinite(win) || win <= 0) continue;
+      const previous = uniqueWinners.get(userKey);
+      if (!previous || win > Number(previous.win || 0)) {
+        uniqueWinners.set(userKey, {
+          ...winner,
+          userKey,
+          win,
+          name: String(winner.name || "User"),
+          avatar: String(winner.avatar || "/default-avatar.png")
+        });
+      }
+    }
+    socket.emit("wildparty_top_winners", [...uniqueWinners.values()]
       .sort((a, b) => Number(b.win || 0) - Number(a.win || 0))
       .slice(0, 3)
-      .map(({ userKey: _key, ...winner }) => winner));
+      .map(({ userKey: _key, key: _legacyKey, ...winner }) => winner));
   });
 
   socket.on("dragonbattle_winner_update", (payload = {}) => {
