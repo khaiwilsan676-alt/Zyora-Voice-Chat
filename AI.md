@@ -1745,3 +1745,10 @@ Current documentation does not certify that all historical features are build-, 
 - Changed long-name marquee to one pass (`iterations = 1`) so it keeps its existing scrolling-name behavior without running forever on every visible card. Room-card layout, images, dimensions, data, loading/cache behavior, room navigation, and voice behavior are unchanged.
 - Existing warm memory/Room-DB cache, lazy room rows, stable keys/content types, and five-minute refresh throttle remain unchanged.
 - Verification required: run native APK CI and measure repeated fast scrolls on device; source change alone does not prove frame-time improvement.
+
+
+## 2026-11-22 — Room voice relay and simultaneous-speaker stabilization
+- `Zyora-Server/server.js`: replaced local adapter room-member enumeration and per-recipient emits with the Socket.IO room broadcast operator plus `except(sourceId)`. The old path read `io.sockets.adapter.rooms.get(room)`, which only exposes the local adapter's room map and can omit remote Render instances even when the Redis adapter is enabled. The new path fans each queued speaker frame through the configured Redis adapter and excludes the publishing socket.
+- Native `JitsiRoomAudio.kt`: restored the 10 ms packet-arrival collection window before mixing independent per-speaker PCM queues. Removing that window let late-arriving speaker frames be mixed in a different playback tick, producing offset/chorused speech during simultaneous conversations.
+- Server commit: `393b084754dcd9b417c90610ce653edc9d56e843`; native commit: `a4624a238a225660450788468875ea275a5d0353`.
+- Source-level changes committed. Render deployment, native APK build, and two-device tests (cross-instance delivery, simultaneous speech, mute/unmute, and Bluetooth) remain required; no runtime success is claimed.
