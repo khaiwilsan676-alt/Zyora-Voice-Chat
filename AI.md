@@ -1889,3 +1889,9 @@ Current documentation does not certify that all historical features are build-, 
 - `Zyora-Server/server.js`: room-wide daily/weekly totals and per-sender contribution rows now use one shared amount parser with the same precedence: `amount`, then legacy `coins`, then legacy `coinAmount`.
 - This prevents legacy sent-gift records from appearing in the sender list but being omitted from the room top counter. Values are normalized to non-negative whole coin amounts and each record is counted once.
 - Gift pricing, wallet debit, Room Cup UI/layout, and room seat layout are unchanged. Render deployment and live test with four 500,000-coin gifts are still required.
+
+## 2026-11-22 — Global top-three game winners
+- `Wildparty.kt`: publishes each positive Wild Party round win with the shared 47-second round number and signed-in user/account identity; subscribes to the server's round leaderboard and fills the existing three podium slots with the real top-three names, avatars, and win amounts. Empty positions retain the existing placeholders.
+- `backend/server.js`: serializes Fruit Party and Wild Party winner updates per game/round to prevent concurrent Redis read-modify-write races; adds the Wild Party top-three request response for users who connect after winners have already been recorded. Existing podium layout and winner timing remain unchanged.
+- Existing Dragon Battle server ranking remains capped at three unique users, sorted by highest win amount; no additional winner cards were added.
+- Native APK build and multi-device runtime verification are required; no runtime result is claimed.
