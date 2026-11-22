@@ -1845,3 +1845,10 @@ Current documentation does not certify that all historical features are build-, 
 - `RoomProfile.kt`: allow room owner/admin moderators to see Mute/Lock controls on the room owner's profile too; self-moderation remains hidden.
 - `backend/server.js`: skip the MongoDB admin lookup for a verified room owner to make owner lock/mute taps faster; keep DB-backed admin authorization for non-owner moderators. Owner/admin mute now applies to empty and locked seats as well as occupied seats, and locking preserves the seat's mute state. Taking a seat resets that temporary empty-seat mute state.
 - UI artwork, seat layout, voice transport, and normal user self-mute behavior are unchanged. Native APK compilation and multi-device owner/admin/locked-seat verification are pending.
+
+
+## 2026-11-22 — Room Settings save-path responsiveness
+- `RoomSettingPage.kt`: ignore repeated Save/Admin add/remove taps while a settings transaction is already in flight, preventing duplicate overlapping PUT requests and duplicate image uploads.
+- After the server confirms a settings save, update the visible Room state immediately; persist the Room Lock row to the local IndexDB cache asynchronously instead of blocking the successful save callback on a second disk operation.
+- Existing server-first save semantics, MongoDB room settings payload, uploaded room DP/theme behavior, settings UI, and Socket.IO room update event remain unchanged.
+- APK compilation and real-device save/reopen/admin/theme/lock regression checks remain required; no measured speedup is claimed.
