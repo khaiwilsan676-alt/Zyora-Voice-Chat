@@ -727,7 +727,14 @@ app.put("/api/rooms", async (req, res) => {
         { "Room Admin": accountId }
       ]
     };
-    const existingRoom = await rooms.findOne(roomFilter) || {};
+    const mongoRoomDb = await connectMediaMongo();
+    if (!mongoRoomDb) {
+      return res.status(503).json({ error: "MongoDB room storage is not connected" });
+    }
+    const mongoRooms = mongoRoomDb.collection("rooms");
+    const existingRoom = await mongoRooms.findOne(roomFilter)
+      || (rooms ? await rooms.findOne(roomFilter) : {})
+      || {};
     const firstText = (...values) => values
       .map((value) => value == null ? "" : String(value).trim())
       .find((value) => value && value !== "null") || "";
@@ -777,11 +784,7 @@ app.put("/api/rooms", async (req, res) => {
     // Persist owner-dashboard room edits directly to MongoDB first.
     // Keep the existing document-store write as a compatibility mirror for
     // older clients while MongoDB becomes the durable room-settings write.
-    const mongoRoomDb = await connectMediaMongo();
-    if (!mongoRoomDb) {
-      return res.status(503).json({ error: "MongoDB room storage is not connected" });
-    }
-    await mongoRoomDb.collection("rooms").updateOne(
+    await mongoRooms.updateOne(
       roomFilter,
       {
         $set: roomData,
