@@ -1041,7 +1041,8 @@ fun RoomPage(
     var roomVehiclePreviewItemId by remember(roomId) { mutableStateOf("") }
     // Deduplicate by the server's entry ID, not by room: every member entry
     // must play on every viewer's device.
-    val seenRoomVehicleEntryIds = remember(roomId) { mutableStateSetOf<String>() }
+    val seenRoomVehicleEntryIds = remember(roomId) { mutableStateListOf<String>() }
+    val pendingRoomVehicleEntries = remember(roomId) { mutableStateListOf<Pair<String, String>>() }
     var roomGiftVideoPreview by remember(roomId) { mutableStateOf("") }
     // Turning an effect OFF also dismisses an already-running local preview.
     // This is local-only and does not broadcast a setting to other room members.
@@ -1049,6 +1050,7 @@ fun RoomPage(
         if (!entryEffectEnabled) {
             roomVehiclePreview = ""
             roomVehiclePreviewItemId = ""
+            pendingRoomVehicleEntries.clear()
         }
     }
     LaunchedEffect(giftEffectEnabled) {
@@ -1167,9 +1169,15 @@ fun RoomPage(
             val videoUrl = if (video.startsWith("http", true)) video else "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/" + video
             val itemId = vehicle.optString("itemId").trim()
             mainHandler.post {
-                if (seenRoomVehicleEntryIds.add(entryId)) {
-                    roomVehiclePreview = videoUrl
-                    roomVehiclePreviewItemId = itemId
+                if (!seenRoomVehicleEntryIds.contains(entryId)) {
+                    seenRoomVehicleEntryIds.add(entryId)
+                    if (seenRoomVehicleEntryIds.size > 100) seenRoomVehicleEntryIds.removeAt(0)
+                    if (roomVehiclePreview.isBlank()) {
+                        roomVehiclePreview = videoUrl
+                        roomVehiclePreviewItemId = itemId
+                    } else if (pendingRoomVehicleEntries.size < 20) {
+                        pendingRoomVehicleEntries.add(videoUrl to itemId)
+                    }
                 }
             }
         }
@@ -1606,8 +1614,12 @@ fun RoomPage(
                     val itemId = equipped.optString("itemId").trim()
                     mainHandler.post {
                         // The server excludes the joining socket from room_vehicle_entry.
-                        roomVehiclePreview = videoUrl
-                        roomVehiclePreviewItemId = itemId
+                        if (roomVehiclePreview.isBlank()) {
+                            roomVehiclePreview = videoUrl
+                            roomVehiclePreviewItemId = itemId
+                        } else if (pendingRoomVehicleEntries.size < 20) {
+                            pendingRoomVehicleEntries.add(videoUrl to itemId)
+                        }
                     }
                 }
             }
@@ -2398,10 +2410,14 @@ Column(Modifier.align(Alignment.BottomStart).padding(bottom=LocalConfiguration.c
                     loop = false,
                     cacheVideo = true,
                     onComplete = {
-                        roomVehiclePreview = ""
-                        roomVehiclePreviewItemId = ""
-                        // Release the guard after playback so every later room entry can display.
-                        roomVehiclePlaybackClaimed.set(false)
+                        if (pendingRoomVehicleEntries.isNotEmpty()) {
+                            val nextEntry = pendingRoomVehicleEntries.removeAt(0)
+                            roomVehiclePreview = nextEntry.first
+                            roomVehiclePreviewItemId = nextEntry.second
+                        } else {
+                            roomVehiclePreview = ""
+                            roomVehiclePreviewItemId = ""
+                        }
                     }
                 )
             }
