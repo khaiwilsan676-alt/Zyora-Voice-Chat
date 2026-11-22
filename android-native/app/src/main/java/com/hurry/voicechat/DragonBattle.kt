@@ -2709,7 +2709,7 @@ private fun DragonWinnerOverlay(
                 horizontalArrangement = Arrangement.Start,
                 verticalAlignment = Alignment.Bottom
             ) {
-                frameItems.forEachIndexed { slotIndex, item ->
+                frameItems.forEach { item ->
                     val isFirst = item.first == "1st"
                     val frameSize = if (isFirst) 84.dp else 76.dp
                     val avatarSize = if (isFirst) 58.dp else 52.dp
