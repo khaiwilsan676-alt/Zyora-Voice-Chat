@@ -808,6 +808,11 @@ fun NativeChatScreen(
         authPrefs.getString("name", "").orEmpty()
     ).firstOrNull { it.isNotBlank() && it != "null" } ?: "Zyora User"
     val currentAccountId = currentAccountIdOverride.ifBlank { authPrefs.getString("accountId", prefs.getString("accountId", currentUserId)).orEmpty() }.ifBlank { currentUserId }
+    val isOfficial = name == "Zyora Team" || name == "Zyora System"
+    var directSocket by remember(receiverId, currentUserId) { mutableStateOf<Socket?>(null) }
+    var chatRegistered by remember(receiverId, currentUserId) { mutableStateOf(false) }
+    var peerOnline by remember(receiverId) { mutableStateOf(false) }
+    var peerRoomId by remember(receiverId) { mutableStateOf("") }
     var text by remember { mutableStateOf("") }
     var showOptions by remember { mutableStateOf(false) }
     var showReportPage by remember { mutableStateOf(false) }
