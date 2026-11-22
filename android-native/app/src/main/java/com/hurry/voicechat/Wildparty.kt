@@ -1471,18 +1471,13 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
   walletStateMutex.withLock {
    val current=balance
    if(delta<0L)check(current>=amount){"Not enough coins"}
-   val next=(current+delta).coerceAtLeast(0L)
+   // Keep the game display aligned with the shared server wallet.
+   // Pending bets/wins are persisted but never added to confirmed balance.
    synchronized(pendingWalletPrefs) {
     val key=pendingWalletKey()
     val queue=runCatching{JSONArray(pendingWalletPrefs.getString(key,"[]")?:"[]")}.getOrDefault(JSONArray())
     queue.put(JSONObject().put("id",transactionId).put("delta",delta).put("title",title).put("date",date))
     check(pendingWalletPrefs.edit().putString(key,queue.toString()).commit()){"Could not save pending Wallet transaction"}
-   }
-   balance=next
-   walletCachePrefs.edit().putLong("balance_$userId",next).apply()
-   withContext(Dispatchers.IO) {
-    val old=dao.getUserData()?:UserDataEntity(balance=next)
-    dao.saveUserData(old.copy(balance=next))
    }
   }
   scope.launch(Dispatchers.IO) {
