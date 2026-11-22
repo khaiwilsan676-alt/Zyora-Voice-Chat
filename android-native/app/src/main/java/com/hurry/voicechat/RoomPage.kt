@@ -3768,6 +3768,24 @@ private fun RoomSeatInviteDialog(
     }
 }
 
+private object NativeRoomMessageProfileRefresh {
+    private val lastRefreshByUser = mutableMapOf<String, Long>()
+    fun shouldRefresh(accountId: String, now: Long = System.currentTimeMillis()): Boolean {
+        if (accountId.isBlank()) return false
+        return synchronized(lastRefreshByUser) {
+            val last = lastRefreshByUser[accountId] ?: 0L
+            if (now - last >= 60_000L) {
+                lastRefreshByUser[accountId] = now
+                if (lastRefreshByUser.size > 2000) {
+                    val cutoff = now - 10 * 60_000L
+                    lastRefreshByUser.entries.removeAll { it.value < cutoff }
+                }
+                true
+            } else false
+        }
+    }
+}
+
 @Composable private fun NativeMessage(m:NativeRoomMessage, roomOwnerId: String, roomAdminIds: List<String> = emptyList(), isCovered: Boolean = false, onAvatarClick: () -> Unit = {}, onMentionClick: (NativeMention) -> Unit = {}, onCopyMessage: (String) -> Unit = {}){
     val context = LocalContext.current
     var showRoomImagePreview by remember(m.id) { mutableStateOf(false) }
@@ -3781,9 +3799,16 @@ private fun RoomSeatInviteDialog(
                 runCatching { profileDb.loadProfile(m.senderAccountId) }.getOrNull()
             }
             profileTags = cached
-            val remote = ProfilePersistence.load(
-                TargetUser(uid = m.senderAccountId, id = m.senderAccountId, accountId = m.senderAccountId, name = m.sender, image = m.senderImage)
-            )
+            // Room chat can render dozens of messages from the same people. Refresh each
+            // sender profile at most once per minute; render the SQLite snapshot immediately
+            // instead of issuing one HTTP request per message.
+            val remote = if (NativeRoomMessageProfileRefresh.shouldRefresh(m.senderAccountId)) {
+                runCatching {
+                    ProfilePersistence.load(
+                        TargetUser(uid = m.senderAccountId, id = m.senderAccountId, accountId = m.senderAccountId, name = m.sender, image = m.senderImage)
+                    )
+                }.getOrNull()
+            } else null
             if (remote != null) {
                 val merged = JSONObject(cached?.toString() ?: "{}")
                 listOf("officialHeadTag", "officialTag", "adminTag", "serviceTag", "coinSellerTag", "coinSeller", "sellerTag", "csTag", "hostTag", "isHost").forEach { key ->
