@@ -89,38 +89,9 @@ fun RoomInfo(
     
     var ownerVipId by remember(roomOwner.id, roomOwner.uid, roomOwner.accountId, roomOwner.vipId) { mutableStateOf(roomOwner.vipId.trim()) }
     var ownerVipBadge by remember(roomOwner.id, roomOwner.uid, roomOwner.accountId, roomOwner.vipIdBadge) { mutableStateOf(roomOwner.vipIdBadge) }
-    LaunchedEffect(isOpen, roomOwner.id, roomOwner.uid, roomOwner.accountId) {
-        if (!isOpen) return@LaunchedEffect
-        val ownerId = roomOwner.accountId.ifBlank { roomOwner.id.ifBlank { roomOwner.uid } }
-        if (ownerId.isBlank()) return@LaunchedEffect
-        val profile = withContext(kotlinx.coroutines.Dispatchers.IO) {
-            val remote = runCatching {
-                ProfilePersistence.load(TargetUser(
-                    id = roomOwner.id.ifBlank { ownerId },
-                    uid = roomOwner.uid.ifBlank { ownerId },
-                    accountId = roomOwner.accountId.ifBlank { ownerId }
-                ))
-            }.getOrNull()
-            val db = NativeIndexDatabase(context)
-            val cached = sequenceOf(roomOwner.uid, roomOwner.id, roomOwner.accountId, ownerId)
-                .filter { it.isNotBlank() }.mapNotNull { key -> runCatching { db.loadProfile(key) }.getOrNull() }
-                .firstOrNull { it.has("vipId") }
-            remote to cached
-        }
-        val remote = profile.first
-        val cached = profile.second
-        val candidate = sequenceOf(remote?.optString("vipId", "").orEmpty(), cached?.optString("vipId", "").orEmpty())
-            .map { it.trim() }.firstOrNull { it.matches(Regex("\\d{1,20}")) }.orEmpty()
-        val expiry = remote?.optLong("vipIdExpiresAt", cached?.optLong("vipIdExpiresAt", 0L) ?: 0L)
-            ?: cached?.optLong("vipIdExpiresAt", 0L) ?: 0L
-        val badge = (remote?.optBoolean("vipIdBadge", false) == true) ||
-            remote?.optString("vipIdBadge", "").equals("true", true) ||
-            (cached?.optBoolean("vipIdBadge", false) == true) ||
-            cached?.optString("vipIdBadge", "").equals("true", true)
-        val active = candidate.isNotBlank() && (expiry == 0L || expiry > System.currentTimeMillis())
-        ownerVipId = if (active) candidate else ""
-        ownerVipBadge = active && (badge || candidate.isNotBlank())
-    }
+    // Use the exact VIP ID state already rendered in the room's top owner card.
+    // Do not reload/overwrite it here with a second, potentially stale profile lookup.
+
     var ownerDisplayName by remember(roomOwner.id, roomOwner.uid, roomOwner.accountId) {
         mutableStateOf(if (roomOwner.accountId == "100002" || roomOwner.id == "100002") "Zyora" else roomOwner.name.trim().takeIf { it.isNotBlank() && !it.equals("User", true) } ?: "User")
     }
