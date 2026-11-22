@@ -46,7 +46,7 @@ private fun processVisitorRows(rows: JSONArray): List<VisitorData> {
     val rawList = (0 until rows.length()).mapNotNull { i -> 
         rows.optJSONObject(i)?.let { v ->
             VisitorData(
-                v.optString("id"),
+                v.optString("id").ifBlank { v.optString("accountId").ifBlank { v.optString("uid") } },
                 v.optString("name","User"),
                 v.optString("gender"),
                 v.optString("avatar"),
@@ -546,7 +546,7 @@ private fun VisitorItemRow(v:VisitorData, isMyVisitorsTab:Boolean, baseUrl:Strin
                 modifier = Modifier
                     .size(36.dp)
                     .clip(CircleShape)
-                    .clickable { onOpenChat(v.id, v.name, v.avatar) }
+                    .clickable { onOpenChat(v.accountId.ifBlank { v.uid.ifBlank { v.id } }, v.name, v.avatar) }
             )
         }
     }
