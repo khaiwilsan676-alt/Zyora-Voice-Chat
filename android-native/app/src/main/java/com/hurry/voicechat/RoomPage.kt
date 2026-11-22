@@ -715,7 +715,6 @@ fun RoomPage(
     var showRoomTask by remember{mutableStateOf(false)}
     var showWildParty by remember{mutableStateOf(false)}
     var wildPartyMinimized by remember { mutableStateOf(false) }
-    var showFruitParty by remember{mutableStateOf(false)}
     var showDragonBattle by remember{mutableStateOf(false)}
     var dragonBattleMinimized by remember { mutableStateOf(false) }
     var showSeatSheet by remember{mutableStateOf(false)}
@@ -2968,14 +2967,13 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
         if (roomGiftVideoPreview.isNotBlank()) {
             RoomGiftVideoOverlay(src = roomGiftVideoPreview) { roomGiftVideoPreview = "" }
         }
-        if(showGames) GamesSheet(onClose={showGames=false},onWildParty={showGames=false;showWildParty=true},onFruitParty={showGames=false;showFruitParty=true},onDragonBattle={showGames=false;showDragonBattle=true})
+        if(showGames) GamesSheet(onClose={showGames=false},onWildParty={showGames=false;showWildParty=true},onDragonBattle={showGames=false;showDragonBattle=true})
         if(showRoomTask) Roomtask(onBack={showRoomTask=false})
         if (showWildParty || wildPartyMinimized) Wildparty(
             onClose = { showWildParty = false; wildPartyMinimized = false },
             onMinimize = { showWildParty = false; wildPartyMinimized = true },
             modifier = if (showWildParty) Modifier.fillMaxSize() else Modifier.size(1.dp).graphicsLayer { alpha = 0f }
         )
-        if(showFruitParty) Fruitparty(onClose={showFruitParty=false},onMinimize={showFruitParty=false})
         BackHandler(enabled=showDragonBattle) { showDragonBattle=false; dragonBattleMinimized=false }
         if (showDragonBattle || dragonBattleMinimized) {
             DragonBattleGameHost(
@@ -3991,34 +3989,23 @@ private val Int.percentHeight: androidx.compose.ui.unit.Dp
     Text(seat.userName,color=Color.White,fontSize=17.sp);if (seat.accountId in setOf("500002", "500003", "500004", "500005", "500005")) { Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(3.dp)) { AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261101_125212.png",contentDescription="Purple ID Badge",contentScale=ContentScale.Fit,modifier=Modifier.height(18.dp).widthIn(max=28.dp)); Text(seat.accountId,color=Color.White.copy(.65f),fontSize=12.sp) } } else Text("ID: "+seat.accountId,color=Color.White.copy(.65f),fontSize=12.sp)
 }
 
-@Composable private fun GamesSheet(onClose:()->Unit,onWildParty:()->Unit,onFruitParty:()->Unit,onDragonBattle:()->Unit){
+@Composable private fun GamesSheet(onClose:()->Unit,onWildParty:()->Unit,onDragonBattle:()->Unit){
     val wildIconUrl="https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_000000009d808211b8ffb7c2183b4ef5.png"
-    val fruitIconUrl="https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_00000000c9e08211ab3e8c4d511b7965.png"
     Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=.30f)).clickable{onClose()},contentAlignment=Alignment.BottomCenter){
         Surface(Modifier.fillMaxWidth().clickable(enabled=false){},color=Color.Black.copy(alpha=0.92f),shape=RoundedCornerShape(topStart=15.dp,topEnd=15.dp)){
             Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(start=16.dp,end=16.dp,top=12.dp,bottom=24.dp)){
                 Text("Games",color=Color.White,fontSize=16.sp,fontWeight=FontWeight.Bold)
                 Spacer(Modifier.height(16.dp))
-                Row(
-                    modifier=Modifier.fillMaxWidth(),
-                    horizontalArrangement=Arrangement.spacedBy(10.dp),
-                    verticalAlignment=Alignment.Top
-                ){
-                    Column(Modifier.weight(1f).clickable{onWildParty()}, horizontalAlignment=Alignment.CenterHorizontally){
+                Row(modifier=Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp),verticalAlignment=Alignment.Top){
+                    // Column 1: Wild Party
+                    Column(Modifier.weight(1f).clickable{onWildParty()},horizontalAlignment=Alignment.CenterHorizontally){
                         AsyncImage(model=wildIconUrl,contentDescription="Wild party",modifier=Modifier.size(56.dp),contentScale=ContentScale.Fit)
                         Spacer(Modifier.height(2.dp))
                         Text("Wild party",color=Color.White,fontSize=10.sp,fontWeight=FontWeight.Bold,maxLines=1,softWrap=false)
                     }
-                    Column(Modifier.weight(1f).clickable{onFruitParty()}, horizontalAlignment=Alignment.CenterHorizontally){
-                        AsyncImage(model=fruitIconUrl,contentDescription="Fruit party",modifier=Modifier.size(56.dp).clip(RoundedCornerShape(6.dp)),contentScale=ContentScale.Fit)
-                        Spacer(Modifier.height(2.dp))
-                        Text("Fruit party",color=Color.White,fontSize=10.sp,fontWeight=FontWeight.Bold,maxLines=1,softWrap=false)
-                    }
-                    Box(Modifier.weight(1f),contentAlignment=Alignment.TopCenter){
-                        DragonBattleGameItem(onClick=onDragonBattle)
-                    }
-                    // Fourth grid column intentionally stays empty until another game is added.
-                    Spacer(Modifier.weight(1f))
+                    // Column 2: Dragon Battle
+                    Box(Modifier.weight(1f),contentAlignment=Alignment.TopCenter){ DragonBattleGameItem(onClick=onDragonBattle) }
+                    Spacer(Modifier.weight(2f))
                 }
             }
         }
