@@ -446,6 +446,8 @@ private fun leaderboardFlag(country: String): String = when (country.trim().lowe
 
 @Composable
 fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour", onOpenProfile:(RoomUser)->Unit = {}) {
+    val context = LocalContext.current
+    val leaderboardPrefs = remember(context) { context.getSharedPreferences("zyora_leaderboard_cache", android.content.Context.MODE_PRIVATE) }
     var tab by remember { mutableStateOf(initialTab) }
     var period by remember { mutableStateOf("daily") }
     var showRules by remember { mutableStateOf(false) }
@@ -467,7 +469,6 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour", onOpenProfile:(R
         else -> "IMG_20261105_230210.png"
     }
 
-    val context = LocalContext.current
     val authPrefs = remember { context.getSharedPreferences("hurry_auth", android.content.Context.MODE_PRIVATE) }
     val ownUserId = authPrefs.getString("userId", authPrefs.getString("id", "")).orEmpty()
     val ownName = authPrefs.getString("name", authPrefs.getString("displayName", "You")).orEmpty().ifBlank { "You" }
@@ -479,10 +480,42 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour", onOpenProfile:(R
     val ownCoins = if (ownIndex >= 0) leaderboardRows[ownIndex].coins else 0L
 
     LaunchedEffect(tab, period) {
+        val cacheKey = "rows_${tab}_${period}"
+        // Render the last successful snapshot immediately, then reconcile with MongoDB.
+        val cachedSnapshot = withContext(Dispatchers.IO) {
+            runCatching {
+                val array = org.json.JSONArray(leaderboardPrefs.getString(cacheKey, "[]") ?: "[]")
+                val rows = (0 until array.length()).mapNotNull { index ->
+                    val item = array.optJSONObject(index) ?: return@mapNotNull null
+                    ZyoraRank(
+                        id = item.optString("id"), name = item.optString("name", "User"),
+                        image = item.optString("image"), coins = item.optLong("coins"),
+                        country = item.optString("country"), gender = item.optString("gender"),
+                        level = item.optInt("level", 1)
+                    )
+                }
+                rows to leaderboardPrefs.getLong("ends_${tab}_${period}", 0L)
+            }.getOrNull()
+        }
+        if (cachedSnapshot != null) {
+            leaderboardRows = cachedSnapshot.first
+            leaderboardEndsAt = cachedSnapshot.second
+        }
         while (true) {
-            runCatching { loadZyoraLeaderboard(if (tab == "honour") "rich" else tab, period) }
-                .onSuccess { leaderboardRows = it.rows; leaderboardEndsAt = it.endsAt }
-                .onFailure { /* keep the last good snapshot during transient network failures */ }
+            val latest = runCatching { loadZyoraLeaderboard(if (tab == "honour") "rich" else tab, period) }.getOrNull()
+            if (latest != null) {
+                leaderboardRows = latest.rows
+                leaderboardEndsAt = latest.endsAt
+                withContext(Dispatchers.IO) {
+                    val array = org.json.JSONArray()
+                    latest.rows.forEach { row ->
+                        array.put(JSONObject().put("id", row.id).put("name", row.name).put("image", row.image)
+                            .put("coins", row.coins).put("country", row.country).put("gender", row.gender).put("level", row.level))
+                    }
+                    leaderboardPrefs.edit().putString(cacheKey, array.toString())
+                        .putLong("ends_${tab}_${period}", latest.endsAt).apply()
+                }
+            }
             delay(10000)
         }
     }
