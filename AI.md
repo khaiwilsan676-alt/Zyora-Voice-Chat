@@ -1852,3 +1852,12 @@ Current documentation does not certify that all historical features are build-, 
 - After the server confirms a settings save, update the visible Room state immediately; persist the Room Lock row to the local IndexDB cache asynchronously instead of blocking the successful save callback on a second disk operation.
 - Existing server-first save semantics, MongoDB room settings payload, uploaded room DP/theme behavior, settings UI, and Socket.IO room update event remain unchanged.
 - APK compilation and real-device save/reopen/admin/theme/lock regression checks remain required; no measured speedup is claimed.
+
+
+## 2026-11-22 — Wallet Agent stability, seat moderation, and Room Settings performance
+- `CoinsNativePage.kt`: persist the last valid approved Wallet Agent seller list locally, restore it immediately, ignore transient empty/invalid server responses, and deduplicate cards by account ID so duplicate UID aliases do not render repeated seller cards. The presence socket remains independent of the 15-second list refresh.
+- `RoomPage.kt`: owner/admin empty-seat taps open the existing action sheet, where empty or locked seats can be muted/unmuted and locked/unlocked; taking an unlocked seat clears the temporary empty-seat mute. Seat lock/unlock remains optimistic locally while the server snapshot confirms it.
+- `RoomProfile.kt`: owner/admin moderation controls are visible on the room owner's profile as well as other users' profiles; self-moderation remains hidden.
+- `backend/server.js`: verified room owners skip the MongoDB admin lookup on seat moderation; admins still use DB-backed authorization. Owner/admin mute applies to occupied, empty, and locked seats; locking preserves mute state and taking a seat resets it.
+- `RoomSettingPage.kt`: room DP and custom-theme uploads run concurrently during save, duplicate save taps are ignored while a save is in progress, owned store themes are restored from a local cache before refreshing inventory, and existing room-member data avoids an unnecessary extra followers request.
+- Room Settings appearance, room seat layout, voice transport, game/wallet economy, and moderation authorization boundaries are unchanged. Android APK compilation and multi-device seat/settings verification are still required; no measured performance gain is claimed.
