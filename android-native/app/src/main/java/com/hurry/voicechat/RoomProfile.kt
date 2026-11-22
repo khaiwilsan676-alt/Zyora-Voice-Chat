@@ -465,16 +465,29 @@ fun RoomProfile(
                         if (showLeaveSeat) {
                             Row(
                                 modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
-                                horizontalArrangement = Arrangement.Center,
+                                horizontalArrangement = Arrangement.SpaceEvenly,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    modifier = Modifier.clickable { onMute() }
+                                ) {
+                                    Icon(
+                                        imageVector = if (user.isMuted) Icons.Default.Mic else Icons.Default.MicOff,
+                                        contentDescription = if (user.isMuted) "Unmute self" else "Mute self",
+                                        tint = Color.Black,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(if (user.isMuted) "Unmute" else "Mute", color = Color.Black, fontSize = 12.sp)
+                                }
                                 Column(
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     modifier = Modifier.clickable { onLeaveSeat() }
                                 ) {
                                     Box(modifier = Modifier.size(26.dp)) {
                                         Icon(
-                                            imageVector = Icons.Default.Person, 
+                                            imageVector = Icons.Default.Person,
                                             contentDescription = "Leave",
                                             tint = Color.Black,
                                             modifier = Modifier.size(22.dp).align(Alignment.TopStart)
@@ -483,10 +496,8 @@ fun RoomProfile(
                                             imageVector = Icons.Default.ArrowDownward,
                                             contentDescription = null,
                                             tint = Color.Red,
-                                            modifier = Modifier
-                                                .size(12.dp)
-                                                .align(Alignment.BottomEnd)
-                                                .background(Color.White, CircleShape) 
+                                            modifier = Modifier.size(12.dp).align(Alignment.BottomEnd)
+                                                .background(Color.White, CircleShape)
                                         )
                                     }
                                     Spacer(modifier = Modifier.height(2.dp))
