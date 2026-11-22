@@ -121,7 +121,7 @@ export default function SpecialIdsPanel({ users = [], ownerKey }: { users?: User
 
       <div className="space-y-2">
         <label className="block text-xs font-bold text-slate-600">Special ID / Tags</label>
-        <div className="flex gap-2"><button type="button" onClick={() => setKind("id")} className="rounded-lg bg-slate-100 px-3 py-2 text-xs font-bold">Special ID</button><button type="button" onClick={() => setKind("tag")} className="rounded-lg bg-slate-100 px-3 py-2 text-xs font-bold">Custom Tag</button></div>
+        <div className="flex gap-2"><button type="button" onClick={() => setKind("id")} className="rounded-lg bg-slate-100 px-3 py-2 text-xs font-bold">Special ID</button><button type="button" onClick={() => setKind("tag")} className="rounded-lg bg-slate-100 px-3 py-2 text-xs font-bold">Image Tag</button></div>
         <div className="flex flex-wrap items-center gap-2">
           {kind === "id" ? <input
             id="special-id-value"
@@ -131,7 +131,7 @@ export default function SpecialIdsPanel({ users = [], ownerKey }: { users?: User
             inputMode="numeric"
             className="h-10 w-40 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-800 outline-none"
           /> : <div className="flex flex-wrap gap-2">
-            {<button type="button" onClick={() => setTagImage("https://zyora-voice-chat.vercel.app/IMG_20261101_125212.png")} className={"flex h-12 items-center justify-center rounded-lg border px-3 " + (tagImage === "https://zyora-voice-chat.vercel.app/IMG_20261101_125212.png" ? "border-slate-900 bg-slate-100 ring-2 ring-slate-300" : "border-slate-200 bg-white")} title="Official ID image" aria-label="Official ID image"><img src="https://zyora-voice-chat.vercel.app/IMG_20261101_125212.png" alt="Official ID" className="h-8 max-w-[76px] object-contain" /></button>}</div>}
+            {<button type="button" onClick={() => setTagImage("https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261101_125212.png")} className={"flex h-12 items-center justify-center rounded-lg border px-3 " + (tagImage === "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261101_125212.png" ? "border-slate-900 bg-slate-100 ring-2 ring-slate-300" : "border-slate-200 bg-white")} title="Official ID image" aria-label="Official ID image"><img src="https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261101_125212.png" alt="Official ID" className="h-8 max-w-[76px] object-contain" /></button>}</div>}
           {kind === 'id' && <div className="relative">
             <button type="button" onClick={() => setMenuOpen(value => !value)} className="flex h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700">
               <BadgeCheck className="h-4 w-4" /> ID Badge <ChevronDown className="h-4 w-4" />
@@ -189,7 +189,7 @@ export default function SpecialIdsPanel({ users = [], ownerKey }: { users?: User
                   <td className="px-3 py-3 font-semibold text-slate-700">{user.hurryId || '—'}</td>
                   <td className="px-3 py-3 font-semibold text-slate-700">
                     <span className="inline-flex items-center gap-2">
-                      {idActive && <><img src="https://zyora-voice-chat.vercel.app/IMG_20261101_125212.png" alt="Official ID" className="h-5 w-auto object-contain" />{user.vipId}</>}
+                      {idActive && <><img src="https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261101_125212.png" alt="Official ID" className="h-5 w-auto object-contain" />{user.vipId}</>}
                       {tagActive && <img src={user.ownerImageTag} alt="Assigned image tag" className="h-7 max-w-[90px] object-contain" />}
                     </span>
                   </td>
