@@ -61,6 +61,8 @@ import coil3.compose.AsyncImage
 import io.socket.client.IO
 import io.socket.emitter.Emitter
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -249,7 +251,6 @@ fun RoomSettingPage(
     // 🔥 COMMON SAVE FUNCTION 🔥
     val performSave = { newState: RoomSettingsDataNative ->
         scope.launch {
-            // Ignore repeated taps while the same room-settings transaction is in flight.
             if (saving) return@launch
             saving = true
             saveError = ""
@@ -260,14 +261,22 @@ fun RoomSettingPage(
             )
             runCatching {
                 val stableRoomId = roomOwnerId.ifBlank { currentUserId }
-                val permanentDp = if (ready.roomDp.startsWith("data:image/")) {
-                    ProfilePersistence.uploadImageToMongoDB(ready.roomDp, "$stableRoomId-room", "room-dp")
-                        ?: error("Room DP upload failed. Check MongoDB image storage and try again.")
-                } else ready.roomDp
-                val permanentTheme = if (ready.customTheme.startsWith("data:image/")) {
-                    ProfilePersistence.uploadImageToMongoDB(ready.customTheme, "$stableRoomId-theme", "room-theme")
-                        ?: error("Room theme upload failed. Check MongoDB image storage and try again.")
-                } else ready.customTheme
+                // Upload room DP and custom theme concurrently; each upload already runs on IO.
+                val (permanentDp, permanentTheme) = coroutineScope {
+                    val dpJob = async {
+                        if (ready.roomDp.startsWith("data:image/")) {
+                            ProfilePersistence.uploadImageToMongoDB(ready.roomDp, "$stableRoomId-room", "room-dp")
+                                ?: error("Room DP upload failed. Check MongoDB image storage and try again.")
+                        } else ready.roomDp
+                    }
+                    val themeJob = async {
+                        if (ready.customTheme.startsWith("data:image/")) {
+                            ProfilePersistence.uploadImageToMongoDB(ready.customTheme, "$stableRoomId-theme", "room-theme")
+                                ?: error("Room theme upload failed. Check MongoDB image storage and try again.")
+                        } else ready.customTheme
+                    }
+                    dpJob.await() to themeJob.await()
+                }
                 val permanent = ready.copy(roomDp = permanentDp, customTheme = permanentTheme)
                 saveRoomSettingsRemote(stableRoomId, currentUserId, permanent)
                 context.getSharedPreferences("room_settings", Context.MODE_PRIVATE).edit()
@@ -278,14 +287,8 @@ fun RoomSettingPage(
                     .putBoolean("room_locked_$stableRoomId", permanent.isLocked)
                     .putString("room_password_$stableRoomId", permanent.roomPassword)
                     .apply()
-                // This database row is only a local warm-cache copy; do not make the
-                // visible Save completion wait for disk I/O after the server confirms.
-                scope.launch(Dispatchers.IO) {
-                    runCatching {
-                        NativeIndexDatabase(context).saveRoomLock(
-                            stableRoomId, permanent.isLocked, permanent.roomPassword
-                        )
-                    }
+                withContext(Dispatchers.IO) {
+                    NativeIndexDatabase(context).saveRoomLock(stableRoomId, permanent.isLocked, permanent.roomPassword)
                 }
                 permanent
             }.onSuccess { permanent ->
