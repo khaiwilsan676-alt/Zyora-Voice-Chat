@@ -1707,3 +1707,9 @@ Current documentation does not certify that all historical features are build-, 
 - Latest workflow #745 showed that the previous brace restoration still left the medal grid's containing Compose scopes unclosed. This caused `MedalScreen` declarations (including `getMedalsData`) to be parsed in the wrong scope and generated cascading unresolved-reference errors.
 - Restored the missing LazyVerticalGrid/container scope closure in `Medal.kt`; no medal data, tab logic, colors, or intended UI layout changed.
 - Verification: workflow #745 failed; a new APK workflow triggered by this fix must pass before calling the APK build successful.
+
+
+## 2026-11-22 — Room Cup top counter K/M format restored
+- `Roomcup.kt`: restored the requested compact K/M/B formatter on the room header's top Cup counter. The earlier full-integer display was incorrect for this specific counter; leaderboard row formatting remains unchanged.
+- Native commit: `719c1c6286778135f32e00ce098949990397204a`.
+- Daily/weekly contribution amount discrepancy is still under investigation; the source path stores gift `amount` from the sent transaction value and sums `room_gift_contributions` records. Do not mark the totals issue fixed until actual persisted transaction amounts and the deployed Render revision are verified.
