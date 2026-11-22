@@ -1649,6 +1649,7 @@ private fun DragonBattleMainOverlay(
     val authPrefs = remember(context) { context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE) }
     val walletCachePrefs = remember(context) { context.getSharedPreferences("zyora_wallet_cache", Context.MODE_PRIVATE) }
     val dragonPendingPrefs = remember(context) { context.getSharedPreferences("dragon_battle_wallet_pending", Context.MODE_PRIVATE) }
+    val dragonRejectedCallbacks = remember { mutableMapOf<String, () -> Unit>() }
     val dragonWalletUserId = remember(authPrefs) {
         authPrefs.getString("uid", null)?.takeIf { it.isNotBlank() }
             ?: authPrefs.getString("accountId", "").orEmpty()
@@ -1809,7 +1810,7 @@ private fun DragonBattleMainOverlay(
         activeBanner = DragonBannerEvent(bannerSeq, text)
     }
 
-    suspend fun syncDragonWalletChanges(rejectedTransactionId: String? = null, onRejected: () -> Unit = {}) {
+    suspend fun syncDragonWalletChanges() {
         if (dragonWalletUserId.isBlank()) return
         walletSyncMutex.withLock {
             val queueKey = "queue_$dragonWalletUserId"
@@ -1856,10 +1857,8 @@ private fun DragonBattleMainOverlay(
                     val latest = fetchDragonWallet(dragonWalletUserId)
                     if (latest != null) balance = (latest + walletPendingDelta).coerceAtLeast(0L)
                     walletCachePrefs.edit().putLong("balance_$dragonWalletUserId", balance).apply()
-                    if (txId == rejectedTransactionId) {
-                        onRejected()
-                        showBanner("Wallet rejected bet - coins restored")
-                    }
+                    dragonRejectedCallbacks.remove(txId)?.invoke()
+                    showBanner("Wallet rejected bet - coins restored")
                     android.util.Log.e("DragonBattle", "Wallet $action rejected: ${result.error}")
                 }
                 // One queue item per worker: its rejection callback stays paired
@@ -1885,7 +1884,8 @@ private fun DragonBattleMainOverlay(
         }
         balance = (balance + delta).coerceAtLeast(0L)
         walletCachePrefs.edit().putLong("balance_$dragonWalletUserId", balance).apply()
-        scope.launch { syncDragonWalletChanges(transactionId, onRejected) }
+        dragonRejectedCallbacks[transactionId] = onRejected
+        scope.launch { syncDragonWalletChanges() }
     }
 
     DisposableEffect(soundManager) {
