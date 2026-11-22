@@ -1975,3 +1975,6 @@ Current documentation does not certify that all historical features are build-, 
 - `RoomPage.kt` / `RoomProfile.kt`: moderator `Mute Seat` remains the independent server-backed `isMuted` state and targets the selected user's microphone. A user's own Mute control uses `isSelfMuted`; self mute cannot overwrite or clear a moderator mute.
 - `JitsiRoomAudio.kt`: the 4-grid Speaker toggle now suppresses both incoming room voice and incoming shared music on this device only. It does not disconnect the room socket, stop local microphone publishing, stop the music publisher, or affect other room members.
 - Android build and multi-device runtime verification are still required.
+## 2026-11-22 — Room Gift Picker canonical wallet sync
+- `Zyora-Server/server.js`: after a room gift transaction commits, publish the canonical sender balance to every registered Firebase UID and permanent account-ID socket room using the same wallet broadcast path as game transactions.
+- This updates the in-room Gift Picker and Mine > Wallet from the same MongoDB balance without changing gift prices, rewards, UI, or room behavior.
