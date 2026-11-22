@@ -280,12 +280,16 @@ fun PublicProfileScreen(
     val isCoreOfficial = displayAccNum == "100002" || displayAccNum == "100003"
     val isRedOfficial = displayAccNum == "500001"
     val is500002Official = displayAccNum in setOf("500002", "500003", "500004", "500005", "500005")
-    val showOfficialHead = !is500002Official && (isCoreOfficial || targetUser?.officialHeadTag == true || liveProfileTags?.optBoolean("officialHeadTag", false) == true)
-    val showOfficial = isCoreOfficial || isRedOfficial || is500002Official || targetUser?.officialTag == true || liveProfileTags?.optBoolean("officialTag", false) == true
-    val showAdmin = !is500002Official && (isCoreOfficial || targetUser?.adminTag == true || liveProfileTags?.optBoolean("adminTag", false) == true)
-    val showService = !is500002Official && (isCoreOfficial || targetUser?.serviceTag == true || liveProfileTags?.optBoolean("serviceTag", false) == true || liveProfileTags?.optBoolean("csTag", false) == true)
-    val showHost = !is500002Official && (isCoreOfficial || liveProfileTags?.optBoolean("hostTag", false) == true || liveProfileTags?.optBoolean("isHost", false) == true)
-    val showCoinSeller = isCoreOfficial || targetUser?.coinSellerTag == true || liveProfileTags?.optBoolean("coinSellerTag", false) == true || liveProfileTags?.optBoolean("coinSeller", false) == true || liveProfileTags?.optBoolean("sellerTag", false) == true
+    val isProfileTagActive: (String, Boolean?) -> Boolean = { key, targetValue ->
+        val expiry = liveProfileTags?.optLong(key + "ExpiresAt", 0L) ?: 0L
+        targetValue == true || (liveProfileTags?.optBoolean(key, false) == true && (expiry == 0L || expiry > System.currentTimeMillis()))
+    }
+    val showOfficialHead = !is500002Official && (isCoreOfficial || isProfileTagActive("officialHeadTag", targetUser?.officialHeadTag))
+    val showOfficial = isCoreOfficial || isRedOfficial || is500002Official || isProfileTagActive("officialTag", targetUser?.officialTag)
+    val showAdmin = !is500002Official && (isCoreOfficial || isProfileTagActive("adminTag", targetUser?.adminTag))
+    val showService = !is500002Official && (isCoreOfficial || isProfileTagActive("serviceTag", targetUser?.serviceTag) || liveProfileTags?.optBoolean("csTag", false) == true)
+    val showHost = !is500002Official && (isCoreOfficial || isProfileTagActive("hostTag", null) || liveProfileTags?.optBoolean("isHost", false) == true)
+    val showCoinSeller = isCoreOfficial || isProfileTagActive("coinSellerTag", targetUser?.coinSellerTag) || liveProfileTags?.optBoolean("coinSeller", false) == true || liveProfileTags?.optBoolean("sellerTag", false) == true
     
     val defaultAvatar = ZYORA_DEFAULT_AVATAR_URL
     val userPhotoRaw = selectedAvatarUri ?: defaultAvatar
@@ -610,8 +614,8 @@ fun PublicProfileScreen(
                             if (showService) Triple("/IMG_20261027_102207.png", "Service", 22) else null,
                             if (showHost) Triple("/IMG_20261028_154914.png", "Host", 19) else null,
                             if (showCoinSeller) Triple("/IMG_20261027_105359.png", "Coin Seller", 22) else null,
-                            if (liveProfileTags?.optBoolean("vipTag", false) == true || targetUser?.vipTag == true) Triple("/IMG_20261027_102250.png", "VIP", 22) else null,
-                            if (liveProfileTags?.optBoolean("premiumTag", false) == true || targetUser?.premiumTag == true) Triple("/IMG_20261027_102250.png", "Premium", 22) else null
+                            if (isProfileTagActive("vipTag", targetUser?.vipTag)) Triple("/IMG_20261027_102250.png", "VIP", 22) else null,
+                            if (isProfileTagActive("premiumTag", targetUser?.premiumTag)) Triple("/IMG_20261027_102250.png", "Premium", 22) else null
                         )
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
