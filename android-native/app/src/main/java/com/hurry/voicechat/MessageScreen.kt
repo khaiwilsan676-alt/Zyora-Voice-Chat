@@ -474,7 +474,7 @@ fun PrivateMessageInboxSync() {
 }
 
 @Composable
-fun MessageScreen(onChat: (String, String, String) -> Unit, embeddedSheet: Boolean = false, onBack: () -> Unit = {}, onJoinRoom: (String) -> Unit = {}) {
+fun MessageScreen(onChat: (String, String, String) -> Unit, embeddedSheet: Boolean = false, onBack: () -> Unit = {}, onJoinRoom: (String) -> Unit = {}, onOpenProfile: (RoomProfileUser) -> Unit = {}) {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("hurry_user", Context.MODE_PRIVATE) }
     val authPrefs = remember { context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE) }
@@ -692,7 +692,7 @@ fun MessageScreen(onChat: (String, String, String) -> Unit, embeddedSheet: Boole
                     isOfficial = (chat.uid == "hurry_team_official" || chat.uid == "hurry_system_official"),
                     onDelete = { chats.remove(chat) }
                 ) {
-                    MessageRow(chat, onClick = { onChat(chat.uid, chat.name, chat.image) }, onJoinRoom = onJoinRoom)
+                    MessageRow(chat, onClick = { onChat(chat.uid, chat.name, chat.image) }, onJoinRoom = onJoinRoom, onOpenProfile = onOpenProfile)
                 }
             }
         }
@@ -700,7 +700,7 @@ fun MessageScreen(onChat: (String, String, String) -> Unit, embeddedSheet: Boole
 }
 
 @Composable
-private fun MessageRow(chat: MessagePreview, onClick: () -> Unit, onJoinRoom: (String) -> Unit) {
+private fun MessageRow(chat: MessagePreview, onClick: () -> Unit, onJoinRoom: (String) -> Unit, onOpenProfile: (RoomProfileUser) -> Unit) {
     // Require a confirmed live room ID; stale booleans must not keep room UI visible.
     val isOfficial = chat.uid == "hurry_team_official" || chat.uid == "hurry_system_official"
     val showRoomPresence = !isOfficial && chat.isInRoom && chat.roomId.isNotBlank()
@@ -713,7 +713,7 @@ private fun MessageRow(chat: MessagePreview, onClick: () -> Unit, onJoinRoom: (S
     ) {
         
         // Avatar + Blue Border + Bottom Music Pill Icon (Sirf normal user ke liye)
-        Box(contentAlignment = Alignment.BottomCenter, modifier = Modifier.clickable(enabled = showRoomPresence) { if (showRoomPresence) onJoinRoom(chat.roomId) }) {
+        Box(contentAlignment = Alignment.BottomCenter, modifier = Modifier.clickable { if (showRoomPresence) onJoinRoom(chat.roomId) else onOpenProfile(RoomProfileUser(id = chat.uid, uid = chat.uid, accountId = chat.uid, name = chat.name, image = chat.image)) }) {
             AsyncImage(
                 model = resolveChatAvatar(chat.image.ifBlank { RAW_MSG + "default-avatar.png" }), contentDescription = chat.name,
                 modifier = Modifier
@@ -1605,7 +1605,7 @@ fun NativeChatScreen(
                             AsyncImage(
                                 model = image,
                                 contentDescription = name,
-                                modifier = Modifier.size(28.dp).clip(CircleShape),
+                                modifier = Modifier.size(28.dp).clip(CircleShape).clickable { onOpenPublicProfile() },
                                 contentScale = ContentScale.Crop
                             )
                             Spacer(Modifier.width(8.dp))
@@ -1618,6 +1618,7 @@ fun NativeChatScreen(
                                 modifier = Modifier
                                     .size(28.dp)
                                     .clip(CircleShape)
+                                    .clickable { onOpenPublicProfile() }
                                     .align(Alignment.Top), // Ye ouper aayega ab
                                 contentScale = ContentScale.Crop
                             )
