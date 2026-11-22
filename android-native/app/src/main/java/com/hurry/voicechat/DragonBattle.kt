@@ -1966,9 +1966,16 @@ private fun DragonBattleMainOverlay(
 
             showBanner("Start Betting !")
 
-            for (sec in 20 downTo 1) {
-                timeLeft = sec
-                delay(1000L)
+            // Drive the visible countdown from an absolute shared deadline.
+            // Recomputing remaining time avoids a stalled/stretched countdown when the
+            // coroutine wakes late after frame drops, backgrounding, or device scheduling.
+            val bettingDeadlineMs = roundStartMs + 20_000L
+            while (true) {
+                val remainingMs = bettingDeadlineMs - System.currentTimeMillis()
+                val remainingSeconds = ((remainingMs + 999L) / 1000L).coerceIn(0L, 20L)
+                timeLeft = remainingSeconds.toInt()
+                if (remainingMs <= 0L) break
+                delay(minOf(200L, remainingMs))
             }
 
             // 2. Time khatam -> "Stop Betting !" banner
