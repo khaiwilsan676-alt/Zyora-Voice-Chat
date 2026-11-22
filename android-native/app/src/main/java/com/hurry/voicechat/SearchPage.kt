@@ -208,7 +208,7 @@ fun SearchPage(onBack:()->Unit={},onOpenProfile:(RoomProfileUser)->Unit={},onOpe
                             }
                             if (roomId.isBlank() || !seen.add(roomId)) continue
                             if (!roomId.contains(q,true) && !roomAccountId.contains(q,true) && !roomName.contains(q,true)) continue
-                            list.add(SearchUserNative(roomId,roomAccountId,roomName,sequenceOf("countryName", "country", "countryCode").map { u.optString(it, "").trim() }.firstOrNull { it.isNotBlank() && it != "null" }.orEmpty(),roomImage,"",true,u.optBoolean("isLocked",false)))
+                            list.add(SearchUserNative(id = roomId, accountId = roomAccountId, name = roomName, country = sequenceOf("countryName", "country", "countryCode").map { u.optString(it, "").trim() }.firstOrNull { it.isNotBlank() && it != "null" }.orEmpty(), image = roomImage, bio = "", isRoom = true, locked = u.optBoolean("isLocked", false)))
                             continue
                         }
                         if(acc.isBlank() || !seen.add(acc)) continue
