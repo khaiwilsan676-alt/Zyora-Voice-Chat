@@ -267,8 +267,8 @@ fun RoomProfile(
     }
 
     val showLeaveSeat = isCurrentUser && user.isInSeat
-    // Moderators can mute/lock the room owner too; only self-moderation is hidden.
-    val showModerationRow = canModerate && !isCurrentUser
+    // Admins must never see moderation controls on the room owner's profile.
+    val showModerationRow = canModerate && !isCurrentUser && !user.isRoomOwner
     val showActions = !isCurrentUser
 
     val authPrefs = remember(context) { context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE) }
