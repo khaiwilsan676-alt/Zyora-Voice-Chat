@@ -778,6 +778,22 @@ app.put("/api/rooms", async (req, res) => {
       updatedAt: Date.now()
     };
 
+    // Persist owner-dashboard room edits directly to MongoDB first.
+    // Keep the existing document-store write as a compatibility mirror for
+    // older clients while MongoDB becomes the durable room-settings write.
+    const mongoRoomDb = await connectMediaMongo();
+    if (!mongoRoomDb) {
+      return res.status(503).json({ error: "MongoDB room storage is not connected" });
+    }
+    await mongoRoomDb.collection("rooms").updateOne(
+      roomFilter,
+      {
+        $set: roomData,
+        $setOnInsert: { createdAt: Date.now() }
+      },
+      { upsert: true }
+    );
+
     await rooms.updateOne(
       roomFilter,
       {
