@@ -71,6 +71,7 @@ import kotlin.math.*
 private data class WpAnimal(val name:String,val image:String,val angle:Float,val dx:Float,val dy:Float,val size:Int,val multiplier:Int)
 private data class WpChip(val label:String,val value:Long,val image:String)
 private data class WpRound(val round:Int,val winner:String,val time:Long,val myBet:Long=0L,val winAmount:Long=0L)
+private data class WpRoundWinner(val name:String,val avatar:String,val win:Long)
 private data class WpFlyingCoin(
  val id: Long,
  val start: Offset,
@@ -1243,6 +1244,7 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
  var loading by remember{mutableStateOf(true)}
  var loadingProgress by remember{mutableFloatStateOf(0f)}
  var processedRound by remember{mutableIntStateOf(-1)}
+ var globalRoundWinners by remember{mutableStateOf<List<WpRoundWinner>>(emptyList())}
 
  // Flying coins + bottom-left popup states
  val bottomLeftPopup = remember { Animatable(0f) }
@@ -1280,7 +1282,19 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
    val registerWallet = { if (walletAccountId.isNotBlank()) walletSocket?.emit(
     "register", JSONObject().put("userId", walletAccountId).put("accountId", walletAccountNumber)
    ) }
-   val onConnect = Emitter.Listener { registerWallet() }
+   val onWinners = Emitter.Listener { args ->
+    val rows = args.firstOrNull() as? JSONArray ?: JSONArray()
+    globalRoundWinners = (0 until rows.length()).mapNotNull { index ->
+     val item = rows.optJSONObject(index) ?: return@mapNotNull null
+     WpRoundWinner(item.optString("name", "User").ifBlank { "User" }, item.optString("avatar", ""), item.optLong("win", 0L).coerceAtLeast(0L))
+    }.sortedByDescending { it.win }.take(3)
+   }
+   val requestWinners = {
+    val now = System.currentTimeMillis()
+    val currentRound = ((now - wpReset(now)).coerceAtLeast(0L) / 47_000L).toInt() + 1
+    walletSocket?.emit("wildparty_top_winners_request", JSONObject().put("round", currentRound))
+   }
+   val onConnect = Emitter.Listener { registerWallet(); requestWinners() }
    val onBalanceUpdated = Emitter.Listener { args ->
     val payload = args.firstOrNull() as? JSONObject ?: return@Listener
     val eventUserId = payload.optString("userId")
@@ -1299,10 +1313,12 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
    }
    walletSocket?.on(Socket.EVENT_CONNECT, onConnect)
    walletSocket?.on("wallet_balance_updated", onBalanceUpdated)
+   walletSocket?.on("wildparty_top_winners", onWinners)
    if (walletSocket?.connected() == true) registerWallet() else walletSocket?.connect()
    onDispose {
     walletSocket?.off(Socket.EVENT_CONNECT, onConnect)
     walletSocket?.off("wallet_balance_updated", onBalanceUpdated)
+    walletSocket?.off("wildparty_top_winners", onWinners)
     walletSocket?.disconnect(); walletSocket?.close()
    }
   }
@@ -1555,7 +1571,15 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
    history=(history+WpRound(round,label,System.currentTimeMillis(),betAmount,winAmount)).takeLast(50);persistHistory()
     winnerTimer=7
     winnerOpen=true
-    if(winAmount>0)launch{runCatching{walletChange(winAmount,"Won in Wild Party")}.onFailure{android.util.Log.e("WildParty","Wallet win queue failed",it)}}
+    if(winAmount>0L){
+    val winnerName = walletAuthPrefs.getString("name", walletAuthPrefs.getString("displayName", "User")).orEmpty().ifBlank { "User" }
+    val winnerAvatar = sequenceOf("image", "photo", "avatar").map { walletAuthPrefs.getString(it, "").orEmpty() }
+     .firstOrNull { it.isNotBlank() && it != "null" && it != "undefined" }.orEmpty()
+    walletSocket?.emit("wildparty_winner_update", JSONObject()
+     .put("round", round).put("userId", walletAccountId).put("accountId", walletAccountNumber)
+     .put("name", winnerName).put("avatar", winnerAvatar).put("win", winAmount))
+    launch{runCatching{walletChange(winAmount,"Won in Wild Party")}.onFailure{android.util.Log.e("WildParty","Wallet win queue failed",it)}}
+   }
   }
  }
  LaunchedEffect(winnerOpen){
@@ -2404,7 +2428,8 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
        val frame = wpAsset( item.second)
        val frameSize = if (isFirst) 84.dp else 76.dp
        val avatarSize = if (isFirst) 58.dp else 52.dp
-       val showMe = isFirst && winAmount > 0L
+       val rankIndex = when(item.first){"1st"->0;"2nd"->1;else->2}
+       val globalWinner = globalRoundWinners.getOrNull(rankIndex)
 
        Column(
         modifier = Modifier
@@ -2416,11 +2441,12 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
          modifier = Modifier.size(frameSize),
          contentAlignment = Alignment.Center
         ) {
-         WpWinnerAvatarPlaceholder(
-          modifier = Modifier
-           .size(avatarSize)
-           .offset(y = 2.dp)
-         )
+         if (!globalWinner?.avatar.isNullOrBlank()) {
+          AsyncImage(model = globalWinner?.avatar, contentDescription = "Global winner avatar",
+           modifier = Modifier.size(avatarSize).offset(y = 2.dp).clip(CircleShape), contentScale = ContentScale.Crop)
+         } else {
+          WpWinnerAvatarPlaceholder(modifier = Modifier.size(avatarSize).offset(y = 2.dp))
+         }
          if (frame.isNotBlank()) {
           AsyncImage(
            model = frame,
@@ -2432,7 +2458,7 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
         }
         Spacer(Modifier.height(6.dp))
         Text(
-         text = if (showMe) "You" else "-",
+         text = globalWinner?.name ?: "-",
          color = Color.White,
          fontSize = 13.sp,
          fontWeight = FontWeight.Bold,
@@ -2452,7 +2478,7 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
           )
          }
          Text(
-          text = if (showMe) wpFormat(winAmount) else "-",
+          text = globalWinner?.let { wpFormat(it.win) } ?: "-",
           color = Color.White,
           fontSize = 13.sp,
           fontWeight = FontWeight.Bold,
