@@ -1235,7 +1235,7 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
  var muted by remember{mutableStateOf(false)}
  var winAmount by remember{mutableLongStateOf(0L)}
  var betAmount by remember{mutableLongStateOf(0L)}
- var winnerTimer by remember{mutableIntStateOf(5)}
+ var winnerTimer by remember{mutableIntStateOf(7)}
  var loading by remember{mutableStateOf(true)}
  var loadingProgress by remember{mutableFloatStateOf(0f)}
  var processedRound by remember{mutableIntStateOf(-1)}
@@ -1513,7 +1513,7 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
     WpMode.SINGLE->(bets[animal.name]?:0L)*animal.multiplier
    }
    history=(history+WpRound(round,label,System.currentTimeMillis(),betAmount,winAmount)).takeLast(50);persistHistory()
-    winnerTimer=5
+    winnerTimer=7
     winnerOpen=true
     if(winAmount>0)launch{runCatching{walletChange(winAmount,"Won in Wild Party")}.onFailure{android.util.Log.e("WildParty","Wallet win queue failed",it)}}
   }
@@ -1521,7 +1521,7 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
  LaunchedEffect(winnerOpen){
   if(winnerOpen){
    launch(Dispatchers.IO) { soundManager.playWinner() }
-   repeat(5){delay(1000);winnerTimer=4-it}
+   repeat(7){delay(1000);winnerTimer=6-it}
    winnerOpen=false
   } else {
    launch(Dispatchers.IO) { soundManager.stopWinner() }
