@@ -1568,7 +1568,7 @@ async function getLuckyBag(bagId) {
         liveLuckyBags.set(key, bag);
         return bag;
       }
-    } catch (error) { console.error("Lucky Bag Redis read failed:", error.message); }
+    } catch (error) { console.error("Lucky Bag Redis read failed:", error.message); throw new Error("Lucky Bag realtime storage unavailable"); }
   }
   return liveLuckyBags.get(key) || null;
 }
@@ -1625,7 +1625,7 @@ async function refundLuckyBag(bagId) {
   return true;
 }
 async function expireLuckyBag(bagId) {
-  const bag = getLuckyBag(bagId);
+  const bag = await getLuckyBag(bagId);
   if (!bag || bag.status !== "open") return false;
   if (Date.now() < Number(bag.expiresAt || 0)) {
     scheduleLuckyBagRefund(bag);
@@ -2157,6 +2157,7 @@ app.post("/api/lucky-bag/send", async (req, res) => {
     const amount = Number(req.body?.amount);
     const recipients = Number(req.body?.recipients);
     const bagId = String(req.body?.bagId || require("crypto").randomUUID());
+    if (!redis) return res.status(503).json({ error: "Lucky Bag realtime service is unavailable" });
     if (!senderId || !roomId || !Number.isSafeInteger(amount) || amount <= 0 ||
         ![10000,100000,200000,500000,1000000,1500000,2000000].includes(amount) ||
         ![5,10,30,50].includes(recipients)) {
@@ -2227,7 +2228,7 @@ app.post("/api/lucky-bag/confirm", async (req, res) => {
     const bagId = String(req.body?.bagId || "").trim();
     const userId = String(req.body?.userId || "").trim();
     if (!bagId || !userId) return res.status(400).json({ error: "bagId and userId required" });
-    const bag = getLuckyBag(bagId);
+    const bag = await getLuckyBag(bagId);
     if (!bag) return res.status(404).json({ error: "Lucky Bag not found" });
     const claim = (bag.claims || []).find((entry) => entry.userId === userId);
     if (!claim) return res.status(409).json({ error: "Open the Lucky Bag before confirming" });
