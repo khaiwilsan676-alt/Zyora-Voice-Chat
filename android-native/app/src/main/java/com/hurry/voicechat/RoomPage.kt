@@ -1163,12 +1163,14 @@ fun RoomPage(
             val video = vehicle.optString("video").trim()
             if (user.isBlank() || video.isBlank() || vehicle.optLong("expiresAt") <= System.currentTimeMillis()) return@Listener
             val entryId = payload.optString("entryId").trim()
-            if (entryId.isBlank() || !seenRoomVehicleEntryIds.add(entryId)) return@Listener
+            if (entryId.isBlank()) return@Listener
             val videoUrl = if (video.startsWith("http", true)) video else "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/" + video
             val itemId = vehicle.optString("itemId").trim()
             mainHandler.post {
-                roomVehiclePreview = videoUrl
-                roomVehiclePreviewItemId = itemId
+                if (seenRoomVehicleEntryIds.add(entryId)) {
+                    roomVehiclePreview = videoUrl
+                    roomVehiclePreviewItemId = itemId
+                }
             }
         }
         val avatarFrameUpdatedListener = Emitter.Listener { args ->
