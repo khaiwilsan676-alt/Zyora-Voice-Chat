@@ -1322,10 +1322,10 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
   topHistoryScrollState.scrollTo(0)
  }
  fun pendingWalletKey()="queue_$walletAccountId"
-  suspend fun syncPendingWalletChanges() = walletSyncMutex.withLock {
-  val userId=walletAccountId.takeIf{it.isNotBlank()}?:return
+  suspend fun syncPendingWalletChanges(): Unit = walletSyncMutex.withLock {
+  val userId=walletAccountId.takeIf{it.isNotBlank()}?:return@withLock
   val key=pendingWalletKey()
-  val queue=runCatching{JSONArray(pendingWalletPrefs.getString(key,"[]")?:"[]")}.getOrElse{return}
+  val queue=runCatching{JSONArray(pendingWalletPrefs.getString(key,"[]")?:"[]")}.getOrNull() ?: return@withLock
   var serverBalance:Long?=null
   val completedIds=mutableSetOf<String>()
   for(i in 0 until queue.length()){
