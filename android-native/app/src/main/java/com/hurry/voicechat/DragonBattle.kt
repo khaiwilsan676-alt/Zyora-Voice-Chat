@@ -1862,6 +1862,10 @@ private fun DragonBattleMainOverlay(
                     }
                     android.util.Log.e("DragonBattle", "Wallet $action rejected: ${result.error}")
                 }
+                // One queue item per worker: its rejection callback stays paired
+                // with the transaction that created it; later items are handled
+                // by their own queued worker or the periodic retry.
+                break
             }
         }
     }
