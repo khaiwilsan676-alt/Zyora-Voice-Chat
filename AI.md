@@ -1767,3 +1767,12 @@ Current documentation does not certify that all historical features are build-, 
 - Incoming voice PCM is no longer copied/queued while room playback is muted, avoiding unnecessary audio-thread and allocation work. Music path, sample format, and UI remain unchanged.
 - Native commit: `c7aa9c31d08a00606fb2339e820297ab2288cd4f`.
 - Static source checks confirmed all intended edits are present. Native APK CI, Redmi 14C speaker/Bluetooth checks, two-device speech, echo, reconnect and simultaneous-speaker testing are still required; source changes alone do not prove smoother live audio.
+
+## 2026-11-22 — Dragon Battle canonical wallet and instant balance sync
+- Root cause: native Dragon Battle posted bets/winnings to `/api/wallet/dragon-battle`, but Zyora-Server exposed only `/api/wallet/wild-party`. The Dragon Battle endpoint therefore had no matching route. The native game also did not subscribe to `wallet_balance_updated`, and the main Coins page did not listen for wallet broadcasts while open.
+- `Zyora-Server/server.js`: added the Dragon Battle route to the existing atomic MongoDB game-wallet transaction handler, with its own idempotency field (`dragonBattleTransactionIds`), transaction ledger type, authoritative response balance, and the same real-time `wallet_balance_updated` event. Wild Party retains its existing idempotency field and behavior.
+- `DragonBattle.kt`: registers the signed-in UID + account ID on its game socket, consumes authoritative wallet events immediately, and updates the visible balance/cache. Existing optimistic bet feedback, rollback, bet values, payout multiplier, winner timing, and layout are preserved.
+- `CoinsNativePage.kt`: registers the same wallet identity and consumes the same event, immediately updating Compose state, the shared wallet cache, and the existing Room snapshot so the main Coins Wallet reflects game debits/credits without reopening the page.
+- Dragon Battle pot panels now use an opaque dark-brown fill (`#32190D`) instead of the translucent fill. No other game styling or layout intentionally changed.
+- Commits: Zyora Server `8131b0928f2dcd9bc8ed543b69e07ce94b4920ad`; native Dragon Battle `bcda29a3cddca3a42284c4735e28021dcbedecab`; native Coins Wallet `8ebcc009a785e6b7559708822a32aa297d557fcf`.
+- Verification: source commits are present. Render deployment, native APK compilation, and live two-account tests for bet debit, win credit, cross-screen balance sync, reconnect, duplicate transaction retry, and insufficient-balance rollback are still required; no runtime success is claimed.
