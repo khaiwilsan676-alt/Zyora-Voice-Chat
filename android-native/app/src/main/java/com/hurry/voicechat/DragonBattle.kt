@@ -1,11 +1,17 @@
 package com.hurry.voicechat
 
+private data class DragonRoundWinner(val name: String, val avatar: String, val win: Long)
+
 import android.content.Context
 import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioTrack
 import android.media.MediaPlayer
 import android.os.Build
+import io.socket.client.IO
+import io.socket.client.Socket
+import org.json.JSONArray
+import org.json.JSONObject
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
@@ -1565,6 +1571,44 @@ private fun DragonBattleMainOverlay(
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
     val soundManager = remember(context) { DragonBetSoundManager(context.applicationContext) }
+    val authPrefs = remember(context) { context.getSharedPreferences("hurry_auth", Context.MODE_PRIVATE) }
+    val dragonAccountId = remember(authPrefs) {
+        authPrefs.getString("accountId", "").orEmpty().ifBlank { authPrefs.getString("uid", "").orEmpty() }
+    }
+    val dragonUserName = remember(authPrefs) { authPrefs.getString("name", "User").orEmpty().ifBlank { "User" } }
+    val dragonUserAvatar = remember(authPrefs) {
+        sequenceOf("image", "photo", "avatar").map { authPrefs.getString(it, "").orEmpty() }
+            .firstOrNull { it.isNotBlank() && it != "null" && it != "undefined" }.orEmpty()
+    }
+    var globalRoundWinners by remember { mutableStateOf<List<DragonRoundWinner>>(emptyList()) }
+    val dragonWinnerSocket = remember {
+        runCatching {
+            IO.socket("https://zyora-server.onrender.com", IO.Options().apply {
+                transports = arrayOf("websocket")
+                reconnection = true
+            })
+        }.getOrNull()
+    }
+    DisposableEffect(dragonWinnerSocket) {
+        val onWinners = io.socket.emitter.Emitter.Listener { args ->
+            val rows = (args.firstOrNull() as? JSONArray) ?: JSONArray()
+            globalRoundWinners = (0 until rows.length()).mapNotNull { index ->
+                val item = rows.optJSONObject(index) ?: return@mapNotNull null
+                DragonRoundWinner(
+                    name = item.optString("name", "User").ifBlank { "User" },
+                    avatar = item.optString("avatar", ""),
+                    win = item.optLong("win", 0L)
+                )
+            }
+        }
+        dragonWinnerSocket?.on("dragonbattle_top_winners", onWinners)
+        dragonWinnerSocket?.connect()
+        onDispose {
+            dragonWinnerSocket?.off("dragonbattle_top_winners", onWinners)
+            dragonWinnerSocket?.disconnect()
+            dragonWinnerSocket?.close()
+        }
+    }
 
     var timeLeft by remember { mutableIntStateOf(20) }
     var isRevealing by remember { mutableStateOf(false) }
@@ -1684,6 +1728,11 @@ private fun DragonBattleMainOverlay(
 
             // 4. Winner tag + Dham sound + White rays + History (max 20)
             val winner = pickDragonWinner(dealt.first, dealt.second, dealt.third)
+            val sharedWinnerRound = System.currentTimeMillis() / 60_000L
+            dragonWinnerSocket?.emit(
+                "dragonbattle_top_winners_request",
+                JSONObject().put("round", sharedWinnerRound)
+            )
             winnerDragon = winner
             highlightedWinnerDragon = winner
             launch(Dispatchers.IO) { soundManager.playDham() }
@@ -1700,6 +1749,20 @@ private fun DragonBattleMainOverlay(
             roundWinAmount = prize
             if (prize > 0L) {
                 balance += prize
+                val sharedWinnerRound = System.currentTimeMillis() / 60_000L
+                dragonWinnerSocket?.emit(
+                    "dragonbattle_winner_update",
+                    JSONObject()
+                        .put("round", sharedWinnerRound)
+                        .put("accountId", dragonAccountId)
+                        .put("name", dragonUserName)
+                        .put("avatar", dragonUserAvatar)
+                        .put("win", prize)
+                )
+                dragonWinnerSocket?.emit(
+                    "dragonbattle_top_winners_request",
+                    JSONObject().put("round", sharedWinnerRound)
+                )
             }
 
             // Show Win tag for 1 second
@@ -2268,7 +2331,8 @@ private fun DragonBattleMainOverlay(
                 winnerDragon = winnerDragon,
                 winnerTimer = winnerTimer,
                 winAmount = roundWinAmount,
-                betAmount = roundBetAmount
+                betAmount = roundBetAmount,
+                topWinners = globalRoundWinners
             )
         }
     }
@@ -2280,7 +2344,8 @@ private fun DragonWinnerOverlay(
     winnerDragon: String,
     winnerTimer: Int,
     winAmount: Long,
-    betAmount: Long
+    betAmount: Long,
+    topWinners: List<DragonRoundWinner>
 ) {
     val winnerSheetShape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
     val winnerImg = when (winnerDragon) {
@@ -2448,7 +2513,9 @@ private fun DragonWinnerOverlay(
                     val isFirst = index == 1
                     val frameSize = if (isFirst) 84.dp else 76.dp
                     val avatarSize = if (isFirst) 58.dp else 52.dp
-                    val showMe = isFirst && winAmount > 0L
+                    val rankIndex = when (item.first) { "1st" -> 0; "2nd" -> 1; else -> 2 }
+                    val globalWinner = topWinners.getOrNull(rankIndex)
+                    val showMe = globalWinner != null
 
                     Column(
                         modifier = Modifier
@@ -2460,11 +2527,18 @@ private fun DragonWinnerOverlay(
                             modifier = Modifier.size(frameSize),
                             contentAlignment = Alignment.Center
                         ) {
-                            DragonWinnerAvatarPlaceholder(
-                                modifier = Modifier
-                                    .size(avatarSize)
-                                    .offset(y = 2.dp)
-                            )
+                            if (!globalWinner?.avatar.isNullOrBlank()) {
+                                AsyncImage(
+                                    model = globalWinner?.avatar,
+                                    contentDescription = "Global winner avatar",
+                                    modifier = Modifier.size(avatarSize).offset(y = 2.dp).clip(CircleShape),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                DragonWinnerAvatarPlaceholder(
+                                    modifier = Modifier.size(avatarSize).offset(y = 2.dp)
+                                )
+                            }
                             AsyncImage(
                                 model = item.second,
                                 contentDescription = item.first,
@@ -2474,7 +2548,7 @@ private fun DragonWinnerOverlay(
                         }
                         Spacer(Modifier.height(6.dp))
                         Text(
-                            text = if (showMe) "You" else "-",
+                            text = globalWinner?.name ?: "-",
                             color = Color.White,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
@@ -2492,7 +2566,7 @@ private fun DragonWinnerOverlay(
                                 contentScale = ContentScale.Fit
                             )
                             Text(
-                                text = if (showMe) formatShortAmount(winAmount) else "-",
+                                text = globalWinner?.let { formatShortAmount(it.win) } ?: "-",
                                 color = Color.White,
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
