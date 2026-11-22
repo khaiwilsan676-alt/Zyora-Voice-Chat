@@ -116,7 +116,7 @@ private fun socialCountryFlagUrl(country: String, fallback: String): String {
 }
 
 @Composable 
-fun FollowPage(type:String, onBack:()->Unit, onOpenProfile:(RoomUser)->Unit = {}, onOpenChat:(String,String,String)->Unit = {}) {
+fun FollowPage(type:String, onBack:()->Unit, onOpenProfile:(RoomUser)->Unit = {}, onOpenChat:(String,String,String)->Unit = { _, _, _ -> }) {
     if(type.equals("Visitors",true)) {
         VisitorsPage(onBack, onOpenProfile, onOpenChat)
     } else {
@@ -278,7 +278,7 @@ fun FollowingCanvas(modifier: Modifier) {
 // VISITORS UI (API LOGIC)
 // -------------------------------------------------------------
 @Composable 
-fun VisitorsPage(onBack:()->Unit, onOpenProfile:(RoomUser)->Unit = {}, onOpenChat:(String,String,String)->Unit = {}) {
+fun VisitorsPage(onBack:()->Unit, onOpenProfile:(RoomUser)->Unit = {}, onOpenChat:(String,String,String)->Unit = { _, _, _ -> }) {
     val context=LocalContext.current
     val prefs=remember(context){context.getSharedPreferences("hurry_auth",Context.MODE_PRIVATE)}
     val myId=remember(prefs){prefs.getString("accountId","").orEmpty().ifBlank{prefs.getString("uid","").orEmpty()}.ifBlank{prefs.getString("id","").orEmpty()}}
