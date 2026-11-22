@@ -2558,7 +2558,10 @@ io.on("connection", (socket) => {
       if (redis) {
         await redis.set(redisKey, JSON.stringify(winners), { ex: 172800 });
       }
-      io.emit(`${gameName}_top_winners`, winners.map(({ userKey: _key, ...winner }) => winner));
+      io.emit(`${gameName}_top_winners`, {
+        round,
+        winners: winners.map(({ userKey: _key, ...winner }) => winner)
+      });
     } catch (error) {
       console.error(`Could not persist ${gameName} round winners:`, error.message);
       const currentData = memoryRoundWinners[gameName];
@@ -2571,7 +2574,10 @@ io.on("connection", (socket) => {
       else currentData.winners.push({ userKey, name, win, avatar });
       currentData.winners.sort((a, b) => b.win - a.win);
       currentData.winners = currentData.winners.slice(0, 3);
-      io.emit(`${gameName}_top_winners`, currentData.winners.map(({ userKey: _key, ...winner }) => winner));
+      io.emit(`${gameName}_top_winners`, {
+        round,
+        winners: currentData.winners.map(({ userKey: _key, ...winner }) => winner)
+      });
     }
   };
 
@@ -2626,10 +2632,13 @@ io.on("connection", (socket) => {
         });
       }
     }
-    socket.emit("wildparty_top_winners", [...uniqueWinners.values()]
-      .sort((a, b) => Number(b.win || 0) - Number(a.win || 0))
-      .slice(0, 3)
-      .map(({ userKey: _key, key: _legacyKey, ...winner }) => winner));
+    socket.emit("wildparty_top_winners", {
+      round,
+      winners: [...uniqueWinners.values()]
+        .sort((a, b) => Number(b.win || 0) - Number(a.win || 0))
+        .slice(0, 3)
+        .map(({ userKey: _key, key: _legacyKey, ...winner }) => winner)
+    });
   });
 
   socket.on("dragonbattle_winner_update", (payload = {}) => {
@@ -2670,10 +2679,13 @@ io.on("connection", (socket) => {
       const cached = memoryRoundWinners.dragonbattle;
       winners = cached.round === round ? cached.winners : [];
     }
-    socket.emit("dragonbattle_top_winners", winners
-      .sort((a, b) => Number(b.win || 0) - Number(a.win || 0))
-      .slice(0, 3)
-      .map(({ userKey: _key, ...winner }) => winner));
+    socket.emit("dragonbattle_top_winners", {
+      round,
+      winners: winners
+        .sort((a, b) => Number(b.win || 0) - Number(a.win || 0))
+        .slice(0, 3)
+        .map(({ userKey: _key, ...winner }) => winner)
+    });
   });
 
   socket.on("presence_online", (userId) => {
