@@ -597,7 +597,6 @@ fun PublicProfileScreen(
                     val genderStr = userGender.trim().ifEmpty { "Male" }
                     val isFemale = genderStr.equals("female", ignoreCase = true)
                     
-                    val displayName = if (userName.length > 8) userName.take(8) + "..." else userName
 
                     Column(
                         modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
@@ -618,7 +617,7 @@ fun PublicProfileScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            Text(displayName, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                            Text(userName, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.Black)
 
                             Box(
                                 modifier = Modifier
@@ -1019,8 +1018,6 @@ fun PublicProfileScreen(
                     color = Color.Black.copy(alpha = topBarAlpha),
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
                     textAlign = TextAlign.Center
                 )
