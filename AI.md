@@ -1759,3 +1759,11 @@ Current documentation does not certify that all historical features are build-, 
 - `Zyora-Server/server.js`: expanded the shared Zyora System DM recipient-room resolution to include Firebase UID, legacy user ID, App ID, and account-number aliases. Both Owner VIP ID assignment and Owner asset grants use this helper; connected users receive the live `private_message` event, while offline users are queued in Redis under the known aliases.
 - Source commits: app `a7f78bbe487e0c3dfb940e1a3e90e20cec8fa03d`; server `a3ed4728eaf5f6fbe1cc9205ba86254decabde9a`.
 - Source-level fix only. Render deployment and two-account online/offline inbox verification are still required; no live delivery or APK build is claimed.
+
+
+## 2026-11-22 — Room voice real-time scheduling and playback audit
+- `JitsiRoomAudio.kt`: raised the dedicated microphone-capture and voice-playback worker threads to Android `THREAD_PRIORITY_AUDIO` so 20 ms PCM capture/write work is less likely to be starved by UI/background scheduling.
+- Voice `AudioTrack` now requests Android `PERFORMANCE_MODE_LOW_LATENCY` on API 26+ and identifies the stream as speech while retaining the existing `USAGE_MEDIA` route (no forced SCO/call routing). The platform may ignore the low-latency request when the selected device route cannot support it.
+- Incoming voice PCM is no longer copied/queued while room playback is muted, avoiding unnecessary audio-thread and allocation work. Music path, sample format, and UI remain unchanged.
+- Native commit: `c7aa9c31d08a00606fb2339e820297ab2288cd4f`.
+- Static source checks confirmed all intended edits are present. Native APK CI, Redmi 14C speaker/Bluetooth checks, two-device speech, echo, reconnect and simultaneous-speaker testing are still required; source changes alone do not prove smoother live audio.
