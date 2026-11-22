@@ -1930,3 +1930,10 @@ Current documentation does not certify that all historical features are build-, 
 - `Wildparty.kt`: tracks the requested/current 47-second round, clears old winner rows at rollover, and rejects winner responses from any other round.
 - `Zyora-Server/server.js`: stores winners under a game+round key, emits `{ round, winners }`, supports round-specific Wild Party/Dragon Battle/Fruit Party winner requests, and registers Dragon Battle winner updates. Late events cannot overwrite another round's winner list.
 - No game UI, artwork, bet values, payout multipliers, or layout was intentionally changed. Server CI passed; native APK build and live multi-device round/payout verification remain pending.
+
+
+## Temporary Owner-assigned IDs (2026-11-22)
+- Owner Panel special IDs are temporary aliases stored in MongoDB `users.vipId` with `vipIdExpiresAt`; the permanent App ID fields are never overwritten.
+- Native Me, Public Profile, and Room Profile now accept 1–20 digit temporary IDs (including short values such as `101`), not only 4–20 digit values.
+- The assigned ID badge artwork is shown while `vipIdBadge` is true and the expiry timestamp is still in the future. After expiry, the UI falls back to the permanent account ID.
+- Native APK build and live Render/API verification are still required before calling the end-to-end behavior verified.
