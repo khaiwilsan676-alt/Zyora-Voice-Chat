@@ -281,8 +281,10 @@ fun PublicProfileScreen(
     val isRedOfficial = displayAccNum == "500001"
     val is500002Official = displayAccNum in setOf("500002", "500003", "500004", "500005", "500005")
     val isProfileTagActive: (String, Boolean?) -> Boolean = { key, targetValue ->
+        val hasExpiry = liveProfileTags?.has(key + "ExpiresAt") == true
         val expiry = liveProfileTags?.optLong(key + "ExpiresAt", 0L) ?: 0L
-        targetValue == true || (liveProfileTags?.optBoolean(key, false) == true && (expiry == 0L || expiry > System.currentTimeMillis()))
+        val withinDuration = !hasExpiry || expiry == 0L || expiry > System.currentTimeMillis()
+        (targetValue == true && withinDuration) || (liveProfileTags?.optBoolean(key, false) == true && withinDuration)
     }
     val showOfficialHead = !is500002Official && (isCoreOfficial || isProfileTagActive("officialHeadTag", targetUser?.officialHeadTag))
     val showOfficial = isCoreOfficial || isRedOfficial || is500002Official || isProfileTagActive("officialTag", targetUser?.officialTag)
