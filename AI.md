@@ -1937,3 +1937,9 @@ Current documentation does not certify that all historical features are build-, 
 - Native Me, Public Profile, and Room Profile now accept 1–20 digit temporary IDs (including short values such as `101`), not only 4–20 digit values.
 - The assigned ID badge artwork is shown while `vipIdBadge` is true and the expiry timestamp is still in the future. After expiry, the UI falls back to the permanent account ID.
 - Native APK build and live Render/API verification are still required before calling the end-to-end behavior verified.
+
+
+## 2026-11-22 — Remove Fruit Party and repair Dragon Battle countdown
+- `RoomPage.kt`: removed Fruit Party from the native room Games sheet and its launch state/entry point. Wild Party is column 1 and Dragon Battle is column 2; remaining columns stay empty. Existing game artwork and styling are preserved.
+- `DragonBattle.kt`: changed the 20-second betting countdown to use the shared round's absolute wall-clock deadline and continuously recompute remaining seconds. Late coroutine wakeups/frame scheduling can no longer stretch or freeze the displayed countdown; betting still ends at the same shared 20-second deadline.
+- Verification pending: native APK compilation and live multi-device countdown checks. No runtime pass is claimed.
