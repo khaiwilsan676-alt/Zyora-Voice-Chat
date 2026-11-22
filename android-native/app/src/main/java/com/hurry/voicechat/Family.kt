@@ -138,7 +138,18 @@ fun Family(onBack: () -> Unit, onOpenFamily: (String) -> Unit = {}) {
     var seconds by remember { mutableIntStateOf(0) }
     var topFamilies by remember { mutableStateOf<List<FamilyRecord>>(emptyList()) }
     var myFamilyRecord by remember { mutableStateOf<FamilyRecord?>(null) }
-    LaunchedEffect(Unit) { while (true) { runCatching { FamilyProfileApi.leaderboard() }.onSuccess { topFamilies = it }; delay(30000) } }
+    LaunchedEffect(context) {
+        // Paint the last known rankings immediately; refresh from MongoDB in background.
+        val cached = withContext(Dispatchers.IO) { FamilyProfileApi.cachedLeaderboard(context) }
+        if (cached.isNotEmpty()) topFamilies = cached
+        while (true) {
+            runCatching { FamilyProfileApi.leaderboard() }.onSuccess { latest ->
+                topFamilies = latest
+                withContext(Dispatchers.IO) { FamilyProfileApi.saveLeaderboardCache(context, latest) }
+            }
+            delay(30000)
+        }
+    }
 
     LaunchedEffect(familyAuthUid, familyAuthId, familyCreatorId) {
         val profileTarget = TargetUser(
