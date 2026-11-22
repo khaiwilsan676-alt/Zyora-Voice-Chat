@@ -339,6 +339,9 @@ fun RoomPage(
     } ?: currentUser.image.trim().takeIf { it.isNotBlank() && it != "null" && it != "undefined" && !it.endsWith("/default-avatar.png", true) }
         ?: ZYORA_DEFAULT_AVATAR_URL
     var copiedId by remember { mutableStateOf("") }
+    // Room-info-only data is loaded when the sheet is opened, not during room entry.
+    // This keeps non-critical member/admin lookups off the room join critical path.
+    var showInfo by remember { mutableStateOf(false) }
     var roomName by remember{mutableStateOf(roomOwner.name.ifBlank{"Room"})}
     var roomImage by remember{mutableStateOf(roomOwner.image)}
     var announcement by remember{mutableStateOf("")}
@@ -601,9 +604,6 @@ fun RoomPage(
             }
         }
     }
-    // Room-info-only data is loaded when the sheet is opened, not during room entry.
-    // This keeps non-critical member/admin lookups off the room join critical path.
-    var showInfo by remember { mutableStateOf(false) }
     var followed by remember{mutableStateOf(false)}
     var followedRoomUsers by remember(roomId) { mutableStateOf<List<RoomInfoFollower>>(emptyList()) }
     LaunchedEffect(roomId, showInfo) {
