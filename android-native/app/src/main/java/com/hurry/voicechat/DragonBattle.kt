@@ -172,10 +172,11 @@ private suspend fun dragonWalletRequest(
 private suspend fun fetchDragonWallet(userId: String): Long? = withContext(Dispatchers.IO) {
     runCatching {
         val encoded = java.net.URLEncoder.encode(userId, "UTF-8")
-        val connection = (URL("https://zyora-server.onrender.com/api/lucky-bag/wallet/$encoded").openConnection() as HttpURLConnection).apply {
+        val connection = (URL("https://zyora-server.onrender.com/api/wallet/dragon-battle/$encoded").openConnection() as HttpURLConnection).apply {
             connectTimeout = 45000
             readTimeout = 45000
             setRequestProperty("Cache-Control", "no-cache")
+            setRequestProperty("Accept", "application/json")
         }
         try {
             val code = connection.responseCode
