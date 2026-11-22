@@ -808,29 +808,6 @@ fun NativeChatScreen(
         authPrefs.getString("name", "").orEmpty()
     ).firstOrNull { it.isNotBlank() && it != "null" } ?: "Zyora User"
     val currentAccountId = currentAccountIdOverride.ifBlank { authPrefs.getString("accountId", prefs.getString("accountId", currentUserId)).orEmpty() }.ifBlank { currentUserId }
-    val canonicalChatWalletUserId = authPrefs.getString("uid", null)?.takeIf { it.isNotBlank() } ?: currentAccountId
-    val isOfficial = name == "Zyora Team" || name == "Zyora System"
-    var directSocket by remember(receiverId, currentUserId) { mutableStateOf<Socket?>(null) }
-    var chatRegistered by remember(receiverId, currentUserId) { mutableStateOf(false) }
-    var peerOnline by remember(receiverId) { mutableStateOf(false) }
-    var peerRoomId by remember(receiverId) { mutableStateOf("") }
-
-    LaunchedEffect(canonicalChatWalletUserId) {
-        if (canonicalChatWalletUserId.isBlank()) return@LaunchedEffect
-        val balance = withContext(Dispatchers.IO) {
-            runCatching {
-                val encoded = java.net.URLEncoder.encode(canonicalChatWalletUserId, "UTF-8")
-                val conn = (java.net.URL("https://zyora-server.onrender.com/api/lucky-bag/wallet/$encoded").openConnection() as java.net.HttpURLConnection).apply {
-                    connectTimeout = 10000; readTimeout = 10000; useCaches = false
-                }
-                try {
-                    if (conn.responseCode !in 200..299) error("Wallet unavailable")
-                    JSONObject(conn.inputStream.bufferedReader().use { it.readText() }).optLong("balance", 0L).coerceAtLeast(0L)
-                } finally { conn.disconnect() }
-            }.getOrNull()
-        }
-        if (balance != null) chatGiftWalletBalance = balance
-    }
     var text by remember { mutableStateOf("") }
     var showOptions by remember { mutableStateOf(false) }
     var showReportPage by remember { mutableStateOf(false) }
