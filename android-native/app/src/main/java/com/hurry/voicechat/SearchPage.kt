@@ -46,7 +46,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
 
-private data class SearchUserNative(val id:String,val accountId:String,val name:String,val country:String,val image:String,val bio:String,val isRoom:Boolean=false,val locked:Boolean=false)
+private data class SearchUserNative(val id:String,val accountId:String,val name:String,val country:String,val image:String,val bio:String,val gender:String="",val isRoom:Boolean=false,val locked:Boolean=false)
 
 // 3 Blue Tracks aur Number ka Custom Component
 @Composable
@@ -139,7 +139,8 @@ fun SearchPage(onBack:()->Unit={},onOpenProfile:(RoomProfileUser)->Unit={},onOpe
                             name = u.optString("name").takeUnless { it == "null" }.orEmpty().ifBlank { "User" },
                             country = u.optString("country").takeUnless { it == "null" }.orEmpty(),
                             image = u.optString("image").takeUnless { it == "null" }.orEmpty(),
-                            bio = u.optString("bio").takeUnless { it == "null" }.orEmpty()
+                            bio = u.optString("bio").takeUnless { it == "null" }.orEmpty(),
+                            gender = u.optString("gender").takeUnless { it == "null" }.orEmpty()
                         )
                     )
                 }
@@ -215,7 +216,8 @@ fun SearchPage(onBack:()->Unit={},onOpenProfile:(RoomProfileUser)->Unit={},onOpe
                             u.optString("name").takeUnless{it=="null"}.orEmpty().ifBlank{u.optString("displayName").ifBlank{u.optString("userName","User")}},
                             sequenceOf("countryName", "country", "countryCode").map { u.optString(it, "").trim() }.firstOrNull { it.isNotBlank() && it != "null" }.orEmpty(),
                             sequenceOf("image","photo","photoURL","photoUrl","avatar","avatarUrl","profileImageUrl","profileImage","profile_image").map { key -> u.optString(key, "").trim() }.firstOrNull { it.isNotBlank() && it != "null" } ?: "",
-                            u.optString("bio","")))
+                            u.optString("bio",""),
+                            u.optString("gender", "")))
                     }
                     list
                 } finally { conn.disconnect() }
@@ -388,17 +390,21 @@ fun SearchPage(onBack:()->Unit={},onOpenProfile:(RoomProfileUser)->Unit={},onOpe
                         items(results,key={it.accountId}) { u ->
                             Row(Modifier.fillMaxWidth().clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
                                 addToHistory(u.accountId)
-                                onOpenProfile(RoomProfileUser(id=u.id,uid=u.id,accountId=u.accountId,name=u.name,image=u.image,country=u.country,flag="",bio=u.bio))
+                                onOpenProfile(RoomProfileUser(id=u.id,uid=u.id,accountId=u.accountId,name=u.name,image=u.image,gender=u.gender,country=u.country,flag="",bio=u.bio))
                             }.padding(vertical = 8.dp),verticalAlignment=Alignment.CenterVertically) {
                                 AsyncImage(model=u.image.ifBlank{"https://zyora-voice-chat.vercel.app/default-avatar.png"},contentDescription=u.name,modifier=Modifier.size(48.dp).clip(CircleShape).background(Color(0xFFE5E7EB)),contentScale=ContentScale.Crop)
                                 Spacer(Modifier.width(12.dp))
                                 Column(Modifier.weight(1f),verticalArrangement=Arrangement.Center) {
                                     Text(text=u.name,fontSize=15.sp,fontWeight=FontWeight.SemiBold,color=Color(0xFF111827),maxLines=1,overflow=TextOverflow.Ellipsis)
                                     Spacer(Modifier.height(3.dp))
-                                    Row(verticalAlignment=Alignment.CenterVertically) {
-                                        CountryFlagImage(u.country, Modifier.size(16.dp, 11.dp))
-                                        Spacer(Modifier.width(5.dp))
-                                        AsyncImage(model="https://zyora-voice-chat.vercel.app/IMG_20261028_004355.png",contentDescription="Lv.1",modifier=Modifier.height(18.dp).width(31.dp),contentScale=ContentScale.Fit)
+                                    Row(verticalAlignment=Alignment.CenterVertically, horizontalArrangement=Arrangement.spacedBy(5.dp)) {
+                                        if (u.gender.isNotBlank()) {
+                                            val isFemale = u.gender.equals("female", true) || u.gender.equals("f", true) || u.gender == "♀"
+                                            Box(Modifier.size(18.dp).clip(CircleShape).background(if (isFemale) Color(0xFFEC4899) else Color(0xFF3B82F6)), contentAlignment = Alignment.Center) {
+                                                CustomGenderIcon(isFemale = isFemale, modifier = Modifier.size(9.dp))
+                                            }
+                                        }
+                                        if (u.country.isNotBlank()) CountryFlagImage(u.country, Modifier.size(16.dp, 11.dp))
                                     }
                                 }
                             }
