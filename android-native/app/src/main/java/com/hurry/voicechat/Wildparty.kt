@@ -1479,6 +1479,9 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
     queue.put(JSONObject().put("id",transactionId).put("delta",delta).put("title",title).put("date",date))
     check(pendingWalletPrefs.edit().putString(key,queue.toString()).commit()){"Could not save pending Wallet transaction"}
    }
+   // Reflect this bet instantly in the game UI; server response will reconcile
+   // the display back to the authoritative MongoDB balance.
+   balance = (current + delta).coerceAtLeast(0L)
   }
   scope.launch(Dispatchers.IO) {
    runCatching {
