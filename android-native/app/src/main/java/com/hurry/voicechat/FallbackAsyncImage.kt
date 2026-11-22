@@ -5,12 +5,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import coil3.compose.rememberAsyncImagePainter
+import coil3.compose.AsyncImagePainter
 
 /**
  * Shows the selected room/user DP whenever one is provided.
  * The bundled-style fallback is used only when no valid DP was supplied.
  */
-private const val ZYORA_FALLBACK_ASSET = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_00000000d0408211a5b096ee1cc2d12a.png"
+const val ZYORA_DEFAULT_AVATAR_URL = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/file_00000000d0408211a5b096ee1cc2d12a.png"
 
 @Composable
 fun FallbackAsyncImage(
@@ -29,10 +30,12 @@ fun FallbackAsyncImage(
 
     // Never cover an assigned DP with the fallback while its image is loading.
     val painter = rememberAsyncImagePainter(
-        model = if (validSource) model else ZYORA_FALLBACK_ASSET
+        model = if (validSource) model else ZYORA_DEFAULT_AVATAR_URL
     )
+    val fallbackPainter = rememberAsyncImagePainter(model = ZYORA_DEFAULT_AVATAR_URL)
+    val displayedPainter = if (!validSource || painter.state is AsyncImagePainter.State.Error) fallbackPainter else painter
     Image(
-        painter = painter,
+        painter = displayedPainter,
         contentDescription = contentDescription,
         modifier = modifier,
         contentScale = contentScale
