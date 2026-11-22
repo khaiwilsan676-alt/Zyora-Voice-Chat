@@ -1354,6 +1354,7 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
   }
   // Merge against the newest disk queue; never erase bets queued during network sync.
   walletStateMutex.withLock {
+   var balanceToPersist:Long?=null
    // Merge server-confirmed transactions with every newer queued mutation.
    synchronized(pendingWalletPrefs) {
     val latestQueue=runCatching{JSONArray(pendingWalletPrefs.getString(key,"[]")?:"[]")}.getOrDefault(JSONArray())
@@ -1367,12 +1368,16 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
      val pendingDelta=(0 until remaining.length()).sumOf{remaining.optJSONObject(it)?.optLong("delta")?:0L}
      val visible=(serverBalance!!+pendingDelta).coerceAtLeast(0L)
      balance=visible
-     withContext(Dispatchers.IO) {
-      val old=dao.getUserData()?:UserDataEntity(balance=visible)
-      dao.saveUserData(old.copy(balance=visible))
-     }
-     walletCachePrefs.edit().putLong("balance_$userId",visible).putLong("last_sync_$userId",System.currentTimeMillis()).apply()
+     balanceToPersist=visible
     }
+   }
+   // Room/SQLite I/O must run outside the synchronized monitor.
+   balanceToPersist?.let { visible ->
+    withContext(Dispatchers.IO) {
+     val old=dao.getUserData()?:UserDataEntity(balance=visible)
+     dao.saveUserData(old.copy(balance=visible))
+    }
+    walletCachePrefs.edit().putLong("balance_$userId",visible).putLong("last_sync_$userId",System.currentTimeMillis()).apply()
    }
   }
  }
