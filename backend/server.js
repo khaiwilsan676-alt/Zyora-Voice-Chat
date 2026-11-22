@@ -1577,6 +1577,8 @@ async function saveLuckyBag(bag) {
   if (!redis) throw new Error("Lucky Bag Redis is not configured");
   const ttl = Math.max(60, Math.ceil((Number(bag.expiresAt || Date.now()) - Date.now()) / 1000) + 300);
   await redis.set(luckyBagRedisKey(bag.bagId), bag, { ex: ttl });
+  await redis.sadd(`zyora:luckybag:room:${String(bag.roomId)}`, String(bag.bagId));
+  await redis.expire(`zyora:luckybag:room:${String(bag.roomId)}`, ttl);
 }
 async function withLuckyBagLock(bagId, work) {
   if (!redis) throw new Error("Lucky Bag Redis is not configured");
@@ -2179,43 +2181,41 @@ app.post("/api/lucky-bag/claim", async (req, res) => {
     const bagId = String(req.body?.bagId || "").trim();
     const userId = String(req.body?.userId || "").trim();
     if (!bagId || !userId) return res.status(400).json({ error: "bagId and userId required" });
-    const bag = getLuckyBag(bagId);
-    if (!bag) return res.status(404).json({ error: "Lucky Bag not found" });
-    const prior = (bag.claims || []).find((claim) => claim.userId === userId);
-    if (prior) {
-      return res.json({ success: true, pending: prior.status !== "confirmed", alreadyClaimed: true,
+    return await withLuckyBagLock(bagId, async () => {
+      const bag = await getLuckyBag(bagId);
+      if (!bag) return res.status(404).json({ error: "Lucky Bag not found" });
+      const prior = (bag.claims || []).find(claim => claim.userId === userId);
+      if (prior) return res.json({ success: true, pending: prior.status !== "confirmed", alreadyClaimed: true,
         alreadyConfirmed: prior.status === "confirmed", amount: Number(prior.amount || 0),
         claimedCount: bag.claimedCount, claimedTotal: bag.claimedTotal, recipients: bag.recipients });
-    }
-    if (bag.status !== "open" || Date.now() >= bag.expiresAt) {
-      if (bag.status === "open" && bag.claimedCount === 0) await refundLuckyBag(bagId);
-      return res.status(410).json({ error: "Lucky Bag expired or closed" });
-    }
-    if (bag.claimedCount >= bag.recipients) return res.status(409).json({ error: "Lucky Bag is empty" });
-    const slotsLeft = bag.recipients - bag.claimedCount;
-    const coinsLeft = bag.amount - bag.claimedTotal;
-    const share = slotsLeft <= 1 ? coinsLeft : Math.max(1, Math.floor(Math.random() * Math.max(2, Math.floor(coinsLeft / slotsLeft) * 2)));
-    const amount = Math.min(coinsLeft, share);
-    bag.claimedCount += 1;
-    bag.claimedTotal += amount;
-    const userName = String(req.body?.userName || "User").trim().slice(0, 80) || "User";
-    const userImage = String(req.body?.userImage || "").slice(0, 1000);
-    const claimedAt = Date.now();
-    bag.claims.push({ userId, userName, userImage, amount, status: "pending_confirmation", claimedAt });
-    if (bag.claimedCount >= bag.recipients) {
-      bag.status = "claimed";
-      bag.completedAt = Date.now();
-      const timer = luckyBagTimers.get(bagId);
-      if (timer) clearTimeout(timer);
-      luckyBagTimers.delete(bagId);
-    }
-    await saveLuckyBag(bag);
-    io.emit("lucky_bag_claim_reserved", {
-      bagId, roomId: bag.roomId, senderId: bag.senderId, userId, userName, userImage,
-      amount, claimedAt, claimedCount: bag.claimedCount, recipients: bag.recipients,
-      claimedTotal: bag.claimedTotal, bagAmount: bag.amount
-    });
-    return res.json({ success: true, pending: true, amount, balance: await walletBalance(userId), claimedCount: bag.claimedCount, recipients: bag.recipients });
+      if (bag.status !== "open" || Date.now() >= bag.expiresAt) {
+        if (bag.status === "open" && bag.claimedCount === 0) await refundLuckyBag(bagId);
+        return res.status(410).json({ error: "Lucky Bag expired or closed" });
+      }
+      if (bag.claimedCount >= bag.recipients) return res.status(409).json({ error: "Lucky Bag is empty" });
+      const slotsLeft = bag.recipients - bag.claimedCount;
+      const coinsLeft = bag.amount - bag.claimedTotal;
+      const share = slotsLeft <= 1 ? coinsLeft : Math.max(1, Math.floor(Math.random() * Math.max(2, Math.floor(coinsLeft / slotsLeft) * 2)));
+      const amount = Math.min(coinsLeft, share);
+      bag.claimedCount += 1;
+      bag.claimedTotal += amount;
+      const userName = String(req.body?.userName || "User").trim().slice(0, 80) || "User";
+      const userImage = String(req.body?.userImage || "").slice(0, 1000);
+      const claimedAt = Date.now();
+      bag.claims.push({ userId, userName, userImage, amount, status: "pending_confirmation", claimedAt });
+      if (bag.claimedCount >= bag.recipients) {
+        bag.status = "claimed";
+        bag.completedAt = Date.now();
+        const timer = luckyBagTimers.get(bagId);
+        if (timer) clearTimeout(timer);
+        luckyBagTimers.delete(bagId);
+      }
+      await saveLuckyBag(bag);
+      io.emit("lucky_bag_claim_reserved", { bagId, roomId: bag.roomId, senderId: bag.senderId, userId, userName, userImage,
+        amount, claimedAt, claimedCount: bag.claimedCount, recipients: bag.recipients,
+        claimedTotal: bag.claimedTotal, bagAmount: bag.amount });
+      return res.json({ success: true, pending: true, amount, balance: await walletBalance(userId),
+        claimedCount: bag.claimedCount, recipients: bag.recipients });
     });
   } catch (err) {
     console.error("POST /api/lucky-bag/claim error:", err.message);
@@ -2252,8 +2252,10 @@ app.post("/api/lucky-bag/confirm", async (req, res) => {
 app.get("/api/lucky-bag/room/:roomId", async (req, res) => {
   try {
     const roomId = String(req.params.roomId || "");
-    const bag = (await Promise.all(Array.from(liveLuckyBags.keys(), key => getLuckyBag(key))))
-      .filter((item) => item && item.roomId === roomId && ["open", "claimed"].includes(item.status) && item.expiresAt > Date.now())
+    const ids = redis ? await redis.smembers(`zyora:luckybag:room:${roomId}`) : [];
+    const keys = new Set([...liveLuckyBags.keys(), ...(ids || []).map(String)]);
+    const bags = await Promise.all([...keys].map(key => getLuckyBag(key)));
+    const bag = bags.filter(item => item && item.roomId === roomId && ["open", "claimed"].includes(item.status) && item.expiresAt > Date.now())
       .sort((a, b) => b.createdAt - a.createdAt)[0];
     if (!bag) return res.json({ bag: null });
     return res.json({ bag: {
@@ -2266,6 +2268,7 @@ app.get("/api/lucky-bag/room/:roomId", async (req, res) => {
       }))
     } });
   } catch (err) {
+    console.error("GET Lucky Bag room failed:", err.message);
     return res.status(503).json({ error: "Lucky Bag unavailable" });
   }
 });
