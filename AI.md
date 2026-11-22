@@ -1792,3 +1792,5 @@ Current documentation does not certify that all historical features are build-, 
 - Removed the now-unused server-side voice-frame queue lifecycle. No Android UI, audio sample format, voice permission rules, speaker cap, or music relay behavior was intentionally changed.
 - Backend commit: `851281758781688675e9ba3014e050da753b3d8c`.
 - Status: **Implemented on backend branch only**. Node syntax/CI, Render deployment, measured latency, and two-device voice tests remain pending. Do not describe the issue as fully fixed until those checks pass.
+
+- Additional CI root cause found on 2026-11-22: the first backend CI run stopped at `node --check server.js` on a pre-existing Android user-agent regular expression with doubled backslashes, which prematurely terminated the regex literal. Corrected the regex escapes in the backend branch (commit `50111a5a4ea8607df21f0c456d6c90dd14b3fff6`). The CI rerun is the source of truth for syntax/contract verification.
