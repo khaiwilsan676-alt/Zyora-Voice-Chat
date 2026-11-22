@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { BadgeCheck, ChevronDown } from 'lucide-react';
-const SPECIAL_ID_ASSIGN_URL = 'https://zyora-server.onrender.com/api/owner/special-ids/assign';
+import { apiUrl } from '@/src/lib/api';
 
 type UserRow = {
   id: string;
@@ -48,7 +48,7 @@ export default function SpecialIdsPanel({ users = [], ownerKey }: { users?: User
     setSaving(true);
     setStatus('');
     try {
-      const response = await fetch(SPECIAL_ID_ASSIGN_URL, {
+      const response = await fetch(apiUrl('/api/owner/special-ids/assign'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-owner-key': ownerKey },
         body: JSON.stringify({
