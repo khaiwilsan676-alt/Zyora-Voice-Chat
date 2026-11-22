@@ -1314,7 +1314,7 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
    walletSocket?.on(Socket.EVENT_CONNECT, onConnect)
    walletSocket?.on("wallet_balance_updated", onBalanceUpdated)
    walletSocket?.on("wildparty_top_winners", onWinners)
-   if (walletSocket?.connected() == true) registerWallet() else walletSocket?.connect()
+   if (walletSocket?.connected() == true) { registerWallet(); requestWinners() } else walletSocket?.connect()
    onDispose {
     walletSocket?.off(Socket.EVENT_CONNECT, onConnect)
     walletSocket?.off("wallet_balance_updated", onBalanceUpdated)
