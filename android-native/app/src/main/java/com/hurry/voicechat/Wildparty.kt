@@ -1244,6 +1244,7 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
  var loading by remember{mutableStateOf(true)}
  var loadingProgress by remember{mutableFloatStateOf(0f)}
  var processedRound by remember{mutableIntStateOf(-1)}
+ var winnerDataRound by remember{mutableIntStateOf(-1)}
  var globalRoundWinners by remember{mutableStateOf<List<WpRoundWinner>>(emptyList())}
 
  // Flying coins + bottom-left popup states
@@ -1283,7 +1284,10 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
     "register", JSONObject().put("userId", walletAccountId).put("accountId", walletAccountNumber)
    ) }
    val onWinners = Emitter.Listener { args ->
-    val rows = args.firstOrNull() as? JSONArray ?: JSONArray()
+    val payload = args.firstOrNull() as? JSONObject ?: return@Listener
+    val payloadRound = payload.optInt("round", -1)
+    if (payloadRound != winnerDataRound) return@Listener
+    val rows = payload.optJSONArray("winners") ?: JSONArray()
     globalRoundWinners = (0 until rows.length()).mapNotNull { index ->
      val item = rows.optJSONObject(index) ?: return@mapNotNull null
      WpRoundWinner(item.optString("name", "User").ifBlank { "User" }, item.optString("avatar", ""), item.optLong("win", 0L).coerceAtLeast(0L))
@@ -1292,6 +1296,10 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
    val requestWinners = {
     val now = System.currentTimeMillis()
     val currentRound = ((now - wpReset(now)).coerceAtLeast(0L) / 47_000L).toInt() + 1
+    if (winnerDataRound != currentRound) {
+     winnerDataRound = currentRound
+     globalRoundWinners = emptyList()
+    }
     walletSocket?.emit("wildparty_top_winners_request", JSONObject().put("round", currentRound))
    }
    val onConnect = Emitter.Listener { registerWallet(); requestWinners() }
@@ -1552,6 +1560,11 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
    val cycleMs=elapsedMs%47_000L
    val cycle=(cycleMs/1000L).toInt()
    round=(elapsed/47L).toInt()+1
+   if (winnerDataRound != round) {
+    winnerDataRound = round
+    globalRoundWinners = emptyList()
+    walletSocket?.emit("wildparty_top_winners_request", JSONObject().put("round", round))
+   }
    val outcome=wpOutcome(round);mode=outcome.first;winnerIndex=outcome.second
    when{
     cycle<30->{
