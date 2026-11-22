@@ -1969,3 +1969,9 @@ Current documentation does not certify that all historical features are build-, 
 - Self mute toggles only that user's microphone via the existing `self_mute` room-seat action; it does not use moderator mute and does not affect other users.
 - Other-user moderation behavior remains unchanged.
 - Updated: `android-native/app/src/main/java/com/hurry/voicechat/RoomProfile.kt` and `RoomPage.kt`.
+
+
+## 2026-11-22 — Separate moderator seat mute, self mute, and local room speaker
+- `RoomPage.kt` / `RoomProfile.kt`: moderator `Mute Seat` remains the independent server-backed `isMuted` state and targets the selected user's microphone. A user's own Mute control uses `isSelfMuted`; self mute cannot overwrite or clear a moderator mute.
+- `JitsiRoomAudio.kt`: the 4-grid Speaker toggle now suppresses both incoming room voice and incoming shared music on this device only. It does not disconnect the room socket, stop local microphone publishing, stop the music publisher, or affect other room members.
+- Android build and multi-device runtime verification are still required.
