@@ -1275,7 +1275,12 @@ fun RoomPage(
         }
         val walletBalanceListener = Emitter.Listener { args ->
             val payload = args.firstOrNull() as? JSONObject ?: return@Listener
-            if (payload.optString("userId") == canonicalWalletUserId) {
+            val eventUserId = payload.optString("userId")
+            val ownWalletIds = setOf(canonicalWalletUserId, accountId, currentUser.uid, currentUser.id)
+                .filter { it.isNotBlank() }.toSet()
+            // Gift transfers may identify the sender by permanent account ID,
+            // while the initial wallet read uses Firebase UID. Accept both aliases.
+            if (eventUserId in ownWalletIds) {
                 val updated = payload.optLong("balance", -1L)
                 if (updated >= 0L) mainHandler.post { roomWalletBalance = updated }
             }
