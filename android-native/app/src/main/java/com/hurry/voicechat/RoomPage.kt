@@ -344,25 +344,35 @@ fun RoomPage(
     var showInfo by remember { mutableStateOf(false) }
     var ownerVipId by remember(roomOwnerAccountId) { mutableStateOf("") }
     var ownerVipBadge by remember(roomOwnerAccountId) { mutableStateOf(false) }
-    LaunchedEffect(roomOwnerAccountId) {
-        val profile = withContext(Dispatchers.IO) {
-            runCatching {
+    LaunchedEffect(roomOwnerAccountId, showInfo) {
+        if (roomOwnerAccountId.isBlank()) return@LaunchedEffect
+        val profiles = withContext(Dispatchers.IO) {
+            val remote = runCatching {
                 ProfilePersistence.load(TargetUser(
-                    id = roomOwnerAccountId, uid = roomOwner.uid.ifBlank { roomOwner.id },
+                    id = roomOwner.id.ifBlank { roomOwnerAccountId },
+                    uid = roomOwner.uid.ifBlank { roomOwnerAccountId },
                     accountId = roomOwnerAccountId, name = roomOwner.name, image = roomOwner.image
                 ))
             }.getOrNull()
+            val cached = sequenceOf(roomOwnerAccountId, roomOwner.uid, roomOwner.id)
+                .filter { it.isNotBlank() }
+                .mapNotNull { key -> runCatching { NativeIndexDatabase(context).loadProfile(key) }.getOrNull() }
+                .firstOrNull { it.has("vipId") }
+            remote to cached
         }
-        val candidate = profile?.optString("vipId", "").orEmpty().trim()
-        val expiry = profile?.optLong("vipIdExpiresAt", 0L) ?: 0L
-        if (candidate.matches(Regex("\\d{1,20}")) && (expiry == 0L || expiry > System.currentTimeMillis()) &&
-            profile?.optBoolean("vipIdBadge", false) == true) {
-            ownerVipId = candidate
-            ownerVipBadge = true
-        } else {
-            ownerVipId = ""
-            ownerVipBadge = false
-        }
+        val remote = profiles.first
+        val cached = profiles.second
+        val candidate = sequenceOf(remote?.optString("vipId", "").orEmpty(), cached?.optString("vipId", "").orEmpty())
+            .map { it.trim() }.firstOrNull { it.matches(Regex("\\d{1,20}")) }.orEmpty()
+        val expiry = remote?.optLong("vipIdExpiresAt", cached?.optLong("vipIdExpiresAt", 0L) ?: 0L)
+            ?: cached?.optLong("vipIdExpiresAt", 0L) ?: 0L
+        val badge = (remote?.optBoolean("vipIdBadge", false) == true) ||
+            remote?.optString("vipIdBadge", "").equals("true", true) ||
+            (cached?.optBoolean("vipIdBadge", false) == true) ||
+            cached?.optString("vipIdBadge", "").equals("true", true)
+        val active = candidate.isNotBlank() && (expiry == 0L || expiry > System.currentTimeMillis()) && badge
+        ownerVipId = if (active) candidate else ""
+        ownerVipBadge = active
     }
     var roomName by remember{mutableStateOf(roomOwner.name.ifBlank{"Room"})}
     var roomImage by remember{mutableStateOf(roomOwner.image)}
