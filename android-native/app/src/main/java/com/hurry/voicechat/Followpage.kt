@@ -188,12 +188,23 @@ fun OtherSocialPages(type: String, onBack: () -> Unit, onOpenProfile:(RoomUser)-
                                 Row(verticalAlignment=Alignment.CenterVertically) {
                                     Text(person.name, color=Color(0xFF111827),fontSize=15.sp,fontWeight=FontWeight.SemiBold,maxLines=1)
                                     if(person.gender.isNotBlank()) {
-                                        Spacer(Modifier.width(5.dp)); val male=person.gender.equals("male",true)||person.gender.equals("m",true)||person.gender=="♂"
-                                        Box(Modifier.size(16.dp).clip(CircleShape).background(if(male)Color(0xFF3B82F6) else Color(0xFFEC4899)),contentAlignment=Alignment.Center) { CustomGenderIcon(isFemale = !male, modifier = Modifier.size(10.dp)) }
+                                        Spacer(Modifier.width(5.dp))
+                                        val male=person.gender.equals("male",true)||person.gender.equals("m",true)||person.gender=="♂"
+                                        Box(Modifier.size(20.dp).clip(CircleShape).background(if(male)Color(0xFF3B82F6) else Color(0xFFFF5874)),contentAlignment=Alignment.Center) {
+                                            CustomGenderIcon(isFemale = !male, modifier = Modifier.size(10.dp))
+                                        }
                                     }
-                                    if(person.country.isNotBlank() || person.countryFlag.isNotBlank()) {
-                                        val flagSource = person.countryFlag.takeIf { it.startsWith("http", true) } ?: socialCountryFlagUrl(person.country, person.countryFlag)
-                                        if (flagSource.isNotBlank()) AsyncImage(model=flagSource, contentDescription="Country", modifier=Modifier.padding(start=5.dp).size(width=20.dp,height=14.dp).clip(RoundedCornerShape(2.dp)), contentScale=ContentScale.Crop)
+                                }
+                                if(person.country.isNotBlank() || person.countryFlag.isNotBlank()) {
+                                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 3.dp)) {
+                                        val countryName = person.country.ifBlank { person.countryFlag.takeUnless { it.startsWith("http", true) }.orEmpty() }
+                                        if (countryName.isNotBlank()) {
+                                            CountryFlagImage(countryName, Modifier.size(18.dp, 12.dp))
+                                            Spacer(Modifier.width(5.dp))
+                                            Text(countryName, color=Color(0xFF6B7280), fontSize=12.sp, maxLines=1)
+                                        } else if (person.countryFlag.startsWith("http", true)) {
+                                            AsyncImage(model=person.countryFlag, contentDescription="Country flag", modifier=Modifier.size(18.dp,12.dp), contentScale=ContentScale.Crop)
+                                        }
                                     }
                                 }
 
