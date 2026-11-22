@@ -105,6 +105,7 @@ import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.Locale
+import java.util.Calendar
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
@@ -118,6 +119,19 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+
+private const val DRAGON_ROUND_DURATION_MS = 47_000L
+private fun dragonRoundReset(now: Long = System.currentTimeMillis()): Long {
+    val calendar = Calendar.getInstance().apply { timeInMillis = now }
+    if (calendar.get(Calendar.HOUR_OF_DAY) < 5) calendar.add(Calendar.DAY_OF_YEAR, -1)
+    calendar.set(Calendar.HOUR_OF_DAY, 5)
+    calendar.set(Calendar.MINUTE, 0)
+    calendar.set(Calendar.SECOND, 0)
+    calendar.set(Calendar.MILLISECOND, 0)
+    return calendar.timeInMillis
+}
+private fun dragonRoundId(now: Long = System.currentTimeMillis()): Long =
+    ((now - dragonRoundReset(now)).coerceAtLeast(0L) / DRAGON_ROUND_DURATION_MS) + 1L
 
 private data class DragonRoundWinner(val name: String, val avatar: String, val win: Long)
 private data class DragonWalletResponse(val success: Boolean, val balance: Long, val error: String, val statusCode: Int = 0)
@@ -1669,7 +1683,7 @@ private fun DragonBattleMainOverlay(
             .firstOrNull { it.isNotBlank() && it != "null" && it != "undefined" }.orEmpty()
     }
     var globalRoundWinners by remember { mutableStateOf<List<DragonRoundWinner>>(emptyList()) }
-    var activeDragonRoundId by remember { mutableLongStateOf((System.currentTimeMillis() / 60_000L) + 1L) }
+    var activeDragonRoundId by remember { mutableLongStateOf(dragonRoundId()) }
     val dragonWinnerSocket = remember {
         runCatching {
             IO.socket("https://zyora-server.onrender.com", IO.Options().apply {
@@ -1711,7 +1725,7 @@ private fun DragonBattleMainOverlay(
     var isRevealing by remember { mutableStateOf(false) }
     var revealedCount by remember { mutableIntStateOf(0) }
     var roundCards by remember {
-        mutableStateOf(dealDragonRoundCards((System.currentTimeMillis() / 60_000L) + 1L))
+        mutableStateOf(dealDragonRoundCards(dragonRoundId()))
     }
 
     var showRankA by remember { mutableStateOf(false) }
@@ -1937,16 +1951,19 @@ private fun DragonBattleMainOverlay(
     LaunchedEffect(Unit) {
         launch(Dispatchers.IO) { soundManager.preload() }
         while (true) {
-            // Anchor every device to the same epoch-minute boundary using the device clock.
-            // This prevents each phone from starting its own independent game loop.
-            val roundStartMs = ((System.currentTimeMillis() / 60_000L) + 1L) * 60_000L
-            val sharedRoundId = roundStartMs / 60_000L
+            // Match Wild Party's shared 5:00 AM reset and 47-second global round.
+            val now = System.currentTimeMillis()
+            val resetMs = dragonRoundReset(now)
+            val elapsed = (now - resetMs).coerceAtLeast(0L)
+            val currentRoundStart = resetMs + (elapsed / DRAGON_ROUND_DURATION_MS) * DRAGON_ROUND_DURATION_MS
+            val roundStartMs = currentRoundStart + DRAGON_ROUND_DURATION_MS
+            val sharedRoundId = ((currentRoundStart - resetMs) / DRAGON_ROUND_DURATION_MS) + 1L
             activeDragonRoundId = sharedRoundId
-            globalRoundWinners = emptyList()
             dragonWinnerSocket?.emit("dragonbattle_top_winners_request", JSONObject().put("round", sharedRoundId))
             delay((roundStartMs - System.currentTimeMillis()).coerceAtLeast(0L))
+            activeDragonRoundId = sharedRoundId
+            globalRoundWinners = emptyList()
 
-            // 1. Start Betting -> "Start Betting !" banner + 20s countdown
             isRevealing = false
             revealedCount = 0
             showRankA = false
@@ -1963,122 +1980,92 @@ private fun DragonBattleMainOverlay(
             flyCornerProgress.snapTo(0f)
             cornerPopupText = null
             cornerPopupProgress.snapTo(0f)
-
             showBanner("Start Betting !")
 
-            // Drive the visible countdown from an absolute shared deadline.
-            // Recomputing remaining time avoids a stalled/stretched countdown when the
-            // coroutine wakes late after frame drops, backgrounding, or device scheduling.
-            val bettingDeadlineMs = roundStartMs + 20_000L
+            // Same 30-second betting window as Wild Party; deadline is epoch-based.
+            val bettingDeadlineMs = roundStartMs + 30_000L
             while (true) {
                 val remainingMs = bettingDeadlineMs - System.currentTimeMillis()
-                val remainingSeconds = ((remainingMs + 999L) / 1000L).coerceIn(0L, 20L)
-                timeLeft = remainingSeconds.toInt()
+                timeLeft = ((remainingMs + 999L) / 1000L).coerceIn(0L, 30L).toInt()
                 if (remainingMs <= 0L) break
-                delay(minOf(200L, remainingMs))
+                delay(minOf(150L, remainingMs))
             }
 
-            // 2. Time khatam -> "Stop Betting !" banner
             timeLeft = 0
             isRevealing = true
             showBanner("Stop Betting !")
-            delay(2150L)
+            delay(700L)
 
-            // 3. Cards show honge -> "Show !" banner + flip 1 card every 1.5s with turn sound (Group A -> B -> C)
             val dealt = dealDragonRoundCards(sharedRoundId)
             roundCards = dealt
             showBanner("Show !")
-
             for (cardStep in 1..9) {
                 revealedCount = cardStep
                 launch(Dispatchers.IO) { soundManager.playCardFlip() }
                 if (cardStep == 3 || cardStep == 6 || cardStep == 9) {
-                    delay(430L)
+                    delay(180L)
                     when (cardStep) {
                         3 -> showRankA = true
                         6 -> showRankB = true
                         9 -> showRankC = true
                     }
                     launch(Dispatchers.IO) { soundManager.playDham() }
-                    delay(1070L)
+                    delay(420L)
                 } else {
-                    delay(1500L)
+                    delay(600L)
                 }
             }
 
-            // 4. Winner tag + Dham sound + White rays + History (max 20)
             val winner = pickDragonWinner(dealt.first, dealt.second, dealt.third)
             dragonWinnerRoundId = sharedRoundId
-            dragonWinnerSocket?.emit(
-                "dragonbattle_top_winners_request",
-                JSONObject().put("round", sharedRoundId)
-            )
+            dragonWinnerSocket?.emit("dragonbattle_top_winners_request", JSONObject().put("round", sharedRoundId))
             winnerDragon = winner
             highlightedWinnerDragon = winner
             launch(Dispatchers.IO) { soundManager.playDham() }
             historyList = (listOf(winner) + historyList).take(20)
 
             val totalBet = youA + youB + youC
-            val winningBet = when (winner) {
-                "A" -> youA
-                "B" -> youB
-                else -> youC
-            }
+            val winningBet = when (winner) { "A" -> youA; "B" -> youB; else -> youC }
             val prize = (winningBet * 2.95).toLong()
             roundBetAmount = totalBet
             roundWinAmount = prize
             if (prize > 0L) {
                 queueDragonWalletChange(prize, "win")
-                dragonWinnerSocket?.emit(
-                    "dragonbattle_winner_update",
-                    JSONObject()
-                        .put("round", sharedRoundId)
-                        .put("accountId", dragonAccountId)
-                        .put("name", dragonUserName)
-                        .put("avatar", dragonUserAvatar)
-                        .put("win", prize)
-                )
-                dragonWinnerSocket?.emit(
-                    "dragonbattle_top_winners_request",
-                    JSONObject().put("round", sharedRoundId)
-                )
+                dragonWinnerSocket?.emit("dragonbattle_winner_update", JSONObject()
+                    .put("round", sharedRoundId).put("accountId", dragonAccountId)
+                    .put("name", dragonUserName).put("avatar", dragonUserAvatar).put("win", prize))
+                dragonWinnerSocket?.emit("dragonbattle_top_winners_request", JSONObject().put("round", sharedRoundId))
             }
 
-            // Show Win tag for 1 second
-            delay(1000L)
-
-            // Gather all pot coins into winning pot -> fly to bottom-left corner image -> disappear
+            delay(450L)
             if (scatteredCoins.isNotEmpty()) {
                 coinAnimPhase = 1
                 gatherProgress.snapTo(0f)
-                gatherProgress.animateTo(1f, tween(durationMillis = 550, easing = FastOutSlowInEasing))
-
+                gatherProgress.animateTo(1f, tween(durationMillis = 350, easing = FastOutSlowInEasing))
                 coinAnimPhase = 2
                 flyCornerProgress.snapTo(0f)
-                flyCornerProgress.animateTo(1f, tween(durationMillis = 550, easing = FastOutSlowInEasing))
-
+                flyCornerProgress.animateTo(1f, tween(durationMillis = 350, easing = FastOutSlowInEasing))
                 coinAnimPhase = 3
                 scatteredCoins = emptyList()
             }
 
-            // Popup +random value at bottom-left corner image
-            val randomPopupAmount = listOf(
-                5_000L, 12_500L, 25_000L, 48_000L, 75_000L,
-                120_000L, 250_000L, 500_000L, 850_000L
-            )[Random(sharedRoundId xor 0x5F3759DFL).nextInt(9)]
+            val randomPopupAmount = listOf(5_000L, 12_500L, 25_000L, 48_000L, 75_000L, 120_000L, 250_000L, 500_000L, 850_000L)[Random(sharedRoundId xor 0x5F3759DFL).nextInt(9)]
             cornerPopupText = "+${formatShortAmount(randomPopupAmount)}"
             cornerPopupProgress.snapTo(0f)
-            cornerPopupProgress.animateTo(1f, tween(durationMillis = 850, easing = FastOutSlowInEasing))
+            cornerPopupProgress.animateTo(1f, tween(durationMillis = 500, easing = FastOutSlowInEasing))
             cornerPopupText = null
 
-            // 5. Winner Page (opens after +random popup, 5s auto-close, NO winner sound)
-            winnerTimer = 5
+            winnerTimer = 3
             winnerOpen = true
-            repeat(5) { step ->
+            repeat(3) { step ->
                 delay(1000L)
-                winnerTimer = 4 - step
+                winnerTimer = 2 - step
             }
             winnerOpen = false
+            // Never let animation/network delays shift the global round clock.
+            val nextRoundAt = roundStartMs + DRAGON_ROUND_DURATION_MS
+            val wait = nextRoundAt - System.currentTimeMillis()
+            if (wait > 0L) delay(wait)
         }
     }
 
@@ -2440,18 +2427,14 @@ private fun DragonBattleMainOverlay(
                             )
                             Box(
                                 modifier = Modifier
-                                    .size(34.dp)
+                                    .size(42.dp)
                                     .graphicsLayer {
                                         val scale = if (isSelected) 1.08f else 1f
                                         scaleX = scale
                                         scaleY = scale
                                         translationY = if (isSelected) -8.dp.toPx() else 0f
-                                        rotationZ = chipRotation
+                                        rotationZ = if (isSelected) chipRotation else 0f
                                     }
-                                    .then(
-                                        if (isSelected) Modifier.border(1.8.dp, Color(0xFFFFD83D), CircleShape)
-                                        else Modifier
-                                    )
                                     .clickable(
                                         interactionSource = remember { MutableInteractionSource() },
                                         indication = null
