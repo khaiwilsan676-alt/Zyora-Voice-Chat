@@ -23,6 +23,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import io.socket.client.IO
+import io.socket.client.Socket
+import io.socket.emitter.Emitter
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -85,18 +88,54 @@ fun SellerCenter(
     ownerName: String = "",
     ownerAvatar: String = ""
 ) {
+    val context = LocalContext.current
+    val walletCachePrefs = remember(context) { context.getSharedPreferences("zyora_wallet_cache", android.content.Context.MODE_PRIVATE) }
+    val walletAccountKey = accountId.ifBlank { userId }
     var showingDetails by remember { mutableStateOf(false) }
     var targetId by remember { mutableStateOf("") }
     var amount by remember { mutableStateOf("") }
     var owner by remember { mutableStateOf(SellerUser(userId, accountId, ownerName.ifBlank { "User" }, ownerAvatar, "")) }
     var selectedUser by remember { mutableStateOf<SellerUser?>(null) }
-    var balance by remember { mutableStateOf(0L) }
+    var balance by remember(userId) { mutableStateOf(walletCachePrefs.getLong("balance_$userId", 0L).coerceAtLeast(0L)) }
     var isChecking by remember { mutableStateOf(false) }
     var isTransferring by remember { mutableStateOf(false) }
     var statusMessage by remember { mutableStateOf("") }
     var transfers by remember { mutableStateOf<List<SellerTransfer>>(emptyList()) }
     var detailsLoading by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+
+    val walletSocket = remember(userId, accountId) {
+        runCatching { IO.socket(SellerApi, IO.Options().apply {
+            transports = arrayOf("websocket"); reconnection = true
+            reconnectionAttempts = Int.MAX_VALUE; reconnectionDelay = 1000; reconnectionDelayMax = 5000
+        }) }.getOrNull()
+    }
+    DisposableEffect(walletSocket, userId, accountId) {
+        val registerWallet = { if (userId.isNotBlank()) walletSocket?.emit(
+            "register", JSONObject().put("userId", userId).put("accountId", walletAccountKey)
+        ) }
+        val onConnect = Emitter.Listener { registerWallet() }
+        val onBalanceUpdated = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
+            val eventUserId = payload.optString("userId")
+            val updated = payload.optLong("balance", -1L)
+            if (eventUserId in setOf(userId, accountId) && updated >= 0L) {
+                scope.launch {
+                    balance = updated
+                    walletCachePrefs.edit().putLong("balance_$userId", updated)
+                        .putLong("last_sync_$userId", System.currentTimeMillis()).apply()
+                }
+            }
+        }
+        walletSocket?.on(Socket.EVENT_CONNECT, onConnect)
+        walletSocket?.on("wallet_balance_updated", onBalanceUpdated)
+        if (walletSocket?.connected() == true) registerWallet() else walletSocket?.connect()
+        onDispose {
+            walletSocket?.off(Socket.EVENT_CONNECT, onConnect)
+            walletSocket?.off("wallet_balance_updated", onBalanceUpdated)
+            walletSocket?.disconnect(); walletSocket?.close()
+        }
+    }
 
     LaunchedEffect(userId) {
         if (userId.isBlank()) return@LaunchedEffect
@@ -114,6 +153,7 @@ fun SellerCenter(
                 )
             }
             balance = sellerRequest("/api/lucky-bag/wallet/$encoded").optLong("balance", 0L).coerceAtLeast(0L)
+            walletCachePrefs.edit().putLong("balance_$userId", balance).apply()
         }.onFailure { statusMessage = it.message ?: "Could not load wallet" }
     }
 
@@ -296,6 +336,7 @@ fun SellerCenter(
                                             .put("amount", coins)
                                             .put("transferId", UUID.randomUUID().toString()))
                                         balance = response.optLong("balance", (balance - coins)).coerceAtLeast(0L)
+                                        walletCachePrefs.edit().putLong("balance_$userId", balance).putLong("last_sync_$userId", System.currentTimeMillis()).apply()
                                         amount = ""; targetId = ""; selectedUser = null
                                         statusMessage = "Transfer successful"
                                     }.onFailure { statusMessage = it.message ?: "Transfer failed" }
