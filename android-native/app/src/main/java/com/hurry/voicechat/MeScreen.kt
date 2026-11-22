@@ -281,13 +281,12 @@ fun MeScreen(onOpen: (String) -> Unit = {}, onPublicProfile: (RoomProfileUser) -
                                 followers = fansCount
                             ))
                         }, contentAlignment = Alignment.Center) {
-                            if (displayPhoto.isNotBlank()) {
-                                FallbackAsyncImage(displayPhoto, name, Modifier.fillMaxSize().clip(CircleShape), contentScale = ContentScale.Crop)
-                            } else {
-                                Box(Modifier.fillMaxSize().clip(CircleShape).background(Color(0xFF666666)), contentAlignment = Alignment.Center) {
-                                    Text(name.take(1).uppercase(), color = Color.White, fontSize = 34.sp, fontWeight = FontWeight.Normal)
-                                }
-                            }
+                            FallbackAsyncImage(
+                                displayPhoto.ifBlank { ZYORA_DEFAULT_AVATAR_URL },
+                                name,
+                                Modifier.fillMaxSize().clip(CircleShape),
+                                contentScale = ContentScale.Crop
+                            )
                             NativeAvatarFrameOverlay(
                                 userId = prefs.getString("accountId", uid).orEmpty().ifBlank { uid },
                                 modifier = Modifier.fillMaxSize(),
