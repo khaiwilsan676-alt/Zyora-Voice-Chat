@@ -1826,7 +1826,7 @@ private fun DragonBattleMainOverlay(
                     synchronized(dragonPendingPrefs) {
                         val latest = runCatching { JSONArray(dragonPendingPrefs.getString(queueKey, "[]") ?: "[]") }.getOrDefault(JSONArray())
                         val cleaned = JSONArray()
-                        for (i in 1 until latest.length()) latest.optJSONObject(i)?.let(cleaned::put)
+                        for (i in 1 until latest.length()) latest.optJSONObject(i)?.let { cleaned.put(it) }
                         dragonPendingPrefs.edit().putString(queueKey, cleaned.toString()).commit()
                     }
                     continue
