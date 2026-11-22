@@ -1,7 +1,5 @@
 package com.hurry.voicechat
 
-private data class DragonRoundWinner(val name: String, val avatar: String, val win: Long)
-
 import android.content.Context
 import android.media.AudioAttributes
 import android.media.AudioFormat
@@ -117,6 +115,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+private data class DragonRoundWinner(val name: String, val avatar: String, val win: Long)
 
 private const val BASE_URL =
     "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/"
