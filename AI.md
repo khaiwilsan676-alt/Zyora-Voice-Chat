@@ -1783,3 +1783,12 @@ Current documentation does not certify that all historical features are build-, 
 - Native Dragon Battle and Coins Wallet listen for balance events and persist the latest shared wallet snapshot; Dragon Battle preserves pending optimistic deltas while reconciling server updates.
 - Dragon Battle HTTP handling tolerates non-JSON proxy/HTML error responses and allows longer Render cold-start response times instead of crashing while parsing HTML as JSON.
 - Dragon Battle pot panels use an opaque dark-brown fill.
+
+## 2026-11-22 — Canonical wallet reliability follow-up
+- Zyora-Server seller/master transfers now commit sender debit, recipient credit, and seller history in one MongoDB transaction.
+- Room gift settlement now commits sender coin debit, recipient diamond credits, room contribution records, and family contribution totals in one MongoDB transaction. Durable transfer IDs prevent socket replay from charging twice.
+- Dragon Battle and Wild Party now resolve the canonical MongoDB user document per request and commit wallet changes plus ledger rows together; the game wallet identity cache was removed.
+- Direct chat gift debit now requires a transaction ID and commits the debit plus ledger row atomically. Native MessageScreen sends a UUID.
+- Diamond exchange now commits both currency changes and its ledger row atomically, with an idempotency key sent by native CoinsNativePage.
+- Render build configuration now runs `npm run verify:contracts` before deployment. Contract assertions cover wallet atomicity and idempotency.
+- No wallet UI redesign was made. Render deployment, contract execution, native APK build, and live device wallet tests must be verified separately before claiming runtime completion.
