@@ -1862,7 +1862,7 @@ private fun DragonBattleMainOverlay(
     LaunchedEffect(Unit) {
         launch(Dispatchers.IO) { soundManager.preload() }
         while (true) {
-            // Anchor every device to the same server-clock minute boundary.
+            // Anchor every device to the same epoch-minute boundary using the device clock.
             // This prevents each phone from starting its own independent game loop.
             val roundStartMs = ((System.currentTimeMillis() / 60_000L) + 1L) * 60_000L
             delay((roundStartMs - System.currentTimeMillis()).coerceAtLeast(0L))
