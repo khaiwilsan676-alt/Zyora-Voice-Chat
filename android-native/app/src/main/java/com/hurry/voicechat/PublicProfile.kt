@@ -216,7 +216,7 @@ fun PublicProfileScreen(
         else if (path.startsWith("http://") || path.startsWith("https://") || path.startsWith("data:") || path.startsWith("content:") || path.startsWith("file:")) path
         else {
             val cleanPath = path.trimStart('/').removePrefix("public/")
-            "https://zyora-voice-chat.vercel.app/$cleanPath"
+            "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/$cleanPath"
         }
     }
 
