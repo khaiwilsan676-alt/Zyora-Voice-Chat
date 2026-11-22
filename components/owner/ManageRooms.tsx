@@ -78,7 +78,8 @@ export default function ManageRooms() {
         name: editValues.name.trim(),
         admin,
         micMode: Number(editValues.micMode) || 15,
-        theme: editValues.theme.trim() || 'default'
+        theme: editValues.theme.trim() || 'default',
+        country: firstValue(selectedRoom.raw, ['country', 'Country', 'roomCountry', 'room_country', 'countryName', 'roomCountryName']) || '🇮🇳'
       };
       if (editValues.password.trim()) payload.roomPassword = editValues.password.trim();
       const response = await fetch(apiUrl('/api/rooms'), {
@@ -88,10 +89,14 @@ export default function ManageRooms() {
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok || !data.success) throw new Error(data.error || 'Could not save room settings');
-      const updated = { ...selectedRoom, name: editValues.name.trim(), raw: { ...selectedRoom.raw, ...payload } };
+      const savedRoom = data.room && typeof data.room === 'object' ? data.room : payload;
+      const updated = { ...selectedRoom, name: editValues.name.trim(), raw: { ...selectedRoom.raw, ...savedRoom, ...payload } };
       setSelectedRoom(updated);
-      setRooms(current => current.map(room => room.roomId === updated.roomId ? updated : room));
-      roomsCache = { rooms: rooms.map(room => room.roomId === updated.roomId ? updated : room), expiresAt: Date.now() + ROOM_CACHE_TTL };
+      setRooms(current => {
+        const next = current.map(room => room.roomId === updated.roomId ? updated : room);
+        roomsCache = { rooms: next, expiresAt: Date.now() + ROOM_CACHE_TTL };
+        return next;
+      });
       setSaveMessage('Saved');
     } catch (error) {
       setSaveMessage(error instanceof Error ? error.message : 'Save failed');
