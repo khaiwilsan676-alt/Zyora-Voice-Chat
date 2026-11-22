@@ -38,7 +38,7 @@ export default function SpecialIdsPanel({ users = [], ownerKey }: { users?: User
       .some(value => String(value || '').toLowerCase().includes(query))).slice(0, 8);
   }, [users, userQuery]);
 
-  // The history table is intentionally limited to users who currently have a VIP ID.
+  // Show users with an active Special ID or owner-assigned image tag.
   const assignedUsers = useMemo(() => users.filter(user => {
     const idActive = Boolean(user.vipId && (!user.vipIdExpiresAt || user.vipIdExpiresAt > Date.now()));
     const tagActive = Boolean(user.ownerImageTag && (!user.ownerImageTagExpiresAt || user.ownerImageTagExpiresAt > Date.now()));
@@ -58,7 +58,7 @@ export default function SpecialIdsPanel({ users = [], ownerKey }: { users?: User
         headers: { 'Content-Type': 'application/json', 'x-owner-key': ownerKey },
         body: JSON.stringify({
           recipientAccountId: selectedUser.hurryId,
-          assignmentType: kind,
+          assignmentType: kind === 'id' ? 'id' : 'imageTag',
           specialId: specialId.trim(),
           tagImage,
           permanent,
