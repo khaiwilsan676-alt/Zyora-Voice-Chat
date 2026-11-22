@@ -333,11 +333,11 @@ fun RoomPage(
             .firstOrNull { it.isNotBlank() && it != "null" && !it.equals("User", ignoreCase = true) }
     } ?: currentUser.name.trim().takeIf { it.isNotBlank() && !it.equals("User", ignoreCase = true) } ?: "User"
     val roomDisplayImage = cachedCurrentProfile?.let { profile ->
-        sequenceOf("image", "avatar", "profileImageUrl", "dp", "photoURL")
+        sequenceOf("image", "dp", "photo", "photoURL", "photoUrl", "avatar", "avatarUrl", "profileImage", "profileImageUrl", "profile_image", "imageUrl", "picture")
             .map { profile.optString(it, "").trim() }
             .firstOrNull { it.isNotBlank() && it != "null" && it != "undefined" }
-    } ?: currentUser.image.takeIf { it.isNotBlank() && it != "null" }
-        ?: "https://zyora-server.onrender.com/default-avatar.png"
+    } ?: currentUser.image.trim().takeIf { it.isNotBlank() && it != "null" && it != "undefined" && !it.endsWith("/default-avatar.png", true) }
+        ?: ZYORA_DEFAULT_AVATAR_URL
     var copiedId by remember { mutableStateOf("") }
     var roomName by remember{mutableStateOf(roomOwner.name.ifBlank{"Room"})}
     var roomImage by remember{mutableStateOf(roomOwner.image)}
@@ -1352,7 +1352,7 @@ fun RoomPage(
                     senderId = senderId,
                     senderName = senderName,
                     recipientName = recipientName,
-                    senderImage = senderImageRaw.ifBlank { "https://zyora-server.onrender.com/default-avatar.png" },
+                    senderImage = senderImageRaw.ifBlank { ZYORA_DEFAULT_AVATAR_URL },
                     giftImage = giftImage,
                     multiplier = if (isComboReplay && luckyGiftNotice?.senderId == senderId) {
                         (luckyGiftNotice?.multiplier ?: multiplier) + 1
@@ -1430,7 +1430,7 @@ fun RoomPage(
                         if (!firstSeat.occupied && !firstSeat.locked && !ownerAlreadySeated) {
                             val ownerUser = JSONObject()
                                 .put("name", latestRoomDisplayName.ifBlank { "User" })
-                                .put("image", latestRoomDisplayImage.ifBlank { "https://zyora-server.onrender.com/default-avatar.png" })
+                                .put("image", latestRoomDisplayImage.ifBlank { ZYORA_DEFAULT_AVATAR_URL })
                                 .put("accountId", accountId)
                             roomSocket.emit(
                                 "room_seat_action",
@@ -1634,7 +1634,7 @@ fun RoomPage(
                 val joinCreatedAt = System.currentTimeMillis()
                 val joinId = "$accountId-$joinCreatedAt"
                 val joinName = latestRoomDisplayName.ifBlank { "User" }
-                val joinImage = latestRoomDisplayImage.ifBlank { "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/default-avatar.png" }
+                val joinImage = latestRoomDisplayImage.ifBlank { ZYORA_DEFAULT_AVATAR_URL }
                 val nativeJoin = NativeRoomMessage(joinId,"Enter the Room",joinName,joinImage,accountId,joinCreatedAt,"join")
                 mainHandler.post {
                     if (messages.none { it.id == joinId }) messages.add(nativeJoin)
@@ -1914,7 +1914,7 @@ Column(Modifier.fillMaxSize()) { // REMOVED imePadding() FROM HERE TO PREVENT TO
                             showSeatSheet = true
                         } else if (!tappedSeat.locked && accountId.isNotBlank() && accountId != "guest") {
                             val displayName = roomDisplayName.ifBlank { "User" }
-                            val displayImage = roomDisplayImage.ifBlank { "https://zyora-server.onrender.com/default-avatar.png" }
+                            val displayImage = roomDisplayImage.ifBlank { ZYORA_DEFAULT_AVATAR_URL }
                             val user = JSONObject().put("name", displayName).put("image", displayImage).put("accountId", accountId)
                             val targetIndex = seats.indexOfFirst { it.number == tappedSeat.number }
                             if (targetIndex >= 0 && !seats[targetIndex].occupied && !seats[targetIndex].locked) {
@@ -2894,7 +2894,7 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                             senderId = localSenderId,
                             senderName = localSenderName,
                             recipientName = outgoingTransfer.optString("recipientName", "User"),
-                            senderImage = localSenderImage.ifBlank { "https://zyora-server.onrender.com/default-avatar.png" },
+                            senderImage = localSenderImage.ifBlank { ZYORA_DEFAULT_AVATAR_URL },
                             giftImage = localGiftImage,
                             multiplier = if (localIsCombo && luckyGiftNotice?.senderId == localSenderId) {
                                 (luckyGiftNotice?.multiplier ?: localMultiplier) + 1
@@ -2973,7 +2973,7 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                     gifTimestamp=timestamp,
                     gifScale=sticker.seatScale
                 )
-                roomSocketRef.value?.emit("room_seat_action",JSONObject().put("roomId",roomId).put("userId",accountId).put("action","emoji").put("seatNumber",selected.number).put("user",JSONObject().put("name",roomDisplayName.ifBlank{"User"}).put("image",roomDisplayImage.ifBlank{"https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/default-avatar.png"}).put("accountId",accountId)).put("src",seatMediaUrl).put("scale",sticker.seatScale).put("timestamp",timestamp))
+                roomSocketRef.value?.emit("room_seat_action",JSONObject().put("roomId",roomId).put("userId",accountId).put("action","emoji").put("seatNumber",selected.number).put("user",JSONObject().put("name",roomDisplayName.ifBlank{"User"}).put("image",roomDisplayImage.ifBlank{ZYORA_DEFAULT_AVATAR_URL}).put("accountId",accountId)).put("src",seatMediaUrl).put("scale",sticker.seatScale).put("timestamp",timestamp))
                 
                 Handler(Looper.getMainLooper()).postDelayed({ if(seats.getOrNull(seatIndex)?.gifTimestamp==timestamp) seats[seatIndex]=seats[seatIndex].copy(gifSrc="",gifTimestamp=0L) },5000)
             }
@@ -3090,7 +3090,7 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                 onDismiss={showSeatSheet=false;selectedSeat=0},
                 onTake={
                     if(!seat.occupied && !seat.locked) {
-                        val user = JSONObject().put("name",roomDisplayName.ifBlank{"User"}).put("image",roomDisplayImage.ifBlank{"https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/default-avatar.png"}).put("accountId",accountId)
+                        val user = JSONObject().put("name",roomDisplayName.ifBlank{"User"}).put("image",roomDisplayImage.ifBlank{ZYORA_DEFAULT_AVATAR_URL}).put("accountId",accountId)
                         // A seat move is one local state transition: clear every previous
                         // seat for this account BEFORE painting the destination. Otherwise
                         // the old avatar remains visible until the server's next snapshot.
@@ -3790,7 +3790,7 @@ private fun RoomSeatInviteDialog(
                     if (remote.has(key)) merged.put(key, remote.opt(key))
                 }
                 val remoteName = sequenceOf("name", "displayName", "userName").map { remote.optString(it, "") }.firstOrNull { it.isNotBlank() && it != "null" } ?: m.sender
-                val remoteImage = sequenceOf("image", "avatar", "profileImageUrl").map { remote.optString(it, "") }.firstOrNull { it.isNotBlank() && it != "null" } ?: "https://zyora-server.onrender.com/default-avatar.png"
+                val remoteImage = sequenceOf("image", "dp", "photo", "photoURL", "photoUrl", "avatar", "avatarUrl", "profileImage", "profileImageUrl", "profile_image", "imageUrl", "picture").map { remote.optString(it, "") }.firstOrNull { it.isNotBlank() && it != "null" } ?: ZYORA_DEFAULT_AVATAR_URL
                 if (remoteName.isNotBlank()) merged.put("name", remoteName)
                 if (remoteImage.isNotBlank()) merged.put("image", remoteImage)
                 withContext(Dispatchers.IO) { profileDb.saveProfile(m.senderAccountId, merged) }
@@ -3814,8 +3814,8 @@ private fun RoomSeatInviteDialog(
     
     Row(Modifier.fillMaxWidth().padding(vertical=2.dp),verticalAlignment=Alignment.Top,horizontalArrangement=Arrangement.Start){
         val cachedName = profileTags?.let { profile -> sequenceOf("name", "displayName", "userName").map { profile.optString(it, "") }.firstOrNull { it.isNotBlank() && it != "null" } }.orEmpty()
-        val cachedImage = profileTags?.let { profile -> sequenceOf("image", "avatar", "profileImageUrl").map { profile.optString(it, "") }.firstOrNull { it.isNotBlank() && it != "null" } }.orEmpty()
-        FallbackAsyncImage(model=cachedImage.ifBlank { m.senderImage.ifBlank { "https://zyora-server.onrender.com/default-avatar.png" } },contentDescription=cachedName.ifBlank { m.sender },modifier=Modifier.padding(top=2.dp).size(28.dp).clip(CircleShape).border(1.dp, Color.White.copy(alpha=.1f), CircleShape).clickable(onClick = onAvatarClick),contentScale=ContentScale.Crop)
+        val cachedImage = profileTags?.let { profile -> sequenceOf("image", "dp", "photo", "photoURL", "photoUrl", "avatar", "avatarUrl", "profileImage", "profileImageUrl", "profile_image", "imageUrl", "picture").map { profile.optString(it, "") }.firstOrNull { it.isNotBlank() && it != "null" } }.orEmpty()
+        FallbackAsyncImage(model=cachedImage.ifBlank { m.senderImage.ifBlank { ZYORA_DEFAULT_AVATAR_URL } },contentDescription=cachedName.ifBlank { m.sender },modifier=Modifier.padding(top=2.dp).size(28.dp).clip(CircleShape).border(1.dp, Color.White.copy(alpha=.1f), CircleShape).clickable(onClick = onAvatarClick),contentScale=ContentScale.Crop)
         
         Column(Modifier.padding(start=8.dp).fillMaxWidth(.75f),verticalArrangement=Arrangement.spacedBy(2.dp)){
             Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(3.dp)){
