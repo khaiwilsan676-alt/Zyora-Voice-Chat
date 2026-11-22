@@ -53,6 +53,7 @@ data class RoomUser(
     val isOnline: Boolean = true,
     val isInSeat: Boolean = false,
     val isMuted: Boolean = false,
+    val isSelfMuted: Boolean = false,
     val isLocked: Boolean = false,
     // Public-profile assets and badges; defaults preserve existing room-profile callers.
     val coverPhoto: String? = null,
@@ -473,13 +474,13 @@ fun RoomProfile(
                                     modifier = Modifier.clickable { onMute() }
                                 ) {
                                     Icon(
-                                        imageVector = if (user.isMuted) Icons.Default.Mic else Icons.Default.MicOff,
-                                        contentDescription = if (user.isMuted) "Unmute self" else "Mute self",
+                                        imageVector = if (user.isSelfMuted) Icons.Default.Mic else Icons.Default.MicOff,
+                                        contentDescription = if (user.isSelfMuted) "Unmute self" else "Mute self",
                                         tint = Color.Black,
                                         modifier = Modifier.size(24.dp)
                                     )
                                     Spacer(modifier = Modifier.height(2.dp))
-                                    Text(if (user.isMuted) "Unmute" else "Mute", color = Color.Black, fontSize = 12.sp)
+                                    Text(if (user.isSelfMuted) "Unmute" else "Mute", color = Color.Black, fontSize = 12.sp)
                                 }
                                 Column(
                                     horizontalAlignment = Alignment.CenterHorizontally,
