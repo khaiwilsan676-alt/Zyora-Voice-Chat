@@ -225,35 +225,24 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
     }
 
     Box(Modifier.fillMaxSize().background(Color(0xFF111827))) {
-        var backgroundPlayer by remember(context) { mutableStateOf<ExoPlayer?>(null) }
-        LaunchedEffect(context) {
-            // Disk-cache database creation can block the first login frame.
-            // Initialize it on IO, then attach the prepared player on the UI thread.
-            val videoCache = withContext(Dispatchers.IO) {
-                runCatching { ZyoraLoginVideoCache.get(context.applicationContext) }.getOrNull()
-            }
-            val player = ExoPlayer.Builder(context).build().apply {
+        // Attach and start the original login video immediately; disk cache must not
+        // delay player creation or the first visible frame.
+        val backgroundPlayer = remember(context) {
+            ExoPlayer.Builder(context).build().apply {
                 val mediaItem = MediaItem.fromUri(Uri.parse(HURRY_VIDEO))
-                val mediaSource = if (videoCache != null) {
-                    val cacheDataSource = CacheDataSource.Factory()
-                        .setCache(videoCache)
-                        .setUpstreamDataSourceFactory(DefaultDataSource.Factory(context))
-                        .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
-                    ProgressiveMediaSource.Factory(cacheDataSource).createMediaSource(mediaItem)
-                } else {
-                    ProgressiveMediaSource.Factory(DefaultDataSource.Factory(context))
-                        .createMediaSource(mediaItem)
-                }
-                setMediaSource(mediaSource)
+                val cacheDataSource = CacheDataSource.Factory()
+                    .setCache(ZyoraLoginVideoCache.get(context.applicationContext))
+                    .setUpstreamDataSourceFactory(DefaultDataSource.Factory(context))
+                    .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
+                setMediaSource(ProgressiveMediaSource.Factory(cacheDataSource).createMediaSource(mediaItem))
                 repeatMode = Player.REPEAT_MODE_ONE
                 volume = 0f
                 playWhenReady = true
                 prepare()
             }
-            backgroundPlayer = player
         }
         DisposableEffect(backgroundPlayer) {
-            onDispose { backgroundPlayer?.release() }
+            onDispose { backgroundPlayer.release() }
         }
         AndroidView(
             modifier = Modifier.fillMaxSize(),
@@ -269,8 +258,9 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
                 }
             },
             update = { view ->
-                // Rebind only when the player changes; never restart playback on recomposition.
                 if (view.player !== backgroundPlayer) view.player = backgroundPlayer
+                if (backgroundPlayer.playbackState == Player.STATE_IDLE) backgroundPlayer.prepare()
+                if (!backgroundPlayer.isPlaying && backgroundPlayer.playWhenReady) backgroundPlayer.play()
             }
         )
         Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = if (page == "welcome") .30f else .40f)))
@@ -556,11 +546,6 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
                     OfficialLoginIcon(Modifier.size(29.dp)) // Icon size adjusted
                 }
                 
-                if (error.isNotBlank()) {
-                    Spacer(Modifier.height(10.dp))
-                    Text(error, color = Color.White, fontSize = 12.sp, textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(Color(0x66EF4444)).padding(10.dp))
-                }
                 Spacer(Modifier.height(24.dp))
                 
                 Text(
@@ -616,10 +601,6 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
                 Spacer(Modifier.height(12.dp))
                 Text("Welcome to Zyora", color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Bold)
                 Text("Log in or create your account", color = Color.White.copy(alpha = .75f), fontSize = 14.sp, modifier = Modifier.padding(top = 4.dp, bottom = 24.dp))
-                if (error.isNotBlank()) {
-                    Text(error, color = Color.White, fontSize = 13.sp, modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Color(0x66EF4444)).padding(12.dp))
-                    Spacer(Modifier.height(12.dp))
-                }
                 AuthField("E-mail Address", email, { email = it }, "Enter your email", false, KeyboardType.Email)
                 Spacer(Modifier.height(16.dp))
                 AuthField("Password", password, { password = it }, "Enter your password", !showPassword, KeyboardType.Password,
@@ -662,6 +643,25 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
                     Spacer(Modifier.height(0.1.dp))
                     CircularProgressIndicator(Modifier.size(15.dp), color = Color.White, strokeWidth = 1.5.dp)
                 }
+            }
+        }
+
+        if (error.isNotBlank()) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(
+                    text = error,
+                    color = Color.White,
+                    fontSize = 13.sp,
+                    lineHeight = 18.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth(0.82f)
+                        .widthIn(max = 300.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color.Black.copy(alpha = 0.30f))
+                        .clickable { error = "" }
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                )
             }
         }
 
