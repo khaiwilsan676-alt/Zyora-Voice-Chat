@@ -416,7 +416,15 @@ fun RoomInfo(
                     verticalArrangement = Arrangement.spacedBy(7.dp)
                 ) {
                     item {
-                        MemberRow(ownerDisplayName, if (isLogoOwner) "https://zyora-voice-chat.vercel.app/logo.png" else ownerDisplayImage, roomOwner.accountId.ifBlank { roomOwner.id.ifBlank { roomOwner.uid } }, "Owner", ownerCountry, ownerGender) {
+                        MemberRow(
+                            ownerDisplayName,
+                            if (isLogoOwner) "https://zyora-voice-chat.vercel.app/logo.png" else ownerDisplayImage,
+                            ownerVipId.takeIf { ownerVipBadge && it.isNotBlank() }
+                                ?: roomOwner.accountId.ifBlank { roomOwner.id.ifBlank { roomOwner.uid } },
+                            "Owner", ownerCountry, ownerGender,
+                            vipId = ownerVipId,
+                            showVipIdBadge = ownerVipBadge && ownerVipId.isNotBlank()
+                        ) {
                             onOpenProfile(RoomInfoFollower(roomOwner.accountId.ifBlank { roomOwner.id.ifBlank { roomOwner.uid } }, ownerDisplayName, ownerDisplayImage, ownerCountry, ownerGender))
                         }
                     }
@@ -555,6 +563,8 @@ private fun MemberRow(
     role: String,
     country: String,
     gender: String = "",
+    vipId: String = "",
+    showVipIdBadge: Boolean = false,
     onClick: () -> Unit
 ) {
     Row(
@@ -588,6 +598,17 @@ private fun MemberRow(
                 }
             }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                if (showVipIdBadge && vipId.isNotBlank()) {
+                    AsyncImage(
+                        model = "https://zyora-voice-chat.vercel.app/IMG_20261101_125212.png",
+                        contentDescription = "VIP ID",
+                        modifier = Modifier.height(13.dp).widthIn(min = 14.dp, max = 19.dp),
+                        contentScale = ContentScale.Fit
+                    )
+                    Text(vipId, color = Color.White.copy(alpha = .72f), fontSize = 10.sp)
+                } else {
+                    Text("ID: $id", color = Color.White.copy(alpha = .58f), fontSize = 10.sp)
+                }
                 if (gender.isNotBlank()) {
                     val isFemale = gender.equals("female", true) || gender.equals("f", true) || gender == "♀"
                     Box(
