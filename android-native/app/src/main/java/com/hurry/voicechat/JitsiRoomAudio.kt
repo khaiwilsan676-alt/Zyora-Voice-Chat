@@ -8,6 +8,7 @@ import android.media.AudioManager
 import android.media.audiofx.AcousticEchoCanceler
 import android.media.AudioFormat
 import android.os.Handler
+import android.os.Process
 import android.os.Looper
 import android.media.AudioRecord
 import android.media.AudioTrack
@@ -251,6 +252,9 @@ fun JitsiRoomAudio(
             }
             onSpeakingChanged(false)
             captureThread = thread(name = "ZyoraRoomMic", isDaemon = true) {
+                // Audio capture is a real-time task; use Android's audio thread
+                // priority so UI/render work cannot starve 20 ms microphone frames.
+                runCatching { Process.setThreadPriority(Process.THREAD_PRIORITY_AUDIO) }
                 val frame = ByteArray(ROOM_VOICE_FRAME_BYTES)
                 var filled = 0
                 var speechFrames = 0
@@ -376,9 +380,21 @@ fun JitsiRoomAudio(
             if (minOut <= 0) return null
             return runCatching {
                 AudioTrack.Builder()
-                    .setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).build())
+                    .setAudioAttributes(
+                        AudioAttributes.Builder()
+                            .setUsage(AudioAttributes.USAGE_MEDIA)
+                            .setContentType(if (isVoicePacket) AudioAttributes.CONTENT_TYPE_SPEECH else AudioAttributes.CONTENT_TYPE_MUSIC)
+                            .build()
+                    )
                     .setAudioFormat(AudioFormat.Builder().setSampleRate(sampleRate).setEncoding(AudioFormat.ENCODING_PCM_16BIT).setChannelMask(channelMask).build())
                     .setBufferSizeInBytes(maxOf(minOut, frameBytes * 4))
+                    .apply {
+                        // Request the platform's low-latency path for live speech.
+                        // Android may ignore it when the device/route cannot support it.
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O && isVoicePacket) {
+                            setPerformanceMode(AudioTrack.PERFORMANCE_MODE_LOW_LATENCY)
+                        }
+                    }
                     .setTransferMode(AudioTrack.MODE_STREAM).build()
                     .takeIf { it.state == AudioTrack.STATE_INITIALIZED }
             }.getOrNull()
@@ -389,6 +405,10 @@ fun JitsiRoomAudio(
                 val current = if (isVoicePacket) voicePlaybackThread else musicPlaybackThread
                 if (current?.isAlive == true) return
                 val worker = thread(name = if (isVoicePacket) "ZyoraRoomVoicePlayback" else "ZyoraRoomMusicPlayback", isDaemon = true) {
+                    if (isVoicePacket) {
+                        // Keep the PCM writer scheduled like an audio callback, not a background worker.
+                        runCatching { Process.setThreadPriority(Process.THREAD_PRIORITY_AUDIO) }
+                    }
                     // Start playback as soon as the first complete frame arrives.
                     // A fixed startup sleep added avoidable latency to every room voice session.
                     while (alive.get()) {
@@ -471,6 +491,7 @@ fun JitsiRoomAudio(
         fun createChunkListener(isVoicePacket: Boolean) = Emitter.Listener { args ->
             val data = args.firstOrNull() as? JSONObject ?: return@Listener
             if (data.optString("roomId") != roomId || !alive.get()) return@Listener
+            // Do not decode/copy remote PCM while the listener has muted room playback.
             if (localAccountId.isNotBlank()) {
                 val packetOwners = listOf(data.optString("userId"), data.optString("accountId"), data.optString("senderId"), data.optString("senderAccountId"), data.optString("publisherId"))
                 if (packetOwners.any { it.isNotBlank() && it == localAccountId }) return@Listener
@@ -482,6 +503,7 @@ fun JitsiRoomAudio(
                 else -> return@Listener
             }
             if (bytes.isEmpty() || bytes.size > 4096 || bytes.size % 2 != 0) return@Listener
+            if (isVoicePacket && !latestPlaybackVoiceEnabled) return@Listener
             val ready = synchronized(playerLock) {
                 if (isVoicePacket) {
                     if (voicePlayer?.state != AudioTrack.STATE_INITIALIZED) {
