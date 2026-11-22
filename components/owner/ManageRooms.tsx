@@ -107,20 +107,49 @@ export default function ManageRooms() {
         return;
       }
       try {
-        const response = await fetch(apiUrl('/api/rooms?ownerPanel=true'), { cache: 'no-store', headers: { Accept: 'application/json' } });
+        // Resolve the room's stored owner UID/account ID against canonical user profiles.
+        const [response, usersResponse] = await Promise.all([
+          fetch(apiUrl('/api/rooms?ownerPanel=true'), { cache: 'no-store', headers: { Accept: 'application/json' } }),
+          fetch(apiUrl('/api/users'), { cache: 'no-store', headers: { Accept: 'application/json' } }).catch(() => null)
+        ]);
         if (!response.ok) throw new Error(`Rooms API failed: ${response.status}`);
         const data = await response.json();
         const rows = Array.isArray(data?.rooms) ? data.rooms : [];
+        let users: any[] = [];
+        if (usersResponse?.ok) {
+          const usersData = await usersResponse.json().catch(() => ({}));
+          users = Array.isArray(usersData?.users) ? usersData.users : [];
+        }
+        const identityValues = (source: any) => [
+          source?.uid, source?.firebaseUid, source?.firebaseUID, source?.userId,
+          source?.id, source?._id, source?.appLongId, source?.accountId,
+          source?.accountNumber, source?.displayAccountNumber, source?.displayUserNumber,
+          source?.publicUserId, source?.hurryId, source?.zyoraId,
+          source?.['Account ID'], source?.['Account Number']
+        ].map(value => textValue(value)).filter(Boolean);
+        const ownerImageOf = (source: any) => textValue(
+          source?.image, source?.dp, source?.photo, source?.photoURL, source?.photoUrl,
+          source?.avatar, source?.avatarUrl, source?.profileImage, source?.profileImageUrl,
+          source?.profile_image, source?.imageUrl, source?.picture,
+          source?.profile?.image, source?.profile?.avatar, source?.profile?.photo,
+          source?.userData?.image, source?.userData?.avatar
+        );
         const mapped: RoomRecord[] = rows.map((room: any, index: number) => {
-          const ownerId = textValue(room.ownerId, room.ownerAccountId, room.accountId, room.roomAdmin, room['Room Admin'], room.id, room.roomId);
+          const ownerId = textValue(
+            room.ownerUid, room.ownerId, room.ownerAccountId, room.owner?.uid,
+            room.owner?.id, room.owner?.accountId, room.roomOwner?.uid,
+            room.roomOwner?.id, room.roomOwner?.accountId, room.roomAdmin,
+            room['Room Admin']
+          );
+          const owner = users.find(user => ownerId && identityValues(user).includes(ownerId));
           return {
             id: textValue(room._id, room.id, room.accountId, room.roomId, index + 1),
             name: textValue(room.name, room.roomName, room['Room Name']) || 'Room',
             dp: textValue(room.dp, room.image, room.roomDp, room['Room dp']),
             roomId: textValue(room.roomId, room.accountId, room.id, room['Room Admin']) || '—',
             ownerId: ownerId || '—',
-            ownerName: textValue(room.ownerName, room.roomOwnerName, room.owner?.name, room.owner?.displayName, room.roomOwner?.name) || '—',
-            ownerImage: textValue(room.ownerImage, room.owner?.image, room.owner?.avatar, room.roomOwner?.image),
+            ownerName: textValue(room.ownerName, room.roomOwnerName, room.owner?.name, room.owner?.displayName, room.roomOwner?.name, owner?.name, owner?.displayName, owner?.userName) || '—',
+            ownerImage: textValue(room.ownerImage, room.owner?.image, room.owner?.avatar, room.roomOwner?.image, ownerImageOf(owner)),
             raw: room
           };
         });
