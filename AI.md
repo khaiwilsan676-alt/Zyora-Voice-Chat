@@ -1978,3 +1978,7 @@ Current documentation does not certify that all historical features are build-, 
 ## 2026-11-22 — Room Gift Picker canonical wallet sync
 - `Zyora-Server/server.js`: after a room gift transaction commits, publish the canonical sender balance to every registered Firebase UID and permanent account-ID socket room using the same wallet broadcast path as game transactions.
 - This updates the in-room Gift Picker and Mine > Wallet from the same MongoDB balance without changing gift prices, rewards, UI, or room behavior.
+## 2026-11-22 — Faster game wallet settlement
+- `Zyora-Server/server.js`: Wild Party and Dragon Battle now settle each bet/win with one atomic MongoDB user-document update instead of a multi-command majority transaction. The balance mutation and idempotency key remain in the same atomic write, preventing duplicate application and overspending.
+- Canonical Socket.IO balance broadcasts happen immediately after the atomic write; local game display remains optimistic while the server confirms. Wallet history persistence runs independently so it does not hold up the balance response.
+- Server deployment and multi-device latency still require runtime verification.
