@@ -101,11 +101,8 @@ export default function ManageRooms() {
   useEffect(() => {
     let active = true;
     const loadRooms = async () => {
-      if (roomsCache && roomsCache.expiresAt > Date.now()) {
-        setRooms(roomsCache.rooms);
-        setLoading(false);
-        return;
-      }
+      // Refresh the owner profile/avatar join on every panel entry; cached room
+      // rows may predate a user's latest profile photo.
       try {
         // Resolve the room's stored owner UID/account ID against canonical user profiles.
         const [response, usersResponse] = await Promise.all([
