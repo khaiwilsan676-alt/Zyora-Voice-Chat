@@ -1301,12 +1301,24 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
     val updatedBalance = payload.optLong("balance", -1L)
     if (eventUserId in setOf(walletAccountId, walletAccountNumber) && updatedBalance >= 0L) {
      scope.launch {
-      balance = updatedBalance
-      walletCachePrefs.edit().putLong("balance_$walletAccountId", updatedBalance)
-       .putLong("last_sync_$walletAccountId", System.currentTimeMillis()).apply()
-      withContext(Dispatchers.IO) {
-       val old = dao.getUserData() ?: UserDataEntity(balance = updatedBalance)
-       dao.saveUserData(old.copy(balance = updatedBalance))
+      // Socket snapshots can arrive while this device still has unconfirmed bets/wins.
+      // Merge the authoritative server balance with the durable pending queue instead
+      // of replacing the visible balance and temporarily losing those local changes.
+      walletStateMutex.withLock {
+       val pending = runCatching {
+        JSONArray(pendingWalletPrefs.getString(pendingWalletKey(), "[]") ?: "[]")
+       }.getOrDefault(JSONArray())
+       val pendingDelta = (0 until pending.length()).sumOf {
+        pending.optJSONObject(it)?.optLong("delta") ?: 0L
+       }
+       val visible = (updatedBalance + pendingDelta).coerceAtLeast(0L)
+       balance = visible
+       walletCachePrefs.edit().putLong("balance_$walletAccountId", visible)
+        .putLong("last_sync_$walletAccountId", System.currentTimeMillis()).apply()
+       withContext(Dispatchers.IO) {
+        val old = dao.getUserData() ?: UserDataEntity(balance = visible)
+        dao.saveUserData(old.copy(balance = visible))
+       }
       }
      }
     }
