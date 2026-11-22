@@ -1943,3 +1943,10 @@ Current documentation does not certify that all historical features are build-, 
 - `RoomPage.kt`: removed Fruit Party from the native room Games sheet and its launch state/entry point. Wild Party is column 1 and Dragon Battle is column 2; remaining columns stay empty. Existing game artwork and styling are preserved.
 - `DragonBattle.kt`: changed the 20-second betting countdown to use the shared round's absolute wall-clock deadline and continuously recompute remaining seconds. Late coroutine wakeups/frame scheduling can no longer stretch or freeze the displayed countdown; betting still ends at the same shared 20-second deadline.
 - Verification pending: native APK compilation and live multi-device countdown checks. No runtime pass is claimed.
+
+
+## Room Info VIP ID and default room DP fix (2026-11-22)
+- RoomInfo now refreshes the room owner's VIP ID from the canonical remote profile when the sheet opens, using UID, ID, and account ID aliases plus the local profile cache. An active assigned VIP ID displays the official ID image and number in the owner row.
+- Room Info room avatar now uses the room's own DP; when the room has no valid DP, it displays the shared Zyora default avatar asset. It no longer substitutes the owner's personal avatar for a missing room DP.
+- RoomPage no longer converts an empty room DP into the room-image API URL, which could return a transparent placeholder and suppress the default avatar.
+- No other Room Info layout, colors, or sizing were intentionally changed. APK build has not yet been verified.
