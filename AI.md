@@ -1722,3 +1722,12 @@ Current documentation does not certify that all historical features are build-, 
 - `PublicProfile.kt` and `MeScreen.kt`: always render the shared fallback when no valid DP exists; use the same fallback-aware image component for the profile avatar.
 - `RoomPage.kt`: normalize legacy profile image keys and use the actual Zyora fallback URL for room self-avatar/seat/chat payloads instead of missing server/Hurry `default-avatar.png` paths.
 - No avatar dimensions, colors, profile layout, room layout, or existing uploaded DP values were intentionally changed. Native APK compilation and on-device Room/Public Profile verification are still required.
+
+
+## 2026-11-22 — Room Cup contribution pipeline root-cause fix
+- Tester-style audit traced the room Cup path end to end: native `GiftPicker.kt` sends `amount = totalSendCostToSend` (gift price × multiplier × recipient count); `RoomPage.kt` emits `coin_transfer` to `https://zyora-server.onrender.com`; Zyora Server writes the sent contribution amount; `/api/rooms/:roomId/contributions` sums `kind: sent` records for the current IST day or Monday-start IST week; `Roomcup.kt` reads the returned `coins` values.
+- Confirmed backend defect: `coin_transfer` wrapped `room_gift_contributions` writes in a nested catch that only logged failures and still emitted `coin_transfer_received` as if the gift succeeded. This allowed wallet/gift success while the Cup leaderboard silently missed contribution rows. The sender's family totals were also incremented before contribution persistence.
+- `Zyora-Server/server.js` now uses idempotent upserts keyed by room + kind + transfer ID for sent and received contribution rows. Contribution persistence failures now reach the existing outer rollback/refund path instead of being swallowed; family sent totals update only after contribution persistence succeeds.
+- `Roomcup.kt` top counter uses compact K/M/B formatting as requested. No UI layout or colors changed.
+- Server commit: `d1a6ac897b608a882f4fc2896af56f65f07dbaf2`; native counter documentation commit: `0df62bb3366fabb48b60a0cbea3dfe54f19b9a03`.
+- Verification still required: deploy the Zyora-Server commit on Render, inspect MongoDB `room_gift_contributions` for the affected room and transfer IDs, then test one 500,000-coin gift and confirm Daily + Weekly totals each increase by 500,000. Historical missing contribution rows are not backfilled automatically. APK build and live two-device verification remain pending.
