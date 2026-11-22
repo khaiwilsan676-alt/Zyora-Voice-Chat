@@ -1752,3 +1752,10 @@ Current documentation does not certify that all historical features are build-, 
 - Native `JitsiRoomAudio.kt`: restored the 10 ms packet-arrival collection window before mixing independent per-speaker PCM queues. Removing that window let late-arriving speaker frames be mixed in a different playback tick, producing offset/chorused speech during simultaneous conversations.
 - Server commit: `393b084754dcd9b417c90610ce653edc9d56e843`; native commit: `a4624a238a225660450788468875ea275a5d0353`.
 - Source-level changes committed. Render deployment, native APK build, and two-device tests (cross-instance delivery, simultaneous speech, mute/unmute, and Bluetooth) remain required; no runtime success is claimed.
+
+
+## 2026-11-22 — Owner VIP ID validation and System message identity delivery
+- `components/owner/SpecialIdsPanel.tsx`: corrected the VIP ID and duration regular expressions. The previous double-escaped digit matcher treated normal numeric input as a literal backslash sequence and rejected valid numeric VIP IDs before the API request.
+- `Zyora-Server/server.js`: expanded the shared Zyora System DM recipient-room resolution to include Firebase UID, legacy user ID, App ID, and account-number aliases. Both Owner VIP ID assignment and Owner asset grants use this helper; connected users receive the live `private_message` event, while offline users are queued in Redis under the known aliases.
+- Source commits: app `a7f78bbe487e0c3dfb940e1a3e90e20cec8fa03d`; server `a3ed4728eaf5f6fbe1cc9205ba86254decabde9a`.
+- Source-level fix only. Render deployment and two-account online/offline inbox verification are still required; no live delivery or APK build is claimed.
