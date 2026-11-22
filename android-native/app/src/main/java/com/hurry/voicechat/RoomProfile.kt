@@ -396,11 +396,14 @@ fun RoomProfile(
                             Text(" Fans", color = Color.Gray, fontSize = 14.sp, modifier = Modifier.padding(start = 4.dp))
                         }
 
+                        // Assigned image occupies the same Official tag slot used by account 100002.
+                        val ownerImageTag = loadedProfile?.optString("ownerImageTag", "").orEmpty().takeIf { it.isNotBlank() && (loadedProfile?.optLong("ownerImageTagExpiresAt", 0L) ?: 0L).let { expiry -> expiry == 0L || expiry > System.currentTimeMillis() } }
+                        val ownerImageTagUrl = ownerImageTag?.fullUrl()
                         // Tags flow in their current availability order: 3 per row.
                         // Lv.1 artwork and its sizing remain unchanged.
                         val roomProfileTags = listOfNotNull(
                             if (officialHeadTag) Triple("file_000000005c388246a5d95dba880d7eb9.png", "Official Head", 27) else null,
-                            if (officialTag) Triple("IMG_20261027_102250.png", "Official", 19) else null,
+                            if (ownerImageTagUrl != null) Triple(ownerImageTagUrl, "Official", 19) else if (officialTag) Triple("IMG_20261027_102250.png", "Official", 19) else null,
                             if (adminTag) Triple("IMG_20261027_114117.png", "Admin", 19) else null,
                             if (serviceTag) Triple("IMG_20261027_102207.png", "Service / CS", 19) else null,
                             if (hostTag) Triple("IMG_20261028_154914.png", "Host", 17) else null,
@@ -443,8 +446,6 @@ fun RoomProfile(
                             }
                         }
 
-                        val ownerImageTag = loadedProfile?.optString("ownerImageTag", "").orEmpty().takeIf { it.isNotBlank() && (loadedProfile?.optLong("ownerImageTagExpiresAt", 0L) ?: 0L).let { expiry -> expiry == 0L || expiry > System.currentTimeMillis() } }
-                        if (ownerImageTag != null) AsyncImage(model = ownerImageTag.fullUrl(), contentDescription = "Owner assigned image tag", contentScale = ContentScale.Fit, modifier = Modifier.padding(top = 6.dp).height(22.dp).widthIn(max = 100.dp))
                         roomProfileTags.drop(3).chunked(3).forEach { tagRow ->
                             Row(
                                 modifier = Modifier.padding(top = 8.dp),
