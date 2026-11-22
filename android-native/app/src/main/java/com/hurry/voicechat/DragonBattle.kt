@@ -1700,7 +1700,9 @@ private fun DragonBattleMainOverlay(
     var timeLeft by remember { mutableIntStateOf(20) }
     var isRevealing by remember { mutableStateOf(false) }
     var revealedCount by remember { mutableIntStateOf(0) }
-    var roundCards by remember { mutableStateOf(dealDragonRoundCards()) }
+    var roundCards by remember {
+        mutableStateOf(dealDragonRoundCards((System.currentTimeMillis() / 60_000L) + 1L))
+    }
 
     var showRankA by remember { mutableStateOf(false) }
     var showRankB by remember { mutableStateOf(false) }
@@ -1978,7 +1980,7 @@ private fun DragonBattleMainOverlay(
             val randomPopupAmount = listOf(
                 5_000L, 12_500L, 25_000L, 48_000L, 75_000L,
                 120_000L, 250_000L, 500_000L, 850_000L
-            )[Random.nextInt(9)]
+            )[Random(sharedRoundId xor 0x5F3759DFL).nextInt(9)]
             cornerPopupText = "+${formatShortAmount(randomPopupAmount)}"
             cornerPopupProgress.snapTo(0f)
             cornerPopupProgress.animateTo(1f, tween(durationMillis = 850, easing = FastOutSlowInEasing))
