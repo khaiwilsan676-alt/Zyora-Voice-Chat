@@ -445,7 +445,7 @@ private fun leaderboardFlag(country: String): String = when (country.trim().lowe
 }
 
 @Composable
-fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
+fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour", onOpenProfile:(RoomUser)->Unit = {}) {
     var tab by remember { mutableStateOf(initialTab) }
     var period by remember { mutableStateOf("daily") }
     var showRules by remember { mutableStateOf(false) }
@@ -482,8 +482,8 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
         while (true) {
             runCatching { loadZyoraLeaderboard(if (tab == "honour") "rich" else tab, period) }
                 .onSuccess { leaderboardRows = it.rows; leaderboardEndsAt = it.endsAt }
-                .onFailure { leaderboardRows = emptyList() }
-            delay(15000)
+                .onFailure { /* keep the last good snapshot during transient network failures */ }
+            delay(10000)
         }
     }
     LaunchedEffect(Unit) {
@@ -623,7 +623,8 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                         // TOP 1 BOX 
                         val rank1 = leaderboardRows.getOrNull(0)
                         Box(
-                            modifier = Modifier.width(podiumTopWidth).height(260.dp).offset(y = (-35).dp), 
+                            modifier = Modifier.width(podiumTopWidth).height(260.dp).offset(y = (-35).dp)
+                                .clickable(enabled = tab != "room" && rank1 != null) { rank1?.let { onOpenProfile(RoomUser(id = it.id, uid = it.id, accountId = it.id, name = it.name, image = it.image, gender = it.gender, country = it.country)) } }, 
                             contentAlignment = Alignment.Center
                         ) {
                             val rank1Img = rank1?.image?.takeIf { it.isNotBlank() }
@@ -692,7 +693,7 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                             // Rank 2 Column (Avatar + Frame overlapping, Info below frame same as Top 1)
                             val rank2 = leaderboardRows.getOrNull(1)
                             Column(
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier.weight(1f).clickable(enabled = tab != "room" && rank2 != null) { rank2?.let { onOpenProfile(RoomUser(id = it.id, uid = it.id, accountId = it.id, name = it.name, image = it.image, gender = it.gender, country = it.country)) },
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 Box(modifier = Modifier.fillMaxWidth().height(175.dp), contentAlignment = Alignment.Center) {
@@ -757,7 +758,7 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                             // Rank 3 Column (Avatar + Frame overlapping, Info below frame same as Top 1)
                             val rank3 = leaderboardRows.getOrNull(2)
                             Column(
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier.weight(1f).clickable(enabled = tab != "room" && rank3 != null) { rank3?.let { onOpenProfile(RoomUser(id = it.id, uid = it.id, accountId = it.id, name = it.name, image = it.image, gender = it.gender, country = it.country)) },
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 Box(modifier = Modifier.fillMaxWidth().height(175.dp), contentAlignment = Alignment.Center) {
@@ -904,7 +905,7 @@ fun Leaderboard(onBack:()->Unit={}, initialTab:String="honour") {
                                         ?: (raw + user.image.removePrefix("/").ifBlank { "default_avatar.png" })
 
                                     Row(
-                                        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 14.dp),
+                                        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 14.dp).clickable(enabled = tab != "room") { onOpenProfile(RoomUser(id = user.id, uid = user.id, accountId = user.id, name = user.name, image = user.image, gender = user.gender, country = user.country)) },
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Text(
