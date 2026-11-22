@@ -159,7 +159,10 @@ fun RoomProfile(
 
     var displayName by remember(user.uid, user.id, user.accountId, user.name, cachedProfile) { mutableStateOf(cachedProfile?.optString("name")?.takeIf { it.isNotBlank() && it != "null" } ?: user.name.ifBlank { "User" }) }
     var displayImage by remember(user.uid, user.id, user.accountId, user.image, cachedProfile) { mutableStateOf(sequenceOf("image", "dp", "photo", "photoURL", "photoUrl", "avatar", "avatarUrl", "profileImage", "profileImageUrl", "profile_image", "imageUrl", "picture").map { key -> cachedProfile?.optString(key, "").orEmpty().trim() }.firstOrNull { it.isNotBlank() && it != "null" && it != "undefined" } ?: user.image) }
-    val displayProfileImage = displayImage
+    val displayProfileImage = displayImage.trim().takeIf {
+        it.isNotBlank() && it != "null" && it != "undefined" &&
+            !it.equals("default-avatar.png", true) && !it.endsWith("/default-avatar.png", true)
+    } ?: ZYORA_DEFAULT_AVATAR_URL
     var displayGender by remember(user.uid, user.id, user.accountId, user.gender, cachedProfile) { mutableStateOf(cachedProfile?.optString("gender")?.takeIf { it.isNotBlank() && it != "null" } ?: user.gender) }
     var displayAge by remember(user.uid, user.id, user.accountId, user.age, cachedProfile) { mutableIntStateOf(if (cachedProfile?.has("age") == true) cachedProfile.optInt("age", user.age) else user.age) }
     var displayBio by remember(user.uid, user.id, user.accountId, user.bio, cachedProfile) { mutableStateOf(cachedProfile?.optString("bio")?.takeIf { it != "null" } ?: user.bio) }
@@ -209,8 +212,8 @@ fun RoomProfile(
         loadedProfile = merged
         remote?.let { latest -> sequenceOf("name", "displayName", "userName", "nickname").map { latest.optString(it, "").trim() }.firstOrNull { it.isNotBlank() && it != "null" && !it.equals("User", ignoreCase = true) }?.let { displayName = it } }
         remote?.let { latest ->
-            sequenceOf("image", "avatar", "profileImageUrl").map { latest.optString(it, "").trim() }
-                .firstOrNull { it.isNotBlank() && it != "null" }?.takeIf { it != displayImage }?.let { displayImage = it }
+            sequenceOf("image", "dp", "photo", "photoURL", "photoUrl", "avatar", "avatarUrl", "profileImage", "profileImageUrl", "profile_image", "imageUrl", "picture").map { latest.optString(it, "").trim() }
+                .firstOrNull { it.isNotBlank() && it != "null" && it != "undefined" }?.takeIf { it != displayImage }?.let { displayImage = it }
         }
         sequenceOf("country", "countryName", "countryCode", "country_code", "nationality", "location").map { merged.optString(it, "").trim() }.firstOrNull { it.isNotBlank() && it != "null" }?.let { displayCountry = it }
         val stableDetails = merged
@@ -758,8 +761,8 @@ fun RoomProfile(
                             .size(88.dp)
                             .clickable { onOpenPublicProfile(user.copy(name = displayName, image = displayProfileImage, country = displayCountry, coinSellerTag = coinSellerTag || user.coinSellerTag == true || loadedProfile?.optBoolean("coinSellerTag", false) == true || loadedProfile?.optBoolean("coinSeller", false) == true || loadedProfile?.optBoolean("sellerTag", false) == true)) }
                     ) {
-                        AsyncImage(
-                            model = displayProfileImage.ifBlank { "default-avatar.png".fullUrl() },
+                        FallbackAsyncImage(
+                            model = displayProfileImage,
                             contentDescription = displayName,
                             contentScale = ContentScale.Crop,
                             modifier = Modifier
@@ -939,6 +942,6 @@ fun TimeOptionItem(text: String, isSelected: Boolean, modifier: Modifier = Modif
 }
 
 private fun String.fullUrl(): String {
-    val baseUrl = "https://raw.githubusercontent.com/khaiwilsan676-alt/Hurry-Voice-Chat/main/public/"
+    val baseUrl = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/"
     return if (this.startsWith("http")) this else baseUrl + this.removePrefix("/")
 }
