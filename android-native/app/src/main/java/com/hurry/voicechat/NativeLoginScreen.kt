@@ -230,11 +230,12 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
         val backgroundPlayer = remember(context) {
             ExoPlayer.Builder(context).build().apply {
                 val mediaItem = MediaItem.fromUri(Uri.parse(HURRY_VIDEO))
-                val cacheDataSource = CacheDataSource.Factory()
-                    .setCache(ZyoraLoginVideoCache.get(context.applicationContext))
-                    .setUpstreamDataSourceFactory(DefaultDataSource.Factory(context))
-                    .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
-                setMediaSource(ProgressiveMediaSource.Factory(cacheDataSource).createMediaSource(mediaItem))
+                // Use the original remote video directly so a stale/busy cache
+                // cannot prevent the login background from starting.
+                setMediaSource(
+                    ProgressiveMediaSource.Factory(DefaultDataSource.Factory(context))
+                        .createMediaSource(mediaItem)
+                )
                 repeatMode = Player.REPEAT_MODE_ONE
                 volume = 0f
                 playWhenReady = true
