@@ -1899,8 +1899,9 @@ private fun DragonBattleMainOverlay(
             check(dragonPendingPrefs.edit().putString(queueKey, queue.toString()).commit())
             walletPendingDelta = (0 until queue.length()).sumOf { queue.optJSONObject(it)?.optLong("delta") ?: 0L }
         }
-        // Pending game deltas are not spendable until MongoDB confirms them.
-        // Keep the displayed balance in sync with the shared Coins Wallet.
+        // Update the visible game balance immediately while the durable request
+        // is sent; the server response/socket event remains authoritative.
+        balance = (balance + delta).coerceAtLeast(0L)
         dragonRejectedCallbacks[transactionId] = onRejected
         scope.launch { syncDragonWalletChanges() }
     }
