@@ -1903,3 +1903,10 @@ Current documentation does not certify that all historical features are build-, 
 - Search result cache rows now include gender so the gender tag can render from the cached response.
 - Commits: native `6e211a4c21d45e095f64e1af1486a3954e0efe47`; server `95c02221400587e79a30e663258849157fc4b330`.
 - Verification pending: native APK compilation, Render deployment, and real-device ID-search latency / Redis-hit checks. No measured speedup or runtime completion is claimed.
+
+
+## 2026-11-22 — Room Cup cumulative total across legacy timestamps
+- Production `Zyora-Server/server.js`: Room Cup daily/weekly contribution reads now normalize legacy epoch-second timestamps, current epoch-millisecond timestamps, ISO date strings, and legacy `createdAt`/`created_at`/`time` fields before applying the IST period window. This prevents older gifts from being excluded when a newer gift is sent, so the displayed total remains the sum of all eligible gifts in that period.
+- Gift settlement and wallet debit logic, Room Cup UI/layout, and room seat layout were not changed.
+- Server commit: `0a3c8506e7ebd62d7f0ca5ad3081d2c3ec4f0e6b`.
+- Render deployment and live cumulative-gift verification are pending; no production runtime result is claimed.
