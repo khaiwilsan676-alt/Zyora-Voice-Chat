@@ -1669,6 +1669,7 @@ private fun DragonBattleMainOverlay(
             .firstOrNull { it.isNotBlank() && it != "null" && it != "undefined" }.orEmpty()
     }
     var globalRoundWinners by remember { mutableStateOf<List<DragonRoundWinner>>(emptyList()) }
+    var activeDragonRoundId by remember { mutableLongStateOf((System.currentTimeMillis() / 60_000L) + 1L) }
     val dragonWinnerSocket = remember {
         runCatching {
             IO.socket("https://zyora-server.onrender.com", IO.Options().apply {
@@ -1679,7 +1680,10 @@ private fun DragonBattleMainOverlay(
     }
     DisposableEffect(dragonWinnerSocket) {
         val onWinners = io.socket.emitter.Emitter.Listener { args ->
-            val rows = (args.firstOrNull() as? JSONArray) ?: JSONArray()
+            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
+            val payloadRound = payload.optLong("round", -1L)
+            if (payloadRound != activeDragonRoundId) return@Listener
+            val rows = payload.optJSONArray("winners") ?: JSONArray()
             globalRoundWinners = (0 until rows.length()).mapNotNull { index ->
                 val item = rows.optJSONObject(index) ?: return@mapNotNull null
                 DragonRoundWinner(
@@ -1690,8 +1694,7 @@ private fun DragonBattleMainOverlay(
             }
         }
         val onConnect = io.socket.emitter.Emitter.Listener {
-            val round = System.currentTimeMillis() / 60_000L
-            dragonWinnerSocket?.emit("dragonbattle_top_winners_request", JSONObject().put("round", round))
+            dragonWinnerSocket?.emit("dragonbattle_top_winners_request", JSONObject().put("round", activeDragonRoundId))
         }
         dragonWinnerSocket?.on("dragonbattle_top_winners", onWinners)
         dragonWinnerSocket?.on(Socket.EVENT_CONNECT, onConnect)
@@ -1937,8 +1940,11 @@ private fun DragonBattleMainOverlay(
             // Anchor every device to the same epoch-minute boundary using the device clock.
             // This prevents each phone from starting its own independent game loop.
             val roundStartMs = ((System.currentTimeMillis() / 60_000L) + 1L) * 60_000L
-            delay((roundStartMs - System.currentTimeMillis()).coerceAtLeast(0L))
             val sharedRoundId = roundStartMs / 60_000L
+            activeDragonRoundId = sharedRoundId
+            globalRoundWinners = emptyList()
+            dragonWinnerSocket?.emit("dragonbattle_top_winners_request", JSONObject().put("round", sharedRoundId))
+            delay((roundStartMs - System.currentTimeMillis()).coerceAtLeast(0L))
 
             // 1. Start Betting -> "Start Betting !" banner + 20s countdown
             isRevealing = false
@@ -1998,7 +2004,7 @@ private fun DragonBattleMainOverlay(
             dragonWinnerRoundId = sharedRoundId
             dragonWinnerSocket?.emit(
                 "dragonbattle_top_winners_request",
-                JSONObject().put("round", sharedWinnerRound)
+                JSONObject().put("round", sharedRoundId)
             )
             winnerDragon = winner
             highlightedWinnerDragon = winner
@@ -2019,7 +2025,7 @@ private fun DragonBattleMainOverlay(
                 dragonWinnerSocket?.emit(
                     "dragonbattle_winner_update",
                     JSONObject()
-                        .put("round", sharedWinnerRound)
+                        .put("round", sharedRoundId)
                         .put("accountId", dragonAccountId)
                         .put("name", dragonUserName)
                         .put("avatar", dragonUserAvatar)
@@ -2027,7 +2033,7 @@ private fun DragonBattleMainOverlay(
                 )
                 dragonWinnerSocket?.emit(
                     "dragonbattle_top_winners_request",
-                    JSONObject().put("round", sharedWinnerRound)
+                    JSONObject().put("round", sharedRoundId)
                 )
             }
 
