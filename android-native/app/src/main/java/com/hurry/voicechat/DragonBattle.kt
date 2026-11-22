@@ -2694,27 +2694,33 @@ private fun DragonWinnerOverlay(
 
             Spacer(Modifier.height(14.dp))
 
+            // Always render three fixed podium slots (2nd | 1st | 3rd).
+            // Missing winners stay as placeholders; never remove a slot or let
+            // the remaining frames reflow when the leaderboard has only 1–2 users.
             val frameItems = listOf(
-                Triple("2nd", DRAGON_WINNER_FRAME_2ND, 0),
-                Triple("1st", DRAGON_WINNER_FRAME_1ST, 1),
+                Triple("2nd", DRAGON_WINNER_FRAME_2ND, 1),
+                Triple("1st", DRAGON_WINNER_FRAME_1ST, 0),
                 Triple("3rd", DRAGON_WINNER_FRAME_3RD, 2)
             )
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 4.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly,
+                horizontalArrangement = Arrangement.Start,
                 verticalAlignment = Alignment.Bottom
             ) {
-                frameItems.forEachIndexed { index, item ->
-                    val isFirst = index == 1
+                frameItems.forEachIndexed { slotIndex, item ->
+                    val isFirst = item.first == "1st"
                     val frameSize = if (isFirst) 84.dp else 76.dp
                     val avatarSize = if (isFirst) 58.dp else 52.dp
-                    val rankIndex = when (item.first) { "1st" -> 0; "2nd" -> 1; else -> 2 }
-                    val globalWinner = topWinners.getOrNull(rankIndex)
+                    val globalWinner = topWinners.getOrNull(item.third)
+                    Box(
+                        modifier = Modifier.weight(1f),
+                        contentAlignment = Alignment.BottomCenter
+                    ) {
                     Column(
                         modifier = Modifier
-                            .weight(1f)
+                            .fillMaxWidth()
                             .padding(bottom = if (isFirst) 12.dp else 0.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
@@ -2768,6 +2774,7 @@ private fun DragonWinnerOverlay(
                                 maxLines = 1
                             )
                         }
+                    }
                     }
                 }
             }
