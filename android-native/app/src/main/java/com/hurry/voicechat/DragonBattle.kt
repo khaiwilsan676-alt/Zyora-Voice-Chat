@@ -8,6 +8,7 @@ import android.media.MediaPlayer
 import android.os.Build
 import io.socket.client.IO
 import io.socket.client.Socket
+import io.socket.emitter.Emitter
 import org.json.JSONArray
 import org.json.JSONObject
 import androidx.compose.animation.core.Animatable
@@ -1700,6 +1701,37 @@ private fun DragonBattleMainOverlay(
     var balance by remember(dragonWalletUserId) {
         mutableLongStateOf(walletCachePrefs.getLong("balance_$dragonWalletUserId", 0L).coerceAtLeast(0L))
     }
+    DisposableEffect(dragonWinnerSocket, dragonWalletUserId, dragonAccountId) {
+        val registerWalletIdentity = {
+            if (dragonWalletUserId.isNotBlank()) {
+                dragonWinnerSocket?.emit(
+                    "register",
+                    JSONObject().put("userId", dragonWalletUserId).put("accountId", dragonAccountId)
+                )
+            }
+        }
+        val onWalletConnect = Emitter.Listener { registerWalletIdentity() }
+        val onWalletBalance = Emitter.Listener { args ->
+            val payload = args.firstOrNull() as? JSONObject ?: return@Listener
+            val eventUserId = payload.optString("userId")
+            val updatedBalance = payload.optLong("balance", -1L)
+            if (eventUserId in setOf(dragonWalletUserId, dragonAccountId) && updatedBalance >= 0L) {
+                balance = updatedBalance
+                walletReady = true
+                walletCachePrefs.edit()
+                    .putLong("balance_$dragonWalletUserId", updatedBalance)
+                    .putLong("last_sync_$dragonWalletUserId", System.currentTimeMillis())
+                    .apply()
+            }
+        }
+        dragonWinnerSocket?.on(Socket.EVENT_CONNECT, onWalletConnect)
+        dragonWinnerSocket?.on("wallet_balance_updated", onWalletBalance)
+        if (dragonWinnerSocket?.connected() == true) registerWalletIdentity()
+        onDispose {
+            dragonWinnerSocket?.off(Socket.EVENT_CONNECT, onWalletConnect)
+            dragonWinnerSocket?.off("wallet_balance_updated", onWalletBalance)
+        }
+    }
     var rulesOpen by remember { mutableStateOf(false) }
     var historyOpen by remember { mutableStateOf(false) }
     var historyList by remember { mutableStateOf(listOf("C", "B", "A", "B", "A")) }
@@ -3156,7 +3188,7 @@ private fun DragonBetColumn(
                     )
                 }
                 .clip(RoundedCornerShape(9.dp))
-                .background(Color(0xD94B1A19))
+                .background(Color(0xFF32190D))
                 .border(
                     width = if (isWinner) 1.6.dp else 1.dp,
                     color = if (isWinner) Color(0xFFFFF0A6) else Color(0x55E5B34A),
