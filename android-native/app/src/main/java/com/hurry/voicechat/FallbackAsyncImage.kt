@@ -34,8 +34,9 @@ fun FallbackAsyncImage(
     val painter = rememberAsyncImagePainter(
         model = if (validSource) model else ZYORA_DEFAULT_AVATAR_URL
     )
+    val painterState by painter.state.collectAsState()
     val fallbackPainter = rememberAsyncImagePainter(model = ZYORA_DEFAULT_AVATAR_URL)
-    val displayedPainter = if (!validSource || painter.state is AsyncImagePainter.State.Error) fallbackPainter else painter
+    val displayedPainter = if (!validSource || painterState is AsyncImagePainter.State.Error) fallbackPainter else painter
     Image(
         painter = displayedPainter,
         contentDescription = contentDescription,
