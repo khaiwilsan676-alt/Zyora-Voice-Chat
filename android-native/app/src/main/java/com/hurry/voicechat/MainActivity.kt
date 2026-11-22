@@ -652,7 +652,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
             } else if (openedSearch) {
                 SearchPage(onBack={openedSearch=false},onOpenProfile={openedPublicProfile=it;openedSearch=false},onOpenRoom={openedSearch=false;tryOpenRoom(it)})
             } else if (openedLeaderboard != null) {
-                Leaderboard(onBack = { openedLeaderboard = null }, initialTab = openedLeaderboard!!)
+                Leaderboard(onBack = { openedLeaderboard = null }, initialTab = openedLeaderboard!!, onOpenProfile = { profile -> openedPublicProfile = profile; openedLeaderboard = null })
             } else if (openedInvite) {
                 InviteFriends(onBack = { openedInvite = false })
             } else if (openedChat != null) {
