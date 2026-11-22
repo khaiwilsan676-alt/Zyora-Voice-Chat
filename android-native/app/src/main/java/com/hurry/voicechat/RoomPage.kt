@@ -2912,7 +2912,11 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
             currentUserImage = roomDisplayImage,
             roomUsers = activeRoomUsers,
             walletBalance = roomWalletBalance,
-            onDebitWallet = { requested -> if (requested <= roomWalletBalance) roomWalletBalance else null },
+            onDebitWallet = { requested ->
+                if (requested >= 0L && requested <= roomWalletBalance) {
+                    (roomWalletBalance - requested).also { roomWalletBalance = it }
+                } else null
+            },
             onSendCoinTransfer = { transfer ->
                 val outgoingTransfer = JSONObject(transfer)
                 if (outgoingTransfer.optBoolean("luckyGift", false)) {
