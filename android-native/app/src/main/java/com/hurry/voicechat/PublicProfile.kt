@@ -602,10 +602,13 @@ fun PublicProfileScreen(
                         modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
+                        // Owner-assigned image uses the exact same inline tag slot as 100002's Official image.
+                        val ownerImageTag = liveProfileTags?.optString("ownerImageTag", "").orEmpty().takeIf { it.isNotBlank() && (liveProfileTags?.optLong("ownerImageTagExpiresAt", 0L) ?: 0L).let { expiry -> expiry == 0L || expiry > System.currentTimeMillis() } }
+                        val ownerImageTagUrl = ownerImageTag?.let { profileAsset(it) }
                         // Original layout: first two tags stay beside the name; all remaining tags sit below.
                         val publicProfileTags = listOfNotNull(
                             if (showOfficialHead) Triple("/file_000000005c388246a5d95dba880d7eb9.png", "Official Head", 31) else null,
-                            if (showOfficial) Triple("/IMG_20261027_102250.png", "Official", 22) else null,
+                            if (ownerImageTagUrl != null) Triple(ownerImageTagUrl, "Official", 22) else if (showOfficial) Triple("/IMG_20261027_102250.png", "Official", 22) else null,
                             if (showAdmin) Triple("/IMG_20261027_114117.png", "Admin", 22) else null,
                             if (showService) Triple("/IMG_20261027_102207.png", "Service", 22) else null,
                             if (showHost) Triple("/IMG_20261028_154914.png", "Host", 19) else null,
@@ -654,10 +657,9 @@ fun PublicProfileScreen(
                         }
                     }
 
-                    val ownerImageTag = liveProfileTags?.optString("ownerImageTag", "").orEmpty().takeIf { it.isNotBlank() && (liveProfileTags?.optLong("ownerImageTagExpiresAt", 0L) ?: 0L).let { expiry -> expiry == 0L || expiry > System.currentTimeMillis() } }
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
-                        if (ownerImageTag != null || hasSpecialIdBadge || isCoreOfficial || isRedOfficial || is500002Official || displayAccNum in setOf("500003", "500004", "500005")) {
-                            AsyncImage(model = profileAsset(ownerImageTag ?: "/IMG_20261101_125212.png"), contentDescription = "Official ID image", contentScale = ContentScale.Fit, modifier = Modifier.height(25.dp).widthIn(min = 22.dp, max = 35.dp).padding(end = 4.dp))
+                        if (hasSpecialIdBadge || isCoreOfficial || isRedOfficial || is500002Official || displayAccNum in setOf("500003", "500004", "500005")) {
+                            AsyncImage(model = profileAsset("/IMG_20261101_125212.png"), contentDescription = "Official ID image", contentScale = ContentScale.Fit, modifier = Modifier.height(25.dp).widthIn(min = 22.dp, max = 35.dp).padding(end = 4.dp))
                             Text(displayAccNum, fontSize = 12.sp, color = Color.Gray)
                         } else Text("ID: $displayAccNum", fontSize = 12.sp, color = Color.Gray)
 
