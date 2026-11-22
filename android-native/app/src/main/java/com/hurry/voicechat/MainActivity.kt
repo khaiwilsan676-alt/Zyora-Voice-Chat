@@ -657,7 +657,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                 InviteFriends(onBack = { openedInvite = false })
             } else if (openedChat != null) {
                 val chat = openedChat!!
-                NativeChatScreen(name = chat.second, image = chat.third, receiverId = chat.first, currentUserId = userId, currentAccountIdOverride = authPrefs.getString("accountId", userId).orEmpty().ifBlank { userId }, onBack = { openedChat = null }, onJoinRoom = { targetRoomId -> openedChat=null; tryOpenRoomById(targetRoomId) })
+                NativeChatScreen(name = chat.second, image = chat.third, receiverId = chat.first, currentUserId = userId, currentAccountIdOverride = authPrefs.getString("accountId", userId).orEmpty().ifBlank { userId }, onBack = { openedChat = null }, onJoinRoom = { targetRoomId -> openedChat=null; tryOpenRoomById(targetRoomId) }, onOpenPublicProfile = { openedPublicProfile = RoomProfileUser(id = chat.first, uid = chat.first, accountId = chat.first, name = chat.second, image = chat.third); openedChat = null })
             } else if (openedRoom != null) {
                 Spacer(Modifier.fillMaxSize())
             } else {
@@ -768,7 +768,7 @@ private fun HurryNativeRoot(onLogout: () -> Unit) {
                             tabStateHolder.SaveableStateProvider(HurryTab.MESSAGE.name) {
                                 MessageScreen(onChat = { uid, name, image ->
                                 openedChat = Triple(uid, name, image)
-                            }, onJoinRoom = { targetRoomId -> tryOpenRoomById(targetRoomId) })
+                            }, onJoinRoom = { targetRoomId -> tryOpenRoomById(targetRoomId) }, onOpenProfile = { profile -> openedPublicProfile = profile })
                             }
                         }
                         Box(if (tab == HurryTab.ME) Modifier.fillMaxSize() else Modifier.size(1.dp).alpha(0f)) {
