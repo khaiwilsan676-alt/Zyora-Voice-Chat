@@ -1738,3 +1738,10 @@ Current documentation does not certify that all historical features are build-, 
 - Fixed by collecting the painter state with `collectAsState()` and switching to the real Zyora bundled fallback asset when the selected image is invalid or errors.
 - Updated the Public Profile edit-avatar preview and Room active-user avatar to use the same fallback-aware image component, in addition to Room seats, Room Profile, Public Profile and Me.
 - Existing user DP is still preferred; no profile image is overwritten or replaced in saved data. No UI layout/styling changes.
+
+
+## 2026-11-22 — Homepage room-card scroll workload follow-up
+- Root cause found in `HomeScreen.kt`: every visible room card with a long name ran an unbounded `basicMarquee(iterations = Int.MAX_VALUE)` animation. With many room cards, multiple perpetual text animations continued competing for frames during vertical scrolling even after the live-count/equalizer timers had been removed.
+- Changed long-name marquee to one pass (`iterations = 1`) so it keeps its existing scrolling-name behavior without running forever on every visible card. Room-card layout, images, dimensions, data, loading/cache behavior, room navigation, and voice behavior are unchanged.
+- Existing warm memory/Room-DB cache, lazy room rows, stable keys/content types, and five-minute refresh throttle remain unchanged.
+- Verification required: run native APK CI and measure repeated fast scrolls on device; source change alone does not prove frame-time improvement.
