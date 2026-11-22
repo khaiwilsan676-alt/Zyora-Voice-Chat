@@ -3540,8 +3540,8 @@ private fun RoomInviteSheet(
             ) {
                 items(visibleUsers, key = { it.accountId }) { user ->
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        AsyncImage(
-                            model = user.image.ifBlank { ZYORA_DEFAULT_AVATAR_URL },
+                        FallbackAsyncImage(
+                            model = user.image,
                             contentDescription = user.name,
                             modifier = Modifier.size(38.dp).clip(CircleShape),
                             contentScale = ContentScale.Crop
@@ -3613,8 +3613,8 @@ private fun RoomSeatInviteDialog(
                         modifier = Modifier.size(23.dp), contentScale = ContentScale.Fit)
                 }
             }
-            AsyncImage(
-                model = inviterImage.ifBlank { "https://zyora-voice-chat.vercel.app/default-avatar.png" },
+            FallbackAsyncImage(
+                model = inviterImage,
                 contentDescription = "Inviter avatar",
                 modifier = Modifier.align(Alignment.TopCenter).offset(y = (-27).dp).size(68.dp).clip(CircleShape),
                 contentScale = ContentScale.Crop
