@@ -366,11 +366,6 @@ fun NativeLoginScreen(onLoginSuccess: () -> Unit) {
                     
                     Spacer(Modifier.height(40.dp))
 
-                    if (error.isNotBlank()) {
-                        Text(error, color = Color.White, fontSize = 13.sp, modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Color(0xFFEF4444)).padding(12.dp))
-                        Spacer(Modifier.height(16.dp))
-                    }
-
                     // Account Field (White Box)
                     OfficialAuthField(
                         icon = Icons.Filled.Person,
