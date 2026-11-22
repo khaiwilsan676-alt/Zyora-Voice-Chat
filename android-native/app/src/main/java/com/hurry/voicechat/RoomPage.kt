@@ -356,7 +356,7 @@ fun RoomPage(
             }.getOrNull()
             val cached = sequenceOf(roomOwnerAccountId, roomOwner.uid, roomOwner.id)
                 .filter { it.isNotBlank() }
-                .mapNotNull { key -> runCatching { NativeIndexDatabase(context).loadProfile(key) }.getOrNull() }
+                .mapNotNull { key -> runCatching { NativeIndexDatabase(appContext).loadProfile(key) }.getOrNull() }
                 .firstOrNull { it.has("vipId") }
             remote to cached
         }
