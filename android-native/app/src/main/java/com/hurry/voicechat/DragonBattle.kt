@@ -131,11 +131,12 @@ private suspend fun dragonWalletRequest(
     runCatching {
         val connection = (URL("https://zyora-server.onrender.com/api/wallet/dragon-battle").openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"
-            connectTimeout = 7000
-            readTimeout = 7000
+            connectTimeout = 45000
+            readTimeout = 45000
             doOutput = true
             setRequestProperty("Content-Type", "application/json; charset=utf-8")
             setRequestProperty("Cache-Control", "no-cache")
+            setRequestProperty("Accept", "application/json")
         }
         try {
             val payload = JSONObject()
@@ -1727,7 +1728,7 @@ private fun DragonBattleMainOverlay(
             val eventUserId = payload.optString("userId")
             val updatedBalance = payload.optLong("balance", -1L)
             if (eventUserId in setOf(dragonWalletUserId, dragonAccountId) && updatedBalance >= 0L) {
-                balance = updatedBalance
+                balance = (updatedBalance + walletPendingDelta).coerceAtLeast(0L)
                 walletReady = true
                 walletCachePrefs.edit()
                     .putLong("balance_$dragonWalletUserId", updatedBalance)
