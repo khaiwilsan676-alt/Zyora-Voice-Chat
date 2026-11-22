@@ -49,6 +49,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.*
 import androidx.compose.ui.zIndex
 import coil3.compose.AsyncImage
+import io.socket.client.IO
+import io.socket.client.Socket
+import io.socket.emitter.Emitter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -1266,6 +1269,42 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
  val walletSyncMutex = remember(walletAccountId) { Mutex() }
  // Protects only short local balance/queue merges; never held during HTTP.
  val walletStateMutex = remember(walletAccountId) { Mutex() }
+  val walletSocket = remember(walletAccountId, walletAccountNumber) {
+   runCatching { IO.socket("https://zyora-server.onrender.com", IO.Options().apply {
+    transports = arrayOf("websocket"); reconnection = true
+    reconnectionAttempts = Int.MAX_VALUE; reconnectionDelay = 1000; reconnectionDelayMax = 5000
+   }) }.getOrNull()
+  }
+  DisposableEffect(walletSocket, walletAccountId, walletAccountNumber) {
+   val registerWallet = { if (walletAccountId.isNotBlank()) walletSocket?.emit(
+    "register", JSONObject().put("userId", walletAccountId).put("accountId", walletAccountNumber)
+   ) }
+   val onConnect = Emitter.Listener { registerWallet() }
+   val onBalanceUpdated = Emitter.Listener { args ->
+    val payload = args.firstOrNull() as? JSONObject ?: return@Listener
+    val eventUserId = payload.optString("userId")
+    val updatedBalance = payload.optLong("balance", -1L)
+    if (eventUserId in setOf(walletAccountId, walletAccountNumber) && updatedBalance >= 0L) {
+     scope.launch {
+      balance = updatedBalance
+      walletCachePrefs.edit().putLong("balance_$walletAccountId", updatedBalance)
+       .putLong("last_sync_$walletAccountId", System.currentTimeMillis()).apply()
+      withContext(Dispatchers.IO) {
+       val old = dao.getUserData() ?: UserDataEntity(balance = updatedBalance)
+       dao.saveUserData(old.copy(balance = updatedBalance))
+      }
+     }
+    }
+   }
+   walletSocket?.on(Socket.EVENT_CONNECT, onConnect)
+   walletSocket?.on("wallet_balance_updated", onBalanceUpdated)
+   if (walletSocket?.connected() == true) registerWallet() else walletSocket?.connect()
+   onDispose {
+    walletSocket?.off(Socket.EVENT_CONNECT, onConnect)
+    walletSocket?.off("wallet_balance_updated", onBalanceUpdated)
+    walletSocket?.disconnect(); walletSocket?.close()
+   }
+  }
  LaunchedEffect(Unit){
   launch(Dispatchers.IO) { soundManager.preload() }
   // Restore game history independently; wallet network failures must never hide it.
