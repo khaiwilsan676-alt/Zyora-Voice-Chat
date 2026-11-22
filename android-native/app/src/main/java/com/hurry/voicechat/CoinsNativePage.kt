@@ -36,6 +36,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.json.JSONArray
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
@@ -780,7 +781,27 @@ private fun DiamondsContent(
 @Composable
 private fun AgentContent(onChat: (String, String, String) -> Unit, currentUserId: String) {
     val context = LocalContext.current
-    var sellers by remember { mutableStateOf<List<WalletAgentSeller>>(emptyList()) }
+    val sellerCachePrefs = remember(context) { context.getSharedPreferences("zyora_wallet_agent_cache", Context.MODE_PRIVATE) }
+    var sellers by remember(context) {
+        mutableStateOf(runCatching {
+            val cached = JSONArray(sellerCachePrefs.getString("approved_sellers", "[]").orEmpty())
+            (0 until cached.length()).mapNotNull { index ->
+                cached.optJSONObject(index)?.let { item ->
+                    WalletAgentSeller(
+                        uid = item.optString("uid"),
+                        accountId = item.optString("accountId"),
+                        name = item.optString("name", "User"),
+                        image = item.optString("image"),
+                        online = item.optBoolean("online", false),
+                        coins = item.optLong("coins", 0L),
+                        dealLast30Days = item.optString("dealLast30Days"),
+                        paymentMethod = item.optString("paymentMethod"),
+                        whatsapp = item.optString("whatsapp")
+                    )
+                }
+            }.filter { it.uid.isNotBlank() && it.accountId.isNotBlank() }.distinctBy { it.uid }
+        }.getOrDefault(emptyList()))
+    }
     var onlineById by remember { mutableStateOf<Map<String, Boolean>>(emptyMap()) }
     var loaded by remember { mutableStateOf(false) }
 
@@ -791,7 +812,21 @@ private fun AgentContent(onChat: (String, String, String) -> Unit, currentUserId
         while (true) {
             val refreshed = fetchWalletAgentSellers()
             if (!refreshed.isNullOrEmpty()) {
-                sellers = refreshed
+                val stableRows = refreshed.filter { it.uid.isNotBlank() && it.accountId.isNotBlank() }
+                    .distinctBy { it.uid }
+                if (stableRows.isNotEmpty()) {
+                    sellers = stableRows
+                    val cache = JSONArray()
+                    stableRows.forEach { seller ->
+                        cache.put(JSONObject()
+                            .put("uid", seller.uid).put("accountId", seller.accountId)
+                            .put("name", seller.name).put("image", seller.image)
+                            .put("online", seller.online).put("coins", seller.coins)
+                            .put("dealLast30Days", seller.dealLast30Days)
+                            .put("paymentMethod", seller.paymentMethod).put("whatsapp", seller.whatsapp))
+                    }
+                    sellerCachePrefs.edit().putString("approved_sellers", cache.toString()).apply()
+                }
             }
             loaded = true
             kotlinx.coroutines.delay(15_000)
