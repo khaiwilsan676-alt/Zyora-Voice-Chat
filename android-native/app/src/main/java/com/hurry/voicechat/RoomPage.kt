@@ -3175,13 +3175,12 @@ if (musicControllerVisible && miniMusicTrack != null && !musicControllerMinimize
                     showSeatSheet=false;selectedSeat=0
                 },
                 onMute={
-                    val isSelfSeat = seat.accountId.trim() == accountId.trim()
-                    val nextMuted = if (isSelfSeat) !seat.selfMuted else !seat.muted
-                    if (seatIndex >= 0) {
-                        seats[seatIndex] = if (isSelfSeat) seat.copy(selfMuted = nextMuted) else seat.copy(muted = nextMuted)
-                    }
+                    // This action is moderator-only. Self mute is a separate control
+                    // in the current user's Room Profile and never uses owner_mute.
+                    val nextMuted = !seat.muted
+                    if (seatIndex >= 0) seats[seatIndex] = seat.copy(muted = nextMuted)
                     roomSocketRef.value?.emit("room_seat_action", JSONObject().put("roomId", roomId)
-                        .put("userId", accountId).put("action", if (isSelfSeat) "self_mute" else "owner_mute")
+                        .put("userId", accountId).put("action", "owner_mute")
                         .put("seatNumber", seat.number).put("isMuted", nextMuted))
                     showSeatSheet = false
                     selectedSeat = 0
@@ -3723,7 +3722,7 @@ private fun RoomSeatInviteDialog(
             Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal=16.dp,vertical=12.dp),verticalArrangement=Arrangement.spacedBy(2.dp)){
                 if(!seat.occupied && !isMySeat) SeatSheetAction("Take Mic",enabled=!seat.locked,onClick=onTake)
                 if(isMySeat) SeatSheetAction("Leave Seat",onClick=onLeave)
-                if(isOwner || isMySeat || seat.occupied) SeatSheetAction(if(seat.muted)"Unmute Seat" else "Mute Seat",onClick=onMute)
+                if(!isMySeat && (isOwner || seat.occupied)) SeatSheetAction(if(seat.muted)"Unmute Seat" else "Mute Seat",onClick=onMute)
                 if(isOwner) SeatSheetAction(if(seat.locked)"Unlock Mic" else "Lock Mic",onClick=onLock)
                 SeatSheetAction("Invite",onClick=onInvite)
             }
