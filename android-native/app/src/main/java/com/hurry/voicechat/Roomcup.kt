@@ -64,8 +64,14 @@ fun RoomDailyCupTotal(roomId: String) {
                 val connection = URL("https://zyora-server.onrender.com/api/rooms/$encodedRoom/contributions?period=daily").openConnection() as HttpURLConnection
                 connection.connectTimeout = 8_000
                 connection.readTimeout = 10_000
+                // This endpoint is live contribution data. Never let an HTTP cache
+                // turn a stale/304 response into a zero-value replacement.
+                connection.useCaches = false
+                connection.setRequestProperty("Cache-Control", "no-cache, no-store")
+                connection.setRequestProperty("Pragma", "no-cache")
                 try {
-                    if (connection.responseCode !in 200..299) 0L
+                    val status = connection.responseCode
+                    if (status == HttpURLConnection.HTTP_NOT_MODIFIED || status !in 200..299) null
                     else {
                         val json = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
                         // Server total includes every sender, not just the Top 20 leaderboard.
@@ -74,9 +80,10 @@ fun RoomDailyCupTotal(roomId: String) {
                 } finally {
                     connection.disconnect()
                 }
-            }.getOrDefault(0L)
+            }.getOrNull()
         }
-        total = latest
+        // A failed/304 request is not a real zero. Keep the last confirmed total.
+        if (latest != null) total = latest
     }
     Text(
         // Room header uses compact K/M/B formatting for the complete daily sent-gift coin total.
@@ -111,6 +118,9 @@ fun RoomCupSheet(roomId:String,userId:String,userName:String,userImage:String,on
             val u=java.net.URLEncoder.encode(userId,"UTF-8")
             val c=URL("https://zyora-server.onrender.com/api/rooms/$r/contributions?period=$period&userId=$u").openConnection() as HttpURLConnection
             c.connectTimeout=8000; c.readTimeout=10000
+            c.useCaches = false
+            c.setRequestProperty("Cache-Control", "no-cache, no-store")
+            c.setRequestProperty("Pragma", "no-cache")
             try {
                 if(c.responseCode !in 200..299) null else {
                     val j=JSONObject(c.inputStream.bufferedReader().use{it.readText()})
