@@ -1749,6 +1749,72 @@ app.get("/api/lucky-bag/wallet/:userId", async (req, res) => {
   }
 });
 
+const dragonBattleWalletLocks = new Map();
+app.post("/api/wallet/dragon-battle", async (req, res) => {
+  const userId = String(req.body?.userId || "").trim();
+  const transactionId = String(req.body?.transactionId || "").trim();
+  const action = String(req.body?.action || "");
+  const amount = Number(req.body?.amount);
+  if (!userId || userId.length > 256 || !transactionId || transactionId.length > 120 ||
+      !["bet", "win"].includes(action) || !Number.isSafeInteger(amount) || amount <= 0) {
+    return res.status(400).json({ success: false, error: "Invalid Dragon Battle wallet transaction" });
+  }
+  if (!db) return res.status(503).json({ success: false, error: "Wallet service unavailable" });
+
+  const lockKey = `${userId}:dragon-battle:${transactionId}`;
+  const previous = dragonBattleWalletLocks.get(lockKey) || Promise.resolve();
+  const operation = previous.catch(() => {}).then(async () => {
+    const user = await ensureWalletUser(userId);
+    if (!user) throw new Error("Wallet user not found");
+    const debitField = "dragonBattleDebits";
+    const creditField = "dragonBattleCredits";
+    const appliedField = action === "bet" ? debitField : creditField;
+    const alreadyApplied = Array.isArray(user[appliedField]) && user[appliedField].includes(transactionId);
+    if (!alreadyApplied) {
+      const update = action === "bet"
+        ? await db.collection("users").updateOne(
+            { _id: user._id, coins: { $gte: amount }, [debitField]: { $ne: transactionId } },
+            { $inc: { coins: -amount }, $addToSet: { [debitField]: transactionId }, $set: { walletUpdatedAt: Date.now() } }
+          )
+        : await db.collection("users").updateOne(
+            { _id: user._id, [creditField]: { $ne: transactionId } },
+            { $inc: { coins: amount }, $addToSet: { [creditField]: transactionId }, $set: { walletUpdatedAt: Date.now() } }
+          );
+      if (!update.modifiedCount) {
+        const latest = await db.collection("users").findOne({ _id: user._id });
+        if (!(Array.isArray(latest?.[appliedField]) && latest[appliedField].includes(transactionId))) {
+          const error = new Error(action === "bet" ? "Insufficient wallet balance" : "Wallet update failed");
+          error.statusCode = action === "bet" ? 409 : 503;
+          throw error;
+        }
+      }
+    }
+    const latest = await db.collection("users").findOne({ _id: user._id });
+    const balance = Math.max(0, Number(latest?.coins ?? 0));
+    const transactions = db.collection("walletTransactions");
+    const historyId = `dragon_battle:${transactionId}`;
+    if (!(await transactions.findOne({ _id: historyId }))) {
+      await transactions.insertOne({
+        _id: historyId, userId, game: "dragon_battle",
+        type: action === "bet" ? "dragon_battle_bet" : "dragon_battle_win",
+        amount: action === "bet" ? -amount : amount,
+        transactionId, createdAt: Date.now()
+      });
+    }
+    return { success: true, userId, balance, transactionId };
+  });
+  dragonBattleWalletLocks.set(lockKey, operation);
+  try {
+    const result = await operation;
+    res.set("Cache-Control", "no-store");
+    return res.json(result);
+  } catch (error) {
+    return res.status(error.statusCode || 503).json({ success: false, error: error.message || "Dragon Battle wallet update failed" });
+  } finally {
+    if (dragonBattleWalletLocks.get(lockKey) === operation) dragonBattleWalletLocks.delete(lockKey);
+  }
+});
+
 app.get("/api/seller/user/:accountId", async (req, res) => {
   try {
     if (!db) return res.status(503).json({ error: "User service unavailable" });
