@@ -398,8 +398,15 @@ fun JitsiRoomAudio(
                                 try { Thread.sleep(20) } catch (_: InterruptedException) { if (!alive.get()) break }
                                 continue
                             }
-                            // Mix frames already available without an extra per-frame wait.
-                            // Each publisher keeps its own bounded queue for network jitter.
+                            // Socket.IO delivers each publisher independently. Collect a short
+                            // 10 ms arrival window before mixing so packets from two speakers that
+                            // belong to the same 20 ms capture interval are not played as offset
+                            // copies. Removing this window caused audible doubled/chorused speech.
+                            if (voiceSpeakerQueues.values.any { it.isNotEmpty() }) {
+                                try { Thread.sleep(10) } catch (_: InterruptedException) {
+                                    if (!alive.get()) break
+                                }
+                            }
                             val mixed = LongArray(ROOM_VOICE_FRAME_BYTES / 2)
                             var activeSpeakers = 0
                             voiceSpeakerQueues.values.forEach { speakerQueue ->
