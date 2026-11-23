@@ -1543,6 +1543,7 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
    val cycleMs=elapsedMs%47_000L
    val cycle=(cycleMs/1000L).toInt()
    round=(elapsed/47L).toInt()+1
+   val outcome=wpOutcome(round)
    if (winnerDataRound != round) {
     winnerDataRound = round
     globalRoundWinners = emptyList()
@@ -1550,9 +1551,23 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
      bets = emptyMap()
      betsRound = round
     }
+    val winnerNames = when (outcome.first) {
+     WpMode.MIX_BIG -> listOf("Eagle", "Bear", "Tiger", "Lion")
+     WpMode.MIX_SMALL -> listOf("Rabbit", "Deer", "Dog", "Camel")
+     else -> listOf(wpAnimals[outcome.second.coerceIn(0, 7)].name)
+    }
+    val winnerImages = JSONArray()
+    winnerNames.forEach { name ->
+     val image = wpAsset(wpAnimals.first { it.name == name }.image)
+     if (image.isNotBlank()) winnerImages.put(image)
+    }
+    walletSocket?.emit("game_round_result_update", JSONObject()
+     .put("game", "wildparty").put("round", round)
+     .put("winnerKey", outcome.second.toString()).put("winnerMode", outcome.first.name)
+     .put("winnerImages", winnerImages))
     walletSocket?.emit("wildparty_top_winners_request", JSONObject().put("round", round))
    }
-   val outcome=wpOutcome(round);mode=outcome.first;winnerIndex=outcome.second
+   mode=outcome.first;winnerIndex=outcome.second
    when{
     cycle<30->{
      phase=WpPhase.BETTING;countdown=30-cycle;highlight=-1;winnerOpen=false
