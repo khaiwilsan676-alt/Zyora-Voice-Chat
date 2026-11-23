@@ -1303,7 +1303,28 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
     }
     walletSocket?.emit("wildparty_top_winners_request", JSONObject().put("round", currentRound))
    }
-   val onConnect = Emitter.Listener { registerWallet(); requestWinners() }
+   // Re-publish the current real outcome after every Socket.IO reconnect.
+   // The game loop may calculate a round before the socket finishes connecting.
+   val publishCurrentWinner = {
+    val now = System.currentTimeMillis()
+    val currentRound = ((now - wpReset(now)).coerceAtLeast(0L) / 47_000L).toInt() + 1
+    val outcome = wpOutcome(currentRound)
+    val winnerNames = when (outcome.first) {
+     WpMode.MIX_BIG -> listOf("Eagle", "Bear", "Tiger", "Lion")
+     WpMode.MIX_SMALL -> listOf("Rabbit", "Deer", "Dog", "Camel")
+     else -> listOf(wpAnimals[outcome.second.coerceIn(0, 7)].name)
+    }
+    val images = JSONArray()
+    winnerNames.forEach { name ->
+     val image = wpAsset(wpAnimals.first { it.name == name }.image)
+     if (image.startsWith("https://")) images.put(image)
+    }
+    if (images.length() > 0) walletSocket?.emit("game_round_result_update", JSONObject()
+     .put("game", "wildparty").put("round", currentRound)
+     .put("winnerKey", outcome.second.toString()).put("winnerMode", outcome.first.name)
+     .put("winnerImages", images))
+   }
+   val onConnect = Emitter.Listener { registerWallet(); requestWinners(); publishCurrentWinner() }
    val onBalanceUpdated = Emitter.Listener { args ->
     val payload = args.firstOrNull() as? JSONObject ?: return@Listener
     val eventUserId = payload.optString("userId")
@@ -1336,7 +1357,7 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
    walletSocket?.on(Socket.EVENT_CONNECT, onConnect)
    walletSocket?.on("wallet_balance_updated", onBalanceUpdated)
    walletSocket?.on("wildparty_top_winners_v2", onWinners)
-   if (walletSocket?.connected() == true) { registerWallet(); requestWinners() } else walletSocket?.connect()
+   if (walletSocket?.connected() == true) { registerWallet(); requestWinners(); publishCurrentWinner() } else walletSocket?.connect()
    onDispose {
     walletSocket?.off(Socket.EVENT_CONNECT, onConnect)
     walletSocket?.off("wallet_balance_updated", onBalanceUpdated)
