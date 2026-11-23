@@ -2027,3 +2027,8 @@ Current documentation does not certify that all historical features are build-, 
 - Frame, vehicle, theme and family-tag rewards are written to the same storeInventory used by Bag, with their configured asset/video and expiry. Family Tag is additionally published as an expiring profile field and replaces the existing Family tag/card background in Public Profile while active.
 - Each recipient gets one durable Zyora System private message in the exact format `You receive\nFamily Top <rank> Rewards\nRegards Zyora Official Team`. Wallet credits and reward claims use idempotency keys; notification failures keep settlement retryable.
 - Native changes: Family.kt, familyprofile.kt, StorePage.kt, and PublicProfile.kt. Server changes: server.js. GitHub Actions APK build and server verification are running; Render deployment and real-device reward/Bag/Wallet/DM checks remain required.
+
+## 2026-11-23 — Owner Panel game winner reconnect delivery
+- `Wildparty.kt`: Wild Party republishes the current round's actual deterministic outcome and HTTPS winner artwork whenever its Socket.IO connection connects or reconnects, so a result calculated before the socket was ready is not lost.
+- `DragonBattle.kt`: Dragon Battle recomputes the current round from the same deterministic dealt cards and republishes the actual winning dragon artwork after every Socket.IO reconnect.
+- This restores the latest-result snapshot in `Zyora-Server/server.js` without changing game odds, betting, payout, round timing, or UI. A fresh native APK build and Render deployment/runtime verification are still required.
