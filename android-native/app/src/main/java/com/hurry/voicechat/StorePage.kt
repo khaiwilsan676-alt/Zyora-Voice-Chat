@@ -123,12 +123,12 @@ private fun upsertNativeStoreCachedItem(context: android.content.Context, userId
     if (!replaced) merged.put(JSONObject(item.toString()))
     writeNativeStoreInventoryCache(context, userId, merged)
 }
-private fun updateNativeStoreCachedEquip(context: android.content.Context, userId: String, itemId: String, equipped: Boolean) {
+private fun updateNativeStoreCachedEquip(context: android.content.Context, userId: String, itemId: String, tab: String, equipped: Boolean) {
     val cached = readNativeStoreInventoryCache(context, userId)
     val updated = JSONArray()
     for (i in 0 until cached.length()) {
         val item = cached.optJSONObject(i) ?: continue
-        if (item.optString("tab") == nativeStoreItems.firstOrNull { it.id == itemId }?.tab) {
+        if (item.optString("tab") == tab) {
             item.put("equipped", item.optString("itemId") == itemId && equipped)
         }
         updated.put(item)
@@ -1029,13 +1029,18 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                                             if (owned) {
                                                 if (!purchaseBusy && storeInventoryUserId.isNotBlank()) {
                                                     val nextEquipped = !equipped
-                                                    val previousTabEquipped = equippedIds.filter { nativeStoreItems.find { entry -> entry.id == it }?.tab == item.tab }
+                                                    val previousTabEquipped = equippedIds.filter { id ->
+                                                        (0 until serverInventory.length()).mapNotNull { serverInventory.optJSONObject(it) }
+                                                            .firstOrNull { it.optString("itemId") == id }?.optString("tab")
+                                                            ?: nativeStoreItems.firstOrNull { it.id == id }?.tab
+                                                        == item.tab
+                                                    }
                                                     // Optimistic UI: update Use/Remove immediately; restore only if server rejects it.
                                                     if (nextEquipped) {
                                                         equippedIds.removeAll { id -> nativeStoreItems.find { it.id == id }?.tab == item.tab }
                                                         equippedIds.add(item.id)
                                                     } else equippedIds.remove(item.id)
-                                                    updateNativeStoreCachedEquip(appContext, storeInventoryUserId, item.id, nextEquipped)
+                                                    updateNativeStoreCachedEquip(appContext, storeInventoryUserId, item.id, item.tab, nextEquipped)
                                                     purchaseBusy = true
                                                     storeScope.launch {
                                                         val result = withContext(Dispatchers.IO) { runCatching {
@@ -1056,9 +1061,9 @@ fun StorePage(onBack: () -> Unit = {}, initialView: String = "store", userId: St
                                                             equippedIds.removeAll { id -> nativeStoreItems.find { it.id == id }?.tab == item.tab }
                                                             equippedIds.addAll(previousTabEquipped)
                                                             previousTabEquipped.forEach { previousId ->
-                                                                updateNativeStoreCachedEquip(appContext, storeInventoryUserId, previousId, true)
+                                                                updateNativeStoreCachedEquip(appContext, storeInventoryUserId, previousId, item.tab, true)
                                                             }
-                                                            updateNativeStoreCachedEquip(appContext, storeInventoryUserId, item.id, false)
+                                                            updateNativeStoreCachedEquip(appContext, storeInventoryUserId, item.id, item.tab, false)
                                                             purchaseMessage = if (nextEquipped) "Could not use item" else "Could not remove item"
                                                         }
                                                         purchaseBusy = false
