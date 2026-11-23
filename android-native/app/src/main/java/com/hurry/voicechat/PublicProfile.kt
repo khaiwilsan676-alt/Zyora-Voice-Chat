@@ -306,7 +306,8 @@ fun PublicProfileScreen(
     val showAdmin = !is500002Official && (isCoreOfficial || isProfileTagActive("adminTag", targetUser?.adminTag))
     val showService = !is500002Official && (isCoreOfficial || isProfileTagActive("serviceTag", targetUser?.serviceTag) || liveProfileTags?.optBoolean("csTag", false) == true)
     val showHost = !is500002Official && (isCoreOfficial || isProfileTagActive("hostTag", null) || liveProfileTags?.optBoolean("isHost", false) == true)
-    val showCoinSeller = isCoreOfficial || isProfileTagActive("coinSellerTag", targetUser?.coinSellerTag) || liveProfileTags?.optBoolean("coinSeller", false) == true || liveProfileTags?.optBoolean("sellerTag", false) == true
+    val sellerTagIdentityIds = setOf(displayAccNum, originalAccNum, targetUser?.id.orEmpty(), targetUser?.uid.orEmpty(), targetUser?.accountId.orEmpty()).map { it.trim() }.filter { it.isNotBlank() }.toSet()
+    val showCoinSeller = sellerTagIdentityIds.any { it == "100002" || it == "100003" } || isProfileTagActive("coinSellerTag", targetUser?.coinSellerTag) || liveProfileTags?.optBoolean("coinSeller", false) == true || liveProfileTags?.optBoolean("sellerTag", false) == true
     
     val defaultAvatar = ZYORA_DEFAULT_AVATAR_URL
     val userPhotoRaw = selectedAvatarUri ?: defaultAvatar
