@@ -2270,255 +2270,46 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
    }
   }
 
-  // Winner Page (Auto-closes only when countdown ends; user cannot manually dismiss)
-  if(winnerOpen){
-   val winnerSheetShape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
+  // Winner Page: show only the actual round result artwork.
+  if (winnerOpen) {
+   val winningAnimals = if (mode == WpMode.MIX_BIG) {
+    listOf("Eagle", "Bear", "Tiger", "Lion")
+   } else if (mode == WpMode.MIX_SMALL) {
+    listOf("Rabbit", "Deer", "Dog", "Camel")
+   } else {
+    listOf(wpAnimals[winnerIndex.coerceIn(0, 7)].name)
+   }
    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
     Box(
-     Modifier
-      .fillMaxSize()
+     Modifier.fillMaxSize()
       .background(Color.Black.copy(alpha = 0.45f))
-      .clickable(
-       interactionSource = remember { MutableInteractionSource() },
-       indication = null,
-       onClick = {}
-      )
+      .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = {})
     )
     Column(
-     modifier = Modifier
-      .fillMaxWidth()
+     Modifier.fillMaxWidth()
       .heightIn(max = h * 0.86f)
-      .clip(winnerSheetShape)
+      .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
       .background(Color(0xFF060608))
-      .clickable(
-       interactionSource = remember { MutableInteractionSource() },
-       indication = null,
-       onClick = {}
-      )
-      .verticalScroll(rememberScrollState())
-      .padding(start = 18.dp, end = 18.dp, top = 14.dp, bottom = 18.dp),
-     horizontalAlignment = Alignment.CenterHorizontally
+      .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = {})
+      .padding(horizontal = 18.dp, vertical = 18.dp),
+     horizontalAlignment = Alignment.CenterHorizontally,
+     verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
-     // Top Section: Countdown (top-right) + Winner Animal (left) + Prizes & Your Bet (right)
-     Box(Modifier.fillMaxWidth()) {
-      Text(
-       text = "${winnerTimer}s",
-       modifier = Modifier
-        .align(Alignment.TopEnd)
-        .padding(top = 2.dp, end = 2.dp),
-       color = Color.White,
-       fontWeight = FontWeight.Bold,
-       fontSize = 15.sp
-      )
-      Row(
-       modifier = Modifier
-        .fillMaxWidth()
-        .padding(top = 12.dp, start = 4.dp, end = 10.dp),
-       verticalAlignment = Alignment.CenterVertically
-      ) {
-       Box(Modifier.size(82.dp), contentAlignment = Alignment.Center) {
-        if (mode == WpMode.MIX_BIG || mode == WpMode.MIX_SMALL) {
-         val group = if (mode == WpMode.MIX_BIG) listOf("Eagle", "Bear", "Tiger", "Lion") else listOf("Rabbit", "Deer", "Dog", "Camel")
-         group.forEachIndexed { idx, n ->
-          val aid = wpAsset( wpAnimals.first { it.name == n }.image)
-          if (aid.isNotBlank()) AsyncImage(
-           model = aid, contentDescription = null, modifier = Modifier
-            .align(when (idx) { 0 -> Alignment.TopStart; 1 -> Alignment.TopEnd; 2 -> Alignment.BottomStart; else -> Alignment.BottomEnd })
-            .size(40.dp),
-           contentScale = ContentScale.Fit
-          )
-         }
-        } else {
-         val winAnimalImg = wpAsset( wpAnimals[winnerIndex.coerceIn(0, 7)].image)
-         if (winAnimalImg.isNotBlank()) {
-          AsyncImage(
-           model = winAnimalImg,
-           contentDescription = null,
-           modifier = Modifier.fillMaxSize(),
-           contentScale = ContentScale.Fit
-          )
-         }
-        }
-       }
-
-       Spacer(Modifier.width(24.dp))
-
-       Column(
-        modifier = Modifier.weight(1f),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
-       ) {
-        Row(
-         modifier = Modifier.fillMaxWidth(),
-         verticalAlignment = Alignment.CenterVertically
-        ) {
-         Text(
-          text = "Prizes",
-          modifier = Modifier.weight(0.70f),
-          color = Color.White,
-          fontSize = 15.sp,
-          fontWeight = FontWeight.Bold
-         )
-         Row(
-          modifier = Modifier.weight(1.15f),
-          verticalAlignment = Alignment.CenterVertically,
-          horizontalArrangement = Arrangement.spacedBy(6.dp)
-         ) {
-          if (coin.isNotBlank()) {
-           AsyncImage(
-            model = coin,
-            contentDescription = null,
-            modifier = Modifier.size(18.dp),
-            contentScale = ContentScale.Fit
-           )
-          }
-          Text(
-           text = wpFormat(winAmount),
-           color = Color.White,
-           fontSize = 15.sp,
-           fontWeight = FontWeight.Bold
-          )
-         }
-        }
-
-        Row(
-         modifier = Modifier.fillMaxWidth(),
-         verticalAlignment = Alignment.CenterVertically
-        ) {
-         Text(
-          text = "Your Bet",
-          modifier = Modifier.weight(0.70f),
-          color = Color.White,
-          fontSize = 15.sp,
-          fontWeight = FontWeight.Bold
-         )
-         Row(
-          modifier = Modifier.weight(1.15f),
-          verticalAlignment = Alignment.CenterVertically,
-          horizontalArrangement = Arrangement.spacedBy(6.dp)
-         ) {
-          if (coin.isNotBlank()) {
-           AsyncImage(
-            model = coin,
-            contentDescription = null,
-            modifier = Modifier.size(18.dp),
-            contentScale = ContentScale.Fit
-           )
-          }
-          Text(
-           text = wpFormat(betAmount),
-           color = Color.White,
-           fontSize = 15.sp,
-           fontWeight = FontWeight.Bold
-          )
-         }
-        }
-       }
-      }
-     }
-
-     Spacer(Modifier.height(16.dp))
-
-     // Middle Heading Artwork (Top Winner image - thoda niche + size increased without shifting other elements)
-     val heading = wpAsset( "wp_img_20260913_000423")
-     if (heading.isNotBlank()) {
-      Box(
-       modifier = Modifier
-        .fillMaxWidth()
-        .height(36.dp),
-       contentAlignment = Alignment.Center
-      ) {
-       AsyncImage(
-        model = heading,
-        contentDescription = null,
-        modifier = Modifier
-         .fillMaxWidth()
-         .offset(y = 6.dp)
-         .requiredHeight(72.dp),
-        contentScale = ContentScale.Fit
-       )
-      }
-     }
-
-     Spacer(Modifier.height(14.dp))
-
-     // Bottom Podium: 2nd | 1st (slightly higher) | 3rd using existing frame drawables
-     val frameItems = listOf(
-      Triple("2nd", "wp_img_20260912_235156", 0),
-      Triple("1st", "wp_img_20260912_235215", 1),
-      Triple("3rd", "wp_img_20260912_235230", 2)
-     )
+     Text("Winner", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
      Row(
-      modifier = Modifier
-       .fillMaxWidth()
-       .padding(horizontal = 4.dp),
-      horizontalArrangement = Arrangement.SpaceEvenly,
-      verticalAlignment = Alignment.Bottom
+      Modifier.fillMaxWidth(),
+      horizontalArrangement = Arrangement.Center,
+      verticalAlignment = Alignment.CenterVertically
      ) {
-      frameItems.filter { item ->
-       val rankIndex = when(item.first){"1st"->0;"2nd"->1;else->2}
-       globalRoundWinners.isEmpty() || rankIndex < globalRoundWinners.size
-      }.forEachIndexed { index, item ->
-       val isFirst = item.first == "1st"
-       val frame = wpAsset( item.second)
-       val frameSize = if (isFirst) 84.dp else 76.dp
-       val avatarSize = if (isFirst) 58.dp else 52.dp
-       val rankIndex = when(item.first){"1st"->0;"2nd"->1;else->2}
-       val globalWinner = globalRoundWinners.getOrNull(rankIndex)
-
-       Column(
-        modifier = Modifier
-         .weight(1f)
-         .padding(bottom = if (isFirst) 12.dp else 0.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-       ) {
-        Box(
-         modifier = Modifier.size(frameSize),
-         contentAlignment = Alignment.Center
-        ) {
-         if (!globalWinner?.avatar.isNullOrBlank()) {
-          AsyncImage(model = globalWinner?.avatar, contentDescription = "Global winner avatar",
-           modifier = Modifier.size(avatarSize).offset(y = 2.dp).clip(CircleShape), contentScale = ContentScale.Crop)
-         } else {
-          WpWinnerAvatarPlaceholder(modifier = Modifier.size(avatarSize).offset(y = 2.dp))
-         }
-         if (frame.isNotBlank()) {
-          AsyncImage(
-           model = frame,
-           contentDescription = item.first,
-           modifier = Modifier.fillMaxSize(),
-           contentScale = ContentScale.Fit
-          )
-         }
-        }
-        Spacer(Modifier.height(6.dp))
-        Text(
-         text = globalWinner?.name ?: "-",
-         color = Color.White,
-         fontSize = 13.sp,
-         fontWeight = FontWeight.Bold,
-         maxLines = 1
+      winningAnimals.forEach { animalName ->
+       val image = wpAsset(wpAnimals.first { it.name == animalName }.image)
+       if (image.isNotBlank()) {
+        AsyncImage(
+         model = image,
+         contentDescription = animalName,
+         modifier = Modifier.size(if (winningAnimals.size == 1) 150.dp else 76.dp),
+         contentScale = ContentScale.Fit
         )
-        Spacer(Modifier.height(4.dp))
-        Row(
-         verticalAlignment = Alignment.CenterVertically,
-         horizontalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-         if (coin.isNotBlank()) {
-          AsyncImage(
-           model = coin,
-           contentDescription = null,
-           modifier = Modifier.size(15.dp),
-           contentScale = ContentScale.Fit
-          )
-         }
-         Text(
-          text = globalWinner?.let { wpFormat(it.win) } ?: "-",
-          color = Color.White,
-          fontSize = 13.sp,
-          fontWeight = FontWeight.Bold,
-          maxLines = 1
-         )
-        }
        }
       }
      }
