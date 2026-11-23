@@ -581,7 +581,7 @@ export default function StaffPanel() {
   useEffect(() => {
     let active = true;
     const verifySavedSession = async () => {
-      const saved = typeof window !== 'undefined' ? sessionStorage.getItem('zyora_owner_panel_session_v2') : null;
+      const saved = typeof window !== 'undefined' ? localStorage.getItem('zyora_owner_panel_session_v2') : null;
       if (!saved) {
         if (active) setAuthChecked(true);
         return;
@@ -599,7 +599,7 @@ export default function StaffPanel() {
           setIsLoggedIn(true);
         }
       } catch {
-        sessionStorage.removeItem('zyora_owner_panel_session_v2');
+        localStorage.removeItem('zyora_owner_panel_session_v2');
       } finally {
         if (active) setAuthChecked(true);
       }
@@ -609,7 +609,7 @@ export default function StaffPanel() {
   }, []);
 
   const handleLoginSuccess = (token: string) => {
-    sessionStorage.setItem('zyora_owner_panel_session_v2', token);
+    localStorage.setItem('zyora_owner_panel_session_v2', token);
     setOwnerSessionToken(token);
     setIsLoggedIn(true);
   };
@@ -1061,7 +1061,7 @@ export default function StaffPanel() {
     if (!isLoggedIn || !ownerSessionToken) return;
     let isMounted = true;
     const logoutExpiredOwner = () => {
-      sessionStorage.removeItem('zyora_owner_panel_session_v2');
+      localStorage.removeItem('zyora_owner_panel_session_v2');
       setOwnerSessionToken('');
       setIsLoggedIn(false);
     };
