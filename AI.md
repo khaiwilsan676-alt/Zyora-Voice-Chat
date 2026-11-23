@@ -2046,3 +2046,10 @@ Current documentation does not certify that all historical features are build-, 
 - Duplicate retries return the current balances without applying a second exchange. Insufficient diamonds return HTTP 409. Wallet balance socket broadcast happens after the atomic commit.
 - Wallet history persistence is best-effort after the balance commit, so a history-write failure cannot make a successful exchange appear rolled back.
 - Native UI and exchange rate (100 diamonds = 33 coins) unchanged. Render deployment and live-device verification remain pending.
+
+
+## 2026-11-24 — Homepage scroll responsiveness and leaderboard podium avatars
+- `HomeScreen.kt`: top pull-refresh now observes unconsumed pull distance without consuming normal scroll deltas, removing the artificial sticky/laggy drag around the banner and Honour/Charm/Room cards while preserving pull-to-refresh.
+- Honour, Charm, and Room cards now show rank 1 in the centre, rank 2 on the left, and rank 3 on the right. Missing rank slots remain in place instead of shifting other users.
+- Empty avatar slots reuse the exact `DefaultUserAvatarIcon` composable from `Leaderboard.kt`; it is now shared with HomeScreen. Card artwork and styling remain unchanged.
+- Native APK compilation and real-device scroll/visual verification remain pending.
