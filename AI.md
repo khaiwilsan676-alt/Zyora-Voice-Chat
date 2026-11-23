@@ -2068,3 +2068,11 @@ Current documentation does not certify that all historical features are build-, 
 - Room DP/custom-theme data URLs deliberately keep the upload-first path; base64 image payloads are not broadcast before permanent image URLs exist.
 - Save requests are guarded before launching the coroutine to prevent rapid duplicate taps. Server persistence errors remain visible in the settings screen.
 - Verification pending: GitHub Actions native APK build and real-device multi-user settings propagation / offline-save tests. No measured latency claim until device testing.
+
+
+## 2026-11-24 — Native Home leaderboard warm-cache performance
+- `android-native/app/src/main/java/com/hurry/voicechat/HomeScreen.kt`: daily Honour/Charm/Room top-three avatar results now live in a process-wide Compose state cache instead of a HomeScreen-local map.
+- Root cause: navigating away from and back to Home could dispose/recreate HomeScreen and repeat all three leaderboard HTTP requests, delaying avatar restoration and adding avoidable network work.
+- Cached avatars render immediately on re-entry; refresh is skipped for five minutes when all three categories are cached. Stale cached avatars remain visible while background refresh runs. Failed categories do not overwrite existing cached data; at least one successful category is required to advance the refresh timestamp.
+- Existing endpoints, rank ordering, avatar URLs, UI layout, and room-list refresh behavior are unchanged.
+- Verification pending: native APK build, repeated tab-navigation test, offline/stale-cache test, and network request-count confirmation on device. No measured frame-time or latency improvement is claimed before profiling.
