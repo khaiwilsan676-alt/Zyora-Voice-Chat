@@ -193,7 +193,7 @@ export default function ManageRooms() {
       <div className="p-8 flex-1 overflow-y-auto">
         <div className="relative w-full max-w-3xl mb-6">
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
-          <input type="text" value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Search by room name, room ID, owner name or owner ID..." className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-400 font-medium text-slate-900 placeholder:text-slate-400 caret-slate-900" />
+          <input type="text" value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Search by room name, room ID, owner name or owner ID..." className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-[#197477] font-medium text-slate-900 placeholder:text-slate-400 caret-slate-900" />
         </div>
         {loading ? <div className="py-12 text-center text-slate-400 font-medium text-sm">Loading rooms...</div> : (
           <div className="w-full overflow-x-auto">
@@ -205,15 +205,15 @@ export default function ManageRooms() {
                 {filteredRooms.map((room, index) => <tr key={room.id} className="hover:bg-slate-50/50 transition-colors">
                   <td className="py-3 pl-4 pr-2 text-xs font-bold text-slate-500">{index + 1}</td>
                   <td className="py-3 px-2"><div className="flex items-center gap-3.5">
-                    <div className="w-10 h-10 rounded-full overflow-hidden border border-slate-200 bg-indigo-100 shrink-0 flex items-center justify-center text-indigo-600 font-bold">{room.dp ? <img src={room.dp} alt={room.name} className="w-full h-full object-cover" /> : room.name.charAt(0).toUpperCase()}</div>
+                    <div className="w-10 h-10 rounded-full overflow-hidden border border-slate-200 bg-indigo-100 shrink-0 flex items-center justify-center text-[#197477] font-bold">{room.dp ? <img src={room.dp} alt={room.name} className="w-full h-full object-cover" /> : room.name.charAt(0).toUpperCase()}</div>
                     <span className="text-sm font-bold text-slate-800">{room.name}</span>
                   </div></td>
                   <td className="py-3 px-2"><span className="text-sm font-bold text-black tracking-wide">{room.roomId}</span></td>
                   <td className="py-3 px-2"><div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full overflow-hidden border border-slate-200 bg-indigo-100 shrink-0 flex items-center justify-center text-indigo-600 font-bold">{room.ownerImage ? <img src={room.ownerImage} alt={room.ownerName} className="w-full h-full object-cover" /> : room.ownerName === '—' ? '?' : room.ownerName.charAt(0).toUpperCase()}</div>
+                    <div className="w-9 h-9 rounded-full overflow-hidden border border-slate-200 bg-indigo-100 shrink-0 flex items-center justify-center text-[#197477] font-bold">{room.ownerImage ? <img src={room.ownerImage} alt={room.ownerName} className="w-full h-full object-cover" /> : room.ownerName === '—' ? '?' : room.ownerName.charAt(0).toUpperCase()}</div>
                     <div className="flex flex-col"><span className="text-sm font-bold text-slate-800">{room.ownerName}</span><span className="text-[11px] text-slate-400 font-medium">{room.ownerId}</span></div>
                   </div></td>
-                  <td className="py-3 px-3 text-right"><button type="button" onClick={() => setSelectedRoom(room)} className="rounded-lg bg-slate-900 px-4 py-2 text-xs font-bold text-white hover:bg-black">Open</button></td>
+                  <td className="py-3 px-3 text-right"><button type="button" onClick={() => setSelectedRoom(room)} className="rounded-lg bg-[#197477] px-4 py-2 text-xs font-bold text-white hover:bg-[#17696c]">Open</button></td>
                 </tr>)}
                 {!filteredRooms.length && <tr><td colSpan={5} className="py-12 text-center text-sm font-medium text-slate-400">No rooms found</td></tr>}
               </tbody>
@@ -226,13 +226,13 @@ export default function ManageRooms() {
         <section className="w-full max-w-4xl max-h-[92vh] overflow-y-auto rounded-2xl bg-white p-5 sm:p-7 shadow-2xl" onClick={(event) => event.stopPropagation()}>
           <div className="mb-6 flex items-center justify-between"><h2 className="text-xl font-extrabold text-slate-900">{selectedRoom.name}</h2><button type="button" onClick={() => setSelectedRoom(null)} className="rounded-lg px-3 py-1.5 text-sm font-bold text-slate-600 hover:bg-slate-100">Close</button></div>
           <div className="grid grid-cols-3 gap-3 sm:gap-4">
-            {detailFields.map((field) => <label key={field.label} className="min-w-0"><span className="mb-1.5 block truncate text-[11px] font-bold text-slate-500 sm:text-xs">{field.label}</span><input type="text" placeholder={field.key === 'password' ? 'Set new password' : ''} value={field.value || ''} readOnly={field.key === 'roomId' || field.key === 'country'} onChange={(event) => setEditValues(current => ({ ...current, [field.key === 'name' ? 'name' : field.key === 'admin' ? 'admin' : field.key === 'micMode' ? 'micMode' : field.key === 'theme' ? 'theme' : 'password']: event.target.value }))} className={`w-full min-w-0 rounded-lg border border-slate-200 bg-slate-50 px-2 py-2.5 text-xs font-semibold text-slate-900 outline-none focus:border-slate-400 sm:px-3 sm:text-sm ${field.label === 'Mic Mode' ? 'text-[11px]' : ''}`} /></label>)}
+            {detailFields.map((field) => <label key={field.label} className="min-w-0"><span className="mb-1.5 block truncate text-[11px] font-bold text-slate-500 sm:text-xs">{field.label}</span><input type="text" placeholder={field.key === 'password' ? 'Set new password' : ''} value={field.value || ''} readOnly={field.key === 'roomId' || field.key === 'country'} onChange={(event) => setEditValues(current => ({ ...current, [field.key === 'name' ? 'name' : field.key === 'admin' ? 'admin' : field.key === 'micMode' ? 'micMode' : field.key === 'theme' ? 'theme' : 'password']: event.target.value }))} className={`w-full min-w-0 rounded-lg border border-slate-200 bg-slate-50 px-2 py-2.5 text-xs font-semibold text-slate-900 outline-none focus:border-[#197477] sm:px-3 sm:text-sm ${field.label === 'Mic Mode' ? 'text-[11px]' : ''}`} /></label>)}
           </div>
           <div className="mt-7"><h3 className="mb-3 text-base font-extrabold text-slate-900">Dashboard</h3><div className="grid grid-cols-2 gap-3">
             <div className="rounded-xl border border-slate-200 p-4"><p className="text-xs font-semibold text-slate-500">Room daily coins receiving</p><p className="mt-2 text-xl font-extrabold text-slate-900">{dailyCoins}</p></div>
             <div className="rounded-xl border border-slate-200 p-4"><p className="text-xs font-semibold text-slate-500">Room weekly coins receiving</p><p className="mt-2 text-xl font-extrabold text-slate-900">{weeklyCoins}</p></div>
           </div></div>
-          <div className="mt-6 flex items-center justify-end gap-3"><span className="text-xs font-semibold text-slate-500">{saveMessage}</span><button type="button" disabled={saving} onClick={saveRoomSettings} className="rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-bold text-white disabled:opacity-50">{saving ? 'Saving...' : 'Save'}</button></div>
+          <div className="mt-6 flex items-center justify-end gap-3"><span className="text-xs font-semibold text-slate-500">{saveMessage}</span><button type="button" disabled={saving} onClick={saveRoomSettings} className="rounded-lg bg-[#197477] px-5 py-2.5 text-sm font-bold text-white disabled:opacity-50">{saving ? 'Saving...' : 'Save'}</button></div>
         </section>
       </div>}
     </div>
