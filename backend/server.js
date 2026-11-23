@@ -3308,7 +3308,7 @@ io.on("connection", (socket) => {
     // the same result; it is not hidden from the user.
     // Seed the outcome from the transfer ID so a retry/reconnect reproduces
     // the exact same reward instead of displaying a different result.
-    const luckyRoll = crypto.createHash("sha256").update(eventId).digest().readUInt32BE(0) / 0xFFFFFFFF;
+    const luckyRoll = require("crypto").createHash("sha256").update(eventId).digest().readUInt32BE(0) / 0xFFFFFFFF;
     const luckyReturnPercent = isLucky
       ? Math.floor(luckyRoll * 51)
       : 0;
