@@ -2004,3 +2004,12 @@ Current documentation does not certify that all historical features are build-, 
 - Feedback, Daisy AI support chat, and user reports submitted from any user's native `index.db` are relayed in real time through Socket.IO to authenticated Owner Panel sessions only.
 - Owner Panel history replay requests for these streams require successful `owner_panel_authenticate`; ordinary app sockets cannot read the Owner Panel handoff buffers. No user message, feedback, or report content is written to MongoDB/Redis/GitHub storage.
 - This intentionally does not broadcast one user's private local `index.db` to other app users.
+
+
+## 2026-11-23 — Owner Panel Game Management uses actual round winners
+- Removed Fruit Party from the Owner Panel Game Management menu; only Wild Party and Dragon Battle remain.
+- Removed synthetic client-side winner prediction timers from Owner Panel. Each game page now shows only the heading "Winner" and the winning game's actual artwork.
+- Native Wild Party publishes the exact shared `wpOutcome(round)` result and matching animal artwork as soon as its round starts, including the correct Mix Big/Mix Small artwork set.
+- Native Dragon Battle deals its existing round-seeded cards before the betting window, calculates the exact same winner from those cards, and publishes the matching Dragon A/B/C artwork before betting starts; the same dealt cards are reused for the normal reveal.
+- Backend retains the latest result in memory and relays it only to authenticated Owner Panel sockets; the history snapshot request also requires Owner Panel authentication.
+- No betting, wallet settlement, payout, or game display styling logic was intentionally changed. Build and live multi-device verification remain pending.
