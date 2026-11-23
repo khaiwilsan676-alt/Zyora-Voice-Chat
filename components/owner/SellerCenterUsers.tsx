@@ -18,6 +18,24 @@ const valueOf = (...values: unknown[]) => {
   return value === undefined ? '' : String(value).trim();
 };
 
+
+async function readApiResponse(response: Response) {
+  const raw = await response.text();
+  if (!raw.trim()) throw new Error(`Server returned an empty response (HTTP ${response.status})`);
+  let data: any;
+  try {
+    data = JSON.parse(raw);
+  } catch {
+    const contentType = response.headers.get('content-type') || '';
+    const hint = contentType.includes('text/html') || /^<!doctype html|^<html/i.test(raw.trim())
+      ? 'Backend returned an HTML page instead of JSON. Check the backend URL/deployment.'
+      : 'Backend returned an invalid JSON response.';
+    throw new Error(`${hint} (HTTP ${response.status})`);
+  }
+  if (!response.ok) throw new Error(data?.error || `Request failed (HTTP ${response.status})`);
+  return data;
+}
+
 export default function SellerCenterUsers() {
   const [query, setQuery] = useState('');
   const [users, setUsers] = useState<SellerUser[]>([]);
@@ -35,8 +53,7 @@ export default function SellerCenterUsers() {
           cache: 'no-store',
           headers: { Accept: 'application/json' }
         });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data?.error || 'Could not load Seller Center users');
+        const data = await readApiResponse(response);
         const rows = Array.isArray(data?.users) ? data.users : [];
         if (!mounted) return;
         setUsers(rows.map((user: any) => ({
@@ -70,8 +87,7 @@ export default function SellerCenterUsers() {
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify({ uid: user.uid, accountId: user.accountId, active: next })
       });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data?.error || 'Could not update Seller Center');
+      const data = await readApiResponse(response);
       setUsers((current) => next ? current.map((item) => item.id === user.id ? { ...item, active: true } : item) : current.filter((item) => item.id !== user.id));
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Could not update Seller Center');
