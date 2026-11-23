@@ -642,6 +642,7 @@ export default function StaffPanel() {
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [usersPage, setUsersPage] = useState(1);
   const [selectedRoleFilter, setSelectedRoleFilter] = useState('All Roles');
   const [selectedUserStatusFilter, setSelectedUserStatusFilter] = useState<'All' | 'Online' | 'Offline' | 'Banned'>('All');
 
@@ -1503,6 +1504,7 @@ export default function StaffPanel() {
   const handleSearchQueryChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setSearchQuery(val);
+    setUsersPage(1);
 
     // Search only the current MongoDB-backed list; do not merge remote matches
     // into state, which could resurrect accounts deleted from MongoDB.
@@ -1526,6 +1528,9 @@ export default function StaffPanel() {
       (selectedUserStatusFilter === 'Offline' && !isBanned && !isOnline);
     return matchesSearch && matchesRole && matchesStatus;
   }).sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+  const usersPageSize = 20;
+  const usersPageCount = Math.max(1, Math.ceil(filteredUsers.length / usersPageSize));
+  const paginatedUsers = filteredUsers.slice((usersPage - 1) * usersPageSize, usersPage * usersPageSize);
 
   const filteredGifts = ALL_GIFTS.filter(g => {
     const typeOk = giftTabFilter === 'All' || g.type === giftTabFilter;
@@ -1697,7 +1702,7 @@ export default function StaffPanel() {
                 <span className="text-xs font-semibold px-3 py-1 bg-slate-100 text-slate-600 rounded-full">Total Users: {users.length.toLocaleString()}</span>
               </div>
               <div className="mt-5 flex flex-nowrap items-center gap-3 overflow-x-auto">
-                <div className="relative w-[180px] md:w-[340px] shrink-0">
+                <div className="relative w-[140px] md:w-[220px] shrink-0">
                   <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
                   <input
                     type="text"
@@ -1712,7 +1717,7 @@ export default function StaffPanel() {
                     <button
                       key={filter}
                       type="button"
-                      onClick={() => setSelectedUserStatusFilter(filter)}
+                      onClick={() => { setSelectedUserStatusFilter(filter); setUsersPage(1); }}
                       className={`px-4 py-2 rounded-lg text-xs font-bold transition-colors ${selectedUserStatusFilter === filter ? 'bg-[#197477] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
                     >
                       {filter}
@@ -1720,7 +1725,7 @@ export default function StaffPanel() {
                   ))}
                   <select
                     value={selectedRoleFilter}
-                    onChange={(e) => setSelectedRoleFilter(e.target.value)}
+                    onChange={(e) => { setSelectedRoleFilter(e.target.value); setUsersPage(1); }}
                     aria-label="Filter by role"
                     className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 outline-none hover:bg-slate-50 cursor-pointer"
                   >
@@ -1758,7 +1763,7 @@ export default function StaffPanel() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {filteredUsers.map((u, idx) => {
+                      {paginatedUsers.map((u, idx) => {
                         const userData = u as any;
                         const isOnline = Boolean(userData.isOnline || userData.online || userData.onlineStatus || userData.roomId || userData.currentRoomId);
                         const userState = String(userData.accountStatus || userData.state || (userData.isBlocked ? 'Blocked' : 'Active'));
@@ -1767,7 +1772,7 @@ export default function StaffPanel() {
                         const roomsCreated = Number(userData.roomsCreated ?? 0);
                         return (
                           <tr key={u.id} className="hover:bg-slate-50/70 transition-colors">
-                            <td className="py-3 pl-4 pr-2 text-xs text-slate-500 tabular-nums">{idx + 1}</td>
+                            <td className="py-3 pl-4 pr-2 text-xs text-slate-500 tabular-nums">{(usersPage - 1) * usersPageSize + idx + 1}</td>
                             <td className="py-3 px-2">
                               <div className="flex items-center gap-2.5 min-w-0">
                                 {u.image ? (
@@ -1831,6 +1836,18 @@ export default function StaffPanel() {
                       )}
                     </tbody>
                   </table>
+                </div>
+              )}
+              {!loadingUsers && filteredUsers.length > 0 && (
+                <div className="mt-5 flex items-center justify-between border-t border-slate-100 pt-4">
+                  <span className="text-xs font-medium text-slate-500">
+                    Showing {(usersPage - 1) * usersPageSize + 1}–{Math.min(usersPage * usersPageSize, filteredUsers.length)} of {filteredUsers.length} users
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button type="button" disabled={usersPage <= 1} onClick={() => setUsersPage(page => Math.max(1, page - 1))} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 disabled:cursor-not-allowed disabled:opacity-40">Previous</button>
+                    <span className="min-w-[74px] text-center text-xs font-semibold text-slate-600">Page {usersPage} of {usersPageCount}</span>
+                    <button type="button" disabled={usersPage >= usersPageCount} onClick={() => setUsersPage(page => Math.min(usersPageCount, page + 1))} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 disabled:cursor-not-allowed disabled:opacity-40">Next</button>
+                  </div>
                 </div>
               )}
             </div>
