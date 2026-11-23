@@ -732,7 +732,7 @@ fun PublicProfileScreen(
                         if (hasFamilyMembership) {
                             Box(contentAlignment = Alignment.Center, modifier = Modifier.height(24.dp).widthIn(min = 60.dp, max = 100.dp)) {
                                 AsyncImage(
-                                    model = ownFamilyRewardTagImage.ifBlank { PUBLIC_PROFILE_FAMILY_IMAGE_URL },
+                                    model = PUBLIC_PROFILE_FAMILY_IMAGE_URL,
                                     contentDescription = "Family tag",
                                     contentScale = ContentScale.FillBounds,
                                     modifier = Modifier.fillMaxSize()
