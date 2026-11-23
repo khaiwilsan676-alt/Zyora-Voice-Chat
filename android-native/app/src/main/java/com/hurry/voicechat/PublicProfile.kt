@@ -169,10 +169,22 @@ fun PublicProfileScreen(
     var ownFamilyRewardTagImage by remember(targetUser?.uid, targetUser?.id, targetUser?.accountId) {
         mutableStateOf("")
     }
+    var ownFamilyRewardTagExpiresAt by remember(targetUser?.uid, targetUser?.id, targetUser?.accountId) {
+        mutableStateOf(0L)
+    }
     var ownFamilyCreatorId by remember(targetUser?.uid, targetUser?.id, targetUser?.accountId) {
         mutableStateOf(if (!isOtherUser) familyPrefs.getString("familyCreatorId", "").orEmpty().ifBlank { currentUserId } else "")
     }
     var ownFamilyCode by remember(targetUser?.uid, targetUser?.id, targetUser?.accountId) { mutableStateOf(if (!isOtherUser) familyPrefs.getString("familyCode", "").orEmpty().ifBlank { familyPrefs.getString("familyId", "").orEmpty() } else "") }
+    LaunchedEffect(ownFamilyRewardTagExpiresAt) {
+        val remaining = ownFamilyRewardTagExpiresAt - System.currentTimeMillis()
+        if (ownFamilyRewardTagExpiresAt > 0L && remaining > 0L) {
+            kotlinx.coroutines.delay(remaining)
+            ownFamilyRewardTagImage = ""
+        } else if (ownFamilyRewardTagExpiresAt > 0L) {
+            ownFamilyRewardTagImage = ""
+        }
+    }
     val hasFamilyMembership = hasOwnFamily
     var ownFamilyMemberCount by remember { mutableIntStateOf(0) }
     val coroutineScope = rememberCoroutineScope()
@@ -389,6 +401,7 @@ fun PublicProfileScreen(
 
         val merged = org.json.JSONObject(cached?.toString() ?: "{}")
         val rewardTagExpiry = merged.optLong("familyRewardTagExpiresAt", 0L)
+        ownFamilyRewardTagExpiresAt = rewardTagExpiry
         val rewardTagFile = merged.optString("familyRewardTagImage", "").trim()
         ownFamilyRewardTagImage = if (rewardTagExpiry > System.currentTimeMillis() && rewardTagFile.isNotBlank()) {
             if (rewardTagFile.startsWith("http", true)) rewardTagFile
