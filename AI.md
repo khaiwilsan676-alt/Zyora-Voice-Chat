@@ -1991,3 +1991,11 @@ Current documentation does not certify that all historical features are build-, 
 - Private-message monitor history remains in the Owner Panel browser IndexedDB; the server keeps only its bounded in-memory reconnect buffer. Native clients' `index.db` remains device-local; messages are relayed to the Owner Panel in real time through Socket.IO when clients send them.
 - Deployment configuration required on the Zyora backend service: set `OWNER_PANEL_EMAIL`, `OWNER_PANEL_PASSWORD`, and a unique random `OWNER_PANEL_SESSION_SECRET` (32+ characters). Do not put these secrets in source code or `NEXT_PUBLIC_*` variables.
 - Source changes committed; Render environment configuration and production deployment/browser verification remain pending.
+
+## 2026-11-23 — Owner Manage Users compact list UI
+- Restyled only the Manage Users table to match the supplied AppChat Admin reference: compact rows, subtle dividers, and compact avatar/name presentation.
+- Kept the S.No column and existing user avatar rendering/fallback.
+- User identity is shown as avatar + name with Zyora ID beneath it; the table includes State, Coins, Diamond, and Online Room columns where source fields are available (missing values display as zero/default).
+- Replaced the per-row overflow icon with a teal Open button using the Owner login button color. It opens the existing selected-user panel/modal.
+- Existing search, role filter, pagination/data loading, and other Owner Panel sections were not changed.
+- Source committed; production deployment and browser verification remain pending.
