@@ -2385,8 +2385,8 @@ io.on("connection", (socket) => {
       timestamp: Date.now()
     };
     if (!result.winnerKey || (game === "wildparty" && !result.winnerImages.length) || (game === "dragonbattle" && !result.winnerImage)) return;
-    const previous = latestGameRoundResults[game];
-    if (previous && previous.round > round) return;
+    // Round IDs reset daily; accept the newest live game broadcast instead of
+    // comparing round numbers across different reset days.
     latestGameRoundResults[game] = result;
     io.to("owner-panel").emit("owner_game_round_result", result);
   });
