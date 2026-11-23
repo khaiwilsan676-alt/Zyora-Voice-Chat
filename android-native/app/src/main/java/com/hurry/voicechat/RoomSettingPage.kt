@@ -249,18 +249,34 @@ fun RoomSettingPage(
     }
 
     // 🔥 COMMON SAVE FUNCTION 🔥
-    val performSave = { newState: RoomSettingsDataNative ->
+    val performSave = save@{ newState: RoomSettingsDataNative ->
+        if (saving) return@save
+        saving = true
+        saveError = ""
+        val ready = newState.copy(
+            roomName = newState.roomName.trim().ifBlank { "Room" },
+            admin = admins,
+            customTheme = newState.customTheme.ifBlank { customTheme }
+        )
+        val stableRoomId = roomOwnerId.ifBlank { currentUserId }
+        // Scalar settings are applied locally and broadcast immediately. Image data URLs
+        // wait for permanent upload so a large base64 payload is never sent over Socket.IO.
+        val canApplyOptimistically = !ready.roomDp.startsWith("data:image/") &&
+            !ready.customTheme.startsWith("data:image/")
+        if (canApplyOptimistically) {
+            state = ready
+            context.getSharedPreferences("room_settings", Context.MODE_PRIVATE).edit()
+                .putString("roomDp_$stableRoomId", ready.roomDp)
+                .putInt("micMode_$stableRoomId", ready.micMode)
+                .putString("theme_$stableRoomId", ready.theme)
+                .putString("customTheme_$stableRoomId", ready.customTheme)
+                .putBoolean("room_locked_$stableRoomId", ready.isLocked)
+                .putString("room_password_$stableRoomId", ready.roomPassword)
+                .apply()
+            onSave(ready)
+        }
         scope.launch {
-            if (saving) return@launch
-            saving = true
-            saveError = ""
-            val ready = newState.copy(
-                roomName = newState.roomName.trim().ifBlank { "Room" },
-                admin = admins,
-                customTheme = newState.customTheme.ifBlank { customTheme }
-            )
             runCatching {
-                val stableRoomId = roomOwnerId.ifBlank { currentUserId }
                 // Upload room DP and custom theme concurrently; each upload already runs on IO.
                 val (permanentDp, permanentTheme) = coroutineScope {
                     val dpJob = async {
@@ -293,7 +309,9 @@ fun RoomSettingPage(
                 permanent
             }.onSuccess { permanent ->
                 state = permanent
-                onSave(permanent)
+                // For image changes, publish only after URLs are permanent. For scalar
+                // changes, the optimistic callback already updated the room and sockets.
+                if (!canApplyOptimistically) onSave(permanent)
             }.onFailure { saveError = it.message ?: "Network error. Try again." }
             saving = false
         }
