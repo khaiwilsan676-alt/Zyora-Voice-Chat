@@ -167,7 +167,7 @@ export default function OwnerAssetsPanel({ ownerKey }: { ownerKey: string }) {
   };
 
   return (
-    <section className="w-full max-w-xl pt-2">
+    <section className="w-full max-w-none pt-2">
       <div className="space-y-4">
         <input value={userQuery} onChange={(event) => setUserQuery(event.target.value)} placeholder="Search User ID" className="h-12 w-full max-w-xs rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-semibold text-slate-900 outline-none focus:border-[#197477]" inputMode="numeric" />
         {user && <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3">
@@ -204,16 +204,16 @@ export default function OwnerAssetsPanel({ ownerKey }: { ownerKey: string }) {
         {notice && <p className="text-xs font-semibold text-slate-600">{notice}</p>}
       </div>
 
-      <div className="mt-8 overflow-x-auto rounded-xl border border-slate-200 bg-white">
-        <table className="w-full min-w-[720px] border-collapse text-left">
-          <thead><tr className="border-b border-slate-100 bg-slate-50"><th className={tableHead}>User</th><th className={tableHead}>ID</th><th className={tableHead}>Assets Type</th><th className={tableHead}>Assets</th><th className={tableHead}>Days</th></tr></thead>
+      <div className="mt-8 w-full overflow-x-auto">
+        <table className="w-full min-w-[920px] border-collapse text-left">
+          <thead><tr className="border-b border-slate-100 text-[10px] font-semibold text-slate-500 uppercase tracking-wide"><th className="py-3 pl-4 pr-2">User</th><th className="py-3 px-2">ID</th><th className="py-3 px-2">Assets Type</th><th className="py-3 px-2">Assets</th><th className="py-3 pr-4">Days</th></tr></thead>
           <tbody className="divide-y divide-slate-100">
             {history.map((item) => <tr key={item.id} className="hover:bg-slate-50">
-              <td className="px-4 py-3"><div className="flex items-center gap-2"><img src={item.avatar || '/default-avatar.png'} alt="" className="h-8 w-8 rounded-full object-cover" /><span className="max-w-36 truncate text-xs font-bold text-slate-800">{item.name}</span></div></td>
-              <td className="px-4 py-3 text-xs font-semibold text-slate-600">{item.accountId}</td>
-              <td className="px-4 py-3 text-xs font-semibold text-slate-700">{item.tab}</td>
-              <td className="px-4 py-3"><img src={item.image ? (ASSETS.find((asset) => asset.image === item.image) ? assetUrl(ASSETS.find((asset) => asset.image === item.image)!) : (String(item.image).startsWith('http') ? item.image : ASSET_BASE + item.image)) : '/default-avatar.png'} alt={item.assetName || item.name || 'Sent asset'} className="h-11 w-11 rounded-lg border border-slate-100 bg-white object-contain p-1" /></td>
-              <td className="px-4 py-3 text-xs font-semibold text-slate-600">{item.days}</td>
+              <td className="py-3 pl-4 pr-2"><div className="flex items-center gap-2.5"><img src={item.avatar || '/default-avatar.png'} alt="" className="h-9 w-9 rounded-full object-cover" /><span className="max-w-36 truncate text-xs font-bold text-slate-800">{item.name}</span></div></td>
+              <td className="px-2 py-3 text-xs text-slate-600 tabular-nums">{item.accountId}</td>
+              <td className="px-2 py-3 text-xs text-slate-600">{item.tab}</td>
+              <td className="px-2 py-3"><img src={item.image ? (ASSETS.find((asset) => asset.image === item.image) ? assetUrl(ASSETS.find((asset) => asset.image === item.image)!) : (String(item.image).startsWith('http') ? item.image : ASSET_BASE + item.image)) : '/default-avatar.png'} alt={item.assetName || item.name || 'Sent asset'} className="h-9 w-9 rounded-lg border border-slate-100 bg-white object-contain p-1" /></td>
+              <td className="py-3 pr-4 text-xs text-slate-600">{item.days}</td>
             </tr>)}
             {history.length === 0 && <tr><td colSpan={5} className="px-4 py-8 text-center text-xs text-slate-400">No sent assets</td></tr>}
           </tbody>
