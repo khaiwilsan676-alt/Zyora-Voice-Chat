@@ -385,6 +385,39 @@ fun HomeScreen(
         RAW + "IMG-20260818-WA0001.jpg"
     )
     val pager = rememberPagerState(pageCount = { banners.size })
+    LaunchedEffect(pager, banners.size) {
+        while (true) {
+            kotlinx.coroutines.delay(5_000L)
+            pager.animateScrollToPage((pager.currentPage + 1) % banners.size)
+        }
+    }
+    val dailyTopThreeAvatars = remember { mutableStateMapOf<String, List<String>>() }
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.coroutineScope {
+            listOf("honour", "charm", "room").forEach { category ->
+                launch(Dispatchers.IO) {
+                    val avatars = runCatching {
+                        val connection = (java.net.URL("https://zyora-server.onrender.com/api/leaderboard?tab=$category&period=daily").openConnection() as java.net.HttpURLConnection).apply {
+                            connectTimeout = 8_000
+                            readTimeout = 10_000
+                            setRequestProperty("Accept", "application/json")
+                        }
+                        try {
+                            if (connection.responseCode !in 200..299) error("Leaderboard unavailable")
+                            val rows = org.json.JSONObject(connection.inputStream.bufferedReader().use { it.readText() }).optJSONArray("leaderboard") ?: org.json.JSONArray()
+                            (0 until minOf(3, rows.length())).mapNotNull { index ->
+                                val row = rows.optJSONObject(index) ?: return@mapNotNull null
+                                row.optString("image").trim().takeIf { it.isNotBlank() && it != "null" && it != "undefined" }?.let { image ->
+                                    if (image.startsWith("http", true)) image else RAW + image.removePrefix("/")
+                                }
+                            }
+                        } finally { connection.disconnect() }
+                    }.getOrDefault(emptyList())
+                    withContext(Dispatchers.Main) { dailyTopThreeAvatars[category] = avatars }
+                }
+            }
+        }
+    }
     val listState = rememberLazyListState()
     val countrySticky by remember { derivedStateOf { listState.firstVisibleItemIndex >= 3 } }
 
@@ -566,9 +599,9 @@ fun HomeScreen(
                                     .graphicsLayer { translationY = -4.dp.toPx() },
                                 horizontalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
-                                HurryCategoryCard("Honour", HONOUR_BG, Modifier.weight(1f)) { onLeaderboard("honour") }
-                                HurryCategoryCard("Charm",  CHARM_BG,  Modifier.weight(1f)) { onLeaderboard("charm") }
-                                HurryCategoryCard("Room",   ROOM_BG,   Modifier.weight(1f)) { onLeaderboard("room") }
+                                HurryCategoryCard("Honour", HONOUR_BG, dailyTopThreeAvatars["honour"].orEmpty(), Modifier.weight(1f)) { onLeaderboard("honour") }
+                                HurryCategoryCard("Charm", CHARM_BG, dailyTopThreeAvatars["charm"].orEmpty(), Modifier.weight(1f)) { onLeaderboard("charm") }
+                                HurryCategoryCard("Room", ROOM_BG, dailyTopThreeAvatars["room"].orEmpty(), Modifier.weight(1f)) { onLeaderboard("room") }
                             }
                         }
 
@@ -1017,71 +1050,23 @@ fun HurryHouseIcon(selected: Boolean = false) {
 private fun HurryCategoryCard(
     label: String,
     bg: String,
+    topThreeAvatars: List<String>,
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {}
 ) {
+    val fallbackAvatar = RAW + "default_avatar.png"
     Box(modifier.height(92.dp).clip(RoundedCornerShape(16.dp)).clickable { onClick() }) {
-        AsyncImage(
-            model = bg,
-            contentDescription = label,
-            modifier = Modifier
-                .fillMaxSize()
-                .offset(y = 1.dp)
-                .graphicsLayer {
-                    val s = if (label.equals("Honour", true)) 1.08f else 1.02f
-                    scaleX = s; scaleY = s
-                },
-            contentScale = ContentScale.Fit
-        )
-        Text(
-            text = label.uppercase(),
-            modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Black,
-            color = Color.White
-        )
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .padding(start = 3.dp, end = 3.dp, bottom = 2.dp)
-        ) {
-            Row(
-                Modifier
-                    .matchParentSize() 
-                    .offset(y = (-1).dp),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                AsyncImage(
-                    model = RAW + "logo.png",
-                    contentDescription = null,
-                    modifier = Modifier.size(24.dp).clip(RoundedCornerShape(50)),
-                    contentScale = ContentScale.Crop
-                )
-                Spacer(Modifier.width(2.dp))
-                AsyncImage(
-                    model = RAW + "logo.png",
-                    contentDescription = null,
-                    modifier = Modifier.size(29.dp).clip(RoundedCornerShape(50)).padding(1.dp),
-                    contentScale = ContentScale.Crop
-                )
-                Spacer(Modifier.width(2.dp))
-                AsyncImage(
-                    model = RAW + "logo.png",
-                    contentDescription = null,
-                    modifier = Modifier.size(24.dp).clip(RoundedCornerShape(50)),
-                    contentScale = ContentScale.Crop
-                )
+        AsyncImage(model = bg, contentDescription = label, modifier = Modifier.fillMaxSize().offset(y = 1.dp).graphicsLayer { val s = if (label.equals("Honour", true)) 1.08f else 1.02f; scaleX = s; scaleY = s }, contentScale = ContentScale.Fit)
+        Text(text = label.uppercase(), modifier = Modifier.fillMaxWidth().padding(top = 16.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center, fontSize = 11.sp, fontWeight = FontWeight.Black, color = Color.White)
+        Box(modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(start = 3.dp, end = 3.dp, bottom = 2.dp)) {
+            Row(Modifier.matchParentSize().offset(y = (-1).dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                (0..2).forEach { index ->
+                    val avatar = topThreeAvatars.getOrNull(index) ?: fallbackAvatar
+                    AsyncImage(model = avatar, contentDescription = "Daily top avatar", modifier = Modifier.size(if (index == 1) 29.dp else 24.dp).clip(RoundedCornerShape(50)), contentScale = ContentScale.Crop)
+                    if (index != 2) Spacer(Modifier.width(2.dp))
+                }
             }
-
-            AsyncImage(
-                model = CARD_FRAME,
-                contentDescription = null,
-                modifier = Modifier.fillMaxWidth().wrapContentHeight(),
-                contentScale = ContentScale.FillWidth
-            )
+            AsyncImage(model = CARD_FRAME, contentDescription = null, modifier = Modifier.fillMaxWidth().wrapContentHeight(), contentScale = ContentScale.FillWidth)
         }
     }
 }
