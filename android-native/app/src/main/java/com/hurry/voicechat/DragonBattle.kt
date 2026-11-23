@@ -1982,6 +1982,12 @@ private fun DragonBattleMainOverlay(
             flyCornerProgress.snapTo(0f)
             cornerPopupText = null
             cornerPopupProgress.snapTo(0f)
+            val dealt = dealDragonRoundCards(sharedRoundId)
+            val winner = pickDragonWinner(dealt.first, dealt.second, dealt.third)
+            val winnerImage = when (winner) { "A" -> DRAGON_A_IMAGE; "B" -> DRAGON_B_IMAGE; else -> DRAGON_C_IMAGE }
+            dragonWinnerSocket?.emit("game_round_result_update", JSONObject()
+                .put("game", "dragonbattle").put("round", sharedRoundId)
+                .put("winnerKey", winner).put("winnerImage", winnerImage))
             showBanner("Start Betting !")
 
             // Dragon Battle betting window: exactly 20 seconds.
@@ -1998,7 +2004,6 @@ private fun DragonBattleMainOverlay(
             showBanner("Stop Betting !")
             delay(700L)
 
-            val dealt = dealDragonRoundCards(sharedRoundId)
             roundCards = dealt
             showBanner("Show !")
             for (cardStep in 1..9) {
@@ -2015,7 +2020,6 @@ private fun DragonBattleMainOverlay(
                 }
             }
 
-            val winner = pickDragonWinner(dealt.first, dealt.second, dealt.third)
             dragonWinnerRoundId = sharedRoundId
             dragonWinnerSocket?.emit("dragonbattle_top_winners_request", JSONObject().put("round", sharedRoundId))
             winnerDragon = winner
