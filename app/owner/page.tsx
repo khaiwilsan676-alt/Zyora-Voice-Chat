@@ -2047,7 +2047,7 @@ export default function StaffPanel() {
         )}
 
         {activeTab === 'gift_catalog' && (
-          <div className="p-6 md:p-8 max-w-6xl mx-auto w-full h-full overflow-y-auto">
+          <div className="p-8 w-full h-full overflow-y-auto">
             <h2 className="mb-5 text-xl font-bold text-slate-800">Assets</h2>
             <OwnerAssetsPanel ownerKey={LEGACY_OWNER_API_KEY} />
           </div>
