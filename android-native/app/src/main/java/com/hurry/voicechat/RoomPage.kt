@@ -471,6 +471,7 @@ fun RoomPage(
     var roomRootSize by remember(roomId) { mutableStateOf(IntSize.Zero) }
     var luckyGiftFlight by remember(roomId) { mutableStateOf<LuckyGiftFlight?>(null) }
     var luckyGiftNotice by remember(roomId) { mutableStateOf<LuckyNotice?>(null) }
+    var luckyNoticeGeneration by remember(roomId) { mutableIntStateOf(0) }
     var showLuckyComboButton by remember(roomId) { mutableStateOf(false) }
     var luckyComboTimeLeft by remember(roomId) { mutableIntStateOf(5) }
     var luckyComboGeneration by remember(roomId) { mutableIntStateOf(0) }
@@ -1419,23 +1420,29 @@ fun RoomPage(
                 }
             }
             mainHandler.post {
-                val activeNoticeId = if (isComboReplay && luckyGiftNotice?.senderId == senderId) {
-                    luckyGiftNotice?.id ?: noticeId
-                } else noticeId
-                luckyGiftNotice = LuckyNotice(
-                    id = activeNoticeId,
-                    senderId = senderId,
-                    senderName = senderName,
-                    recipientName = recipientName,
-                    senderImage = senderImageRaw.ifBlank { ZYORA_DEFAULT_AVATAR_URL },
-                    giftImage = giftImage,
-                    multiplier = if (isComboReplay && luckyGiftNotice?.senderId == senderId) {
-                        (luckyGiftNotice?.multiplier ?: multiplier) + 1
-                    } else multiplier,
-                    totalWinAmount = payload.optLong("luckyReturnAmount", 0L),
-                    maxWinTimes = payload.optInt("luckyReturnPercent", 0),
-                    recipientMode = recipientMode
-                )
+                val isSameSenderCombo = isComboReplay && luckyGiftNotice?.senderId == senderId
+                val activeNoticeId = if (isSameSenderCombo) luckyGiftNotice?.id ?: noticeId else noticeId
+                if (isSameSenderCombo) {
+                    // A combo changes only the multiplier text; keep the same banner,
+                    // sender, recipient, image, and position without replaying its entrance.
+                    luckyGiftNotice = luckyGiftNotice?.copy(
+                        multiplier = (luckyGiftNotice?.multiplier ?: multiplier) + 1,
+                        isExiting = false
+                    )
+                } else {
+                    luckyGiftNotice = LuckyNotice(
+                        id = activeNoticeId,
+                        senderId = senderId,
+                        senderName = senderName,
+                        recipientName = recipientName,
+                        senderImage = senderImageRaw.ifBlank { ZYORA_DEFAULT_AVATAR_URL },
+                        giftImage = giftImage,
+                        multiplier = multiplier,
+                        totalWinAmount = payload.optLong("luckyReturnAmount", 0L),
+                        maxWinTimes = payload.optInt("luckyReturnPercent", 0),
+                        recipientMode = recipientMode
+                    )
+                }
                 if (senderId == accountId) {
                     // Only a server-confirmed transfer may start/renew the combo window.
                     lastLuckyComboPayload = JSONObject(payload.toString())
@@ -1472,10 +1479,15 @@ fun RoomPage(
                 }
                 // Each new send or combo replay renews the same visible notice.
                 // The notice only exits after five seconds with no further combo.
+                val noticeGeneration = ++luckyNoticeGeneration
                 mainHandler.postDelayed({
-                    if (luckyGiftNotice?.id == activeNoticeId) {
+                    if (luckyNoticeGeneration == noticeGeneration && luckyGiftNotice?.id == activeNoticeId) {
                         luckyGiftNotice = luckyGiftNotice?.copy(isExiting = true)
-                        mainHandler.postDelayed({ if (luckyGiftNotice?.id == activeNoticeId) luckyGiftNotice = null }, 450)
+                        mainHandler.postDelayed({
+                            if (luckyNoticeGeneration == noticeGeneration && luckyGiftNotice?.id == activeNoticeId) {
+                                luckyGiftNotice = null
+                            }
+                        }, 450L)
                     }
                 }, 5000L)
             }
