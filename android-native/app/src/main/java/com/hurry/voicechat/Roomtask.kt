@@ -43,17 +43,16 @@ fun Roomtask(onBack: () -> Unit = {}) {
 
     LaunchedEffect(Unit) {
         while (true) {
-            val now = Calendar.getInstance()
-            val target = Calendar.getInstance().apply {
-                val days = (Calendar.MONDAY - get(Calendar.DAY_OF_WEEK) + 7) % 7
-                add(Calendar.DAY_OF_MONTH, if (days == 0) 7 else days)
-                set(Calendar.HOUR_OF_DAY, 0)
-                set(Calendar.MINUTE, 0)
+            val now = Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC"))
+            val target = Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC")).apply {
+                set(Calendar.HOUR_OF_DAY, 5)
+                set(Calendar.MINUTE, 30)
                 set(Calendar.SECOND, 0)
                 set(Calendar.MILLISECOND, 0)
+                if (timeInMillis <= now.timeInMillis) add(Calendar.DAY_OF_MONTH, 1)
             }
             val left = ((target.timeInMillis - now.timeInMillis).coerceAtLeast(0L)) / 1000L
-            hour = ((left / 3600) % 24).toInt()
+            hour = (left / 3600).toInt()
             minute = ((left / 60) % 60).toInt()
             second = (left % 60).toInt()
             delay(1000)
@@ -175,24 +174,26 @@ fun Roomtask(onBack: () -> Unit = {}) {
                     )
                 }
 
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(3.dp),
-                    modifier = Modifier.offset(y = (-15).dp).padding(vertical = 0.dp).zIndex(5f)
-                ) {
-                    Text("Countdown", color = Color(0xFFF5B8B8), fontSize = 10.sp)
-                    listOf(hour to "Hour", minute to "Minute", second to "Second").forEach { pair ->
-                        Box(
-                            Modifier.background(
-                                Brush.verticalGradient(listOf(Color(0xFF8F1A1A), Color(0xFF470A0A))),
-                                RoundedCornerShape(4.dp)
-                            ).padding(horizontal = 5.dp, vertical = 3.dp)
-                        ) {
-                            Text(pair.first.toString(), color = Color(0xFFFFE0E0), fontSize = 11.sp)
-                        }
-                        Text(pair.second, color = Color(0xFFF5B8B8), fontSize = 10.sp)
-                    }
-                }
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 34.dp)
+                        .offset(y = (-15).dp)
+                        .zIndex(5f)
+                        .height(2.dp)
+                        .background(
+                            Brush.horizontalGradient(
+                                colorStops = arrayOf(
+                                    0.00f to Color.Transparent,
+                                    0.16f to Color(0xFF8F1A1A).copy(alpha = 0.45f),
+                                    0.50f to Color(0xFFFFD7A0),
+                                    0.84f to Color(0xFF8F1A1A).copy(alpha = 0.45f),
+                                    1.00f to Color.Transparent
+                                )
+                            ),
+                            RoundedCornerShape(50)
+                        )
+                )
 
                 Column(
                     modifier = Modifier.fillMaxWidth().offset(y = (-25).dp).zIndex(1f),
