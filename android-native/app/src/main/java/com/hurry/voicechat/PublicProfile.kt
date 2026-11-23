@@ -421,7 +421,7 @@ fun PublicProfileScreen(
                 merged.put("image", remoteAvatar)
                 merged.put("photo", remoteAvatar)
             }
-            val keysToSync = listOf("coverPhotos", "coverPhoto", "albumImages", "bio", "age", "gender", "country", "countryName", "countryCode", "country_code", "nationality", "location", "officialHeadTag", "officialTag", "adminTag", "serviceTag", "csTag", "hostTag", "isHost", "coinSellerTag", "coinSeller", "sellerTag", "vipId", "vipIdDays", "vipIdAssignedAt", "vipIdExpiresAt", "vipIdBadge", "vipIdBadgeType", "ownerImageTag", "ownerImageTagExpiresAt", "familyCreated", "familyName", "familyImage", "familyCreatorId", "familyCode", "familyAnnouncement")
+            val keysToSync = listOf("coverPhotos", "coverPhoto", "albumImages", "bio", "age", "gender", "country", "countryName", "countryCode", "country_code", "nationality", "location", "officialHeadTag", "officialTag", "adminTag", "serviceTag", "csTag", "hostTag", "isHost", "coinSellerTag", "coinSeller", "sellerTag", "vipId", "vipIdDays", "vipIdAssignedAt", "vipIdExpiresAt", "vipIdBadge", "vipIdBadgeType", "ownerImageTag", "ownerImageTagExpiresAt", "familyRewardTagImage", "familyRewardTagExpiresAt", "familyRewardTagRank", "familyRewardTagWeekStart", "familyCreated", "familyName", "familyImage", "familyCreatorId", "familyCode", "familyAnnouncement")
             keysToSync.forEach { key ->
                 if (latest.has(key)) {
                     val value = latest.optString(key, "")
@@ -433,6 +433,15 @@ fun PublicProfileScreen(
                 }
             }
         }
+
+        // Reward tag fields come from the remote user profile, not just this device's cache.
+        val syncedRewardTagExpiry = merged.optLong("familyRewardTagExpiresAt", 0L)
+        val syncedRewardTagFile = merged.optString("familyRewardTagImage", "").trim()
+        ownFamilyRewardTagExpiresAt = syncedRewardTagExpiry
+        ownFamilyRewardTagImage = if (syncedRewardTagExpiry > System.currentTimeMillis() && syncedRewardTagFile.isNotBlank()) {
+            if (syncedRewardTagFile.startsWith("http", true)) syncedRewardTagFile
+            else "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/" + syncedRewardTagFile
+        } else ""
 
         if (profileCacheKey.isNotBlank()) listOf(targetUser?.uid, targetUser?.id, targetUser?.accountId, targetUser?.displayAccountNumber, profileCacheKey).filter { !it.isNullOrBlank() }.distinct().forEach { cache.saveProfile(it!!, merged) }
         liveProfileTags = merged
