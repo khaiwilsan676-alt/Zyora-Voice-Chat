@@ -166,6 +166,9 @@ fun PublicProfileScreen(
     var ownFamilyImage by remember(targetUser?.uid, targetUser?.id, targetUser?.accountId) {
         mutableStateOf(if (!isOtherUser) familyPrefs.getString("familyImage", "").orEmpty() else "")
     }
+    var ownFamilyRewardTagImage by remember(targetUser?.uid, targetUser?.id, targetUser?.accountId) {
+        mutableStateOf("")
+    }
     var ownFamilyCreatorId by remember(targetUser?.uid, targetUser?.id, targetUser?.accountId) {
         mutableStateOf(if (!isOtherUser) familyPrefs.getString("familyCreatorId", "").orEmpty().ifBlank { currentUserId } else "")
     }
@@ -385,6 +388,12 @@ fun PublicProfileScreen(
         }
 
         val merged = org.json.JSONObject(cached?.toString() ?: "{}")
+        val rewardTagExpiry = merged.optLong("familyRewardTagExpiresAt", 0L)
+        val rewardTagFile = merged.optString("familyRewardTagImage", "").trim()
+        ownFamilyRewardTagImage = if (rewardTagExpiry > System.currentTimeMillis() && rewardTagFile.isNotBlank()) {
+            if (rewardTagFile.startsWith("http", true)) rewardTagFile
+            else "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/" + rewardTagFile
+        } else ""
         
         remote?.let { latest ->
             val remoteName = sequenceOf("name", "displayName", "userName", "nickname").map { latest.optString(it, "").trim() }.firstOrNull { it.isNotBlank() && it != "null" && !it.equals("User", ignoreCase = true) }
@@ -700,7 +709,7 @@ fun PublicProfileScreen(
                         if (hasFamilyMembership) {
                             Box(contentAlignment = Alignment.Center, modifier = Modifier.height(24.dp).widthIn(min = 60.dp, max = 100.dp)) {
                                 AsyncImage(
-                                    model = PUBLIC_PROFILE_FAMILY_IMAGE_URL,
+                                    model = ownFamilyRewardTagImage.ifBlank { PUBLIC_PROFILE_FAMILY_IMAGE_URL },
                                     contentDescription = "Family tag",
                                     contentScale = ContentScale.FillBounds,
                                     modifier = Modifier.fillMaxSize()
@@ -781,7 +790,7 @@ fun PublicProfileScreen(
                             ) {
                                 // Background updated
                                 AsyncImage(
-                                    model = "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261116_163413.png",
+                                    model = ownFamilyRewardTagImage.ifBlank { "https://raw.githubusercontent.com/khaiwilsan676-alt/Zyora-Voice-Chat/main/public/IMG_20261116_163413.png" },
                                     contentDescription = "Family background",
                                     modifier = Modifier.fillMaxSize(),
                                     contentScale = ContentScale.FillBounds
