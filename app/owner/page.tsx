@@ -446,6 +446,10 @@ const SidebarCategory = ({ icon, title, items, activeItem, setActiveItem, setIsS
   );
 };
 
+// Existing owner-management APIs still use their legacy owner-key contract.
+// This key does not authenticate the Owner Panel or authorize private-message monitoring.
+const LEGACY_OWNER_API_KEY = '18 July 2026';
+
 // ==============================================================
 // LOGIN FORM COMPONENT
 // ==============================================================
@@ -1934,14 +1938,14 @@ export default function StaffPanel() {
         {activeTab === 'special_ids' && (
           <div className="p-6 md:p-8 max-w-6xl mx-auto w-full h-full overflow-y-auto">
             <h2 className="mb-5 text-xl font-bold text-slate-800">Special ID / Tags</h2>
-            <SpecialIdsPanel users={users} ownerKey={VALID_CREDENTIALS.secretKey} />
+            <SpecialIdsPanel users={users} ownerKey={LEGACY_OWNER_API_KEY} />
           </div>
         )}
 
         {activeTab === 'gift_catalog' && (
           <div className="p-6 md:p-8 max-w-6xl mx-auto w-full h-full overflow-y-auto">
             <h2 className="mb-5 text-xl font-bold text-slate-800">Assets</h2>
-            <OwnerAssetsPanel ownerKey={VALID_CREDENTIALS.secretKey} />
+            <OwnerAssetsPanel ownerKey={LEGACY_OWNER_API_KEY} />
           </div>
         )}
 
