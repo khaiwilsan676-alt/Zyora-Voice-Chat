@@ -1920,7 +1920,7 @@ private fun DragonBattleMainOverlay(
         }
         balance = (balance + delta).coerceAtLeast(0L)
         dragonRejectedCallbacks[transactionId] = onRejected
-        scope.launch { syncDragonWalletChanges() }
+        scope.launch(Dispatchers.IO) { syncDragonWalletChanges() }
     }
 
     DisposableEffect(soundManager) {
