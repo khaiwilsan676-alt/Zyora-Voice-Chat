@@ -1343,12 +1343,18 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
         }
         check(pendingWalletPrefs.edit().putString("queue_$walletAccountId", remaining.toString()).commit())
        }
-       balance = updatedBalance
-       walletCachePrefs.edit().putLong("balance_$walletAccountId", updatedBalance)
+       val pendingDelta = synchronized(pendingWalletPrefs) {
+        val pending = runCatching { JSONArray(pendingWalletPrefs.getString("queue_$walletAccountId", "[]") ?: "[]") }.getOrDefault(JSONArray())
+        (0 until pending.length()).sumOf { pending.optJSONObject(it)?.optLong("delta") ?: 0L }
+       }
+       val visibleBalance = (updatedBalance + pendingDelta).coerceAtLeast(0L)
+       // Keep unconfirmed rapid bets applied over the latest canonical server snapshot.
+       balance = visibleBalance
+       walletCachePrefs.edit().putLong("balance_$walletAccountId", visibleBalance)
         .putLong("last_sync_$walletAccountId", System.currentTimeMillis()).apply()
        withContext(Dispatchers.IO) {
-        val old = dao.getUserData() ?: UserDataEntity(balance = updatedBalance)
-        dao.saveUserData(old.copy(balance = updatedBalance))
+        val old = dao.getUserData() ?: UserDataEntity(balance = visibleBalance)
+        dao.saveUserData(old.copy(balance = visibleBalance))
        }
       }
      }
@@ -1463,7 +1469,8 @@ fun Wildparty(onClose:()->Unit={},onMinimize:()->Unit={},modifier:Modifier=Modif
     }
     check(pendingWalletPrefs.edit().putString(key,remaining.toString()).commit()){"Could not persist remaining wallet queue"}
     if(serverBalance!=null){
-     val visible=serverBalance!!
+     val pendingDelta=(0 until remaining.length()).sumOf { remaining.optJSONObject(it)?.optLong("delta") ?: 0L }
+     val visible=(serverBalance!! + pendingDelta).coerceAtLeast(0L)
      balance=visible
      balanceToPersist=visible
     }
