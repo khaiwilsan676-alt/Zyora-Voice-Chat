@@ -1655,8 +1655,7 @@ export default function StaffPanel() {
             items={[{ id: 'themes', label: 'Themes', icon: '🎨' }, { id: 'special_ids', label: 'Special ID / Tags', icon: '💎' }, { id: 'gift_catalog', label: 'Gift Catalog', icon: '🎁' }]}
           />
           <SidebarCategory
-            icon="💰" title="Economy" activeItem={activeTab} setActiveItem={setActiveTab} setIsSidebarOpen={setIsSidebarOpen}
-            items={[{ id: 'wallet', label: 'Master Wallet', icon: '💳' }, { id: 'seller_center', label: 'Seller Center', icon: '🛒' }, { id: 'revenue', label: 'Bean Revenue', icon: '📈' }]}
+            icon="💰" title="Economy" activeItem={activeTab} setActiveItem={setActiveTab} setIsSidebarOpen={setIsSidebarOpen}            items={[{ id: 'wallet', label: 'Master Wallet', icon: '💳' }, { id: 'seller_center', label: 'Seller Center', icon: '🛒' }, { id: 'revenue', label: 'Bean Revenue', icon: '📈' }]}
           />
           <SidebarCategory
             icon="📁" title="Content" activeItem={activeTab} setActiveItem={setActiveTab} setIsSidebarOpen={setIsSidebarOpen}
@@ -1709,7 +1708,7 @@ export default function StaffPanel() {
                     value={searchQuery}
                     onChange={handleSearchQueryChange}
                     placeholder="Search by ID or name..."
-                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-400 font-medium text-slate-900 placeholder:text-slate-400 caret-slate-900"
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-[#197477] font-medium text-slate-900 placeholder:text-slate-400 caret-slate-900"
                   />
                 </div>
                 <div className="flex flex-nowrap items-center gap-2 shrink-0">
@@ -1865,7 +1864,7 @@ export default function StaffPanel() {
 
             <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 space-y-6">
               <div className="flex items-center gap-2 border-b border-slate-100 pb-4">
-                <Gamepad2 className="w-6 h-6 text-indigo-600" />
+                <Gamepad2 className="w-6 h-6 text-[#197477]" />
                 <h3 className="text-xl font-bold text-slate-800">
                   Live Real-Time Winner Prediction
                   <span className="text-[10px] bg-red-100 text-red-600 font-bold px-2.5 py-0.5 rounded-full ml-2 align-middle">Owner Advance View</span>
@@ -1877,8 +1876,8 @@ export default function StaffPanel() {
                   <span className="text-xs text-slate-500 font-bold uppercase tracking-wider">Current Round ID</span>
                   <span className="text-4xl font-black text-slate-800">#{livePrediction.round}</span>
                   <div className="flex items-center gap-2 mt-1 bg-indigo-50 border border-indigo-200 px-4 py-2 rounded-xl">
-                    <Timer className="w-5 h-5 text-indigo-600" />
-                    <span className="text-sm font-bold text-indigo-700 uppercase tracking-wide">
+                    <Timer className="w-5 h-5 text-[#197477]" />
+                    <span className="text-sm font-bold text-[#197477] uppercase tracking-wide">
                       {livePrediction.phase} - {livePrediction.countdown}s
                     </span>
                   </div>
@@ -1898,7 +1897,7 @@ export default function StaffPanel() {
                         <span className="text-5xl drop-shadow-md mb-1">{livePrediction.wEmoji}</span>
                       )}
                       <span className="font-black text-slate-800 text-base">{livePrediction.wName}</span>
-                      <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md mt-1">
+                      <span className="text-xs font-bold text-[#197477] bg-indigo-50 px-2 py-0.5 rounded-md mt-1">
                         {livePrediction.wMult}
                       </span>
                     </div>
@@ -1965,7 +1964,7 @@ export default function StaffPanel() {
           <div className="p-8 max-w-6xl mx-auto w-full h-full overflow-y-auto">
             <div className="flex items-center justify-between mb-6 border-b border-slate-200 pb-4">
               <h2 className="text-2xl font-bold text-slate-800">All Store Themes</h2>
-              <span className="text-xs font-bold bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full">
+              <span className="text-xs font-bold bg-indigo-50 text-[#197477] px-3 py-1 rounded-full">
                 {ALL_STORE_THEMES.length} Themes Active
               </span>
             </div>
@@ -1978,7 +1977,7 @@ export default function StaffPanel() {
                   value={themeSearchQuery}
                   onChange={(e) => setThemeSearchQuery(e.target.value)}
                   placeholder="Search themes by name..."
-                  className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-400 font-medium text-slate-900 placeholder:text-slate-400 caret-slate-900"
+                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-[#197477] font-medium text-slate-900 placeholder:text-slate-400 caret-slate-900"
                 />
               </div>
             </div>
@@ -2176,7 +2175,7 @@ export default function StaffPanel() {
                     <div className="font-bold text-sm text-slate-800 truncate">
                       {selectedPair.senderName} ↔ {selectedPair.receiverName}
                     </div>
-                    <div className="text-[11px] text-indigo-600 font-semibold truncate">
+                    <div className="text-[11px] text-[#197477] font-semibold truncate">
                       {selectedPair.senderId} • {selectedPair.receiverId}
                     </div>
                   </div>
@@ -2193,7 +2192,7 @@ export default function StaffPanel() {
                         <div className={`max-w-[75%] px-3 py-2 rounded-2xl shadow-sm ${
                           isSenderSide
                             ? 'bg-white border border-slate-200 text-slate-800 rounded-tl-none'
-                            : 'bg-indigo-600 text-white rounded-tr-none'
+                            : 'bg-[#197477] text-white rounded-tr-none'
                         }`}>
                           {msg.imageUrl && (
                             <div className="mb-1.5 rounded-lg overflow-hidden border border-white/20">
@@ -2238,7 +2237,7 @@ export default function StaffPanel() {
                     placeholder="Search AI chats by user name, ID, email..."
                     value={supportSearchQuery}
                     onChange={(e) => setSupportSearchQuery(e.target.value)}
-                    className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 outline-none focus:border-blue-500 placeholder:text-slate-400"
+                    className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 outline-none focus:border-[#197477] placeholder:text-slate-400"
                   />
                   <div className="relative">
                     <button
@@ -2255,7 +2254,7 @@ export default function StaffPanel() {
                             key={status}
                             type="button"
                             onClick={() => { setSupportStatusFilter(status); setSupportFilterOpen(false); }}
-                            className={`block w-full px-4 py-2.5 text-left text-sm hover:bg-blue-50 ${supportStatusFilter === status ? 'font-bold text-blue-600' : 'text-slate-700'}`}
+                            className={`block w-full px-4 py-2.5 text-left text-sm hover:bg-[#197477]/10 ${supportStatusFilter === status ? 'font-bold text-[#197477]' : 'text-slate-700'}`}
                           >
                             {status}
                           </button>
@@ -2266,7 +2265,7 @@ export default function StaffPanel() {
                   <button
                     type="button"
                     onClick={() => { setAppliedSupportSearchQuery(supportSearchQuery); setAppliedSupportStatusFilter(supportStatusFilter); setSupportChatPage(1); setSupportFilterOpen(false); }}
-                    className="rounded-xl bg-green-800 px-6 py-3 text-sm font-bold text-white hover:bg-green-900"
+                    className="rounded-xl bg-[#197477] px-6 py-3 text-sm font-bold text-white hover:bg-[#17696c]"
                   >
                     Filter
                   </button>
@@ -2302,7 +2301,7 @@ export default function StaffPanel() {
                             <td className="px-4 py-4 font-semibold text-black">{chat.userAccountId || chat.userId}</td>
                             <td className="whitespace-nowrap px-4 py-4 text-xs text-slate-500">{chat.timestamp ? new Date(chat.timestamp).toLocaleString() : '—'}</td>
                             <td className="px-4 py-4">
-                              <button type="button" onClick={() => setSelectedSupportUserId(chat.userId)} className="rounded-lg bg-green-800 px-4 py-2 text-xs font-bold text-white hover:bg-green-900">
+                              <button type="button" onClick={() => setSelectedSupportUserId(chat.userId)} className="rounded-lg bg-[#197477] px-4 py-2 text-xs font-bold text-white hover:bg-[#17696c]">
                                 Open
                               </button>
                             </td>
@@ -2371,7 +2370,7 @@ export default function StaffPanel() {
                       return (
                         <div key={idx} className={`flex items-start gap-2.5 ${isBot ? '' : 'flex-row-reverse'}`}>
                           <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-sm overflow-hidden border ${
-                            isBot ? 'bg-gradient-to-r from-pink-400 to-purple-500 text-white border-pink-200' : 'bg-blue-600 text-white border-blue-400'
+                            isBot ? 'bg-gradient-to-r from-pink-400 to-purple-500 text-white border-pink-200' : 'bg-[#197477] text-white border-[#197477]'
                           }`}>
                             {isBot ? (
                               <img src="/1785612362650~2.jpg" alt="Daisy AI" className="w-full h-full object-cover" />
@@ -2385,7 +2384,7 @@ export default function StaffPanel() {
                           <div className={`max-w-[75%] rounded-2xl p-3 shadow-sm ${
                             isBot
                               ? 'bg-white rounded-tl-none border border-slate-200 text-slate-800'
-                              : 'bg-blue-600 rounded-tr-none text-white'
+                              : 'bg-[#197477] rounded-tr-none text-white'
                           }`}>
                             <div className="flex items-center justify-between gap-3 mb-1">
                               <span className={`text-[10px] font-extrabold ${isBot ? 'text-purple-600' : 'text-blue-200'}`}>
@@ -2423,8 +2422,8 @@ export default function StaffPanel() {
                       <button type="button" onClick={() => socket.emit('daisy_mode_set', { enabled: !daisyEnabled })} className={`rounded-lg px-4 py-2 text-xs font-bold text-white ${daisyEnabled ? 'bg-red-600' : 'bg-emerald-600'}`}>{daisyEnabled ? 'Stop' : 'Start'}</button>
                     </div>
                     <div className="flex gap-2">
-                      <input value={ownerSupportDraft} onChange={(e) => setOwnerSupportDraft(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); const text = ownerSupportDraft.trim(); if (!text) return; socket.emit('owner_support_reply', { userId: activeChat.userId, userAccountId: activeChat.userAccountId || activeChat.userId, userName: activeChat.userName || 'User', userPhoto: activeChat.userPhoto || '' , text }, (result: any) => { if (result?.ok) setOwnerSupportDraft(current => current === text ? '' : current); else console.error('Daisy support reply was not delivered:', result?.error || 'No delivery acknowledgement'); }); } }} placeholder="Reply as Zyora Team..." className="min-w-0 flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-500" />
-                      <button type="button" disabled={!ownerSupportDraft.trim()} onClick={() => { const text = ownerSupportDraft.trim(); if (!text) return; socket.emit('owner_support_reply', { userId: activeChat.userId, userAccountId: activeChat.userAccountId || activeChat.userId, userName: activeChat.userName || 'User', userPhoto: activeChat.userPhoto || '' , text }, (result: any) => { if (result?.ok) setOwnerSupportDraft(current => current === text ? '' : current); else console.error('Daisy support reply was not delivered:', result?.error || 'No delivery acknowledgement'); }); }} className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white disabled:opacity-40">Send</button>
+                      <input value={ownerSupportDraft} onChange={(e) => setOwnerSupportDraft(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); const text = ownerSupportDraft.trim(); if (!text) return; socket.emit('owner_support_reply', { userId: activeChat.userId, userAccountId: activeChat.userAccountId || activeChat.userId, userName: activeChat.userName || 'User', userPhoto: activeChat.userPhoto || '' , text }, (result: any) => { if (result?.ok) setOwnerSupportDraft(current => current === text ? '' : current); else console.error('Daisy support reply was not delivered:', result?.error || 'No delivery acknowledgement'); }); } }} placeholder="Reply as Zyora Team..." className="min-w-0 flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#197477]" />
+                      <button type="button" disabled={!ownerSupportDraft.trim()} onClick={() => { const text = ownerSupportDraft.trim(); if (!text) return; socket.emit('owner_support_reply', { userId: activeChat.userId, userAccountId: activeChat.userAccountId || activeChat.userId, userName: activeChat.userName || 'User', userPhoto: activeChat.userPhoto || '' , text }, (result: any) => { if (result?.ok) setOwnerSupportDraft(current => current === text ? '' : current); else console.error('Daisy support reply was not delivered:', result?.error || 'No delivery acknowledgement'); }); }} className="rounded-xl bg-[#197477] px-4 py-2 text-xs font-bold text-white disabled:opacity-40">Send</button>
                     </div>
                   </div>
                 </div>
@@ -2466,16 +2465,16 @@ export default function StaffPanel() {
                 <label className="mb-2 block text-[11px] font-extrabold uppercase tracking-wider text-slate-500">Search by Zyora ID</label>
                 <div className="relative">
                   <Search className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-400" />
-                  <input value={masterWalletSearch} onChange={e => { setMasterWalletSearch(e.target.value); setMasterWalletSelectedUser(null); }} placeholder="Enter user ID..." className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm font-semibold text-slate-800 outline-none transition focus:border-indigo-400 focus:bg-white focus:ring-4 focus:ring-indigo-500/10" />
+                  <input value={masterWalletSearch} onChange={e => { setMasterWalletSearch(e.target.value); setMasterWalletSelectedUser(null); }} placeholder="Enter user ID..." className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm font-semibold text-slate-800 outline-none transition focus:border-[#197477] focus:bg-white focus:ring-4 focus:ring-indigo-500/10" />
                 </div>
                 {masterWalletSearching && <p className="mt-2 text-xs text-slate-400">Searching users...</p>}
                 {masterWalletResults.length > 0 && !masterWalletSelectedUser && (
                   <div className="mt-2 max-h-52 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-lg">
                     {masterWalletResults.slice(0, 7).map(user => (
-                      <button key={user.uid + ':' + user.accountId} type="button" onClick={() => { setMasterWalletSelectedUser(user); setMasterWalletSearch(user.accountId); setMasterWalletResults([]); }} className="flex w-full items-center gap-3 border-b border-slate-100 px-3 py-3 text-left last:border-0 hover:bg-indigo-50/60">
+                      <button key={user.uid + ':' + user.accountId} type="button" onClick={() => { setMasterWalletSelectedUser(user); setMasterWalletSearch(user.accountId); setMasterWalletResults([]); }} className="flex w-full items-center gap-3 border-b border-slate-100 px-3 py-3 text-left last:border-0 hover:bg-[#197477]/10">
                         <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-100 text-sm font-black text-slate-500">{user.image ? <img src={user.image} alt="" className="h-full w-full object-cover" /> : user.name.slice(0,1).toUpperCase()}</span>
                         <span className="min-w-0 flex-1"><span className="block truncate text-sm font-bold text-slate-800">{user.name}</span><span className="text-xs text-slate-500">ID: {user.accountId}</span></span>
-                        <span className="text-xs font-bold text-indigo-600">Select</span>
+                        <span className="text-xs font-bold text-[#197477]">Select</span>
                       </button>
                     ))}
                   </div>
@@ -2489,7 +2488,7 @@ export default function StaffPanel() {
                 )}
                 <div className="mt-5">
                   <label className="mb-2 block text-[11px] font-extrabold uppercase tracking-wider text-slate-500">Coins amount</label>
-                  <input type="number" min="1" step="1" inputMode="numeric" value={masterWalletAmount} onChange={e => setMasterWalletAmount(e.target.value)} placeholder="Enter coin amount" className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 text-lg font-black text-slate-900 outline-none focus:border-indigo-400 focus:bg-white focus:ring-4 focus:ring-indigo-500/10" />
+                  <input type="number" min="1" step="1" inputMode="numeric" value={masterWalletAmount} onChange={e => setMasterWalletAmount(e.target.value)} placeholder="Enter coin amount" className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 text-lg font-black text-slate-900 outline-none focus:border-[#197477] focus:bg-white focus:ring-4 focus:ring-indigo-500/10" />
                 </div>
                 <button
                   type="button"
@@ -2529,7 +2528,7 @@ export default function StaffPanel() {
                       setMasterWalletTransferring(false);
                     }
                   }}
-                  className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-3.5 text-sm font-black text-white shadow-sm transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-[#197477] px-5 py-3.5 text-sm font-black text-white shadow-sm transition hover:bg-[#17696c] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <Send className="h-4 w-4" /> {masterWalletTransferring ? 'Transferring...' : 'Transfer Coins'}
                 </button>
@@ -2625,13 +2624,13 @@ export default function StaffPanel() {
                     value={feedbackSearchQuery}
                     onChange={(e) => setFeedbackSearchQuery(e.target.value)}
                     placeholder="Search feedback..."
-                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-400 font-medium text-slate-900 placeholder:text-slate-400 caret-slate-900"
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-[#197477] font-medium text-slate-900 placeholder:text-slate-400 caret-slate-900"
                   />
                 </div>
                 <select
                   value={selectedFeedbackTypeFilter}
                   onChange={(e) => setSelectedFeedbackTypeFilter(e.target.value)}
-                  className="px-3 py-2.5 bg-white border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 outline-none cursor-pointer"
+                  className="px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 outline-none cursor-pointer"
                 >
                   <option value="All">All</option>
                   <option value="bug">Bug</option>
@@ -2641,7 +2640,7 @@ export default function StaffPanel() {
                 </select>
                 <button
                   onClick={() => { setAppliedFeedbackSearchQuery(feedbackSearchQuery); setAppliedFeedbackTypeFilter(selectedFeedbackTypeFilter); setFeedbackPage(1); }}
-                  className="px-5 py-2.5 bg-green-800 hover:bg-green-900 text-white rounded-lg text-sm font-bold transition-colors"
+                  className="px-5 py-2.5 bg-[#197477] hover:bg-[#17696c] text-white rounded-lg text-sm font-bold transition-colors"
                 >Filter</button>
               </div>
             </div>
@@ -2688,7 +2687,7 @@ export default function StaffPanel() {
                         fb.type === 'bug' ? 'bg-red-50 text-red-600 border-red-100' :
                         fb.type === 'account' ? 'bg-orange-50 text-orange-600 border-orange-100' :
                         fb.type === 'recharge' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                        'bg-blue-50 text-blue-600 border-blue-100'
+                        'bg-[#197477]/10 text-[#197477] border-[#197477]/20'
                       }`}>
                         {fb.typeLabel || fb.type || 'Feedback'}
                       </span>
@@ -2699,7 +2698,7 @@ export default function StaffPanel() {
                       </span>
                     </div>
                     <div className="w-24 flex justify-end shrink-0">
-                      <button onClick={() => setSelectedFeedback(fb)} className="px-4 py-2 bg-green-800 hover:bg-green-900 text-white rounded-lg text-xs font-bold">Open</button>
+                      <button onClick={() => setSelectedFeedback(fb)} className="px-4 py-2 bg-[#197477] hover:bg-[#17696c] text-white rounded-lg text-xs font-bold">Open</button>
                     </div>
                   </div>
                 )))}
@@ -2750,7 +2749,7 @@ export default function StaffPanel() {
                         selectedFeedback.type === 'bug' ? 'bg-red-50 text-red-600 border-red-100' :
                         selectedFeedback.type === 'account' ? 'bg-orange-50 text-orange-600 border-orange-100' :
                         selectedFeedback.type === 'recharge' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                        'bg-blue-50 text-blue-600 border-blue-100'
+                        'bg-[#197477]/10 text-[#197477] border-[#197477]/20'
                       }`}>
                         {selectedFeedback.typeLabel || selectedFeedback.type}
                       </span>
@@ -2780,7 +2779,7 @@ export default function StaffPanel() {
                   <div className="mt-6 pt-4 border-t border-slate-100 flex justify-end">
                     <button
                       onClick={() => setSelectedFeedback(null)}
-                      className="px-6 py-2.5 text-xs font-bold bg-indigo-600 text-white rounded-xl shadow-md hover:bg-indigo-700 transition-colors"
+                      className="px-6 py-2.5 text-xs font-bold bg-[#197477] text-white rounded-xl shadow-md hover:bg-[#17696c] transition-colors"
                     >
                       Close Details
                     </button>
@@ -2807,7 +2806,7 @@ export default function StaffPanel() {
                     setOfficialRecipient(null);
                   }}
                   placeholder="Enter a user's real Zyora ID..."
-                  className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500"
+                  className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#197477]"
                 />
                 {officialRecipientLoading && <p className="mt-2 text-xs text-slate-500">Searching users...</p>}
                 {!officialRecipientLoading && officialRecipientQuery.trim() && officialRecipientResults.length > 0 && (
@@ -2830,7 +2829,7 @@ export default function StaffPanel() {
                           <span className="block truncate text-sm font-bold text-slate-800">{user.name}</span>
                           <span className="block text-xs text-slate-500">ID: {user.accountId}</span>
                         </span>
-                        <span className="text-xs font-bold text-indigo-600">Select</span>
+                        <span className="text-xs font-bold text-[#197477]">Select</span>
                       </button>
                     ))}
                   </div>
@@ -2859,7 +2858,7 @@ export default function StaffPanel() {
                 <select
                   value={officialSender}
                   onChange={(e) => setOfficialSender(e.target.value as any)}
-                  className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:border-indigo-500 cursor-pointer"
+                  className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:border-[#197477] cursor-pointer"
                 >
                   <option value="hurry_team_official">Zyora Team (ID: hurry_team_official)</option>
                   <option value="hurry_system_official">Zyora System (ID: hurry_system_official)</option>
@@ -2874,7 +2873,7 @@ export default function StaffPanel() {
                   value={officialText}
                   onChange={(e) => setOfficialText(e.target.value)}
                   placeholder="Type your official message here..."
-                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-md text-sm font-medium focus:outline-none focus:border-indigo-500 text-slate-900 placeholder:text-slate-400 caret-slate-900"
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-md text-sm font-medium focus:outline-none focus:border-[#197477] text-slate-900 placeholder:text-slate-400 caret-slate-900"
                 />
 
                 <div>
@@ -2900,7 +2899,7 @@ export default function StaffPanel() {
                   />
 
                   {officialImage ? (
-                    <div className="relative inline-block border border-slate-200 rounded-md overflow-hidden bg-slate-900 max-w-xs">
+                    <div className="relative inline-block border border-slate-200 rounded-md overflow-hidden bg-[#197477] max-w-xs">
                       <img src={officialImage} alt="Attachment" className="max-h-48 object-contain" />
                       <button
                         onClick={() => {
@@ -3011,7 +3010,7 @@ export default function StaffPanel() {
                       });
                     }}
                     disabled={officialSending || (!officialText.trim() && !officialImage)}
-                    className="px-6 py-2.5 bg-slate-900 text-white text-sm font-extrabold rounded-md shadow-md disabled:opacity-50 transition-all flex items-center gap-2 cursor-pointer"
+                    className="px-6 py-2.5 bg-[#197477] text-white text-sm font-extrabold rounded-md shadow-md disabled:opacity-50 transition-all flex items-center gap-2 cursor-pointer"
                   >
                     <Send className="w-4 h-4" />
                     <span>{officialSending ? 'Sending...' : 'Broadcast to all users'}</span>
@@ -3107,7 +3106,7 @@ export default function StaffPanel() {
                 {selectedTagUserData.image ? <img src={selectedTagUserData.image} alt={selectedTagUserData.name} className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center text-xl font-bold text-slate-500">{selectedTagUserData.name.charAt(0).toUpperCase()}</div>}
               </div>
               <span className="min-w-0 flex-1 truncate text-lg font-bold text-slate-900">{selectedTagUserData.name}</span>
-              <button type="button" onClick={() => { setEditedUserName(selectedTagUserData.name || ''); setEditedUserImage(selectedTagUserData.image || ''); setIsUserProfileEditOpen(true); }} className="shrink-0 rounded-lg px-3 py-1.5 text-sm font-bold text-blue-600 hover:bg-blue-50">Edit</button>
+              <button type="button" onClick={() => { setEditedUserName(selectedTagUserData.name || ''); setEditedUserImage(selectedTagUserData.image || ''); setIsUserProfileEditOpen(true); }} className="shrink-0 rounded-lg px-3 py-1.5 text-sm font-bold text-[#197477] hover:bg-[#197477]/10">Edit</button>
             </div>
             <div className="grid grid-cols-1 gap-x-10 px-6 py-3 text-sm sm:grid-cols-2">
               <div className="flex min-w-0 items-center gap-2 border-b border-slate-100 py-4 sm:col-span-2">
@@ -3148,9 +3147,9 @@ export default function StaffPanel() {
           <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <h3 className="mb-4 text-lg font-extrabold text-slate-900">Edit User Profile</h3>
             <label className="mb-1 block text-xs font-bold text-slate-600">User Name</label>
-            <input value={editedUserName} onChange={(e) => setEditedUserName(e.target.value)} maxLength={40} className="mb-4 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-blue-500" />
+            <input value={editedUserName} onChange={(e) => setEditedUserName(e.target.value)} maxLength={40} className="mb-4 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-[#197477]" />
             <label className="mb-1 block text-xs font-bold text-slate-600">Avatar Image URL</label>
-            <input value={editedUserImage} onChange={(e) => setEditedUserImage(e.target.value)} placeholder="https://..." className="mb-5 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-blue-500" />
+            <input value={editedUserImage} onChange={(e) => setEditedUserImage(e.target.value)} placeholder="https://..." className="mb-5 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-[#197477]" />
             <div className="flex justify-end gap-2">
               <button type="button" onClick={() => setIsUserProfileEditOpen(false)} className="rounded-lg px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100">Cancel</button>
               <button type="button" disabled={!editedUserName.trim()} onClick={() => {
@@ -3158,7 +3157,7 @@ export default function StaffPanel() {
                 setSelectedTagUserData(updated);
                 setUsers(previous => previous.map(user => String(user.id) === String(updated.id) ? { ...user, name: updated.name, image: updated.image } : user));
                 setIsUserProfileEditOpen(false);
-              }} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-50">Save</button>
+              }} className="rounded-lg bg-[#197477] px-4 py-2 text-sm font-bold text-white hover:bg-[#17696c] disabled:opacity-50">Save</button>
             </div>
           </div>
         </div>
